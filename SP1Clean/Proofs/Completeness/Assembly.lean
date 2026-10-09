@@ -205,9 +205,8 @@ def publicValues : SP1PublicIO (ZMod p) := trace.boundary
 **The 53 built tables**, in `sp1Ensemble.tables` order: the twenty-five instruction chips of
 `sp1Tables`, then the 28 entries of `sp1ProviderTables`.
 
-Branch and the two shifts use `Table.buildHinted`: their event builders supply the opcode and
-comparison hints still read by those circuits. Bitwise, Lt, Mul and DivRem take selectors as
-ordinary inputs and use an empty hint. The other builders share the trace's `hint`.
+Instruction selectors are ordinary inputs. Their builders use `Table.build` and do not read
+prover hints. Provider builders retain their explicit generation data and shared hint.
 -/
 def rangeTables : List (Table (ZMod p)) :=
   RangeChip.allWidths.map fun width =>
@@ -244,8 +243,9 @@ def instructionTableFor : InstructionChipId → Table (ZMod p)
       (JalChip.traceInputs (trace.instructionEvents .jal) 0) trace.generationData trace.hint
   | .jalr => Table.build JalrChip.component
       (JalrChip.traceInputs (trace.instructionEvents .jalr) 0) trace.generationData trace.hint
-  | .branch => Table.buildHinted BranchChip.component
+  | .branch => Table.build BranchChip.component
       (BranchChip.traceInputs (trace.instructionEvents .branch) 0) trace.generationData
+      (ProverHint.empty _)
   | .uType => Table.build UTypeChip.component
       (UTypeChip.traceInputs (trace.instructionEvents .uType) 0) trace.generationData trace.hint
   | .loadByte => Table.build LoadByteChip.component
@@ -456,7 +456,7 @@ theorem providerTables_constraints (wf : trace.WellFormed) :
 
 /-- **The assembled tables are the ensemble's tables**, component for component and in order. One
 `rfl`: every completeness-side `component` is by definition the wrapper `sp1Tables` /
-`sp1ProviderTables` build, and `Table.build`/`Table.buildHinted` record the component they were
+`sp1ProviderTables` build, and `Table.build` record the component they were
 given. -/
 theorem tables_map_component :
     (trace.tables.map (·.component)) = (sp1Ensemble (p := p)).tables := by

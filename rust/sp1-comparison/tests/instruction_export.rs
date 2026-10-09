@@ -13,7 +13,9 @@ use slop_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
 use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
 use slop_matrix::{dense::RowMajorMatrix, Matrix};
 use sp1_core_executor::{
-    events::{AluEvent, MemInstrEvent, MemoryReadRecord, MemoryRecordEnum, MemoryWriteRecord},
+    events::{
+        AluEvent, BranchEvent, MemInstrEvent, MemoryReadRecord, MemoryRecordEnum, MemoryWriteRecord,
+    },
     get_quotient_and_remainder, ALUTypeRecord, ExecutionRecord, ITypeRecord, Opcode, RTypeRecord,
 };
 use sp1_core_machine::{
@@ -27,6 +29,7 @@ use sp1_core_machine::{
         sll::{ShiftLeftChip, ShiftLeftCols},
         sr::{ShiftRightChip, ShiftRightCols},
     },
+    control_flow::{BranchChip, BranchColumns},
     memory::load::load_byte::{LoadByteChip, LoadByteColumns},
     SupervisorMode,
 };
@@ -111,6 +114,15 @@ mod generated_shift_right {
     ));
 }
 use generated_shift_right::{ShiftRightInstruction, ShiftRightInstructionAirSpec};
+
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod generated_branch {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/branch_instruction.rs"
+    ));
+}
+use generated_branch::{BranchInstruction, BranchInstructionAirSpec};
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -503,6 +515,7 @@ fn instruction_fixtures_do_not_claim_provider_balance() {
     check_open_buses::<LtInstruction>(&lt_row(&lt_trace().row_slice(0)));
     check_open_buses::<ShiftLeftInstruction>(&shift_left_row(&shift_left_trace().row_slice(0)));
     check_open_buses::<ShiftRightInstruction>(&shift_right_row(&shift_right_trace().row_slice(0)));
+    check_open_buses::<BranchInstruction>(&branch_row(&branch_trace().row_slice(0)));
 }
 
 fn load_byte_event(
@@ -1354,5 +1367,137 @@ fn all_shift_right_columns_preserve_constraints_and_interactions_under_mutation(
         &indices,
         shift_right_row,
         &ShiftRightChip::<SupervisorMode>::default(),
+    );
+}
+
+fn branch_trace() -> RowMajorMatrix<SP1Field> {
+    let values: [u64; 9] = [
+        0,
+        1,
+        65535,
+        65536,
+        u32::MAX as u64,
+        1 << 32,
+        (1 << 63) - 1,
+        1 << 63,
+        u64::MAX,
+    ];
+    let mut record = ExecutionRecord::default();
+    for opcode in [
+        Opcode::BEQ,
+        Opcode::BNE,
+        Opcode::BLT,
+        Opcode::BGE,
+        Opcode::BLTU,
+        Opcode::BGEU,
+    ] {
+        let mut outcomes = [0; 2];
+        for a in values {
+            for b in values {
+                let taken = match opcode {
+                    Opcode::BEQ => a == b,
+                    Opcode::BNE => a != b,
+                    Opcode::BLT => (a as i64) < (b as i64),
+                    Opcode::BGE => (a as i64) >= (b as i64),
+                    Opcode::BLTU => a < b,
+                    Opcode::BGEU => a >= b,
+                    _ => unreachable!(),
+                };
+                // Both targets fit 48 bits. Exercise zero/negative displacements and
+                // carries at each PC limb boundary, for taken and fallthrough branches.
+                for pc in [0x1000_u64, 0xfffc, 0xffff_fffc, (1 << 48) - 0x2000] {
+                    for offset in [-4096_i64, -4, 0, 4, 4092] {
+                        let c = offset as u64;
+                        let next_pc = pc.wrapping_add(if taken { c } else { 4 });
+                        assert!(next_pc < 1 << 48 && next_pc % 4 == 0);
+                        let clk = 9 + 8 * record.branch_events.len() as u64;
+                        let read = |value, timestamp| {
+                            MemoryRecordEnum::Read(MemoryReadRecord {
+                                value,
+                                timestamp,
+                                prev_timestamp: clk - 8,
+                                prev_page_prot_record: None,
+                            })
+                        };
+                        record.branch_events.push((
+                            BranchEvent::new(clk, pc, next_pc, opcode, a, b, c, a == 0),
+                            ITypeRecord {
+                                op_a: if a == 0 { 0 } else { 5 },
+                                a: read(a, clk + 4),
+                                op_b: if b == 0 { 0 } else { 6 },
+                                b: read(b, clk + 3),
+                                op_c: c,
+                                is_untrusted: false,
+                            },
+                        ));
+                        outcomes[usize::from(taken)] += 1;
+                    }
+                }
+            }
+        }
+        assert!(outcomes.iter().all(|count| *count > 0));
+    }
+    assert_eq!(record.branch_events.len(), 9720);
+    let chip = BranchChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
+    assert_eq!(
+        trace.width(),
+        <BranchChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
+    );
+    assert_eq!(trace.height(), 9728); // Eight zero-filled padding rows.
+    trace
+}
+
+fn branch_row(sp1: &[SP1Field]) -> Vec<NativeField> {
+    type Columns = BranchColumns<u8, SupervisorMode>;
+    // Authenticate the 31 input cells and all 14 witnesses using SP1's field offsets.
+    let mut indices: Vec<usize> = (0..offset_of!(Columns, next_pc)).collect();
+    indices.extend(offset_of!(Columns, is_beq)..offset_of!(Columns, is_branching));
+    indices.extend(offset_of!(Columns, compare_operation)..offset_of!(Columns, adapter_cols));
+    indices.push(offset_of!(Columns, is_branching));
+    indices.extend(offset_of!(Columns, next_pc)..offset_of!(Columns, is_beq));
+    assert_eq!(sp1.len(), 45);
+    assert_eq!(sp1.len(), BranchInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(
+        <BranchInstruction as Program<NativeField>>::PROVER_INPUTS,
+        31
+    );
+    let mut sorted = indices.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
+    indices
+        .into_iter()
+        .map(|index| NativeField::from_u64(sp1[index].as_canonical_u64()))
+        .collect()
+}
+
+#[test]
+fn generated_branch_witness_and_air_match_released_sp1() {
+    check_trace::<BranchInstruction, BranchInstructionAirSpec>(
+        &branch_trace(),
+        branch_row,
+        &BranchChip::<SupervisorMode>::default(),
+    );
+}
+
+#[test]
+fn all_branch_columns_preserve_constraints_and_interactions_under_mutation() {
+    // Every opcode, both outcomes, equality, sign boundaries, PC carries and padding.
+    let indices: Vec<usize> = (0..6)
+        .flat_map(|opcode| {
+            [0, 1, 9, 10, 61, 69, 71, 79, 80]
+                .into_iter()
+                .flat_map(move |pair| {
+                    [0, 6, 12, 18, 19].map(|pc_offset| opcode * 1620 + pair * 20 + pc_offset)
+                })
+        })
+        .chain([9720])
+        .collect();
+    assert_eq!(indices.len(), 271); // 36,585 independent column/value mutations.
+    check_mutations::<BranchInstruction, BranchInstructionAirSpec>(
+        &branch_trace(),
+        &indices,
+        branch_row,
+        &BranchChip::<SupervisorMode>::default(),
     );
 }

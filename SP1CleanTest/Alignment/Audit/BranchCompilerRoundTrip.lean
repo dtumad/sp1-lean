@@ -123,7 +123,7 @@ def data : ProverData (ZMod SP1Prime) := fun _ _ => #[]
 
 /-- The actual circuit witness generated from the identical compiled event. -/
 def row : Array (ZMod SP1Prime) :=
-  BranchChip.component.buildRow event.toBranchInputs data event.toBranchHint
+  BranchChip.component.buildRow event.toBranchInputs data (ProverHint.empty _)
 
 /-- The environment reads the actual generated row cells. -/
 def env : Environment (ZMod SP1Prime) := Environment.fromArray row data
@@ -140,7 +140,7 @@ theorem row_target : sndPcOf (SP1Clean.Soundness.stateAccess rowView) = 69628#64
 
 /-- One circuit-built Branch table, with the compiled event and no padding. -/
 def table : Table (ZMod SP1Prime) :=
-  Table.buildHinted BranchChip.component (BranchChip.traceInputs [event] 0) data
+  Table.build BranchChip.component (BranchChip.traceInputs [event] 0) data (ProverHint.empty _)
 
 /-- Completeness checks the real local table. It does not assert ensemble channel balance. -/
 theorem table_constraints : table.Constraints data :=

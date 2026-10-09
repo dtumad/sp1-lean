@@ -42,7 +42,7 @@ def projection : (id : InstructionChipId) →
   | .jalr => ⟨fun input _ => input.is_real,
       fun input offset => cpuStateNextMessage input.state #v[var ⟨offset⟩ - var ⟨offset + 8⟩, var ⟨offset + 1⟩, var ⟨offset + 2⟩] 8⟩
   | .branch => ⟨fun input _ => input.is_real,
-      fun input offset => cpuStateNextMessage input.state #v[var ⟨offset + 7⟩, var ⟨offset + 8⟩, var ⟨offset + 9⟩] 8⟩
+      fun input offset => cpuStateNextMessage input.state #v[var ⟨offset + 11⟩, var ⟨offset + 12⟩, var ⟨offset + 13⟩] 8⟩
   | .uType => ⟨fun input _ => input.is_real,
       fun input _ => cpuStatePushMessage input.state⟩
   | .loadByte => ⟨fun input _ => input.is_lb + input.is_lbu,

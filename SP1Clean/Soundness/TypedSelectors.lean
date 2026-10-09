@@ -279,29 +279,7 @@ theorem JalrChip.mainSelectorBinary :
 
 theorem BranchChip.mainSelectorBinary :
     MainSelectorBinary (p := p) BranchChip.main (fun input => input.is_real) := by
-  constructor
-  intro input offset env shallow
-  let flagSum : Expression (ZMod p) :=
-    var { index := offset } + var { index := offset + 1 } + var { index := offset + 2 } +
-      var { index := offset + 3 } + var { index := offset + 4 } + var { index := offset + 5 }
-  have allConstraints := (constraintsHold_shallow_iff_forall_mem.mp shallow).1
-  have linkMem : input.is_real - flagSum ∈
-      ((BranchChip.main input).operations offset).shallowConstraints := by
-    change (input.is_real - flagSum) ∈ (input.is_real - flagSum) :: _
-    exact List.mem_cons_self
-  have gateMem : flagSum * (flagSum - 1) ∈
-      ((BranchChip.main input).operations offset).shallowConstraints := by
-    change (flagSum * (flagSum - 1)) ∈
-      (input.is_real - flagSum) :: (flagSum * (flagSum - 1)) :: _
-    exact List.mem_cons_of_mem _ List.mem_cons_self
-  have link := allConstraints _ linkMem
-  have gate := allConstraints _ gateMem
-  simp only [circuit_norm] at link gate ⊢
-  rcases bool_of_mul_pred gate with selectorZero | selectorOne
-  · left
-    linear_combination link + selectorZero
-  · right
-    linear_combination link + selectorOne
+  headGateSelectorBinary BranchChip.main
 
 theorem UTypeChip.mainSelectorBinary :
     MainSelectorBinary (p := p) UTypeChip.main (fun input => input.is_real) := by

@@ -595,8 +595,8 @@ theorem JalrChip.programEmissionShape :
 theorem BranchChip.programEmissionShape :
     CircuitProgramEmissionShape (p := p) (BranchChip.circuit (p := p)) BranchChip.rowView := by
   programExposureStart
-  refine ⟨fun input _ => input.is_real, fun input offset =>
-    ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], BranchChip.exposedOpcode offset,
+  refine ⟨fun input _ => input.is_real, fun input _ =>
+    ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2], BranchChip.exposedOpcode input,
       input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c_imm,
       input.adapter.op_a_0, 0, 1⟩, ?_, ?_, ?_⟩
   · intro input offset

@@ -279,7 +279,7 @@ theorem branchChip_shallowNextPcContract :
     CircuitShallowNextPcContract (p := p) (BranchChip.circuit (p := p)) BranchChip.rowView := by
   let input : Var BranchChip.Inputs (ZMod p) := varFromOffset BranchChip.Inputs 0
   let offset := size BranchChip.Inputs
-  refine ⟨input.is_real, var { index := offset + 8 }, var { index := offset + 9 }, ?_, ?_, ?_⟩
+  refine ⟨input.is_real, var { index := offset + 12 }, var { index := offset + 13 }, ?_, ?_, ?_⟩
   · simp only [input, offset, BranchChip.circuit, BranchChip.main,
       Operations.shallowInteractions, circuit_norm, List.mem_cons]
   · simp only [input, offset, BranchChip.circuit, BranchChip.main,

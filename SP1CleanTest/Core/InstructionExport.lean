@@ -7,6 +7,7 @@ import SP1Clean.Proofs.Chips.BitwiseChip.Complete
 import SP1Clean.Proofs.Chips.LtChip.Complete
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
 import SP1Clean.Proofs.Chips.ShiftRightChip.Complete
+import SP1Clean.Proofs.Chips.BranchChip.Complete
 import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
@@ -86,5 +87,10 @@ def shiftLeftRust : Except String String :=
 def shiftRightRust : Except String String :=
   Extraction.Rust.ensembleToRust "ShiftRightInstruction"
     (ensemble { circuit := ShiftRightChip.circuit }) (config ShiftRightChip.Inputs)
+
+/-- Export all six conditional branches; Clean computes comparison, decision and next PC. -/
+def branchRust : Except String String :=
+  Extraction.Rust.ensembleToRust "BranchInstruction"
+    (ensemble { circuit := BranchChip.circuit }) (config BranchChip.Inputs)
 
 end SP1CleanTest.Core.InstructionExport

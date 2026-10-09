@@ -13,9 +13,8 @@ Covers the chips whose contracts reference only the contract layer (operand `isU
 plus UType. The rest keep their `Assumptions`/`ProverAssumptions` in their proof files, for one of
 two structural reasons (also recorded in `docs/architecture.md` § deliberate layering exceptions):
 
-- **hint/helper-dependent** — the `ProverAssumptions` references `Defs`-layer witness plumbing
-  that does not belong on the contract surface (`hintFlags` for Mul/Bitwise/Lt/Branch and the
-  shift/DivRem populate layers; Jal/Jalr's jump helpers). Lifting them would drag `Native`/proof
+- **helper-dependent** — the `ProverAssumptions` references `Defs`-layer witness plumbing
+  that does not belong on the contract surface (populate layers and Jal/Jalr jump helpers). Lifting them would drag `Native`/proof
   internals below the contract layer.
 - **Native-resident contract block** — the nine memory chips (the five loads, LoadX0 among
   them, and the four stores) and AluX0 define their `Inputs` (and `Spec`) in

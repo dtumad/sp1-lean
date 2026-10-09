@@ -170,34 +170,21 @@ private theorem branchOracle_ltSigned_interactions_eq {F : Type} [Field F] [CoeH
     Extracted.LtOperationSigned.interactions]
   simp only [branchOracle_u16msb_interactions_eq, branchOracle_ltUnsigned_interactions_eq]
 
-def branchChipInput {F : Type} [Add F]
-    (cols : BranchChip.Columns F) : BranchChip.Inputs F :=
-  { is_real :=
-      cols.is_beq + cols.is_bne + cols.is_blt + cols.is_bge +
-        cols.is_bltu + cols.is_bgeu
-    state := cols.state
-    adapter := cols.adapter }
+/-- Ordinary inputs recovered from any committed Branch row. -/
+def branchChipInput {F : Type} (cols : BranchChip.Columns F) : BranchChip.Inputs F :=
+  { state := cols.state, adapter := cols.adapter,
+    isBeq := cols.is_beq, isBne := cols.is_bne, isBlt := cols.is_blt,
+    isBge := cols.is_bge, isBltu := cols.is_bltu, isBgeu := cols.is_bgeu }
 
-private theorem branchChipInput_isReal {F : Type} [Add F]
-    (cols : BranchChip.Columns F) :
-    (branchChipInput cols).is_real =
-      cols.is_beq + cols.is_bne + cols.is_blt + cols.is_bge +
-        cols.is_bltu + cols.is_bgeu := rfl
+/-- Decision and next-PC cells follow the comparison certificate. -/
+def branchChipTail {F : Type} (cols : BranchChip.Columns F) : Vector F 4 :=
+  #v[cols.is_branching, cols.next_pc[0], cols.next_pc[1], cols.next_pc[2]]
 
-def branchChipPrefix {F : Type}
-    (cols : BranchChip.Columns F) : Vector F 10 :=
-  #v[cols.is_beq, cols.is_bne, cols.is_blt, cols.is_bge,
-    cols.is_bltu, cols.is_bgeu, cols.is_branching,
-    cols.next_pc[0], cols.next_pc[1], cols.next_pc[2]]
+/-- The fourteen independently committed witness cells, without executing witness generation. -/
+def branchChipLocals {F : Type} (cols : BranchChip.Columns F) : Vector F 14 :=
+  toElements cols.compare_operation ++ branchChipTail cols
 
-def branchChipLocals {F : Type}
-    (cols : BranchChip.Columns F) : Vector F 20 :=
-  Vector.cast (by rfl)
-    (branchChipPrefix cols ++
-      toElements cols.compare_operation)
-
-def branchChipPhysicalRow {F : Type} [Add F]
-    (cols : BranchChip.Columns F) : Array F :=
+def branchChipPhysicalRow {F : Type} (cols : BranchChip.Columns F) : Array F :=
   inputFirstRow (branchChipInput cols) (branchChipLocals cols)
 
 private theorem vec3_eta {F : Type} (value : Vector F 3) :
@@ -206,79 +193,11 @@ private theorem vec3_eta {F : Type} (value : Vector F 3) :
   intro i hi
   interval_cases i <;> rfl
 
-private theorem branchChipLocals_prefix {F : Type}
-    (cols : BranchChip.Columns F) (i : ℕ) (hi : i < 10) :
-    (branchChipLocals cols)[i] = (branchChipPrefix cols)[i] := by
-  unfold branchChipLocals
-  rw [Vector.getElem_cast, Vector.getElem_append_left hi]
-
-private theorem branchChipLocals_suffix {F : Type}
-    (cols : BranchChip.Columns F) (i : ℕ)
-    (hi : i < size Circuits.Types.LtOperationSigned) :
-    (branchChipLocals cols)[10 + i]'(by
-      have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
-      rw [hsize] at hi
-      omega) =
-      (toElements cols.compare_operation)[i] := by
-  unfold branchChipLocals
-  rw [Vector.getElem_cast,
-    Vector.getElem_append_right (by
-      have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
-      rw [hsize] at hi
-      omega) (by omega)]
-  congr
-  omega
-
-private theorem branchChipPrefix_zero {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[0] = cols.is_beq := rfl
-
-private theorem branchChipPrefix_one {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[1] = cols.is_bne := rfl
-
-private theorem branchChipPrefix_two {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[2] = cols.is_blt := rfl
-
-private theorem branchChipPrefix_three {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[3] = cols.is_bge := rfl
-
-private theorem branchChipPrefix_four {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[4] = cols.is_bltu := rfl
-
-private theorem branchChipPrefix_five {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[5] = cols.is_bgeu := rfl
-
-private theorem branchChipPrefix_six {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[6] = cols.is_branching := rfl
-
-private theorem branchChipPrefix_seven {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[7] = cols.next_pc[0] := rfl
-
-private theorem branchChipPrefix_eight {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[8] = cols.next_pc[1] := rfl
-
-private theorem branchChipPrefix_nine {F : Type}
-    (cols : BranchChip.Columns F) :
-    (branchChipPrefix cols)[9] = cols.next_pc[2] := rfl
-
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_branchChipCompare
-    (cols : BranchChip.Columns (ZMod p))
-    (data : ProverData (ZMod p)) :
-    Eval.eval
-        (Environment.fromArray
-          (inputFirstRow (branchChipInput cols)
-            (branchChipLocals cols)) data)
-        (varFromOffset Circuits.Types.LtOperationSigned (F := ZMod p)
-          (size BranchChip.Inputs + 10)) =
+    (cols : BranchChip.Columns (ZMod p)) (data : ProverData (ZMod p)) :
+    Eval.eval (Environment.fromArray (inputFirstRow (branchChipInput cols) (branchChipLocals cols)) data)
+      (varFromOffset Circuits.Types.LtOperationSigned (F := ZMod p) (size BranchChip.Inputs)) =
       cols.compare_operation := by
   rw [ProvableType.eval_varFromOffset]
   rw [← ProvableType.fromElements_toElements cols.compare_operation]
@@ -286,85 +205,56 @@ private theorem eval_branchChipCompare
   apply Vector.ext
   intro i hi
   rw [Vector.getElem_mapRange]
-  have hlocal := eval_local_inputFirstRow
-    (branchChipInput cols) (branchChipLocals cols) data (10 + i) (by
-      have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
-      rw [hsize] at hi
-      omega)
-  simp only [Expression.eval] at hlocal
-  exact (by
-    simpa only [Nat.add_assoc] using
-      hlocal.trans (branchChipLocals_suffix cols i hi))
+  have hlocal := eval_local_inputFirstRow (branchChipInput cols) (branchChipLocals cols) data i
+    (by change i < 10 at hi; omega)
+  simpa only [Expression.eval, branchChipLocals, Vector.getElem_append_left hi] using hlocal
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem eval_branchChipPrefixLocal
-    (cols : BranchChip.Columns (ZMod p))
-    (data : ProverData (ZMod p)) (i : ℕ) (hi : i < 10) :
+private theorem eval_branchChipTailLocal
+    (cols : BranchChip.Columns (ZMod p)) (data : ProverData (ZMod p)) (i : ℕ) (hi : i < 4) :
     Expression.eval
-        (Environment.fromArray
-          (inputFirstRow (branchChipInput cols)
-            (branchChipLocals cols)) data)
-        (var { index := size BranchChip.Inputs + i }) =
-      (branchChipPrefix cols)[i] := by
-  exact (eval_local_inputFirstRow (branchChipInput cols)
-    (branchChipLocals cols) data i (by omega)).trans
-      (branchChipLocals_prefix cols i hi)
+      (Environment.fromArray (inputFirstRow (branchChipInput cols) (branchChipLocals cols)) data)
+      (var { index := size BranchChip.Inputs + (10 + i) }) = (branchChipTail cols)[i] := by
+  have hlocal := eval_local_inputFirstRow (branchChipInput cols) (branchChipLocals cols) data
+    (10 + i) (by omega)
+  have hsize : size Circuits.Types.LtOperationSigned = 10 := rfl
+  unfold branchChipLocals at hlocal
+  rw [Vector.getElem_append_right (by omega) (by omega)] at hlocal
+  simp only [hsize, Nat.add_sub_cancel_left] at hlocal
+  exact hlocal
 
 theorem eval_branchChipDirectOutput
-    (cols : BranchChip.Columns (ZMod p))
-    (data : ProverData (ZMod p)) :
+    (cols : BranchChip.Columns (ZMod p)) (data : ProverData (ZMod p)) :
     ProvableType.eval
-        (Environment.fromArray
-          (inputFirstRow (branchChipInput cols)
-            (branchChipLocals cols)) data)
-        ((BranchChip.elaborated (p := p)).output
-          (varFromOffset BranchChip.Inputs 0)
-          (size BranchChip.Inputs)) =
-      cols := by
+      (Environment.fromArray (inputFirstRow (branchChipInput cols) (branchChipLocals cols)) data)
+      ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
+        (size BranchChip.Inputs)) = cols := by
   rw [BranchChip.directOutput_eq]
-  rw [← CircuitType.eval_expression, BranchChip.eval_columns]
-  rw [BranchChip.Columns.mk.injEq]
+  rw [← CircuitType.eval_expression, BranchChip.eval_columns, BranchChip.Columns.mk.injEq]
   dsimp only
-  have hinputEval := eval_inputFirstRow
-    (branchChipInput cols) (branchChipLocals cols) data
-  rw [BranchChip.eval_inputs, BranchChip.Inputs.mk.injEq] at hinputEval
-  refine
-    ⟨by simpa only [branchChipInput] using hinputEval.2.1,
-      by simpa only [branchChipInput] using hinputEval.2.2,
-      ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-      ?_, ?_⟩
+  have hinput := eval_inputFirstRow (branchChipInput cols) (branchChipLocals cols) data
+  rw [BranchChip.eval_inputs, BranchChip.Inputs.mk.injEq] at hinput
+  obtain ⟨hstate, hadapter, hf0, hf1, hf2, hf3, hf4, hf5⟩ := hinput
+  refine ⟨hstate, hadapter, ?_, hf0, hf1, hf2, hf3, hf4, hf5, ?_, eval_branchChipCompare cols data⟩
   · apply Vector.ext
     intro i hi
     rw [← ProvableType.getElem_eval_fields
-      (Environment.fromArray
-        (inputFirstRow (branchChipInput cols)
-          (branchChipLocals cols)) data)
-      (Vector.mapRange 3 fun i =>
-        var { index := size BranchChip.Inputs + 7 + i }) i hi]
+      (Environment.fromArray (inputFirstRow (branchChipInput cols) (branchChipLocals cols)) data)
+      (Vector.mapRange 3 fun i => var { index := size BranchChip.Inputs + 11 + i }) i hi]
     rw [Vector.getElem_mapRange]
     interval_cases i
-    · simpa only [branchChipPrefix_seven] using
-        (eval_branchChipPrefixLocal (p := p) cols data 7 (by decide))
-    · simpa only [branchChipPrefix_eight] using
-        (eval_branchChipPrefixLocal (p := p) cols data 8 (by decide))
-    · simpa only [branchChipPrefix_nine] using
-        (eval_branchChipPrefixLocal (p := p) cols data 9 (by decide))
-  · simpa only [branchChipPrefix_zero, ProvableType.eval_field,
-      Nat.add_zero] using
-      (eval_branchChipPrefixLocal (p := p) cols data 0 (by decide))
-  · simpa only [branchChipPrefix_one, ProvableType.eval_field] using
-      (eval_branchChipPrefixLocal (p := p) cols data 1 (by decide))
-  · simpa only [branchChipPrefix_two, ProvableType.eval_field] using
-      (eval_branchChipPrefixLocal (p := p) cols data 2 (by decide))
-  · simpa only [branchChipPrefix_three, ProvableType.eval_field] using
-      (eval_branchChipPrefixLocal (p := p) cols data 3 (by decide))
-  · simpa only [branchChipPrefix_four, ProvableType.eval_field] using
-      (eval_branchChipPrefixLocal (p := p) cols data 4 (by decide))
-  · simpa only [branchChipPrefix_five, ProvableType.eval_field] using
-      (eval_branchChipPrefixLocal (p := p) cols data 5 (by decide))
-  · simpa only [branchChipPrefix_six, ProvableType.eval_field] using
-      (eval_branchChipPrefixLocal (p := p) cols data 6 (by decide))
-  · exact eval_branchChipCompare cols data
+    · simpa only [branchChipTail, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_assoc] using
+        eval_branchChipTailLocal (p := p) cols data 1 (by decide)
+    · simpa only [branchChipTail, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_assoc] using
+        eval_branchChipTailLocal (p := p) cols data 2 (by decide)
+    · simpa only [branchChipTail, Vector.getElem_mk, List.getElem_toArray,
+        List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_assoc] using
+        eval_branchChipTailLocal (p := p) cols data 3 (by decide)
+  · simpa only [branchChipTail, ProvableType.eval_field, Vector.getElem_mk,
+      List.getElem_toArray, List.getElem_cons_zero, Nat.add_zero] using
+      eval_branchChipTailLocal (p := p) cols data 0 (by decide)
 
 def branchChipRowCodec :
     ChipRowCodec BranchChip.Inputs BranchChip.Columns
@@ -386,31 +276,28 @@ def branchChipRowCodec :
         Air.Flat.Component.rowOffset_mk]
       exact eval_branchChipDirectOutput (p := p) cols data }
 
-private def branchFlag (offset i : ℕ) : Expression (ZMod p) :=
-  var { index := offset + i }
-
 private def branchIsBranching (offset : ℕ) : Expression (ZMod p) :=
-  var { index := offset + 6 }
+  var { index := offset + 10 }
 
 private def branchNextPc (offset : ℕ) :
     Vector (Expression (ZMod p)) 3 :=
-  #v[var { index := offset + 7 },
-    var { index := offset + 8 },
-    var { index := offset + 9 }]
+  #v[var { index := offset + 11 },
+    var { index := offset + 12 },
+    var { index := offset + 13 }]
 
 private def branchCompare (offset : ℕ) :
     Circuits.Types.LtOperationSigned (Expression (ZMod p)) :=
-  varFromOffset Circuits.Types.LtOperationSigned (offset + 10)
+  varFromOffset Circuits.Types.LtOperationSigned (offset)
 
-private def branchSum (offset : ℕ) : Expression (ZMod p) :=
-  branchFlag offset 0 + branchFlag offset 1 +
-    branchFlag offset 2 + branchFlag offset 3 +
-      branchFlag offset 4 + branchFlag offset 5
+private def branchSum (input : Var BranchChip.Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isBeq + input.isBne +
+    input.isBlt + input.isBge +
+      input.isBltu + input.isBgeu
 
-private def branchOpcode (offset : ℕ) : Expression (ZMod p) :=
-  branchFlag offset 0 * 40 + branchFlag offset 1 * 41 +
-    branchFlag offset 2 * 42 + branchFlag offset 3 * 43 +
-      branchFlag offset 4 * 44 + branchFlag offset 5 * 45
+private def branchOpcode (input : Var BranchChip.Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isBeq * 40 + input.isBne * 41 +
+    input.isBlt * 42 + input.isBge * 43 +
+      input.isBltu * 44 + input.isBgeu * 45
 
 private def branchLtInput
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -424,7 +311,7 @@ private def branchLtInput
       input.adapter.op_b_memory.prev_value[2],
       input.adapter.op_b_memory.prev_value[3]],
     branchCompare offset,
-    branchFlag offset 2 + branchFlag offset 3,
+    input.isBlt + input.isBge,
     input.is_real⟩
 
 private def branchCpuInput
@@ -433,23 +320,23 @@ private def branchCpuInput
   ⟨input.state, branchNextPc offset, 8, input.is_real⟩
 
 private def branchITypeInput
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
+    (input : Var BranchChip.Inputs (ZMod p)) (_offset : ℕ) :
     Var Readers.ITypeReaderImmutable.Inputs (ZMod p) :=
   ⟨input.adapter, input.is_real, input.is_real,
     input.state.clk_high,
     input.state.clk_0_16 + input.state.clk_16_24 * 65536,
-    input.state.pc, branchOpcode offset⟩
+    input.state.pc, branchOpcode input⟩
 
 private def branchInlineConstraints
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     List (Expression (ZMod p)) :=
-  let f0 := branchFlag offset 0
-  let f1 := branchFlag offset 1
-  let f2 := branchFlag offset 2
-  let f3 := branchFlag offset 3
-  let f4 := branchFlag offset 4
-  let f5 := branchFlag offset 5
-  let sum := branchSum offset
+  let f0 := input.isBeq
+  let f1 := input.isBne
+  let f2 := input.isBlt
+  let f3 := input.isBge
+  let f4 := input.isBltu
+  let f5 := input.isBgeu
+  let sum := branchSum input
   let branching := branchIsBranching offset
   let cmp := branchCompare offset
   let nextPc := branchNextPc offset
@@ -483,7 +370,7 @@ private def branchInlineConstraints
   [ f0 * (f0 - 1), f1 * (f1 - 1),
     f2 * (f2 - 1), f3 * (f3 - 1),
     f4 * (f4 - 1), f5 * (f5 - 1),
-    input.is_real - sum, sum * (sum - 1),
+    sum * (sum - 1),
     branching * (branching - 1),
     sum * (branching - decision),
     branching * (taken0 * (taken0 - 1)),
@@ -501,18 +388,18 @@ private def branchNativeMeaning
   List.Forall (· = 0)
       (nativeAssertZeros env
         ((LtOperationSigned.main
-          (branchLtInput input offset)).operations (offset + 20))) ∧
+          (branchLtInput input offset)).operations (offset + 14))) ∧
     List.Forall (· = 0)
       ((branchInlineConstraints input offset).map
         (Expression.eval env)) ∧
     List.Forall (· = 0)
       (nativeAssertZeros env
         ((Readers.CPUState.main
-          (branchCpuInput input offset)).operations (offset + 20))) ∧
+          (branchCpuInput input offset)).operations (offset + 14))) ∧
     List.Forall (· = 0)
       (nativeAssertZeros env
         ((Readers.ITypeReaderImmutable.main
-          (branchITypeInput input offset)).operations (offset + 20)))
+          (branchITypeInput input offset)).operations (offset + 14)))
 
 private theorem branchNativeAssertionsDecompose
     (env : Environment (ZMod p))
@@ -523,7 +410,7 @@ private theorem branchNativeAssertionsDecompose
       branchNativeMeaning env input offset := by
   have hLtSize : size Circuits.Types.LtOperationSigned = 10 := rfl
   unfold branchNativeMeaning
-  simp only [nativeAssertZeros, BranchChip.main,
+  dsimp only [nativeAssertZeros, BranchChip.main, BranchChip.branchDecision,
     Circuit.operations, Circuit.bind_def, Circuit.pure_def,
     witnessVectorIR, witnessField, Witnessable.witness, witnessIR,
     subcircuitWithAssertion, assertion, assertZero,
@@ -545,7 +432,7 @@ private theorem branchNativeAssertionsDecompose
     List.map_append, List.map_cons, List.map_nil,
     List.forall_append, List.forall_cons]
   simp only [branchLtInput, branchCpuInput, branchITypeInput,
-    branchInlineConstraints, branchFlag, branchIsBranching,
+    branchInlineConstraints, branchIsBranching,
     branchNextPc, branchCompare, branchSum, branchOpcode,
     LtOperationSigned.circuit, Readers.CPUState.circuit,
     Readers.ITypeReaderImmutable.circuit,
@@ -797,7 +684,7 @@ private theorem branchColumns_interactions_decompose
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 private theorem branchNextPcMap_eq (offset : ℕ) :
     (Vector.mapRange 3 fun i =>
-      (var { index := offset + 7 + i } :
+      (var { index := offset + 11 + i } :
         Expression (ZMod p))) =
       branchNextPc offset := by
   apply Vector.ext
@@ -813,14 +700,14 @@ private def branchChipRustColumns
     adapter := Eval.eval env input.adapter
     next_pc := Eval.eval env
       (Vector.mapRange 3 fun i =>
-        (var { index := offset + 7 + i } :
+        (var { index := offset + 11 + i } :
           Expression (ZMod p)))
-    is_beq := Expression.eval env (branchFlag offset 0)
-    is_bne := Expression.eval env (branchFlag offset 1)
-    is_blt := Expression.eval env (branchFlag offset 2)
-    is_bge := Expression.eval env (branchFlag offset 3)
-    is_bltu := Expression.eval env (branchFlag offset 4)
-    is_bgeu := Expression.eval env (branchFlag offset 5)
+    is_beq := Expression.eval env (input.isBeq)
+    is_bne := Expression.eval env (input.isBne)
+    is_blt := Expression.eval env (input.isBlt)
+    is_bge := Expression.eval env (input.isBge)
+    is_bltu := Expression.eval env (input.isBltu)
+    is_bgeu := Expression.eval env (input.isBgeu)
     is_branching := Expression.eval env
       (branchIsBranching offset)
     compare_operation := Eval.eval env (branchCompare (p := p) offset) }
@@ -893,62 +780,56 @@ private theorem branchRustAssertionsDecompose
 omit [Fact (2 ^ 17 < p)] in
 private theorem branchCpuMeaningFaithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     branchRustCpuMeaning env input offset ↔
       List.Forall (· = 0)
         (nativeAssertZeros env
           ((Readers.CPUState.main
-            (branchCpuInput input offset)).operations (offset + 20))) := by
+            (branchCpuInput input offset)).operations (offset + 14))) := by
   let cpuInput := branchCpuInput input offset
   have hCpu := CanonicalReader.cpuStateAssertions
-    (p := p) env cpuInput (offset + 20)
+    (p := p) env cpuInput (offset + 14)
     (Eval.eval env input.state)
     (Eval.eval env (branchNextPc (p := p) offset))
-    8 (Expression.eval env (branchSum (p := p) offset)) (by
+    8 (Expression.eval env (branchSum (p := p) input)) (by
       simp only [cpuInput, branchCpuInput,
         ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      rfl)
   unfold branchRustCpuMeaning
   dsimp only [branchChipRustColumns]
   rw [branchNextPcMap_eq]
-  simpa only [branchSum, branchFlag, eval_add,
+  simpa only [branchSum, eval_add,
     Expression.eval] using hCpu
 
 private theorem branchITypeMeaningFaithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     branchRustITypeMeaning env input offset ↔
       List.Forall (· = 0)
         (nativeAssertZeros env
           ((Readers.ITypeReaderImmutable.main
-            (branchITypeInput input offset)).operations (offset + 20))) := by
+            (branchITypeInput input offset)).operations (offset + 14))) := by
   let readerInput := branchITypeInput input offset
   have hIType := CanonicalReader.iTypeImmutableAssertionsExact
-    (p := p) env readerInput (offset + 20)
+    (p := p) env readerInput (offset + 14)
     (Expression.eval env input.state.clk_high)
     (Expression.eval env
       (input.state.clk_0_16 + input.state.clk_16_24 * 65536))
-    (Expression.eval env (branchOpcode (p := p) offset))
-    (Expression.eval env (branchSum (p := p) offset))
-    (Expression.eval env (branchSum (p := p) offset))
+    (Expression.eval env (branchOpcode (p := p) input))
+    (Expression.eval env (branchSum (p := p) input))
+    (Expression.eval env (branchSum (p := p) input))
     (Eval.eval env input.state.pc)
     (Eval.eval env input.adapter)
     (by
       simp only [readerInput, branchITypeInput,
         ProvableStruct.eval_eq_eval,
         ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      rfl)
     (by
       simp only [readerInput, branchITypeInput,
         ProvableStruct.eval_eq_eval,
         ProvableStruct.structEvalLiteralProc]
-      exact hinputReal)
+      rfl)
     (by
       simp only [readerInput, branchITypeInput]
       rw [Readers.ITypeReader.eval_cols]
@@ -985,21 +866,18 @@ private theorem branchITypeMeaningFaithful
   unfold branchRustITypeMeaning
   dsimp only [branchChipRustColumns]
   simpa only [readerInput, branchITypeInput, branchSum,
-    branchOpcode, branchFlag, eval_cpuState,
+    branchOpcode, eval_cpuState,
     Readers.ITypeReader.eval_cols, ProvableType.eval_field,
     eval_add, eval_mul, Expression.eval] using hIType
 
 private theorem branchLtMeaningFaithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     branchRustLtMeaning env input offset ↔
       List.Forall (· = 0)
         (nativeAssertZeros env
           ((LtOperationSigned.main
-            (branchLtInput input offset)).operations (offset + 20))) := by
+            (branchLtInput input offset)).operations (offset + 14))) := by
   let ltInput := branchLtInput input offset
   have hA :
       Eval.eval env ltInput.b =
@@ -1018,16 +896,12 @@ private theorem branchLtMeaningFaithful
     dsimp only
     rw [eval_registerAccessCols]
   have hExact := ltSigned_assertions_exact
-    (p := p) env ltInput (offset + 20)
+    (p := p) env ltInput (offset + 14)
   rw [hA, hB] at hExact
-  simp only [ltInput, branchLtInput, branchFlag,
-    Expression.eval] at hExact
-  rw [hinputReal] at hExact
-  simp only [branchSum, branchFlag,
+  simp only [ltInput, branchLtInput,
     Expression.eval] at hExact
   unfold branchRustLtMeaning
   dsimp only [branchChipRustColumns]
-  simp only [branchFlag, Expression.eval]
   rw [← hExact]
   rfl
 
@@ -1040,10 +914,7 @@ private theorem branchLtMeaningFaithful
 omit [Fact (2 ^ 17 < p)] in
 private theorem branchTailMeaningFaithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     branchRustTailMeaning env input offset ↔
       List.Forall (· = 0)
         ((branchInlineConstraints input offset).map
@@ -1052,7 +923,7 @@ private theorem branchTailMeaningFaithful
   dsimp only [branchChipRustColumns]
   rw [branchNextPcMap_eq]
   simp only [branchRustTail, branchInlineConstraints]
-  simp only [branchFlag, branchIsBranching, branchNextPc,
+  simp only [branchIsBranching, branchNextPc,
     branchCompare, branchSum,
     eval_cpuState, Readers.ITypeReader.eval_cols,
     eval_ltSignedColumns, eval_ltUnsignedColumns,
@@ -1062,34 +933,25 @@ private theorem branchTailMeaningFaithful
     List.getElem_cons_zero, List.getElem_cons_succ,
     List.map_cons, List.map_nil, List.Forall,
     eval_sub, Expression.eval]
-  rw [hinputReal]
-  simp only [branchSum, branchFlag,
-    Expression.eval, sub_self]
   tauto
 
 private theorem branchMeaningFaithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     branchRustMeaning env input offset ↔
       branchNativeMeaning env input offset := by
   unfold branchRustMeaning branchNativeMeaning
-  rw [branchCpuMeaningFaithful env input offset hinputReal,
-    branchITypeMeaningFaithful env input offset hinputReal,
-    branchLtMeaningFaithful env input offset hinputReal,
-    branchTailMeaningFaithful env input offset hinputReal]
+  rw [branchCpuMeaningFaithful env input offset,
+    branchITypeMeaningFaithful env input offset,
+    branchLtMeaningFaithful env input offset,
+    branchTailMeaningFaithful env input offset]
   tauto
 
 theorem branchChip_constraints_faithful
     (env : Environment (ZMod p))
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : BranchChip.Columns (ZMod p))
-    (hbind : BindsChipOutput BranchChip.main env input offset cols)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (hbind : BindsChipOutput BranchChip.main env input offset cols) :
     List.Forall (· = 0)
         (branchChipOracle.nativeAssertZeros cols) ↔
       List.Forall (· = 0)
@@ -1105,74 +967,8 @@ theorem branchChip_constraints_faithful
   subst cols
   exact (branchRustAssertionsDecompose
     (p := p) env input offset).trans
-      ((branchMeaningFaithful env input offset hinputReal).trans
+      ((branchMeaningFaithful env input offset).trans
         (branchNativeAssertionsDecompose env input offset).symm)
-
-private theorem branchChipRowCodec_inputReal
-    (cols : BranchChip.Columns (ZMod p))
-    (data : ProverData (ZMod p)) :
-    let assignment := branchChipRowCodec.assignment cols data
-    Expression.eval assignment.environment
-        ({ circuit := BranchChip.circuit (p := p) } :
-          Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-      Expression.eval assignment.environment
-        (branchSum
-          ({ circuit := BranchChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowOffset) := by
-  dsimp only
-  let assignment := branchChipRowCodec.assignment cols data
-  rw [Air.Flat.Component.rowInputVar_mk,
-    Air.Flat.Component.rowOffset_mk]
-  have hInput :
-      Expression.eval
-          (Environment.fromArray
-            (inputFirstRow (branchChipInput cols)
-              (branchChipLocals cols)) data)
-          (varFromOffset BranchChip.Inputs 0).is_real =
-        (branchChipInput cols).is_real := by
-    rw [← BranchChip.eval_inputIsReal]
-    exact congrArg (fun value => value.is_real)
-      (eval_inputFirstRow (branchChipInput cols)
-        (branchChipLocals cols) data)
-  have h0 := eval_branchChipPrefixLocal
-    (p := p) cols data 0 (by decide)
-  have h1 := eval_branchChipPrefixLocal
-    (p := p) cols data 1 (by decide)
-  have h2 := eval_branchChipPrefixLocal
-    (p := p) cols data 2 (by decide)
-  have h3 := eval_branchChipPrefixLocal
-    (p := p) cols data 3 (by decide)
-  have h4 := eval_branchChipPrefixLocal
-    (p := p) cols data 4 (by decide)
-  have h5 := eval_branchChipPrefixLocal
-    (p := p) cols data 5 (by decide)
-  change
-    Expression.eval assignment.environment
-        (varFromOffset BranchChip.Inputs 0).is_real =
-      assignment.environment.get (size BranchChip.Inputs) +
-          assignment.environment.get (size BranchChip.Inputs + 1) +
-        assignment.environment.get (size BranchChip.Inputs + 2) +
-        assignment.environment.get (size BranchChip.Inputs + 3) +
-        assignment.environment.get (size BranchChip.Inputs + 4) +
-        assignment.environment.get (size BranchChip.Inputs + 5)
-  rw [show assignment.environment =
-      Environment.fromArray
-        (inputFirstRow (branchChipInput cols)
-          (branchChipLocals cols)) data by rfl]
-  rw [branchChipPrefix_zero] at h0
-  rw [branchChipPrefix_one] at h1
-  rw [branchChipPrefix_two] at h2
-  rw [branchChipPrefix_three] at h3
-  rw [branchChipPrefix_four] at h4
-  rw [branchChipPrefix_five] at h5
-  rw [branchChipInput_isReal] at hInput
-  simp only [Expression.eval] at h0 h1 h2 h3 h4 h5
-  have h01 := congrArg₂ (· + ·) h0 h1
-  have h012 := congrArg₂ (· + ·) h01 h2
-  have h0123 := congrArg₂ (· + ·) h012 h3
-  have h01234 := congrArg₂ (· + ·) h0123 h4
-  have h012345 := congrArg₂ (· + ·) h01234 h5
-  simpa only [Nat.add_zero] using hInput.trans h012345.symm
 
 theorem branchChip_constraints_constructive
     (rustCols : Extracted.BranchOracle.BranchColumns (ZMod p))
@@ -1194,21 +990,12 @@ theorem branchChip_constraints_constructive
     have h := NativeRowAssignment.bindsOutput assignment
     rw [BranchChip.circuit_main_eq] at h
     exact h
-  have hinputReal :
-      Expression.eval assignment.environment
-          ({ circuit := BranchChip.circuit (p := p) } :
-            Air.Flat.Component (ZMod p)).rowInputVar.is_real =
-        Expression.eval assignment.environment
-          (branchSum
-            ({ circuit := BranchChip.circuit (p := p) } :
-              Air.Flat.Component (ZMod p)).rowOffset) :=
-    branchChipRowCodec_inputReal (p := p) cols data
   have hlegacy := branchChip_constraints_faithful (p := p)
     assignment.environment
     ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := BranchChip.circuit (p := p) } :
-      Air.Flat.Component (ZMod p)).rowOffset cols hbind hinputReal
+      Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (branchChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
@@ -1341,11 +1128,11 @@ private def branchStateInteractions
   Readers.CPUState.stateInteractions (branchCpuInput input offset)
 
 private def branchProgramInteractions
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
+    (input : Var BranchChip.Inputs (ZMod p)) (_offset : ℕ) :
     List (ChannelInteraction (programChannel (p := p))) :=
   [ programChannel.pulledIf input.is_real
       ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2],
-        branchOpcode offset, input.adapter.op_a,
+        branchOpcode input, input.adapter.op_a,
         #v[input.adapter.op_b, 0, 0, 0],
         input.adapter.op_c_imm, input.adapter.op_a_0, 0, 1⟩ ]
 
@@ -1353,12 +1140,12 @@ private def branchTailByteInteractions
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (byteChannel (p := p))) :=
   [ byteChannel.pulledIf input.is_real
-      ⟨6, (var { index := offset + 7 } :
+      ⟨6, (var { index := offset + 11 } :
         Expression (ZMod p)) * (4 : ZMod p)⁻¹, 14, 0⟩,
     byteChannel.pulledIf input.is_real
-      ⟨6, var { index := offset + 8 }, 16, 0⟩,
+      ⟨6, var { index := offset + 12 }, 16, 0⟩,
     byteChannel.pulledIf input.is_real
-      ⟨6, var { index := offset + 9 }, 16, 0⟩ ]
+      ⟨6, var { index := offset + 13 }, 16, 0⟩ ]
 
 private theorem branchStateInteractions_eq
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -1392,7 +1179,7 @@ private theorem branchProgramInteractions_eq
     (by
       simp [BranchChip.circuit, BranchChip.stateExposure,
         branchProgramInteractions, BranchChip.exposedOpcode,
-        branchOpcode, branchFlag, expose])
+        branchOpcode, expose])
 
 private theorem branchLtByteInteractions_subcircuit
     (input : Var LtOperationSigned.Inputs (ZMod p))
@@ -1440,13 +1227,13 @@ private theorem branchByteInteractions_decompose
         byteChannel.toRaw =
       ((LtOperationSigned.main
         (branchLtInput input offset)).operations
-          (offset + 20)).interactionsWith byteChannel.toRaw ++
+          (offset + 14)).interactionsWith byteChannel.toRaw ++
       ((Readers.CPUState.main
         (branchCpuInput input offset)).operations
-          (offset + 20)).interactionsWith byteChannel.toRaw ++
+          (offset + 14)).interactionsWith byteChannel.toRaw ++
       ((Readers.ITypeReaderImmutable.main
         (branchITypeInput input offset)).operations
-          (offset + 20)).interactionsWith byteChannel.toRaw ++
+          (offset + 14)).interactionsWith byteChannel.toRaw ++
       (branchTailByteInteractions input offset).map
         ChannelInteraction.toRaw := by
   have hLtSize : size Circuits.Types.LtOperationSigned = 10 := rfl
@@ -1480,7 +1267,7 @@ private theorem branchByteInteractions_decompose
     ChannelInteraction.toRaw_channel,
     List.nil_append]
   simp only [branchLtInput, branchCpuInput, branchITypeInput,
-    branchTailByteInteractions, branchFlag, branchNextPc,
+    branchTailByteInteractions, branchNextPc,
     branchCompare, branchOpcode,
     hLtSize, Nat.add_zero, Nat.add_assoc,
     Nat.reduceAdd,
@@ -1604,8 +1391,8 @@ private theorem branchRustColumns_sum
     let cols := branchChipRustColumns env input offset
     cols.is_beq + cols.is_bne + cols.is_blt + cols.is_bge +
         cols.is_bltu + cols.is_bgeu =
-      Expression.eval env (branchSum offset) := by
-  simp only [branchChipRustColumns, branchSum, branchFlag,
+      Expression.eval env (branchSum input) := by
+  simp only [branchChipRustColumns, branchSum,
     Expression.eval]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -1622,16 +1409,13 @@ private theorem branchRustColumns_opcode
     let cols := branchChipRustColumns env input offset
     cols.is_beq * 40 + cols.is_bne * 41 + cols.is_blt * 42 +
           cols.is_bge * 43 + cols.is_bltu * 44 + cols.is_bgeu * 45 =
-      Expression.eval env (branchOpcode offset) := by
-  simp only [branchChipRustColumns, branchOpcode, branchFlag,
+      Expression.eval env (branchOpcode input) := by
+  simp only [branchChipRustColumns, branchOpcode,
     Expression.eval]
 
 private theorem branchStateInteractions_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((branchStateInteractions input offset).map
         ChannelInteraction.toRaw).map
           (AbstractInteraction.toAccess env)) =
@@ -1642,9 +1426,8 @@ private theorem branchStateInteractions_faithful
     (p := p) env cpuInput
     (Eval.eval env input.state)
     (Eval.eval env (branchNextPc (p := p) offset))
-    8 (Expression.eval env (branchSum offset))
-    (by simpa only [cpuInput, branchCpuInput,
-      ProvableStruct.structEvalLiteralProc] using hinputReal)
+    8 (Expression.eval env (branchSum input))
+    (by rfl)
     (by simp only [cpuInput, branchCpuInput, eval_cpuState,
       ProvableType.eval_field])
     (by simp only [cpuInput, branchCpuInput, eval_cpuState,
@@ -1716,13 +1499,10 @@ private theorem branchTailRustAccesses_noMemory
 
 private theorem branchITypeMemory_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((((Readers.ITypeReaderImmutable.main
           (branchITypeInput input offset)).operations
-            (offset + 20)).interactionsWith memoryChannel.toRaw).map
+            (offset + 14)).interactionsWith memoryChannel.toRaw).map
               (AbstractInteraction.toAccess env)).map
                 LookupAccessList.negMult) =
       (branchITypeRustAccesses
@@ -1732,18 +1512,17 @@ private theorem branchITypeMemory_faithful
   let rustAdapter := Eval.eval env input.adapter
   have hReader :=
     itypereaderimmutable_memory_interactions_faithful_syntactic
-      (p := p) env readerInput (offset + 20)
+      (p := p) env readerInput (offset + 14)
       (Expression.eval env input.state.clk_high)
       (Expression.eval env
         (input.state.clk_0_16 +
           input.state.clk_16_24 * 65536))
       (Eval.eval env input.state.pc)
-      (Expression.eval env (branchOpcode offset))
+      (Expression.eval env (branchOpcode input))
       rustAdapter
-      (Expression.eval env (branchSum offset))
-      (Expression.eval env (branchSum offset))
-      (by simpa only [readerInput, branchITypeInput,
-        ProvableStruct.structEvalLiteralProc] using hinputReal)
+      (Expression.eval env (branchSum input))
+      (Expression.eval env (branchSum input))
+      (by rfl)
       (by rfl)
       (by rfl)
       (by simp only [readerInput, branchITypeInput, rustAdapter,
@@ -1796,10 +1575,7 @@ private theorem branchITypeMemory_faithful
 
 private theorem branchMemoryInteractions_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((((BranchChip.exposedMemoryInteractions input offset).map
           ChannelInteraction.toRaw).map
             (AbstractInteraction.toAccess env)).map
@@ -1809,10 +1585,10 @@ private theorem branchMemoryInteractions_faithful
   let readerInput := branchITypeInput input offset
   have hReader :=
     Soundness.iTypeReaderImmutable_memoryInteractions
-      (p := p) readerInput (offset + 20)
+      (p := p) readerInput (offset + 14)
   change
     ((Readers.ITypeReaderImmutable.main readerInput).operations
-        (offset + 20)).interactionsWith memoryChannel.toRaw =
+        (offset + 14)).interactionsWith memoryChannel.toRaw =
       Soundness.iTypeImmutableMemoryInteractions readerInput at hReader
   have hExposure :
       Soundness.iTypeImmutableMemoryInteractions readerInput =
@@ -1827,7 +1603,7 @@ private theorem branchMemoryInteractions_faithful
     branchLtRustAccesses_noMemory,
     branchTailRustAccesses_noMemory]
   simp only [List.nil_append, List.append_nil]
-  rw [← branchITypeMemory_faithful env input offset hinputReal]
+  rw [← branchITypeMemory_faithful env input offset]
   apply congrArg (List.map LookupAccessList.negMult)
   apply congrArg (List.map (AbstractInteraction.toAccess env))
   exact (hReader.trans hExposure).symm
@@ -1862,13 +1638,10 @@ private theorem branchTailRustAccesses_noProgram
 
 private theorem branchITypeProgram_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((((Readers.ITypeReaderImmutable.main
           (branchITypeInput input offset)).operations
-            (offset + 20)).interactionsWith programChannel.toRaw).map
+            (offset + 14)).interactionsWith programChannel.toRaw).map
               (AbstractInteraction.toAccess env)).map
                 LookupAccessList.negMult) =
       (branchITypeRustAccesses
@@ -1878,18 +1651,17 @@ private theorem branchITypeProgram_faithful
   let rustAdapter := Eval.eval env input.adapter
   have hReader :=
     itypereaderimmutable_program_interactions_faithful_syntactic
-      (p := p) env readerInput (offset + 20)
+      (p := p) env readerInput (offset + 14)
       (Expression.eval env input.state.clk_high)
       (Expression.eval env
         (input.state.clk_0_16 +
           input.state.clk_16_24 * 65536))
       (Eval.eval env input.state.pc)
-      (Expression.eval env (branchOpcode offset))
+      (Expression.eval env (branchOpcode input))
       rustAdapter
-      (Expression.eval env (branchSum offset))
-      (Expression.eval env (branchSum offset))
-      (by simpa only [readerInput, branchITypeInput,
-        ProvableStruct.structEvalLiteralProc] using hinputReal)
+      (Expression.eval env (branchSum input))
+      (Expression.eval env (branchSum input))
+      (by rfl)
       (by
         simp only [readerInput, branchITypeInput]
         exact ProvableType.getElem_eval_fields env input.state.pc 0
@@ -1937,10 +1709,7 @@ private theorem branchITypeProgram_faithful
 
 private theorem branchProgramInteractions_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((((branchProgramInteractions input offset).map
           ChannelInteraction.toRaw).map
             (AbstractInteraction.toAccess env)).map
@@ -1950,10 +1719,10 @@ private theorem branchProgramInteractions_faithful
   let readerInput := branchITypeInput input offset
   have hReader :=
     Soundness.iTypeReaderImmutable_programInteractions
-      (p := p) readerInput (offset + 20)
+      (p := p) readerInput (offset + 14)
   change
     ((Readers.ITypeReaderImmutable.main readerInput).operations
-        (offset + 20)).interactionsWith programChannel.toRaw =
+        (offset + 14)).interactionsWith programChannel.toRaw =
       [(programChannel.pulledIf readerInput.is_trusted
         (Soundness.iTypeImmutableProgramMessage readerInput)).toRaw]
       at hReader
@@ -1971,7 +1740,7 @@ private theorem branchProgramInteractions_faithful
     branchLtRustAccesses_noProgram,
     branchTailRustAccesses_noProgram]
   simp only [List.nil_append, List.append_nil]
-  rw [← branchITypeProgram_faithful env input offset hinputReal]
+  rw [← branchITypeProgram_faithful env input offset]
   apply congrArg (List.map LookupAccessList.negMult)
   apply congrArg (List.map (AbstractInteraction.toAccess env))
   exact (hReader.trans hExposure).symm
@@ -1990,31 +1759,27 @@ private theorem branchRustColumns_signed
     let cols := branchChipRustColumns env input offset
     cols.is_blt + cols.is_bge =
       Expression.eval env
-        (branchFlag offset 2 + branchFlag offset 3) := by
-  simp only [branchChipRustColumns, branchFlag,
+        (input.isBlt + input.isBge) := by
+  simp only [branchChipRustColumns,
     Expression.eval]
 
 private theorem branchCpuByte_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((Readers.CPUState.main
         (branchCpuInput input offset)).operations
-          (offset + 20)).interactionsWith byteChannel.toRaw).map
+          (offset + 14)).interactionsWith byteChannel.toRaw).map
             (AbstractInteraction.toAccess env) =
       (branchCpuRustAccesses
         (branchChipRustColumns env input offset)).filter
           (fun access => access.1 = InteractionKind.Byte) := by
   let cpuInput := branchCpuInput input offset
   have hCpu := cpustate_byte_interactions_faithful_syntactic
-    (p := p) env cpuInput (offset + 20)
+    (p := p) env cpuInput (offset + 14)
     (Eval.eval env input.state)
     (Eval.eval env (branchNextPc (p := p) offset))
-    8 (Expression.eval env (branchSum offset))
-    (by simpa only [cpuInput, branchCpuInput,
-      ProvableStruct.structEvalLiteralProc] using hinputReal)
+    8 (Expression.eval env (branchSum input))
+    (by rfl)
     (by simp only [cpuInput, branchCpuInput, eval_cpuState,
       ProvableType.eval_field])
     (by simp only [cpuInput, branchCpuInput, eval_cpuState,
@@ -2025,13 +1790,10 @@ private theorem branchCpuByte_faithful
 
 private theorem branchITypeByte_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((Readers.ITypeReaderImmutable.main
         (branchITypeInput input offset)).operations
-          (offset + 20)).interactionsWith byteChannel.toRaw).map
+          (offset + 14)).interactionsWith byteChannel.toRaw).map
             (AbstractInteraction.toAccess env) =
       (branchITypeRustAccesses
         (branchChipRustColumns env input offset)).filter
@@ -2040,18 +1802,17 @@ private theorem branchITypeByte_faithful
   let rustAdapter := Eval.eval env input.adapter
   have hReader :=
     itypereaderimmutable_byte_interactions_faithful_syntactic
-      (p := p) env readerInput (offset + 20)
+      (p := p) env readerInput (offset + 14)
       (Expression.eval env input.state.clk_high)
       (Expression.eval env
         (input.state.clk_0_16 +
           input.state.clk_16_24 * 65536))
       (Eval.eval env input.state.pc)
-      (Expression.eval env (branchOpcode offset))
+      (Expression.eval env (branchOpcode input))
       rustAdapter
-      (Expression.eval env (branchSum offset))
-      (Expression.eval env (branchSum offset))
-      (by simpa only [readerInput, branchITypeInput,
-        ProvableStruct.structEvalLiteralProc] using hinputReal)
+      (Expression.eval env (branchSum input))
+      (Expression.eval env (branchSum input))
+      (by rfl)
       (by rfl)
       (by simp only [readerInput, branchITypeInput, rustAdapter,
         Readers.ITypeReader.eval_cols, eval_registerAccessCols,
@@ -2081,13 +1842,10 @@ private theorem branchITypeByte_faithful
 
 private theorem branchLtByte_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((LtOperationSigned.main
         (branchLtInput input offset)).operations
-          (offset + 20)).interactionsWith byteChannel.toRaw).map
+          (offset + 14)).interactionsWith byteChannel.toRaw).map
             (AbstractInteraction.toAccess env) =
       branchLtRustAccesses
         (branchChipRustColumns env input offset) := by
@@ -2109,11 +1867,10 @@ private theorem branchLtByte_faithful
     dsimp only
     rw [eval_registerAccessCols]
   have hLt := ltSigned_interactions_exact
-    (p := p) env ltInput (offset + 20)
+    (p := p) env ltInput (offset + 14)
   rw [hA, hB] at hLt
-  simp only [ltInput, branchLtInput, branchFlag,
+  simp only [ltInput, branchLtInput,
     Expression.eval] at hLt
-  rw [hinputReal] at hLt
   rw [branchLtRustAccesses, branchRustColumns_adapter,
     branchRustColumns_compare, branchRustColumns_signed,
     branchRustColumns_sum]
@@ -2143,10 +1900,7 @@ private theorem branchTailRustAccesses_allByte
 
 private theorem branchTailByte_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     (((branchTailByteInteractions input offset).map
         ChannelInteraction.toRaw).map
           (AbstractInteraction.toAccess env)) =
@@ -2173,14 +1927,11 @@ private theorem branchTailByte_faithful
   simp [branchTailByteInteractions,
     hBytePull, Extracted.Interaction.toAccess, Extracted.Dir.sign, branchNextPc,
     ← ProvableType.getElem_eval_fields,
-    Expression.eval, hinputReal, h6, h14, h16]
+    Expression.eval, branchSum, h6, h14, h16]
 
 private theorem branchByteInteractions_faithful
     (env : Environment (ZMod p))
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
     List.Perm
       ((((BranchChip.main input).operations offset).interactionsWith
           byteChannel.toRaw).map
@@ -2193,10 +1944,10 @@ private theorem branchByteInteractions_faithful
     List.filter_append, List.filter_append, List.filter_append,
     branchLtRustAccesses_allByte,
     branchTailRustAccesses_allByte]
-  rw [branchLtByte_faithful env input offset hinputReal,
-    branchCpuByte_faithful env input offset hinputReal,
-    branchITypeByte_faithful env input offset hinputReal,
-    branchTailByte_faithful env input offset hinputReal]
+  rw [branchLtByte_faithful env input offset,
+    branchCpuByte_faithful env input offset,
+    branchITypeByte_faithful env input offset,
+    branchTailByte_faithful env input offset]
   simpa only [List.append_assoc] using
     (List.perm_append_comm
       (l₁ := branchLtRustAccesses
@@ -2236,10 +1987,7 @@ theorem branchChip_interactions_faithful
     (env : Environment (ZMod p))
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ)
     (cols : BranchChip.Columns (ZMod p))
-    (hbind : BindsChipOutput BranchChip.main env input offset cols)
-    (hinputReal :
-      Expression.eval env input.is_real =
-        Expression.eval env (branchSum (p := p) offset)) :
+    (hbind : BindsChipOutput BranchChip.main env input offset cols) :
     List.Perm
       (nativeAccesses env
         ((BranchChip.main input).operations offset))
@@ -2264,16 +2012,16 @@ theorem branchChip_interactions_faithful
     branchProgramInteractions_eq]
   have hState :=
     branchStateInteractions_faithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hByte :=
     branchByteInteractions_faithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hMemory :=
     branchMemoryInteractions_faithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hProgram :=
     branchProgramInteractions_faithful
-      (p := p) env input offset hinputReal
+      (p := p) env input offset
   have hraw : ∀ i ∈ Extracted.BranchOracle.BranchColumns.interactions
       (branchChipReconfigure (branchChipRustColumns env input offset)), ¬ i.IsRaw := by
     simp [Extracted.BranchOracle.BranchColumns.interactions, Extracted.BranchOracle.LtOperationSigned.interactions, Extracted.BranchOracle.LtOperationUnsigned.interactions, Extracted.BranchOracle.U16CompareOperation.interactions, Extracted.BranchOracle.U16MSBOperation.interactions, Extracted.CPUState.interactions, Extracted.ITypeReaderImmutable.interactions,
@@ -2315,7 +2063,6 @@ theorem branchChip_interactions_constructive
       Air.Flat.Component (ZMod p)).rowInputVar
     ({ circuit := BranchChip.circuit (p := p) } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
-    (branchChipRowCodec_inputReal (p := p) cols data)
   rw [nativeAccesses_component_eq_rowOperations
     (BranchChip.circuit (p := p)) assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,

@@ -11,7 +11,7 @@ addition supplies a semantic row/table construction theorem: honest circuit witn
 circuit's prover assumptions imply the resulting physical constraints and channel guarantees.
 It does not establish scheduler completeness or agreement with final derived data.
 
-Rows are built at explicit prover data, with either per-row or constant hints. A table stores
+Rows are built at explicit prover data and a shared hint. A table stores
 only its component and physical rows; its constraints and ledger are evaluated at the enclosing
 ensemble's canonical data. The congruence lemmas identify which obligations survive a data change.
 Fixed-column tables require the same exact fixed-prefix invariant as Clean's `Table` constructor.
@@ -301,65 +301,6 @@ theorem interactionsWith_setData (table : Table F) (data data' : ProverData F)
   apply congrArg List.flatten
   exact List.map_congr_left fun _ _ => table.component.interactionValuesWith_setData channel
 
-/-- Build physical rows from semantic inputs and their row-local hints. Fixed columns retain
-Clean's exact row-indexed invariant. The data argument is used for generation, not stored. -/
-def buildHinted (c : Component F) (inputs : List (c.Input F × ProverHint F))
-    (data : ProverData F)
-    (fixed : c.fixedRowsMatch (inputs.map fun input => c.buildRow input.1 data input.2) := by
-      preserve_tactic_target
-      trivial) : Table F where
-  component := c
-  table := inputs.map fun input => c.buildRow input.1 data input.2
-  uniform_width := by
-    intro row member
-    obtain ⟨input, _, rfl⟩ := List.mem_map.mp member
-    exact c.size_buildRow input.1 data input.2
-  fixed_rows_match := fixed
-
-section Hinted
-variable (c : Component F) (inputs : List (c.Input F × ProverHint F)) (data : ProverData F)
-  (fixed : c.fixedRowsMatch (inputs.map fun input => c.buildRow input.1 data input.2))
-
-@[simp] lemma buildHinted_component : (buildHinted c inputs data fixed).component = c := rfl
-
-@[simp] lemma buildHinted_table :
-    (buildHinted c inputs data fixed).table = inputs.map fun input => c.buildRow input.1 data input.2 := rfl
-
-@[simp] lemma buildHinted_length : (buildHinted c inputs data fixed).length = inputs.length :=
-  List.length_map ..
-
-/-- Honest row-local witnesses satisfy the physical constraints at the generation data. -/
-theorem buildHinted_constraints (h_computable : c.circuit.base.ComputableWitnessesWithData)
-    (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input.1 data input.2) :
-    (buildHinted c inputs data fixed).Constraints data := by
-  intro row member
-  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
-  exact (c.buildRow_constraintsHold input.1 data input.2 h_computable (h_prover input h_input)).1
-
-/-- Honest row-local witnesses satisfy the channel guarantees at the generation data. -/
-theorem buildHinted_guarantees (h_computable : c.circuit.base.ComputableWitnessesWithData)
-    (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input.1 data input.2) :
-    (buildHinted c inputs data fixed).Guarantees data := by
-  intro row member
-  obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
-  exact (c.buildRow_constraintsHold input.1 data input.2 h_computable (h_prover input h_input)).2
-
-/-- The literal per-channel ledger at any evaluation data, preserving input order and repeats. -/
-theorem buildHinted_interactions (evaluationData : ProverData F) (channel : RawChannel F) :
-    (buildHinted c inputs data fixed).interactionsWith evaluationData channel =
-      inputs.flatMap fun input => c.operations.interactionValuesWith channel
-        (Environment.fromArray (c.buildRow input.1 data input.2) evaluationData) := by
-  simp only [interactionsWith, buildHinted_table, buildHinted_component, List.flatMap_map]
-
-/-- All interaction occurrences at any evaluation data. -/
-theorem buildHinted_interactionValues (evaluationData : ProverData F) :
-    (buildHinted c inputs data fixed).interactions evaluationData =
-      inputs.flatMap fun input => c.operations.interactionValues
-        (Environment.fromArray (c.buildRow input.1 data input.2) evaluationData) := by
-  simp only [interactions, buildHinted_table, buildHinted_component, List.flatMap_map]
-
-end Hinted
-
 /-- Build physical rows with one hint shared by all inputs. -/
 def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
     (hint : ProverHint F)
@@ -385,45 +326,35 @@ variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hi
 
 @[simp] lemma build_length : (build c inputs data hint fixed).length = inputs.length := List.length_map ..
 
-/-- A constant hint is precisely a repeated row-local hint. -/
-theorem build_eq_buildHinted :
-    build c inputs data hint fixed = buildHinted c (inputs.map (·, hint)) data
-      (by simpa only [List.map_map, Function.comp_def] using fixed) := by
-  rw [ext_iff]
-  refine ⟨rfl, ?_⟩
-  simp only [build_table, buildHinted_table, List.map_map, Function.comp_def]
-
 /-- Honest constant-hint witnesses satisfy the physical constraints at the generation data. -/
 theorem build_constraints (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
     (build c inputs data hint fixed).Constraints data := by
-  rw [build_eq_buildHinted]
-  refine buildHinted_constraints c _ data _ h_computable fun ih member => ?_
+  intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
-  exact h_prover input h_input
+  exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).1
 
 /-- Honest constant-hint witnesses satisfy the channel guarantees at the generation data. -/
 theorem build_guarantees (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
     (build c inputs data hint fixed).Guarantees data := by
-  rw [build_eq_buildHinted]
-  refine buildHinted_guarantees c _ data _ h_computable fun ih member => ?_
+  intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
-  exact h_prover input h_input
+  exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).2
 
 /-- The literal per-channel ledger at any evaluation data. -/
 theorem build_interactions (evaluationData : ProverData F) (channel : RawChannel F) :
     (build c inputs data hint fixed).interactionsWith evaluationData channel =
       inputs.flatMap fun input => c.operations.interactionValuesWith channel
         (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
-  rw [build_eq_buildHinted, buildHinted_interactions, List.flatMap_map]
+  simp only [interactionsWith, build_table, build_component, List.flatMap_map]
 
 /-- All interaction occurrences at any evaluation data. -/
 theorem build_interactionValues (evaluationData : ProverData F) :
     (build c inputs data hint fixed).interactions evaluationData =
       inputs.flatMap fun input => c.operations.interactionValues
         (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
-  rw [build_eq_buildHinted, buildHinted_interactionValues, List.flatMap_map]
+  simp only [interactions, build_table, build_component, List.flatMap_map]
 
 end ConstantHint
 

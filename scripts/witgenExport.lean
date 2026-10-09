@@ -22,8 +22,8 @@ and skips `index.json` (never a partial index); `--stdout` prints the payload in
 writing files. `--testdata` writes differential fixtures at `testdata/<Chip>.trace.json`
 under the output directory, anchored for **all 25 chips** to the committed SP1 trace dumps
 (`export/sp1dump/`, always read from the repo tree): one `"event"` row per dumped
-executor event with inputs recovered through the symbolic row map and hints from the
-event's opcode, **each recomputed and gated cell-for-cell against the dumped
+executor event with inputs recovered through the symbolic row map and empty hints,
+**each recomputed and gated cell-for-cell against the dumped
 `generate_trace` row before anything is written**, plus an honest padding row and
 deterministic seeded synthetic rows. `expectedWitness` is always the Lean reference
 evaluation (`witgen` below: Clean's `FlatOperation.witgen` at the empty commitment) over the
@@ -243,7 +243,7 @@ def manifestFor (e : Entry) (payload : Json) : Json :=
       ("interact", toJson (count "interact"))]),
     ("hints", Json.arr ((aggregate (gets.filter (·.isHint))).map tableUseJson).toArray),
     ("hintPolicy", Json.str "a missing table, wrong width, or out-of-range row reads as \
-      the all-zero vector; padding rows rely on this default"),
+      the all-zero vector"),
     ("data", Json.arr ((aggregate (gets.filter (!·.isHint))).map tableUseJson).toArray),
     ("field", fieldJson)]
 
@@ -281,9 +281,8 @@ produced by the `chip_traces` binary committed at the pinned extraction branch).
 chip:
 
 - `"event"` rows — one per dumped executor event. Inputs are recovered from the dumped
-  row itself through the symbolic row map (every native input cell is a bare `var`
-  column of the Rust row, except `is_real` on the six flag-hinted chips, where it is
-  `1` on event rows); hint tables come from the event's opcode discriminant. **The
+  row itself through the symbolic row map; every native input cell is a bare `var`
+  column of the Rust row. No hint tables or synthesized activity are used. **The
   generation-time gate:** every event row is recomputed — `witgen` over
   the authored operations, then the symbolic row map evaluated at the resulting cells —
   and must equal the dumped SP1 row cell-for-cell, or the exporter throws with
@@ -314,20 +313,6 @@ def lcgStream (seed : ℕ) : ℕ → ℕ
 def synInputs (width seed : ℕ) : List Fp :=
   (List.range width).map fun j => ((lcgStream seed j : ℕ) : Fp)
 
-/-- Seeded hint tables from the payload-derived schema: one row per declared table,
-0/1-valued (the hint tables in these chips carry selector flags). -/
-def synHint (uses : List TableUse) (seed : ℕ) : ProverHint Fp := fun key n =>
-  if uses.any fun u => u.table == key && u.width == n then
-    #[Vector.ofFn fun i : Fin n => ((lcgStream seed i.val % 2 : ℕ) : Fp)]
-  else #[]
-
-/-- Serialize the declared hint tables as read from a `ProverHint`. -/
-def serializeHints (uses : List TableUse) (h : ProverHint Fp) : Json :=
-  Json.mkObj <| uses.map fun u =>
-    (u.table, Json.mkObj [
-      ("width", toJson u.width),
-      ("rows", toJson ((h u.table u.width).toList.map fun v => v.toList.map ZMod.val))])
-
 /-- Clean's array-backed `FlatOperation.witgen` at the empty commitment, spelled through the
 data-carrying `ToClean` generalization: Clean's own `Circuit/WitnessGeneration.lean` is orphaned
 upstream (unwired, non-`module`), so the module-mode `ToClean` no longer reaches it. -/
@@ -349,18 +334,10 @@ def rowJson (kind : String) (anchored : Bool) (seed : Option ℕ) (inputs : List
 
 /-! ### SP1 dumps, input recovery, and the generation-time gate -/
 
-/-- One parsed dump event: the opcode discriminant plus the two operand values —
-everything the hint builders need (inputs are recovered from the rows, not the
-events). -/
-structure DumpEvent where
-  opcode : Nat
-  a : Nat
-  b : Nat
-
 /-- One parsed SP1 chip dump: the events and the full padded `generate_trace`
 matrix. -/
 structure Dump where
-  events : List DumpEvent
+  events : List Nat
   rows : List (List Nat)
   width : Nat
   height : Nat
@@ -380,15 +357,11 @@ def dumpOf (chip : String) (j : Json) : Except String Dump := do
     | some a => pure a
     | none => .error s!"{chip}.dump.json: missing events array"
   let events ← eventsJ.toList.mapM fun e => do
-    let evNat (k : String) : Except String Nat :=
-      match (e.getObjVal? k).toOption.bind (·.getNat?.toOption) with
-      | some n => .ok n
-      | none => .error s!"{chip}.dump.json: event missing '{k}'"
     let opcode ← match ((e.getObjVal? "opcode").toOption.bind fun o =>
         (o.getObjVal? "discriminant").toOption).bind (·.getNat?.toOption) with
       | some d => Except.ok d
       | none => Except.error s!"{chip}.dump.json: event without opcode discriminant"
-    return DumpEvent.mk opcode (← evNat "a") (← evNat "b")
+    return opcode
   let rowsJ ← match (j.getObjVal? "rows").toOption.bind (·.getArr?.toOption) with
     | some a => pure a
     | none => .error s!"{chip}.dump.json: missing rows array"
@@ -405,63 +378,20 @@ def dumpOf (chip : String) (j : Json) : Except String Dump := do
   unless events.length < height do throw s!"{chip}.dump.json: no padding row"
   return ⟨events, rows, width, height⟩
 
-/-- The remaining chips whose `is_real` input (native input cell 0) is not a bare column of
-the Rust row — it gates flag-hinted populate paths instead. On their event rows
-`is_real = 1`, on padding rows `0`. Verified over all 25 committed row maps: these are
-exactly the chips with any non-bare-`var` input cell, and only cell 0 is affected. -/
-def isRealHintedChips : List String :=
-  ["Branch"]
-
-/-- Input-recovery table from the symbolic row map: input `i` reads Rust column `j`
-iff `rowMap[j] = var i` (`none` = the `is_real` exception). Fails closed on any other
-uncovered input cell, so row-map drift breaks the build rather than the fixtures. -/
+/-- Every native input is a directly committed SP1 column. Missing inputs fail closed. -/
 def inversionOf (chip : String) (inputWidth : Nat) (rowMap : List (Expression Fp)) :
-    Except String (List (Option Nat)) :=
+    Except String (List Nat) :=
   (List.range inputWidth).mapM fun i =>
     match rowMap.zipIdx.find? fun (ex, _) =>
         match ex with
         | .var v => v.index == i
         | _ => false with
-    | some (_, j) => .ok (some j)
-    | none =>
-      if i == 0 && isRealHintedChips.contains chip then .ok none
-      else .error s!"{chip}: input cell {i} is not a bare row column (row map drifted)"
+    | some (_, j) => .ok j
+    | none => .error s!"{chip}: input cell {i} is not a bare row column (row map drifted)"
 
-/-- Recover the native input cells from a dumped Rust row (`isReal` fills the
-non-bare `is_real` slot: `1` on event rows, `0` on padding rows). -/
-def invertInputs (inv : List (Option Nat)) (isReal : Fp) (row : List Nat) : List Fp :=
-  inv.map fun
-    | some j => ((row.getD j 0 : ℕ) : Fp)
-    | none => isReal
-
-/-- Signed view of a u64 value (two's complement). -/
-def i64Of (n : Nat) : Int := if n < 2 ^ 63 then (n : Int) else (n : Int) - 2 ^ 64
-
-/-- SP1's branch-taken derivation, mirroring `branch/trace.rs` exactly: BEQ `a == b`,
-BNE `!=`, BLT/BGE signed less-than and its negation, BLTU/BGEU unsigned. -/
-def branchTaken (op a b : Nat) : Bool :=
-  match op with
-  | 40 => a == b
-  | 41 => a != b
-  | 42 => decide (i64Of a < i64Of b)
-  | 43 => decide (i64Of b ≤ i64Of a)
-  | 44 => decide (a < b)
-  | 45 => decide (b ≤ a)
-  | _ => false
-
-/-- Per-chip flag hints from the dumped event (opcode discriminant = the executor
-`Opcode` `#[repr(u8)]` values; Branch additionally derives its `is_branching` bit
-from the operand values, mirroring SP1's own populate). The tables are the ones the
-payloads' `hintGet`s declare; chips without hint tables read the empty hint. -/
-def hintFor (chip : String) (ev : DumpEvent) : ProverHint Fp := fun key n =>
-  let op := ev.opcode
-  match chip, key, n with
-  | "Branch", "branch_flags", 6 =>
-    #[#v[if op = 40 then 1 else 0, if op = 41 then 1 else 0, if op = 42 then 1 else 0,
-         if op = 43 then 1 else 0, if op = 44 then 1 else 0, if op = 45 then 1 else 0]]
-  | "Branch", "branch_branching", 1 =>
-    #[#v[if branchTaken op ev.a ev.b then 1 else 0]]
-  | _, _, _ => #[]
+/-- Recover input columns without synthesizing selectors or activity. -/
+def invertInputs (inv : List Nat) (row : List Nat) : List Fp :=
+  inv.map fun j => ((row.getD j 0 : ℕ) : Fp)
 
 /-- The chips whose padding rows SP1 *derives* by running populate on the pad template
 (nonzero `padded_row_template`); the rest zero-fill without running populate. -/
@@ -544,7 +474,8 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
   let payload ← match e.ops.witgenJson? with
     | .ok j => pure j
     | .error msg => throw (IO.userError s!"{e.name}: {msg}")
-  let uses := aggregate ((collectGets payload).filter (·.isHint))
+  unless ((collectGets payload).filter (·.isHint)).isEmpty do
+    throw (IO.userError s!"{e.name}: instruction witnesses must not read prover hints")
   let flat := e.ops.toFlat
   let empty : ProverHint Fp := ProverHint.empty Fp
   -- The SP1 dump, the symbolic row map, and the input-recovery table.
@@ -565,21 +496,20 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
   -- Event rows: recover inputs, recompute, gate cell-for-cell against the dump.
   for (ev, k) in dump.events.zipIdx do
     let sp1Row := dump.rows.getD k []
-    let inputs := invertInputs inv 1 sp1Row
-    let hint := hintFor e.name ev
-    let cells := witgen hint flat inputs.toArray
+    let inputs := invertInputs inv sp1Row
+    let cells := witgen empty flat inputs.toArray
     if let some (j, l, s) := firstMismatch (rowValsOf rowMap cells) sp1Row then
       throw (IO.userError s!"{e.name}: GATE FAILED at event row {k} column {j}: \
-        recomputed {l} != SP1 {s} (opcode {ev.opcode})")
-    rows := rows.push (rowJson "event" true none inputs (serializeHints uses hint)
+        recomputed {l} != SP1 {s} (opcode {ev})")
+    rows := rows.push (rowJson "event" true none inputs (Json.mkObj [])
       ((cells.toList.drop inputs.length).map ZMod.val) (some sp1Row))
   -- The value-level spot check on event row 0.
   let spot ← match spotChecks.find? (·.1 == e.name) with
     | some (_, f) => pure f
     | none => throw (IO.userError s!"{e.name}: no spot check registered")
   let row0 := dump.rows.getD 0 []
-  let spotRow := spot (invertInputs inv 1 row0)
-    (hintFor e.name (dump.events.getD 0 ⟨0, 0, 0⟩))
+  let spotRow := spot (invertInputs inv row0)
+    empty
   unless spotRow.map ZMod.val == row0 do
     throw (IO.userError
       s!"{e.name}: circuitTraceRowMapped spot check diverged from the dump on event row 0")
@@ -588,19 +518,19 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
   let padSp1 := dump.rows.getD dump.events.length []
   unless (dump.rows.drop dump.events.length).all (· == padSp1) do
     throw (IO.userError s!"{e.name}: padding rows are not uniform in the dump")
-  let padInputs := invertInputs inv 0 padSp1
+  let padInputs := invertInputs inv padSp1
   let padWitness := expectedWitnessOf flat empty padInputs
   if derivedPadChips.contains e.name then
     let padCells := witgen empty flat padInputs.toArray
     if let some (j, l, s) := firstMismatch (rowValsOf rowMap padCells) padSp1 then
       throw (IO.userError s!"{e.name}: GATE FAILED at the padding row, column {j}: \
         recomputed {l} != SP1 {s}")
-    rows := rows.push (rowJson "padding" true none padInputs (serializeHints uses empty)
+    rows := rows.push (rowJson "padding" true none padInputs (Json.mkObj [])
       padWitness (some padSp1))
   else
     unless padSp1.all (· == 0) do
       throw (IO.userError s!"{e.name}: zero-fill padding row is not all-zero in the dump")
-    rows := rows.push (rowJson "padding" false none padInputs (serializeHints uses empty)
+    rows := rows.push (rowJson "padding" false none padInputs (Json.mkObj [])
       padWitness none)
   let mut provenance : List (String × Json) := [("events", Json.str
     s!"SP1 chip_traces dump export/sp1dump/{e.name}.dump.json (sp1Commit {sp1Commit}); \
@@ -609,14 +539,13 @@ def writeTestdataChip (dumpDir dir : System.FilePath) (sp1Commit : String) (idx 
     cell-for-cell at generation time (fail-closed), with a value-level \
     circuitTraceRowMapped spot check on event row 0")]
   let zero := List.replicate e.inputWidth (0 : Fp)
-  rows := rows.push (rowJson "synthetic" false (some 0) zero (serializeHints uses empty)
+  rows := rows.push (rowJson "synthetic" false (some 0) zero (Json.mkObj [])
     (expectedWitnessOf flat empty zero) none)
   for s in [1, 2, 3, 4] do
     let seed := (idx + 1) * 1009 + s
     let inputs := synInputs e.inputWidth seed
-    let hint := synHint uses (seed * 7919)
     rows := rows.push (rowJson "synthetic" false (some seed) inputs
-      (serializeHints uses hint) (expectedWitnessOf flat hint inputs) none)
+      (Json.mkObj []) (expectedWitnessOf flat empty inputs) none)
   provenance := provenance ++ [("synthetic", Json.str
     "deterministic seeded inputs; expectedWitness is the Lean reference evaluation \
     (FlatOperation.witgen) over the authored operations serialized by Clean")]

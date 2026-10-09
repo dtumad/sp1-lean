@@ -37,9 +37,8 @@ subcircuits. Their high-limb-zero hypotheses justify the three-limb PC represent
 inline carry equations. Complete output ranges are supplied for the three real-row byte pulls.
 -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) : Prop :=
-  let f := hintFlags hint
-  let br := hintBranching hint
+    (_hint : ProverHint (ZMod p)) : Prop :=
+  let br := populateBranching input
   Word.isU64 input.adapter.op_c_imm ∧
   Word.isU64 (rs1WordInput input) ∧
   Word.isU64 (rs2WordInput input) ∧
@@ -56,34 +55,7 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
       input.state.pc, 0⟩ ∧
   (branchTargetWord input)[3] = 0 ∧
   (fallThroughWord input)[3] = 0 ∧
-  (f[0] = 0 ∨ f[0] = 1) ∧
-  (f[1] = 0 ∨ f[1] = 1) ∧
-  (f[2] = 0 ∨ f[2] = 1) ∧
-  (f[3] = 0 ∨ f[3] = 1) ∧
-  (f[4] = 0 ∨ f[4] = 1) ∧
-  (f[5] = 0 ∨ f[5] = 1) ∧
-  (input.is_real = f[0] + f[1] + f[2] + f[3] + f[4] + f[5]) ∧
-  (br = 0 ∨ br = 1) ∧
-  (input.is_real = 0 → br = 0) ∧
-  (input.is_real = 1 →
-    (f[0] = 1 → (br = 1 ↔
-      Word.toBitVec64 (rs1WordInput input) =
-        Word.toBitVec64 (rs2WordInput input))) ∧
-    (f[1] = 1 → (br = 1 ↔
-      Word.toBitVec64 (rs1WordInput input) ≠
-        Word.toBitVec64 (rs2WordInput input))) ∧
-    (f[2] = 1 → (br = 1 ↔
-      (Word.toBitVec64 (rs1WordInput input)).slt
-        (Word.toBitVec64 (rs2WordInput input)) = true)) ∧
-    (f[3] = 1 → (br = 1 ↔
-      (Word.toBitVec64 (rs1WordInput input)).slt
-        (Word.toBitVec64 (rs2WordInput input)) = false)) ∧
-    (f[4] = 1 → (br = 1 ↔
-      (Word.toBitVec64 (rs1WordInput input)).ult
-        (Word.toBitVec64 (rs2WordInput input)) = true)) ∧
-    (f[5] = 1 → (br = 1 ↔
-      (Word.toBitVec64 (rs1WordInput input)).ult
-        (Word.toBitVec64 (rs2WordInput input)) = false))) ∧
+  (∀ i : Fin 6, input.flags[i] = 0 ∨ input.flags[i] = 1) ∧
   (input.is_real = 1 →
     ((committedNextPc input br)[0] * (4 : ZMod p)⁻¹).val < 2 ^ 14 ∧
     (committedNextPc input br)[1].val < 2 ^ 16 ∧
@@ -135,18 +107,18 @@ noncomputable def BranchChip.physicalView (env : Environment (ZMod p)) :
 
 private theorem BranchChip.isBeqBinaryConstraint_mem
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset } * (var { index := offset } - 1) - 0 ∈
+    input.isBeq * (input.isBeq - 1) - 0 ∈
       ((BranchChip.main input).operations offset).constraints := by
   simp only [BranchChip.main, circuit_norm]
   iterate 1 right
   left
   simpa only [FormalAssertion.toSubcircuit, Operations.toNested_toFlat,
     Operations.constraints_toFlat, Gadgets.Equality.circuit] using
-    equalityConstraint_mem (var { index := offset } * (var { index := offset } - 1)) 0 _
+    equalityConstraint_mem (input.isBeq * (input.isBeq - 1)) 0 _
 
 private theorem BranchChip.isBneBinaryConstraint_mem
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 1 } * (var { index := offset + 1 } - 1) - 0 ∈
+    input.isBne * (input.isBne - 1) - 0 ∈
       ((BranchChip.main input).operations offset).constraints := by
   simp only [BranchChip.main, circuit_norm]
   iterate 2 right
@@ -154,11 +126,11 @@ private theorem BranchChip.isBneBinaryConstraint_mem
   simpa only [FormalAssertion.toSubcircuit, Operations.toNested_toFlat,
     Operations.constraints_toFlat, Gadgets.Equality.circuit] using
     equalityConstraint_mem
-      (var { index := offset + 1 } * (var { index := offset + 1 } - 1)) 0 _
+      (input.isBne * (input.isBne - 1)) 0 _
 
 private theorem BranchChip.isBltBinaryConstraint_mem
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 2 } * (var { index := offset + 2 } - 1) - 0 ∈
+    input.isBlt * (input.isBlt - 1) - 0 ∈
       ((BranchChip.main input).operations offset).constraints := by
   simp only [BranchChip.main, circuit_norm]
   iterate 3 right
@@ -166,11 +138,11 @@ private theorem BranchChip.isBltBinaryConstraint_mem
   simpa only [FormalAssertion.toSubcircuit, Operations.toNested_toFlat,
     Operations.constraints_toFlat, Gadgets.Equality.circuit] using
     equalityConstraint_mem
-      (var { index := offset + 2 } * (var { index := offset + 2 } - 1)) 0 _
+      (input.isBlt * (input.isBlt - 1)) 0 _
 
 private theorem BranchChip.isBgeBinaryConstraint_mem
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 3 } * (var { index := offset + 3 } - 1) - 0 ∈
+    input.isBge * (input.isBge - 1) - 0 ∈
       ((BranchChip.main input).operations offset).constraints := by
   simp only [BranchChip.main, circuit_norm]
   iterate 4 right
@@ -178,11 +150,11 @@ private theorem BranchChip.isBgeBinaryConstraint_mem
   simpa only [FormalAssertion.toSubcircuit, Operations.toNested_toFlat,
     Operations.constraints_toFlat, Gadgets.Equality.circuit] using
     equalityConstraint_mem
-      (var { index := offset + 3 } * (var { index := offset + 3 } - 1)) 0 _
+      (input.isBge * (input.isBge - 1)) 0 _
 
 private theorem BranchChip.isBltuBinaryConstraint_mem
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 4 } * (var { index := offset + 4 } - 1) - 0 ∈
+    input.isBltu * (input.isBltu - 1) - 0 ∈
       ((BranchChip.main input).operations offset).constraints := by
   simp only [BranchChip.main, circuit_norm]
   iterate 5 right
@@ -190,11 +162,11 @@ private theorem BranchChip.isBltuBinaryConstraint_mem
   simpa only [FormalAssertion.toSubcircuit, Operations.toNested_toFlat,
     Operations.constraints_toFlat, Gadgets.Equality.circuit] using
     equalityConstraint_mem
-      (var { index := offset + 4 } * (var { index := offset + 4 } - 1)) 0 _
+      (input.isBltu * (input.isBltu - 1)) 0 _
 
 private theorem BranchChip.isBgeuBinaryConstraint_mem
     (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    var { index := offset + 5 } * (var { index := offset + 5 } - 1) - 0 ∈
+    input.isBgeu * (input.isBgeu - 1) - 0 ∈
       ((BranchChip.main input).operations offset).constraints := by
   simp only [BranchChip.main, circuit_norm]
   iterate 6 right
@@ -202,15 +174,7 @@ private theorem BranchChip.isBgeuBinaryConstraint_mem
   simpa only [FormalAssertion.toSubcircuit, Operations.toNested_toFlat,
     Operations.constraints_toFlat, Gadgets.Equality.circuit] using
     equalityConstraint_mem
-      (var { index := offset + 5 } * (var { index := offset + 5 } - 1)) 0 _
-
-private theorem BranchChip.isRealLinkConstraint_mem
-    (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
-    input.is_real - (var { index := offset } + var { index := offset + 1 } +
-      var { index := offset + 2 } + var { index := offset + 3 } +
-      var { index := offset + 4 } + var { index := offset + 5 }) ∈
-      ((BranchChip.main input).operations offset).constraints := by
-  simp [BranchChip.main, circuit_norm]
+      (input.isBgeu * (input.isBgeu - 1)) 0 _
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Lift a binary field flag to its `ℕ` value. -/
@@ -250,9 +214,7 @@ theorem BranchChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (BranchChip.isBltuBinaryConstraint_mem input (size BranchChip.Inputs))
   have g5 := constraints.1 _
     (BranchChip.isBgeuBinaryConstraint_mem input (size BranchChip.Inputs))
-  have glink := constraints.1 _
-    (BranchChip.isRealLinkConstraint_mem input (size BranchChip.Inputs))
-  simp only [eval_sub, Expression.eval, sub_zero] at g0 g1 g2 g3 g4 g5 glink
+  simp only [eval_sub, Expression.eval, sub_zero] at g0 g1 g2 g3 g4 g5
   obtain ⟨a, ha, hea⟩ := flagNatValue (bool_of_mul_pred g0)
   obtain ⟨b, hb, heb⟩ := flagNatValue (bool_of_mul_pred g1)
   obtain ⟨c, hc, hec⟩ := flagNatValue (bool_of_mul_pred g2)
@@ -266,63 +228,20 @@ theorem BranchChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     simp only [BranchChip.physicalView]
     rw [← inputEq, BranchChip.eval_inputIsReal]
   have hreal : Expression.eval env input.is_real = 1 := viewIsReal.symm.trans real
-  have hsum : env.get (size BranchChip.Inputs) + env.get (size BranchChip.Inputs + 1) +
-      env.get (size BranchChip.Inputs + 2) + env.get (size BranchChip.Inputs + 3) +
-      env.get (size BranchChip.Inputs + 4) + env.get (size BranchChip.Inputs + 5) = 1 :=
-    (sub_eq_zero.mp glink).symm.trans hreal
-  have projBeq : (BranchChip.physicalCols env).is_beq = env.get (size BranchChip.Inputs) := by
-    simpa only [BranchChip.physicalCols, BranchChip.directOutput_eq, CircuitType.eval_expr,
-      Expression.eval] using
-      congrArg (fun v : BranchChip.Columns (ZMod p) => v.is_beq)
-        (BranchChip.eval_columns env
-          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
-            (size BranchChip.Inputs)))
-  have projBne : (BranchChip.physicalCols env).is_bne =
-      env.get (size BranchChip.Inputs + 1) := by
-    simpa only [BranchChip.physicalCols, BranchChip.directOutput_eq, CircuitType.eval_expr,
-      Expression.eval] using
-      congrArg (fun v : BranchChip.Columns (ZMod p) => v.is_bne)
-        (BranchChip.eval_columns env
-          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
-            (size BranchChip.Inputs)))
-  have projBlt : (BranchChip.physicalCols env).is_blt =
-      env.get (size BranchChip.Inputs + 2) := by
-    simpa only [BranchChip.physicalCols, BranchChip.directOutput_eq, CircuitType.eval_expr,
-      Expression.eval] using
-      congrArg (fun v : BranchChip.Columns (ZMod p) => v.is_blt)
-        (BranchChip.eval_columns env
-          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
-            (size BranchChip.Inputs)))
-  have projBge : (BranchChip.physicalCols env).is_bge =
-      env.get (size BranchChip.Inputs + 3) := by
-    simpa only [BranchChip.physicalCols, BranchChip.directOutput_eq, CircuitType.eval_expr,
-      Expression.eval] using
-      congrArg (fun v : BranchChip.Columns (ZMod p) => v.is_bge)
-        (BranchChip.eval_columns env
-          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
-            (size BranchChip.Inputs)))
-  have projBltu : (BranchChip.physicalCols env).is_bltu =
-      env.get (size BranchChip.Inputs + 4) := by
-    simpa only [BranchChip.physicalCols, BranchChip.directOutput_eq, CircuitType.eval_expr,
-      Expression.eval] using
-      congrArg (fun v : BranchChip.Columns (ZMod p) => v.is_bltu)
-        (BranchChip.eval_columns env
-          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
-            (size BranchChip.Inputs)))
-  have projBgeu : (BranchChip.physicalCols env).is_bgeu =
-      env.get (size BranchChip.Inputs + 5) := by
-    simpa only [BranchChip.physicalCols, BranchChip.directOutput_eq, CircuitType.eval_expr,
-      Expression.eval] using
-      congrArg (fun v : BranchChip.Columns (ZMod p) => v.is_bgeu)
-        (BranchChip.eval_columns env
-          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
-            (size BranchChip.Inputs)))
+  have hsum : Expression.eval env input.isBeq + Expression.eval env input.isBne +
+      Expression.eval env input.isBlt + Expression.eval env input.isBge +
+      Expression.eval env input.isBltu + Expression.eval env input.isBgeu = 1 := by
+    simpa only [BranchChip.Inputs.is_real, Expression.eval] using hreal
   have opcodeEq : (BranchChip.physicalView env).opcode =
-      env.get (size BranchChip.Inputs) * 40 + env.get (size BranchChip.Inputs + 1) * 41 +
-      env.get (size BranchChip.Inputs + 2) * 42 + env.get (size BranchChip.Inputs + 3) * 43 +
-      env.get (size BranchChip.Inputs + 4) * 44 + env.get (size BranchChip.Inputs + 5) * 45 := by
-    simp only [BranchChip.physicalView, BranchChip.branchOpcode]
-    rw [projBeq, projBne, projBlt, projBge, projBltu, projBgeu]
+      Expression.eval env input.isBeq * 40 + Expression.eval env input.isBne * 41 +
+      Expression.eval env input.isBlt * 42 + Expression.eval env input.isBge * 43 +
+      Expression.eval env input.isBltu * 44 + Expression.eval env input.isBgeu * 45 := by
+    simpa only [BranchChip.physicalView, BranchChip.physicalCols, BranchChip.directOutput_eq,
+      BranchChip.branchOpcode, CircuitType.eval_expr] using
+      congrArg BranchChip.branchOpcode
+        (BranchChip.eval_columns env
+          ((BranchChip.elaborated (p := p)).output (varFromOffset BranchChip.Inputs 0)
+            (size BranchChip.Inputs)))
   rw [hea, heb, hec, hed, hee, hef] at hsum
   have habSum : a + b + c + d + e + f = 1 :=
     natCastSmall_inj (by omega) (by omega) (by exact_mod_cast hsum)

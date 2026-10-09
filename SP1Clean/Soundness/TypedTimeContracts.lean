@@ -145,10 +145,10 @@ theorem BranchChip.cpuStateTimeContract :
   dsimp only
   let input : Var BranchChip.Inputs (ZMod p) := varFromOffset BranchChip.Inputs 0
   let offset := size BranchChip.Inputs
-  refine ⟨offset + 20,
+  refine ⟨offset + 14,
     ⟨input.state,
-      #v[var { index := offset + 7 }, var { index := offset + 8 },
-        var { index := offset + 9 }], 8, input.is_real⟩, ?_, ?_⟩
+      #v[var { index := offset + 11 }, var { index := offset + 12 },
+        var { index := offset + 13 }], 8, input.is_real⟩, ?_, ?_⟩
   · simp only [input, offset, BranchChip.circuit, BranchChip.main, circuit_norm]
     right
     right

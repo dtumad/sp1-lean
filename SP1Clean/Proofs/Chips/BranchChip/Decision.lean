@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.Chips
+import SP1Clean.Semantics.Specs.Chips.Branch
 import SP1Clean.Math.Gate
 
 /-! # `SP1Clean.BranchChip` — the six-way decision dispatch (shared field lemmas)
@@ -17,7 +17,7 @@ context — so the heavy one-hot case analysis is elaborated **once, in a small 
 under the giant `circuit_proof_start` chip goal. This is what lets `Formal.lean`'s soundness/completeness
 drop their `maxHeartbeats` ceilings.
 
-The flag↔index convention matches `Defs.lean`'s `main` and `FormalModel/Contracts/Chips.lean`'s `Spec`:
+The flag↔index convention matches `Defs.lean`'s `main` and `Semantics/Specs/Chips/Branch.lean`'s `Spec`:
 `is_beq = b0, is_bne = b1, is_blt = b2, is_bge = b3, is_bltu = b4, is_bgeu = b5`; the signed-compare
 selector is `is_signed = is_blt + is_bge = b2 + b3`; `is_eq = 1 - sum` where `sum` is the four
 `u16_flags`; and
@@ -118,13 +118,63 @@ private lemma bool_eq_of_iff_ne {x y : ZMod p} (hx : x = 0 ∨ x = 1) (hy : y = 
 `is_branching = branchDecision`. They take the signed-compare gadget couplings (`h_bit`/`h_eqf`/`h_eqbin`)
 in exactly the form `LtOperationSigned.Spec` exposes them (after the operand-word eval bridges). -/
 
-/-- The in-circuit branch decision as a field expression (matches `Defs.main`'s `decision`). -/
-def branchDecision (b0 b1 b2 b3 b4 b5 bit sum : ZMod p) : ZMod p :=
-  b0 * (1 - sum) + b1 * (1 - (1 - sum)) + (b3 + b5) * (1 - bit) + (b2 + b4) * bit
+/-- Binary opcode selectors with zero activity are all zero. -/
+lemma flags_zero_of_sum_zero {b0 b1 b2 b3 b4 b5 : ZMod p}
+    (h0 : b0 = 0 ∨ b0 = 1) (h1 : b1 = 0 ∨ b1 = 1) (h2 : b2 = 0 ∨ b2 = 1)
+    (h3 : b3 = 0 ∨ b3 = 1) (h4 : b4 = 0 ∨ b4 = 1) (h5 : b5 = 0 ∨ b5 = 1)
+    (hsum : b0 + b1 + b2 + b3 + b4 + b5 = 0) :
+    b0 = 0 ∧ b1 = 0 ∧ b2 = 0 ∧ b3 = 0 ∧ b4 = 0 ∧ b5 = 0 := by
+  have hp : 6 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+  have v0 := bool_val_le h0
+  have v1 := bool_val_le h1
+  have v2 := bool_val_le h2
+  have v3 := bool_val_le h3
+  have v4 := bool_val_le h4
+  have v5 := bool_val_le h5
+  have hc : ((b0.val + b1.val + b2.val + b3.val + b4.val + b5.val : ℕ) : ZMod p) = 0 := by
+    simpa only [Nat.cast_add, ZMod.natCast_zmod_val] using hsum
+  have hv := congrArg ZMod.val hc
+  rw [ZMod.val_natCast_of_lt (by omega), ZMod.val_zero] at hv
+  exact ⟨(ZMod.val_eq_zero _).mp (by omega), (ZMod.val_eq_zero _).mp (by omega),
+    (ZMod.val_eq_zero _).mp (by omega), (ZMod.val_eq_zero _).mp (by omega),
+    (ZMod.val_eq_zero _).mp (by omega), (ZMod.val_eq_zero _).mp (by omega)⟩
+
+/-- Signed comparison is selected only by BLT/BGE, and only on active rows. -/
+lemma signed_selector_valid {b0 b1 b2 b3 b4 b5 : ZMod p}
+    (h0 : b0 = 0 ∨ b0 = 1) (h1 : b1 = 0 ∨ b1 = 1) (h2 : b2 = 0 ∨ b2 = 1)
+    (h3 : b3 = 0 ∨ b3 = 1) (h4 : b4 = 0 ∨ b4 = 1) (h5 : b5 = 0 ∨ b5 = 1)
+    (hreal : b0 + b1 + b2 + b3 + b4 + b5 = 0 ∨ b0 + b1 + b2 + b3 + b4 + b5 = 1) :
+    (b2 + b3 = 0 ∨ b2 + b3 = 1) ∧
+      (b0 + b1 + b2 + b3 + b4 + b5 - 1) * (b2 + b3) = 0 := by
+  rcases hreal with hz | ho
+  · obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := flags_zero_of_sum_zero h0 h1 h2 h3 h4 h5 hz
+    simp
+  · refine ⟨?_, by rw [ho]; simp⟩
+    rcases flagsOneHot_of_sum_one h0 h1 h2 h3 h4 h5 ho with
+      ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ |
+      ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ |
+      ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ <;> simp
+
+/-- Computing a decision from a binary comparison certificate produces a binary bit. -/
+lemma branchDecision_binary {b0 b1 b2 b3 b4 b5 bit sum : ZMod p}
+    (h0 : b0 = 0 ∨ b0 = 1) (h1 : b1 = 0 ∨ b1 = 1) (h2 : b2 = 0 ∨ b2 = 1)
+    (h3 : b3 = 0 ∨ b3 = 1) (h4 : b4 = 0 ∨ b4 = 1) (h5 : b5 = 0 ∨ b5 = 1)
+    (hreal : b0 + b1 + b2 + b3 + b4 + b5 = 0 ∨ b0 + b1 + b2 + b3 + b4 + b5 = 1)
+    (hbit : bit = 0 ∨ bit = 1) (hsum : sum = 0 ∨ sum = 1) :
+    branchDecision b0 b1 b2 b3 b4 b5 bit sum = 0 ∨
+      branchDecision b0 b1 b2 b3 b4 b5 bit sum = 1 := by
+  rcases hreal with hz | ho
+  · obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := flags_zero_of_sum_zero h0 h1 h2 h3 h4 h5 hz
+    simp [branchDecision]
+  · rcases flagsOneHot_of_sum_one h0 h1 h2 h3 h4 h5 ho with
+      ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ |
+      ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ |
+      ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+    all_goals rcases hbit with rfl | rfl <;> rcases hsum with rfl | rfl <;> simp [branchDecision]
 
 /-- **Soundness direction.** Given the in-circuit decision equation `br = branchDecision …`, the six
 binary opcode flags (one-hot, summing to `1`), the binary `br`, and the signed-compare couplings, derive
-the six per-opcode `br = 1 ↔ <RV64 condition>` biconditionals (verbatim `FormalModel/Contracts/Chips.lean` Branch `Spec`
+the six per-opcode `br = 1 ↔ <RV64 condition>` biconditionals (verbatim `Semantics/Specs/Chips/Branch.lean` `Spec`
 form). -/
 lemma branch_conditions_of_decision_eq {rs1 rs2 : Word (ZMod p)}
     (hrs1U : Word.isU64 rs1) (hrs2U : Word.isU64 rs2)

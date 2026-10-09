@@ -59,14 +59,9 @@ private theorem main_requirementsChannelsLawful
       Operations.localLength] at h_constraints
     simp only [ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, true_and, and_true, eval_sub, Expression.eval] at h_constraints
-    have h_sum_eq : Expression.eval env input_var.is_real =
-        env.get (i₀ + 0) + env.get (i₀ + 1) + env.get (i₀ + 2) +
-          env.get (i₀ + 3) + env.get (i₀ + 4) + env.get (i₀ + 5) :=
-      sub_eq_zero.mp h_constraints.1
     have h_bool : Expression.eval env input_var.is_real = 0 ∨
-        Expression.eval env input_var.is_real = 1 := by
-      rw [h_sum_eq]
-      exact bool_of_mul_pred h_constraints.2.1
+        Expression.eval env input_var.is_real = 1 :=
+      bool_of_mul_pred h_constraints.1
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def, witnessVectorIR, witnessField, Witnessable.witness, witnessIR, subcircuitWithAssertion, assertion, assertZero,
@@ -84,11 +79,10 @@ private theorem main_requirementsChannelsLawful
       simp only [circuit_norm] at h1 h0 <;>
       exact off_gate_vacuous h_bool h1 h0
 
-/-- The Program-fetch opcode committed by the witnessed one-hot branch flags. -/
-def exposedOpcode (offset : ℕ) : Expression (ZMod p) :=
-  var ⟨offset⟩ * 40 + var ⟨offset + 1⟩ * 41 +
-    var ⟨offset + 2⟩ * 42 + var ⟨offset + 3⟩ * 43 +
-      var ⟨offset + 4⟩ * 44 + var ⟨offset + 5⟩ * 45
+/-- The Program-fetch opcode selected by the six input discriminants. -/
+def exposedOpcode (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
+  input.isBeq * 40 + input.isBne * 41 + input.isBlt * 42 +
+    input.isBge * 43 + input.isBltu * 44 + input.isBgeu * 45
 
 /-- Branch's exact Memory-channel list, descended from `ITypeReaderImmutable`. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (_offset : ℕ) :
@@ -131,18 +125,18 @@ theorem opBPull_mem_exposedMemoryInteractions
   simp [exposedMemoryInteractions]
 
 /-- State, Memory, and Program interactions exposed by the exact Branch row.
-`next_pc` occupies local cells `offset + 7 .. offset + 9`. -/
+`next_pc` occupies local cells `offset + 11 .. offset + 13`. -/
 def stateExposure (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ExposedChannel (ZMod p)) :=
   Readers.CPUState.exposedState
     ⟨input.state,
-      #v[var ⟨offset + 7⟩, var ⟨offset + 8⟩, var ⟨offset + 9⟩],
+      #v[var ⟨offset + 11⟩, var ⟨offset + 12⟩, var ⟨offset + 13⟩],
       8, input.is_real⟩ ++
   expose memoryChannel (exposedMemoryInteractions input offset) ++
   expose programChannel
     [ programChannel.pulledIf input.is_real
         ⟨input.state.pc[0], input.state.pc[1], input.state.pc[2],
-          exposedOpcode offset, input.adapter.op_a,
+          exposedOpcode input, input.adapter.op_a,
           #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c_imm,
           input.adapter.op_a_0, 0, 1⟩ ]
 

@@ -53,7 +53,7 @@ schema. `witgen/<Chip>.manifest.json` fills the gap:
   "inputWidth": 36,
   "operationCounts": {"witness": 30, "assert": 321, "lookup": 0, "interact": 135},
   "hints": [],
-  "hintPolicy": "a missing table, wrong width, or out-of-range row reads as the all-zero vector; padding rows rely on this default",
+  "hintPolicy": "a missing table, wrong width, or out-of-range row reads as the all-zero vector",
   "data": [],
   "field": {"name": "KoalaBear", "modulus": 2130706433}
 }
@@ -239,10 +239,8 @@ Row provenance is honest:
   dump (`export/sp1dump/<Chip>.dump.json`, produced by the `chip_traces` binary at the
   pinned extraction branch; the `provenance.events` string names the dump file and its
   `sp1Commit`). The inputs are recovered from the dumped row itself through the
-  symbolic row map (every native input cell is a bare `var` column of the Rust row,
-  except Branch's `is_real`, which is `1` on event rows). Branch's remaining hint tables
-  come from the opcode discriminant and its `branch_branching` bit from the operand values,
-  mirroring SP1's own populate. `expectedRow` is the dumped
+  symbolic row map: every native input cell is a bare `var` column of the Rust row.
+  All 25 instruction chips use empty hints; the exporter rejects any `hintGet`. `expectedRow` is the dumped
   SP1 `generate_trace` row verbatim. **The generation-time gate**: before anything is
   written, the exporter recomputes every event row — `FlatOperation.witgen` over the
   authored operations, then the symbolic row map evaluated at the resulting cells — and
@@ -298,10 +296,9 @@ witnesses with Lean and exercises Clean's proof backend; see [export](export.md)
 
 ## SP1-specific facts a consumer may rely on
 
-- The 25 instruction chips have empty `data` schemas. Bitwise, Lt, ShiftLeft, ShiftRight, Mul
-  and DivRem supply their variant selectors as inputs and read no external hints. The first five
-  derive activity from their selectors; DivRem supplies seven selectors and derives DIVU.
-- Only Branch uses `hintGet`, always at constant row `0`. Its two hint tables and widths
-  appear in the manifests: `branch_flags` 6 and `branch_branching` 1.
-- Missing hints read as zero vectors. DivRem's DIVU padding instead uses seven zero
-  selector inputs and a divisor read of one; its derived DIVU witness is one.
+- The 25 instruction chips have empty `data` and `hints` schemas. Bitwise, Lt, ShiftLeft,
+  ShiftRight, Mul and Branch supply variant selectors as inputs and derive activity from their
+  sum. DivRem supplies seven selectors and derives DIVU; Branch computes its decision bit.
+- DivRem's DIVU padding uses seven zero selector inputs and a divisor read of one; its
+  derived DIVU witness is one. Missing hints read as zero vectors in the general wire format,
+  but instruction witness programs do not use them.

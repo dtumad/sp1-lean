@@ -2,42 +2,12 @@ import SP1Clean.FormalModel.TraceGen.Arith
 import SP1Clean.Proofs.Chips.BranchChip.Witgen
 import ToClean.Air.TableBuild
 
-/-! # `SP1Clean.BranchChip` — from trace events to a valid AIR table
+/-! # Branch event and table construction
 
-The six conditional branches (`BEQ`/`BNE`/`BLT`/`BGE`/`BLTU`/`BGEU`) through the trace-generation
-chain (see `AddChip/Complete.lean` for the programme note, and `BitwiseChip/Complete.lean` for why
-a hint-flag chip's hint has to be built per row).
-
-Branch is the chip that needs the per-row hint for **two** reasons, not one. The six variant
-selectors are the familiar case: `is_real = Σ is_b*`, so a table-level hint could not carry a
-padding row and a real row at once. The second is `is_branching` — the row's taken/not-taken
-decision, which is per-row *data*, not a per-table constant, and which the chip's
-`ProverAssumptions` pins against the operand comparison the row's own opcode names:
-
-    f[2] = 1 → (br = 1 ↔ (rs1).slt (rs2) = true)          -- and five siblings
-
-`ITypeEvent.branchTaken` is that bridge on the event side: the RV64 comparison of the event's two
-operand values, selected by its opcode discriminant. `ITypeEvent.toBranchHint` puts it in the
-`"branch_branching"` key beside the flags, so the row the builder produces decides the way the
-executor decided.
-
-## Two new event predicates, and why each
-
-* `ITypeEvent.WellFormedBranch` — **not** `ITypeEvent.WellFormed`. That record's `opA_ne_zero` is
-  the write families' routing condition; a branch's `op_a` is the `rs1` **source read**, and
-  `beq x0, x1, L` is legal and common, so reusing it would silently exclude every branch comparing
-  against zero — the `MemoryEvent.WellFormedStore` finding, repeated. What it states instead is
-  that `x0` reads as zero, which is what the immutable adapter's four `op_a_0 · prev_value_i = 0`
-  gates need. (Details in `TraceGen/Events.lean`.)
-* `ITypeEvent.BranchTargets` — the two candidate addresses. Both carry chains run on every real
-  row, so both owe `< 2 ^ 48`; only the **selected** one is alignment-range-checked, so that
-  conjunct is gated on the decision rather than demanded of both.
-
-Everything else is cited: the `CPUState` block, the whole immutable I-type adapter contract
-(`iTypeReaderImmutable_spec`, the store family's lemma, unchanged), and the `AddOperation` witness
-identity `populate_pcWord`. Padding is satisfiable: the empty hint reads six zero flags and
-`is_branching = 0`, and the two ungated `value[3] = 0` conjuncts hold on a zero row because its two
-sums are `0 + 0` and `0 + 4`. -/
+Event opcodes supply the six committed selectors. Clean generates the comparison, branch
+bit and next PC without per-row hints. `WellFormedBranch` permits reading `x0`; `BranchTargets`
+bounds both candidate PCs and aligns the selected target.
+-/
 
 namespace SP1Clean.TraceGen
 
@@ -51,13 +21,16 @@ def branchFlags (opcode : ℕ) : Vector (ZMod p) 6 :=
   #v[if opcode = 40 then 1 else 0, if opcode = 41 then 1 else 0, if opcode = 42 then 1 else 0,
      if opcode = 43 then 1 else 0, if opcode = 44 then 1 else 0, if opcode = 45 then 1 else 0]
 
-/-- The `Branch` chip's committed input row for one event — a **real** row (`is_real = 1`). The six
-flags, the decision, the compare block and the three `next_pc` limbs are all *witnessed* columns,
-not inputs; only the state and adapter blocks are built here. -/
+/-- CPU state, immutable reads and selectors for one branch event. -/
 def ITypeEvent.toBranchInputs (e : ITypeEvent) : BranchChip.Inputs (ZMod p) where
-  is_real := 1
   state := cpuStateCols e.clk e.pc
   adapter := iTypeReaderCols e
+  isBeq := (branchFlags e.opcode)[0]
+  isBne := (branchFlags e.opcode)[1]
+  isBlt := (branchFlags e.opcode)[2]
+  isBge := (branchFlags e.opcode)[3]
+  isBltu := (branchFlags e.opcode)[4]
+  isBgeu := (branchFlags e.opcode)[5]
 
 lemma ITypeEvent.toBranchInputs_state (e : ITypeEvent) :
     (e.toBranchInputs (p := p)).state = cpuStateCols e.clk e.pc := rfl
@@ -65,51 +38,18 @@ lemma ITypeEvent.toBranchInputs_state (e : ITypeEvent) :
 lemma ITypeEvent.toBranchInputs_adapter (e : ITypeEvent) :
     (e.toBranchInputs (p := p)).adapter = iTypeReaderCols e := rfl
 
-/-- **The row's prover hint.** Two keys: `"branch_flags"` carries the variant selectors of *this
-event's* opcode, and `"branch_branching"` carries *this event's* taken/not-taken decision. Both are
-per-row data in SP1's Rust trace, and both are pinned by the chip's `ProverAssumptions` against the
-row's own columns — the flags against `is_real`, the decision against the operand comparison. -/
-def ITypeEvent.toBranchHint (e : ITypeEvent) : ProverHint (ZMod p) :=
-  hintAdd "branch_branching" #v[if e.branchTaken then (1 : ZMod p) else 0]
-    (flagHint "branch_flags" (branchFlags e.opcode))
-
-/-- The `Branch` chip's padding row: every column zero, `is_real = 0`. Its hint is the empty one,
-so all six flags and the decision read back as `0`. -/
+/-- Zero state, operands and selectors for padding. -/
 def branchPaddingInputs : BranchChip.Inputs (ZMod p) where
-  is_real := 0
   state := zeroCPUStateCols
   adapter := zeroITypeReaderCols
+  isBeq := 0
+  isBne := 0
+  isBlt := 0
+  isBge := 0
+  isBltu := 0
+  isBgeu := 0
 
 variable [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-omit [Fact (2 ^ 24 < p)] in
-/-- The chip reads back exactly the flags the builder put in (the `"branch_branching"` key of the
-hint falls through to the flag table). -/
-lemma hintFlags_toBranchHint (e : ITypeEvent) :
-    BranchChip.hintFlags (e.toBranchHint (p := p)) = branchFlags e.opcode := by
-  have hdefault : (default : Vector (ZMod p) 6) = #v[0, 0, 0, 0, 0, 0] := rfl
-  rw [BranchChip.hintFlags, ← hdefault, ITypeEvent.toBranchHint, hintAdd, if_neg (by decide)]
-  exact flagHint_apply _ _
-
-omit [Fact (2 ^ 24 < p)] in
-/-- The chip reads back exactly the decision the builder put in. -/
-lemma hintBranching_toBranchHint (e : ITypeEvent) :
-    BranchChip.hintBranching (e.toBranchHint (p := p))
-      = if e.branchTaken then (1 : ZMod p) else 0 := by
-  have hdefault : (default : Vector (ZMod p) 1) = #v[0] := rfl
-  rw [BranchChip.hintBranching, ← hdefault, ITypeEvent.toBranchHint,
-    hintAdd_apply "branch_branching" _ _]
-  rfl
-
-omit [Fact (2 ^ 24 < p)] in
-/-- A padding row's empty hint reads back as all-zero flags. -/
-lemma branchHintFlags_empty :
-    BranchChip.hintFlags (ProverHint.empty (ZMod p)) = #v[0, 0, 0, 0, 0, 0] := rfl
-
-omit [Fact (2 ^ 24 < p)] in
-/-- A padding row's empty hint reads back as a `0` decision — a padding row branches nowhere. -/
-lemma branchHintBranching_empty :
-    BranchChip.hintBranching (ProverHint.empty (ZMod p)) = 0 := rfl
 
 omit [Fact (2 ^ 24 < p)] in
 /-- **The flags of a real `Branch` row are one-hot, and their sum is `1`.** -/
@@ -123,11 +63,9 @@ lemma branchFlags_spec {e : ITypeEvent} (hop : e.IsBranch) :
     exact ⟨fun i hi => by interval_cases i <;> simp [branchFlags, h], by simp [branchFlags, h]⟩
 
 omit [Fact (2 ^ 24 < p)] in
-/-- The `is_branching` cell a built row carries is `1` exactly when the row's decision is taken. -/
-lemma branchBit_eq_one_iff (b : Bool) : ((if b then (1 : ZMod p) else 0) = 1) ↔ b = true := by
-  cases b
-  · simp
-  · simp
+/-- A branch event activates exactly one instruction selector. -/
+lemma ITypeEvent.toBranchInputs_is_real {e : ITypeEvent} (hop : e.IsBranch) :
+    (e.toBranchInputs (p := p)).is_real = 1 := (branchFlags_spec hop).2
 
 /-! ## The witnessed words of a built row -/
 
@@ -174,24 +112,59 @@ lemma fallThroughWord_toBranchInputs {e : ITypeEvent} (h : e.pc < 2 ^ 48) :
   simp only [ITypeEvent.toBranchInputs_state]
   rw [wordOfNat_four, populate_pcWord h]
 
-/-- **The committed `next_pc` of a built row is the built word of the address the row continues
-at** — the decision the hint carries selects the same candidate the executor did. -/
-lemma committedNextPc_toBranchInputs {e : ITypeEvent} (h : e.pc < 2 ^ 48) :
+/-- The comparison witness computes the executor's branch decision. -/
+lemma populateBranching_toBranchInputs {e : ITypeEvent} (hop : e.IsBranch) :
+    BranchChip.populateBranching (e.toBranchInputs (p := p)) =
+      if e.branchTaken then (1 : ZMod p) else 0 := by
+  have hrs1 : Word.isU64 (BranchChip.rs1WordInput (e.toBranchInputs (p := p))) := by
+    rw [rs1WordInput_toBranchInputs]
+    exact wordOfNat_isU64 _
+  have hrs2 : Word.isU64 (BranchChip.rs2WordInput (e.toBranchInputs (p := p))) := by
+    rw [rs2WordInput_toBranchInputs]
+    exact wordOfNat_isU64 _
+  have hf : ∀ i : Fin 6, (e.toBranchInputs (p := p)).flags[i] = 0 ∨
+      (e.toBranchInputs (p := p)).flags[i] = 1 := by
+    intro i
+    exact (branchFlags_spec (p := p) hop).1 i i.isLt
+  have hreal := e.toBranchInputs_is_real (p := p) hop
+  have hbinary := BranchChip.populateBranching_binary e.toBranchInputs hrs1 hrs2 hf (Or.inr hreal)
+  have hconditions := BranchChip.populateBranching_conditions e.toBranchInputs hrs1 hrs2 hf hreal
+  rw [rs1BV_toBranchInputs, rs2BV_toBranchInputs] at hconditions
+  have hdecision : BranchChip.populateBranching (e.toBranchInputs (p := p)) = 1 ↔
+      e.branchTaken = true := by
+    obtain hq | hq | hq | hq | hq | hq := hop
+    · simpa [ITypeEvent.branchTaken, hq] using hconditions.1 (by simp [ITypeEvent.toBranchInputs, branchFlags, hq])
+    · simpa [ITypeEvent.branchTaken, hq] using hconditions.2.1 (by simp [ITypeEvent.toBranchInputs, branchFlags, hq])
+    · simpa [ITypeEvent.branchTaken, hq] using hconditions.2.2.1 (by simp [ITypeEvent.toBranchInputs, branchFlags, hq])
+    · simpa [ITypeEvent.branchTaken, hq] using hconditions.2.2.2.1 (by simp [ITypeEvent.toBranchInputs, branchFlags, hq])
+    · simpa [ITypeEvent.branchTaken, hq] using hconditions.2.2.2.2.1 (by simp [ITypeEvent.toBranchInputs, branchFlags, hq])
+    · simpa [ITypeEvent.branchTaken, hq] using hconditions.2.2.2.2.2 (by simp [ITypeEvent.toBranchInputs, branchFlags, hq])
+  cases hb : e.branchTaken with
+  | false =>
+    rcases hbinary with h0 | h1
+    · exact h0
+    · have hf := hdecision.mp h1
+      simp [hb] at hf
+  | true => exact hdecision.mpr hb
+
+/-- Selecting the event's branch bit yields the executor's next PC. -/
+lemma committedNextPc_toBranchInputs {e : ITypeEvent} (hop : e.IsBranch)
+    (h : e.pc < 2 ^ 48) :
     BranchChip.committedNextPc (e.toBranchInputs (p := p))
         (if e.branchTaken then (1 : ZMod p) else 0)
       = #v[(wordOfNat (p := p) e.branchNextPc)[0], (wordOfNat (p := p) e.branchNextPc)[1],
            (wordOfNat (p := p) e.branchNextPc)[2]] := by
-  rw [BranchChip.committedNextPc, branchTargetWord_toBranchInputs h,
+  rw [BranchChip.committedNextPc, e.toBranchInputs_is_real hop, branchTargetWord_toBranchInputs h,
     fallThroughWord_toBranchInputs h, ITypeEvent.branchNextPc]
   cases hb : e.branchTaken <;>
     · refine Vector.ext (fun i hi => ?_)
-      interval_cases i <;> simp [ITypeEvent.toBranchInputs]
+      interval_cases i <;> simp
 
 /-- **The committed `next_pc` is a legal program counter**: its low limb passes the chip's
 `Range(next_pc[0] / 4, 14)` alignment pull and its two upper limbs are u16s. The alignment is the
 event's own — the address the executor continued at is 4-byte aligned — and the limb bounds are
 properties of the builder. -/
-lemma committedNextPc_bounds {e : ITypeEvent} (hpc : e.pc < 2 ^ 48)
+lemma committedNextPc_bounds {e : ITypeEvent} (hop : e.IsBranch) (hpc : e.pc < 2 ^ 48)
     (halign : e.branchNextPc % 4 = 0) :
     ((BranchChip.committedNextPc (e.toBranchInputs (p := p))
         (if e.branchTaken then (1 : ZMod p) else 0))[0] * (4 : ZMod p)⁻¹).val < 2 ^ 14 ∧
@@ -199,7 +172,7 @@ lemma committedNextPc_bounds {e : ITypeEvent} (hpc : e.pc < 2 ^ 48)
         (if e.branchTaken then (1 : ZMod p) else 0))[1].val < 2 ^ 16 ∧
       (BranchChip.committedNextPc (e.toBranchInputs (p := p))
         (if e.branchTaken then (1 : ZMod p) else 0))[2].val < 2 ^ 16 := by
-  simp only [committedNextPc_toBranchInputs hpc, Vector.getElem_mk, List.getElem_toArray,
+  simp only [committedNextPc_toBranchInputs hop hpc, Vector.getElem_mk, List.getElem_toArray,
     List.getElem_cons_zero, List.getElem_cons_succ]
   obtain ⟨-, hl1, hl2, -⟩ := Word.lt_cases_of_isU64 (wordOfNat_isU64 (p := p) e.branchNextPc)
   refine ⟨?_, hl1, hl2⟩
@@ -217,81 +190,52 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-! ## The chip's honest-prover contract on a built row -/
 
-/--
-**A well-formed branch trace event with legal targets builds a row the honest prover can complete,
-at the hint the same event builds.** Every conjunct of `BranchChip.ProverAssumptions` follows from
-`ITypeEvent.WellFormedBranch`, the routing condition `hop : e.IsBranch`, and `htgt : e.BranchTargets`.
-
-The `data` is arbitrary; the **hint is not** — it is `e.toBranchHint`, carrying this event's own
-opcode selectors and its own taken/not-taken decision.
--/
+/-- A well-formed branch event satisfies the prover contract for arbitrary hints. -/
 theorem proverAssumptions_of_event {e : ITypeEvent} (h : e.WellFormedBranch) (hop : e.IsBranch)
-    (htgt : e.BranchTargets) (data : ProverData (ZMod p)) :
-    ProverAssumptions (e.toBranchInputs (p := p)) data e.toBranchHint := by
-  obtain ⟨htgt48, hlink, halign⟩ := htgt
-  obtain ⟨hbin, hsum⟩ := branchFlags_spec (p := p) hop
-  have hne : ((0 : ZMod p)) ≠ 1 := zero_ne_one
+    (htgt : e.BranchTargets) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ProverAssumptions (e.toBranchInputs (p := p)) data hint := by
+  obtain ⟨htgt48, _hlink, halign⟩ := htgt
+  obtain ⟨hbin, _hsum⟩ := branchFlags_spec (p := p) hop
   have hpc : e.pc < 2 ^ 48 := h.pc_lt
-  simp only [ProverAssumptions, hintFlags_toBranchHint, hintBranching_toBranchHint]
-  refine ⟨wordOfNat_isU64 _, ?_, ?_, cpuStateCols_pcWord_isU64 e.clk e.pc, Or.inr rfl,
+  simp only [ProverAssumptions, e.toBranchInputs_is_real hop]
+  refine ⟨wordOfNat_isU64 _, ?_, ?_, cpuStateCols_pcWord_isU64 e.clk e.pc, Or.inr trivial,
     cpuState_spec e.clk e.pc h.clk_mod _ _ _,
     iTypeReaderImmutable_spec h.clk_mod h.opA_lt h.prevA_x0 h.prevTsA_lt h.prevTsB_lt _ _ _ _,
-    ?_, ?_, hbin 0 (by omega), hbin 1 (by omega), hbin 2 (by omega), hbin 3 (by omega),
-    hbin 4 (by omega), hbin 5 (by omega), hsum.symm, ?_, fun hr => absurd hr.symm hne, ?_, ?_⟩
-  -- the two operand words are the two register reads
+    ?_, ?_, ?_, ?_⟩
   · rw [rs1WordInput_toBranchInputs]
     exact wordOfNat_isU64 _
   · rw [rs2WordInput_toBranchInputs]
     exact wordOfNat_isU64 _
-  -- both candidate addresses are program counters: 48 bits, so their committed high limbs vanish
   · rw [branchTargetWord_toBranchInputs hpc]
     exact wordOfNat_three_eq_zero htgt48
   · rw [fallThroughWord_toBranchInputs hpc]
     exact wordOfNat_three_eq_zero (by omega)
-  -- the decision cell is binary
-  · cases hb : e.branchTaken
-    · exact Or.inl rfl
-    · exact Or.inr rfl
-  -- **the decision bridge**: the cell is `1` exactly when the comparison the row's opcode names
-  -- holds of the row's two operands
+  · intro i
+    exact hbin i i.isLt
   · intro _
-    rw [rs1BV_toBranchInputs, rs2BV_toBranchInputs]
-    obtain hq | hq | hq | hq | hq | hq := hop <;>
-      refine ⟨fun hf => ?_, fun hf => ?_, fun hf => ?_, fun hf => ?_, fun hf => ?_,
-        fun hf => ?_⟩ <;>
-      simp only [branchFlags, hq, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
-        List.getElem_cons_succ, if_true] at hf ⊢ <;>
-      first
-        | exact absurd hf hne
-        | · rw [branchBit_eq_one_iff, ITypeEvent.branchTaken]
-            simp [hq]
-  -- the alignment and limb ranges of the committed `next_pc`, on whichever candidate was selected
-  · exact fun _ => committedNextPc_bounds hpc halign
+    rw [populateBranching_toBranchInputs hop]
+    exact committedNextPc_bounds hop hpc halign
 
-/-- **A padding row satisfies the same contract**, at the empty hint: six zero flags, a `0`
-decision, and every `is_real`-gated conjunct vacuous. The two `value[3] = 0` conjuncts are stated
-**ungated** and hold because a zero row's two carry chains compute `0 + 0` and `0 + 4`. -/
-theorem proverAssumptions_padding (data : ProverData (ZMod p)) :
-    ProverAssumptions (branchPaddingInputs (p := p)) data (ProverHint.empty (ZMod p)) := by
+/-- Zero selectors make every activity-gated padding obligation vacuous.
+The two ungated high limbs vanish for `0 + 0` and `0 + 4`. -/
+theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ProverAssumptions (branchPaddingInputs (p := p)) data hint := by
   have hzero : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) :=
     Word.isU64_of_cases (by simp) (by simp) (by simp) (by simp)
   have hne : ¬((0 : ZMod p) = 1) := zero_ne_one
-  refine ⟨hzero, ?_, ?_, hzero, Or.inl rfl, fun hr => absurd hr hne, ?_, ?_, ?_,
-    Or.inl rfl, Or.inl rfl, Or.inl rfl, Or.inl rfl, Or.inl rfl, Or.inl rfl, ?_,
-    Or.inl rfl, fun _ => rfl, fun hr => absurd hr hne, fun hr => absurd hr hne⟩
-  -- the two operand words of a zero row
-  · exact hzero
-  · exact hzero
-  -- the immutable adapter's contract: the four zeroing gates are `0 * 0`, everything else is gated
+  have hreal : (branchPaddingInputs (p := p)).is_real = 0 := by simp [branchPaddingInputs]
+  simp only [ProverAssumptions, hreal]
+  refine ⟨hzero, hzero, hzero, hzero, Or.inl trivial, fun hr => absurd hr hne, ?_, ?_, ?_,
+    ?_, fun hr => absurd hr hne⟩
   · exact ⟨⟨zero_mul _, zero_mul _, zero_mul _, zero_mul _⟩, fun hr => absurd hr hne,
       fun hr => absurd hr hne, fun hr => absurd hr hne, fun hr => absurd hr hne,
       fun hr => absurd hr hne⟩
-  -- the two ungated `value[3] = 0` gates: the zero row's two sums are `0 + 0` and `0 + 4`
   · simp [branchTargetWord, branchPaddingInputs, zeroCPUStateCols, zeroITypeReaderCols,
       AddOperation.populate]
   · simp [fallThroughWord, branchPaddingInputs, zeroCPUStateCols, AddOperation.populate]
-  -- the selector sum of a padding row is `0`
-  · simp [branchPaddingInputs, branchHintFlags_empty]
+  · intro i
+    left
+    fin_cases i <;> rfl
 
 /-! ## The built table -/
 
@@ -300,53 +244,48 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) :
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
 def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
 
-/-- The rows a trace builds: one input row **paired with its own hint** per event, then `padding`
-zero rows at the empty hint. -/
-def traceInputs (events : List ITypeEvent) (padding : ℕ) :
-    List (Inputs (ZMod p) × ProverHint (ZMod p)) :=
-  events.map (fun e => (e.toBranchInputs, e.toBranchHint))
-    ++ List.replicate padding (branchPaddingInputs, ProverHint.empty (ZMod p))
+/-- Real event inputs followed by zero padding inputs. -/
+def traceInputs (events : List ITypeEvent) (padding : ℕ) : List (Inputs (ZMod p)) :=
+  events.map ITypeEvent.toBranchInputs ++ List.replicate padding branchPaddingInputs
 
-/-- Every row of a built trace — event row or padding row — satisfies the chip's honest-prover
-contract at its own hint. -/
+/-- Each event or padding row satisfies the prover contract. -/
 theorem proverAssumptions_of_mem_traceInputs {events : List ITypeEvent} {padding : ℕ}
     (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets)
-    (data : ProverData (ZMod p)) :
-    ∀ input ∈ traceInputs (p := p) events padding, ProverAssumptions input.1 data input.2 := by
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ∀ input ∈ traceInputs (p := p) events padding, ProverAssumptions input data hint := by
   intro input hin
   rcases List.mem_append.mp hin with hin | hin
   · obtain ⟨e, he, rfl⟩ := List.mem_map.mp hin
-    exact proverAssumptions_of_event (h e he).1 (h e he).2.1 (h e he).2.2 data
+    exact proverAssumptions_of_event (h e he).1 (h e he).2.1 (h e he).2.2 data hint
   · rw [List.eq_of_mem_replicate hin]
-    exact proverAssumptions_padding data
+    exact proverAssumptions_padding data hint
 
-/-- **A real trace builds a valid Branch table.** Every `assertZero` of the whole flattened chip
-circuit evaluates to zero on every built row, and no static lookup is left unchecked. -/
+/-- Clean's ordinary table builder satisfies every constraint. -/
 theorem traceTable_constraints (events : List ITypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p))
     (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets) :
-    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding) data).Constraints data :=
-  Air.Flat.Table.buildHinted_constraints _ _ _ _ computableWitnesses
-    (proverAssumptions_of_mem_traceInputs h data)
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
+      (ProverHint.empty _)).Constraints data :=
+  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
+    (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
-/-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
-Memory, Program and Byte channels carries the payload its channel promises. -/
+/-- The built table satisfies its channel guarantees. -/
 theorem traceTable_guarantees (events : List ITypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p))
     (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets) :
-    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding) data).Guarantees data :=
-  Air.Flat.Table.buildHinted_guarantees _ _ _ _ computableWitnesses
-    (proverAssumptions_of_mem_traceInputs h data)
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
+      (ProverHint.empty _)).Guarantees data :=
+  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
+    (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
-/-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
-concatenated in row order. -/
+/-- The table interaction list, preserving row order and multiplicities. -/
 theorem traceTable_interactionsWith (events : List ITypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Air.Flat.Table.buildHinted (component (p := p)) (traceInputs events padding)
-        data).interactionsWith data channel =
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events padding)
+        data (ProverHint.empty _)).interactionsWith data channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
-          (Environment.fromArray ((component (p := p)).buildRow input.1 data input.2) data) :=
-  Air.Flat.Table.buildHinted_interactions _ _ _ _ data channel
+          (Environment.fromArray ((component (p := p)).buildRow input data (ProverHint.empty _)) data) :=
+  Air.Flat.Table.build_interactions _ _ _ _ _ data channel
 
 end SP1Clean.BranchChip

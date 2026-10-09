@@ -84,26 +84,6 @@ theorem tablesCleanAccesses_cons (table : Table (ZMod p)) (tables : List (Table 
       tableCleanAccesses table data ++ tablesCleanAccesses tables data := by
   simp only [tablesCleanAccesses, List.flatMap_cons]
 
-/-- The `buildHinted` companion of `tableCleanAccesses_build`.
-
-Seven of the twenty-five instruction chips build through `Table.buildHinted` rather than
-`Table.build` — the ones whose witness generation reads a per-row prover hint (the flag one-hots of
-Bitwise/Lt/the shifts/Mul/DivRem, and Branch's comparison selector). Without this they are simply
-unreachable from the ledger layer. -/
-theorem tableCleanAccesses_buildHinted (component : Component (ZMod p))
-    (inputs : List (component.Input (ZMod p) × ProverHint (ZMod p)))
-    (data : ProverData (ZMod p))
-    (fixed : component.fixedRowsMatch (inputs.map fun input => component.buildRow input.1 data input.2))
-    (evaluationData : ProverData (ZMod p)) :
-    tableCleanAccesses (Table.buildHinted component inputs data fixed) evaluationData =
-      inputs.flatMap fun input =>
-        component.operations.interactions.map
-          (AbstractInteraction.toAccess
-            (Environment.fromArray (component.buildRow input.1 data input.2) evaluationData)) := by
-  simp only [tableCleanAccesses, Table.buildHinted_interactionValues,
-    Operations.interactionValues, List.map_flatMap, List.map_map, Function.comp_def,
-    interactionToAccess_eval]
-
 /-! ## One channel's ledger versus the whole table's
 
 Clean's balance obligations are stated per channel (`EnsembleWitness.interactionsWith channel`),

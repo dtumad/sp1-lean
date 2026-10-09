@@ -1,7 +1,6 @@
-import SP1Clean.FormalModel.Contracts.Chips
+import SP1Clean.Semantics.Specs.Chips.Branch
 import SP1Clean.Native.Operations.AddOperation.Populate
 import SP1Clean.Circuits.Gadgets.LtSigned
-import SP1Clean.Native.Witgen.HintFlags
 import ToClean.Circuit.WitnessCombinator
 import SP1Clean.Native.Readers.RTypeReader
 import SP1Clean.Native.Readers.ITypeReader
@@ -34,34 +33,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 omit [Fact p.Prime] in
 /-- `14 < p`, so the alignment `Range` byte-row width column `14` round-trips through `byteRowSpec_range`. -/
 lemma h14p : (14 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-
-/-- The six honest opcode flags the prover supplies via the `"branch_flags"` hint key (one-hot for the
-active branch opcode `Σ is_b*·k`, all-zero on padding). Falls back to all-zero when the key is absent. -/
-def hintFlags (h : ProverHint (ZMod p)) : Vector (ZMod p) 6 :=
-  ((h "branch_flags" 6)[0]?).getD #v[0, 0, 0, 0, 0, 0]
-
-/-- The honest `is_branching` decision the prover supplies via the `"branch_branching"` hint key. -/
-def hintBranching (h : ProverHint (ZMod p)) : ZMod p :=
-  (((h "branch_branching" 1)[0]?).getD #v[0])[0]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- The flag accessor is literally the `hintFlagsIR` evaluation (`hintGet`'s zero default IS the
-`.getD` fallback), in the `Witgen.eval` normal form the completeness seam arrives in. -/
-lemma hintFlags_eval_ir (env : ProverEnvironment (ZMod p)) :
-    (Witgen.WitgenIR.ofFExprs (hintFlagsIR (ZMod p) "branch_flags" 6)).eval env
-      = hintFlags env.hint := by
-  have hdefault : (default : Vector (ZMod p) 6) = #v[0, 0, 0, 0, 0, 0] := rfl
-  rw [hintFlagsIR_eval, hintFlags, ← hdefault]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- The branching-decision accessor is literally the single-cell `hintGet` evaluation. -/
-lemma hintBranching_eval_ir (env : ProverEnvironment (ZMod p)) :
-    Witgen.FExpr.eval { env := env }
-        (.hintGet "branch_branching" 1 0 (0 : Fin 1) : Witgen.FExpr (ZMod p))
-      = hintBranching env.hint := by
-  have hdefault : (default : Vector (ZMod p) 1) = #v[0] := rfl
-  rw [hintBranching, ← hdefault]
-  simp only [circuit_norm]
 
 /-- The `next_pc` witness as exportable IR: the `is_branching`-selected blend of the two
 `AddOperation`-style carry chains (branch target `pc + imm`, fall-through `pc + 4`), limbs 0–2.
@@ -157,10 +128,10 @@ def rs2WordInput (input : Inputs (ZMod p)) : Word (ZMod p) :=
   #v[input.adapter.op_b_memory.prev_value[0], input.adapter.op_b_memory.prev_value[1],
      input.adapter.op_b_memory.prev_value[2], input.adapter.op_b_memory.prev_value[3]]
 
-/-- Compose the BRANCH row with the exact Rust-owned local-column shape:
-six opcode flags, `is_branching`, three `next_pc` limbs, and the ten `LtOperationSigned` columns.
-The witness closure uses `AddOperation.populate` to compute the selected target, while the circuit
-itself commits only SP1's inline carry equations and its three `next_pc` range interactions. -/
+/-- Compose the branch comparison certificate, decision and selected next PC.
+
+Selectors are ordinary inputs. Clean witnesses the comparison first, then computes
+the decision from those cells and feeds it to the existing next-PC witness IR. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p)) := do
   let rs1WordV : Word (Expression (ZMod p)) :=
     #v[input.adapter.op_a_memory.prev_value[0], input.adapter.op_a_memory.prev_value[1],
@@ -168,17 +139,19 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   let rs2WordV : Word (Expression (ZMod p)) :=
     #v[input.adapter.op_b_memory.prev_value[0], input.adapter.op_b_memory.prev_value[1],
        input.adapter.op_b_memory.prev_value[2], input.adapter.op_b_memory.prev_value[3]]
-  -- six opcode flags + is_branching: threaded via ProverHint (not an Inputs field).
-  let flags ← witnessVectorIR 6 (.ofFExprs (hintFlagsIR (ZMod p) "branch_flags" 6))
-  let is_beq := flags[0]; let is_bne := flags[1]; let is_blt := flags[2]
-  let is_bge := flags[3]; let is_bltu := flags[4]; let is_bgeu := flags[5]
-  let is_branching ← witnessField (.hintGet "branch_branching" 1 0 0)
-  let next_pc ← witnessVectorIR 3
-    (nextPcIR #v[input.state.pc[0], input.state.pc[1], input.state.pc[2]]
-      input.adapter.op_c_imm is_branching input.is_real)
+  let is_beq := input.isBeq; let is_bne := input.isBne; let is_blt := input.isBlt
+  let is_bge := input.isBge; let is_bltu := input.isBltu; let is_bgeu := input.isBgeu
   let lt_cols ← witness (var := Var Circuits.Types.LtOperationSigned)
     (LtOperationSigned.populateFE rs1WordV rs2WordV (is_blt + is_bge) input.is_real)
   let cmp := lt_cols
+  let decision := branchDecision is_beq is_bne is_blt is_bge is_bltu is_bgeu
+    cmp.result.u16_compare_operation.bit
+    (cmp.result.u16_flags[0] + cmp.result.u16_flags[1]
+      + cmp.result.u16_flags[2] + cmp.result.u16_flags[3])
+  let is_branching ← witnessField (.expr decision)
+  let next_pc ← witnessVectorIR 3
+    (nextPcIR #v[input.state.pc[0], input.state.pc[1], input.state.pc[2]]
+      input.adapter.op_c_imm is_branching input.is_real)
   assertion LtOperationSigned.circuit ⟨rs1WordV, rs2WordV, lt_cols, is_blt + is_bge, input.is_real⟩
   is_beq * (is_beq - 1) === 0
   is_bne * (is_bne - 1) === 0
@@ -187,15 +160,8 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   is_bltu * (is_bltu - 1) === 0
   is_bgeu * (is_bgeu - 1) === 0
   let sum := is_beq + is_bne + is_blt + is_bge + is_bltu + is_bgeu
-  -- shallow (`assertZero`, W11 Phase 0c): the three next_pc byte pulls are gated by `input.is_real`, whose
-  -- binarity is `is_real = Σ flags` ∧ `Σ flags ∈ {0,1}`; both must be visible to `ConstraintsHold.Shallow`.
-  assertZero (input.is_real - sum)
+  -- Activity must be visible to the shallow byte-channel obligations.
   assertZero (sum * (sum - 1))
-  let is_eq := (1 : Expression (ZMod p)) - (cmp.result.u16_flags[0] + cmp.result.u16_flags[1]
-    + cmp.result.u16_flags[2] + cmp.result.u16_flags[3])
-  let bit := cmp.result.u16_compare_operation.bit
-  let decision := is_beq * is_eq + is_bne * (1 - is_eq)
-    + (is_bge + is_bgeu) * (1 - bit) + (is_blt + is_bltu) * bit
   is_branching * (is_branching - 1) === 0
   sum * (is_branching - decision) === 0
   let baseInv : Expression (ZMod p) :=
@@ -245,68 +211,25 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   return ⟨input.state, input.adapter, next_pc,
     is_beq, is_bne, is_blt, is_bge, is_bltu, is_bgeu, is_branching, cmp⟩
 
-/-- Derive the 20 Rust-owned witness cells and complete four-channel interface from `main`. -/
+/-- Derive the 14 Rust-owned witness cells and complete four-channel interface from `main`. -/
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
   elaborate_circuit
 
-/-- Folded completed-row layout used by the whole-chip Rust AIR codec.  The 20 Rust-owned local
-cells are, in order, the six opcode flags, `is_branching`, the three `next_pc` limbs, and the ten
-`LtOperationSigned` cells. -/
+/-- Completed row: ten comparison cells, the decision and three next-PC limbs. -/
 @[circuit_norm] lemma directOutput_eq
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
-        Vector.mapRange 3 fun i => var { index := offset + 7 + i },
-        var { index := offset },
-        var { index := offset + 1 },
-        var { index := offset + 2 },
-        var { index := offset + 3 },
-        var { index := offset + 4 },
-        var { index := offset + 5 },
-        var { index := offset + 6 },
-        varFromOffset Circuits.Types.LtOperationSigned (offset + 10)⟩ :
+        Vector.mapRange 3 fun i => var { index := offset + 11 + i },
+        input.isBeq, input.isBne, input.isBlt, input.isBge, input.isBltu, input.isBgeu,
+        var { index := offset + 10 },
+        varFromOffset Circuits.Types.LtOperationSigned offset⟩ :
         Var Columns (ZMod p)) := rfl
-
-/-- Component-wise evaluation of the independent Branch input prefix. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    Eval.eval env input =
-      ({ is_real := Eval.eval env input.is_real,
-         state := Eval.eval env input.state,
-         adapter := Eval.eval env input.adapter } : Inputs F) := by
-  rw [ProvableStruct.eval_eq_eval]; rfl
-
-/-- Folded projection of the Branch input activity flag.
-
-Keeping this projection behind a theorem prevents `eval_inputFirstRow` consumers from asking
-reducibility to unfold the completed circuit while recovering the first input cell. -/
-@[circuit_norm] theorem eval_inputIsReal {F : Type} [FiniteField F]
-    (env : Environment F) (input : Inputs (Expression F)) :
-    (Eval.eval env input).is_real = Expression.eval env input.is_real := by
-  simpa only [CircuitType.eval_expr] using
-    congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
-
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
-    (env : Environment F) (cols : Columns (Expression F)) :
-    Eval.eval env cols =
-      ({ state := Eval.eval env cols.state,
-         adapter := Eval.eval env cols.adapter,
-         next_pc := Eval.eval env cols.next_pc,
-         is_beq := Eval.eval env cols.is_beq,
-         is_bne := Eval.eval env cols.is_bne,
-         is_blt := Eval.eval env cols.is_blt,
-         is_bge := Eval.eval env cols.is_bge,
-         is_bltu := Eval.eval env cols.is_bltu,
-         is_bgeu := Eval.eval env cols.is_bgeu,
-         is_branching := Eval.eval env cols.is_branching,
-         compare_operation := Eval.eval env cols.compare_operation } :
-        Columns F) := by
-  rw [ProvableStruct.eval_eq_eval]; rfl
 
 set_option linter.unusedSectionVars false in
 
 @[circuit_norm] lemma localLength_eq (input : Var Inputs (ZMod p)) :
-    (elaborated (p := p)).localLength input = 20 := rfl
+    (elaborated (p := p)).localLength input = 14 := rfl
 
 /-! ### Operand projections, in `circuit_norm`'s own orientation — stated at the **component**
 level (the lift simprocs move projections inside `eval` before an input-level lemma could match;
@@ -373,6 +296,19 @@ theorem eval_rs2In {F : Type} [FiniteField F]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
   exact ProvableType.eval_fields env _
+
+/-- Value interpretation of the comparison witness used to compute the branch decision. -/
+def populateComparison (input : Inputs (ZMod p)) : Circuits.Types.LtOperationSigned (ZMod p) :=
+  LtOperationSigned.populate (rs1WordInput input) (rs2WordInput input)
+    (input.isBlt + input.isBge) input.is_real
+
+/-- Value interpretation of the generated taken-branch bit. -/
+def populateBranching (input : Inputs (ZMod p)) : ZMod p :=
+  let cmp := populateComparison input
+  branchDecision input.isBeq input.isBne input.isBlt input.isBge input.isBltu input.isBgeu
+    cmp.result.u16_compare_operation.bit
+    (cmp.result.u16_flags[0] + cmp.result.u16_flags[1]
+      + cmp.result.u16_flags[2] + cmp.result.u16_flags[3])
 
 /-- The taken target word the chip witnesses for `branch_value` (`pc + op_c_imm`, base-2^16). -/
 def branchTargetWord (input : Inputs (ZMod p)) : Word (ZMod p) :=

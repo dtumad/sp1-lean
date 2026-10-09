@@ -102,6 +102,13 @@ ShiftLeft and ShiftRight own their row types in `Circuits/Types` and RV64 contra
 nonzero padding powers. Ordinary table builders need no hints; bounded operands and reader/clock
 obligations remain.
 
+Branch owns its row types in `Circuits/Types/BranchChip` and its reader/RV64 contract in
+`Semantics/Specs/Chips/Branch`. Six explicit selectors determine activity. Clean generates ten
+comparison cells, the branch decision and three next-PC limbs, giving SP1's 45-cell supervisor
+layout. Honest construction retains operand, reader, clock and target bounds; it derives the
+decision's binary and semantic properties. All 25 instruction chips now use empty prover hints.
+Providers may still require external witness data under their own contracts.
+
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
 one complete finite state with projections, and one typed physical inventory. Retain distinctions
