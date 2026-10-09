@@ -99,9 +99,9 @@ theorem instructionTableFor_length (id : InstructionChipId) :
       simp only [JalrChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)
   | branch =>
-    exact (Table.buildHinted_length BranchChip.component
+    exact (Table.build_length BranchChip.component
       (BranchChip.traceInputs (trace.instructionEvents .branch) 0)
-      trace.generationData (by trivial)).trans (by
+      trace.generationData (ProverHint.empty _) (by trivial)).trans (by
       change (BranchChip.traceInputs (trace.instructionEvents .branch) 0).length = _
       simp only [BranchChip.traceInputs, List.length_append, List.length_replicate, Nat.add_zero]
       exact List.length_map ..)

@@ -915,15 +915,12 @@ theorem branchChip_immutableItypeMemoryInteractionShape :
     descriptorSubst branchChipDescriptor (p := p)
     rfl
 
-/-- The retained immutable I-type reader after Branch's 28 witness cells. -/
-def branchChipITypeInput (input : Var BranchChip.Inputs (ZMod p)) (offset : ℕ) :
+/-- Branch's immutable reader uses the committed opcode selectors. -/
+def branchChipITypeInput (input : Var BranchChip.Inputs (ZMod p)) :
     Var Readers.ITypeReaderImmutable.Inputs (ZMod p) :=
-  let opcode :=
-    var { index := offset } * 40 + var { index := offset + 1 } * 41 +
-      var { index := offset + 2 } * 42 + var { index := offset + 3 } * 43 +
-      var { index := offset + 4 } * 44 + var { index := offset + 5 } * 45
   ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
-    input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc, opcode⟩
+    input.state.clk_0_16 + input.state.clk_16_24 * 65536, input.state.pc,
+    BranchChip.exposedOpcode input⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem BranchChip.immutableItypeTimestampContract :
@@ -932,9 +929,9 @@ theorem BranchChip.immutableItypeTimestampContract :
   let input : Var BranchChip.Inputs (ZMod p) := varFromOffset BranchChip.Inputs 0
   let offset := size BranchChip.Inputs
   let readerInput : Var Readers.ITypeReaderImmutable.Inputs (ZMod p) :=
-    branchChipITypeInput input offset
-  refine .intro (offset + 20) readerInput ?_ ?_
-  · simp only [input, offset, readerInput, branchChipITypeInput, BranchChip.circuit,
+    branchChipITypeInput input
+  refine .intro (offset + 14) readerInput ?_ ?_
+  · simp only [input, offset, readerInput, branchChipITypeInput, BranchChip.exposedOpcode, BranchChip.circuit,
       BranchChip.main, Readers.ITypeReaderImmutable.circuit, circuit_norm]
     right
     right
@@ -949,7 +946,7 @@ theorem BranchChip.immutableItypeTimestampContract :
     rfl
   · intro env
     constructor <;>
-      simp only [input, offset, readerInput, branchChipITypeInput, BranchChip.circuit,
+      simp only [input, readerInput, branchChipITypeInput, BranchChip.exposedOpcode, BranchChip.circuit,
         BranchChip.rowView, BranchChip.branchOpcode, Circuits.Types.ITypeReader.toAdapterView,
         circuit_norm]
 

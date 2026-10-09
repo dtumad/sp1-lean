@@ -590,21 +590,11 @@ theorem mul_real_row_satisfiable :
 /-- BEQ (taken) row: `beq x5, x6, +0x100` with `x5 = x6 = 42` (equal, nonzero operands; the
 branch is taken, `next_pc = 0x1100`). The branch adapter reads rs1 on the `op_a` slot. -/
 def branchBeqInputs : BranchChip.Inputs (ZMod SP1Prime) :=
-  { is_real := 1
-    state := cpuState 9 4096
+  { state := cpuState 9 4096
     adapter :=
       { op_a := 5, op_a_memory := accessCols 42 0 13, op_a_0 := 0,
-        op_b := 6, op_b_memory := accessCols 42 0 12, op_c_imm := u64Word 0x100 } }
-
-/-- The honest `"branch_flags"` one-hot (opcodes BEQ = 40 … BGEU = 45) + `"branch_branching"`
-decision prover hints. -/
-def branchFlagsHint (op : ℕ) (branching : Bool) : ProverHint (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "branch_flags", 6 =>
-    #[#v[if op = 40 then 1 else 0, if op = 41 then 1 else 0, if op = 42 then 1 else 0,
-         if op = 43 then 1 else 0, if op = 44 then 1 else 0, if op = 45 then 1 else 0]]
-  | "branch_branching", 1 => #[#v[if branching then 1 else 0]]
-  | _, _ => #[]
+        op_b := 6, op_b_memory := accessCols 42 0 12, op_c_imm := u64Word 0x100 }
+    isBeq := 1, isBne := 0, isBlt := 0, isBge := 0, isBltu := 0, isBgeu := 0 }
 
 /-- **`BranchChip` is satisfiable on a real taken-BEQ row**: the full constraint system holds on
 `beq x5, x6, +0x100` with `x5 = x6 = 42` (taken; `next_pc = pc + 0x100`). -/
@@ -612,7 +602,7 @@ theorem branch_beq_taken_real_row_satisfiable :
     (chipOperations BranchChip.Inputs BranchChip.main
       (inputColumns branchBeqInputs)).ConstraintsHold
       (chipEnvironment BranchChip.Inputs BranchChip.main (inputColumns branchBeqInputs)
-        (branchFlagsHint 40 true)) :=
+        (ProverHint.empty _)) :=
   constraintsHold_of_check (by native_decide)
 
 /-- JAL row: `jal x7, +0x100` at `pc = 0x1000` (link `x7 := 0x1004`, jump to `0x1100`). -/

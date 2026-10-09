@@ -339,7 +339,7 @@ private def activeTableGroup0 : List (Table (ZMod SP1Prime)) :=
 private def activeTableGroup1 : List (Table (ZMod SP1Prime)) :=
   [activeJalBuilt,
    Table.build JalrChip.component [] anchorData anchorHint,
-   Table.buildHinted BranchChip.component [] anchorData,
+   Table.build BranchChip.component [] anchorData (ProverHint.empty _),
    Table.build UTypeChip.component [] anchorData anchorHint,
    Table.build LoadByteChip.component [] anchorData anchorHint,
    Table.build LoadHalfChip.component [] anchorData anchorHint,
@@ -353,7 +353,7 @@ private def activeTableGroup2 : List (Table (ZMod SP1Prime)) :=
    Table.build StoreWordChip.component [] anchorData anchorHint,
    Table.build StoreDoubleChip.component [] anchorData anchorHint,
    Table.build MulChip.component [] anchorData anchorHint,
-   Table.buildHinted DivRemChip.component [] anchorData,
+   Table.build DivRemChip.component [] anchorData (ProverHint.empty _),
    Table.build AluX0Chip.component [] anchorData anchorHint]
 
 private def activeTableGroup3 : List (Table (ZMod SP1Prime)) :=
@@ -386,12 +386,12 @@ private theorem activeTableGroup0_interactionsWith (ch : RawChannel (ZMod SP1Pri
 private theorem activeTableGroup1_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
     activeTableGroup1.flatMap (fun t => t.interactionsWith anchorData ch) = activeJalBuilt.interactionsWith anchorData ch := by
   simp only [activeTableGroup1, List.flatMap_cons, List.flatMap_nil,
-    TraceNonVacuity.nilTable, TraceNonVacuity.nilTableHinted, List.append_nil]
+    TraceNonVacuity.nilTable, List.append_nil]
 
 private theorem activeTableGroup2_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
     activeTableGroup2.flatMap (fun t => t.interactionsWith anchorData ch) = [] := by
   simp only [activeTableGroup2, List.flatMap_cons, List.flatMap_nil,
-    TraceNonVacuity.nilTable, TraceNonVacuity.nilTableHinted, List.nil_append]
+    TraceNonVacuity.nilTable, List.nil_append]
 
 private theorem activeTableGroup3_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
     activeTableGroup3.flatMap (fun t => t.interactionsWith anchorData ch) = activeU8Built.interactionsWith anchorData ch := by

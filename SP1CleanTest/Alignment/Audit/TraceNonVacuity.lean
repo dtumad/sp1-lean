@@ -182,11 +182,6 @@ theorem nilRangeTable (width : RangeChip.Width) (ch : RawChannel (ZMod SP1Prime)
     (Table.build (RangeChip.componentFor width) (RangeChip.traceInputs [])
       anchorData anchorHint).interactionsWith anchorData ch = [] := rfl
 
-/-- The hinted sibling of `nilTable`. -/
-theorem nilTableHinted (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime))
-    {fixed : c.fixedRowsMatch []} :
-    (Table.buildHinted c [] anchorData fixed).interactionsWith anchorData ch = [] := rfl
-
 /-- The assembled table list with every empty occurrence list already reduced to `[]` — one `rfl`,
 which is what lets the channel split below be a single `simp only`. -/
 theorem anchorTrace_tables_eq :
@@ -202,7 +197,7 @@ theorem anchorTrace_tables_eq :
        Table.build ShiftRightChip.component [] anchorData (ProverHint.empty _),
        Table.build JalChip.component [] anchorData anchorHint,
        Table.build JalrChip.component [] anchorData anchorHint,
-       Table.buildHinted BranchChip.component [] anchorData,
+       Table.build BranchChip.component [] anchorData (ProverHint.empty _),
        Table.build UTypeChip.component [] anchorData anchorHint,
        Table.build LoadByteChip.component [] anchorData anchorHint,
        Table.build LoadHalfChip.component [] anchorData anchorHint,
@@ -214,7 +209,7 @@ theorem anchorTrace_tables_eq :
        Table.build StoreWordChip.component [] anchorData anchorHint,
        Table.build StoreDoubleChip.component [] anchorData anchorHint,
        Table.build MulChip.component [] anchorData anchorHint,
-       Table.buildHinted DivRemChip.component [] anchorData,
+       Table.build DivRemChip.component [] anchorData (ProverHint.empty _),
        Table.build AluX0Chip.component [] anchorData anchorHint,
        u8RangeBuilt,
        Table.build ByteChip.MSB.component [] anchorData anchorHint,
@@ -240,7 +235,7 @@ theorem anchorTrace_interactionsWith_split (ch : RawChannel (ZMod SP1Prime)) :
     (fun t => t.interactionsWith anchorTrace.witness.data ch) = _
   simp_rw [Table.interactionsWith_setData _ anchorTrace.witness.data anchorData]
   rw [anchorTrace_tables_eq]
-  simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, nilTable, nilTableHinted,
+  simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, nilTable,
     haltBuilt_eq, List.nil_append, List.append_nil]
   simp [SupportedCoreTraceWitness.rangeTables, RangeChip.allWidths, List.finRange_succ,
     anchorRangeBuilt_interactionsWith, width16]

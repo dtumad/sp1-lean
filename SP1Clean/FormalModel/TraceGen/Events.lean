@@ -823,13 +823,9 @@ def ITypeEvent.rs1BV (e : ITypeEvent) : BitVec 64 := BitVec.ofNat 64 e.prevA
 /-- The `rs2` operand of a branch row as a 64-bit value — the `op_b` source read (`b`). -/
 def ITypeEvent.rs2BV (e : ITypeEvent) : BitVec 64 := BitVec.ofNat 64 e.b
 
-/-- **Whether SP1's executor took this branch**: the RV64 comparison the event's opcode names, on
-its two operand values. This is the one fact in this file phrased over `BitVec 64` rather than `ℕ`,
-because half of the six comparisons are *signed* — and it is still executor data, not a column: it
-is what `Executor::execute_branch` computes before it decides the next `pc`.
-
-The chip does not commit this either; it is prover-side data, threaded through the
-`"branch_branching"` hint key, which is why the row's hint is built per row from the event. -/
+/-- The executor's RV64 branch condition. Signed variants use `BitVec 64` comparison.
+The circuit computes its committed branch bit from the operand comparison witness;
+`populateBranching_toBranchInputs` proves agreement with this event decision. -/
 def ITypeEvent.branchTaken (e : ITypeEvent) : Bool :=
   if e.opcode = 40 then e.rs1BV = e.rs2BV
   else if e.opcode = 41 then e.rs1BV ≠ e.rs2BV

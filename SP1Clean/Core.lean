@@ -1,3 +1,6 @@
+import SP1Clean.Circuits.Types.BranchChip
+import SP1Clean.Semantics.Specs.Chips.Branch
+import SP1Clean.Proofs.Chips.BranchChip.Populate
 import SP1Clean.Circuits.Types.ShiftRightChip
 import SP1Clean.Semantics.Specs.Chips.ShiftRight
 import SP1Clean.Circuits.Types.ShiftLeftChip
@@ -375,7 +378,6 @@ import SP1Clean.Native.Readers.RegisterRead
 import SP1Clean.Native.Readers.RegisterReadLedger
 import SP1Clean.Native.Readers.RegisterReadPopulate
 import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Native.Witgen.HintFlags
 import SP1Clean.Proofs.Chips.AddChip.Complete
 import SP1Clean.Proofs.Chips.AddChip.Formal
 import SP1Clean.Proofs.Chips.AddChip.Witgen

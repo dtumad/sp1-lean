@@ -540,8 +540,8 @@ theorem branchChip_stateEmissionShape : StateEmissionShape
   stateExposureStart (BranchChip.circuit (p := p)), BranchChip.rowView
   refine ⟨fun input _ => input.is_real, fun input _ => cpuStatePullMessage input.state,
     fun input offset => cpuStateNextMessage input.state
-      #v[var ⟨offset + 7⟩, var ⟨offset + 8⟩,
-        var ⟨offset + 9⟩] 8, ?_, ?_, ?_, ?_⟩
+      #v[var ⟨offset + 11⟩, var ⟨offset + 12⟩,
+        var ⟨offset + 13⟩] 8, ?_, ?_, ?_, ?_⟩
   all_goals
     intros
     simp [BranchChip.circuit,

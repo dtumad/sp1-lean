@@ -20,7 +20,7 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- ADD, LoadByte, Bitwise, Lt, ShiftLeft, ShiftRight, Mul and DivRem export through the same
+- ADD, LoadByte, Bitwise, Lt, ShiftLeft, ShiftRight, Branch, Mul and DivRem export through the same
   built-in path. Rust compares generated witnesses, local constraint satisfaction and complete
   interaction multisets with SP1 v6.8.1's supervisor AIR, including padding and column mutations.
   Multi-opcode components use explicit selectors without hints. Comparisons retain repeated and
