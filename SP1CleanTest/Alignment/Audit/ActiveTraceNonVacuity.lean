@@ -334,7 +334,7 @@ private def activeTableGroup0 : List (Table (ZMod SP1Prime)) :=
    Table.build BitwiseChip.component [] anchorData (ProverHint.empty _),
    Table.build LtChip.component [] anchorData (ProverHint.empty _),
    Table.build ShiftLeftChip.component [] anchorData (ProverHint.empty _),
-   Table.buildHinted ShiftRightChip.component [] anchorData]
+   Table.build ShiftRightChip.component [] anchorData (ProverHint.empty _)]
 
 private def activeTableGroup1 : List (Table (ZMod SP1Prime)) :=
   [activeJalBuilt,
@@ -381,7 +381,7 @@ private theorem activeTrace_tables_eq : activeTrace.tables = activeGroupedTables
 private theorem activeTableGroup0_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
     activeTableGroup0.flatMap (fun t => t.interactionsWith anchorData ch) = [] := by
   simp only [activeTableGroup0, List.flatMap_cons, List.flatMap_nil,
-    TraceNonVacuity.nilTable, TraceNonVacuity.nilTableHinted, List.nil_append]
+    TraceNonVacuity.nilTable, List.nil_append]
 
 private theorem activeTableGroup1_interactionsWith (ch : RawChannel (ZMod SP1Prime)) :
     activeTableGroup1.flatMap (fun t => t.interactionsWith anchorData ch) = activeJalBuilt.interactionsWith anchorData ch := by

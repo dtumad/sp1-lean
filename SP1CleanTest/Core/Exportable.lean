@@ -155,7 +155,7 @@ not own a second spelling of the production characteristic. -/
 /-- info: exportable ✓ (31 witness cells) -/
 #guard_msgs in
 #assert_exportable (ShiftLeftChip.circuit (p := SP1Prime))
-/-- info: exportable ✓ (37 witness cells) -/
+/-- info: exportable ✓ (33 witness cells) -/
 #guard_msgs in
 #assert_exportable (ShiftRightChip.circuit (p := SP1Prime))
 /-- info: exportable ✓ (210 witness cells) -/
