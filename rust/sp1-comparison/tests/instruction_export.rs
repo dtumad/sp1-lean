@@ -14,14 +14,23 @@ use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
 use slop_matrix::{dense::RowMajorMatrix, Matrix};
 use sp1_core_executor::{
     events::{
-        AluEvent, BranchEvent, MemInstrEvent, MemoryReadRecord, MemoryRecordEnum, MemoryWriteRecord,
+        AluEvent, BranchEvent, JumpEvent, MemInstrEvent, MemoryReadRecord, MemoryRecordEnum,
+        MemoryWriteRecord, UTypeEvent,
     },
-    get_quotient_and_remainder, ALUTypeRecord, ExecutionRecord, ITypeRecord, Opcode, RTypeRecord,
+    get_quotient_and_remainder, ALUTypeRecord, ExecutionRecord, ITypeRecord, JTypeRecord, Opcode,
+    RTypeRecord,
 };
 use sp1_core_machine::{
     air::TrivialOperationBuilder,
     alu::{
-        add_sub::add::AddChip,
+        add_sub::{
+            add::AddChip,
+            addi::{AddiChip, AddiCols},
+            addw::{AddwChip, AddwCols},
+            sub::{SubChip, SubCols},
+            subw::{SubwChip, SubwCols},
+        },
+        alu_x0::{AluX0Chip, AluX0Cols},
         bitwise::{BitwiseChip, BitwiseCols},
         divrem::{DivRemChip, DivRemCols},
         lt::{LtChip, LtCols},
@@ -29,8 +38,23 @@ use sp1_core_machine::{
         sll::{ShiftLeftChip, ShiftLeftCols},
         sr::{ShiftRightChip, ShiftRightCols},
     },
-    control_flow::{BranchChip, BranchColumns},
-    memory::load::load_byte::{LoadByteChip, LoadByteColumns},
+    control_flow::{BranchChip, BranchColumns, JalChip, JalColumns, JalrChip, JalrColumns},
+    memory::{
+        load::{
+            load_byte::{LoadByteChip, LoadByteColumns},
+            load_double::{LoadDoubleChip, LoadDoubleColumns},
+            load_half::{LoadHalfChip, LoadHalfColumns},
+            load_word::{LoadWordChip, LoadWordColumns},
+            load_x0::{LoadX0Chip, LoadX0Columns},
+        },
+        store::{
+            store_byte::{StoreByteChip, StoreByteColumns},
+            store_double::{StoreDoubleChip, StoreDoubleColumns},
+            store_half::{StoreHalfChip, StoreHalfColumns},
+            store_word::{StoreWordChip, StoreWordColumns},
+        },
+    },
+    utype::{UTypeChip, UTypeColumns},
     SupervisorMode,
 };
 use sp1_hypercube::{
@@ -41,88 +65,166 @@ use sp1_primitives::SP1Field;
 use std::marker::PhantomData;
 use std::mem::offset_of;
 
-// Clean emits a shared helper set; this instruction does not need every helper.
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_add {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/add_instruction.rs"
-    ));
+// Clean emits shared helpers that some individual components do not use.
+macro_rules! generated_instruction {
+    ($module:ident, $file:literal, $program:ident, $air:ident) => {
+        #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+        mod $module {
+            include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/", $file));
+        }
+        use $module::{$air, $program};
+    };
 }
-use generated_add::{AddInstruction, AddInstructionAirSpec};
-
-// The same upstream helper set is emitted for each standalone component.
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_load_byte {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/load_byte_instruction.rs"
-    ));
-}
-use generated_load_byte::{LoadByteInstruction, LoadByteInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_div_rem {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/div_rem_instruction.rs"
-    ));
-}
-use generated_div_rem::{DivRemInstruction, DivRemInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_mul {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/mul_instruction.rs"
-    ));
-}
-use generated_mul::{MulInstruction, MulInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_bitwise {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/bitwise_instruction.rs"
-    ));
-}
-use generated_bitwise::{BitwiseInstruction, BitwiseInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_lt {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/lt_instruction.rs"
-    ));
-}
-use generated_lt::{LtInstruction, LtInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_shift_left {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/shift_left_instruction.rs"
-    ));
-}
-use generated_shift_left::{ShiftLeftInstruction, ShiftLeftInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_shift_right {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/shift_right_instruction.rs"
-    ));
-}
-use generated_shift_right::{ShiftRightInstruction, ShiftRightInstructionAirSpec};
-
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated_branch {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/branch_instruction.rs"
-    ));
-}
-use generated_branch::{BranchInstruction, BranchInstructionAirSpec};
+generated_instruction!(
+    generated_add,
+    "add_instruction.rs",
+    AddInstruction,
+    AddInstructionAirSpec
+);
+generated_instruction!(
+    generated_addi,
+    "addi_instruction.rs",
+    AddiInstruction,
+    AddiInstructionAirSpec
+);
+generated_instruction!(
+    generated_addw,
+    "addw_instruction.rs",
+    AddwInstruction,
+    AddwInstructionAirSpec
+);
+generated_instruction!(
+    generated_sub,
+    "sub_instruction.rs",
+    SubInstruction,
+    SubInstructionAirSpec
+);
+generated_instruction!(
+    generated_subw,
+    "subw_instruction.rs",
+    SubwInstruction,
+    SubwInstructionAirSpec
+);
+generated_instruction!(
+    generated_bitwise,
+    "bitwise_instruction.rs",
+    BitwiseInstruction,
+    BitwiseInstructionAirSpec
+);
+generated_instruction!(
+    generated_lt,
+    "lt_instruction.rs",
+    LtInstruction,
+    LtInstructionAirSpec
+);
+generated_instruction!(
+    generated_shift_left,
+    "shift_left_instruction.rs",
+    ShiftLeftInstruction,
+    ShiftLeftInstructionAirSpec
+);
+generated_instruction!(
+    generated_shift_right,
+    "shift_right_instruction.rs",
+    ShiftRightInstruction,
+    ShiftRightInstructionAirSpec
+);
+generated_instruction!(
+    generated_jal,
+    "jal_instruction.rs",
+    JalInstruction,
+    JalInstructionAirSpec
+);
+generated_instruction!(
+    generated_jalr,
+    "jalr_instruction.rs",
+    JalrInstruction,
+    JalrInstructionAirSpec
+);
+generated_instruction!(
+    generated_branch,
+    "branch_instruction.rs",
+    BranchInstruction,
+    BranchInstructionAirSpec
+);
+generated_instruction!(
+    generated_u_type,
+    "u_type_instruction.rs",
+    UTypeInstruction,
+    UTypeInstructionAirSpec
+);
+generated_instruction!(
+    generated_load_byte,
+    "load_byte_instruction.rs",
+    LoadByteInstruction,
+    LoadByteInstructionAirSpec
+);
+generated_instruction!(
+    generated_load_half,
+    "load_half_instruction.rs",
+    LoadHalfInstruction,
+    LoadHalfInstructionAirSpec
+);
+generated_instruction!(
+    generated_load_word,
+    "load_word_instruction.rs",
+    LoadWordInstruction,
+    LoadWordInstructionAirSpec
+);
+generated_instruction!(
+    generated_load_double,
+    "load_double_instruction.rs",
+    LoadDoubleInstruction,
+    LoadDoubleInstructionAirSpec
+);
+generated_instruction!(
+    generated_load_x0,
+    "load_x0_instruction.rs",
+    LoadX0Instruction,
+    LoadX0InstructionAirSpec
+);
+generated_instruction!(
+    generated_store_byte,
+    "store_byte_instruction.rs",
+    StoreByteInstruction,
+    StoreByteInstructionAirSpec
+);
+generated_instruction!(
+    generated_store_half,
+    "store_half_instruction.rs",
+    StoreHalfInstruction,
+    StoreHalfInstructionAirSpec
+);
+generated_instruction!(
+    generated_store_word,
+    "store_word_instruction.rs",
+    StoreWordInstruction,
+    StoreWordInstructionAirSpec
+);
+generated_instruction!(
+    generated_store_double,
+    "store_double_instruction.rs",
+    StoreDoubleInstruction,
+    StoreDoubleInstructionAirSpec
+);
+generated_instruction!(
+    generated_mul,
+    "mul_instruction.rs",
+    MulInstruction,
+    MulInstructionAirSpec
+);
+generated_instruction!(
+    generated_div_rem,
+    "div_rem_instruction.rs",
+    DivRemInstruction,
+    DivRemInstructionAirSpec
+);
+generated_instruction!(
+    generated_alu_x0,
+    "alu_x0_instruction.rs",
+    AluX0Instruction,
+    AluX0InstructionAirSpec
+);
 
 type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -477,22 +579,22 @@ fn check_mutations<P: Program<NativeField>, S: GeneratedAirSpec>(
 
 #[test]
 fn generated_add_witness_and_air_match_released_sp1() {
+    let trace = add_trace();
     check_trace::<AddInstruction, AddInstructionAirSpec>(
-        &add_trace(),
+        &trace,
         add_row,
         &AddChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_add_columns_preserve_constraints_and_interactions_under_mutation() {
     // Carries, wraparound and inactive padding: 396 mutations.
     check_mutations::<AddInstruction, AddInstructionAirSpec>(
-        &add_trace(),
+        &trace,
         &[0, 40, 80, 81],
         add_row,
         &AddChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<AddInstruction>(&add_row(&trace.row_slice(0)));
 }
 
 fn check_open_buses<P: Program<NativeField>>(row: &[NativeField]) {
@@ -505,20 +607,7 @@ fn check_open_buses<P: Program<NativeField>>(row: &[NativeField]) {
     ));
 }
 
-#[test]
-fn instruction_fixtures_do_not_claim_provider_balance() {
-    check_open_buses::<AddInstruction>(&add_row(&add_trace().row_slice(0)));
-    check_open_buses::<LoadByteInstruction>(&load_byte_row(&load_byte_trace().row_slice(0)));
-    check_open_buses::<DivRemInstruction>(&div_rem_row(&div_rem_trace().row_slice(0)));
-    check_open_buses::<MulInstruction>(&mul_row(&mul_trace().row_slice(0)));
-    check_open_buses::<BitwiseInstruction>(&bitwise_row(&bitwise_trace().row_slice(0)));
-    check_open_buses::<LtInstruction>(&lt_row(&lt_trace().row_slice(0)));
-    check_open_buses::<ShiftLeftInstruction>(&shift_left_row(&shift_left_trace().row_slice(0)));
-    check_open_buses::<ShiftRightInstruction>(&shift_right_row(&shift_right_trace().row_slice(0)));
-    check_open_buses::<BranchInstruction>(&branch_row(&branch_trace().row_slice(0)));
-}
-
-fn load_byte_event(
+fn load_event(
     index: usize,
     opcode: Opcode,
     base: u64,
@@ -538,11 +627,16 @@ fn load_byte_event(
         offset + 8
     };
     let b = (base + offset).wrapping_sub(c);
-    let byte = word.to_le_bytes()[offset as usize];
-    let a = if opcode == Opcode::LB {
-        byte as i8 as i64 as u64
-    } else {
-        byte as u64
+    let selected = word >> (8 * offset);
+    let a = match opcode {
+        Opcode::LB => selected as u8 as i8 as i64 as u64,
+        Opcode::LBU => selected as u8 as u64,
+        Opcode::LH => selected as u16 as i16 as i64 as u64,
+        Opcode::LHU => selected as u16 as u64,
+        Opcode::LW => selected as u32 as i32 as i64 as u64,
+        Opcode::LWU => selected as u32 as u64,
+        Opcode::LD => selected,
+        _ => unreachable!(),
     };
     let read = |value, timestamp, prev_timestamp| {
         MemoryRecordEnum::Read(MemoryReadRecord {
@@ -588,7 +682,7 @@ fn load_byte_trace() -> RowMajorMatrix<SP1Field> {
                 for negative_immediate in [false, true] {
                     for offset in 0..8 {
                         let index = record.memory_load_byte_events.len();
-                        record.memory_load_byte_events.push(load_byte_event(
+                        record.memory_load_byte_events.push(load_event(
                             index,
                             opcode,
                             base,
@@ -605,7 +699,7 @@ fn load_byte_trace() -> RowMajorMatrix<SP1Field> {
     // Exercise MemoryAccess's timestamp-high branch independently of register accesses.
     for opcode in [Opcode::LB, Opcode::LBU] {
         let index = record.memory_load_byte_events.len();
-        record.memory_load_byte_events.push(load_byte_event(
+        record.memory_load_byte_events.push(load_event(
             index,
             opcode,
             1 << 32,
@@ -646,22 +740,22 @@ fn load_byte_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_load_byte_witness_and_air_match_released_sp1() {
+    let trace = load_byte_trace();
     check_trace::<LoadByteInstruction, LoadByteInstructionAirSpec>(
-        &load_byte_trace(),
+        &trace,
         load_byte_row,
         &LoadByteChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_load_byte_columns_preserve_constraints_and_interactions_under_mutation() {
     // Both selectors, both address bounds, cross-window memory reads and padding.
     check_mutations::<LoadByteInstruction, LoadByteInstructionAirSpec>(
-        &load_byte_trace(),
+        &trace,
         &[0, 64, 128, 192, 256, 257, 258],
         load_byte_row,
         &LoadByteChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<LoadByteInstruction>(&load_byte_row(&trace.row_slice(0)));
 }
 
 fn div_rem_trace() -> RowMajorMatrix<SP1Field> {
@@ -794,26 +888,26 @@ fn div_rem_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_div_rem_witness_and_air_match_released_sp1() {
+    let trace = div_rem_trace();
     check_trace::<DivRemInstruction, DivRemInstructionAirSpec>(
-        &div_rem_trace(),
+        &trace,
         div_rem_row,
         &DivRemChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_div_rem_columns_preserve_constraints_and_interactions_under_mutation() {
     // Zero division, signed overflow at both widths, negative operands, and nonzero padding.
     let indices: Vec<usize> = (0..8)
         .flat_map(|opcode| [0, 76, 109, 120].map(|row| opcode * 121 + row))
         .chain([968])
         .collect();
     check_mutations::<DivRemInstruction, DivRemInstructionAirSpec>(
-        &div_rem_trace(),
+        &trace,
         &indices,
         div_rem_row,
         &DivRemChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<DivRemInstruction>(&div_rem_row(&trace.row_slice(0)));
 }
 
 fn mul_trace() -> RowMajorMatrix<SP1Field> {
@@ -894,26 +988,26 @@ fn mul_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_mul_witness_and_air_match_released_sp1() {
+    let trace = mul_trace();
     check_trace::<MulInstruction, MulInstructionAirSpec>(
-        &mul_trace(),
+        &trace,
         mul_row,
         &MulChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_mul_columns_preserve_constraints_and_interactions_under_mutation() {
     // Zero, word-sign boundary, signed high product, maximal limbs, and inactive padding.
     let indices: Vec<usize> = (0..5)
         .flat_map(|opcode| [0, 76, 109, 120].map(|row| opcode * 121 + row))
         .chain([605])
         .collect();
     check_mutations::<MulInstruction, MulInstructionAirSpec>(
-        &mul_trace(),
+        &trace,
         &indices,
         mul_row,
         &MulChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<MulInstruction>(&mul_row(&trace.row_slice(0)));
 }
 
 fn bitwise_trace() -> RowMajorMatrix<SP1Field> {
@@ -1000,15 +1094,13 @@ fn bitwise_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_bitwise_witness_and_air_match_released_sp1() {
+    let trace = bitwise_trace();
     check_trace::<BitwiseInstruction, BitwiseInstructionAirSpec>(
-        &bitwise_trace(),
+        &trace,
         bitwise_row,
         &BitwiseChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_bitwise_columns_preserve_constraints_and_interactions_under_mutation() {
     // All three opcodes, register and immediate forms, signed boundaries, and inactive padding.
     let indices: Vec<usize> = (0..3)
         .flat_map(|opcode| {
@@ -1017,11 +1109,13 @@ fn all_bitwise_columns_preserve_constraints_and_interactions_under_mutation() {
         .chain([612])
         .collect();
     check_mutations::<BitwiseInstruction, BitwiseInstructionAirSpec>(
-        &bitwise_trace(),
+        &trace,
         &indices,
         bitwise_row,
         &BitwiseChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<BitwiseInstruction>(&bitwise_row(&trace.row_slice(0)));
 }
 
 fn lt_trace() -> RowMajorMatrix<SP1Field> {
@@ -1112,15 +1206,13 @@ fn lt_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_lt_witness_and_air_match_released_sp1() {
+    let trace = lt_trace();
     check_trace::<LtInstruction, LtInstructionAirSpec>(
-        &lt_trace(),
+        &trace,
         lt_row,
         &LtChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_lt_columns_preserve_constraints_and_interactions_under_mutation() {
     // Both opcodes and operand forms, equal/unequal limbs, sign boundaries and padding.
     let indices: Vec<usize> = (0..2)
         .flat_map(|opcode| {
@@ -1132,11 +1224,13 @@ fn all_lt_columns_preserve_constraints_and_interactions_under_mutation() {
         .chain([468])
         .collect();
     check_mutations::<LtInstruction, LtInstructionAirSpec>(
-        &lt_trace(),
+        &trace,
         &indices,
         lt_row,
         &LtChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<LtInstruction>(&lt_row(&trace.row_slice(0)));
 }
 
 fn shift_left_trace() -> RowMajorMatrix<SP1Field> {
@@ -1216,15 +1310,13 @@ fn shift_left_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_shift_left_witness_and_air_match_released_sp1() {
+    let trace = shift_left_trace();
     check_trace::<ShiftLeftInstruction, ShiftLeftInstructionAirSpec>(
-        &shift_left_trace(),
+        &trace,
         shift_left_row,
         &ShiftLeftChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_shift_left_columns_preserve_constraints_and_interactions_under_mutation() {
     // Both opcodes and forms, word sign extension, split/placement boundaries and padding.
     let indices: Vec<usize> = [1, 10]
         .into_iter()
@@ -1240,11 +1332,13 @@ fn all_shift_left_columns_preserve_constraints_and_interactions_under_mutation()
         .chain([0, 2596])
         .collect();
     check_mutations::<ShiftLeftInstruction, ShiftLeftInstructionAirSpec>(
-        &shift_left_trace(),
+        &trace,
         &indices,
         shift_left_row,
         &ShiftLeftChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<ShiftLeftInstruction>(&shift_left_row(&trace.row_slice(0)));
 }
 
 fn shift_right_trace() -> RowMajorMatrix<SP1Field> {
@@ -1336,15 +1430,13 @@ fn shift_right_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_shift_right_witness_and_air_match_released_sp1() {
+    let trace = shift_right_trace();
     check_trace::<ShiftRightInstruction, ShiftRightInstructionAirSpec>(
-        &shift_right_trace(),
+        &trace,
         shift_right_row,
         &ShiftRightChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_shift_right_columns_preserve_constraints_and_interactions_under_mutation() {
     // All opcodes and forms, sign fill, limb boundaries, ignored shift bits and padding.
     let mut indices = vec![6136];
     for (base, stride) in [(0, 134), (1742, 134), (3484, 102), (4810, 102)] {
@@ -1363,11 +1455,13 @@ fn all_shift_right_columns_preserve_constraints_and_interactions_under_mutation(
     }
     assert_eq!(indices.len(), 133); // 27,531 independent column/value mutations.
     check_mutations::<ShiftRightInstruction, ShiftRightInstructionAirSpec>(
-        &shift_right_trace(),
+        &trace,
         &indices,
         shift_right_row,
         &ShiftRightChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<ShiftRightInstruction>(&shift_right_row(&trace.row_slice(0)));
 }
 
 fn branch_trace() -> RowMajorMatrix<SP1Field> {
@@ -1473,15 +1567,13 @@ fn branch_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 
 #[test]
 fn generated_branch_witness_and_air_match_released_sp1() {
+    let trace = branch_trace();
     check_trace::<BranchInstruction, BranchInstructionAirSpec>(
-        &branch_trace(),
+        &trace,
         branch_row,
         &BranchChip::<SupervisorMode>::default(),
     );
-}
 
-#[test]
-fn all_branch_columns_preserve_constraints_and_interactions_under_mutation() {
     // Every opcode, both outcomes, equality, sign boundaries, PC carries and padding.
     let indices: Vec<usize> = (0..6)
         .flat_map(|opcode| {
@@ -1495,9 +1587,783 @@ fn all_branch_columns_preserve_constraints_and_interactions_under_mutation() {
         .collect();
     assert_eq!(indices.len(), 271); // 36,585 independent column/value mutations.
     check_mutations::<BranchInstruction, BranchInstructionAirSpec>(
-        &branch_trace(),
+        &trace,
         &indices,
         branch_row,
         &BranchChip::<SupervisorMode>::default(),
     );
+
+    check_open_buses::<BranchInstruction>(&branch_row(&trace.row_slice(0)));
 }
+
+/// Every adapter is an independently checked permutation of the released SP1 layout.
+fn reorder<P: Program<NativeField>, S: GeneratedAirSpec>(
+    sp1: &[SP1Field],
+    input_width: usize,
+    indices: impl IntoIterator<Item = usize>,
+) -> Vec<NativeField> {
+    assert_eq!(S::WIDTHS, &[sp1.len()]);
+    assert_eq!(P::PROVER_INPUTS, input_width);
+    let indices: Vec<_> = indices.into_iter().collect();
+    let mut sorted = indices.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
+    indices
+        .into_iter()
+        .map(|i| NativeField::from_u64(sp1[i].as_canonical_u64()))
+        .collect()
+}
+
+fn padded_trace<C>(chip: &C, record: &ExecutionRecord, active: usize) -> RowMajorMatrix<SP1Field>
+where
+    C: MachineAir<SP1Field, Record = ExecutionRecord, Program = sp1_core_executor::Program>,
+{
+    let trace = chip.generate_trace(record, &mut ExecutionRecord::default());
+    assert_eq!(trace.width(), chip.width());
+    assert_eq!(trace.height(), active.div_ceil(32) * 32);
+    assert!(
+        active > 0 && trace.height() > active,
+        "exercise active and padding rows"
+    );
+    trace
+}
+
+/// New families mutate every column of every event and padding row.
+fn check_all_rows<P: Program<NativeField>, S: GeneratedAirSpec>(
+    trace: &RowMajorMatrix<SP1Field>,
+    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
+    chip: &impl Air<Sp1Evaluation>,
+) {
+    check_trace::<P, S>(trace, map_row, chip);
+    check_mutations::<P, S>(
+        trace,
+        &(0..trace.height()).collect::<Vec<_>>(),
+        map_row,
+        chip,
+    );
+    check_open_buses::<P>(&map_row(&trace.row_slice(0)));
+}
+
+fn read_record(value: u64, timestamp: u64, prev_timestamp: u64) -> MemoryRecordEnum {
+    MemoryRecordEnum::Read(MemoryReadRecord {
+        value,
+        timestamp,
+        prev_timestamp,
+        prev_page_prot_record: None,
+    })
+}
+
+fn write_record(
+    value: u64,
+    previous: u64,
+    timestamp: u64,
+    prev_timestamp: u64,
+) -> MemoryRecordEnum {
+    MemoryRecordEnum::Write(MemoryWriteRecord {
+        value,
+        prev_value: previous,
+        timestamp,
+        prev_timestamp,
+        prev_page_prot_record: None,
+    })
+}
+
+const ARITHMETIC_VALUES: [u64; 11] = [
+    0,
+    1,
+    65535,
+    65536,
+    (1 << 31) - 1,
+    1 << 31,
+    u32::MAX as u64,
+    1 << 32,
+    (1 << 63) - 1,
+    1 << 63,
+    u64::MAX,
+];
+
+fn arithmetic_record(opcode: Opcode) -> (ExecutionRecord, usize) {
+    let mut record = ExecutionRecord::default();
+    let mut active = 0;
+    for b in ARITHMETIC_VALUES {
+        let forms = if opcode == Opcode::ADDI {
+            &[true][..]
+        } else if opcode == Opcode::ADDW {
+            &[false, true][..]
+        } else {
+            &[false][..]
+        };
+        for &immediate in forms {
+            let immediates = [(-2048_i64) as u64, u64::MAX, 0, 1, 2047];
+            let operands = if immediate {
+                &immediates[..]
+            } else {
+                &ARITHMETIC_VALUES[..]
+            };
+            for &c in operands {
+                let value = if matches!(opcode, Opcode::SUB | Opcode::SUBW) {
+                    b.wrapping_sub(c)
+                } else {
+                    b.wrapping_add(c)
+                };
+                let a = if matches!(opcode, Opcode::ADDW | Opcode::SUBW) {
+                    value as u32 as i32 as i64 as u64
+                } else {
+                    value
+                };
+                let (event, registers) = r_type_event(active, opcode, a, b, c);
+                match opcode {
+                    Opcode::ADDI => record.addi_events.push((
+                        event,
+                        ITypeRecord {
+                            op_a: registers.op_a,
+                            a: registers.a,
+                            op_b: registers.op_b,
+                            b: registers.b,
+                            op_c: c,
+                            is_untrusted: false,
+                        },
+                    )),
+                    Opcode::ADDW => record
+                        .addw_events
+                        .push(alu_type_event(active, opcode, a, b, c, immediate)),
+                    Opcode::SUB => record.sub_events.push((event, registers)),
+                    Opcode::SUBW => record.subw_events.push((event, registers)),
+                    _ => unreachable!(),
+                }
+                active += 1;
+            }
+        }
+    }
+    assert_eq!(
+        active,
+        match opcode {
+            Opcode::ADDI => 55,
+            Opcode::ADDW => 176,
+            _ => 121,
+        }
+    );
+    (record, active)
+}
+
+macro_rules! arithmetic_case {
+    ($test:ident, $program:ident, $air:ident, $chip:ident, $cols:ident, $operation:ident, $opcode:ident) => {
+        #[test]
+        fn $test() {
+            let (record, active) = arithmetic_record(Opcode::$opcode);
+            let chip = $chip::<SupervisorMode>::default();
+            let trace = padded_trace(&chip, &record, active);
+            check_all_rows::<$program, $air>(
+                &trace,
+                |row| {
+                    type Columns = $cols<u8, SupervisorMode>;
+                    let real = offset_of!(Columns, is_real);
+                    let operation = offset_of!(Columns, $operation);
+                    assert_eq!(real + 1, row.len());
+                    reorder::<$program, $air>(row, operation + 1, [real].into_iter().chain(0..real))
+                },
+                &chip,
+            );
+        }
+    };
+}
+arithmetic_case!(
+    addi,
+    AddiInstruction,
+    AddiInstructionAirSpec,
+    AddiChip,
+    AddiCols,
+    add_operation,
+    ADDI
+);
+arithmetic_case!(
+    addw,
+    AddwInstruction,
+    AddwInstructionAirSpec,
+    AddwChip,
+    AddwCols,
+    addw_operation,
+    ADDW
+);
+arithmetic_case!(
+    sub,
+    SubInstruction,
+    SubInstructionAirSpec,
+    SubChip,
+    SubCols,
+    sub_operation,
+    SUB
+);
+arithmetic_case!(
+    subw,
+    SubwInstruction,
+    SubwInstructionAirSpec,
+    SubwChip,
+    SubwCols,
+    subw_operation,
+    SUBW
+);
+
+#[test]
+fn alu_x0() {
+    let mut record = ExecutionRecord::default();
+    // All ALU discriminants that the released executor routes through its x0 chip.
+    for opcode in [
+        Opcode::ADD,
+        Opcode::ADDI,
+        Opcode::SUB,
+        Opcode::XOR,
+        Opcode::OR,
+        Opcode::AND,
+        Opcode::SLL,
+        Opcode::SRL,
+        Opcode::SRA,
+        Opcode::SLT,
+        Opcode::SLTU,
+        Opcode::ADDW,
+        Opcode::SUBW,
+        Opcode::SLLW,
+        Opcode::SRLW,
+        Opcode::SRAW,
+        Opcode::MUL,
+        Opcode::MULH,
+        Opcode::MULHU,
+        Opcode::MULHSU,
+        Opcode::MULW,
+        Opcode::DIV,
+        Opcode::DIVU,
+        Opcode::REM,
+        Opcode::REMU,
+        Opcode::DIVW,
+        Opcode::DIVUW,
+        Opcode::REMW,
+        Opcode::REMUW,
+    ] {
+        for b in ARITHMETIC_VALUES {
+            for immediate in [false, true] {
+                if opcode == Opcode::ADDI && !immediate {
+                    continue;
+                }
+                if immediate && opcode.instruction_type().1.is_none() {
+                    continue;
+                }
+                let c = if immediate { 1 } else { b.rotate_left(17) };
+                let (mut event, mut registers) =
+                    alu_type_event(record.alu_x0_events.len(), opcode, 0, b, c, immediate);
+                event.op_a_0 = true;
+                registers.op_a = 0;
+                registers.a = write_record(0, 0, event.clk + 4, event.clk - 8);
+                record.alu_x0_events.push((event, registers));
+            }
+        }
+    }
+    assert_eq!(record.alu_x0_events.len(), 451);
+    let chip = AluX0Chip::<SupervisorMode>::default();
+    let trace = padded_trace(&chip, &record, 451);
+    check_all_rows::<AluX0Instruction, AluX0InstructionAirSpec>(
+        &trace,
+        |row| {
+            type Columns = AluX0Cols<u8, SupervisorMode>;
+            assert_eq!(offset_of!(Columns, adapter_cols), row.len());
+            assert_eq!(offset_of!(Columns, selector_cols), row.len());
+            reorder::<AluX0Instruction, AluX0InstructionAirSpec>(row, row.len(), 0..row.len())
+        },
+        &chip,
+    );
+}
+
+#[test]
+fn u_type() {
+    let mut record = ExecutionRecord::default();
+    for opcode in [Opcode::LUI, Opcode::AUIPC] {
+        for pc in [0x1000_u64, 0xfffc, 0xffff_fffc, (1 << 48) - 8] {
+            for b in [
+                0,
+                0x1000,
+                0x7ffff000,
+                0xffff_ffff_8000_0000,
+                0xffff_ffff_ffff_f000,
+            ] {
+                for discard in [false, true] {
+                    let clk = 9 + 8 * record.utype_events.len() as u64;
+                    let a = if discard {
+                        0
+                    } else if opcode == Opcode::LUI {
+                        b
+                    } else {
+                        pc.wrapping_add(b)
+                    };
+                    record.utype_events.push((
+                        UTypeEvent {
+                            clk,
+                            pc,
+                            opcode,
+                            a,
+                            b,
+                            c: 0,
+                            op_a_0: discard,
+                        },
+                        JTypeRecord {
+                            op_a: if discard { 0 } else { 5 },
+                            a: write_record(a, 0, clk + 4, clk - 8),
+                            op_b: b,
+                            op_c: 0,
+                            is_untrusted: false,
+                        },
+                    ));
+                }
+            }
+        }
+    }
+    assert_eq!(record.utype_events.len(), 80);
+    let chip = UTypeChip::<SupervisorMode>::default();
+    let trace = padded_trace(&chip, &record, 80);
+    check_all_rows::<UTypeInstruction, UTypeInstructionAirSpec>(
+        &trace,
+        |row| {
+            type Columns = UTypeColumns<u8, SupervisorMode>;
+            let real = offset_of!(Columns, is_real);
+            let selector = offset_of!(Columns, is_auipc);
+            let witness = offset_of!(Columns, addend);
+            assert_eq!(real + 1, row.len());
+            reorder::<UTypeInstruction, UTypeInstructionAirSpec>(
+                row,
+                witness + 2,
+                [real]
+                    .into_iter()
+                    .chain(0..witness)
+                    .chain([selector])
+                    .chain(witness..selector),
+            )
+        },
+        &chip,
+    );
+}
+
+#[test]
+fn jal() {
+    let mut record = ExecutionRecord::default();
+    for pc in [0x1000_u64, 0xfffc, 0xffff_fffc, (1 << 48) - 0x2000] {
+        for offset in [-4096_i64, -4, 0, 4, 4092] {
+            for discard in [false, true] {
+                let clk = 9 + 8 * record.jal_events.len() as u64;
+                let a = if discard { 0 } else { pc + 4 };
+                let b = offset as u64;
+                let next_pc = pc.wrapping_add(b);
+                assert!(next_pc < 1 << 48 && next_pc % 4 == 0);
+                record.jal_events.push((
+                    JumpEvent {
+                        clk,
+                        pc,
+                        next_pc,
+                        opcode: Opcode::JAL,
+                        a,
+                        b,
+                        c: 0,
+                        op_a_0: discard,
+                    },
+                    JTypeRecord {
+                        op_a: if discard { 0 } else { 5 },
+                        a: write_record(a, 0, clk + 4, clk - 8),
+                        op_b: b,
+                        op_c: 0,
+                        is_untrusted: false,
+                    },
+                ));
+            }
+        }
+    }
+    assert_eq!(record.jal_events.len(), 40);
+    let chip = JalChip::<SupervisorMode>::default();
+    let trace = padded_trace(&chip, &record, 40);
+    check_all_rows::<JalInstruction, JalInstructionAirSpec>(
+        &trace,
+        |row| {
+            type Columns = JalColumns<u8, SupervisorMode>;
+            let real = offset_of!(Columns, is_real);
+            assert_eq!(real + 1, row.len());
+            reorder::<JalInstruction, JalInstructionAirSpec>(
+                row,
+                offset_of!(Columns, add_operation) + 1,
+                [real].into_iter().chain(0..real),
+            )
+        },
+        &chip,
+    );
+}
+
+#[test]
+fn jalr() {
+    let mut record = ExecutionRecord::default();
+    for pc in [0x1000_u64, 0xfffc, 0xffff_fffc, (1 << 48) - 8] {
+        for target in [0, 0xfffc_u64, 1 << 32, (1 << 48) - 4] {
+            for immediate in [-2048_i64, -1, 0, 1, 2047] {
+                for lsb in [0, 1] {
+                    for discard in [false, true] {
+                        let clk = 9 + 8 * record.jalr_events.len() as u64;
+                        let c = immediate as u64;
+                        let b = (target + lsb).wrapping_sub(c);
+                        let a = if discard { 0 } else { pc + 4 };
+                        record.jalr_events.push((
+                            JumpEvent {
+                                clk,
+                                pc,
+                                next_pc: target,
+                                opcode: Opcode::JALR,
+                                a,
+                                b,
+                                c,
+                                op_a_0: discard,
+                            },
+                            ITypeRecord {
+                                op_a: if discard { 0 } else { 5 },
+                                a: write_record(a, 0, clk + 4, clk - 8),
+                                op_b: if b == 0 { 0 } else { 6 },
+                                b: read_record(b, clk + 3, clk - 8),
+                                op_c: c,
+                                is_untrusted: false,
+                            },
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    // Add a distinct x0 source/destination case, and ensure the trace has padding.
+    let clk = 9 + 8 * record.jalr_events.len() as u64;
+    record.jalr_events.push((
+        JumpEvent {
+            clk,
+            pc: 4096,
+            next_pc: 0,
+            opcode: Opcode::JALR,
+            a: 0,
+            b: 0,
+            c: 0,
+            op_a_0: true,
+        },
+        ITypeRecord {
+            op_a: 0,
+            a: write_record(0, 0, clk + 4, clk - 8),
+            op_b: 0,
+            b: read_record(0, clk + 3, clk - 8),
+            op_c: 0,
+            is_untrusted: false,
+        },
+    ));
+    assert_eq!(record.jalr_events.len(), 321);
+    let chip = JalrChip::<SupervisorMode>::default();
+    let trace = padded_trace(&chip, &record, 321);
+    check_all_rows::<JalrInstruction, JalrInstructionAirSpec>(
+        &trace,
+        |row| {
+            type Columns = JalrColumns<u8, SupervisorMode>;
+            let real = offset_of!(Columns, is_real);
+            assert_eq!(real + 1, offset_of!(Columns, add_operation));
+            reorder::<JalrInstruction, JalrInstructionAirSpec>(
+                row,
+                real + 1,
+                [real].into_iter().chain(0..real).chain(real + 1..row.len()),
+            )
+        },
+        &chip,
+    );
+}
+
+fn load_events(opcodes: &[Opcode], discard: bool) -> Vec<(MemInstrEvent, ITypeRecord)> {
+    let mut events = vec![];
+    for &opcode in opcodes {
+        let alignment = match opcode {
+            Opcode::LB | Opcode::LBU => 1,
+            Opcode::LH | Opcode::LHU => 2,
+            Opcode::LW | Opcode::LWU => 4,
+            Opcode::LD => 8,
+            _ => unreachable!(),
+        };
+        for base in [1 << 16, (1 << 48) - 8] {
+            for word in [0, u64::MAX, 0x807f_ff00_0180_fe7f, 0x0102_0304_0506_0708] {
+                for negative in [false, true] {
+                    for offset in (0..8).step_by(alignment) {
+                        events.push(load_event(
+                            events.len(),
+                            opcode,
+                            base,
+                            offset,
+                            word,
+                            negative,
+                            false,
+                        ));
+                    }
+                }
+            }
+        }
+        events.push(load_event(
+            events.len(),
+            opcode,
+            1 << 32,
+            8 - alignment as u64,
+            0x80ff_7f00_1234_5678,
+            true,
+            true,
+        ));
+    }
+    if discard {
+        for (event, registers) in &mut events {
+            event.a = 0;
+            event.op_a_0 = true;
+            registers.op_a = 0;
+            registers.a = write_record(0, 0, event.clk + 4, event.clk - 8);
+        }
+    }
+    events
+}
+
+// The native memory chips take selectors first and compute four address limbs last.
+macro_rules! memory_row {
+    ($row:expr, $program:ident, $air:ident, $cols:ident, $selector:ident) => {{
+        type Columns = $cols<u8, SupervisorMode>;
+        let row = $row;
+        let address = offset_of!(Columns, address_operation);
+        let memory = offset_of!(Columns, memory_access);
+        let selectors = offset_of!(Columns, $selector);
+        assert_eq!(memory - address, 4);
+        assert_eq!(offset_of!(Columns, adapter_cols), row.len());
+        reorder::<$program, $air>(
+            row,
+            row.len() - 4,
+            (selectors..row.len())
+                .chain(0..address)
+                .chain(memory..selectors)
+                .chain(address..memory),
+        )
+    }};
+}
+
+macro_rules! load_case {
+    ($test:ident, $program:ident, $air:ident, $chip:ident, $cols:ident, $selector:ident,
+     $events:ident, $opcodes:expr, $discard:literal, $active:literal) => {
+        #[test]
+        fn $test() {
+            let mut record = ExecutionRecord::default();
+            record.$events = load_events($opcodes, $discard);
+            assert_eq!(record.$events.len(), $active);
+            let chip = $chip::<SupervisorMode>::default();
+            let trace = padded_trace(&chip, &record, $active);
+            check_all_rows::<$program, $air>(
+                &trace,
+                |row| memory_row!(row, $program, $air, $cols, $selector),
+                &chip,
+            );
+        }
+    };
+}
+load_case!(
+    load_half,
+    LoadHalfInstruction,
+    LoadHalfInstructionAirSpec,
+    LoadHalfChip,
+    LoadHalfColumns,
+    is_lh,
+    memory_load_half_events,
+    &[Opcode::LH, Opcode::LHU],
+    false,
+    130
+);
+load_case!(
+    load_word,
+    LoadWordInstruction,
+    LoadWordInstructionAirSpec,
+    LoadWordChip,
+    LoadWordColumns,
+    is_lw,
+    memory_load_word_events,
+    &[Opcode::LW, Opcode::LWU],
+    false,
+    66
+);
+load_case!(
+    load_double,
+    LoadDoubleInstruction,
+    LoadDoubleInstructionAirSpec,
+    LoadDoubleChip,
+    LoadDoubleColumns,
+    is_real,
+    memory_load_double_events,
+    &[Opcode::LD],
+    false,
+    17
+);
+load_case!(
+    load_x0,
+    LoadX0Instruction,
+    LoadX0InstructionAirSpec,
+    LoadX0Chip,
+    LoadX0Columns,
+    is_lb,
+    memory_load_x0_events,
+    &[
+        Opcode::LB,
+        Opcode::LBU,
+        Opcode::LH,
+        Opcode::LHU,
+        Opcode::LW,
+        Opcode::LWU,
+        Opcode::LD
+    ],
+    true,
+    471
+);
+
+fn store_event(
+    index: usize,
+    opcode: Opcode,
+    base: u64,
+    offset: u64,
+    previous: u64,
+    value: u64,
+    negative: bool,
+    previous_window: bool,
+) -> (MemInstrEvent, ITypeRecord) {
+    let clk = if previous_window {
+        (1 << 24) + 9
+    } else {
+        9 + 8 * index as u64
+    };
+    let c = if negative {
+        offset.wrapping_sub(8)
+    } else {
+        offset + 8
+    };
+    let b = (base + offset).wrapping_sub(c);
+    let mask = match opcode {
+        Opcode::SB => 0xff,
+        Opcode::SH => 0xffff,
+        Opcode::SW => 0xffff_ffff,
+        Opcode::SD => u64::MAX,
+        _ => unreachable!(),
+    };
+    let shift = 8 * offset;
+    let stored = (previous & !(mask << shift)) | ((value & mask) << shift);
+    let memory_previous = if previous_window { 5 } else { clk - 8 };
+    (
+        MemInstrEvent {
+            clk,
+            pc: 4096 + 4 * index as u64,
+            opcode,
+            a: value,
+            b,
+            c,
+            op_a_0: value == 0,
+            mem_access: write_record(stored, previous, clk + 1, memory_previous),
+        },
+        ITypeRecord {
+            op_a: if value == 0 { 0 } else { 5 },
+            a: read_record(value, clk + 4, clk - 8),
+            op_b: 6,
+            b: read_record(b, clk + 3, clk - 8),
+            op_c: c,
+            is_untrusted: false,
+        },
+    )
+}
+
+fn store_events(opcode: Opcode) -> Vec<(MemInstrEvent, ITypeRecord)> {
+    let alignment = match opcode {
+        Opcode::SB => 1,
+        Opcode::SH => 2,
+        Opcode::SW => 4,
+        Opcode::SD => 8,
+        _ => unreachable!(),
+    };
+    let mut events = vec![];
+    for base in [1 << 16, (1 << 48) - 8] {
+        for previous in [0, u64::MAX, 0x807f_ff00_0180_fe7f] {
+            for value in [0, 1, u64::MAX, 0x0102_0304_0506_0708] {
+                for negative in [false, true] {
+                    for offset in (0..8).step_by(alignment) {
+                        events.push(store_event(
+                            events.len(),
+                            opcode,
+                            base,
+                            offset,
+                            previous,
+                            value,
+                            negative,
+                            false,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    events.push(store_event(
+        events.len(),
+        opcode,
+        1 << 32,
+        8 - alignment as u64,
+        0x80ff_7f00_1234_5678,
+        0xff80_017f_ffff_0000,
+        true,
+        true,
+    ));
+    events
+}
+
+macro_rules! store_case {
+    ($test:ident, $program:ident, $air:ident, $chip:ident, $cols:ident,
+     $events:ident, $opcode:ident, $active:literal) => {
+        #[test]
+        fn $test() {
+            let mut record = ExecutionRecord::default();
+            record.$events = store_events(Opcode::$opcode);
+            assert_eq!(record.$events.len(), $active);
+            let chip = $chip::<SupervisorMode>::default();
+            let trace = padded_trace(&chip, &record, $active);
+            check_all_rows::<$program, $air>(
+                &trace,
+                |row| memory_row!(row, $program, $air, $cols, is_real),
+                &chip,
+            );
+        }
+    };
+}
+store_case!(
+    store_byte,
+    StoreByteInstruction,
+    StoreByteInstructionAirSpec,
+    StoreByteChip,
+    StoreByteColumns,
+    memory_store_byte_events,
+    SB,
+    385
+);
+store_case!(
+    store_half,
+    StoreHalfInstruction,
+    StoreHalfInstructionAirSpec,
+    StoreHalfChip,
+    StoreHalfColumns,
+    memory_store_half_events,
+    SH,
+    193
+);
+store_case!(
+    store_word,
+    StoreWordInstruction,
+    StoreWordInstructionAirSpec,
+    StoreWordChip,
+    StoreWordColumns,
+    memory_store_word_events,
+    SW,
+    97
+);
+store_case!(
+    store_double,
+    StoreDoubleInstruction,
+    StoreDoubleInstructionAirSpec,
+    StoreDoubleChip,
+    StoreDoubleColumns,
+    memory_store_double_events,
+    SD,
+    49
+);

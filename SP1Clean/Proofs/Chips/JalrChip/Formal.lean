@@ -313,26 +313,28 @@ theorem completeness :
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     exact he_av ⟨i, hi⟩
-  have hval2_off (hop0 : input_adapter_op_a_0 = 0) :
+  have hval2_off (hgate : input_is_real - input_adapter_op_a_0 = 1) :
       (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i => var {index := i₀ + 4 + i}) : Word (ZMod p))
       = AddOperation.populate #v[Expression.eval env.toEnvironment input_var_state_pc[0],
           Expression.eval env.toEnvironment input_var_state_pc[1],
           Expression.eval env.toEnvironment input_var_state_pc[2], 0] #v[4, 0, 0, 0] := by
-    rw [← AddOperation.populateIRGated_eval_off env input_var_adapter_op_a_0
+    rw [← AddOperation.populateIRGated_eval_off env
+      (1 - (input_var_is_real - input_var_adapter_op_a_0))
       #v[input_var_state_pc[0], input_var_state_pc[1], input_var_state_pc[2], 0]
       #v[4, 0, 0, 0] _ _ (by simp [circuit_norm]) (by simp [circuit_norm]) (hpceq ▸ h_pcU) h4U
-      (h_a0.trans hop0)]
+      (by simp [circuit_norm, _h_ir, h_a0, hgate])]
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     exact he_oav ⟨i, hi⟩
-  have hval2_on (hop1 : input_adapter_op_a_0 = 1) :
+  have hval2_on (hgate : input_is_real - input_adapter_op_a_0 = 0) :
       (Vector.map (Expression.eval env.toEnvironment)
         (Vector.mapRange 4 fun i => var {index := i₀ + 4 + i}) : Word (ZMod p))
         = #v[0, 0, 0, 0] := by
-    rw [← AddOperation.populateIRGated_eval_on env input_var_adapter_op_a_0
+    rw [← AddOperation.populateIRGated_eval_on env
+      (1 - (input_var_is_real - input_var_adapter_op_a_0))
       #v[input_var_state_pc[0], input_var_state_pc[1], input_var_state_pc[2], 0]
-      #v[4, 0, 0, 0] (by rw [h_a0, hop1]; exact one_ne_zero)]
+      #v[4, 0, 0, 0] (by simp [circuit_norm, _h_ir, h_a0, hgate])]
     apply Vector.ext; intro i hi
     simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
     exact he_oav ⟨i, hi⟩
@@ -383,9 +385,9 @@ theorem completeness :
     · rw [hr, h1]
       simp
   have hz (i : Fin 4) : input_adapter_op_a_0 * env.get (i₀ + 4 + (i : ℕ)) = 0 := by
-    rcases h_op_a_0 with h0 | ⟨_, h1⟩
+    rcases h_op_a_0 with h0 | ⟨hr, h1⟩
     · rw [h0, zero_mul]
-    · have hi := congrArg (fun v : Word (ZMod p) => v[(i : ℕ)]) (hval2_on h1)
+    · have hi := congrArg (fun v : Word (ZMod p) => v[(i : ℕ)]) (hval2_on (by rw [hr, h1, sub_self]))
       simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] at hi
       rw [h1, one_mul, hi]
       fin_cases i <;> rfl
@@ -397,28 +399,24 @@ theorem completeness :
   · rcases hlsb_bin with h | h <;> rw [h] <;> simp
   · rw [hval1]; exact AddOperation.spec_populate hrs1U h_imm input_is_real
   · rw [hav3]; exact h_jt3
-  · rcases h_op_a_0 with h0 | ⟨hr, h1⟩
-    · rw [hval2_off h0]
-      exact AddOperation.spec_populate (hpceq ▸ h_pcU) h4U
-        (input_is_real - input_adapter_op_a_0)
-    · intro hgate
-      rw [hr, h1, sub_self] at hgate
-      exact absurd hgate zero_ne_one
-  · rcases h_op_a_0 with h0 | ⟨_, h1⟩
-    · have hoav3 := congrArg (·[3]) (hval2_off h0)
+  · intro hgate
+    rw [hval2_off hgate]
+    exact AddOperation.spec_populate (hpceq ▸ h_pcU) h4U
+      (input_is_real - input_adapter_op_a_0) hgate
+  · rcases h_gate2 with hg0 | hg1
+    · have hoav3 := congrArg (·[3]) (hval2_on hg0)
+      simpa only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] using hoav3
+    · have hoav3 := congrArg (·[3]) (hval2_off hg1)
       simp only [Vector.getElem_map, Vector.getElem_mapRange, hpceq, circuit_norm] at hoav3
       rw [hoav3]
       exact h_lt3
-    · have hoav3 := congrArg (·[3]) (hval2_on h1)
-      simpa only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] using hoav3
-  · -- RegisterWrite emits the populated link for an ordinary destination and zero for x0.
-    intro hr
-    rcases h_op_a_0 with h0 | ⟨_, h1⟩
-    · rw [hval2_off h0]
-      exact (AddOperation.spec_populate (hpceq ▸ h_pcU) h4U
-        (input_is_real - input_adapter_op_a_0) (by rw [h0]; simpa using hr)).1
-    · rw [hval2_on h1]
+  · intro _
+    rcases h_gate2 with hg0 | hg1
+    · rw [hval2_on hg0]
       exact Word.isU64_of_cases (by simp) (by simp) (by simp) (by simp)
+    · rw [hval2_off hg1]
+      exact (AddOperation.spec_populate (hpceq ▸ h_pcU) h4U
+        (input_is_real - input_adapter_op_a_0) hg1).1
   · intro hneg
     have hr1 : input_is_real = 1 := neg_inj.mp hneg
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat

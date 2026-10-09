@@ -68,7 +68,8 @@ python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import sys
 assert len(sys.argv) == 3
-for path, counts in zip(sys.argv[1:], [[3, 19], [19]]):
+# Each instruction test reuses one trace for witness, mutation and open-bus checks.
+for path, counts in zip(sys.argv[1:], [[3, 25], [25]]):
     log = Path(path).read_text()
     if (log.count("test result: ok.") != len(counts)
             or any(log.count(f"test result: ok. {count} passed; 0 failed;") != 1

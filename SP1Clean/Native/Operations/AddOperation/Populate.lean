@@ -104,13 +104,10 @@ theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
       hA 0 (by omega), hA 1 (by omega), hA 2 (by omega), hA 3 (by omega),
       hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega)]
 
-/-- The conditionally-populated variant used for `op_a`-gated adds: the limbs of
-`populate a b` when the `op_a_0` gate expression evaluates to `0`, and zeros when it
-does not — mirroring SP1's populate exactly (`jal`/`jalr` `trace.rs`:
-`if !event.op_a_0 { op_a_operation.populate(..) }`; `utype` `mod.rs`:
-`if record.op_a != 0 { add_operation.populate(..) }`). The chip-level asserts stay
-gated by `is_real - op_a_0`, so both the gated and unconditional witnesses satisfy
-the AIR; this one matches SP1's trace bytes cell-for-cell. -/
+/-- Emit the limbs of `populate a b` when the suppression expression is zero,
+and zero limbs otherwise. UType supplies `op_a_0`; JAL/JALR supply
+`1 - (is_real - op_a_0)` to suppress both discarded links and inactive padding.
+This controls witness generation independently of the chip's AIR constraint gates. -/
 def populateIRGated (op_a_0 : Expression (ZMod p)) (a b : Word (Expression (ZMod p))) :
     WitgenIR (ZMod p) 4 :=
   let s0 : U64Expr (ZMod p) := a[0].val + b[0].val

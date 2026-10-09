@@ -20,16 +20,16 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- ADD, LoadByte, Bitwise, Lt, ShiftLeft, ShiftRight, Branch, Mul and DivRem export through the same
-  built-in path. Rust compares generated witnesses, local constraint satisfaction and complete
+- All 25 supported instruction families export through the same built-in path. Rust compares
+  generated witnesses, local constraint satisfaction and complete
   interaction multisets with SP1 v6.8.1's supervisor AIR, including padding and column mutations.
   Multi-opcode components use explicit selectors without hints. Comparisons retain repeated and
   zero-multiplicity messages, including the multiplication gadget's caller-supplied result word.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
   mprotect semantics remain outside their scope. Exact cases and counts live in the
   [coverage table](../rust/sp1-comparison/README.md).
-- Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They are
-  transitional evidence until instruction coverage moves to the built-in path.
+- Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
+  migration evidence while provider coverage and live consumers move to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,
   IsZeroWord and WordRangeCheck through Clean's Circom/WASM/R1CS backend. Their positive,
   alternate-valid and rejecting cases test a separate backend boundary.
