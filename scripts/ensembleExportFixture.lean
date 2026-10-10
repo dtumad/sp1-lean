@@ -1,5 +1,6 @@
 import SP1CleanTest.Core.EnsembleExport
 import SP1CleanTest.Core.InstructionExport
+import SP1CleanTest.Core.ByteProviderExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -17,11 +18,12 @@ private def exportEnsembleFixture : IO Unit := do
     | .ok value => pure value
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
-  for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports do
-    let instruction ← match result with
+  for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
+      SP1CleanTest.Core.ByteProviderExport.rustExports do
+    let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
-    IO.FS.writeFile (out / name) instruction
+    IO.FS.writeFile (out / name) source
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [

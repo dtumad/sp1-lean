@@ -1,4 +1,5 @@
 import ToClean.Gadgets.LookupProjection
+import ToClean.Gadgets.BitwiseByte
 import SP1Clean.Model.Channels
 import SP1Clean.Math.Bitwise
 import Clean.Circuit.Basic
@@ -6,9 +7,6 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Bits
 import Clean.Gadgets.Boolean
-import Clean.Gadgets.And.And8
-import Clean.Gadgets.Or.Or8
-import Clean.Gadgets.Xor.ByteXorTable
 import Clean.Utils.Tactics
 import Clean.Utils.Tactics.ProvableStructDeriving
 
@@ -23,9 +21,8 @@ pushed row valid in-circuit** (the `ByteRowSpec` membership predicate, `Model/By
 
 This module is the in-circuit provider's push side. For each opcode we build a Clean
 `GeneralFormalCircuit` whose `main`:
-- range-checks the byte operands in-circuit with Clean's `Gadgets.ToBits.rangeCheck 8` (an `assertion`
-  subcircuit — a genuine bit-decomposition, *not* a byte lookup, so the provider owes nothing to the
-  byte bus it provides), then
+- range-checks the byte operands in-circuit with Clean's bundled bit decomposition (directly in the bitwise gadget
+  or through `Gadgets.ToBits.rangeCheck 8`), then
 - reads the explicit multiplicity column `m` from the row and `byteChannel.pushIf m`-pushes the row,
 
 and whose soundness discharges the push's `Requirements` (`ByteRowSpec` of the pushed row, since
@@ -219,14 +216,11 @@ end MSB
 
 /-! ## ops 0/1/2 — byte AND/OR/XOR: push `⟨op, r, b, c⟩`, `r` = the per-byte bitwise result
 
-Each reuses a self-contained Clean byte gadget — `And8`/`Or8` (or the `ByteXorTable` lookup for XOR) —
-to derive `r = b op c` in-circuit. Those gadgets are sound by construction via Clean's static
-`ByteXorTable` *lookup*, **not** the byte bus the provider provides, so there is no circular dependence.
+Each composes the same lookup-free bitwise gadget: two Clean bit decompositions and a packed
+bit polynomial derive `r = b op c`. The provider has no legacy static lookup or circular byte-bus
+dependency. Its result and operand bounds remain specified when multiplicity is zero.
 SP1 emits one row per opcode `⟨op, r, b, c⟩` from `bytes/air.rs`; each is a separate fixed-opcode
 provider here. -/
-
-/-- `p > 512`, needed by Clean's `And8`/`Or8`/`ByteXorTable` gadgets. -/
-instance : Fact (p > 512) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
 namespace AndByte
 
@@ -239,14 +233,12 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
-/-- Range-checks `b`, `c` as bytes, derives `r = b AND c` via Clean's `And8` gadget, and pushes the
+/-- Range-checks `b`, `c` as bytes, derives `r = b AND c` via the bit-decomposition gadget, and pushes the
 `AND` row `⟨0, r, b, c⟩`. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) := do
   let b := input.b
   let c := input.c
-  assertion (Gadgets.ToBits.rangeCheck 8 two_pow_eight_lt) b
-  assertion (Gadgets.ToBits.rangeCheck 8 two_pow_eight_lt) c
-  let r ← Gadgets.And.And8.circuit ⟨b, c⟩
+  let r ← Gadgets.BitwiseByte.circuit .and two_pow_eight_lt (b, c)
   byteChannel.pushIf input.multiplicity
     (⟨0, r, b, c⟩ : ByteRow (Expression (ZMod p)))
   return r
@@ -262,24 +254,20 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
   ProverAssumptions input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
   channelsWithRequirements := [byteChannel.toRaw]
   soundness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    obtain ⟨hb, hc, hand⟩ := h_holds
-    have hr : (Expression.eval env (Gadgets.And.And8.circuit.output
-        { x := input_var_b, y := input_var_c } (i₀ + 8 + 8))).val = input_b.val &&& input_c.val :=
-      hand ⟨hb, hc⟩
-    refine ⟨⟨⟨hb, hc⟩, hr⟩, Or.inl rfl,
+    circuit_proof_start [Gadgets.BitwiseByte.circuit, Gadgets.BitwiseByte.Op.apply]
+    obtain ⟨⟨hb, hc⟩, hr⟩ := h_holds
+    refine ⟨⟨⟨hb, hc⟩, hr⟩,
       fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_zero]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
     · rw [hr]; exact Nat.and_lt_two_pow (n := 8) input_b.val hc
     · rw [ZMod.val_zero, byteOp_zero]; exact hr
   completeness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    exact ⟨h_assumptions.1, h_assumptions.2, h_assumptions⟩
+    circuit_proof_start [Gadgets.BitwiseByte.circuit]
+    exact h_assumptions
 
 /-- The provider's static lookup keys, independent of the interaction multiplicity. -/
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
-  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.And.And8.circuit, Gadgets.And.And8.main, circuit_norm]
-  rfl
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.BitwiseByte.circuit, circuit_norm]
 
 end AndByte
 
@@ -294,14 +282,12 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
-/-- Range-checks `b`, `c` as bytes, derives `r = b OR c` via Clean's `Or8` gadget, and pushes the
+/-- Range-checks `b`, `c` as bytes, derives `r = b OR c` via the bit-decomposition gadget, and pushes the
 `OR` row `⟨1, r, b, c⟩`. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) := do
   let b := input.b
   let c := input.c
-  assertion (Gadgets.ToBits.rangeCheck 8 two_pow_eight_lt) b
-  assertion (Gadgets.ToBits.rangeCheck 8 two_pow_eight_lt) c
-  let r ← Gadgets.Or.Or8.circuit ⟨b, c⟩
+  let r ← Gadgets.BitwiseByte.circuit .or two_pow_eight_lt (b, c)
   byteChannel.pushIf input.multiplicity
     (⟨1, r, b, c⟩ : ByteRow (Expression (ZMod p)))
   return r
@@ -317,25 +303,20 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
   ProverAssumptions input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
   channelsWithRequirements := [byteChannel.toRaw]
   soundness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    obtain ⟨hb, hc, hor⟩ := h_holds
-    have hr : (Expression.eval env (Gadgets.Or.Or8.circuit.output
-        { x := input_var_b, y := input_var_c } (i₀ + 8 + 8))).val = input_b.val ||| input_c.val ∧
-        (Expression.eval env (Gadgets.Or.Or8.circuit.output
-        { x := input_var_b, y := input_var_c } (i₀ + 8 + 8))).val < 256 :=
-      hor ⟨hb, hc⟩
-    refine ⟨⟨⟨hb, hc⟩, hr.1⟩, Or.inl rfl,
-      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_one]; norm_num)).mpr ⟨⟨hr.2, hb, hc⟩, ?_⟩⟩
-    rw [ZMod.val_one, byteOp_one]; exact hr.1
+    circuit_proof_start [Gadgets.BitwiseByte.circuit, Gadgets.BitwiseByte.Op.apply]
+    obtain ⟨⟨hb, hc⟩, hr⟩ := h_holds
+    refine ⟨⟨⟨hb, hc⟩, hr⟩,
+      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_one]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
+    · rw [hr]; exact Nat.or_lt_two_pow (n := 8) hb hc
+    · rw [ZMod.val_one, byteOp_one]; exact hr
   completeness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    exact ⟨h_assumptions.1, h_assumptions.2, h_assumptions⟩
+    circuit_proof_start [Gadgets.BitwiseByte.circuit]
+    exact h_assumptions
 
 /-- The provider's static lookup keys, independent of the interaction multiplicity. -/
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
-  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.Or.Or8.circuit, Gadgets.Or.Or8.main, circuit_norm]
-  rfl
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.BitwiseByte.circuit, circuit_norm]
 
 end OrByte
 
@@ -350,15 +331,12 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
-/-- Range-checks `b`, `c` as bytes, derives `r = b XOR c` via Clean's static `ByteXorTable` lookup, and
+/-- Range-checks `b`, `c` as bytes, derives `r = b XOR c` via the bit-decomposition gadget, and
 pushes the `XOR` row `⟨2, r, b, c⟩`. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Expression (ZMod p)) := do
   let b := input.b
   let c := input.c
-  assertion (Gadgets.ToBits.rangeCheck 8 two_pow_eight_lt) b
-  assertion (Gadgets.ToBits.rangeCheck 8 two_pow_eight_lt) c
-  let r ← witnessField (b.val ^^^ c.val).toField
-  lookup Gadgets.Xor.ByteXorTable (b, c, r)
+  let r ← Gadgets.BitwiseByte.circuit .xor two_pow_eight_lt (b, c)
   byteChannel.pushIf input.multiplicity
     (⟨2, r, b, c⟩ : ByteRow (Expression (ZMod p)))
   return r
@@ -374,25 +352,20 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
   ProverAssumptions input _ _ := input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8
   channelsWithRequirements := [byteChannel.toRaw]
   soundness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck, Gadgets.Xor.ByteXorTable]
-    obtain ⟨hb, hc, -, -, hxor⟩ := h_holds
-    have hval2 : (2 : ZMod p).val = 2 := val_2_zmod_p
-    refine ⟨⟨⟨hb, hc⟩, hxor⟩,
-      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [hval2]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
-    · rw [hxor]; exact Nat.xor_lt_two_pow (n := 8) hb hc
-    · rw [hval2, byteOp_two]; exact hxor
+    circuit_proof_start [Gadgets.BitwiseByte.circuit, Gadgets.BitwiseByte.Op.apply]
+    obtain ⟨⟨hb, hc⟩, hr⟩ := h_holds
+    refine ⟨⟨⟨hb, hc⟩, hr⟩,
+      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [val_2_zmod_p]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
+    · rw [hr]; exact Nat.xor_lt_two_pow (n := 8) hb hc
+    · rw [val_2_zmod_p, byteOp_two]; exact hr
   completeness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck, Gadgets.Xor.ByteXorTable]
-    obtain ⟨hb, hc⟩ := h_assumptions
-    have hxlt : input_b.val ^^^ input_c.val < 256 := Nat.xor_lt_two_pow (n := 8) hb hc
-    refine ⟨hb, hc, hb, hc, ?_⟩
-    rw [h_env, ZMod.val_natCast_of_lt (by have := Fact.out (p := 2 ^ 17 < p); omega)]
+    circuit_proof_start [Gadgets.BitwiseByte.circuit]
+    exact h_assumptions
 
 /-- The provider's static lookup keys, independent of the interaction multiplicity. -/
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).lookups.map (·.table.name) = [Gadgets.Xor.ByteXorTable (p := p) |>.name] := by
-  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
-  rfl
+    ((main input).operations offset).lookups.map (·.table.name) = [] := by
+  simp [main, Gadgets.BitwiseByte.circuit, circuit_norm]
 
 end XorByte
 

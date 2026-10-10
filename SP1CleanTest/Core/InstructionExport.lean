@@ -1,4 +1,4 @@
-import Clean.Air.Extraction.Rust
+import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Proofs.Chips.AddChip.Formal
 import SP1Clean.Proofs.Chips.AddiChip.Formal
 import SP1Clean.Proofs.Chips.AddwChip.Formal
@@ -24,7 +24,6 @@ import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
 import SP1Clean.Proofs.Chips.MulChip.Formal
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
 import SP1Clean.Proofs.Chips.AluX0Chip.Formal
-import SP1Clean.Model.SP1Field
 
 /-! # Instruction-local Rust export
 
@@ -37,34 +36,7 @@ namespace SP1CleanTest.Core.InstructionExport
 
 open Air.Flat SP1Clean
 
-abbrev Fp := ZMod SP1Prime
-
-/-- An instruction component with its original constraints and channel interactions. -/
-def ensemble (component : Component Fp) : Ensemble Fp unit where
-  tables := [component]
-  unique_names := by simp
-  channels := [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
-    Channels.memoryChannel.toRaw, Channels.programChannel.toRaw]
-
-/-- A single independent instruction input, supplied as prover construction data. -/
-def config (Inputs : Type → Type) [ProvableType Inputs] : WitnessGeneration.Config Fp Inputs where
-  modes := [.preallocated {
-    rows := 1
-    input := {
-      width := size Inputs
-      steps := []
-      output := .mapRange (size Inputs) (.proverInputGet .idx)
-    }
-    input_valid := by rfl
-    handlers := []
-  }]
-  padding := [{ input := Array.replicate (size Inputs) 0 }]
-  fuel := 1
-
-/-- Export a production circuit with ordinary inputs and zero padding through Clean. -/
-private def exportRust {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
-    (name : String) (circuit : GeneralFormalCircuit Fp Input Output) : Except String String :=
-  Extraction.Rust.ensembleToRust name (ensemble { circuit }) (config Input)
+open ComponentExport
 
 /-- All supported instruction families in release order. DivRem alone selects DIVU on padding;
 the other components generate their padding witnesses from zero inputs. -/

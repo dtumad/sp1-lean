@@ -25,7 +25,7 @@ The comparison crate uses release optimization level 1 to bound generated-code c
 dependency crates retain their normal release settings. CI logs the export step's time and peak memory.
 
 The runner checks two byte-identical generations under `.lake/ensemble-export/`. Cargo compiles
-that output and exercises two boundaries:
+that output and exercises these boundaries:
 
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
@@ -68,6 +68,15 @@ that output and exercises two boundaries:
   SUBW, JAL, JALR, UType, AluX0 and memory components other than LoadByte mutate every row;
   the remaining components use selected boundary rows.
 
+All six native byte providers are compared with SP1's actual `ByteChip` preprocessed trace and
+AIR over all 65,536 operand pairs, each at multiplicities `0`, `1`, `2` and `p-1`. The full six-entry
+message multiset is compared without dropping zeros or combining repeated MSB keys. Native rows
+prove membership with polynomial constraints; SP1 authenticates its fixed table, so their physical
+layouts and local constraint lists are intentionally different. Boundary-pair mutations check
+every native column with three deltas. Out-of-range operands must fail even at zero multiplicity;
+zero padding balances, and unmatched nonzero provider rows fail. These tests also run with
+`mprotect` enabled; they establish no additional mode semantics or ensemble count bounds.
+
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
 reject an active row without providers. This is not a full-ensemble acceptance or completeness test.
@@ -77,7 +86,7 @@ No generated row-map JSON supplies the reference layout. Channel adaptation
 reverses Byte, Memory and Program signs to match Clean's provider-to-consumer guarantee direction.
 
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables
-the backend fixture alone; `instruction-export` also enables the live SP1 instruction comparison.
+the backend fixture alone; `instruction-export` also enables the live SP1 instruction and byte-provider comparisons.
 
 The Lean semantic profile and existing migration evidence remain on their separately recorded
 revision until instruction comparisons and the semantic review pass.

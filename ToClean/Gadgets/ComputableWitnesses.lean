@@ -1,40 +1,19 @@
 module
 
 public import ToClean.Circuit.WitgenBridge
-public import Clean.Gadgets.Bits
-public import Clean.Gadgets.And.And8
-public import Clean.Gadgets.Or.Or8
+public import ToClean.Gadgets.BitwiseByte
 
-/-! # `ComputableWitnesses` for the Clean gadgets an AIR provider composes
+/-! # Computable witnesses for bit gadgets
 
-Clean's gadget library carries exactly one `ComputableWitnesses` instance in tree
-(`Gadgets/Addition8/Addition8FullCarry.lean`). Every other gadget states its `completeness` only —
-"any environment consistent with my generators satisfies my constraints" — which is enough to
-compose a circuit but not to *build* a row: an AIR trace-generation argument needs the environment
-Clean's array-backed interpreter actually produces, and `Circuit.witgen_usesLocalWitnesses` is
-gated on `ComputableWitnesses` (here at the strengthened `ComputableWitnessesWithData` of
-`ToClean.Circuit.AgreesBelowWithData`).
+Clean's `ToBits` circuits prove completeness but do not expose the witness-locality fact needed
+by the array-backed row builder. These additive upstream APIs show that their witness IR reads
+only the input expression, including under changes to prover data. The range-check wrapper
+composes the same fact through the ordinary subcircuit bridge. The bitwise-byte gadget composes
+two decompositions and a result witness through that same API.
 
-This file supplies the missing instances for the three gadgets a byte/range table provider
-composes. All three are honest for the same reason — their witness generators are witness-IR terms
-over the input expressions alone — so each proof is the input-agreement hypothesis pushed through
-one `Witgen` evaluation step (for `And8`/`Or8`, `circuit_norm` performs the step itself on the
-destructured input and the two operand agreements close the goal):
-
-* `Gadgets.ToBits.toBits` — one `witnessVector n (x.bits n)`, then boolean asserts and one equality
-  subcircuit, neither of which declares a cell;
-* `Gadgets.ToBits.rangeCheck` — the `FormalAssertion` wrapper around `toBits`, dispatched by
-  `forAll_witnessCongr_of_generalSubcircuit`;
-* `Gadgets.And.And8` / `Gadgets.Or.Or8` — one witnessed result cell computed from the two operand
-  cells, with the correctness constraint carried by a static `ByteXorTable` lookup (a lookup
-  declares no cells, so it contributes nothing here).
-
-## Upstream
-
-Destined for the gadget files themselves — `computableWitnesses` beside each gadget's `circuit`,
-mirroring `Addition8FullCarry`'s. Declared here in the gadgets' own namespaces so acceptance is a
-deletion plus dropping the import. Nothing in this file changes an existing Clean declaration; the
-three composition lemmas it cites are in `ToClean/Circuit/WitgenBridge.lean`. -/
+Move these declarations beside Clean's bit gadgets and delete this module when upstream supplies
+these APIs. The data-aware composition lemmas live in `ToClean/Circuit/WitgenBridge.lean`.
+-/
 
 @[expose] public section
 
@@ -68,33 +47,29 @@ theorem rangeCheck_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p)
 
 end Gadgets.ToBits
 
-namespace Gadgets.And.And8
+namespace Gadgets.BitwiseByte
 
 open Circuit
 
-variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
+variable {p : ℕ} [Fact p.Prime] [Fact (p > 2)]
 
-/-- `And8` has computable witnesses: its single cell is `x &&& y` over the two input cells, and the
-`ByteXorTable` lookup that certifies it declares none. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
-  intro k ⟨x, y⟩ env env'
+/-- Every witness depends only on the two inputs. -/
+theorem computableWitnesses (op : Op) (hp : 2 ^ 8 < p) :
+    (circuit op hp).base.ComputableWitnessesWithData := by
+  intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  intro _ ⟨hx, hy⟩
-  rw [hx, hy]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit
+      (ToBits.toBits 8 hp) input.1 k (ToBits.toBits_computableWitnesses 8 hp)
+      (fun h => by simpa only [circuit_norm] using congrArg Prod.fst h)
+  · rw [show (ToBits.toBits 8 hp).localLength input.1 + k =
+        k + ((ToBits.toBits 8 hp).localLength input.1 + 0) by omega]
+    exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit
+      (ToBits.toBits 8 hp) input.2 _ (ToBits.toBits_computableWitnesses 8 hp)
+      (fun h => by simpa only [circuit_norm] using congrArg Prod.snd h)
+  · intro _ h
+    obtain ⟨hx, hy⟩ := Prod.mk.inj h
+    cases op <;> simp [circuit_norm, hx, hy]
+  · exact FlatOperation.forAll_witnessCongr_of_subcircuit _ _ (by simp [circuit_norm])
 
-end Gadgets.And.And8
-
-namespace Gadgets.Or.Or8
-
-open Circuit
-
-variable {p : ℕ} [Fact p.Prime] [Fact (p > 512)]
-
-/-- `Or8` has computable witnesses — the `And8` argument verbatim, at `|||`. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
-  intro k ⟨x, y⟩ env env'
-  simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  intro _ ⟨hx, hy⟩
-  rw [hx, hy]
-
-end Gadgets.Or.Or8
+end Gadgets.BitwiseByte

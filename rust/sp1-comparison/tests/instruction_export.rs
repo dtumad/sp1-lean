@@ -3,13 +3,11 @@
 
 extern crate alloc;
 
-use clean_backend::witness_generation::{
-    generate, Interaction, Mode, Padding, Program, WitnessData, WitnessGenerationError,
-};
+use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as NativeField;
-use slop_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
+use slop_air::{Air, BaseAir};
 use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
 use slop_matrix::{dense::RowMajorMatrix, Matrix};
 use sp1_core_executor::{
@@ -21,7 +19,6 @@ use sp1_core_executor::{
     RTypeRecord,
 };
 use sp1_core_machine::{
-    air::TrivialOperationBuilder,
     alu::{
         add_sub::{
             add::AddChip,
@@ -57,12 +54,8 @@ use sp1_core_machine::{
     utype::{UTypeChip, UTypeColumns},
     SupervisorMode,
 };
-use sp1_hypercube::{
-    air::{AirInteraction, InteractionScope, MachineAir, MessageBuilder, SP1_PROOF_NUM_PV_ELTS},
-    InteractionKind,
-};
+use sp1_hypercube::air::{MachineAir, SP1_PROOF_NUM_PV_ELTS};
 use sp1_primitives::SP1Field;
-use std::marker::PhantomData;
 use std::mem::offset_of;
 
 // Clean emits shared helpers that some individual components do not use.
@@ -226,155 +219,9 @@ generated_instruction!(
     AluX0InstructionAirSpec
 );
 
-type Ledger = Vec<(String, u64, Vec<u64>)>;
-
-/// SP1 supplies the actual expressions; this builder records their field evaluations.
-struct Sp1Evaluation {
-    row: Vec<SP1Field>,
-    constraints: Vec<SP1Field>,
-    ledger: Ledger,
-    public: Vec<SP1Field>,
-}
-
-impl AirBuilder for Sp1Evaluation {
-    type F = SP1Field;
-    type Expr = SP1Field;
-    type Var = SP1Field;
-    type M = RowMajorMatrix<SP1Field>;
-    fn main(&self) -> Self::M {
-        RowMajorMatrix::new(self.row.clone(), self.row.len())
-    }
-    fn is_first_row(&self) -> Self::Expr {
-        SP1Field::one()
-    }
-    fn is_last_row(&self) -> Self::Expr {
-        SP1Field::one()
-    }
-    fn is_transition_window(&self, _: usize) -> Self::Expr {
-        panic!("instruction-local comparison must not read adjacent rows")
-    }
-    fn assert_zero<I: Into<Self::Expr>>(&mut self, value: I) {
-        self.constraints.push(value.into());
-    }
-}
-impl AirBuilderWithPublicValues for Sp1Evaluation {
-    type PublicVar = SP1Field;
-    fn public_values(&self) -> &[SP1Field] {
-        &self.public
-    }
-}
-impl TrivialOperationBuilder for Sp1Evaluation {}
-
-impl Sp1Evaluation {
-    fn interaction(
-        &mut self,
-        interaction: AirInteraction<SP1Field>,
-        scope: InteractionScope,
-        receiving: bool,
-    ) {
-        assert_eq!(scope, InteractionScope::Local);
-        // Clean's State direction agrees with SP1. Byte, Memory and Program orient
-        // guarantees from providers to consumers, reversing SP1's send/receive signs.
-        let (channel, reverse) = match interaction.kind {
-            InteractionKind::State => ("SP1State", false),
-            InteractionKind::Byte => ("SP1Byte", true),
-            InteractionKind::Memory => ("SP1Memory", true),
-            InteractionKind::Program => ("SP1Program", true),
-            other => panic!("unmapped SP1 instruction interaction: {other:?}"),
-        };
-        let mult = if receiving ^ reverse {
-            -interaction.multiplicity
-        } else {
-            interaction.multiplicity
-        };
-        self.ledger.push((
-            channel.to_owned(),
-            mult.as_canonical_u64(),
-            interaction
-                .values
-                .iter()
-                .map(Sp1PrimeField64::as_canonical_u64)
-                .collect(),
-        ));
-    }
-}
-impl MessageBuilder<AirInteraction<SP1Field>> for Sp1Evaluation {
-    fn send(&mut self, value: AirInteraction<SP1Field>, scope: InteractionScope) {
-        self.interaction(value, scope, false);
-    }
-    fn receive(&mut self, value: AirInteraction<SP1Field>, scope: InteractionScope) {
-        self.interaction(value, scope, true);
-    }
-}
-
-/// The generated constraint function takes row values directly; no expression interpreter.
-struct NativeEvaluation;
-impl p3_air::AirBuilder for NativeEvaluation {
-    type F = NativeField;
-    type Expr = NativeField;
-    type Var = NativeField;
-    type M = p3_matrix::dense::RowMajorMatrix<NativeField>;
-    fn main(&self) -> Self::M {
-        unreachable!("generated constraints take an explicit row")
-    }
-    fn is_first_row(&self) -> Self::Expr {
-        unreachable!("flat AIR has no row selectors")
-    }
-    fn is_last_row(&self) -> Self::Expr {
-        unreachable!("flat AIR has no row selectors")
-    }
-    fn is_transition_window(&self, _: usize) -> Self::Expr {
-        unreachable!("flat AIR has no adjacent-row constraints")
-    }
-    fn assert_zero<I: Into<Self::Expr>>(&mut self, _: I) {
-        unreachable!("generated constraints return their values")
-    }
-}
-impl p3_air::AirBuilderWithPublicValues for NativeEvaluation {
-    type PublicVar = NativeField;
-    fn public_values(&self) -> &[NativeField] {
-        &[]
-    }
-}
-
-/// Use Clean's runtime to construct one row, without satisfying its external buses.
-/// Only this test adapter suppresses scheduling interactions. The generated interactions
-/// are checked separately against SP1, including repeated and zero-multiplicity entries.
-/// The unadapted generated program must still reject an active row with no providers.
-struct RowWitness<P>(PhantomData<P>);
-impl<P: Program<NativeField>> Program<NativeField> for RowWitness<P> {
-    const FUEL: usize = <P as Program<NativeField>>::FUEL;
-    const COMPONENTS: usize = <P as Program<NativeField>>::COMPONENTS;
-    const PUBLIC_INPUTS: usize = <P as Program<NativeField>>::PUBLIC_INPUTS;
-    const PROVER_INPUTS: usize = <P as Program<NativeField>>::PROVER_INPUTS;
-    const FIXED_WIDTHS: &'static [usize] = <P as Program<NativeField>>::FIXED_WIDTHS;
-    const COMPONENT_NAMES: &'static [&'static str] = <P as Program<NativeField>>::COMPONENT_NAMES;
-    fn modes() -> Vec<Mode<NativeField>> {
-        P::modes()
-    }
-    fn padding() -> Vec<Padding<NativeField>> {
-        P::padding()
-    }
-    fn initial_rows(
-        component: usize,
-        input: &[NativeField],
-    ) -> Result<Vec<Vec<NativeField>>, String> {
-        P::initial_rows(component, input)
-    }
-    fn complete_row(
-        component: usize,
-        input: &[NativeField],
-        data: &WitnessData<NativeField>,
-    ) -> Result<Vec<NativeField>, String> {
-        P::complete_row(component, input, data)
-    }
-    fn interactions(_: usize, _: &[NativeField]) -> Vec<Interaction<NativeField>> {
-        vec![]
-    }
-    fn verifier_interactions(_: &[NativeField]) -> Vec<Interaction<NativeField>> {
-        vec![]
-    }
-}
+#[path = "support/export.rs"]
+mod export_support;
+use export_support::{Ledger, NativeEvaluation, RowWitness, Sp1Evaluation};
 
 fn r_type_event(index: usize, opcode: Opcode, a: u64, b: u64, c: u64) -> (AluEvent, RTypeRecord) {
     let clk = 9 + 8 * index as u64;
@@ -482,6 +329,7 @@ fn compare<P: Program<NativeField>, S: GeneratedAirSpec>(
 ) -> bool {
     let mut expected = Sp1Evaluation {
         row: sp1.to_vec(),
+        preprocessed: vec![],
         constraints: vec![],
         ledger: vec![],
         public: vec![SP1Field::zero(); SP1_PROOF_NUM_PV_ELTS],

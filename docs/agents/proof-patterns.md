@@ -719,17 +719,11 @@ plain `circuit_proof_start`.
   unfolding (`Native/Readers/RegisterAccessCols.lean`, `Native/Readers/RTypeReader.lean`, `Proofs/Chips/AddChip/Formal.lean`). Set
   `output` explicitly **only** for a *leaf* circuit whose `main` has no sub-circuits — there `varFromOffset`
   is right and cheap (`Native/Readers/RegisterAccessTimestamp.lean`).
-- **Emit a struct-input-projected byte check as an inline `Circuit.lookup ByteTable ⟨…⟩`, not a
-  `byteRangeCheck`/`byteRangeCheckBits` `FormalAssertion` sub-circuit.** When the lookup argument flows from a
-  *struct field* of the input (`input.clk_target` into the `U8Range`/`Range` argument), composing the
-  `FormalAssertion` wrapper as a sub-circuit makes `circuit_proof_start` explode in `whnf` (superlinear in
-  subcircuit-args-over-struct-projections). The raw inline `Circuit.lookup ByteTable ⟨op, x, …⟩` — the
-  in-circuit half of SP1's `send_byte`, the same way `BitwiseU16Operation` uses `ByteXorTable` — is
-  semantically identical (membership in the same `ByteTable`) and closes at the default floor. Soundness:
-  `simp only [circuit_norm, ByteTable] at h_holds` turns each lookup into a `ByteRowSpec` fact; convert via
-  `byteRowSpec_range`/`byteRowSpec_u8range`. The `FormalAssertion` wrappers stay fine when the arg is the
-  *whole* bare input (`Native/Readers/CPUState.lean`'s clock checks). Related: a `FormalAssertion`'s predicate
-  *preconditions* belong in its internal `Assumptions`, not threaded in as extra inputs.
+- **Byte checks use typed channel interactions.** Compose the current bundled byte/range
+  interfaces and keep their semantic specs folded. The native providers discharge membership
+  with polynomial bit decompositions; the legacy inline `ByteTable` workaround is retired.
+  If subcircuit metadata expands through struct projections, supply the elaborated metadata
+  explicitly and use `circuit_norm` projection lemmas before considering a new proof boundary.
 - **Soundness/completeness shapes for a reader composing N sub-circuits.** After `circuit_proof_start`,
   `h_holds` is the N sub-circuit results (`Assumptions → Spec`, `Assumptions = True` so use `h_ trivial`)
   **then** this circuit's own asserts, in `main` emission order — `obtain ⟨h_a, h_b, h_c, z0, z1, z2, z3⟩`.
