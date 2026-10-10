@@ -126,6 +126,11 @@ raw constraints, complete balance, authenticated boundaries and ranked chronolog
 smuggled into a channel payload. Keep occurrence lists through transformations: equal keys do
 not identify occurrences, and disabled interactions still affect characteristic bounds.
 
+Source-register authentication separates fixed membership from sparse Memory traffic. Clean's
+fixed-column program owns all 32 index/value rows; only their counts are prover-owned. Each
+requested source record consumes membership and emits one Memory occurrence. Global balance and
+the fixed prefixes establish membership without a caller-supplied provider-validity premise.
+
 A projected witness derives canonical data from its retained physical rows. Prove row-layout,
 lookup and channel-guarantee transport at the actual two data environments; dropping tables or
 truncating rows does not preserve the complete data function. Public-verifier guarantees are

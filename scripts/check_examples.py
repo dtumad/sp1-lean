@@ -36,7 +36,7 @@ def validate_report(name, result, revision, dirty):
                        "changed-untouched-x31", "changed-untouched-ram", "missing-bank-terminal",
                        "empty-identity"]
         values = [True] + [False] * 7 + [True]
-        require(report["table_count"] == 89, "ADD inventory mismatch")
+        require(report["table_count"] == 90, "ADD inventory mismatch")
     elif name == "branch":
         identifiers = ["active-branch", "wrong-public-next-pc", "missing-authentication-row",
                        "duplicate-authentication-row", "changed-untouched-register", "empty-identity",
@@ -44,7 +44,7 @@ def validate_report(name, result, revision, dirty):
         values = [True, False, False, False, False, True, False, False]
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 89, "uniqueChannels": 25, "registeredChannelOccurrences": 260,
+                    "tableCount": 90, "uniqueChannels": 26, "registeredChannelOccurrences": 261,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and

@@ -13,6 +13,7 @@ import ToClean.Air.EnsembleBuild
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import ToClean.Air.TableBuild
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Executed shared HINT_READ table selection
 
@@ -157,44 +158,31 @@ private theorem baseNames :
 private def assembly :=
   HostHintReadLocal.ensemble (p := SP1Prime) image source HostCallReceivers.available [] [] baseNames
 
-/-- Seed the declared component at each physical position; no component retagging is needed. -/
-private def buildTables (ensemble : Ensemble Fp SP1PublicIO)
-    (noFixed : ensemble.tables.all (fun component => component.fixedColumns.isNone) = true)
-    (inputs : ℕ → List (List Fp)) : List (Table Fp) :=
-  let components := ensemble.tables
-  List.ofFn fun index : Fin components.length =>
-    let component := components[index]
-    Table.build component ((inputs index.val).map fun row =>
-      fromElements (Vector.ofFn fun i => row[i.val]?.getD 0))
-      (fun _ _ => #[]) (ProverHint.empty Fp)
-      (by
-        have fixed := Option.isNone_iff_eq_none.mp
-          (List.all_eq_true.mp noFixed component (List.getElem_mem _))
-        simp only [Component.fixedRowsMatch, fixed])
-
+/-- Build every physical slot, retaining unused verifier-fixed register rows at count zero. -/
 private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
-    (noFixed : ensemble.tables.all (fun component => component.fixedColumns.isNone) = true)
     (inputs : ℕ → List (List Fp)) : EnsembleWitness ensemble :=
-  EnsembleWitness.ofTables ensemble (buildTables ensemble noFixed inputs)
-    (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[]))) (by
-      simp only [buildTables, List.map_ofFn]
-      exact List.ofFn_getElem)
+  EnsembleWitness.ofTables ensemble
+    (StaticMembership.buildTables ensemble.tables inputs
+      (source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name []
+      (fun _ _ => #[]) (ProverHint.empty Fp))
+    (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
+    (StaticMembership.buildTables_components ..)
 
 private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (permissions : List (WritePermissionProvider.Inputs Fp)) (index : ℕ) : List (List Fp) :=
-  if index == 59 then permissions.map (fun row => (toElements row).toList)
-  else if index == 60 then calls.map (fun row => (toElements row).toList)
-  else if index == 81 || index == 82 then
-    (rows.filter (fun row => row.1 == (index == 82))).map (fun row => (toElements row.2).toList)
+  if index == 60 then permissions.map (fun row => (toElements row).toList)
+  else if index == 61 then calls.map (fun row => (toElements row).toList)
+  else if index == 82 || index == 83 then
+    (rows.filter (fun row => row.1 == (index == 83))).map (fun row => (toElements row.2).toList)
   else []
 
 /-- A physical ensemble witness used to test cursor extraction. Other channels are deliberately
 not claimed balanced: source authentication and CPU instruction construction are separate tests. -/
 private def installed (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (permissions : List (WritePermissionProvider.Inputs Fp) := []) : EnsembleWitness assembly :=
-  buildWitness assembly (by rfl) (installedInputs calls rows permissions)
+  buildWitness assembly (installedInputs calls rows permissions)
 
-/-- The installed 83-table assembly retains exactly the handler and both physical word tables.
+/-- The installed 84-table assembly retains exactly the handler and both physical word tables.
 Its complete cursor balances with reversed multi-call rows; missing handlers, missing words,
 and orphan consumers fail at the same whole-witness channel boundary. The named prover data
 contains the actual handler inputs in physical order. -/
@@ -204,7 +192,7 @@ theorem installedCursor :
     let handler := HostHintReadLocal.handlerTable witness
     let tables := HostHintReadLocal.wordTables witness
     let cursor := cursorLedger witness.interactions
-    witness.tables.length = 83 ∧ handler.table = (handlers calls).table ∧
+    witness.tables.length = 84 ∧ handler.table = (handlers calls).table ∧
       witness.data "sp1.native.hint_read" (size HostHintReadChip.Inputs) =
         (calls.map toElements).toArray ∧
       tables.map (·.table) = (consumers rows).map (·.table) ∧
@@ -253,8 +241,8 @@ theorem installedPermissions :
 private def sourceInputs (calls : List (HostHintReadChip.Inputs Fp))
     (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
     (index : ℕ) : List (List Fp) :=
-  if index == 83 then nodes.map (fun row => (toElements row).toList)
-  else if index == 84 then records.map (fun row => (toElements row).toList)
+  if index == 84 then nodes.map (fun row => (toElements row).toList)
+  else if index == 85 then records.map (fun row => (toElements row).toList)
   else installedInputs calls rows [] index
 
 private def recordSnapshot (actual : List Bytes) : ExecutionSnapshot :=
@@ -268,7 +256,7 @@ private def sourceAssembly (actual : List Bytes) :=
 private def withSources (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
     (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
     EnsembleWitness (sourceAssembly actual) :=
-  buildWitness (sourceAssembly actual) (by rfl) (sourceInputs calls rows nodes records)
+  buildWitness (sourceAssembly actual) (sourceInputs calls rows nodes records)
 
 private def sourceRowsChecked (actual : List Bytes) (nodes : List (NodeRecord Fp))
     (records : List (WordRecord Fp)) : Bool :=
@@ -288,7 +276,7 @@ theorem installedRecords :
     let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
     let witness := withSources hints calls rows nodes records
     let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
-    witness.tables.length = 87 ∧ sourceRowsChecked hints nodes records = true ∧
+    witness.tables.length = 88 ∧ sourceRowsChecked hints nodes records = true ∧
       HintReadFixtures.balanced (recordLedger witness.interactions) = true ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records).interactions) = false ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows nodes (records.drop 1)).interactions) = false ∧
@@ -348,7 +336,7 @@ private def withQueueBoundary (actual : List Bytes) (final : HostHintQueue.State
     (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
     EnsembleWitness (queueAssembly actual final) :=
-  buildWitness (queueAssembly actual final) (by rfl) (sourceInputs calls rows nodes records)
+  buildWitness (queueAssembly actual final) (sourceInputs calls rows nodes records)
 
 /-- The actual verifier closes queue balance exactly once. Duplicate handler chains, a forged
 final head, and a reset frontier fail; zero-event identities work. Other AIR channels remain
@@ -362,7 +350,7 @@ theorem installedQueueEndpoints :
     let projected := Soundness.HostHintQueueBoundary.projected witness
     let endpoints := queueLedger ((queueAssembly hints final).verifierOperations.interactionValues
       (Environment.fromInput witness.publicInput witness.data))
-    witness.tables.length = 87 ∧ projected.tables.length = 87 ∧
+    witness.tables.length = 88 ∧ projected.tables.length = 88 ∧
       witness.tables.map (·.table) = projected.tables.map (·.table) ∧
       endpoints = [queueEndpoint (SP1Clean.HostHintQueueBoundary.initial hints) 1,
         queueEndpoint final (-1)] ∧

@@ -285,7 +285,40 @@ theorem buildRow_of_localLength_zero (c : Component F) (input : c.Input F) (data
     (toElements input).toArray)[i]'hbound = _
   simpa using this
 
+/-- Decode the verifier's fixed prefix followed by prover-owned suffix cells. -/
+def fixedInput (c : Component F) (fixed : FixedColumns F) (index : ℕ) (suffix : Array F) :
+    c.Input F :=
+  fromElements (Vector.ofFn fun cell : Fin (size c.Input) =>
+    if cell.val < fixed.width then (fixed.row index)[cell.val]?.getD 0
+    else suffix[cell.val - fixed.width]?.getD 0)
 
+/-- Honest row generation preserves every verifier-fixed input cell. -/
+theorem buildRow_fixedInput_prefix (c : Component F) (fixed : FixedColumns F)
+    (columns : c.fixedColumns = some fixed) (index : ℕ) (suffix : Array F)
+    (data : ProverData F) (hint : ProverHint F) :
+    (c.buildRow (c.fixedInput fixed index suffix) data hint).extract 0 fixed.width = fixed.row index := by
+  have width : fixed.width ≤ size c.Input := by
+    simpa only [columns, Option.map_some, Option.getD_some] using c.fixed_width_le_input
+  have fixedSize : (fixed.row index).size = fixed.width := by simp [FixedColumns.row]
+  have rowSize : size c.Input ≤ (c.buildRow (c.fixedInput fixed index suffix) data hint).size := by
+    rw [buildRow, Circuit.size_witgenWithData, Vector.size_toArray]
+    omega
+  apply Array.ext
+  · simp only [Array.size_extract, Nat.sub_zero, fixedSize]
+    omega
+  · intro cell left right
+    have bound : cell < fixed.width := by omega
+    have inputBound : cell < (toElements (c.fixedInput fixed index suffix)).toArray.size := by
+      simp only [Vector.size_toArray]
+      omega
+    have cells := Circuit.getElem?_witgenWithData_of_lt
+      (c.circuit.main (varFromOffset c.Input 0)) data hint inputBound
+    change (c.buildRow (c.fixedInput fixed index suffix) data hint)[cell]?.getD 0 =
+      (toElements (c.fixedInput fixed index suffix)).toArray[cell] at cells
+    have generatedBound : cell < (c.buildRow (c.fixedInput fixed index suffix) data hint).size := by omega
+    rw [Array.getElem?_eq_getElem generatedBound] at cells
+    simpa [Array.getElem_extract, fixedInput, ProvableType.toElements_fromElements,
+      bound, Array.getElem?_eq_getElem right] using cells
 
 end Component
 
@@ -314,6 +347,42 @@ def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
     obtain ⟨input, _, rfl⟩ := List.mem_map.mp member
     exact c.size_buildRow input data hint
   fixed_rows_match := fixed
+
+/-- Build all verifier-fixed rows using Clean's row witness generator. The suffix is indexed
+by physical row, so duplicate fixed messages and zero-demand rows retain their positions.
+This is a semantic table constructor; channel scheduling remains Clean's responsibility. -/
+def buildPreallocated (c : Component F) (fixed : FixedColumns F)
+    (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
+    (data : ProverData F) (hint : ProverHint F) : Table F :=
+  build c ((List.range fixed.height).map fun index => c.fixedInput fixed index (suffix index))
+    data hint (by
+      simp only [Component.fixedRowsMatch, columns, FixedColumns.RowsMatch, List.map_map]
+      exact List.map_congr_left fun index _ => c.buildRow_fixedInput_prefix fixed columns index _ data hint)
+
+@[simp] theorem buildPreallocated_component (c : Component F) (fixed : FixedColumns F)
+    (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
+    (data : ProverData F) (hint : ProverHint F) :
+    (buildPreallocated c fixed columns suffix data hint).component = c := rfl
+
+@[simp] theorem buildPreallocated_length (c : Component F) (fixed : FixedColumns F)
+    (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
+    (data : ProverData F) (hint : ProverHint F) :
+    (buildPreallocated c fixed columns suffix data hint).length = fixed.height := by
+  simp [buildPreallocated, build, length]
+
+/-- Build ordinary input rows, or allocate the complete fixed trace with the supplied suffixes.
+The fixed prefix always comes from the component's verifier-owned program. -/
+def buildWithFixed (c : Component F) (inputs : List (c.Input F))
+    (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F) : Table F :=
+  match columns : c.fixedColumns with
+  | none => build c inputs data hint (by simp only [Component.fixedRowsMatch, columns])
+  | some fixed => buildPreallocated c fixed columns (suffix fixed) data hint
+
+@[simp] theorem buildWithFixed_component (c : Component F) (inputs : List (c.Input F))
+    (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F) :
+    (buildWithFixed c inputs suffix data hint).component = c := by
+  unfold buildWithFixed
+  split <;> rfl
 
 section ConstantHint
 variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hint : ProverHint F)

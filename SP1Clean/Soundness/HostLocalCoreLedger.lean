@@ -3,7 +3,7 @@ import SP1Clean.Soundness.LocalCoreChannels
 
 /-! # New private protocols on the complete host-enabled local ledger
 
-The public boundary verifier and 59 non-wrapper components are silent on each new registered
+The public boundary verifier and 60 non-wrapper components are silent on each new registered
 private protocol. Source assertions use a channel fresh for the complete host inventory.
 Their silence follows from the local channel inventory and the protected store projections.
 Only the physical syscall wrapper and appended auxiliary tables can contribute. This exact
@@ -24,7 +24,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
 
 def auxiliaryTables (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :=
-  witness.tables.drop 60
+  witness.tables.drop 61
 
 /-- Auxiliary tables retain the exact registered component inventory and order. -/
 theorem auxiliaryTables_components (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
@@ -33,18 +33,18 @@ theorem auxiliaryTables_components (witness : EnsembleWitness (ensemble image so
   rw [List.drop_left' (by simp only [List.length_set, ProtectedLocalCore.tables_length])]
 
 private theorem prefix_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    60 ≤ witness.tables.length := by
+    61 ≤ witness.tables.length := by
   rw [← witness.same_length]
-  change 60 ≤ (tables image source auxiliary).length
+  change 61 ≤ (tables image source auxiliary).length
   rw [tables_length]
   omega
 
 private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (channel : RawChannel (ZMod p)) (fresh : channel ∉ (LocalCore.ensemble (p := p) image source).channels)
     (permission : channel ≠ WritePermissionProvider.channel.toRaw)
-    (index : Fin 60) (notWrapper : index.val ≠ 58) :
+    (index : Fin 61) (notWrapper : index.val ≠ 58) :
     (witness.tables[index.val]'(by have := prefix_length witness; omega)).interactionsWith witness.data channel = [] := by
-  by_cases old : index.val < 59
+  by_cases old : index.val < 60
   · let original := (LocalCore.tables (p := p) image source)[index.val]'(by
       rw [LocalCore.tables_length]; exact old)
     have component : (witness.tables[index.val]'(by have := prefix_length witness; omega)).component =
@@ -66,7 +66,7 @@ private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image so
       rw [component]
       exact ((ProtectedLocalCore.component_projection (p := p) image source ⟨index.val, old⟩).2.2 channel permission).symm)] at silent
     exact silent
-  · have last : index.val = 59 := by omega
+  · have last : index.val = 60 := by omega
     have component : (witness.tables[index.val]'(by have := prefix_length witness; omega)).component = { circuit := WritePermissionProvider.circuit image } := by
       rw [← witness.same_circuits]
       change (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) = _
@@ -96,20 +96,20 @@ theorem interactions_split_new (witness : EnsembleWitness (ensemble image source
       (fun member => fresh (List.mem_append_left _ member)) _
   simp only [EnsembleWitness.interactionsWith, verifierSilent, List.nil_append,
     EnsembleWitness.tableContext, TableContext.interactionsWith]
-  have split := List.take_append_drop 60 witness.tables
+  have split := List.take_append_drop 61 witness.tables
   rw [← split, List.flatMap_append]
   congr 1
   have length := prefix_length witness
-  have prefixTables : witness.tables.take 60 = List.ofFn (fun index : Fin 60 =>
+  have prefixTables : witness.tables.take 61 = List.ofFn (fun index : Fin 61 =>
       witness.tables[index.val]'(by omega)) := by
     apply List.ext_getElem
     · simp only [List.length_take, Nat.min_eq_left length, List.length_ofFn]
     · intro index hi hj
       simp only [List.getElem_take, List.getElem_ofFn]
   rw [prefixTables]
-  have actual : (List.ofFn fun index : Fin 60 =>
+  have actual : (List.ofFn fun index : Fin 61 =>
       (witness.tables[index.val]'(by omega)).interactionsWith witness.data channel) =
-      List.ofFn (fun index : Fin 60 => if index.val = 58 then (hostCallTable witness).interactionsWith witness.data channel else []) := by
+      List.ofFn (fun index : Fin 61 => if index.val = 58 then (hostCallTable witness).interactionsWith witness.data channel else []) := by
     apply congrArg List.ofFn
     funext index
     by_cases same : index.val = 58
@@ -130,7 +130,8 @@ theorem hostCall_fresh : HostCallChip.channel.toRaw ∉ (LocalCore.ensemble (p :
     simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
       SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HostCallChip.channel,
       stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-      publicValuesChannel, Channel.toRaw] at used
+      publicValuesChannel, StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw] at used
   · have same := (List.mem_singleton.mp member).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,

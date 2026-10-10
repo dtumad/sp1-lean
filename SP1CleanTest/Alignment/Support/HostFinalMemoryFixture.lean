@@ -32,14 +32,14 @@ def record (address clock value : ℕ) : Channels.MemoryMsg Fp :=
   ⟨0, clock, (word address)[0], (word address)[1], (word address)[2], word value⟩
 
 def registerCheck (index clock value : ℕ) (selected : Fp) : Row :=
-  (87, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
+  (88, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
 
 def ramCheck (clock : ℕ) : Row :=
-  (88, (toElements (⟨⟨record 65536 clock (target.memory.readWord 65536).toNat,
+  (89, (toElements (⟨⟨record 65536 clock (target.memory.readWord 65536).toNat,
     InitialMemoryRead.populate target.memory 65536⟩, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
 
 def terminals : List Row :=
-  [85, 86].map fun index => (index, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)
+  [86, 87].map fun index => (index, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)
 
 def rows : List Row :=
   coreRows ++ terminals ++ [registerCheck 1 13 123 1, registerCheck 2 12 100 0,
@@ -51,27 +51,20 @@ def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
   [{ registers with table := { registers.table with name := "sp1.native.target_registers" } },
     { memory with table := { memory.table with name := "sp1.native.target_memory" } }]
 
-private theorem noFixed (target : MemorySnapshot) (component : Component Fp)
-    (member : component ∈ (assembly target).tables) : component.fixedColumns = none := by
-  have all : (assembly target).tables.all (fun component => component.fixedColumns.isNone) = true := by rfl
-  exact Option.isNone_iff_eq_none.mp (List.all_eq_true.mp all component member)
-
-/-- Retain all 89 physical tables, including empty tables, in their declared order. -/
+/-- Retain all 90 physical tables, including every fixed register row, in their declared order. -/
 def builtTables (target : MemorySnapshot) (rows : List Row) : List (Table Fp) :=
   let components := (assembly target).tables
-  List.ofFn fun index : Fin components.length =>
-    let component := components[index]
-    Table.build component ((rows.filter (fun row => row.1 == index.val)).map fun row =>
-      fromElements (Vector.ofFn fun i => row.2[i.val]?.getD 0))
-      (fun _ _ => #[]) (ProverHint.empty Fp)
-      (by simp only [Component.fixedRowsMatch, noFixed target component (List.getElem_mem _)])
+  let inputs := fun index => (rows.filter (fun row => row.1 == index)).map (·.2)
+  let channel := (source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name
+  let ledger := StaticMembership.demandLedger components inputs channel (fun _ _ => #[]) (ProverHint.empty Fp)
+  StaticMembership.buildTables components inputs channel ledger (fun _ _ => #[]) (ProverHint.empty Fp)
 
 /-- Only committed physical rows determine the verifier's data environment. -/
 def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
     EnsembleWitness (assembly target) :=
   EnsembleWitness.ofTables _ (builtTables target rows) input (by
-    simp only [builtTables, List.map_ofFn]
-    exact List.ofFn_getElem)
+    unfold builtTables
+    exact StaticMembership.buildTables_components (F := Fp) ..)
 
 def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) : Bool :=
   let installed := assembly target
@@ -88,7 +81,8 @@ def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
   let valid := completeRows.all fun row =>
     match installed.tables[row.1]? with
     | none => false
-    | some component => (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2 lookups).1
+    | some component => component.fixedColumns.isNone &&
+        (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2 lookups).1
   valid && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       registered.contains name &&
@@ -105,15 +99,15 @@ def identityRows : List Row :=
 /-- Named actual outcomes. These are fixture checks, not proof certificates. -/
 def results : List (String × Bool × Bool) :=
   [("active-add", true, check target header rows),
-   ("missing-ram-validator", false, check target header (rows.filter (fun row => row.1 != 88))),
+   ("missing-ram-validator", false, check target header (rows.filter (fun row => row.1 != 89))),
    ("duplicate-ram-validator", false, check target header (rows ++ [ramCheck 0])),
    ("wrong-final-record-clock", false,
-     check target header (rows.map fun row => if row.1 == 88 then ramCheck 1 else row)),
+     check target header (rows.map fun row => if row.1 == 89 then ramCheck 1 else row)),
    ("missing-unchanged-register-validators", false,
      check target header (coreRows ++ terminals ++ [registerCheck 1 13 123 1, ramCheck 0])),
    ("changed-untouched-x31", false, check { target with registers := target.registers.set 31 1 } header rows),
    ("changed-untouched-ram", false, check { target with memory := target.memory.write 65544 1 } header rows),
-   ("missing-bank-terminal", false, check target header (rows.filter (fun row => row.1 != 85))),
+   ("missing-bank-terminal", false, check target header (rows.filter (fun row => row.1 != 86))),
    ("empty-identity", true, check source.sail.memorySnapshot identityHeader identityRows)]
 
 end SP1CleanTest.Alignment.Core.HostFinalMemory.Fixture

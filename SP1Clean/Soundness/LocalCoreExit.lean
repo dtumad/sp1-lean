@@ -48,7 +48,7 @@ private theorem verifier_exit (witness : EnsembleWitness (ensemble (p := p) imag
 
 private theorem prefix_silent (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (witness.tables.take 57).flatMap (·.interactionsWith witness.data exitChannel.toRaw) = [] := by
-  have checked : ((tables (p := p) image source).take 57).all
+  have checked : ((NativeCore.afterInitialTables (p := p) image).take 54).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (exitChannel (p := p)).toRaw.name) = true := rfl
   apply List.flatMap_eq_nil_iff.mpr
@@ -56,10 +56,22 @@ private theorem prefix_silent (witness : EnsembleWitness (ensemble (p := p) imag
   apply Table.interactionsWith_nil_of_channel_not_mem
   have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   rw [List.map_take, witness.tables_map_component] at mapped
-  have absent := List.all_eq_true.mp checked table.component mapped
-  intro used
-  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at absent
-  contradiction
+  change table.component ∈
+    (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
+      (NativeCore.afterInitialTables image).take 54 at mapped
+  rcases List.mem_append.mp mapped with initial | native
+  · obtain ⟨view, viewMem, same⟩ := List.mem_map.mp initial
+    rw [← same]
+    obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+    intro used
+    have inside := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
+    simp [exitChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw] at inside
+  · have absent := List.all_eq_true.mp checked table.component native
+    intro used
+    rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at absent
+    contradiction
 
 /-- Every physical Exit producer, retaining both gates of each legacy HALT row. -/
 noncomputable def exitProducers (witness : EnsembleWitness (ensemble (p := p) image source)) :
@@ -76,12 +88,19 @@ theorem exit_interactions (witness : EnsembleWitness (ensemble (p := p) image so
     witness.interactionsWith exitChannel.toRaw =
       [exitChannel.pulledValue ⟨witness.publicInput.exit_code⟩] ++
         (exitProducers witness).map (fun entry => exitChannel.pushedIfValue entry.1 entry.2) := by
-  have length : witness.tables.length = 59 := by
+  have length : witness.tables.length = 60 := by
     rw [← witness.same_length]; exact tables_length image source
-  have tail : witness.tables.drop 57 = [systemTable witness 2, systemTable witness 3] := by
+  have tail : witness.tables.drop 57 =
+      [systemTable witness 2, systemTable witness 3, registerMembershipTable witness] := by
     rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+      List.drop_eq_getElem_cons (by omega),
       List.drop_eq_nil_of_le (by omega)]
     rfl
+  have registerSilent : (registerMembershipTable witness).interactionsWith witness.data exitChannel.toRaw = [] := by
+    apply Table.interactionsWith_nil_of_channel_not_mem
+    rw [registerMembershipTable_component]
+    change exitChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [exitChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
   have halt := congrArg (List.map TypedInteraction.raw)
     (haltTable_typedExit_of_component _ witness.data (systemTable_component witness 2))
   have syscall := congrArg (List.map TypedInteraction.raw)
@@ -94,7 +113,7 @@ theorem exit_interactions (witness : EnsembleWitness (ensemble (p := p) image so
     (List.take_append_drop 57 witness.tables)
   rw [List.flatMap_append, prefix_silent, List.nil_append, tail] at split
   rw [← split]
-  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, halt, syscall,
+  simp only [List.flatMap_cons, List.flatMap_nil, registerSilent, List.append_nil, halt, syscall,
     exitProducers, List.map_append, List.map_flatMap, List.map_cons, List.map_nil,
     List.map_map, Function.comp_def, ← List.map_eq_flatMap]
 

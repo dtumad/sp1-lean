@@ -23,9 +23,20 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
 private theorem witness_length {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source)) : witness.tables.length = 59 := by
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : witness.tables.length = 60 := by
   rw [← witness.same_length]
   exact tables_length image source
+
+/-- The fixed register inventory is separate from the sparse source Memory providers. -/
+def registerMembershipTable {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) : Table (ZMod p) :=
+  witness.tables[59]'(by have := witness_length witness; omega)
+
+theorem registerMembershipTable_component {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) :
+    (registerMembershipTable witness).component =
+      SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot :=
+  (witness.same_circuits 59 (by change 59 < (tables image source).length; rw [tables_length]; decide)).symm
 
 /-- The physical refresh, StateBump, HALT, and syscall tables, in their registered order. -/
 def systemTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -55,10 +66,11 @@ theorem systemTable_constraints {image : ProgramImage} {source : ExecutionSnapsh
 private theorem systemTables_eq {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
-      systemTable witness 2, systemTable witness 3] := by
+      systemTable witness 2, systemTable witness 3, registerMembershipTable witness] := by
   have length := witness_length witness
   rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
     List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+    List.drop_eq_getElem_cons (by omega),
     List.drop_eq_nil_of_le (by omega)]
   rfl
 
@@ -93,13 +105,18 @@ theorem memoryInterior_split {image : ProgramImage} {source : ExecutionSnapshot}
     rw [systemTable_component]
     change memoryChannel.toRaw ∉ [byteChannel.toRaw, stateChannel.toRaw]
     simp [memoryChannel_eq_byteChannel_false, memoryChannel_eq_stateChannel_false]
+  have registerSilent : typedTableInteractionsWith (registerMembershipTable witness) witness.data memoryChannel = [] := by
+    apply typedTableInteractions_nil
+    rw [registerMembershipTable_component]
+    change memoryChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [memoryChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
   have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
     rw [List.drop_eq_getElem_cons (by have := witness_length witness; omega)]
     rfl
   rw [memoryInterior, head, List.flatMap_cons, programSilent, List.nil_append,
     flatMap_split witness.tables _ 7 25, flatMap_split witness.tables _ 32 23,
     byteTables_memory_silent, List.nil_append, systemTables_eq]
-  simp only [List.flatMap_cons, List.flatMap_nil, stateSilent, List.nil_append,
+  simp only [List.flatMap_cons, List.flatMap_nil, stateSilent, registerSilent, List.nil_append,
     List.append_nil, List.append_assoc, instructionTables]
 
 /-- Active ordinary rows decoded from the unchanged physical instruction batch. -/

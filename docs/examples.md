@@ -30,10 +30,10 @@ terminal reject. These cases exercise complete change coverage, not just locally
 an official Sail step to canonical projection, event compilation and raw acceptance of the
 actual HostFinalMemory assembly. BEQ x1,x2,+4092 has PC 65536→69628 and clock 1→9.
 
-The fixture retains 89 installed tables with 57 physical rows in 14 nonempty tables. The separate
-public verifier contributes 46 interactions. Its 260 channel registrations represent 25 distinct
-channels, including the source, host and final-memory assertion checks. Full RawChannel membership
-equivalence permits deduplicating the registry while retaining every interaction occurrence.
+The fixture retains every installed component and all 32 verifier-fixed source-register rows,
+including unused rows at count zero. The JSON report records physical rows, complete interactions
+and the separate public verifier. Full RawChannel membership equivalence permits deduplicating
+the registry while retaining every interaction occurrence and each assertion-check channel.
 
 Original/empty witnesses accept. Wrong next PC, missing/duplicate authentication, a changed
 untouched target register and malformed seed indices/lengths reject. The runner computes the

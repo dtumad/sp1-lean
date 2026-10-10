@@ -1,4 +1,5 @@
 import ToClean.Circuit.SubcircuitProjection
+import ToClean.Air.StaticProvider
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.Model.Core.RegisterSnapshotTable
 import SP1Clean.Model.Channels
@@ -7,9 +8,10 @@ import Clean.Utils.Tactics
 
 /-! # Register source records for an arbitrary local snapshot
 
-Each row authenticates its index and complete value against the fixed snapshot table, then emits
-one zero-time Memory record. A witness cannot choose the incoming register value. No activity
-selector is needed: absent provider rows are represented by an empty table.
+Each sparse row requests its index and complete value from the snapshot's fixed-column
+membership provider, then emits one zero-time Memory record. The private membership channel
+authenticates the incoming value. No activity selector is needed: absent Memory-provider rows
+are represented by an empty table; the separate fixed provider retains all 32 register rows.
 -/
 
 namespace SP1Clean.SnapshotRegisterProvider
@@ -47,7 +49,7 @@ theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
 
 def main (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) :
     Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
-  lookup snapshot.registerTable.toTable input
+  snapshot.registerTable.channel.pull input
   let record := message input
   memoryChannel.push record
   return record
@@ -56,13 +58,14 @@ instance elaborated (snapshot : MemorySnapshot) :
     ElaboratedCircuit (ZMod p) Inputs MemoryMsg (main snapshot) where
   localLength _ := 0
   output input _ := message input
-  channelsWithGuarantees := []
+  channelsWithGuarantees := [snapshot.registerTable.channel.toRaw]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main snapshot input).operations offset).interactionsWith memoryChannel.toRaw =
       [(memoryChannel.pushed (message input)).toRaw] := by
-  simp only [main, circuit_norm]
+  simp [main, circuit_norm, StaticTable.channel, MemorySnapshot.registerTable,
+    StaticTable.ofRows, memoryChannel]
 
 def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
   name := "sp1.native.memory.snapshot.registers"
@@ -72,11 +75,11 @@ def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs M
   ProverAssumptions input _ _ := snapshot.registerTable.Spec input
   channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
-    circuit_proof_start [message]
+    circuit_proof_start [message, StaticTable.channel]
     have valid := snapshotSpec snapshot ⟨input_index, input_value⟩ h_holds
     exact ⟨valid, fun _ _ => ⟨valid.1.1, valid.1.2.1⟩⟩
   completeness := by
-    circuit_proof_start [message]
+    circuit_proof_start [message, StaticTable.channel]
     exact h_assumptions
 
 /-- Every semantic register index has a proof-independent row constructor. -/
@@ -88,12 +91,10 @@ theorem populate_assumptions (snapshot : MemorySnapshot) (index : BitVec 5)
   (snapshot.registerTable_spec _).mpr ⟨index, rfl⟩
 
 omit [Fact (2 ^ 17 < p)] in
-/-- Register initialization authenticates exactly one row of the finite source snapshot. -/
+/-- Register authentication uses the private membership channel, with no legacy lookup. -/
 @[circuit_norm] theorem main_lookupNames (snapshot : MemorySnapshot)
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main snapshot input).operations offset).lookups.map (·.table.name) =
-      [(snapshot.registerTable (p := p)).name] := by
+    ((main snapshot input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, circuit_norm]
-  rfl
 
 end SP1Clean.SnapshotRegisterProvider

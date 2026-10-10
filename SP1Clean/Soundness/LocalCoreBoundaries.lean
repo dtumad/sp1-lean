@@ -21,14 +21,15 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 def sourceWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     EnsembleWitness ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).ensemble
-      (NativeCore.afterInitialTables image) [] (baseEnsemble image source).unique_names) :=
+      (afterSourceTables image source) [] (baseEnsemble image source).unique_names) :=
   EnsembleWitness.ofTables _ witness.tables () witness.tables_map_component
 
-/-- Source records are checked using Byte guarantees alone, independently of Memory balance. -/
-theorem sourceTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
+/-- Source records use Byte guarantees and fixed-register membership, independently of Memory balance. -/
+theorem sourceTables_spec_of_channels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (registers : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
       table.Spec witness.data := by
   intro table member row rowMem
@@ -40,18 +41,21 @@ theorem sourceTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnap
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
   have tableMem : table ∈ witness.tables := List.mem_of_mem_take member
   have byte := bytes table tableMem row rowMem
+  have register := (register_guarantees_of_balance image source witness constraints registers).2
+    table tableMem row rowMem
   have checked := constraints table tableMem row rowMem
-  rw [← same] at byte checked ⊢
+  rw [← same] at byte register checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-  exact SnapshotMemoryEnsemble.view_spec source.sail.memorySnapshot id _ checked byte
+  exact SnapshotMemoryEnsemble.view_spec source.sail.memorySnapshot id _ checked byte register
 
 theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
       table.Spec witness.data :=
-  sourceTables_spec_of_byte witness constraints
+  sourceTables_spec_of_channels witness constraints
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble]))
 
 /-- Every physical source record authenticates its complete value against the fixed source. -/
 theorem source_records_authentic {image : ProgramImage} {source : ExecutionSnapshot}
@@ -104,13 +108,26 @@ theorem sourceWitness_interactions {image : ProgramImage} {source : ExecutionSna
     Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
 
+/-- The source ordering channel is absent from both the native suffix and fixed membership rows. -/
+theorem afterSourceTables_silent (image : ProgramImage) (source : ExecutionSnapshot) :
+    ∀ component ∈ afterSourceTables (p := p) image source,
+      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉ component.circuit.channels := by
+  intro component member
+  rcases List.mem_append.mp member with native | fixed
+  · exact NativeCore.afterInitialTables_silent image component native
+  · obtain rfl := List.mem_singleton.mp fixed
+    change (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉
+      [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+      OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, Channel.toRaw]
+
 /-- Distinct source locations follow from the combined AIR, including across register/RAM tables. -/
 theorem source_records_locations_nodup {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     (((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map MemoryMsg.locOf).Nodup := by
   apply (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_locations_nodup_of_tables
-    (sourceWitness witness) (NativeCore.afterInitialTables_silent image) (sourceTables_spec witness constraints balanced)
+    (sourceWitness witness) (afterSourceTables_silent image source) (sourceTables_spec witness constraints balanced)
   change BalancedInteractions ((sourceWitness witness).interactionsWith _)
   rw [sourceWitness_interactions]
   exact balanced _ (List.mem_append_left _ (List.mem_cons_self ..))

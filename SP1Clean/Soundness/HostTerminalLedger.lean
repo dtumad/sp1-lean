@@ -181,10 +181,10 @@ variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 private theorem auxiliary_controls
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
-    (witness.tables.drop 60).flatMap (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) =
+    (witness.tables.drop 61).flatMap (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) =
       (controlTables (HostHintQueueBoundary.projected witness)).flatMap
         (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) := by
-  have silent : ∀ table ∈ (witness.tables.drop 60).take 1 ++ (witness.tables.drop 60).drop 19,
+  have silent : ∀ table ∈ (witness.tables.drop 61).take 1 ++ (witness.tables.drop 61).drop 19,
       table.interactionsWith witness.data HostExitBoundary.channel.toRaw = [] := by
     have mapped := HostTableRegistry.auxiliary_components witness
     have checked : (((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
@@ -203,14 +203,14 @@ private theorem auxiliary_controls
     have absent := List.all_eq_true.mp checked table.component present
     rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at absent
     contradiction
-  have first : ((witness.tables.drop 60).take 1).flatMap (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) = [] :=
+  have first : ((witness.tables.drop 61).take 1).flatMap (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) = [] :=
     List.flatMap_eq_nil_iff.mpr (fun table member => silent table (List.mem_append_left _ member))
-  have last : ((witness.tables.drop 60).drop 19).flatMap (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) = [] :=
+  have last : ((witness.tables.drop 61).drop 19).flatMap (·.interactionsWith witness.data HostExitBoundary.channel.toRaw) = [] :=
     List.flatMap_eq_nil_iff.mpr (fun table member => silent table (List.mem_append_right _ member))
   have split := congrArg (List.flatMap (fun table : Table (ZMod p) =>
-    table.interactionsWith witness.data HostExitBoundary.channel.toRaw)) (List.take_append_drop 1 (witness.tables.drop 60))
+    table.interactionsWith witness.data HostExitBoundary.channel.toRaw)) (List.take_append_drop 1 (witness.tables.drop 61))
   have tail := congrArg (List.flatMap (fun table : Table (ZMod p) =>
-    table.interactionsWith witness.data HostExitBoundary.channel.toRaw)) (List.take_append_drop 18 ((witness.tables.drop 60).drop 1))
+    table.interactionsWith witness.data HostExitBoundary.channel.toRaw)) (List.take_append_drop 18 ((witness.tables.drop 61).drop 1))
   simp only [List.drop_drop] at last
   simp only [List.flatMap_append, List.drop_drop] at split tail
   rw [first, List.nil_append, ← tail, last, List.append_nil] at split
@@ -224,8 +224,11 @@ private theorem exit_fresh :
     [LocalCore.sourceChannel image source] at used
   rcases List.mem_append.mp used with used | used
   · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    change false = true at present
-    exact Bool.noConfusion present
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HostExitBoundary.channel,
+      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
+      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
+      StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp used).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
@@ -271,7 +274,7 @@ theorem interactions
     (by simp [HostExitBoundary.channel, WritePermissionProvider.channel, Channel.toRaw])
   rw [wrapper, List.nil_append] at split
   have tail : HostLocalCore.auxiliaryTables (HostHintQueueBoundary.projected witness) =
-      witness.tables.drop 60 := HostHintQueueBoundary.projected_drop witness 60 (by decide)
+      witness.tables.drop 61 := HostHintQueueBoundary.projected_drop witness 61 (by decide)
   rw [tail, HostHintQueueBoundary.projected_data, auxiliary_controls] at split
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced

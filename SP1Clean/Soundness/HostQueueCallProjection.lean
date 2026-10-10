@@ -293,7 +293,7 @@ theorem calls_run_or_queue
     · have projected := (control_calls witness interface constraints balanced message control).2.1
       intro read
       simp only [project, read, queueCallEvent?, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
-      contradiction
+      cases projected
     · have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
         (controlTables witness) (by
           simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
@@ -369,7 +369,7 @@ theorem calls_not_verify
       (rows_spec _ witness.data (queueTables_aligned witness) specs row rowMem)).2
     intro same
     simp only [project, queueCallEvent?, same, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
-    contradiction
+    cases projected
   · exact (control_calls witness interface constraints balanced message control).2.2
 
 end SP1Clean.Soundness.HostQueueCallProjection

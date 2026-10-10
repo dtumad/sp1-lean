@@ -48,8 +48,11 @@ private theorem node_fresh : nodeChannel.toRaw ∉ (LocalCore.ensemble (p := p) 
     [LocalCore.sourceChannel image source] at used
   rcases List.mem_append.mp used with used | used
   · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    change false = true at present
-    contradiction
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, nodeChannel,
+      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
+      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
+      StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp used).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
@@ -63,8 +66,11 @@ private theorem word_fresh : wordChannel.toRaw ∉ (LocalCore.ensemble (p := p) 
     [LocalCore.sourceChannel image source] at used
   rcases List.mem_append.mp used with used | used
   · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    change false = true at present
-    contradiction
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, wordChannel,
+      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
+      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
+      StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp used).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
@@ -361,6 +367,10 @@ private theorem source_auxiliary_fresh (image : ProgramImage) (source : Executio
         (wordResources ++ sourceResources hints)).map
           (fun component : Component (ZMod p) => component.circuit.name)).contains name) = true := by
   rw [source_auxiliary_names]
+  rw [ProtectedLocalCore.tables_names]
+  simp only [LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+    SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+    MemorySnapshot.registerTable, StaticTable.ofRows]
   rfl
 
 /-- The concrete source inventory has distinct physical data keys, including each commit slot. -/
@@ -371,6 +381,10 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
   rw [HostLocalCore.tables_names, source_auxiliary_names, List.nodup_append]
   refine ⟨?_, ?_, ?_⟩
   · apply (ProtectedLocalCore.tables_unique_names image source).set
+    rw [ProtectedLocalCore.tables_names]
+    simp only [LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+      SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+      MemorySnapshot.registerTable, StaticTable.ofRows]
     exact of_decide_eq_true rfl
   · exact of_decide_eq_true rfl
   · have fresh := source_auxiliary_fresh (p := p) image source hints

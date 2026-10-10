@@ -45,6 +45,10 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
     of_decide_eq_true rfl, ?_⟩
   have fresh : (original.map (·.circuit.name)).all
       (fun name => !((FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name)).contains name) = true := by
+    simp only [original, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
+      LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+      SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+      MemorySnapshot.registerTable, StaticTable.ofRows]
     rfl
   intro a old b added same
   have absent := List.all_eq_true.mp fresh a old
@@ -68,7 +72,7 @@ theorem base_tables_length (image : ProgramImage) (source : ExecutionSnapshot) (
     (channels : List (RawChannel (ZMod p)))
     (names : UniqueNames image source target others resources) :
     (base image source target final bankFinal others resources channels names).tables.length =
-      65 + others.length + resources.length := by
+      66 + others.length + resources.length := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
     ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
     HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, List.length_set]
@@ -165,7 +169,7 @@ def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)
 /-- The prefix contains exactly the original core, receiver registry and resource block. -/
 theorem prefix_length (image : ProgramImage) (source : ExecutionSnapshot)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) :
-    (beforeChecks image source others resources).length = 63 + others.length + resources.length := by
+    (beforeChecks image source others resources).length = 64 + others.length + resources.length := by
   rw [beforeChecks, HostLocalCore.tables_length]
   simp only [List.length_append, List.length_map, List.length_cons, List.length_nil,
     HostHintReadHandoff.wordResources]
@@ -195,7 +199,7 @@ def checkSlot (index : Fin 2) : TableSlot (ensemble image source target final ba
   let slot := (TableSlot.ofIndex (FinalMemoryChecks.checkTables (p := p) target)
     ⟨index.val, by simpa only [FinalMemoryChecks.checkTables, List.length_cons, List.length_nil] using index.isLt⟩).appendRight
       (beforeChecks image source others resources)
-  have bound : 60 ≤ slot.index.val := by
+  have bound : 61 ≤ slot.index.val := by
     dsimp only [slot, TableSlot.appendRight, TableSlot.ofIndex]
     rw [prefix_length]
     omega

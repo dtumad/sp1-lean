@@ -78,9 +78,10 @@ private theorem source_record_bounds
     ∀ record ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
       (LocalCore.sourceWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))),
       MemoryClockBounds record := by
-  have specs := LocalCore.sourceTables_spec_of_byte _
+  have specs := LocalCore.sourceTables_spec_of_channels _
     (HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.projected_constraints witness constraints))
     (source_ordering witness constraints balanced).byte
+    (source_register_balance witness balanced)
   have authentic := (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_valid_of_tables _ specs
   intro record member
   have facts := authentic record member

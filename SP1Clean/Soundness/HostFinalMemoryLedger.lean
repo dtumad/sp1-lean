@@ -52,7 +52,8 @@ private theorem private_not_local (channel : RawChannel (ZMod p))
       SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
       FinalMemoryValue.channel, FinalMemoryChange.channel,
       stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-      publicValuesChannel, Channel.toRaw] at names
+      publicValuesChannel, StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw] at names
 
 private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
   [{ circuit := ProtectedStore.byte }, { circuit := ProtectedStore.half }, { circuit := ProtectedStore.word }, { circuit := ProtectedStore.double },

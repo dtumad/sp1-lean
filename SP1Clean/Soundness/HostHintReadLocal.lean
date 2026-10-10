@@ -155,8 +155,12 @@ private theorem cursor_fresh : HintReadWordChip.stateChannel.toRaw ∉
     [LocalCore.sourceChannel image source] at member
   rcases List.mem_append.mp member with member | member
   · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) member)
-    change false = true at present
-    contradiction
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HintReadWordChip.stateChannel,
+      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
+      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
+      StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp member).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,

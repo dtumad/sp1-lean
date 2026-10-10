@@ -37,19 +37,19 @@ noncomputable def auxiliaryMemory (witness : EnsembleWitness (ensemble image sou
   (auxiliaryTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel)
 
 private theorem local_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    (localWitness witness).tables.length = 59 := by
+    (localWitness witness).tables.length = 60 := by
   rw [← (localWitness witness).same_length]
   exact LocalCore.tables_length image source
 
 private theorem extended_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    60 ≤ witness.tables.length := by
+    61 ≤ witness.tables.length := by
   rw [← witness.same_length]
-  change 60 ≤ (tables image source auxiliary).length
+  change 61 ≤ (tables image source auxiliary).length
   rw [tables_length]
   omega
 
 private theorem table_memory_original (witness : EnsembleWitness (ensemble image source auxiliary channels names))
-    (index : Fin 59) (notWrapper : index.val ≠ 58) :
+    (index : Fin 60) (notWrapper : index.val ≠ 58) :
     typedTableInteractionsWith ((localWitness witness).tables[index.val]'(by rw [local_length]; exact index.isLt))
         (localWitness witness).data memoryChannel =
       typedTableInteractionsWith (witness.tables[index.val]'(by have := extended_length witness; omega)) witness.data memoryChannel := by
@@ -125,11 +125,11 @@ private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image s
   exact (List.flatMap_append_perm _ _ _).symm
 
 private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    typedTableInteractionsWith (witness.tables[59]'(by have := extended_length witness; omega)) witness.data memoryChannel = [] := by
-  have component : (witness.tables[59]'(by have := extended_length witness; omega)).component =
+    typedTableInteractionsWith (witness.tables[60]'(by have := extended_length witness; omega)) witness.data memoryChannel = [] := by
+  have component : (witness.tables[60]'(by have := extended_length witness; omega)).component =
       { circuit := WritePermissionProvider.circuit image } := by
     rw [← witness.same_circuits]
-    change (tables image source auxiliary)[59]'(by rw [tables_length]; omega) = _
+    change (tables image source auxiliary)[60]'(by rw [tables_length]; omega) = _
     simp only [tables]
     rw [List.getElem_append_left (by simp only [List.length_set, ProtectedLocalCore.tables_length]; decide),
       List.getElem_set_ne (by decide)]
@@ -148,21 +148,37 @@ theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source au
     (memoryInterior witness).Perm
       (LocalCore.memoryInterior (localWitness witness) ++ wrapperMemory witness ++ auxiliaryMemory witness) := by
   have fullSplit : witness.tables.drop 58 = hostCallTable witness ::
-      witness.tables[59]'(by have := extended_length witness; omega) :: witness.tables.drop 60 := by
+      witness.tables[59]'(by have := extended_length witness; omega) ::
+      witness.tables[60]'(by have := extended_length witness; omega) :: witness.tables.drop 61 := by
     rw [List.drop_eq_getElem_cons (by have := extended_length witness; omega),
+      List.drop_eq_getElem_cons (by have := extended_length witness; omega),
       List.drop_eq_getElem_cons (by have := extended_length witness; omega)]
     rfl
-  have originalSplit : (localWitness witness).tables.drop 58 = [LocalCore.systemTable (localWitness witness) 3] := by
+  have originalSplit : (localWitness witness).tables.drop 58 =
+      [LocalCore.systemTable (localWitness witness) 3, LocalCore.registerMembershipTable (localWitness witness)] := by
     rw [List.drop_eq_getElem_cons (by rw [local_length]; decide),
+      List.drop_eq_getElem_cons (by rw [local_length]; decide),
       List.drop_eq_nil_of_le (by rw [local_length])]
     rfl
+  have originalFixedSilent : typedTableInteractionsWith (LocalCore.registerMembershipTable (localWitness witness))
+      (localWitness witness).data memoryChannel = [] := by
+    apply NativeCore.typedTableInteractions_nil
+    rw [LocalCore.registerMembershipTable_component]
+    change memoryChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [memoryChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
+  have fixedSilent : typedTableInteractionsWith (witness.tables[59]'(by have := extended_length witness; omega))
+      witness.data memoryChannel = [] := by
+    rw [← table_memory_original witness ⟨59, by decide⟩ (by decide)]
+    exact originalFixedSilent
   rw [memoryInterior, NativeCore.flatMap_split witness.tables _ 6 52, fullSplit,
-    List.flatMap_cons, List.flatMap_cons, permission_memory_nil, List.nil_append]
+    List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, fixedSilent,
+    permission_memory_nil, List.nil_append, List.nil_append]
   rw [LocalCore.memoryInterior, NativeCore.flatMap_split (localWitness witness).tables _ 6 52,
-    originalSplit, List.flatMap_cons, List.flatMap_nil, List.append_nil, before_wrapper]
+    originalSplit, List.flatMap_cons, List.flatMap_cons, List.flatMap_nil, originalFixedSilent,
+    List.nil_append, List.append_nil, before_wrapper]
   simpa only [List.append_assoc, auxiliaryMemory, auxiliaryTables] using
     ((wrapper_memory_perm witness constraints).append_right
-      ((witness.tables.drop 60).flatMap (typedTableInteractionsWith · witness.data memoryChannel))).append_left
+      ((witness.tables.drop 61).flatMap (typedTableInteractionsWith · witness.data memoryChannel))).append_left
         (((witness.tables.drop 6).take 52).flatMap (typedTableInteractionsWith · witness.data memoryChannel))
 
 end SP1Clean.Soundness.HostLocalCore

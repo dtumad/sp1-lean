@@ -74,6 +74,19 @@ theorem memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
   rw [← split, ← splitTail, List.append_assoc]
   rfl
 
+/-- Native interior rows have signed-unit Memory traffic; the fixed register provider is silent. -/
+theorem interior_memoryBinary (image : ProgramImage) (source : ExecutionSnapshot)
+    (component : Component (ZMod p)) (member : component ∈ (tables image source).drop 6) :
+    NativeCore.MemoryBinary component := by
+  change component ∈ NativeCore.afterFinalTables image ++
+    [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot] at member
+  rcases List.mem_append.mp member with native | fixed
+  · exact NativeCore.interior_memoryBinary image component native
+  · obtain rfl := List.mem_singleton.mp fixed
+    apply NativeCore.memoryBinary_of_silent
+    change memoryChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [memoryChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
+
 /-- Every interaction of the unchanged interior has signed-unit multiplicity or zero. -/
 theorem memoryInterior_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints) :
@@ -86,8 +99,7 @@ theorem memoryInterior_signedBinary {image : ProgramImage} {source : ExecutionSn
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp rowMem
   have componentMem := List.mem_map_of_mem (f := fun t : Table (ZMod p) => t.component) tableMem
   rw [List.map_drop, witness.tables_map_component] at componentMem
-  change table.component ∈ NativeCore.afterFinalTables image at componentMem
-  exact NativeCore.interior_memoryBinary image table.component componentMem witness.data physical
+  exact interior_memoryBinary image source table.component componentMem witness.data physical
     (constraints table (List.mem_of_mem_drop tableMem)
       physical physicalMem) interaction.raw emitted
 

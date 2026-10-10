@@ -33,9 +33,9 @@ private theorem boundary_state_silent (image : ProgramImage) (source : Execution
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
     intro used
     have subset := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
-    simp only [List.mem_cons, List.not_mem_nil, or_false, stateChannel_eq_byteChannel_false,
-      stateChannel_eq_memoryChannel_false, false_or] at subset
-    exact (by decide : "SP1State" ≠ SnapshotMemoryEnsemble.channelName) (congrArg RawChannel.name subset)
+    simp [stateChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw] at subset
   · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp final
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
     intro used
@@ -75,7 +75,7 @@ theorem state_interiors {image : ProgramImage} {source : ExecutionSnapshot}
         typedTableInteractionsWith (systemTable witness 1) witness.data stateChannel ++
         typedTableInteractionsWith (systemTable witness 2) witness.data stateChannel ++
         typedTableInteractionsWith (systemTable witness 3) witness.data stateChannel := by
-  have length : witness.tables.length = 59 := by
+  have length : witness.tables.length = 60 := by
     rw [← witness.same_length]; exact tables_length image source
   have programSilent : typedTableInteractionsWith (programTable witness) witness.data stateChannel = [] := by
     apply typedTableInteractions_nil
@@ -89,10 +89,16 @@ theorem state_interiors {image : ProgramImage} {source : ExecutionSnapshot}
     simp [stateChannel_eq_byteChannel_false, stateChannel_eq_memoryChannel_false]
   have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
     rw [List.drop_eq_getElem_cons (by omega)]; rfl
+  have registerSilent : typedTableInteractionsWith (registerMembershipTable witness) witness.data stateChannel = [] := by
+    apply typedTableInteractions_nil
+    rw [registerMembershipTable_component]
+    change stateChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [stateChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
   have tail : witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
-      systemTable witness 2, systemTable witness 3] := by
+      systemTable witness 2, systemTable witness 3, registerMembershipTable witness] := by
     rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
       List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+      List.drop_eq_getElem_cons (by omega),
       List.drop_eq_nil_of_le (by omega)]
     rfl
   have split := congrArg (List.flatMap (typedTableInteractionsWith · witness.data stateChannel))
@@ -101,7 +107,7 @@ theorem state_interiors {image : ProgramImage} {source : ExecutionSnapshot}
   rw [← split, head, List.flatMap_cons, programSilent, List.nil_append,
     flatMap_split witness.tables _ 7 25, flatMap_split witness.tables _ 32 23,
     byteTables_state_silent, List.nil_append, tail]
-  simp only [List.flatMap_cons, List.flatMap_nil, refreshSilent, List.nil_append,
+  simp only [List.flatMap_cons, List.flatMap_nil, refreshSilent, registerSilent, List.nil_append,
     List.append_nil, List.append_assoc, instructionTables]
 
 /-- The combined verifier contributes exactly the final pull and initial push. -/
