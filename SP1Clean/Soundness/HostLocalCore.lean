@@ -49,11 +49,11 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot)
   (LocalSourceBoundary.checker image source).install (baseEnsemble image source auxiliary channels names)
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) (auxiliary : List (Component (ZMod p))) :
-    (tables image source auxiliary).length = 60 + auxiliary.length := by
+    (tables image source auxiliary).length = 61 + auxiliary.length := by
   simp only [tables, List.length_append, List.length_set, ProtectedLocalCore.tables_length]
 
 theorem core_component (image : ProgramImage) (source : ExecutionSnapshot)
-    (auxiliary : List (Component (ZMod p))) (index : Fin 59) :
+    (auxiliary : List (Component (ZMod p))) (index : Fin 60) :
     (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) =
       if 58 = index.val then HostCallLedger.producer else
         (ProtectedLocalCore.tables image source)[index.val]'(by rw [ProtectedLocalCore.tables_length]; omega) := by
@@ -78,7 +78,7 @@ private theorem unchanged_projection (original extended : Component (ZMod p))
 
 /-- Every retained component projects its constraints, Byte guarantees, and complete State ledger. -/
 theorem component_projection (image : ProgramImage) (source : ExecutionSnapshot)
-    (auxiliary : List (Component (ZMod p))) (index : Fin 59) :
+    (auxiliary : List (Component (ZMod p))) (index : Fin 60) :
     let extended := (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)
     (∀ env, extended.operations.ConstraintsHold env → original.operations.ConstraintsHold env) ∧
@@ -143,8 +143,8 @@ private theorem protected_byte_requirements (image : ProgramImage) (source : Exe
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements byteChannel.toRaw env := by
   obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
-  have limit : index < 60 := by simpa only [ProtectedLocalCore.tables_length] using bound
-  by_cases core : index < 59
+  have limit : index < 61 := by simpa only [ProtectedLocalCore.tables_length] using bound
+  by_cases core : index < 60
   · have projection := ProtectedLocalCore.component_projection (p := p) image source ⟨index, core⟩
     have original := LocalCore.component_byte_requirements image source
       ((LocalCore.tables image source)[index]'(by rw [LocalCore.tables_length]; exact core))
@@ -153,10 +153,10 @@ private theorem protected_byte_requirements (image : ProgramImage) (source : Exe
     apply Operations.channelRequirements_of_interactionsWith_subset _ _ _ ?_ env original
     rw [projection.2.2 byteChannel.toRaw (by simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw])]
     exact List.Subset.refl _
-  · have last : index = 59 := by omega
+  · have last : index = 60 := by omega
     subst index
     apply Operations.requirements_of_not_mem _ _ _
-      (((ProtectedLocalCore.tables image source)[59]).inChannelsOrRequirements_of_constraints env constraints)
+      (((ProtectedLocalCore.tables image source)[60]).inChannelsOrRequirements_of_constraints env constraints)
     change byteChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
     simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw]
 
@@ -178,8 +178,8 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
 
 private theorem suffix_components (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) :
-    (tables image source auxiliary).drop 59 = { circuit := WritePermissionProvider.circuit image } :: auxiliary := by
-  have suffix : (ProtectedLocalCore.tables (p := p) image source).drop 59 =
+    (tables image source auxiliary).drop 60 = { circuit := WritePermissionProvider.circuit image } :: auxiliary := by
+  have suffix : (ProtectedLocalCore.tables (p := p) image source).drop 60 =
       [{ circuit := WritePermissionProvider.circuit image }] := by
     rw [ProtectedLocalCore.tables, List.drop_left' (by
       simp only [List.length_set, LocalCore.tables_length])]
@@ -190,7 +190,7 @@ private theorem suffix_components (image : ProgramImage) (source : ExecutionSnap
 
 
 private theorem component_other_interactions (image : ProgramImage) (source : ExecutionSnapshot)
-    (auxiliary : List (Component (ZMod p))) (index : Fin 59) (channel : RawChannel (ZMod p))
+    (auxiliary : List (Component (ZMod p))) (index : Fin 60) (channel : RawChannel (ZMod p))
     (notByte : channel ≠ byteChannel.toRaw) (notMemory : channel ≠ memoryChannel.toRaw)
     (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw) :
     ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).operations.interactionsWith channel =
@@ -206,14 +206,14 @@ private theorem component_other_interactions (image : ProgramImage) (source : Ex
 
 
 private theorem component_width_eq (image : ProgramImage) (source : ExecutionSnapshot)
-    (auxiliary : List (Component (ZMod p))) (index : Fin 59) (unchanged : 58 ≠ index.val) :
+    (auxiliary : List (Component (ZMod p))) (index : Fin 60) (unchanged : 58 ≠ index.val) :
     ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).width =
       ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).width := by
   rw [core_component, if_neg unchanged]
   exact (ProtectedLocalCore.component_layout image source index).1
 
 private theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot)
-    (auxiliary : List (Component (ZMod p))) (index : Fin 59) :
+    (auxiliary : List (Component (ZMod p))) (index : Fin 60) :
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)
     let extended := (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)
     original.width ≤ extended.width ∧ original.fixedColumns = extended.fixedColumns := by
@@ -290,7 +290,7 @@ def localWitness : EnsembleWitness (LocalCore.ensemble (p := p) image source) :=
 @[simp] theorem localWitness_publicInput : (localWitness witness).publicInput = witness.publicInput := rfl
 
 /-- Non-wrapper components retain every complete physical row under their original interpretation. -/
-theorem localWitness_table (index : Fin 59) (unchanged : 58 ≠ index.val) :
+theorem localWitness_table (index : Fin 60) (unchanged : 58 ≠ index.val) :
     (localWitness witness).tables[index.val]'(by
       rw [← (localWitness witness).same_length]
       change index.val < (LocalCore.tables (p := p) image source).length
@@ -314,7 +314,7 @@ theorem localWitness_constraints (constraints : witness.Constraints) : (localWit
   apply witness.projectPrefix_constraints_of (target := LocalCore.ensemble image source)
     projectionLength projectionWidths projectionFixed ?_ constraints
   intro index row rowWidth checked
-  have bound : index.val < 59 := by
+  have bound : index.val < 60 := by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)
   change ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.ConstraintsHold
     (Environment.fromArray row witness.data) at checked
@@ -372,7 +372,7 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
       intro table member
       have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
       rw [List.map_drop, witness.tables_map_component] at mapped
-      change table.component ∈ (tables image source auxiliary).drop 59 at mapped
+      change table.component ∈ (tables image source auxiliary).drop 60 at mapped
       rw [suffix_components] at mapped
       apply table.interactionsWith_nil_of_channel_not_mem
       rcases List.mem_cons.mp mapped with same | extra
@@ -382,7 +382,7 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
       · exact silent table.component extra
     rw [empty, List.append_nil]
   · intro index row rowWidth
-    have bound : index.val < 59 := by
+    have bound : index.val < 60 := by
       simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)
     by_cases wrapper : 58 = index.val
     · have same : index = ⟨58, by change 58 < (LocalCore.tables (p := p) image source).length; rw [LocalCore.tables_length]; decide⟩ := Fin.ext wrapper.symm
@@ -419,6 +419,19 @@ theorem localWitness_program
     (by simp [programChannel, HostCallChip.channel, Channel.toRaw])
     (by simp [programChannel, WritePermissionProvider.channel, Channel.toRaw]) silent
 
+/-- Register membership retains the verifier-fixed provider rows and their complete private ledger. -/
+theorem localWitness_registers
+    (silent : ∀ component ∈ auxiliary,
+      source.sail.memorySnapshot.registerTable.channel.toRaw ∉ component.circuit.channels) :
+    (localWitness witness).interactionsWith source.sail.memorySnapshot.registerTable.channel.toRaw =
+      witness.interactionsWith source.sail.memorySnapshot.registerTable.channel.toRaw := by
+  apply localWitness_other witness _ (by simp [LocalCore.baseEnsemble])
+  · simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, byteChannel, Channel.toRaw]
+  · simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, memoryChannel, Channel.toRaw]
+  · simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, HostCallChip.channel, Channel.toRaw]
+  · simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, WritePermissionProvider.channel, Channel.toRaw]
+  · exact silent
+
 omit [Fact (2 ^ 25 < p)] in
 /-- Byte predicates depend on their message cells, not on canonical prover data. -/
 private theorem byte_guarantees_setData (ops : Operations (ZMod p)) (row : Array (ZMod p))
@@ -443,7 +456,7 @@ theorem localWitness_byte_of_guarantees
   apply witness.projectPrefix_channelGuarantees_of (target := LocalCore.ensemble image source)
     projectionLength projectionWidths projectionFixed byteChannel.toRaw ?_ byte
   intro index row rowWidth guaranteed
-  have bound : index.val < 59 := by
+  have bound : index.val < 60 := by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)
   change ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.ChannelGuarantees
     byteChannel.toRaw (Environment.fromArray row witness.data) at guaranteed

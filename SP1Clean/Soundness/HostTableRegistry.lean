@@ -29,11 +29,11 @@ theorem auxiliary_components {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
       HostCallReceivers.available (sourceResources source.host.io.hints) channels
       (source_unique_names image source source.host.io.hints))) :
-    (witness.tables.drop 60).map (·.component) = auxiliary source.host.io.hints := by
+    (witness.tables.drop 61).map (·.component) = auxiliary source.host.io.hints := by
   have components := HostLocalCore.auxiliaryTables_components (HostHintQueueBoundary.projected witness)
-  change ((HostHintQueueBoundary.projected witness).tables.drop 60).map (·.component) =
+  change ((HostHintQueueBoundary.projected witness).tables.drop 61).map (·.component) =
     auxiliary source.host.io.hints at components
-  rw [HostHintQueueBoundary.projected_drop witness 60 (by decide)] at components
+  rw [HostHintQueueBoundary.projected_drop witness 61 (by decide)] at components
   exact components
 
 /-- Number of source-backed host components before any further resource extension. -/
@@ -85,7 +85,7 @@ theorem installedBankSlot_index (image : ProgramImage) (source : ExecutionSnapsh
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (channels : List (RawChannel (ZMod p))) (deferred : Bool) (index : Index) :
     (installedBankSlot image source final bankFinal channels deferred index).index.val =
-      60 + bankPosition deferred index := by
+      61 + bankPosition deferred index := by
   change ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer).length +
     bankPosition deferred index = _
   rw [List.length_set, ProtectedLocalCore.tables_length]

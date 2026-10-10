@@ -111,8 +111,8 @@ theorem word_memory_sublist {image : ProgramImage} {source : ExecutionSnapshot}
        memoryChannel.pushedValue (HintReadCoverage.rowInput row).ram.pushed])).Sublist
       ((HostLocalCore.memoryInterior witness).map TypedInteraction.raw) := by
   rw [HostLocalCore.memoryInterior_raw, ← HintReadWriteLedger.memory_ledger _ witness.data (wordTables_aligned witness)]
-  have suffix : (witness.tables.drop 60).Sublist (witness.tables.drop 6) := by
-    simpa only [List.drop_drop] using List.drop_sublist 54 (witness.tables.drop 6)
+  have suffix : (witness.tables.drop 61).Sublist (witness.tables.drop 6) := by
+    simpa only [List.drop_drop] using List.drop_sublist 55 (witness.tables.drop 6)
   have physical : (wordTables witness).Sublist (witness.tables.drop 6) :=
     ((List.take_sublist 2 _).trans (List.drop_sublist _ _)).trans suffix
   exact physical.flatMap _
@@ -207,19 +207,26 @@ theorem source_program_silent (source : ExecutionSnapshot) :
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
   contradiction
 
-/-- The installed host resources preserve both private Memory-boundary ordering channels. -/
+/-- The installed host resources preserve private boundary ordering and fixed register membership. -/
 theorem source_boundary_silent (source : ExecutionSnapshot)
-    (name : String) (boundary : name ∈ [SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName]) :
+    (channel : RawChannel (ZMod p))
+    (boundary : channel ∈ [(OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+      source.sail.memorySnapshot.registerTable.channel.toRaw]) :
     ∀ component ∈ (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
       (wordResources ++ sourceResources source.host.io.hints),
-      (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels := by
+      channel ∉ component.circuit.channels := by
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
       (wordResources ++ sourceResources source.host.io.hints)).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
-        (OrderedBoundary.channel (p := p) name).toRaw.name) = true := by
+        channel.name) = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at boundary
-    rcases boundary with rfl | rfl <;> rfl
+    rcases boundary with rfl | rfl | rfl
+    · rfl
+    · rfl
+    · simp only [Channel.toRaw_name, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows]
+      rfl
   intro component member used
   have silent := List.all_eq_true.mp checked component member
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
@@ -227,6 +234,17 @@ theorem source_boundary_silent (source : ExecutionSnapshot)
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {channels : List (RawChannel (ZMod p))}
+
+/-- The complete assembly's actual membership ledger survives both physical projections. -/
+theorem source_register_balance
+    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
+    (balanced : witness.BalancedChannels) :
+    (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel
+      source.sail.memorySnapshot.registerTable.channel.toRaw := by
+  change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
+  rw [HostLocalCore.localWitness_registers _ (source_boundary_silent source _ (by simp))]
+  exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble])
 
 /-- The installed source/queue assembly closes the host word access facts without a caller
 supplying a channel interface or any Memory guarantee. -/
@@ -315,8 +333,8 @@ theorem source_memory_prior_bound (valid : image.Valid)
     have bytes := HostLocalCore.localWitness_byte (HostHintQueueBoundary.projected witness)
       (auxiliaryInterface (source_interface source.host.io.hints)) checked
       (HostHintQueueBoundary.record_channels witness balanced).byte
-    have specs := LocalCore.sourceTables_spec_of_byte _
-      (HostLocalCore.localWitness_constraints _ checked) bytes
+    have specs := LocalCore.sourceTables_spec_of_channels _
+      (HostLocalCore.localWitness_constraints _ checked) bytes (source_register_balance witness balanced)
     exact ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_valid_of_tables _ specs
       message sourceRecord).2.1
   · exact source_memory_push_bound valid witness constraints balanced message push
@@ -363,10 +381,12 @@ theorem source_memory_frontier_balance
     (auxiliaryInterface (source_interface source.host.io.hints))
     (source_boundary_silent source _ (List.mem_cons_self ..))
     (source_boundary_silent source _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+    (source_boundary_silent source _ (by simp))
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced).byte
     (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _
       (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels]))
+    (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
     (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
     (HostHintQueueBoundary.projected_core_balancedChannel witness balanced _ (by simp [LocalCore.baseEnsemble]))
     (source_memoryBinary source) loc

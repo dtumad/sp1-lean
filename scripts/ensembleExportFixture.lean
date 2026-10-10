@@ -1,6 +1,7 @@
 import SP1CleanTest.Core.EnsembleExport
 import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
+import SP1CleanTest.Core.SnapshotRegisterExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -9,6 +10,18 @@ The comparison script regenerates twice, checks the completion marker and compil
 -/
 
 open Lean SP1CleanTest.Core.EnsembleExport
+
+private def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
+    {ensemble : Air.Flat.Ensemble (ZMod SP1Clean.SP1Prime) PublicIO}
+    (witness : Air.Flat.EnsembleWitness ensemble) : Json :=
+  Json.mkObj [
+    ("tables", toJson (witness.tables.map fun table =>
+      table.table.map fun row => row.map (·.val))),
+    ("interactions", toJson (witness.interactions.map fun interaction => Json.mkObj [
+      ("channel", toJson interaction.channel.name),
+      ("message", toJson (interaction.msg.map (·.val))),
+      ("multiplicity", toJson interaction.mult.val),
+      ("assumeGuarantees", toJson interaction.assumeGuarantees)]))]
 
 private def exportEnsembleFixture : IO Unit := do
   let out := System.FilePath.mk
@@ -19,7 +32,8 @@ private def exportEnsembleFixture : IO Unit := do
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
-      SP1CleanTest.Core.ByteProviderExport.rustExports do
+      SP1CleanTest.Core.ByteProviderExport.rustExports ++
+      SP1CleanTest.Core.SnapshotRegisterExport.rustExports do
     let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
@@ -38,6 +52,29 @@ private def exportEnsembleFixture : IO Unit := do
             ("interactionCount", toJson witness.interactions.length)]
     pure result
   IO.FS.writeFile (out / "fixed_membership.reference.json") ((toJson cases).compress ++ "\n")
+  let registerCases ← SP1CleanTest.Core.SnapshotRegisterExport.cases.mapM
+      fun (name, requests, expected) => do
+    let fields := [("name", toJson name),
+      ("publicInput", toJson ((toElements requests).toArray.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.SnapshotRegisterExport.generate requests with
+    | .error message =>
+      if expected then throw (IO.userError s!"{name}: {message}")
+      pure <| Json.mkObj (fields ++ [("error", toJson message)])
+    | .ok witness =>
+      unless expected && SP1CleanTest.Core.SnapshotRegisterExport.description.checkWitness
+          SP1Clean.SP1Prime witness do
+        throw (IO.userError s!"unexpected source-register acceptance: {name}")
+      pure <| Json.mkObj (fields ++ [("witness", physicalReference witness)])
+  let empty ← match SP1CleanTest.Core.SnapshotRegisterExport.generateEmpty with
+    | .error message => throw (IO.userError message)
+    | .ok witness =>
+      unless SP1CleanTest.Core.SnapshotRegisterExport.emptyDescription.checkWitness
+          SP1Clean.SP1Prime witness do
+        throw (IO.userError "unused fixed provider failed raw acceptance")
+      pure (physicalReference witness)
+  IO.FS.writeFile (out / "snapshot_registers.reference.json")
+    ((Json.mkObj [("cases", toJson registerCases), ("empty", empty)]).compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture

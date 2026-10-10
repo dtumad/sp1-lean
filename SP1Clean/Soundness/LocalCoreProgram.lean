@@ -23,19 +23,21 @@ theorem component_program_source (image : ProgramImage) (source : ExecutionSnaps
   change component ∈ tables image source at member
   have split : tables (p := p) image source =
       (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
-        FinalMemoryEnsemble.inventory.views.map (·.component) ++ NativeCore.afterFinalTables image := by
-    simp only [tables, NativeCore.afterInitialTables, NativeCore.afterFinalTables, List.append_assoc]
-  rw [split, List.mem_append, List.mem_append] at member
-  rcases member with (initial | final) | interior
+        FinalMemoryEnsemble.inventory.views.map (·.component) ++ NativeCore.afterFinalTables image ++
+        [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot] := by
+    simp only [tables, afterSourceTables, NativeCore.afterInitialTables,
+      NativeCore.afterFinalTables, List.append_assoc]
+  simp only [split, List.mem_append, List.mem_singleton] at member
+  rcases member with ((initial | final) | interior) | rfl
   · right
     apply NativeCore.programPulls_of_silent
     obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
     intro used
     have subset := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
-    simp only [List.mem_cons, List.not_mem_nil, or_false, programChannel_eq_byteChannel_false,
-      programChannel_eq_memoryChannel_false, false_or] at subset
-    exact (by decide : "SP1Program" ≠ SnapshotMemoryEnsemble.channelName) (congrArg RawChannel.name subset)
+    simp [programChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw] at subset
   · right
     apply NativeCore.programPulls_of_silent
     obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp final
@@ -46,6 +48,11 @@ theorem component_program_source (image : ProgramImage) (source : ExecutionSnaps
       programChannel_eq_memoryChannel_false, false_or] at subset
     exact (by decide : "SP1Program" ≠ OrderedFinalProvider.channelName) (congrArg RawChannel.name subset)
   · exact NativeCore.interior_program_source image component interior
+  · right
+    apply NativeCore.programPulls_of_silent
+    change programChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [programChannel, StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.ofRows, Channel.toRaw]
 
 /-- Source assertions retain their fresh channel and cannot manufacture Program fetches. -/
 theorem verifier_program_silent (image : ProgramImage) (source : ExecutionSnapshot)

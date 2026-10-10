@@ -4,7 +4,7 @@ import ToClean.Air.ComponentReplacement
 
 /-! # The protected local AIR retains the original execution witness
 
-The first 59 physical tables are reinterpreted by their original components; the fixed permission
+The first 60 physical tables are reinterpreted by their original components; the fixed permission
 provider is omitted. Assertions, lookups, public input, and every original channel's complete
 interaction list are preserved. Fixed lookup predicates survive changes to canonical data.
 Thus all previously proved local ordering and grounding results apply to this projection without
@@ -17,8 +17,9 @@ open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-private theorem tables_getElem (image : ProgramImage) (source : ExecutionSnapshot)
-    (index : ℕ) (bound : index < 59) :
+/-- Resolve a protected component without unfolding the complete physical inventory. -/
+theorem tables_getElem (image : ProgramImage) (source : ExecutionSnapshot)
+    (index : ℕ) (bound : index < 60) :
     (tables (p := p) image source)[index]'(by rw [tables_length]; omega) =
       if 28 = index then { circuit := ProtectedStore.double } else
       if 27 = index then { circuit := ProtectedStore.word } else
@@ -32,7 +33,7 @@ private theorem tables_getElem (image : ProgramImage) (source : ExecutionSnapsho
 
 /-- Each retained component preserves its original local algebra and old channel ledgers. -/
 theorem component_projection (image : ProgramImage) (source : ExecutionSnapshot)
-    (index : Fin 59) :
+    (index : Fin 60) :
     let extended := (tables (p := p) image source)[index.val]'(by rw [tables_length]; omega)
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by
       rw [LocalCore.tables_length]; exact index.isLt)
@@ -63,7 +64,7 @@ theorem component_projection (image : ProgramImage) (source : ExecutionSnapshot)
   simp [double, word, half, byte]
 
 /-- Permission interactions preserve physical widths and fixed-column contracts. -/
-theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot) (index : Fin 59) :
+theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot) (index : Fin 60) :
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by
       rw [LocalCore.tables_length]; exact index.isLt)
     let extended := (tables (p := p) image source)[index.val]'(by rw [tables_length]; omega)
@@ -111,7 +112,7 @@ def localWitness {image : ProgramImage} {source : ExecutionSnapshot}
 
 /-- Each projected table retains its complete physical arrays under the original component. -/
 theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 59) :
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 60) :
     (localWitness witness).tables[index.val]'(by
       rw [← (localWitness witness).same_length]
       change index.val < (LocalCore.tables (p := p) image source).length
@@ -138,7 +139,7 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
     (projectionLength image source) _ _ ?_ constraints
   intro index row rowWidth checked
   rw [projectionWidth, ← rowWidth, Array.extract_size]
-  have bound : index.val < 59 := by
+  have bound : index.val < 60 := by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)
   have projection := component_projection (p := p) image source ⟨index.val, bound⟩
   change (tables (p := p) image source)[index.val]'(by rw [tables_length]; omega) |>.operations.ConstraintsHold
@@ -152,14 +153,14 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
 private theorem provider_suffix_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw) :
-    (witness.tables.drop 59).flatMap (·.interactionsWith witness.data channel) = [] := by
+    (witness.tables.drop 60).flatMap (·.interactionsWith witness.data channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   rw [List.map_drop, witness.tables_map_component] at mapped
-  change table.component ∈ (tables image source).drop 59 at mapped
+  change table.component ∈ (tables image source).drop 60 at mapped
   have length : ((((LocalCore.tables (p := p) image source).set 25 { circuit := ProtectedStore.byte }).set 26
-      { circuit := ProtectedStore.half }).set 27 { circuit := ProtectedStore.word } |>.set 28 { circuit := ProtectedStore.double }).length = 59 := by
+      { circuit := ProtectedStore.half }).set 27 { circuit := ProtectedStore.word } |>.set 28 { circuit := ProtectedStore.double }).length = 60 := by
     simp only [List.length_set, LocalCore.tables_length]
   rw [tables, List.drop_left' length] at mapped
   obtain same := List.mem_singleton.mp mapped
@@ -198,7 +199,8 @@ theorem old_channel_ne_permission {image : ProgramImage} {source : ExecutionSnap
     simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
       SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
       WritePermissionProvider.channel, stateChannel, memoryChannel, byteChannel, programChannel,
-      exitChannel, syscallChannel, publicValuesChannel, Channel.toRaw] at names
+      exitChannel, syscallChannel, publicValuesChannel, StaticTable.channel,
+      MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at names
   · obtain rfl := List.mem_singleton.mp member
     intro same
     have names := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList.head?) same

@@ -7,6 +7,7 @@ mkdir -p .lake/ensemble-export
 scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
   SP1CleanTest.Core.InstructionExport SP1CleanTest.Core.ByteProviderExport \
+  SP1CleanTest.Core.SnapshotRegisterExport \
   2>&1 | tee "$scratch/build.log"
 python3 - "$scratch" <<'PY'
 import hashlib
@@ -34,7 +35,8 @@ if revision != clean["rev"] or dirty:
     raise SystemExit("Clean checkout differs from the pinned emitter/backend")
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
-files = ["fixed_membership.rs", "fixed_membership.reference.json"] + [
+files = ["fixed_membership.rs", "fixed_membership.reference.json", "snapshot_registers.rs",
+         "snapshot_registers_empty.rs", "snapshot_registers.reference.json"] + [
     re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "_instruction.rs"
     for _, name, _ in CHIPS
 ] + [name + "_byte_provider.rs" for name in ["and", "or", "xor", "u8_range", "ltu", "msb"]]
@@ -63,14 +65,14 @@ CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export,mprotect \
-    --test instruction_export --test byte_provider_export 2>&1 | tee "$scratch/rust-mprotect.log"
+    --test clean_export --test instruction_export --test byte_provider_export 2>&1 | tee "$scratch/rust-mprotect.log"
 python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import re
 import sys
 assert len(sys.argv) == 3
-# Require every binary's exact success count, including both three-test suites.
-for path, counts in zip(sys.argv[1:], [[3, 3, 25], [3, 25]]):
+# Require every binary's exact success count in both configurations.
+for path, counts in zip(sys.argv[1:], [[3, 7, 25], [3, 7, 25]]):
     log = Path(path).read_text()
     actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
     if sorted(actual) != counts or "warning:" in log:

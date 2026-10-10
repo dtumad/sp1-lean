@@ -79,8 +79,12 @@ theorem boundaryVerifier_requirements (env : Environment (ZMod p)) :
     ChannelInteraction.toRaw, stateChannel, byteChannel, exitChannel,
     OrderedBoundary.channel, Channel.toRaw, circuit_norm]
 
+/-- Native execution components followed by the source's fixed membership provider. -/
+def afterSourceTables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
+  NativeCore.afterInitialTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot]
+
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
-  (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++ NativeCore.afterInitialTables image
+  (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++ afterSourceTables image source
 
 /-- Byte guarantees suffice for the State verifier's endpoint bounds; ordering traffic is structural. -/
 theorem boundaryVerifier_limbBounds (input : SP1PublicIO (ZMod p)) (data : ProverData (ZMod p))
@@ -110,9 +114,14 @@ theorem boundaryVerifier_limbBounds (input : SP1PublicIO (ZMod p)) (data : Prove
 /-- The physical inventory and existing boundary traffic, before installing source assertions. -/
 def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
   tables := tables image source
-  unique_names := by exact of_decide_eq_true rfl
+  unique_names := by
+    simp only [tables, afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+      SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+      MemorySnapshot.registerTable, StaticTable.ofRows]
+    exact of_decide_eq_true rfl
   channels := (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ::
-    (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw :: sp1Ensemble.channels
+    (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ::
+    source.sail.memorySnapshot.registerTable.channel.toRaw :: sp1Ensemble.channels
   verifier := boundaryVerifier
 
 /-- Install all eight source checks with the generic public-assertion adapter. -/
@@ -146,8 +155,8 @@ theorem verifier_requirements (image : ProgramImage) (source : ExecutionSnapshot
   exact ⟨boundaryVerifier_requirements env, Verifier.checkZeros_requirements _ _ _⟩
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
-    (tables (p := p) image source).length = 59 := by
-  simp [tables, SnapshotMemoryEnsemble.inventory, NativeCore.afterInitialTables,
+    (tables (p := p) image source).length = 60 := by
+  simp [tables, afterSourceTables, SnapshotMemoryEnsemble.inventory, NativeCore.afterInitialTables,
     OrderedMemoryEnsemble.Inventory.views, FinalMemoryEnsemble.inventory,
     sp1Tables_length, sp1ProviderTables_length]
 
@@ -168,7 +177,8 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+      source.sail.memorySnapshot.registerTable.channel.toRaw])
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements channel env := by
   have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
@@ -181,7 +191,14 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
       have used := source_requirements source component member required
       simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
       tauto))
-  · exact NativeCore.afterInitialTables_finished_requirements image component member channel outside env constraints
+  · rcases List.mem_append.mp member with native | fixed
+    · exact NativeCore.afterInitialTables_finished_requirements image component native channel
+        (fun inside => outside (List.mem_append_left _ inside)) env constraints
+    · obtain rfl := List.mem_singleton.mp fixed
+      apply absent
+      change channel ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+      exact fun inside => outside (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+        (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ inside))))
 
 /-- The local assembly supplies its own Byte and Program guarantees, including for both
 source providers. No provider validity or memory-content premise is accepted here. -/
@@ -197,7 +214,8 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
       (member : channel ∈ (baseEnsemble (p := p) image source).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
         (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
-        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]) :
+        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+        source.sail.memorySnapshot.registerTable.channel.toRaw]) :
       (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
         ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
     apply witness.channelGuarantees_of_component_requirements channel constraints
@@ -208,10 +226,12 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
         component_finished_requirements image source component mem channel outside env holds
   have byte := closed byteChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
-      OrderedFinalProvider.channelName, byteChannel])
+      OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
+      MemorySnapshot.registerTable, StaticTable.ofRows])
   have program := closed programChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
-      OrderedFinalProvider.channelName, programChannel])
+      OrderedFinalProvider.channelName, programChannel, StaticTable.channel,
+      MemorySnapshot.registerTable, StaticTable.ofRows])
   exact ⟨⟨byte.1, program.1⟩, fun table member => ⟨(byte.2 table member), (program.2 table member)⟩⟩
 
 /-- Program guarantees use only this channel's balance, so host extensions can retain their
@@ -226,7 +246,51 @@ theorem program_guarantees_of_balance (image : ProgramImage) (source : Execution
     exact verifier_requirements image source _ interaction emitted
   · exact fun component mem env holds => component_finished_requirements image source component mem
       programChannel.toRaw (by simp [circuit_norm, OrderedBoundary.channel,
-        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel]) env holds
+        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel,
+        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows]) env holds
+
+/-- Fixed register rows discharge every provider requirement. Channel balance then authenticates
+the sparse source requests against those rows, using the witness's canonical prover data. -/
+theorem register_guarantees_of_balance (image : ProgramImage) (source : ExecutionSnapshot)
+    (witness : EnsembleWitness (ensemble (p := p) image source))
+    (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw) :
+    (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data
+        source.sail.memorySnapshot.registerTable.channel.toRaw ∧
+      ∀ table ∈ witness.tables,
+        table.ChannelGuarantees witness.data source.sail.memorySnapshot.registerTable.channel.toRaw := by
+  apply witness.channelGuarantees_of_requirements _ balanced
+  · intro interaction emitted _
+    exact verifier_requirements image source _ interaction emitted
+  · intro table member
+    have location := EnsembleWitness.mem_component_of_mem member
+    simp only [ensemble, PublicVerifier.install, baseEnsemble, tables, afterSourceTables,
+      List.mem_append, List.mem_singleton] at location
+    rcases location with sourceTable | native | fixed
+    · intro row rowMember
+      apply Operations.requirements_of_not_mem _ _ _
+        (table.component.inChannelsOrRequirements_of_constraints _
+          (constraints table member row rowMember))
+      intro required
+      have used := source_requirements source table.component sourceTable required
+      simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+        memoryChannel, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+        Channel.toRaw] at used
+    · intro row rowMember
+      apply NativeCore.afterInitialTables_finished_requirements image table.component native _ ?_
+        _ (constraints table member row rowMember)
+      simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+        stateChannel, memoryChannel, OrderedBoundary.channel,
+        OrderedInitialProvider.channelName,
+        OrderedFinalProvider.channelName, Channel.toRaw]
+    · have assumptions : table.Assumptions witness.data := by
+        intro row _
+        rw [fixed]
+        trivial
+      intro row rowMember interaction emitted _
+      exact (table.component.weakSoundness_of_no_guarantees (by rw [fixed]; rfl)
+        (table.circuitAssumptions (witness.data_consistent table member) assumptions row rowMember)
+        (constraints table member row rowMember)).2 interaction emitted
 
 /-- Exactly the channel facts used by chronology, including the installed public source checks.
 Byte guarantees may be transported from a larger ensemble without projecting its Byte
@@ -245,7 +309,8 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
     component.operations.ChannelRequirements byteChannel.toRaw env := by
   apply component_finished_requirements image source component member byteChannel.toRaw ?_ env constraints
   simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
-    OrderedFinalProvider.channelName, byteChannel]
+    OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
+    MemorySnapshot.registerTable, StaticTable.ofRows]
 
 /-- The local assembly derives the ordering interface from its Byte, State, and source-check ledgers. -/
 theorem orderingChannels_of_constraints {image : ProgramImage} {source : ExecutionSnapshot}

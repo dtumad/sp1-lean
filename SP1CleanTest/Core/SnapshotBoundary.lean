@@ -1,12 +1,13 @@
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Model.SP1Field
 import ToClean.Air.FiniteLookup
+import SP1CleanTest.Core.StaticMembership
 import Clean.Circuit.WitnessExport
 
 /-! # Arbitrary source-snapshot AIR regressions
 
 Execute the real witness programs and check all flattened assertions, concrete fixed lookups,
-and nonzero Byte messages. These are provider regressions, not a whole-machine balance claim.
+nonzero Byte messages, and the fixed register membership ledger. These are provider regressions, not a whole-machine balance claim.
 -/
 
 namespace SP1CleanTest.Core.SnapshotBoundary
@@ -35,8 +36,7 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
   let circuit := program (varFromOffset Input 0)
   let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
   let operations := (circuit.operations (size Input)).toFlat
-  let tables := [FiniteLookup.ofStatic (snapshot.registerTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (snapshot.memory.fixedTable (p := SP1Prime) (2 ^ 48))]
+  let tables := [FiniteLookup.ofStatic (snapshot.memory.fixedTable (p := SP1Prime) (2 ^ 48))]
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
@@ -45,7 +45,10 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
     | .interact interaction => interaction.channel.name != "SP1Byte" || env interaction.mult == 0 ||
         byteValid (interaction.msg.map env).toList
     | .witness .. => true
-  (valid, (toElements (ProvableType.eval env (circuit.output (size Input)))).toList)
+  let ledger := (FlatOperation.interactions operations).map fun interaction =>
+    (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult)
+  (valid && StaticMembership.check snapshot.registerTable ledger,
+    (toElements (ProvableType.eval env (circuit.output (size Input)))).toList)
 
 private def name : String := "SP1NativeSourceMemoryOrder"
 
@@ -72,6 +75,36 @@ theorem rejectsForgedRegisters :
       { payload with value := changed }) ++
       [{ payload with index := 6 }, { payload with index := 32 }, { payload with index := 0 }]
     bad.all (fun input => !(evaluate (SnapshotRegisterProvider.circuit snapshot).main input).1) = true := by
+  native_decide
+
+/-- Repeated requests share a count while all 32 physical rows and zero-count occurrences survive. -/
+theorem fixedRegisterOccurrences :
+    let source := snapshot.registerTable (p := SP1Prime)
+    let message := (toElements (snapshot.registerRow (p := SP1Prime) 5)).toList
+    let requests : StaticMembership.Ledger Fp :=
+      [(source.channel.name, message, -1), (source.channel.name, message, -1)]
+    let built := StaticMembership.table source requests
+    let ledger := StaticMembership.providerLedger source requests
+    built.length = 32 ∧ ledger.length = 32 ∧
+      (ledger.filter (fun entry => entry.2.1 == message)).map (·.2.2) = [2] ∧
+      (ledger.filter (fun entry => entry.2.2 == 0)).length = 31 ∧
+      StaticMembership.check source requests = true ∧
+      (StaticMembership.providerLedger source []).map (·.2.2) = List.replicate 32 0 := by
+  native_decide
+
+/-- Empty and duplicate fixed tables retain their physical shape without duplicating demand. -/
+theorem emptyAndDuplicateFixedRows :
+    let row := snapshot.registerRow (p := SP1Prime) 5
+    let duplicate := StaticTable.ofRows "duplicate" [row, row]
+    let empty := StaticTable.ofRows (Row := RegisterSnapshotRow) (F := Fp) "empty" []
+    let message := (toElements row).toList
+    let requests : StaticMembership.Ledger Fp := [("duplicate", message, -1), ("duplicate", message, -1)]
+    (StaticMembership.table duplicate requests).length = 2 ∧
+      (StaticMembership.providerLedger duplicate requests).map (·.2.2) = [2, 0] ∧
+      StaticMembership.check duplicate requests = true ∧
+      (StaticMembership.table empty []).length = 0 ∧
+      StaticMembership.check empty [] = true ∧
+      StaticMembership.check empty [("empty", message, -1)] = false := by
   native_decide
 
 /-- Explicit and default-zero RAM bytes are authenticated, including the last aligned word. -/

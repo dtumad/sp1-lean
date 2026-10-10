@@ -2,6 +2,7 @@ import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import SP1Clean.Soundness.ProtectedLocalCore
 import SP1Clean.Model.Core.SyscallTable
 import ToClean.Air.FiniteLookup
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Shared ADD fixture and actual AIR evaluator
 
@@ -84,8 +85,7 @@ def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (component : Co
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let fixed := [FiniteLookup.ofStatic (source.sail.memorySnapshot.registerTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
+  let fixed := [FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
     FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
     FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
     FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))] ++ extraLookups

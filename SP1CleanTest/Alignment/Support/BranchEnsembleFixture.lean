@@ -3,6 +3,7 @@ import SP1Clean.Soundness.HostFinalMemory
 import ToClean.Air.EnsembleBuild
 import ToClean.Air.FiniteLookup
 import ToClean.Air.ChannelRegistry
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Compiler-derived branch witness for the complete local host assembly
 
@@ -102,7 +103,7 @@ def finalSeeds : List Seed :=
 /-- Every published final receipt is checked against the fixed complete target snapshot. -/
 def validatorSeeds : List Seed :=
   (orderedMemory true).map fun record =>
-    Seed.ofCells 87 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
+    Seed.ofCells 88 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
 /-- Terminate the actual finite ordered register inventory. -/
 def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0
@@ -116,7 +117,7 @@ def programSeeds : List Seed :=
     Seed.ofCells 6 (toElements (DecodedProgramProvider.inputOfMessage message (-entry.2.2))).toList
 /-- Unchanged host-bank endpoints, physically present even though this step makes no host call. -/
 def hostTerminals : List Seed :=
-  [85, 86].map fun index =>
+  [86, 87].map fun index =>
     Seed.ofCells index (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList
 /-- All non-Byte rows use the compiler and its demanded authentication inventory. -/
 def consumerSeeds : List Seed :=
@@ -127,12 +128,12 @@ def consumerSeeds : List Seed :=
 def seedValid (target : MemorySnapshot) (seed : Seed) : Bool :=
   match (assembly target).tables[seed.table]? with
   | none => false
-  | some component => seed.cells.length == component.rowOffset
+  | some component => component.fixedColumns.isNone && seed.cells.length == component.rowOffset
 /-- Evaluate one seed, failing closed if its component position is absent. -/
 def seedLedger? (target : MemorySnapshot) (seed : Seed) : Option Ledger :=
   match (assembly target).tables[seed.table]? with
   | none => none
-  | some component => if seed.cells.length != component.rowOffset then none else
+  | some component => if component.fixedColumns.isSome || seed.cells.length != component.rowOffset then none else
       some (rowLedger component (seed.build component))
 /-- Demand one actual Byte or Range provider row, rejecting unsupported message shapes. -/
 def byteSeed? (entry : String × List Fp × Fp) : Option (Option Seed) :=
@@ -155,28 +156,24 @@ def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List 
   let providers ← (verifier ++ ledgers.flatten).mapM byteSeed?
   let generated := providers.filterMap id
   if generated.all (seedValid target) then some (consumers ++ generated) else none
-private theorem noFixed (target : MemorySnapshot) (component : Component Fp)
-    (member : component ∈ (assembly target).tables) : component.fixedColumns = none := by
-  have all : (assembly target).tables.all (fun component => component.fixedColumns.isNone) = true := by rfl
-  exact Option.isNone_iff_eq_none.mp (List.all_eq_true.mp all component member)
-
-/-- Every table remains installed; unused instruction and host tables have zero physical rows. -/
+/-- Every table remains installed, including all fixed register rows at their actual counts. -/
 def builtTables (target : MemorySnapshot) (seeds : List Seed) : List (Table Fp) :=
   let components := (assembly target).tables
-  List.ofFn fun index : Fin components.length =>
-    let component := components[index]
-    Table.build component ((seeds.filter fun seed => seed.table == index.val).map fun seed =>
-      seed.input component) data (ProverHint.empty Fp)
-      (by simp only [Component.fixedRowsMatch, noFixed target component (List.getElem_mem _)])
+  let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
+  let channel := (source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name
+  let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channel data (ProverHint.empty Fp)
+  SP1CleanTest.StaticMembership.buildTables components inputs channel ledger data (ProverHint.empty Fp)
+
 /-- All built tables retain the assembly's original component identities and order. -/
 theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed) :
     (builtTables target seeds).map (·.component) = (assembly target).tables := by
-  simp only [builtTables, List.map_ofFn]
-  exact List.ofFn_getElem
-/-- Building rows never changes the fixed 89-table host inventory. -/
+  unfold builtTables
+  exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
+
+/-- Building rows never changes the complete 90-table host inventory. -/
 theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed) :
-    (builtTables target seeds).length = 89 := by
-  simp only [builtTables, List.length_ofFn]
+    (builtTables target seeds).length = 90 := by
+  simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   rfl
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/
 def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed) :

@@ -36,6 +36,9 @@ theorem tables_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
     ((tables (p := p) image source).map (·.circuit.name)).Nodup := by
   rw [tables_names, List.nodup_append]
   refine ⟨(LocalCore.baseEnsemble image source).unique_names, by simp, ?_⟩
+  simp only [LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+    SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+    MemorySnapshot.registerTable, StaticTable.ofRows]
   exact of_decide_eq_true rfl
 
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
@@ -45,7 +48,7 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMo
   verifier := (LocalCore.ensemble image source).verifier
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
-    (tables (p := p) image source).length = 60 := by
+    (tables (p := p) image source).length = 61 := by
   simp only [tables, List.length_append, List.length_set, List.length_singleton, LocalCore.tables_length]
 
 end SP1Clean.Soundness.ProtectedLocalCore

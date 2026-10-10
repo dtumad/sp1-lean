@@ -83,7 +83,7 @@ Mutable executor commitment banks are distinct from fixed digest checks in the e
 | Ordinary construction | Deterministic 55-table compiler on an explicitly narrower admissible domain; readiness/capacity restrictions remain local to it |
 | Ordinary soundness | `supported_core_native_sound` assumes native algebra, semantic boundary binding and an inactive syscall table with a physical Halt table |
 | Installed host assembly | Six calls: HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN and HINT_READ; genuine replay and endpoint observations are derived |
-| Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison; the complete-Memory ensemble has 89 tables plus verifier |
+| Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison; the complete Memory ensemble retains its separate public verifier |
 | Sail boundary | Static target checks, protected ordinary receipts and ordered observation are proved; combined dynamic supplied-target equality remains open |
 | Concrete examples | Accepted ADD and compiler-derived BEQ assemblies; LoadByte fixed-table replacement with occurrence-preserving transport |
 | Exact upstream AIR | A paired 34+6-table relation with a 160-cell public-value block and conditional refinement combinators; no closed exact-Core theorem |

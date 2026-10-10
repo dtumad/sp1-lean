@@ -48,8 +48,9 @@ theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnap
     simp only [sp1CoreChannels, List.mem_cons, List.not_mem_nil, or_false] at used
     simp only [baseEnsemble, sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
     tauto
-  change component ∈ tables image source at member
-  rcases List.mem_append.mp member with initial | remaining
+  simp only [ensemble, PublicVerifier.install, baseEnsemble, tables, afterSourceTables,
+    List.mem_append, List.mem_singleton] at member
+  rcases member with initial | remaining | rfl
   · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
     intro channel used
@@ -79,6 +80,11 @@ theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnap
       rcases sp1ProviderTables_channels_subset_core component provider with inside | rfl
       · exact fun _ used => core (inside used)
       · intro channel used
-        exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (syscallInstrsProvider_channels_subset used))
+        exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+          (List.mem_cons_of_mem _ (syscallInstrsProvider_channels_subset used)))
+  · change [source.sail.memorySnapshot.registerTable.channel.toRaw] ⊆ _
+    intro channel member
+    obtain rfl := List.mem_singleton.mp member
+    simp [baseEnsemble]
 
 end SP1Clean.Soundness.LocalCore

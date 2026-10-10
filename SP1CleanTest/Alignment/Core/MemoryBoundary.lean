@@ -353,10 +353,10 @@ private def localVerifierRow (snapshot : ExecutionSnapshot) (pi : SP1PublicIO Fp
     (Soundness.LocalCore.sourceChannel (p := SP1Prime) image snapshot).name
     Soundness.SnapshotMemoryEnsemble.channelName
 
-/-- All eight checks survive installation, including zero-valued checks; the 59 committed
+/-- All eight checks survive installation, including zero-valued checks; the 60 committed
 tables and the original 19 verifier occurrences remain intact. -/
 theorem localVerifierInventory :
-    (Soundness.LocalCore.ensemble (p := SP1Prime) image source).tables.length = 59 ∧
+    (Soundness.LocalCore.ensemble (p := SP1Prime) image source).tables.length = 60 ∧
     (localVerifierLedger source localPublic).length = 35 ∧
     ((localVerifierLedger source localPublic).filter fun interaction => interaction.channel.name ==
       (Soundness.LocalCore.sourceChannel (p := SP1Prime) image source).name).length = 16 := by

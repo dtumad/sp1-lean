@@ -32,7 +32,9 @@ private def haltSlot (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) :
     TableSlot (HostLocalCore.tables image source auxiliary) HaltPaddingChip.original where
   index := ⟨57, by rw [HostLocalCore.tables_length]; omega⟩
-  component_eq := (HostLocalCore.core_component image source auxiliary ⟨57, by decide⟩).trans (by rfl)
+  component_eq := by
+    rw [HostLocalCore.core_component image source auxiliary ⟨57, by decide⟩, if_neg (by decide)]
+    rfl
 
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (final : State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
@@ -67,7 +69,9 @@ def projected (witness : EnsembleWitness (ensemble image source final bankFinal 
 
 @[simp] theorem projected_data
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names)) :
-    (projected witness).data = witness.data := underlying_data witness
+    (projected witness).data = witness.data := by
+  rw [projected, ClosedVerifier.project_data]
+  exact underlying_data witness
 
 @[simp] theorem projected_publicInput
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names)) :
@@ -173,7 +177,10 @@ private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∉ (boundary source final bankFinal).circuit.channels := by
   have checked : (LocalCore.baseEnsemble (p := p) image source).channels.all
-      (fun core => !((boundary source final bankFinal).circuit.channels.map RawChannel.name).contains core.name) = true := rfl
+      (fun core => !((boundary source final bankFinal).circuit.channels.map RawChannel.name).contains core.name) = true := by
+    simp only [LocalCore.baseEnsemble, List.all_cons, StaticTable.channel,
+      MemorySnapshot.registerTable, StaticTable.ofRows]
+    rfl
   intro used
   have absent := List.all_eq_true.mp checked channel registered
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at absent
@@ -268,10 +275,10 @@ variable {availableNames : ((HostLocalCore.tables image source
 
 theorem extraTables_eq
     (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames)) :
-    extraTables (projected witness) = witness.tables.drop 83 := by
-  change (((projected witness).tables.drop 60).drop 21).drop 2 = _
+    extraTables (projected witness) = witness.tables.drop 84 := by
+  change (((projected witness).tables.drop 61).drop 21).drop 2 = _
   rw [List.drop_drop, List.drop_drop]
-  exact projected_drop witness 83 (by decide)
+  exact projected_drop witness 84 (by decide)
 
 /-- The complete queue ledger includes the verifier's endpoints and each physical handler row. -/
 theorem queue_balanced

@@ -19,13 +19,19 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 def channelName : String := "SP1NativeMemoryInitOrder"
 
+/-- All 32 source registers authenticate sparse requests through verifier-fixed columns.
+This table is separate from the ordered Memory providers and contributes no Memory records. -/
+def registerMembership (snapshot : MemorySnapshot) : Component (ZMod p) :=
+  snapshot.registerTable.component
+
 def registerView (snapshot : MemorySnapshot) :
     TransitionView (OrderedBoundary.channel (p := p) channelName) :=
   OrderedMemoryEnsemble.providerView channelName (by decide)
     (MemoryBoundary.SnapshotSpec snapshot) (SnapshotRegisterProvider.circuit snapshot)
     (fun _ _ _ valid => valid.1) (fun _ valid => valid.canonical) (by
       simp [GeneralFormalCircuit.channels, SnapshotRegisterProvider.circuit, circuit_norm,
-        OrderedBoundary.channel, channelName, memoryChannel])
+        OrderedBoundary.channel, channelName, memoryChannel, StaticTable.channel,
+        MemorySnapshot.registerTable, StaticTable.ofRows])
 
 def ramView (snapshot : MemorySnapshot) :
     TransitionView (OrderedBoundary.channel (p := p) channelName) :=
@@ -88,20 +94,24 @@ theorem inventory_unique_names (snapshot : MemorySnapshot) :
     SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit, channelName]
   decide
 
-/-- Source rows use only Byte, Memory, and their own private ordering channel. -/
+/-- Source rows use Byte, Memory, private ordering and fixed register membership. -/
 theorem view_channels_subset (snapshot : MemorySnapshot) (id : TableId) :
     (viewFor (p := p) snapshot id).component.circuit.channels ⊆
-      [byteChannel.toRaw, memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
+      [byteChannel.toRaw, memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+        snapshot.registerTable.channel.toRaw] := by
   cases id
-  · change (byteChannel.toRaw :: (OrderedBoundary.channel channelName).toRaw ::
+  · change (snapshot.registerTable.channel.toRaw :: byteChannel.toRaw :: (OrderedBoundary.channel channelName).toRaw ::
       [byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
         memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
     simp
   · change (List.replicate 42 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
       List.replicate 4 byteChannel.toRaw ++ [memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
     generalize (byteChannel (p := p)).toRaw = byte, (memoryChannel (p := p)).toRaw = memory,
-      (OrderedBoundary.channel (p := p) channelName).toRaw = control
-    simp
+      (OrderedBoundary.channel (p := p) channelName).toRaw = control,
+      (snapshot.registerTable (p := p)).channel.toRaw = registers
+    simp only [List.subset_def, List.mem_append, List.mem_replicate,
+      List.mem_cons, List.not_mem_nil, or_false]
+    tauto
   · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
       (OrderedBoundary.channel channelName).toRaw] ⊆ _
     simp
@@ -134,29 +144,36 @@ theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env :
     rfl
   · exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
-/-- Source-provider semantics follow from raw constraints and the Byte guarantees alone.
-Memory currency is an output of subsequent grounding, never a provider soundness premise. -/
+/-- Source-provider semantics follow from raw constraints, Byte guarantees and authenticated
+register membership. The assembly closes membership from fixed rows and its actual ledger;
+Memory currency remains an output of subsequent grounding. -/
 theorem view_spec (snapshot : MemorySnapshot) (id : TableId) (env : Environment (ZMod p))
     (constraints : (viewFor snapshot id).component.operations.ConstraintsHold env)
-    (byte : (viewFor snapshot id).component.operations.ChannelGuarantees byteChannel.toRaw env) :
+    (byte : (viewFor snapshot id).component.operations.ChannelGuarantees byteChannel.toRaw env)
+    (registers : (viewFor snapshot id).component.operations.ChannelGuarantees
+      snapshot.registerTable.channel.toRaw env) :
     (viewFor snapshot id).component.Spec env := by
   have assumptions : (viewFor snapshot id).component.CircuitAssumptions env := by cases id <;> trivial
   have channels : (viewFor (p := p) snapshot id).component.circuit.channelsWithGuarantees ⊆
-      [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
+      [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+        snapshot.registerTable.channel.toRaw] := by
     cases id
-    · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
+    · change [snapshot.registerTable.channel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
         byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
       simp
     · change (List.replicate 42 byteChannel.toRaw ++
         [(OrderedBoundary.channel channelName).toRaw] ++ List.replicate 4 byteChannel.toRaw) ⊆ _
       simp
-    · exact List.Subset.refl _
+    · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] ⊆ _
+      simp
   apply (Component.weakSoundness assumptions constraints ?_).1
   rw [Operations.guarantees_iff _ _ _ ((viewFor snapshot id).component.inChannelsOrGuarantees env)]
   intro channel member
   rcases List.mem_cons.mp (channels member) with rfl | member
   · exact byte
-  · obtain rfl := List.mem_singleton.mp member
-    exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+  · rcases List.mem_cons.mp member with rfl | member
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+    · obtain rfl := List.mem_singleton.mp member
+      exact registers
 
 end SP1Clean.Soundness.SnapshotMemoryEnsemble

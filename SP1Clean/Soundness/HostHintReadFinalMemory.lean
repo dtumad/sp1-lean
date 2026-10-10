@@ -28,6 +28,16 @@ local instance finalMemoryLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
+private theorem no_push_of_empty {α : Type*} (events : List α) (facts : α → RowFacts p)
+    (loc : MemLoc) (empty : pushesAt (events.map facts) loc = 0) :
+    ∀ event ∈ events, ∀ message ∈ (facts event).memPushes, MemoryMsg.locOf message ≠ loc := by
+  intro event member message pushed same
+  have present : message ∈ pushesAt (events.map facts) loc :=
+    mem_pushesAt.mpr ⟨_, List.mem_map_of_mem member, pushed, same⟩
+  rw [empty] at present
+  exact Multiset.notMem_zero _ present
+
 /-- A missing physical final record means no active event pushes this location. Strict
 chronology excludes hidden cycles, including cycles containing physical refresh rows. -/
 theorem source_no_push_of_final_none (valid : image.Valid)
@@ -49,14 +59,7 @@ theorem source_no_push_of_final_none (valid : image.Valid)
     (fun pair member => congrArg Prod.fst (LocalCore.memoryRefreshes_preserve _ pair member))
     chronology.refreshOrder loc absent
   rw [(projection loc).1] at empty
-  intro event member message pushed same
-  have present := mem_pushesAt.mpr
-    ⟨_, List.mem_map_of_mem (f := eventFacts witness.data
-      (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data)) member, pushed, same⟩
-  change message ∈ pushesAt (sourceExecutionRows witness) loc at present
-  rw [empty] at present
-  exact Multiset.notMem_zero _ present
+  exact no_push_of_empty _ _ loc empty
 
 /-- The source value survives at every location omitted by the physical final frontier. -/
 theorem GroundingCarrier.untouched_memory (valid : image.Valid)

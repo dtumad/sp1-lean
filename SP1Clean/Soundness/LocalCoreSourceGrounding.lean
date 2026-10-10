@@ -72,11 +72,12 @@ noncomputable def memoryInitialFrontier {image : ProgramImage} {source : Executi
     (fun message => decide (MemoryMsg.locOf message = loc))).head?
 
 /-- Source-record values are contents of the actual full Sail state used by execution. -/
-theorem memoryInitialFrontier_content_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
+theorem memoryInitialFrontier_content_of_channels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (registers : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw)
     {loc : MemLoc} {message : MemoryMsg (ZMod p)}
     (present : memoryInitialFrontier witness loc = some message) :
     MemoryMsg.locOf message = loc ∧ MemoryBoundary.SnapshotSpec source.sail.memorySnapshot message ∧
@@ -84,12 +85,12 @@ theorem memoryInitialFrontier_content_of_byte {image : ProgramImage} {source : E
   have member := List.mem_filter.mp (List.mem_of_head? present)
   have same := of_decide_eq_true member.2
   have authentic := (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_valid_of_tables
-    (sourceWitness witness) (sourceTables_spec_of_byte witness constraints bytes) _ member.1
+    (sourceWitness witness) (sourceTables_spec_of_channels witness constraints bytes registers) _ member.1
   refine ⟨same, authentic, ?_⟩
   rw [← same]
   exact authentic.locContent ((source_balanced_iff witness).mp sourceChecks).1.memory
 
-/-- The complete local AIR supplies the source and verifier Byte guarantees. -/
+/-- The complete local AIR supplies source checks, Byte guarantees, and register membership. -/
 theorem memoryInitialFrontier_content {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
@@ -97,22 +98,25 @@ theorem memoryInitialFrontier_content {image : ProgramImage} {source : Execution
     (present : memoryInitialFrontier witness loc = some message) :
     MemoryMsg.locOf message = loc ∧ MemoryBoundary.SnapshotSpec source.sail.memorySnapshot message ∧
       locContent source.sail.realize loc = some (Word.toBitVec64 message.value) :=
-  memoryInitialFrontier_content_of_byte witness constraints
+  memoryInitialFrontier_content_of_channels witness constraints
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
-    (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1) present
+    (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble])) present
 
-/-- Source constraints and Byte guarantees supply the complete live-memory invariant at local genesis.
+/-- Source constraints and channel closure supply the complete live-memory invariant at local genesis.
 No memory-truth or source-timestamp premise is supplied by the caller. -/
-theorem memoryInitialFrontier_liveOK_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
+theorem memoryInitialFrontier_liveOK_of_channels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (registers : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw)
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) :
     LiveOKG trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) := by
   intro loc message present
-  obtain ⟨same, authentic, content⟩ := memoryInitialFrontier_content_of_byte witness constraints sourceChecks bytes present
+  obtain ⟨same, authentic, content⟩ :=
+    memoryInitialFrontier_content_of_channels witness constraints sourceChecks bytes registers present
   have atStart : LocalValueAtG trajectory source.sail.realize timeline loc (timeline.start 0) message.value :=
     (localValueAtG_stepStart_iff initial).mpr content
   refine ⟨same, ⟨authentic.1, authentic.2.1, ?_⟩, atStart, ?_⟩
@@ -123,16 +127,17 @@ theorem memoryInitialFrontier_liveOK_of_byte {image : ProgramImage} {source : Ex
   · rw [authentic.2.2.1]
     exact Nat.zero_le _
 
-/-- The complete local AIR supplies the source and verifier Byte guarantees. -/
+/-- The complete local AIR supplies source checks, Byte guarantees, and register membership. -/
 theorem memoryInitialFrontier_liveOK {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) :
     LiveOKG trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) :=
-  memoryInitialFrontier_liveOK_of_byte witness constraints
+  memoryInitialFrontier_liveOK_of_channels witness constraints
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble]))
     trajectory timeline initial
 
 end SP1Clean.Soundness.LocalCore

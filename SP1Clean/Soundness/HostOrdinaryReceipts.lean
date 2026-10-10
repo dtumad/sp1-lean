@@ -39,7 +39,7 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
 
 private theorem base_length :
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length =
-      65 + others.length + resources.length := by
+      66 + others.length + resources.length := by
   simp only [HostSailBoundary.ensemble, PublicVerifier.install, HostFinalMemory.ensemble,
     ClosedVerifier.install, HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set, HostFinalMemory.base_tables_length]
@@ -49,6 +49,7 @@ private theorem protected_component (index : Fin 25) :
       rw [ProtectedLocalCore.tables_length]; omega) =
         { circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
           rw [InstructionChipId.all_length]; exact index.isLt)) } := by
+  rw [ProtectedLocalCore.tables_getElem image source (7 + index.val) (by omega)]
   fin_cases index <;> rfl
 
 /-- Static registration identifies the actual protected instructions below all endpoint wrappers. -/

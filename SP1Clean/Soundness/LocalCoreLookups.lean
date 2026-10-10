@@ -3,8 +3,9 @@ import SP1Clean.Soundness.EnsembleLookups
 
 /-! # Fixed lookup constraints in the local execution assembly
 
-Source register/RAM lookups and the decoded ROM are fixed by the supplied snapshot and image;
-native provider lookups use Clean's fixed byte-XOR table. Their predicates ignore prover data.
+Remaining source RAM lookups and decoded ROM lookups are fixed by the supplied snapshot and image.
+Registers use a fixed-column channel provider, and native byte providers are lookup-free.
+The remaining lookup predicates ignore prover data.
 Local constraints therefore survive canonical-data changes when physical row cells are retained.
 This proof uses the actual lookup predicates, preserving every repeated RAM lookup, and adds no
 metadata-agreement or provider-validity premise. Channel guarantees remain separate obligations.
@@ -75,6 +76,12 @@ theorem component_constraints_setData (image : ProgramImage) (source : Execution
     component.operations.ConstraintsHold (Environment.fromArray row data') := by
   rcases List.mem_append.mp member with snapshot | rest
   · exact source_constraints_setData source component snapshot checked
+  rcases List.mem_append.mp rest with rest | fixed
+  swap
+  · obtain rfl := List.mem_singleton.mp fixed
+    apply Component.constraintsHold_setData _ ?_ checked
+    simp [SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+      Component.lookups_eq, Component.rowOperations, circuit_norm]
   rcases List.mem_append.mp rest with retained | provider
   · rcases List.mem_append.mp retained with boundary | instruction
     · rcases List.mem_append.mp boundary with final | rom

@@ -221,7 +221,8 @@ theorem GroundingCarrier.ground_of_steps (valid : image.Valid)
   have initialState := LocalCore.initialStateTruth_of_checks valid _ ordering.sourceChecks trajectory carrier.timeline initial
     (carrier.timeline_start.trans encoding.1)
   rw [source_public] at initialState
-  have genesis := LocalCore.memoryInitialFrontier_liveOK_of_byte _ checked ordering.sourceChecks ordering.byte
+  have genesis := LocalCore.memoryInitialFrontier_liveOK_of_channels _ checked ordering.sourceChecks ordering.byte
+    (source_register_balance witness balanced)
     trajectory carrier.timeline initial
   rw [carrier.timeline_start] at genesis
   have grounded := NativeCore.ExecutionCarrier.ground carrier (image.toGuestProgram valid) trajectory source.sail.realize

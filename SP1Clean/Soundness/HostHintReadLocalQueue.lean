@@ -69,8 +69,11 @@ private theorem queue_fresh : stateChannel.toRaw ∉ (LocalCore.ensemble (p := p
     [LocalCore.sourceChannel image source] at used
   rcases List.mem_append.mp used with used | used
   · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    change false = true at present
-    contradiction
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, stateChannel,
+      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
+      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
+      StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp used).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
@@ -84,36 +87,36 @@ private theorem wrapper_queue_silent : stateChannel.toRaw ∉ (HostCallLedger.pr
   change false = true at present
   contradiction
 
-private theorem control_queue_silent
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
-    (((HostLocalHandoff.receiverTables witness).drop 1).take 18).flatMap (·.interactionsWith witness.data stateChannel.toRaw) = [] := by
-  have checked : (((HostCallReceivers.available (p := p)).map (·.component)).take 18).all
-      (fun component => !(component.circuit.channels.map RawChannel.name).contains (stateChannel (p := p)).toRaw.name) = true := rfl
+omit [Fact (2 ^ 25 < p)] in
+/-- Keep physical lists opaque while checking a silent component block: unfolding the installed
+inventory here duplicates its boundary views through the projected list operations. -/
+private theorem tables_queue_silent (physical : List (Table (ZMod p))) (data : ProverData (ZMod p))
+    (components : List (Component (ZMod p))) (same : physical.map (·.component) = components)
+    (checked : components.all
+      (fun component => !(component.circuit.channels.map RawChannel.name).contains (stateChannel (p := p)).toRaw.name) = true) :
+    physical.flatMap (·.interactionsWith data stateChannel.toRaw) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply table.interactionsWith_nil_of_channel_not_mem
   have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  simp only [List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
-    List.map_cons, List.drop_succ_cons, List.drop_zero] at mapped
+  rw [same] at mapped
   intro used
   have silent := List.all_eq_true.mp checked table.component mapped
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
   contradiction
 
+private theorem control_queue_silent
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (((HostLocalHandoff.receiverTables witness).drop 1).take 18).flatMap (·.interactionsWith witness.data stateChannel.toRaw) = [] := by
+  apply tables_queue_silent _ _ (((HostCallReceivers.available (p := p)).map (·.component)).take 18)
+  · simp only [List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
+      List.map_cons, List.drop_succ_cons, List.drop_zero]
+  · rfl
+
 private theorem word_queue_silent
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
     (wordTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) = [] := by
-  have checked : (wordResources (p := p)).all
-      (fun component => !(component.circuit.channels.map RawChannel.name).contains (stateChannel (p := p)).toRaw.name) = true := rfl
-  apply List.flatMap_eq_nil_iff.mpr
-  intro table member
-  apply table.interactionsWith_nil_of_channel_not_mem
-  have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  rw [wordTables_components] at mapped
-  intro used
-  have silent := List.all_eq_true.mp checked table.component mapped
-  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
-  contradiction
+  exact tables_queue_silent _ _ wordResources (wordTables_components witness) rfl
 
 /-- This accounts for every installed table. No endpoint or future allocation contribution is dropped. -/
 theorem queue_interactions

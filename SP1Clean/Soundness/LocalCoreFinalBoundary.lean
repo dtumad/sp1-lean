@@ -21,15 +21,22 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 The omitted initialization tables are silent on the final ordering channel. -/
 def finalWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p) (NativeCore.afterFinalTables image) []
-      (by simpa only [NativeCore.afterInitialTables_eq] using NativeCore.final_unique_names (p := p) image)) :=
+    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p)
+      (NativeCore.afterFinalTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot]) []
+      (by
+        have unique := (baseEnsemble (p := p) image source).unique_names
+        change ((tables image source).map (·.circuit.name)).Nodup at unique
+        rw [tables, List.map_append] at unique
+        simpa only [afterSourceTables, NativeCore.afterInitialTables_eq, List.append_assoc] using
+          unique.of_append_right)) :=
   EnsembleWitness.ofTables _ (witness.tables.drop 3) () (by
     rw [List.map_drop, witness.tables_map_component]
     change (tables image source).drop 3 =
-      FinalMemoryEnsemble.inventory.views.map (·.component) ++ NativeCore.afterFinalTables image
+      FinalMemoryEnsemble.inventory.views.map (·.component) ++
+        (NativeCore.afterFinalTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot])
     rw [tables]
     have length : ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.map (·.component)).length = 3 := rfl
-    rw [List.drop_left' length, NativeCore.afterInitialTables_eq])
+    rw [List.drop_left' length, afterSourceTables, NativeCore.afterInitialTables_eq, List.append_assoc])
 
 /-- Finalizer contracts follow before any Memory guarantees or execution facts are available. -/
 theorem finalTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
@@ -88,7 +95,8 @@ private theorem sourceTables_final_silent {image : ProgramImage} {source : Execu
   have allowed := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id
   intro used
   simpa [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-    memoryChannel, byteChannel, Channel.toRaw] using allowed used
+    memoryChannel, byteChannel, StaticTable.channel, MemorySnapshot.registerTable,
+    StaticTable.ofRows, Channel.toRaw] using allowed used
 
 /-- The certified boundary program fixes the final inventory's two ordering endpoints. -/
 theorem verifier_final_interactions (env : Environment (ZMod p)) :
@@ -151,6 +159,20 @@ theorem finalWitness_interactions {image : ProgramImage} {source : ExecutionSnap
     Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
 
+/-- The final ordering channel is absent from the execution suffix and source membership table. -/
+theorem afterFinalTables_silent (image : ProgramImage) (source : ExecutionSnapshot) :
+    ∀ component ∈ NativeCore.afterFinalTables (p := p) image ++
+        [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot],
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels := by
+  intro component member
+  rcases List.mem_append.mp member with native | fixed
+  · exact NativeCore.afterFinalTables_silent image component native
+  · obtain rfl := List.mem_singleton.mp fixed
+    change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
+      [source.sail.memorySnapshot.registerTable.channel.toRaw]
+    simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+      OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw]
+
 /-- The final inventory has one record per decoded location before any value is grounded.
 This includes uniqueness across the register/RAM split and across duplicate physical rows. -/
 theorem final_records_locations_nodup {image : ProgramImage} {source : ExecutionSnapshot}
@@ -158,7 +180,7 @@ theorem final_records_locations_nodup {image : ProgramImage} {source : Execution
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((FinalMemoryEnsemble.records (finalWitness witness)).map MemoryMsg.locOf).Nodup := by
   apply FinalMemoryEnsemble.inventory.records_locations_nodup_of_tables
-    (finalWitness witness) (NativeCore.afterFinalTables_silent image) (finalTables_spec witness constraints balanced)
+    (finalWitness witness) (afterFinalTables_silent image source) (finalTables_spec witness constraints balanced)
   change BalancedInteractions ((finalWitness witness).interactionsWith _)
   rw [finalWitness_interactions]
   exact balanced _ (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))

@@ -43,7 +43,7 @@ def bankTables (deferred : Bool) (witness : Witness (p := p) (image := image) (s
 private theorem auxiliary_length
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
-    (witness.tables.drop 60).length = 27 := by
+    (witness.tables.drop 61).length = 27 := by
   have size := congrArg List.length (HostTableRegistry.auxiliary_components witness)
   simp only [List.length_map] at size
   exact size
@@ -62,7 +62,7 @@ private theorem slice_eq_ofFn {α : Type*} (rows : List α) (offset count : ℕ)
 private theorem bankTables_eq (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
-    bankTables deferred witness = selected deferred (witness.tables.drop 60) := by
+    bankTables deferred witness = selected deferred (witness.tables.drop 61) := by
   have size := auxiliary_length witness
   simp only [bankTables, indices, List.map_append, List.map_map, List.map_cons, List.map_nil,
     Function.comp_def, TableSlot.table, HostTableRegistry.installedBankSlot_index]
@@ -79,9 +79,9 @@ theorem receiver_tables
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
     HostLocalHandoff.receiverTables (HostHintQueueBoundary.projected witness) =
-      (witness.tables.drop 60).take 21 := by
-  change ((HostHintQueueBoundary.projected witness).tables.drop 60).take 21 = _
-  rw [HostHintQueueBoundary.projected_drop witness 60 (by decide)]
+      (witness.tables.drop 61).take 21 := by
+  change ((HostHintQueueBoundary.projected witness).tables.drop 61).take 21 = _
+  rw [HostHintQueueBoundary.projected_drop witness 61 (by decide)]
 
 private theorem read_calls (deferred : Bool) (slots : List (Fin 8))
     (tables terminal : List (Table (ZMod p))) (data : ProverData (ZMod p)) (size : slots.length = tables.length) :
@@ -112,12 +112,12 @@ theorem calls_eq_slot_tables (deferred : Bool)
           (if deferred then 11 else 3)).take 8) witness.data := by
   have size := auxiliary_length witness
   have slotsSize : (List.finRange 8).length =
-      (((witness.tables.drop 60).drop (start deferred)).take 8).length := by
+      (((witness.tables.drop 61).drop (start deferred)).take 8).length := by
     simp only [List.length_drop] at size
     cases deferred <;> simp [start, List.length_take, List.length_drop] <;> omega
   have read := read_calls deferred (List.finRange 8)
-    (((witness.tables.drop 60).drop (start deferred)).take 8)
-    (((witness.tables.drop 60).drop (start deferred + 8 + gap deferred)).take 1) witness.data slotsSize
+    (((witness.tables.drop 61).drop (start deferred)).take 8)
+    (((witness.tables.drop 61).drop (start deferred + 8 + gap deferred)).take 1) witness.data slotsSize
   rw [receiver_tables]
   simp only [List.drop_take, List.take_take]
   cases deferred <;> simpa only [bankTables_eq, selected, start, indices, Bool.false_eq_true,
@@ -143,12 +143,12 @@ private theorem bank_mem (deferred : Bool)
       (final := final) (bankFinal := bankFinal) (channels := channels))
     (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
     table ∈ (HostHintQueueBoundary.projected witness).tables := by
-  have within : table ∈ witness.tables.drop 60 := by
+  have within : table ∈ witness.tables.drop 61 := by
     rw [bankTables_eq] at member
     rcases List.mem_append.mp member with member | member <;>
       exact List.mem_of_mem_drop (List.mem_of_mem_take member)
-  apply List.mem_of_mem_drop (i := 60)
-  rw [HostHintQueueBoundary.projected_drop witness 60 (by decide)]
+  apply List.mem_of_mem_drop (i := 61)
+  rw [HostHintQueueBoundary.projected_drop witness 61 (by decide)]
   exact within
 
 private theorem flatMap_selected {α β : Type*} (deferred : Bool) (tables : List α) (f : α → List β)
@@ -169,7 +169,7 @@ private theorem flatMap_selected {α β : Type*} (deferred : Bool) (tables : Lis
 private theorem auxiliary_interactions (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
-    (witness.tables.drop 60).flatMap (·.interactionsWith witness.data (HostCommitChip.stateChannel deferred).toRaw) =
+    (witness.tables.drop 61).flatMap (·.interactionsWith witness.data (HostCommitChip.stateChannel deferred).toRaw) =
       (bankTables deferred witness).flatMap (·.interactionsWith witness.data (HostCommitChip.stateChannel deferred).toRaw) := by
   rw [bankTables_eq]
   apply flatMap_selected
@@ -196,7 +196,12 @@ private theorem bank_fresh (deferred : Bool) :
     (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at used
   rcases List.mem_append.mp used with used | used
   · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    cases deferred <;> change false = true at present <;> exact Bool.noConfusion present
+    cases deferred <;>
+      simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HostCommitChip.stateChannel,
+        Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
+        Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
+        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp used).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
     dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
@@ -242,7 +247,7 @@ theorem interactions (deferred : Bool)
     (by cases deferred <;> simp [HostCommitChip.stateChannel, WritePermissionProvider.channel, Channel.toRaw])
   rw [wrapper, List.nil_append] at split
   have tail : HostLocalCore.auxiliaryTables (HostHintQueueBoundary.projected witness) =
-      witness.tables.drop 60 := HostHintQueueBoundary.projected_drop witness 60 (by decide)
+      witness.tables.drop 61 := HostHintQueueBoundary.projected_drop witness 61 (by decide)
   rw [tail, HostHintQueueBoundary.projected_data, auxiliary_interactions] at split
   have ledger := HostHintQueueBoundary.interactions_split witness (HostCommitChip.stateChannel deferred).toRaw
     (List.mem_append_right _ (by cases deferred <;>

@@ -30,6 +30,13 @@ that output and exercises these boundaries:
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
   values, rows and table shapes. Test FRI parameters are not deployment security parameters.
+- Source-register authentication pairs the production sparse Memory consumer with all 32 fixed
+  membership rows. Forty cases cover every register, repeated requests, altered limbs and forged
+  indices. Rust independently computes the snapshot and complete Memory/membership ledgers;
+  backend tests mutate each public field, every sparse cell and all counts. An unused-provider
+  ensemble retains all 32 zero-count occurrences. This tests the native arbitrary-snapshot
+  contract, not agreement with SP1's boot-only all-zero register table. Both Cargo configurations
+  run these checks, without claiming additional mprotect semantics.
 - All 25 production instruction components use the same comparison harness:
 
   | Component | SP1 event / padding rows | Column mutations | Cases |
