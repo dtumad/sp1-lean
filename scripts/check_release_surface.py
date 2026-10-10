@@ -45,6 +45,26 @@ CHIPS = [
 ]
 
 
+def instruction_export_errors(lean: str, rust: str) -> list[str]:
+    """Check built-in export registrations independently of generated artifacts."""
+    names = [name for _, name, _ in CHIPS]
+    files = [re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "_instruction.rs"
+             for name in names]
+    exported = re.findall(r'\("([^"]+_instruction\.rs)",', lean)
+    registrations = re.findall(
+        r'generated_instruction!\(\s*\w+,\s*"([^"]+)",\s*(\w+),\s*(\w+)\s*\);',
+        rust,
+    )
+    expected = [(file, name + "Instruction", name + "InstructionAirSpec")
+                for file, name in zip(files, names)]
+    errors = []
+    if exported != files:
+        errors.append("built-in instruction exporter inventory/order differs")
+    if registrations != expected:
+        errors.append("Rust instruction comparison registrations differ")
+    return errors
+
+
 def main() -> None:
     def fail(message: str) -> None:
         print(f"FAIL: {message}")
@@ -91,6 +111,12 @@ def main() -> None:
     if export_names != [name for _, name, _ in CHIPS]:
         fail(f"witness exporter registry differs: {export_names}")
 
+    for error in instruction_export_errors(
+        (ROOT / "SP1CleanTest/Core/InstructionExport.lean").read_text(),
+        (ROOT / "rust/sp1-comparison/tests/instruction_export.rs").read_text(),
+    ):
+        fail(error)
+
     nonvacuity_source = (ROOT / "SP1CleanTest/Core/NonVacuityReal.lean").read_text()
     for _, name, anchor in CHIPS:
         chip = f"{name}Chip"
@@ -113,7 +139,7 @@ def main() -> None:
     print(
         "PASS: 25-chip release surface is complete "
         "(identity/order, native definitions, formal/bridge/completeness proofs, whole-chip oracles, "
-        "faithfulness anchors, real-row models, dumps, and witness exporter registry)"
+        "faithfulness anchors, real-row models, dumps, witness exporter and built-in Rust registrations)"
     )
 
 

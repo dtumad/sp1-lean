@@ -36,9 +36,9 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   let add_value ← witnessVectorIR 4 (AddOperation.populateIR
     #v[input.state.pc[0], input.state.pc[1], input.state.pc[2], 0]
     input.adapter.op_b_imm)
-  -- SP1 populates the link word only when `rd ≠ x0` (`jal/trace.rs`: `if !event.op_a_0`);
-  -- the gated IR zeroes these cells on `op_a_0` rows so the derived trace matches byte-for-byte.
-  let op_a_value ← witnessVectorIR 4 (AddOperation.populateIRGated input.adapter.op_a_0
+  -- SP1 zero-fills padding and skips the link word for rd = x0.
+  let op_a_value ← witnessVectorIR 4 (AddOperation.populateIRGated
+    (1 - (input.is_real - input.adapter.op_a_0))
     #v[input.state.pc[0], input.state.pc[1], input.state.pc[2], 0]
     #v[4, 0, 0, 0])
   let pcWordV : Word (Expression (ZMod p)) :=

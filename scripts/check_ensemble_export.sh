@@ -12,11 +12,13 @@ python3 - "$scratch" <<'PY'
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
 sys.path.insert(0, "scripts")
 from lean_flags import flags_for, load_lakefile
+from check_release_surface import CHIPS
 
 out = Path(sys.argv[1])
 build_log = (out / "build.log").read_text()
@@ -32,10 +34,10 @@ if revision != clean["rev"] or dirty:
     raise SystemExit("Clean checkout differs from the pinned emitter/backend")
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
-files = ["fixed_membership.rs", "fixed_membership.reference.json",
-         "add_instruction.rs", "load_byte_instruction.rs", "div_rem_instruction.rs",
-         "mul_instruction.rs", "bitwise_instruction.rs", "lt_instruction.rs",
-         "shift_left_instruction.rs", "shift_right_instruction.rs", "branch_instruction.rs"]
+files = ["fixed_membership.rs", "fixed_membership.reference.json"] + [
+    re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "_instruction.rs"
+    for _, name, _ in CHIPS
+]
 for directory in [out, out / "repeat"]:
     directory.mkdir(exist_ok=True)
     result = subprocess.run(command, env=dict(os.environ, ENSEMBLE_EXPORT_OUT=str(directory)),
@@ -66,7 +68,8 @@ python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import sys
 assert len(sys.argv) == 3
-for path, counts in zip(sys.argv[1:], [[3, 19], [19]]):
+# Each instruction test reuses one trace for witness, mutation and open-bus checks.
+for path, counts in zip(sys.argv[1:], [[3, 25], [25]]):
     log = Path(path).read_text()
     if (log.count("test result: ok.") != len(counts)
             or any(log.count(f"test result: ok. {count} passed; 0 failed;") != 1
