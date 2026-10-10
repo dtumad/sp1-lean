@@ -39,6 +39,10 @@ interpreter or scheduler.
   row/count mutations. Unused-provider cases retain all 32 fixed rows and zero-count occurrences.
   Arbitrary local snapshots are distinct from SP1's boot-only initialization. Generation alone
   does not establish acceptance: malformed address limbs can balance while violating assertions.
+- Static membership retains original row order and uses a fixed eligibility tag to select the
+  first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty tables
+  have one inactive row; other heights round up to a power of two. Capacity proofs must account
+  for this expansion. Clean's scheduler, lowering and emitter handle the resulting tables.
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
   migration evidence while provider coverage and live consumers move to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,

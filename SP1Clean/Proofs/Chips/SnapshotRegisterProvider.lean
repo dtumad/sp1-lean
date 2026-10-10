@@ -49,7 +49,7 @@ theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
 
 def main (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) :
     Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
-  snapshot.registerTable.channel.pull input
+  snapshot.registerTable.channel.pull ⟨input, 1⟩
   let record := message input
   memoryChannel.push record
   return record

@@ -21,7 +21,7 @@ def membership (target : MemorySnapshot) : StaticTable (ZMod p) RegisterSnapshot
   { target.registerTable with name := "sp1.native.target_registers" }
 
 def main (target : MemorySnapshot) (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) Unit := do
-  (membership target).channel.pull ⟨input.addr0, input.value⟩
+  (membership target).channel.pull ⟨⟨input.addr0, input.value⟩, 1⟩
   assertZero input.addr1
   assertZero input.addr2
   (FinalMemoryValue.channel false).pull input

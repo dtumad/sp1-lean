@@ -46,7 +46,7 @@ def membershipMode : WitnessGeneration.Mode Fp := .preallocated {
   rows := 32
   input := .ofFExprs #v[.const 0]
   input_valid := by rfl
-  handlers := [{ interaction := 0, column := 5 }]
+  handlers := [{ interaction := 0, column := 6 }]
 }
 
 /-- Allocate one sparse row per Memory occurrence, including repeated messages. -/
@@ -58,7 +58,7 @@ def config : WitnessGeneration.Config Fp unit where
     input := ⟨[.message 2, .message 5, .message 6, .message 7, .message 8]⟩
   }, membershipMode]
   padding := [{ input := #[0, 0, 0, 0, 0] },
-    { input := #[0, 0, 0, 0, 0, 0], minimumRows := 32 }]
+    { input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }]
   fuel := 128
 
 /-- Check complete raw constraints and both ledgers, retaining zero-count occurrences. -/
@@ -88,7 +88,7 @@ def emptyEnsemble : Ensemble Fp unit where
 
 def emptyConfig : WitnessGeneration.Config Fp unit where
   modes := [membershipMode]
-  padding := [{ input := #[0, 0, 0, 0, 0, 0], minimumRows := 32 }]
+  padding := [{ input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }]
   fuel := 1
 
 def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
@@ -177,7 +177,7 @@ def config : WitnessGeneration.Config Fp unit where
     input := ⟨(List.range 9).map .message⟩
   }, membershipMode]
   padding := [{ input := #[0, 0, 0, 0, 0, 0, 0, 0, 0] },
-    { input := #[0, 0, 0, 0, 0, 0], minimumRows := 32 }]
+    { input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }]
   fuel := 128
 
 def description : Air.Flat.EnsembleCheck ensemble where

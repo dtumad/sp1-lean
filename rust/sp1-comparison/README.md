@@ -44,6 +44,11 @@ that output and exercises these boundaries:
   directions. Generation can succeed for an assertion-invalid address, which the backend must
   reject. An unused target provider retains all 32 zero-count rows. These are native boundary
   tests, without a claim of SP1 execution or cryptographic security.
+- Static providers cover empty, singleton, uneven, duplicate and all-zero tables: 80 request
+  pairs and five unused-provider cases. Rust reconstructs payloads, eligibility flags, padding
+  and counts from independent input lists. Backend checks bind public requests and reject
+  mutations of every count, including duplicate and padding rows. A fixed eligibility tag keeps
+  real zero requests distinct from inactive rows without a custom scheduler.
 - All 25 production instruction components use the same comparison harness:
 
   | Component | SP1 event / padding rows | Column mutations | Cases |
