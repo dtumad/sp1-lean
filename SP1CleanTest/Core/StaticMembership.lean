@@ -17,10 +17,10 @@ variable {F : Type} [FiniteField F]
 
 abbrev Ledger (F : Type) := List (String × List F × F)
 
-/-- Assign demand to the first matching physical row. Repeated fixed messages remain as
-zero-count rows, and unmatched demand remains unbalanced. -/
+/-- Assign demand only to verifier-eligible rows. Duplicate and padding rows retain their
+zero-count occurrences, and unmatched or inactive demand remains unbalanced. -/
 def suffix (channel : String) (ledger : Ledger F) (fixed : FixedColumns F) (index : ℕ) : Array F :=
-  if (List.range index).any (fun prior => fixed.row prior == fixed.row index) then #[0] else
+  if (fixed.row index).back?.getD 0 == 0 then #[0] else
   #[-((ledger.filter fun entry => entry.1 == channel && entry.2.1 == (fixed.row index).toList).map
     (·.2.2)).sum]
 

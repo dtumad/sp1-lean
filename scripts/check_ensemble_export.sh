@@ -7,7 +7,7 @@ mkdir -p .lake/ensemble-export
 scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
   SP1CleanTest.Core.InstructionExport SP1CleanTest.Core.ByteProviderExport \
-  SP1CleanTest.Core.SnapshotRegisterExport \
+  SP1CleanTest.Core.SnapshotRegisterExport SP1CleanTest.Core.StaticProviderExport \
   2>&1 | tee "$scratch/build.log"
 python3 - "$scratch" <<'PY'
 import hashlib
@@ -37,7 +37,12 @@ command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP
            "scripts/ensembleExportFixture.lean"]
 files = ["fixed_membership.rs", "fixed_membership.reference.json", "snapshot_registers.rs",
          "snapshot_registers_empty.rs", "snapshot_registers.reference.json", "target_registers.rs",
-         "target_registers_empty.rs", "target_registers.reference.json"] + [
+         "target_registers_empty.rs", "target_registers.reference.json",
+         "static_membership.reference.json"] + [
+    "static_" + name + suffix + ".rs"
+    for name in ["empty", "singleton", "uneven", "duplicates", "zeroes"]
+    for suffix in ["", "_unused"]
+] + [
     re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "_instruction.rs"
     for _, name, _ in CHIPS
 ] + [name + "_byte_provider.rs" for name in ["and", "or", "xor", "u8_range", "ltu", "msb"]]
@@ -73,7 +78,7 @@ import re
 import sys
 assert len(sys.argv) == 3
 # Require every binary's exact success count in both configurations.
-for path, counts in zip(sys.argv[1:], [[3, 10, 25], [3, 10, 25]]):
+for path, counts in zip(sys.argv[1:], [[3, 15, 25], [3, 15, 25]]):
     log = Path(path).read_text()
     actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
     if sorted(actual) != counts or "warning:" in log:

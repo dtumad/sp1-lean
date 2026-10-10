@@ -80,7 +80,7 @@ theorem rejectsForgedRegisters :
 /-- Repeated requests share a count while all 32 physical rows and zero-count occurrences survive. -/
 theorem fixedRegisterOccurrences :
     let source := snapshot.registerTable (p := SP1Prime)
-    let message := (toElements (snapshot.registerRow (p := SP1Prime) 5)).toList
+    let message := (toElements (snapshot.registerRow (p := SP1Prime) 5)).toList ++ [1]
     let requests : StaticMembership.Ledger Fp :=
       [(source.channel.name, message, -1), (source.channel.name, message, -1)]
     let built := StaticMembership.table source requests
@@ -92,17 +92,17 @@ theorem fixedRegisterOccurrences :
       (StaticMembership.providerLedger source []).map (·.2.2) = List.replicate 32 0 := by
   native_decide
 
-/-- Empty and duplicate fixed tables retain their physical shape without duplicating demand. -/
+/-- Duplicate rows remain physical; an empty predicate has one inactive backend row. -/
 theorem emptyAndDuplicateFixedRows :
     let row := snapshot.registerRow (p := SP1Prime) 5
     let duplicate := StaticTable.ofRows "duplicate" [row, row]
     let empty := StaticTable.ofRows (Row := RegisterSnapshotRow) (F := Fp) "empty" []
-    let message := (toElements row).toList
+    let message := (toElements row).toList ++ [1]
     let requests : StaticMembership.Ledger Fp := [("duplicate", message, -1), ("duplicate", message, -1)]
     (StaticMembership.table duplicate requests).length = 2 ∧
       (StaticMembership.providerLedger duplicate requests).map (·.2.2) = [2, 0] ∧
       StaticMembership.check duplicate requests = true ∧
-      (StaticMembership.table empty []).length = 0 ∧
+      (StaticMembership.table empty []).length = 1 ∧
       StaticMembership.check empty [] = true ∧
       StaticMembership.check empty [("empty", message, -1)] = false := by
   native_decide

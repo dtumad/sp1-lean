@@ -43,7 +43,8 @@ mod empty_target_registers {
 
 use clean_backend::witness_generation::{Program, WitnessGenerationError};
 use clean_backend::{
-    prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, StarkConfig,
+    prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, GeneratedEnsemble,
+    StarkConfig,
 };
 use p3_challenger::DuplexChallenger;
 use p3_commit::ExtensionMmcs;
@@ -249,6 +250,187 @@ fn register(index: u64) -> Vec<u64> {
     row
 }
 
+fn eligible_register(index: u64) -> Vec<u64> {
+    [register(index), vec![1]].concat()
+}
+
+// These expected rows come from the input list, independently of Lean/exported metadata.
+fn padded_membership_rows(source: &[u64], public: &[u64]) -> Vec<Vec<u64>> {
+    (0..source.len().next_power_of_two())
+        .map(|index| {
+            let value = source.get(index).copied().unwrap_or(0);
+            let eligible = index < source.len() && !source[..index].contains(&value);
+            let count = if eligible {
+                public.iter().filter(|request| **request == value).count() as u64
+            } else {
+                0
+            };
+            vec![value, u64::from(eligible), count]
+        })
+        .collect()
+}
+
+fn check_padded_membership<P: Program<F>, S: GeneratedAirSpec>(
+    source: &[u64],
+    public: &[u64],
+    reference: &serde_json::Value,
+) {
+    let rows = padded_membership_rows(source, public);
+    let height = rows.len();
+    assert_eq!(P::FIXED_WIDTHS, &[2]);
+    let fixed = S::fixed_trace::<F>(0).unwrap();
+    assert_eq!((fixed.height(), fixed.width()), (height, 2));
+    assert_eq!(
+        fixed.values,
+        rows.iter()
+            .flat_map(|row| row[..2].iter().copied())
+            .map(field)
+            .collect::<Vec<_>>()
+    );
+    let public_fields: Vec<_> = public.iter().copied().map(field).collect();
+    let result = clean_backend::witness_generation::generate::<F, P>(&public_fields, &[]);
+    let accepted = public.iter().all(|value| source.contains(value));
+    assert_eq!(result.is_ok(), accepted);
+    if !public.is_empty() {
+        assert_eq!(reference["publicInput"], serde_json::json!(public));
+        assert_eq!(reference["accepted"], accepted);
+    }
+    let Ok(witness) = result else { return };
+    let actual = physical_reference::<P>(&public_fields, &witness.tables);
+    assert_eq!(
+        &actual,
+        if public.is_empty() {
+            reference
+        } else {
+            &reference["witness"]
+        }
+    );
+    let ledger: Vec<_> = public
+        .iter()
+        .map(|value| {
+            interaction(
+                "fixture.membership",
+                F::ORDER_U64 - 1,
+                vec![*value, 1],
+                true,
+            )
+        })
+        .chain(
+            rows.iter()
+                .map(|row| interaction("fixture.membership", row[2], row[..2].to_vec(), false)),
+        )
+        .collect();
+    assert_eq!(
+        actual,
+        serde_json::json!({"tables": [rows], "interactions": ledger})
+    );
+    let statement = GeneratedEnsemble::<F, S>::new(&[height]).unwrap();
+    assert_eq!(
+        statement.interaction_count(),
+        (height + public.len()) as u128
+    );
+    for invalid in [0, height + 1, height * 2] {
+        assert!(GeneratedEnsemble::<F, S>::new(&[invalid]).is_err());
+    }
+    let config = config();
+    let traces = witness.into_traces().unwrap();
+    assert_eq!((traces[0].height(), traces[0].width()), (height, 1));
+    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public_fields).unwrap();
+    verify_ensemble(&config, &statement, &proof, &public_fields).unwrap();
+    for cell in 0..public.len() {
+        let mut altered = public_fields.clone();
+        altered[cell] += field(1);
+        assert!(verify_ensemble(&config, &statement, &proof, &altered).is_err());
+    }
+    // Includes every real, duplicate and padding row, in both directions.
+    for row in 0..height {
+        for delta in [field(1), -field(1)] {
+            let mut altered = traces.clone();
+            altered[0].values[row] += delta;
+            assert_backend_rejection(|| {
+                let (proof, _) =
+                    prove_ensemble(&config, &statement, altered, &public_fields).unwrap();
+                verify_ensemble(&config, &statement, &proof, &public_fields).is_err()
+            });
+        }
+    }
+
+    // Identical inactive messages can cancel in the ledger. Their nonzero counts must still
+    // violate the AIR constraint, independently of the lookup balance check.
+    if let Some((first, second)) = (0..height).find_map(|first| {
+        (first + 1..height)
+            .find(|&second| rows[first][1] == 0 && rows[first][..2] == rows[second][..2])
+            .map(|second| (first, second))
+    }) {
+        for delta in [field(1), -field(1)] {
+            let mut altered = traces.clone();
+            altered[0].values[first] += delta;
+            altered[0].values[second] -= delta;
+            let interactions = [first, second].map(|index| {
+                let mut row: Vec<_> = rows[index].iter().copied().map(field).collect();
+                row[2] = altered[0].values[index];
+                P::interactions(0, &row)
+            });
+            assert_eq!(interactions[0].len(), 1);
+            assert_eq!(interactions[1].len(), 1);
+            let left = &interactions[0][0];
+            let right = &interactions[1][0];
+            assert_eq!(left.channel, "fixture.membership");
+            assert_eq!(left.channel, right.channel);
+            assert_eq!(left.message, vec![field(rows[first][0]), field(0)]);
+            assert_eq!(left.message, right.message);
+            assert!(!left.assume_guarantees && !right.assume_guarantees);
+            assert_eq!(left.multiplicity, delta);
+            assert_eq!(right.multiplicity, -delta);
+            assert_backend_rejection(|| {
+                let (proof, _) =
+                    prove_ensemble(&config, &statement, altered, &public_fields).unwrap();
+                verify_ensemble(&config, &statement, &proof, &public_fields).is_err()
+            });
+        }
+    }
+}
+
+macro_rules! padded_membership_fixture {
+    ($module:ident, $name:literal, $source:expr) => {
+        mod $module {
+            use super::*;
+            #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+            mod used {
+                include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/static_", $name, ".rs"));
+            }
+            #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+            mod unused {
+                include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/static_", $name, "_unused.rs"));
+            }
+            #[test]
+            fn independent_rows_ledgers_and_backend_mutations() {
+                let fixtures: serde_json::Value = serde_json::from_str(include_str!(concat!(
+                    env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/static_membership.reference.json"
+                ))).unwrap();
+                assert_eq!(fixtures.as_array().unwrap().len(), 5);
+                let fixture = fixtures.as_array().unwrap().iter().find(|f| f["name"] == $name).unwrap();
+                let cases = fixture["cases"].as_array().unwrap();
+                assert_eq!(cases.len(), 16);
+                for (index, (a, b)) in [0, 7, 9, 11].into_iter()
+                    .flat_map(|a| [0, 7, 9, 11].into_iter().map(move |b| (a, b))).enumerate()
+                {
+                    check_padded_membership::<used::StaticMembership, used::StaticMembershipAirSpec>(
+                        $source, &[a, b], &cases[index]);
+                }
+                check_padded_membership::<unused::UnusedMembership, unused::UnusedMembershipAirSpec>(
+                    $source, &[], &fixture["unused"]);
+            }
+        }
+    };
+}
+
+padded_membership_fixture!(empty_membership, "empty", &[]);
+padded_membership_fixture!(singleton_membership, "singleton", &[0]);
+padded_membership_fixture!(uneven_membership, "uneven", &[7, 0, 9]);
+padded_membership_fixture!(duplicate_membership, "duplicates", &[0, 7, 0, 7, 9]);
+padded_membership_fixture!(zero_membership, "zeroes", &[0, 0, 0, 0, 0]);
+
 fn memory(row: &[u64]) -> Vec<u64> {
     let mut message = vec![0, 0, row[0], 0, 0];
     message.extend_from_slice(&row[1..]);
@@ -345,13 +527,16 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
     assert_eq!(cases.len(), 40);
     assert_eq!(
         <registers::SnapshotRegisters as Program<F>>::FIXED_WIDTHS,
-        &[0, 5]
+        &[0, 6]
     );
     let fixed = registers::SnapshotRegistersAirSpec::fixed_trace::<F>(1).unwrap();
-    assert_eq!((fixed.height(), fixed.width()), (32, 5));
+    assert_eq!((fixed.height(), fixed.width()), (32, 6));
     assert_eq!(
         fixed.values,
-        (0..32).flat_map(register).map(field).collect::<Vec<_>>()
+        (0..32)
+            .flat_map(eligible_register)
+            .map(field)
+            .collect::<Vec<_>>()
     );
 
     for (case, (name, public, accepted)) in reference["cases"].as_array().unwrap().iter().zip(cases)
@@ -372,7 +557,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
         let sparse: Vec<Vec<u64>> = public.chunks_exact(5).map(<[u64]>::to_vec).collect();
         let fixed_rows: Vec<Vec<u64>> = (0..32)
             .map(|index| {
-                let mut row = register(index);
+                let mut row = eligible_register(index);
                 row.push(sparse.iter().filter(|r| r[0] == index).count() as u64);
                 row
             })
@@ -386,7 +571,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
             ledger.push(interaction(
                 "sp1.native.source_registers",
                 F::ORDER_U64 - 1,
-                row.clone(),
+                [row.clone(), vec![1]].concat(),
                 true,
             ));
             ledger.push(interaction("SP1Memory", 1, memory(row), false));
@@ -394,8 +579,8 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
         for row in fixed_rows {
             ledger.push(interaction(
                 "sp1.native.source_registers",
-                row[5],
-                row[..5].to_vec(),
+                row[6],
+                row[..6].to_vec(),
                 false,
             ));
         }
@@ -421,13 +606,20 @@ fn unused_snapshot_registers_keep_all_fixed_rows_and_zero_occurrences() {
     assert_eq!(actual, register_reference()["empty"]);
     let rows: Vec<_> = (0..32)
         .map(|index| {
-            let mut row = register(index);
+            let mut row = eligible_register(index);
             row.push(0);
             row
         })
         .collect();
     let ledger: Vec<_> = (0..32)
-        .map(|index| interaction("sp1.native.source_registers", 0, register(index), false))
+        .map(|index| {
+            interaction(
+                "sp1.native.source_registers",
+                0,
+                eligible_register(index),
+                false,
+            )
+        })
         .collect();
     assert_eq!(
         actual,
@@ -574,13 +766,16 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
     assert_eq!(reference["cases"].as_array().unwrap().len(), cases.len());
     assert_eq!(
         <target_registers::TargetRegisters as Program<F>>::FIXED_WIDTHS,
-        &[0, 5]
+        &[0, 6]
     );
     let fixed = target_registers::TargetRegistersAirSpec::fixed_trace::<F>(1).unwrap();
-    assert_eq!((fixed.height(), fixed.width()), (32, 5));
+    assert_eq!((fixed.height(), fixed.width()), (32, 6));
     assert_eq!(
         fixed.values,
-        (0..32).flat_map(register).map(field).collect::<Vec<_>>()
+        (0..32)
+            .flat_map(eligible_register)
+            .map(field)
+            .collect::<Vec<_>>()
     );
     let config = config();
     let statement = target_registers::TargetRegistersStatement::<F>::new(&[2, 32]).unwrap();
@@ -605,7 +800,7 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
             .collect();
         let fixed_rows: Vec<Vec<u64>> = (0..32)
             .map(|index| {
-                let mut row = register(index);
+                let mut row = eligible_register(index);
                 row.push(sparse.iter().filter(|r| r[2] == index).count() as u64);
                 row
             })
@@ -616,7 +811,7 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
             .map(|row| interaction("SP1FinalRegisterValue", 1, row.clone(), false))
             .collect();
         for row in &sparse {
-            let membership = [vec![row[2]], row[5..].to_vec()].concat();
+            let membership = [vec![row[2]], row[5..].to_vec(), vec![1]].concat();
             ledger.push(interaction(
                 "sp1.native.target_registers",
                 F::ORDER_U64 - 1,
@@ -633,8 +828,8 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
         for row in fixed_rows {
             ledger.push(interaction(
                 "sp1.native.target_registers",
-                row[5],
-                row[..5].to_vec(),
+                row[6],
+                row[..6].to_vec(),
                 false,
             ));
         }
@@ -662,13 +857,20 @@ fn unused_target_registers_retain_every_zero_count_occurrence() {
     assert_eq!(actual, target_register_reference()["empty"]);
     let rows: Vec<_> = (0..32)
         .map(|index| {
-            let mut row = register(index);
+            let mut row = eligible_register(index);
             row.push(0);
             row
         })
         .collect();
     let ledger: Vec<_> = (0..32)
-        .map(|index| interaction("sp1.native.target_registers", 0, register(index), false))
+        .map(|index| {
+            interaction(
+                "sp1.native.target_registers",
+                0,
+                eligible_register(index),
+                false,
+            )
+        })
         .collect();
     assert_eq!(
         actual,

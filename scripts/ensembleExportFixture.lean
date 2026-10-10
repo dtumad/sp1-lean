@@ -2,6 +2,7 @@ import SP1CleanTest.Core.EnsembleExport
 import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
 import SP1CleanTest.Core.SnapshotRegisterExport
+import SP1CleanTest.Core.StaticProviderExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -34,7 +35,8 @@ private def exportEnsembleFixture : IO Unit := do
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
-      SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports do
+      SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
+      SP1CleanTest.Core.StaticProviderExport.rustExports do
     let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
@@ -99,6 +101,29 @@ private def exportEnsembleFixture : IO Unit := do
       pure (physicalReference witness)
   IO.FS.writeFile (out / "target_registers.reference.json")
     ((Json.mkObj [("cases", toJson targetCases), ("empty", targetEmpty)]).compress ++ "\n")
+  let staticFixtures ← SP1CleanTest.Core.StaticProviderExport.fixtures.mapM fun (name, rows) => do
+    let cases ← SP1CleanTest.Core.StaticProviderExport.requests.mapM fun request => do
+      let expected := rows.contains request[0] && rows.contains request[1]
+      let fields := [("publicInput", toJson ((toElements request).toArray.map (·.val))),
+        ("accepted", toJson expected)]
+      match SP1CleanTest.Core.StaticProviderExport.generate rows request with
+      | .error message =>
+        if expected then throw (IO.userError s!"{name}: {message}")
+        pure <| Json.mkObj (fields ++ [("error", toJson message)])
+      | .ok witness =>
+        unless expected && (SP1CleanTest.Core.StaticProviderExport.description rows).checkWitness
+            SP1Clean.SP1Prime witness do
+          throw (IO.userError s!"unexpected padded membership acceptance: {name}")
+        pure <| Json.mkObj (fields ++ [("witness", physicalReference witness)])
+    let unused ← match SP1CleanTest.Core.StaticProviderExport.generateEmpty rows with
+      | .error message => throw (IO.userError s!"{name}: {message}")
+      | .ok witness =>
+        unless (SP1CleanTest.Core.StaticProviderExport.emptyDescription rows).checkWitness
+            SP1Clean.SP1Prime witness do
+          throw (IO.userError s!"unused padded provider failed: {name}")
+        pure (physicalReference witness)
+    pure <| Json.mkObj [("name", toJson name), ("cases", toJson cases), ("unused", unused)]
+  IO.FS.writeFile (out / "static_membership.reference.json") ((toJson staticFixtures).compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture
