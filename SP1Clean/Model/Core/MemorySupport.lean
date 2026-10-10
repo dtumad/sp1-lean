@@ -14,6 +14,11 @@ def supportBelow (memory : ByteMemory) (limit : ℕ) : Finset ℕ :=
   memory.entries.toFinset.image Prod.fst |>.filter
     (fun address => address < limit ∧ memory.read address ≠ 0)
 
+/-- Live addresses cannot outnumber the supplied bindings, even with duplicates and zeros. -/
+theorem supportBelow_card_le (memory : ByteMemory) (limit : ℕ) :
+    (memory.supportBelow limit).card ≤ memory.entries.length :=
+  (Finset.card_filter_le _ _).trans (Finset.card_image_le.trans (List.toFinset_card_le _))
+
 @[simp] theorem mem_supportBelow (memory : ByteMemory) (limit address : ℕ) :
     address ∈ memory.supportBelow limit ↔ address < limit ∧ memory.read address ≠ 0 := by
   simp only [supportBelow, Finset.mem_filter]

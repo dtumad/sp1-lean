@@ -176,6 +176,7 @@ import SP1Clean.Model.Core.MemoryEquality
 import SP1Clean.Model.Core.MemoryFinalCheck
 import SP1Clean.Model.Core.SailFinalCheck
 import SP1Clean.Model.Core.MemoryIntervals
+import SP1Clean.Model.Core.MemoryNormalization
 import SP1Clean.Model.Core.MemorySnapshot
 import SP1Clean.Model.Core.MemorySpan
 import SP1Clean.Model.Core.MemorySupport
