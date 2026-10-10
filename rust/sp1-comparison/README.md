@@ -37,6 +37,13 @@ that output and exercises these boundaries:
   ensemble retains all 32 zero-count occurrences. This tests the native arbitrary-snapshot
   contract, not agreement with SP1's boot-only all-zero register table. Both Cargo configurations
   run these checks, without claiming additional mprotect semantics.
+- Target-register authentication checks complete final receipts on a separate membership
+  channel. Its 42 cases cover every register, repeated receipts, forged values/indices and
+  malformed upper address limbs. Rust reconstructs both clock limbs and the full receipt ledger;
+  backend tests bind every public field and mutate every sparse cell and count in both
+  directions. Generation can succeed for an assertion-invalid address, which the backend must
+  reject. An unused target provider retains all 32 zero-count rows. These are native boundary
+  tests, without a claim of SP1 execution or cryptographic security.
 - All 25 production instruction components use the same comparison harness:
 
   | Component | SP1 event / padding rows | Column mutations | Cases |

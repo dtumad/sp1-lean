@@ -33,11 +33,12 @@ interpreter or scheduler.
   Rust compares all byte pairs and four field multiplicities against SP1's actual preprocessed
   table and AIR, retaining every message occurrence. Native polynomial membership and SP1's
   authenticated preprocessing have different row layouts.
-- Source-register authentication exports the production sparse Memory consumer together with
-  the snapshot's fixed membership provider. Rust independently reconstructs all register values
-  and Memory messages, compares complete Lean/Rust ledgers, and tests backend public binding and
-  row/count mutations. An unused-provider case retains all 32 fixed rows and zero-count
-  occurrences. This arbitrary local snapshot is distinct from SP1's boot-only initialization.
+- Source and target register authentication export their production sparse Memory provider and
+  final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
+  register values and complete ledgers, including receipt clocks, and tests public binding and
+  row/count mutations. Unused-provider cases retain all 32 fixed rows and zero-count occurrences.
+  Arbitrary local snapshots are distinct from SP1's boot-only initialization. Generation alone
+  does not establish acceptance: malformed address limbs can balance while violating assertions.
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
   migration evidence while provider coverage and live consumers move to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,

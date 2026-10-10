@@ -3,7 +3,7 @@ import SP1Clean.Soundness.HostFinalMemoryInventory
 
 /-! # Complete target Memory comparison from raw host acceptance
 
-The actual host witness supplies Byte closure and all three private receipt balances.
+The actual host witness supplies Byte closure and all four private channel balances.
 The existing boundary theorem then checks the complete target, including every location
 outside the physical final inventory. No endpoint certificate or witness-selected change
 inventory is a premise. Full mixed Sail/host endpoint reconstruction remains a later consumer.
@@ -23,22 +23,26 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {channels : List (RawChannel (ZMod p))}
   {names : UniqueNames image source target others resources}
 
-/-- Complete comparison requires only inherited Byte guarantees and the three actual receipt balances. -/
+/-- Complete comparison requires only inherited Byte guarantees and the actual membership and receipt balances. -/
 theorem checkFinal_of_channels
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (interface : PrivateInterface others resources) (checked : witness.Constraints)
+    (interface : PrivateInterface target others resources) (checked : witness.Constraints)
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
-    (balances : ∀ channel ∈ privateChannels (p := p), witness.BalancedChannel channel) :
+    (balances : ∀ channel ∈ privateChannels (p := p) target, witness.BalancedChannel channel) :
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
   apply FinalMemoryChecks.checkFinal_of_channels (boundaryWitness witness)
-    ⟨by simp, by simp, by simp⟩ (boundaryWitness_constraints witness checked)
+    ⟨by simp, by simp, by simp, by simp⟩ (boundaryWitness_constraints witness checked)
     (boundaryWitness_byte witness bytes)
   · intro ram
-    have member : (FinalMemoryValue.channel ram).toRaw ∈ privateChannels (p := p) := by
+    have member : (FinalMemoryValue.channel ram).toRaw ∈ privateChannels (p := p) target := by
       cases ram <;> simp [privateChannels]
     exact boundaryWitness_balancedChannel witness interface _ member (balances _ member)
-  · have member : FinalMemoryChange.channel.toRaw ∈ privateChannels (p := p) := by simp [privateChannels]
+  · have member : FinalMemoryChange.channel.toRaw ∈ privateChannels (p := p) target := by simp [privateChannels]
+    exact boundaryWitness_balancedChannel witness interface _ member (balances _ member)
+
+  · have member : (FinalRegisterValue.membership target).channel.toRaw ∈ privateChannels (p := p) target := by
+      simp [privateChannels]
     exact boundaryWitness_balancedChannel witness interface _ member (balances _ member)
 
 /-- Complete raw host AIR acceptance implies the existing finite target Memory comparison.
@@ -46,7 +50,7 @@ The two interfaces describe fixed installed circuits, never properties of the su
 theorem checkFinal
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
-    (privacy : PrivateInterface others resources)
+    (privacy : PrivateInterface target others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
@@ -54,9 +58,14 @@ theorem checkFinal
   · intro channel member
     apply balanced
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl <;>
+    rcases member with rfl | rfl | rfl | rfl <;>
       simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, circuit_norm]
+    apply Or.inl
+    simp [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
+      ClosedVerifier.install, ClosedVerifier.withInteractions, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
+      HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble,
+      FinalMemoryChecks.checkTables, StaticTable.component, StaticTable.provider, circuit_norm]
   · simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
       base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent, HostHintReadLocal.ensemble,
       HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, LocalCore.baseEnsemble,
@@ -70,6 +79,6 @@ theorem source_checkFinal
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true :=
   checkFinal witness (HostHintReadLocal.source_interface source.host.io.hints)
-    (source_privacy source.host.io.hints) checked balanced
+    (source_privacy target source.host.io.hints) checked balanced
 
 end SP1Clean.Soundness.HostFinalMemory

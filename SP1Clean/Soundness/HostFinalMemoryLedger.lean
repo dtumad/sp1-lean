@@ -2,8 +2,8 @@ import SP1Clean.Soundness.HostFinalMemoryView
 
 /-! # Private Memory receipts in the physical host ledger
 
-The old host components are silent on the three new boundary protocols. This is a static
-property of registered circuits. Selecting the five boundary tables therefore preserves
+The old host components are silent on the four boundary protocols. This is a static
+property of registered circuits. Selecting the six boundary tables therefore preserves
 these ledgers exactly, while their Byte guarantees still come from the full assembly.
 -/
 
@@ -16,14 +16,14 @@ local instance finalLedgerLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.ou
 local instance finalLedgerClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- The only protocols introduced by complete outgoing Memory validation. -/
-def privateChannels : List (RawChannel (ZMod p)) :=
+def privateChannels (target : MemorySnapshot) : List (RawChannel (ZMod p)) :=
   [(FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
-   FinalMemoryChange.channel.toRaw]
+   FinalMemoryChange.channel.toRaw, (FinalRegisterValue.membership target).channel.toRaw]
 
 /-- Installed handlers/resources keep the final-memory receipt protocols private. -/
-def PrivateInterface (others : List (HostLocalHandoff.Receiver (p := p)))
+def PrivateInterface (target : MemorySnapshot) (others : List (HostLocalHandoff.Receiver (p := p)))
     (resources : List (Component (ZMod p))) : Prop :=
-  ∀ channel ∈ privateChannels (p := p), ∀ component ∈ others.map (·.component) ++ resources,
+  ∀ channel ∈ privateChannels (p := p) target, ∀ component ∈ others.map (·.component) ++ resources,
     channel ∉ component.circuit.channels
 
 omit [Fact (2 ^ 25 < p)] in
@@ -42,17 +42,17 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {names : UniqueNames image source target others resources}
 
 private theorem private_not_local (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels := by
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-  rcases privateChannel with rfl | rfl | rfl <;>
+  rcases privateChannel with rfl | rfl | rfl | rfl <;>
     intro member <;>
     have names := List.mem_map_of_mem (f := RawChannel.name) member <;>
     simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
       SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-      FinalMemoryValue.channel, FinalMemoryChange.channel,
+      FinalMemoryValue.channel, FinalMemoryChange.channel, FinalRegisterValue.membership, StaticTable.channel,
       stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-      publicValuesChannel, StaticTable.channel, MemorySnapshot.registerTable,
+      publicValuesChannel, MemorySnapshot.registerTable,
       StaticTable.ofRows, Channel.toRaw] at names
 
 private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
@@ -61,19 +61,19 @@ private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
    HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
 
 private theorem additions_private (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p))
+    (privateChannel : channel ∈ privateChannels (p := p) target)
     (component : Component (ZMod p)) (member : component ∈ fixedAdditions (p := p) image) :
     channel ∉ component.circuit.channels := by
   apply silent_of_names
   have quiet : (fixedAdditions (p := p) image).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true := by
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-    rcases privateChannel with rfl | rfl | rfl <;> rfl
+    rcases privateChannel with rfl | rfl | rfl | rfl <;> rfl
   simpa using List.all_eq_true.mp quiet component member
 
 /-- Receipt freshness follows from the existing core inventory and the installed resource interface. -/
-theorem beforeChecks_private (interface : PrivateInterface others resources)
-    (channel : RawChannel (ZMod p)) (privateChannel : channel ∈ privateChannels (p := p)) :
+theorem beforeChecks_private (interface : PrivateInterface target others resources)
+    (channel : RawChannel (ZMod p)) (privateChannel : channel ∈ privateChannels (p := p) target) :
     ∀ component ∈ beforeChecks image source others resources, channel ∉ component.circuit.channels := by
   intro component member
   change component ∈ (ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer ++ _ at member
@@ -105,15 +105,15 @@ theorem beforeChecks_private (interface : PrivateInterface others resources)
 
 /-- The legacy padding restriction introduces no receipt-channel occurrence. -/
 theorem padding_private (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     channel ∉ HaltPaddingChip.component.circuit.channels := by
   apply silent_of_names
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-  rcases privateChannel with rfl | rfl | rfl <;> rfl
+  rcases privateChannel with rfl | rfl | rfl | rfl <;> rfl
 
 /-- The currently installed six-call registry and fixed hint/bank resources satisfy receipt privacy. -/
-theorem source_privacy (hints : List Bytes) :
-    PrivateInterface (HostCallReceivers.available (p := p)) (HostHintReadLocal.sourceResources hints) := by
+theorem source_privacy (target : MemorySnapshot) (hints : List Bytes) :
+    PrivateInterface target (HostCallReceivers.available (p := p)) (HostHintReadLocal.sourceResources hints) := by
   intro channel privateChannel component member
   apply silent_of_names
   have quiet : ((HostCallReceivers.available (p := p)).map
@@ -121,21 +121,22 @@ theorem source_privacy (hints : List Bytes) :
       HostHintReadLocal.sourceResources hints).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true := by
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-    rcases privateChannel with rfl | rfl | rfl <;> rfl
+    rcases privateChannel with rfl | rfl | rfl | rfl <;> rfl
   simpa using List.all_eq_true.mp quiet component member
 
-/-- The target validators register all three private protocols before verifier installation. -/
+/-- The target validators register all four private protocols before verifier installation. -/
 private theorem check_channels (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     channel ∈ (FinalMemoryChecks.checkTables (p := p) target).flatMap (·.circuit.channels) := by
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-  rcases privateChannel with rfl | rfl | rfl <;>
-    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit, circuit_norm]
+  rcases privateChannel with rfl | rfl | rfl | rfl <;>
+    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit,
+      StaticTable.component, StaticTable.provider, circuit_norm]
 
 /-- Queue, bank and CPU verifier boundaries emit nothing on the Memory receipt protocols.
 Fresh assertion channels are separated using the registered target-validator inventory. -/
 theorem base_verifier_private (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) (env : Environment (ZMod p)) :
+    (privateChannel : channel ∈ privateChannels (p := p) target) (env : Environment (ZMod p)) :
     (base image source target final bankFinal others resources channels names).verifierOperations.interactionValuesWith
       channel env = [] := by
   let original := HostHintReadLocal.ensemble image source others
@@ -165,9 +166,9 @@ theorem base_verifier_private (channel : RawChannel (ZMod p))
     exact LocalCore.boundaryVerifier_silent image source channel (private_not_local channel privateChannel) env
   have boundaryQuiet : channel ∉ (HostHintQueueBoundary.boundary source final bankFinal).circuit.channels := by
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-    rcases privateChannel with rfl | rfl | rfl <;>
+    rcases privateChannel with rfl | rfl | rfl | rfl <;>
       apply HostHintQueueBoundary.boundary_silent <;>
-      simp [FinalMemoryValue.channel, FinalMemoryChange.channel, HostHintQueue.stateChannel,
+      simp [FinalMemoryValue.channel, FinalMemoryChange.channel, FinalRegisterValue.membership, StaticTable.channel, HostHintQueue.stateChannel,
         HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
   have empty := (HostHintQueueBoundary.boundary source final bankFinal).singleton.interactionsWith_nil_of_channel_not_mem
     (data := env.data) boundaryQuiet

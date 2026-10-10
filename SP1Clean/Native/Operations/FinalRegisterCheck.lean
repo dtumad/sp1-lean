@@ -72,7 +72,8 @@ theorem change_values (target : MemorySnapshot) (input : Var Inputs (ZMod p))
   have empty := InteractionRecovery.interactionsWith_main_eq_nil
     (FinalRegisterValue.circuit target).base FinalMemoryChange.channel.toRaw input.record offset (by
       simp [FinalRegisterValue.circuit, circuit_norm,
-        FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])
+        FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw,
+        FinalRegisterValue.membership, StaticTable.channel])
   simp only [FinalRegisterValue.circuit] at empty
   simp only [Operations.interactionValuesWith, empty, List.map_nil, List.nil_append]
 

@@ -3,8 +3,7 @@ import SP1Clean.Soundness.FinalMemoryChecks
 
 /-! # Complete target Memory checks in the physical host assembly
 
-The existing host assembly keeps every CPU, host, source and final-order table. The two
-target consumers are appended to its resource block, the original finalizers publish their
+The existing host assembly keeps every CPU, host, source and final-order table. The target consumers and fixed register provider are appended to its resource block, the original finalizers publish their
 full records, and the canonical change demand runs once in the verifier. These additions use
 existing circuits and typed physical slots. Receipt projection preserves every row and canonical
 data; selecting a smaller inventory requires separate constraint and channel transport.
@@ -42,18 +41,22 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
     simp only [original, HostLocalCore.tables_names, List.map_append, List.append_assoc]
   rw [UniqueNames, split, List.nodup_append]
   refine ⟨HostHintReadLocal.source_unique_names image source source.host.io.hints,
-    of_decide_eq_true rfl, ?_⟩
-  have fresh : (original.map (·.circuit.name)).all
-      (fun name => !((FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name)).contains name) = true := by
-    simp only [original, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
-      LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
-      SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
-      MemorySnapshot.registerTable, StaticTable.ofRows]
-    rfl
-  intro a old b added same
-  have absent := List.all_eq_true.mp fresh a old
-  rw [List.contains_iff_mem.mpr (same.symm ▸ added)] at absent
-  exact Bool.noConfusion absent
+    ?_, ?_⟩
+  · simp only [FinalMemoryChecks.checkTables, List.map_cons, List.map_nil,
+      StaticTable.component, StaticTable.provider, FinalRegisterValue.membership]
+    exact of_decide_eq_true rfl
+  · have fresh : (original.map (·.circuit.name)).all
+        (fun name => !((FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name)).contains name) = true := by
+      simp only [original, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
+        LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+        SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+        MemorySnapshot.registerTable, StaticTable.ofRows,
+        FinalMemoryChecks.checkTables, FinalRegisterValue.membership]
+      rfl
+    intro a old b added same
+    have absent := List.all_eq_true.mp fresh a old
+    rw [List.contains_iff_mem.mpr (same.symm ▸ added)] at absent
+    exact Bool.noConfusion absent
 
 /-- Install the existing target consumers in the host resource block. Their channels are
 registered by the same host assembly as every other resource. -/
@@ -65,14 +68,14 @@ registered by the same host assembly as every other resource. -/
   HostHintQueueBoundary.ensemble image source final bankFinal others
     (resources ++ FinalMemoryChecks.checkTables target) channels names
 
-/-- The original core and handler positions are unchanged; only two resource tables are added. -/
+/-- The original core and handler positions are unchanged; three resource tables are added. -/
 theorem base_tables_length (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
     (names : UniqueNames image source target others resources) :
     (base image source target final bankFinal others resources channels names).tables.length =
-      66 + others.length + resources.length := by
+      67 + others.length + resources.length := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
     ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
     HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, List.length_set]
@@ -160,7 +163,7 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (target : Memor
   (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).install
     (withReceipts image source target final bankFinal others resources channels names)
 
-/-- The original host table block before the two target consumers, prior to the padding wrapper. -/
+/-- The original host table block before the target consumers and fixed register provider, prior to the padding wrapper. -/
 def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) :=
   HostLocalCore.tables image source
@@ -192,8 +195,8 @@ theorem tables_eq : (ensemble image source target final bankFinal others resourc
   simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, base_tables_eq]
 
-/-- Typed registration of either target validator survives all three unrelated table replacements. -/
-def checkSlot (index : Fin 2) : TableSlot (ensemble image source target final bankFinal others resources channels names).tables
+/-- Typed registration of each target validator or fixed provider survives all three unrelated table replacements. -/
+def checkSlot (index : Fin 3) : TableSlot (ensemble image source target final bankFinal others resources channels names).tables
     ((FinalMemoryChecks.checkTables (p := p) target)[index.val]'(by
       simpa only [FinalMemoryChecks.checkTables, List.length_cons, List.length_nil] using index.isLt)) := by
   let slot := (TableSlot.ofIndex (FinalMemoryChecks.checkTables (p := p) target)

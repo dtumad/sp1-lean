@@ -1,6 +1,7 @@
 import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Model.SP1Field
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Complete outgoing Memory assembly regression
 
@@ -29,13 +30,15 @@ private theorem names (target : MemorySnapshot) :
     (((FinalMemoryEnsemble.inventory (p := SP1Prime)).views.map TransitionView.component ++
       (Soundness.FinalMemoryChecks.checkTables target ++ auxiliary)).map
         (fun component : Component Fp => component.circuit.name)).Nodup := by
+  simp only [Soundness.FinalMemoryChecks.checkTables, List.map_append, List.map_cons, List.map_nil,
+    StaticTable.component, StaticTable.provider, FinalRegisterValue.membership]
   exact of_decide_eq_true rfl
 
 private def assembly (target : MemorySnapshot) :=
   Soundness.FinalMemoryChecks.ensemble source target auxiliary [] (names target)
 
 /-- The real provider family satisfies the static interface used by the soundness theorem. -/
-theorem resourceInterface : Soundness.FinalMemoryChecks.Interface auxiliary := by
+theorem resourceInterface (target : MemorySnapshot) : Soundness.FinalMemoryChecks.Interface target auxiliary := by
   have members (component : Component Fp) (member : component ∈ auxiliary) :
       component ∈ (sp1Ensemble (p := SP1Prime)).tables := by
     apply List.mem_append_right
@@ -44,10 +47,17 @@ theorem resourceInterface : Soundness.FinalMemoryChecks.Interface auxiliary := b
       simp
     · exact List.mem_of_mem_take provider
   have silence : auxiliary.all (fun component =>
+      !(component.circuit.channels.map RawChannel.name).contains "sp1.native.target_registers" &&
       !(component.circuit.channels.map RawChannel.name).contains "SP1FinalRegisterValue" &&
       !(component.circuit.channels.map RawChannel.name).contains "SP1FinalRamValue" &&
       !(component.circuit.channels.map RawChannel.name).contains "SP1FinalMemoryChange") = true := rfl
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro component member used
+    have silent := List.all_eq_true.mp silence component member
+    have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
+    change (component.circuit.channels.map RawChannel.name).contains "sp1.native.target_registers" = true at present
+    rw [present] at silent
+    simp at silent
   · intro component member env checked
     exact sp1_component_finished_requirements component (members component member)
       Channels.byteChannel.toRaw (by simp [Channels.byteChannel, Channels.stateChannel,
@@ -77,7 +87,7 @@ private def finalizer (index previous : ℕ) (record : Channels.MemoryMsg Fp) : 
     (Word.toNat (MemoryBoundary.address record)))).toList)
 
 private def memory (record : Channels.MemoryMsg Fp) : Row :=
-  (5, (toElements (⟨record.clk_high, record.clk_low, record.addr0, record.addr1,
+  (6, (toElements (⟨record.clk_high, record.clk_low, record.addr0, record.addr1,
     record.addr2, record.value, 1⟩ : MemoryProviderChip.Inputs Fp)).toList)
 
 private def registerCheck (record : Channels.MemoryMsg Fp) (selected : Fp) : Row :=
@@ -100,12 +110,9 @@ private def evaluate (target : MemorySnapshot) (component : Component Fp) (input
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let registers := target.registerTable (p := SP1Prime)
   let memory := target.memory.fixedTable (p := SP1Prime) (2 ^ 48)
   let fixed : List (String × Array (Array Fp)) :=
-    [("sp1.native.target_registers", Array.ofFn fun i : Fin registers.length =>
-      (toElements (registers.row i)).toArray),
-     ("sp1.native.target_memory", Array.ofFn fun i : Fin memory.length =>
+    [("sp1.native.target_memory", Array.ofFn fun i : Fin memory.length =>
       (toElements (memory.row i)).toArray)]
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
@@ -125,12 +132,12 @@ private def byteProvider (entry : String × List Fp × Fp) : Option Row :=
   if entry.1 != "SP1Byte" || entry.2.2 == 0 then none else
   match entry.2.1 with
   | [opcode, a, b, c] =>
-    if opcode == 3 then some (6, [b, c, -entry.2.2])
-    else if opcode == 4 then some (11, [b, c, -entry.2.2])
-    else if opcode == 5 then some (7, [b, -entry.2.2])
-    else if opcode == 6 && b.val < 17 then some (12 + b.val, [a, -entry.2.2])
-    else some (29, [])
-  | _ => some (29, [])
+    if opcode == 3 then some (8, [b, c, -entry.2.2])
+    else if opcode == 4 then some (12, [b, c, -entry.2.2])
+    else if opcode == 5 then some (8, [b, -entry.2.2])
+    else if opcode == 6 && b.val < 17 then some (13 + b.val, [a, -entry.2.2])
+    else some (30, [])
+  | _ => some (30, [])
 
 private def verifierLedger (target : MemorySnapshot) : Ledger :=
   let env : Environment Fp := Environment.fromInput (Input := unit) () (fun _ _ => #[])
@@ -142,7 +149,9 @@ private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Boo
   let initial := (true, verifierLedger target) :: rows.map (evaluateRow target)
   let providers := if supplyBytes then (initial.flatMap Prod.snd).filterMap byteProvider else []
   let evaluated := initial ++ providers.map (evaluateRow target)
-  let ledger := evaluated.flatMap Prod.snd
+  let consumerLedger := evaluated.flatMap Prod.snd
+  let ledger := consumerLedger ++ StaticMembership.providerLedger
+    (FinalRegisterValue.membership target) consumerLedger
   evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       ((assembly target).channels.map RawChannel.name).contains name &&
@@ -180,7 +189,7 @@ theorem rejectsMutations :
      check { target with memory := target.memory.write 65543 18 } rows,
      check target rows false,
      check target (rows.filter (fun row => row.1 != 2)),
-     check target (rows.filter (fun row => row.1 != 5))] = List.replicate 11 false := by
+     check target (rows.filter (fun row => row.1 != 6))] = List.replicate 11 false := by
   native_decide
 
 end SP1CleanTest.Alignment.Core.FinalMemoryChecks

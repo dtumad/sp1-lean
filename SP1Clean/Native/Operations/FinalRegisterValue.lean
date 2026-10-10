@@ -1,11 +1,13 @@
 import SP1Clean.FormalModel.Contracts.FinalRegisterValue
 import SP1Clean.Math.WordEquality
 import ToClean.Circuit.InteractionRecovery
+import ToClean.Air.StaticProvider
 
 /-! # Fixed target-register authentication
 
-The source and target use different fixed table names. Every row consumes one complete final
-record, including its clock, and checks its value against the target's canonical register row.
+The source and target use separate membership channels. Every sparse row consumes one complete
+final record, including its clock, and authenticates its value through the target's verifier-fixed
+register provider. The separate provider retains all 32 rows, including unused registers.
 -/
 
 namespace SP1Clean.FinalRegisterValue
@@ -14,9 +16,12 @@ open Circuit Model.Core Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+/-- The target keeps the snapshot predicate with its own private channel identity. -/
+def membership (target : MemorySnapshot) : StaticTable (ZMod p) RegisterSnapshotRow :=
+  { target.registerTable with name := "sp1.native.target_registers" }
+
 def main (target : MemorySnapshot) (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) Unit := do
-  lookup { target.registerTable.toTable with name := "sp1.native.target_registers" }
-    ⟨input.addr0, input.value⟩
+  (membership target).channel.pull ⟨input.addr0, input.value⟩
   assertZero input.addr1
   assertZero input.addr2
   (FinalMemoryValue.channel false).pull input
@@ -31,7 +36,7 @@ theorem receipt_values (target : MemorySnapshot) (input : Var MemoryMsg (ZMod p)
       [(FinalMemoryValue.channel false).pulledValue (eval env input)] := by
   have raw : ((main target input).operations offset).interactionsWith (FinalMemoryValue.channel false).toRaw =
       [((FinalMemoryValue.channel false).pulled input).toRaw] := by
-    simp only [main, circuit_norm]
+    simp [main, circuit_norm, membership, StaticTable.channel, FinalMemoryValue.channel]
   rw [Operations.interactionValuesWith, raw]
   exact congrArg (fun value => [value]) Channel.eval_pulled
 
@@ -44,13 +49,13 @@ def circuit (target : MemorySnapshot) : GeneralFormalCircuit (ZMod p) MemoryMsg 
     target.registerTable.Spec ⟨input.addr0, input.value⟩ ∧ input.addr1 = 0 ∧ input.addr2 = 0
   channelsWithRequirements := [(FinalMemoryValue.channel false).toRaw]
   soundness := by
-    circuit_proof_start [FinalMemoryValue.channel]
+    circuit_proof_start [FinalMemoryValue.channel, StaticTable.channel, membership]
     obtain ⟨member, one, two⟩ := h_holds
     obtain ⟨bound, range, value⟩ := target.registerTable_sound ⟨input_addr0, input_value⟩ member
     refine ⟨bound, one, two, range, ?_⟩
     simpa only [MemoryMsg.locOf, bound, one, two, and_self, ↓reduceIte] using value
   completeness := by
-    circuit_proof_start [FinalMemoryValue.channel]
+    circuit_proof_start [FinalMemoryValue.channel, StaticTable.channel, membership]
     exact h_assumptions
 
 instance (target : MemorySnapshot) (record : MemoryMsg (ZMod p)) : Decidable (Spec target record) := by

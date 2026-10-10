@@ -163,7 +163,7 @@ private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
     (inputs : ℕ → List (List Fp)) : EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
     (StaticMembership.buildTables ensemble.tables inputs
-      (source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name []
+      []
       (fun _ _ => #[]) (ProverHint.empty Fp))
     (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
     (StaticMembership.buildTables_components ..)

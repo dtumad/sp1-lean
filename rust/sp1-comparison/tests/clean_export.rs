@@ -25,6 +25,22 @@ mod empty_registers {
     ));
 }
 
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod target_registers {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/target_registers.rs"
+    ));
+}
+
+#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+mod empty_target_registers {
+    include!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/target_registers_empty.rs"
+    ));
+}
+
 use clean_backend::witness_generation::{Program, WitnessGenerationError};
 use clean_backend::{
     prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, StarkConfig,
@@ -192,30 +208,35 @@ fn generated_air_rejects_wrong_shape_and_row_content() {
     for (cell, value) in [(0, 0), (0, 2), (1, 64), (2, 1)] {
         let mut altered = traces.clone();
         altered[0].values[cell] = field(value);
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        assert_backend_rejection(|| {
             let (proof, _) = prove_ensemble(&config, &statement, altered, &public).unwrap();
             verify_ensemble(&config, &statement, &proof, &public).is_err()
-        }));
-        match result {
-            Ok(rejected) => assert!(rejected, "invalid row cell {cell} was accepted"),
-            Err(payload) => {
-                let message = payload
-                    .downcast_ref::<String>()
-                    .map(String::as_str)
-                    .or_else(|| payload.downcast_ref::<&str>().copied())
-                    .unwrap_or("");
-                if !cfg!(debug_assertions)
-                    || !(message.contains("constraint") || message.contains("lookup"))
-                {
-                    std::panic::resume_unwind(payload);
-                }
-            }
-        }
+        });
     }
     assert_eq!(
         <generated::FixedMembership as Program<F>>::COMPONENT_NAMES,
         &["allowed"]
     );
+}
+
+// Release mode verifies a rejected proof; debug mode can reject invalid constraints earlier.
+// Propagate unrelated panics instead of treating an arbitrary crash as rejection.
+fn assert_backend_rejection(check: impl FnOnce() -> bool) {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(check)) {
+        Ok(rejected) => assert!(rejected, "invalid witness was accepted"),
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| payload.downcast_ref::<&str>().copied())
+                .unwrap_or("");
+            if !cfg!(debug_assertions)
+                || !(message.contains("constraint") || message.contains("lookup"))
+            {
+                std::panic::resume_unwind(payload);
+            }
+        }
+    }
 }
 
 // This arbitrary local snapshot is not SP1's boot-only all-zero register table.
@@ -483,6 +504,240 @@ fn snapshot_register_air_rejects_shapes_sparse_row_and_count_mutations() {
                     verify_ensemble(&config, &statement, &proof, &public).is_err(),
                     "accepted mutation of table {table}, cell {cell}"
                 );
+            }
+        }
+    }
+}
+
+fn final_register(index: u64, clock: u64) -> Vec<u64> {
+    let mut row = memory(&register(index));
+    row[0] = clock >> 24;
+    row[1] = clock & ((1 << 24) - 1);
+    row
+}
+
+fn target_register_reference() -> serde_json::Value {
+    serde_json::from_str(include_str!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/target_registers.reference.json"
+    )))
+    .unwrap()
+}
+
+#[test]
+fn target_registers_match_complete_receipts_and_independent_fixed_values() {
+    let reference = target_register_reference();
+    let last = final_register(31, (2 << 24) + 31);
+    let row = final_register(5, (1 << 24) + 5);
+    let mut cases: Vec<_> = (0..32)
+        .map(|index| {
+            (
+                format!("register-{index}"),
+                [final_register(index, (1 << 24) + index), last.clone()].concat(),
+                true,
+            )
+        })
+        .collect();
+    cases.push((
+        "repeated".to_owned(),
+        [row.clone(), row.clone()].concat(),
+        true,
+    ));
+    for limb in 0..4 {
+        let mut forged = row.clone();
+        forged[limb + 5] += 1;
+        cases.push((
+            format!("forged-limb-{limb}"),
+            [forged, last.clone()].concat(),
+            false,
+        ));
+    }
+    for index in [6, 32, 0] {
+        let mut forged = row.clone();
+        forged[2] = index;
+        cases.push((
+            format!("forged-index-{index}"),
+            [forged, last.clone()].concat(),
+            false,
+        ));
+    }
+    for limb in [1, 2] {
+        let mut forged = row.clone();
+        forged[limb + 2] = 1;
+        cases.push((
+            format!("forged-addr{limb}"),
+            [forged, last.clone()].concat(),
+            false,
+        ));
+    }
+    assert_eq!(cases.len(), 42);
+    assert_eq!(reference["cases"].as_array().unwrap().len(), cases.len());
+    assert_eq!(
+        <target_registers::TargetRegisters as Program<F>>::FIXED_WIDTHS,
+        &[0, 5]
+    );
+    let fixed = target_registers::TargetRegistersAirSpec::fixed_trace::<F>(1).unwrap();
+    assert_eq!((fixed.height(), fixed.width()), (32, 5));
+    assert_eq!(
+        fixed.values,
+        (0..32).flat_map(register).map(field).collect::<Vec<_>>()
+    );
+    let config = config();
+    let statement = target_registers::TargetRegistersStatement::<F>::new(&[2, 32]).unwrap();
+    for (case, (name, public, accepted)) in reference["cases"].as_array().unwrap().iter().zip(cases)
+    {
+        assert_eq!(case["name"], name);
+        assert_eq!(case["publicInput"], serde_json::json!(public));
+        assert_eq!(case["accepted"], accepted);
+        let public: Vec<_> = public.into_iter().map(field).collect();
+        let result = target_registers::generate(&public, &[]);
+        assert_eq!(result.is_ok(), case["witness"].is_object(), "{name}");
+        let Ok(witness) = result else {
+            assert!(!accepted, "{name}");
+            continue;
+        };
+        let actual =
+            physical_reference::<target_registers::TargetRegisters>(&public, &witness.tables);
+        assert_eq!(actual, case["witness"], "{name}");
+        let sparse: Vec<Vec<u64>> = public
+            .chunks_exact(9)
+            .map(|row| row.iter().map(PrimeField64::as_canonical_u64).collect())
+            .collect();
+        let fixed_rows: Vec<Vec<u64>> = (0..32)
+            .map(|index| {
+                let mut row = register(index);
+                row.push(sparse.iter().filter(|r| r[2] == index).count() as u64);
+                row
+            })
+            .collect();
+        assert_eq!(actual["tables"], serde_json::json!([sparse, fixed_rows]));
+        let mut ledger: Vec<_> = sparse
+            .iter()
+            .map(|row| interaction("SP1FinalRegisterValue", 1, row.clone(), false))
+            .collect();
+        for row in &sparse {
+            let membership = [vec![row[2]], row[5..].to_vec()].concat();
+            ledger.push(interaction(
+                "sp1.native.target_registers",
+                F::ORDER_U64 - 1,
+                membership,
+                true,
+            ));
+            ledger.push(interaction(
+                "SP1FinalRegisterValue",
+                F::ORDER_U64 - 1,
+                row.clone(),
+                true,
+            ));
+        }
+        for row in fixed_rows {
+            ledger.push(interaction(
+                "sp1.native.target_registers",
+                row[5],
+                row[..5].to_vec(),
+                false,
+            ));
+        }
+        assert_eq!(actual["interactions"], serde_json::json!(ledger));
+        assert_eq!(ledger.len(), 38);
+        assert_eq!(statement.interaction_count(), 38);
+        let traces = witness.into_traces().unwrap();
+        assert_eq!((traces[0].height(), traces[0].width()), (2, 9));
+        assert_eq!((traces[1].height(), traces[1].width()), (32, 1));
+        // Malformed upper address limbs can balance and generate rows while failing AIR.
+        if !accepted {
+            assert_backend_rejection(|| {
+                let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
+                verify_ensemble(&config, &statement, &proof, &public).is_err()
+            });
+        }
+    }
+}
+
+#[test]
+fn unused_target_registers_retain_every_zero_count_occurrence() {
+    let witness = empty_target_registers::generate::<F>(&[], &[]).unwrap();
+    let actual =
+        physical_reference::<empty_target_registers::EmptyTargetRegisters>(&[], &witness.tables);
+    assert_eq!(actual, target_register_reference()["empty"]);
+    let rows: Vec<_> = (0..32)
+        .map(|index| {
+            let mut row = register(index);
+            row.push(0);
+            row
+        })
+        .collect();
+    let ledger: Vec<_> = (0..32)
+        .map(|index| interaction("sp1.native.target_registers", 0, register(index), false))
+        .collect();
+    assert_eq!(
+        actual,
+        serde_json::json!({"tables": [rows], "interactions": ledger})
+    );
+    let statement = empty_target_registers::EmptyTargetRegistersStatement::<F>::new(&[32]).unwrap();
+    assert_eq!(statement.interaction_count(), 32);
+    let config = config();
+    let traces = witness.into_traces().unwrap();
+    assert_eq!((traces[0].height(), traces[0].width()), (32, 1));
+    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &[]).unwrap();
+    verify_ensemble(&config, &statement, &proof, &[]).unwrap();
+    for index in [0, 5, 31] {
+        let mut altered = traces.clone();
+        altered[0].values[index] = field(1);
+        let (proof, _) = prove_ensemble(&config, &statement, altered, &[]).unwrap();
+        assert!(verify_ensemble(&config, &statement, &proof, &[]).is_err());
+    }
+}
+
+#[test]
+fn target_register_backend_binds_clocks_values_addresses_and_counts() {
+    for heights in [vec![], vec![32], vec![2, 32, 32], vec![2, 16], vec![2, 64]] {
+        assert!(target_registers::TargetRegistersStatement::<F>::new(&heights).is_err());
+    }
+    assert!(matches!(
+        target_registers::generate::<F>(&[], &[]),
+        Err(WitnessGenerationError::PublicInputWidth { .. })
+    ));
+    let statement = target_registers::TargetRegistersStatement::<F>::new(&[2, 32]).unwrap();
+    let config = config();
+    for indices in [[0, 31], [5, 5]] {
+        let public: Vec<_> = indices
+            .into_iter()
+            .map(|index| final_register(index, (1 << 24) + index))
+            .flatten()
+            .map(field)
+            .collect();
+        assert!(matches!(
+            target_registers::generate(&public, &[field(1)]),
+            Err(WitnessGenerationError::ProverInputWidth { .. })
+        ));
+        let traces = target_registers::generate(&public, &[])
+            .unwrap()
+            .into_traces()
+            .unwrap();
+        assert!(matches!(
+            prove_ensemble(&config, &statement, vec![traces[0].clone()], &public),
+            Err(EnsembleShapeError::TraceCount { .. })
+        ));
+        let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
+        verify_ensemble(&config, &statement, &proof, &public).unwrap();
+        for cell in 0..public.len() {
+            let mut altered = public.clone();
+            altered[cell] += field(1);
+            assert!(verify_ensemble(&config, &statement, &proof, &altered).is_err());
+        }
+        // Both clock limbs, every address/value limb, and all 32 counts remain bound.
+        for (table, trace) in traces.iter().enumerate() {
+            for cell in 0..trace.values.len() {
+                for delta in [field(1), -field(1)] {
+                    let mut altered = traces.clone();
+                    altered[table].values[cell] += delta;
+                    assert_backend_rejection(|| {
+                        let (proof, _) =
+                            prove_ensemble(&config, &statement, altered, &public).unwrap();
+                        verify_ensemble(&config, &statement, &proof, &public).is_err()
+                    });
+                }
             }
         }
     }

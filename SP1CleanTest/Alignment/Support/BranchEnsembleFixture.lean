@@ -160,9 +160,10 @@ def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List 
 def builtTables (target : MemorySnapshot) (seeds : List Seed) : List (Table Fp) :=
   let components := (assembly target).tables
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
-  let channel := (source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name
-  let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channel data (ProverHint.empty Fp)
-  SP1CleanTest.StaticMembership.buildTables components inputs channel ledger data (ProverHint.empty Fp)
+  let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
+    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name]
+  let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
+  SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
 
 /-- All built tables retain the assembly's original component identities and order. -/
 theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed) :
@@ -170,9 +171,9 @@ theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed) :
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
-/-- Building rows never changes the complete 90-table host inventory. -/
+/-- Building rows never changes the complete 91-table host inventory. -/
 theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed) :
-    (builtTables target seeds).length = 90 := by
+    (builtTables target seeds).length = 91 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   rfl
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/

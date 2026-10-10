@@ -45,33 +45,36 @@ def check {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row) (ledge
 not be regenerated to compute membership counts; their full constraints and ledgers are still
 checked in the assembled witness. Channel declarations cover actual circuit interactions. -/
 def demandLedger (components : List (Component F)) (inputs : ℕ → List (List F))
-    (channel : String) (data : ProverData F) (hint : ProverHint F) : Ledger F :=
+    (channels : List String) (data : ProverData F) (hint : ProverHint F) : Ledger F :=
   components.zipIdx.flatMap fun (component, index) =>
-    if component.circuit.channels.any (fun declared => declared.name == channel) then
+    if component.circuit.channels.any (fun declared => channels.contains declared.name) then
       (inputs index).flatMap fun cells =>
         let input : component.Input F :=
           fromElements (Vector.ofFn fun cell => cells[cell.val]?.getD 0)
         let env := Environment.fromArray (component.buildRow input data hint) data
         (component.rowOperations.interactionValues env).filterMap fun interaction =>
-          if interaction.channel.name == channel then
+          if channels.contains interaction.channel.name then
             some (interaction.channel.name, interaction.msg.toList, interaction.mult)
           else none
     else []
 
-/-- Keep each installed component and its fixed rows. Current snapshot assemblies have one
-fixed membership provider; ordinary components retain the supplied input order verbatim. -/
+/-- Keep each installed component and its fixed rows. Membership providers declare one
+requirement channel, which selects their counts independently of other providers. Ordinary
+components retain the supplied input order verbatim. -/
 def buildTables (components : List (Component F)) (inputs : ℕ → List (List F))
-    (channel : String) (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F) : List (Table F) :=
+    (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F) : List (Table F) :=
   List.ofFn fun index : Fin components.length =>
     let component := components[index]
     Table.buildWithFixed component ((inputs index.val).map fun cells =>
       fromElements (Vector.ofFn fun cell => cells[cell.val]?.getD 0))
-      (suffix channel ledger) data hint
+      (fun fixed index => match component.circuit.channelsWithRequirements with
+        | [channel] => suffix channel.name ledger fixed index
+        | _ => #[]) data hint
 
 /-- Construction preserves the whole physical inventory and its order. -/
 theorem buildTables_components (components : List (Component F)) (inputs : ℕ → List (List F))
-    (channel : String) (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F) :
-    (buildTables components inputs channel ledger data hint).map (·.component) = components := by
+    (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F) :
+    (buildTables components inputs ledger data hint).map (·.component) = components := by
   simp only [buildTables, List.map_ofFn, Function.comp_def, Table.buildWithFixed_component]
   exact List.ofFn_getElem
 

@@ -10,7 +10,7 @@ namespace SP1Clean.Audit.BranchEnsemble
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
 
 /-- Original protocol channels; public assertion channels are allocated separately. -/
-def originalChannels : List (RawChannel Fp) :=
+def originalChannels (target : MemorySnapshot) : List (RawChannel Fp) :=
   [HostCallChip.channel.toRaw, WritePermissionProvider.channel.toRaw,
     (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
     (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
@@ -21,7 +21,8 @@ def originalChannels : List (RawChannel Fp) :=
     (HostCommitChip.stateChannel false).toRaw, (HostCommitChip.stateChannel true).toRaw,
     HostRamAccessChip.channel.toRaw, (FinalMemoryValue.channel false).toRaw,
     FinalMemoryChange.channel.toRaw, (FinalMemoryValue.channel true).toRaw,
-    source.sail.memorySnapshot.registerTable.channel.toRaw]
+    source.sail.memorySnapshot.registerTable.channel.toRaw,
+    (FinalRegisterValue.membership target).channel.toRaw]
 
 /-- The full physical inventory and protocol registry before source assertions are installed. -/
 def rawAssembly (target : MemorySnapshot) : Ensemble Fp SP1PublicIO :=
@@ -47,7 +48,7 @@ def baseAssembly (target : MemorySnapshot) :=
 
 /-- Source and host assertion channels are retained alongside every protocol channel. -/
 def baseChannels (target : MemorySnapshot) : List (RawChannel Fp) :=
-  originalChannels ++
+  originalChannels target ++
     [(LocalSourceBoundary.checker image source).channel (rawAssembly target),
      (HostHintQueueBoundary.boundary source (HostHintQueueBoundary.initial []) source.host).channel
        (beforeBoundary target)]
@@ -58,20 +59,20 @@ def channels (target : MemorySnapshot) : List (RawChannel Fp) :=
     [(FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).channel (baseAssembly target)]
 
 /-- Registry occurrence indices before the change verifier, checked by full raw records. -/
-def channelOccurrences : List (Fin 25) :=
-  [0, 1, 2, 3, 22, 4, 5, 6, 7, 8, 9, 10, 11, 5, 5, 12, 5, 5, 13, 0, 14, 11, 13, 12, 0, 14, 11, 5, 0, 0, 15, 0, 0, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 13, 0, 14, 0, 14, 13, 0, 14, 0, 14, 5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11, 5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11, 13, 12, 16, 16, 17, 17, 19, 19, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 21, 21, 20, 23, 14, 16, 17, 15, 14, 16, 17, 15, 24, 19, 21]
+def channelOccurrences : List (Fin 26) :=
+  [0, 1, 2, 3, 22, 4, 5, 6, 7, 8, 9, 10, 11, 5, 5, 12, 5, 5, 13, 0, 14, 11, 13, 12, 0, 14, 11, 5, 0, 0, 15, 0, 0, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 16, 0, 16, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 5, 5, 0, 17, 0, 17, 10, 13, 0, 14, 0, 14, 13, 0, 14, 0, 14, 5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11, 5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11, 13, 12, 16, 16, 17, 17, 23, 19, 19, 20, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 21, 21, 20, 23, 24, 14, 16, 17, 15, 14, 16, 17, 15, 25, 19, 21]
 
 /-- The original registration list repeats precisely these full raw channels. -/
 theorem channel_expansion (target : MemorySnapshot) :
     (baseAssembly target).channels = channelOccurrences.map (fun index => (baseChannels target)[index.val]'(by
-      change index.val < 25
+      change index.val < 26
       exact index.isLt)) := by
   repeat' first
     | apply congrArg₂ (@List.cons (RawChannel Fp))
     | rfl
 
 /-- Every canonical channel has an original registration. -/
-theorem channelOccurrences_complete (index : Fin 25) : index ∈ channelOccurrences := by
+theorem channelOccurrences_complete (index : Fin 26) : index ∈ channelOccurrences := by
   fin_cases index <;> decide
 
 /-- Full raw membership includes each channel's arity and predicate. -/
@@ -81,15 +82,15 @@ private theorem base_channels_membership (target : MemorySnapshot) (channel : Ra
   constructor
   · intro member
     obtain ⟨index, bound, equal⟩ := List.mem_iff_getElem.mp member
-    have small : index < 25 := bound
+    have small : index < 26 := bound
     exact List.mem_map.mpr ⟨⟨index, small⟩, channelOccurrences_complete _, equal⟩
   · intro member
     obtain ⟨index, _, rfl⟩ := List.mem_map.mp member
     exact List.getElem_mem _
 
 /-- Exact declared channel indices for every installed physical table, including empty tables. -/
-def componentChannelIndices : List (List (Fin 23)) :=
-  [[22, 5, 2, 5, 5, 5, 5, 7, 2], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 5, 5, 5, 5, 7, 2], [5, 2, 2], [5, 3, 5, 5, 5, 5, 7, 3, 19], [5, 5, 3, 5, 5, 5, 5, 7, 3, 21], [5, 3, 3], [6], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 7], [5, 4, 6, 7, 7], [5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 5, 4, 7], [5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 5, 4, 7], [5, 5, 4, 5, 6, 7, 5, 5, 5, 7], [5, 4, 5, 5, 5, 5, 5, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 5, 5, 7, 5, 6, 7, 4, 7], [5, 4, 5, 5, 7, 5, 6, 7, 5, 5, 1, 4, 7], [5, 4, 6, 7, 1, 1, 4, 7], [5, 4, 6, 7, 1, 1, 1, 1, 4, 7], [5, 4, 6, 7, 1, 1, 1, 1, 1, 1, 1, 1, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5, 7, 7], [5, 4], [5, 4, 6, 7, 8, 7], [5, 4, 6, 7, 8, 9, 10, 5, 7, 7, 0], [22], [1], [5, 5, 12, 5, 5, 13, 0, 14, 11, 13, 12, 0, 14, 11], [5, 0, 0, 15], [0, 0], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [13, 0, 14, 0, 14, 13], [0, 14, 0, 14], [5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11], [5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11], [13], [12], [16, 16], [17, 17], [19, 19, 20], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 21, 21, 20]]
+def componentChannelIndices : List (List (Fin 24)) :=
+  [[22, 5, 2, 5, 5, 5, 5, 7, 2], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 5, 5, 5, 5, 7, 2], [5, 2, 2], [5, 3, 5, 5, 5, 5, 7, 3, 19], [5, 5, 3, 5, 5, 5, 5, 7, 3, 21], [5, 3, 3], [6], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 7], [5, 4, 6, 7, 7], [5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 5, 4, 7], [5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 5, 4, 7], [5, 5, 4, 5, 6, 7, 5, 5, 5, 7], [5, 4, 5, 5, 5, 5, 5, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 5, 5, 7, 5, 6, 7, 4, 7], [5, 4, 5, 5, 7, 5, 6, 7, 5, 5, 1, 4, 7], [5, 4, 6, 7, 1, 1, 4, 7], [5, 4, 6, 7, 1, 1, 1, 1, 4, 7], [5, 4, 6, 7, 1, 1, 1, 1, 1, 1, 1, 1, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5, 4, 6, 7, 4, 7], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5], [5, 7, 7], [5, 4], [5, 4, 6, 7, 8, 7], [5, 4, 6, 7, 8, 9, 10, 5, 7, 7, 0], [22], [1], [5, 5, 12, 5, 5, 13, 0, 14, 11, 13, 12, 0, 14, 11], [5, 0, 0, 15], [0, 0], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 16, 0, 16, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [5, 5, 0, 17, 0, 17, 10], [13, 0, 14, 0, 14, 13], [0, 14, 0, 14], [5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11], [5, 7, 12, 5, 5, 18, 1, 1, 1, 1, 1, 1, 1, 1, 11, 7, 18, 12, 1, 11], [13], [12], [16, 16], [17, 17], [23, 19, 19, 20], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 21, 21, 20], [23]]
 
 private theorem change_channels_membership (keys : List (FinalMemoryChange.Key Fp))
     (channel : RawChannel Fp) :
@@ -126,14 +127,14 @@ theorem channels_membership (target : MemorySnapshot) (channel : RawChannel Fp) 
 theorem table_channels (target : MemorySnapshot) :
     (assembly target).tables.map (fun component => component.circuit.channels) =
       componentChannelIndices.map (fun indices => indices.map (fun index =>
-        originalChannels[index.val]'(by change index.val < 23; exact index.isLt))) := by
+        (originalChannels target)[index.val]'(by change index.val < 24; exact index.isLt))) := by
   repeat' first
     | apply congrArg₂ List.cons
     | rfl
 
 /-- Every installed physical component uses only the original protocol channels. -/
 theorem component_channels_subset (target : MemorySnapshot) (component : Component Fp)
-    (member : component ∈ (assembly target).tables) : component.circuit.channels ⊆ originalChannels := by
+    (member : component ∈ (assembly target).tables) : component.circuit.channels ⊆ originalChannels target := by
   have present := List.mem_map_of_mem
     (f := fun component : Component Fp => component.circuit.channels) member
   rw [table_channels] at present
@@ -177,7 +178,7 @@ theorem channels_unique (target : MemorySnapshot) : ((channels target).map RawCh
   simp only [List.map_cons, List.map_nil] at prefixes
   refine ⟨?_, List.Nodup.of_map (fun name : String => name.toList.take 8) ?_, ?_⟩
   · simp only [originalChannels, List.map_cons, List.map_nil, Channel.toRaw,
-      StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows]
+      StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, FinalRegisterValue.membership]
     decide
   · change ([_, _, _].map (fun name : String => name.toList.take 8)).Nodup
     simpa only [List.map_cons, List.map_nil, prefixes] using
@@ -186,10 +187,10 @@ theorem channels_unique (target : MemorySnapshot) : ((channels target).map RawCh
     have present := List.mem_map_of_mem (f := fun name : String => name.toList.take 8) added
     change b.toList.take 8 ∈ [_, _, _] at present
     rw [prefixes] at present
-    have separate : ∀ name ∈ originalChannels.map RawChannel.name,
+    have separate : ∀ name ∈ (originalChannels target).map RawChannel.name,
         name.toList.take 8 ∉ ["sp1.loca".toList, "host-bou".toList, "final-me".toList] := by
       simp only [originalChannels, List.map_cons, List.map_nil, Channel.toRaw,
-        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows]
+        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, FinalRegisterValue.membership]
       decide
     exact separate a old (same.symm ▸ present)
 
@@ -237,22 +238,22 @@ private theorem closed_program_channels (closed : ClosedVerifier Fp) (ens : Ense
 
 private theorem raw_verifier_channels (target : MemorySnapshot) (interaction : AbstractInteraction Fp)
     (used : interaction ∈ (rawAssembly target).verifierOperations.interactions) :
-    interaction.channel ∈ originalChannels := by
+    interaction.channel ∈ originalChannels target := by
   have inventory : ((rawAssembly target).verifierOperations.interactions.map (·.channel)) =
-      ([4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 8, 2, 2, 3, 3] : List (Fin 23)).map
-        (fun index => originalChannels[index.val]'(by change index.val < 23; exact index.isLt)) := by rfl
+      ([4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 8, 2, 2, 3, 3] : List (Fin 24)).map
+        (fun index => (originalChannels target)[index.val]'(by change index.val < 24; exact index.isLt)) := by rfl
   have member := List.mem_map_of_mem (f := AbstractInteraction.channel) used
   rw [inventory] at member
   obtain ⟨index, _, equal⟩ := List.mem_map.mp member
   exact equal ▸ List.getElem_mem _
 
-private theorem host_boundary_channels (channel : RawChannel Fp)
+private theorem host_boundary_channels (target : MemorySnapshot) (channel : RawChannel Fp)
     (used : channel ∈ (HostHintQueueBoundary.boundary (p := SP1Prime) source
-      (HostHintQueueBoundary.initial []) source.host).circuit.channels) : channel ∈ originalChannels := by
+      (HostHintQueueBoundary.initial []) source.host).circuit.channels) : channel ∈ originalChannels target := by
   have inventory : (HostHintQueueBoundary.boundary (p := SP1Prime) source
       (HostHintQueueBoundary.initial []) source.host).circuit.channels =
-      ([14, 16, 17, 15, 14, 16, 17, 15] : List (Fin 23)).map
-        (fun index => originalChannels[index.val]'(by change index.val < 23; exact index.isLt)) := by rfl
+      ([14, 16, 17, 15, 14, 16, 17, 15] : List (Fin 24)).map
+        (fun index => (originalChannels target)[index.val]'(by change index.val < 24; exact index.isLt)) := by rfl
   rw [inventory] at used
   obtain ⟨index, _, rfl⟩ := List.mem_map.mp used
   exact List.getElem_mem _
@@ -278,7 +279,7 @@ private theorem base_verifier_channels (target : MemorySnapshot) :
   · exact sourceChannels
   · intro interaction used
     rcases closed_program_channels _ _ interaction used with original | check
-    · exact List.mem_append_left _ (host_boundary_channels _ original)
+    · exact List.mem_append_left _ (host_boundary_channels target _ original)
     · rw [check]
       exact List.mem_append_right _ (List.mem_cons_of_mem _ List.mem_cons_self)
 
