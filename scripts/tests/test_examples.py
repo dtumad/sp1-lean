@@ -13,7 +13,7 @@ import check_examples
 class ExampleTests(unittest.TestCase):
     def report(self):
         return {"revision": "test", "dirty": False,
-                "assembly": "SP1Clean.Soundness.HostFinalMemory.ensemble", "table_count": 90,
+                "assembly": "SP1Clean.Soundness.HostFinalMemory.ensemble", "table_count": 91,
                 "cases": [{"id": name, "actual": value, "expected": value} for name, value in [
                     ("active-add", True), ("missing-ram-validator", False),
                     ("duplicate-ram-validator", False), ("wrong-final-record-clock", False),

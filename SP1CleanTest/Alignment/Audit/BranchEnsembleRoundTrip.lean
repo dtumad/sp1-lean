@@ -21,8 +21,8 @@ def activeSeeds : List Seed := (seeds? target header consumerSeeds).get seeds_pr
 /-- The actual witness on `HostFinalMemory.ensemble`, retaining its complete original registry. -/
 def activeWitness : EnsembleWitness (assembly target) := witness target header activeSeeds
 
-/-- All 90 tables remain installed, including empty instruction and host components. -/
-theorem activeWitness_length : activeWitness.tables.length = 90 := builtTables_length target activeSeeds
+/-- All 91 tables remain installed, including empty instruction and host components. -/
+theorem activeWitness_length : activeWitness.tables.length = 91 := builtTables_length target activeSeeds
 
 /-- Concrete execution of the generic authenticated checker accepts all rows and channels. -/
 theorem active_checked : checkPhysical target header activeSeeds = true := by native_decide

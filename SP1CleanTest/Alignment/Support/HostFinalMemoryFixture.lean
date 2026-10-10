@@ -46,18 +46,17 @@ def rows : List Row :=
     registerCheck 3 11 23 0, ramCheck 0]
 
 def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
-  let registers := FiniteLookup.ofStatic (target.registerTable (p := SP1Prime))
   let memory := FiniteLookup.ofStatic (target.memory.fixedTable (p := SP1Prime) (2 ^ 48))
-  [{ registers with table := { registers.table with name := "sp1.native.target_registers" } },
-    { memory with table := { memory.table with name := "sp1.native.target_memory" } }]
+  [{ memory with table := { memory.table with name := "sp1.native.target_memory" } }]
 
-/-- Retain all 90 physical tables, including every fixed register row, in their declared order. -/
+/-- Retain all 91 physical tables, including every fixed register row, in their declared order. -/
 def builtTables (target : MemorySnapshot) (rows : List Row) : List (Table Fp) :=
   let components := (assembly target).tables
   let inputs := fun index => (rows.filter (fun row => row.1 == index)).map (·.2)
-  let channel := (source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name
-  let ledger := StaticMembership.demandLedger components inputs channel (fun _ _ => #[]) (ProverHint.empty Fp)
-  StaticMembership.buildTables components inputs channel ledger (fun _ _ => #[]) (ProverHint.empty Fp)
+  let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
+    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name]
+  let ledger := StaticMembership.demandLedger components inputs channels (fun _ _ => #[]) (ProverHint.empty Fp)
+  StaticMembership.buildTables components inputs ledger (fun _ _ => #[]) (ProverHint.empty Fp)
 
 /-- Only committed physical rows determine the verifier's data environment. -/
 def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :

@@ -33,7 +33,8 @@ private def exportEnsembleFixture : IO Unit := do
   IO.FS.writeFile (out / "fixed_membership.rs") exported
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
-      SP1CleanTest.Core.SnapshotRegisterExport.rustExports do
+      SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
+      SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports do
     let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
@@ -75,6 +76,29 @@ private def exportEnsembleFixture : IO Unit := do
       pure (physicalReference witness)
   IO.FS.writeFile (out / "snapshot_registers.reference.json")
     ((Json.mkObj [("cases", toJson registerCases), ("empty", empty)]).compress ++ "\n")
+  let targetCases ← SP1CleanTest.Core.SnapshotRegisterExport.Target.cases.mapM
+      fun (name, requests, expected) => do
+    let fields := [("name", toJson name),
+      ("publicInput", toJson ((toElements requests).toArray.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.SnapshotRegisterExport.Target.generate requests with
+    | .error message =>
+      if expected then throw (IO.userError s!"{name}: {message}")
+      pure <| Json.mkObj (fields ++ [("error", toJson message)])
+    | .ok witness =>
+      unless SP1CleanTest.Core.SnapshotRegisterExport.Target.description.checkWitness
+          SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected target-register acceptance: {name}")
+      pure <| Json.mkObj (fields ++ [("witness", physicalReference witness)])
+  let targetEmpty ← match SP1CleanTest.Core.SnapshotRegisterExport.Target.generateEmpty with
+    | .error message => throw (IO.userError message)
+    | .ok witness =>
+      unless SP1CleanTest.Core.SnapshotRegisterExport.Target.emptyDescription.checkWitness
+          SP1Clean.SP1Prime witness do
+        throw (IO.userError "unused target provider failed raw acceptance")
+      pure (physicalReference witness)
+  IO.FS.writeFile (out / "target_registers.reference.json")
+    ((Json.mkObj [("cases", toJson targetCases), ("empty", targetEmpty)]).compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture

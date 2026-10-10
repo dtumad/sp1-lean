@@ -2,7 +2,7 @@ import SP1Clean.Soundness.HostFinalMemoryLedger
 
 /-! # Exact channel transport to the installed target Memory checks
 
-Only the five registered boundary tables and the fixed verifier demand use these private
+Only the six registered boundary tables and the fixed verifier demand use these private
 protocols. The projection retains every occurrence, including disabled selection entries,
 so it transports both integer balance and the original count bounds.
 -/
@@ -22,7 +22,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {channels : List (RawChannel (ZMod p))}
   {names : UniqueNames image source target others resources}
 
-private theorem checkSlot_position (index : Fin 2) :
+private theorem checkSlot_position (index : Fin 3) :
     (checkSlot (image := image) (source := source) (target := target) (final := final)
       (bankFinal := bankFinal) (others := others) (resources := resources) (channels := channels) (names := names) index).index.val =
       (beforeChecks image source others resources).length + index.val := by
@@ -30,12 +30,12 @@ private theorem checkSlot_position (index : Fin 2) :
 
 private theorem physical_length
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
-    witness.tables.length = (beforeChecks image source others resources).length + 2 := by
+    witness.tables.length = (beforeChecks image source others resources).length + 3 := by
   rw [← witness.same_length, tables_eq]
   simp only [List.length_set, List.length_append, FinalMemoryChecks.checkTables,
     List.length_cons, List.length_nil]
 
-/-- The existing final rows and appended checks are exactly the five-table proof view. -/
+/-- The existing final rows and appended checks are exactly the six-table proof view. -/
 theorem boundaryTables_eq
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     boundaryTables witness = (witness.tables.drop 3).take 3 ++
@@ -53,12 +53,13 @@ theorem boundaryTables_eq
       interval_cases index <;> simp only [List.getElem_take, List.getElem_drop]
       all_goals rfl
   have checks : witness.tables.drop (beforeChecks image source others resources).length =
-      [(checkSlot ⟨0, by decide⟩).table witness, (checkSlot ⟨1, by decide⟩).table witness] := by
+      [(checkSlot ⟨0, by decide⟩).table witness, (checkSlot ⟨1, by decide⟩).table witness,
+       (checkSlot ⟨2, by decide⟩).table witness] := by
     apply List.ext_getElem
     · simp only [List.length_drop, List.length_cons, List.length_nil]
       omega
     · intro index left right
-      have bound : index < 2 := by simpa using right
+      have bound : index < 3 := by simpa using right
       interval_cases index <;>
         simp only [List.getElem_drop, List.getElem_cons_zero, List.getElem_cons_succ,
           TableSlot.table, checkSlot_position, Nat.add_zero]
@@ -67,8 +68,8 @@ theorem boundaryTables_eq
 
 private theorem initial_silent
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     (witness.tables.take 3).flatMap (·.interactionsWith witness.data channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
@@ -81,8 +82,8 @@ private theorem initial_silent
 
 private theorem middle_silent
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     ((witness.tables.take (beforeChecks image source others resources).length).drop 6).flatMap
       (·.interactionsWith witness.data channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
@@ -98,11 +99,11 @@ private theorem middle_silent
   · rw [same]
     exact padding_private channel privateChannel
 
-/-- Dropping unrelated physical rows changes none of the three private receipt ledgers. -/
+/-- Dropping unrelated physical rows changes none of the four private ledgers. -/
 theorem boundaryTables_interactions
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     witness.tables.flatMap (·.interactionsWith witness.data channel) =
       (boundaryTables witness).flatMap (·.interactionsWith witness.data channel) := by
   let count := (beforeChecks image source others resources).length
@@ -127,7 +128,7 @@ theorem boundaryTables_interactions
 
 private theorem verifier_values
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (channel : RawChannel (ZMod p)) (privateChannel : channel ∈ privateChannels (p := p)) :
+    (channel : RawChannel (ZMod p)) (privateChannel : channel ∈ privateChannels (p := p) target) :
     witness.verifierInteractionsWith channel =
       if channel = FinalMemoryChange.channel.toRaw then
         (source.sail.memorySnapshot.changes target).map
@@ -153,8 +154,8 @@ private theorem verifier_values
 /-- The boundary view has exactly the full assembly's receipt ledgers, including count bounds. -/
 theorem boundaryWitness_interactions
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) :
+    (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
+    (privateChannel : channel ∈ privateChannels (p := p) target) :
     (boundaryWitness witness).interactionsWith channel = witness.interactionsWith channel := by
   have dataChange : (boundaryTables witness).flatMap
       (·.interactionsWith (boundaryWitness witness).data channel) =
@@ -166,15 +167,15 @@ theorem boundaryWitness_interactions
   rw [dataChange, boundaryTables_interactions witness interface channel privateChannel,
     verifier_values witness channel privateChannel, FinalMemoryChecks.verifier_values]
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-  rcases privateChannel with rfl | rfl | rfl <;>
-    simp [FinalMemoryValue.channel, FinalMemoryChange.channel, OrderedBoundary.channel,
+  rcases privateChannel with rfl | rfl | rfl | rfl <;>
+    simp [FinalMemoryValue.channel, FinalMemoryChange.channel, FinalRegisterValue.membership, StaticTable.channel, OrderedBoundary.channel,
       OrderedFinalProvider.channelName, Channel.toRaw]
 
 /-- Receipt balance transfers independently of Byte and Memory balance in the smaller view. -/
 theorem boundaryWitness_balancedChannel
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (interface : PrivateInterface others resources) (channel : RawChannel (ZMod p))
-    (privateChannel : channel ∈ privateChannels (p := p)) (balanced : witness.BalancedChannel channel) :
+    (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
+    (privateChannel : channel ∈ privateChannels (p := p) target) (balanced : witness.BalancedChannel channel) :
     (boundaryWitness witness).BalancedChannel channel := by
   change BalancedInteractions ((boundaryWitness witness).interactionsWith channel)
   rw [boundaryWitness_interactions witness interface channel privateChannel]

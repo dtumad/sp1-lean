@@ -3,9 +3,9 @@ import SP1Clean.Soundness.FinalMemoryCheckSoundness
 
 /-! # The installed Memory boundary as a physical proof view
 
-The five tables below are selected from the actual host witness. They reuse the existing
+The six tables below are selected from the actual host witness. They reuse the existing
 boundary assembly, contracts and decoder. Byte guarantees are inherited from the enclosing
-ledger. Its canonical data is derived from these five tables; fixed target lookups and Byte
+ledger. Its canonical data is derived from these six tables; fixed target RAM lookups and Byte
 predicates transport separately. This view need not have balanced Byte or Memory channels.
 -/
 
@@ -23,12 +23,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {channels : List (RawChannel (ZMod p))}
   {names : UniqueNames image source target others resources}
 
-/-- The original three final tables and two target consumers, without reconstructed rows. -/
+/-- The original final tables, target consumers and fixed register provider, without reconstructed rows. -/
 def boundaryTables
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :=
   [(finalSlot ⟨0, by decide⟩).table witness, (finalSlot ⟨1, by decide⟩).table witness,
    (finalSlot ⟨2, by decide⟩).table witness,
-   (checkSlot ⟨0, by decide⟩).table witness, (checkSlot ⟨1, by decide⟩).table witness]
+   (checkSlot ⟨0, by decide⟩).table witness, (checkSlot ⟨1, by decide⟩).table witness,
+   (checkSlot ⟨2, by decide⟩).table witness]
 
 /-- Every boundary table is an unchanged physical table of the complete host assembly. -/
 theorem boundaryTables_subset
@@ -36,9 +37,9 @@ theorem boundaryTables_subset
     boundaryTables witness ⊆ witness.tables := by
   intro table member
   simp only [boundaryTables, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl <;> exact TableSlot.table_mem _ witness
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> exact TableSlot.table_mem _ witness
 
-/-- Reuse the boundary assembly with canonical data derived from its five physical tables. -/
+/-- Reuse the boundary assembly with canonical data derived from its six physical tables. -/
 def boundaryWitness
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     EnsembleWitness (FinalMemoryChecks.ensemble (p := p) source.sail.memorySnapshot target [] []
@@ -57,7 +58,7 @@ def finalRecords
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
     (boundaryWitness witness).tables = boundaryTables witness := rfl
 
-/-- Fixed target lookups and row assertions survive selection of the boundary inventory. -/
+/-- Fixed target RAM lookups and row assertions survive selection of the boundary inventory. -/
 theorem boundaryWitness_constraints
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (checked : witness.Constraints) : (boundaryWitness witness).Constraints := by

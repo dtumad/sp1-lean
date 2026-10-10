@@ -7,10 +7,12 @@ import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
 import SP1Clean.Model.SP1Field
 import Clean.Circuit.WitnessExport
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Native target-value checks and complete-record handoff
 
-These run the actual witness programs, assertions, target fixed lookups, and Byte semantics.
+These run the actual witness programs, assertions, fixed register membership, target RAM
+lookups, and Byte semantics.
 Receipt balance includes clocks and all value limbs. The original Memory and ordering ledgers
 remain available to the enclosing machine; this fixture does not claim a complete mixed AIR.
 -/
@@ -41,11 +43,7 @@ private def localConstraints (snapshot : MemorySnapshot) (env : Environment Fp)
     match operation with
     | .assert expression => env expression == 0
     | .lookup lookup =>
-      if arity : lookup.table.arity = size RegisterSnapshotRow then
-        lookup.table.name == "sp1.native.target_registers" && (List.finRange 32).any fun index =>
-          toElements (snapshot.registerRow (p := SP1Prime) (BitVec.ofNat 5 index.val)) ==
-            arity ▸ lookup.entry.map env
-      else if arity : lookup.table.arity = size MemoryIntervalRow then
+      if arity : lookup.table.arity = size MemoryIntervalRow then
         lookup.table.name == "sp1.native.target_memory" && (snapshot.memory.intervals (2 ^ 48)).any fun interval =>
           toElements (interval.encode (p := SP1Prime)) == arity ▸ lookup.entry.map env
       else false
@@ -61,7 +59,10 @@ private def evaluate {Input Output : TypeMap} [ProvableType Input] [ProvableType
   let bytes := interactions.all fun interaction =>
     interaction.channel.name != "SP1Byte" || env interaction.mult == 0 ||
       byteValid (interaction.msg.map env).toList
-  (localConstraints snapshot env operations && bytes,
+  let membership := StaticMembership.check (FinalRegisterValue.membership snapshot)
+    (interactions.map fun interaction =>
+      (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+  (localConstraints snapshot env operations && bytes && membership,
     (interactions.filter fun interaction =>
       interaction.channel.name == "SP1FinalRegisterValue" || interaction.channel.name == "SP1FinalRamValue" ||
         interaction.channel.name == "SP1FinalMemoryChange").map

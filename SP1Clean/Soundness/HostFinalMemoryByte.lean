@@ -45,7 +45,7 @@ theorem targetInterface (target : MemorySnapshot)
   · constructor
     · intro component member env checked
       simp only [FinalMemoryChecks.checkTables, List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl <;> exact not_required _ (by rfl) env checked
+      rcases member with rfl | rfl | rfl <;> exact not_required _ (by rfl) env checked
     · exact checks_silent target stateChannel.toRaw (by rfl)
   · exact checks_silent target HostCallChip.channel.toRaw (by rfl)
   · exact checks_silent target HintReadWordChip.stateChannel.toRaw (by rfl)
