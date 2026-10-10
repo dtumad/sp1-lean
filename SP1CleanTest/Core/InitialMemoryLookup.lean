@@ -11,13 +11,14 @@ fixed-row authentication from address containment: either can fail while the oth
 
 namespace SP1CleanTest.Core.InitialMemoryLookup
 
-open Circuit SP1Clean.Model.Core SP1Clean.InitialMemoryLookup
+open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.InitialMemoryLookup
+open SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Clean.SP1Prime
 
 private def memory : ByteMemory := ⟨[(7, 42), (0, 13), (7, 9), (15, 255)]⟩
 
-/-- info: exportable ✓ (64 witness cells) -/
+/-- info: exportable ✓ (89 witness cells) -/
 #guard_msgs in
 #assert_exportable (circuit (p := SP1Clean.SP1Prime) memory 16 (by norm_num))
 
@@ -34,25 +35,48 @@ def localConstraints (memory : ByteMemory) (limit : ℕ) (env : Environment Fp)
       else false
     | .witness .. | .interact .. => true
 
-private def accepts (input : Inputs Fp) : Bool :=
-  let program := main memory 16 (varFromOffset Inputs 0)
-  let env := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
-  localConstraints memory 16 env (program.operations (size Inputs)).toFlat
+/-- Mutations replace the selected interval and recompute honest comparison columns. This lets
+containment failures remain distinct from forged fixed-row payloads. -/
+private def check (image : ByteMemory) (limit address : ℕ)
+    (replacement : Option MemoryInterval := none) : Bool × Fp :=
+  let input : Word Fp := bitVecToWord (BitVec.ofNat 64 address)
+  let vars : Var Word Fp := varFromOffset Word 0
+  let program := main image limit vars
+  let start := size Word
+  let honest := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
+  let changes : List (ℕ × Fp) := match replacement with
+    | none => []
+    | some interval =>
+      let row : MemoryIntervalRow Fp := interval.encode
+      let lowerStart := start + size MemoryIntervalRow + WordRangeCheck.circuit.localLength vars
+      (toElements row).toList.zipIdx start |>.map Prod.swap |>.append
+        (((toElements (LtOperationUnsigned.populate input row.lower)).toList.zipIdx lowerStart).map Prod.swap) |>.append
+        (((toElements (LtOperationUnsigned.populate input row.upper)).toList.zipIdx
+          (lowerStart + size Circuits.Types.LtOperationUnsigned)).map Prod.swap)
+  let env : Environment Fp := { honest with get := fun i => (changes.lookup i).getD (honest.get i) }
+  (localConstraints image limit env (program.operations start).toFlat, env (program.output start))
 
-/-- Every in-range byte, including default-zero gaps and both endpoints, constructs a valid row. -/
-theorem constructedRows : (List.range 16).all (fun address =>
-    ((populate? memory 16 address : Option (Inputs Fp)).map accepts).getD false) = true := by
+/-- Every bounded input constructs a valid row and returns the expected sparse-memory byte. -/
+theorem constructedRows :
+    (List.range 16).map (fun address =>
+      let result := check memory 16 address
+      (result.1, result.2.val)) =
+    [(true, 13), (true, 0), (true, 0), (true, 0), (true, 0), (true, 0), (true, 0), (true, 42),
+     (true, 0), (true, 0), (true, 0), (true, 0), (true, 0), (true, 0), (true, 0), (true, 255)] := by
   native_decide
 
 /-- A forged byte, a genuine but non-containing interval, and its exclusive upper endpoint fail. -/
 theorem rejectsForgedRows :
-    [accepts (populate 7 ⟨7, 8, 99⟩), accepts (populate 6 ⟨7, 8, 42⟩),
-      accepts (populate 8 ⟨7, 8, 42⟩)] = [false, false, false] := by
+    [(check memory 16 7 (some ⟨7, 8, 99⟩)).1,
+      (check memory 16 6 (some ⟨7, 8, 42⟩)).1,
+      (check memory 16 8 (some ⟨7, 8, 42⟩)).1] = [false, false, false] := by
   native_decide
 
-example : (populate? (p := SP1Clean.SP1Prime) memory 16 16).isSome = false := by native_decide
+example : (check memory 16 16).1 = false := by native_decide
 
-example : ((populate? (p := SP1Clean.SP1Prime) memory (2 ^ 48) (2 ^ 48 - 1)).map
-    (fun input => input.interval.value.val)) = some 0 := by native_decide
+example : (check memory (2 ^ 48) (2 ^ 48 - 1)).1 = true ∧
+    (check memory (2 ^ 48) (2 ^ 48 - 1)).2 = 0 := by native_decide
+
+example : (check memory (2 ^ 48) (2 ^ 48)).1 = false := by native_decide
 
 end SP1CleanTest.Core.InitialMemoryLookup
