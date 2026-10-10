@@ -103,69 +103,43 @@ end MSB
 
 namespace AndByte
 
-/-- The `AND` provider has computable witnesses: two bit decompositions plus the `And8` gadget's
-own witnessed result cell. -/
+/-- The `AND` provider composes the bitwise gadget's input-local witnesses. -/
 theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  exact ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.b h),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.c h),
-    FlatOperation.forAll_witnessCongr_of_formalSubcircuit _ _ (by omega)
-      Gadgets.And.And8.computableWitnesses (fun _ h => by
-        have hb : Expression.eval env.toEnvironment input.b
-            = Expression.eval env'.toEnvironment input.b := by
-          simpa [circuit_norm] using congrArg Inputs.b h
-        have hc : Expression.eval env.toEnvironment input.c
-            = Expression.eval env'.toEnvironment input.c := by
-          simpa [circuit_norm] using congrArg Inputs.c h
-        simp [circuit_norm, hb, hc])⟩
+  exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
+    (Gadgets.BitwiseByte.computableWitnesses .and two_pow_eight_lt) (fun h => by
+      have hb := Inputs.eval_congr_b h
+      have hc := Inputs.eval_congr_c h
+      simp only [circuit_norm, hb, hc])
 
 end AndByte
 
 namespace OrByte
 
-/-- The `OR` provider has computable witnesses — the `AND` argument verbatim, at `Or8`. -/
+/-- The `OR` provider composes the bitwise gadget's input-local witnesses. -/
 theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  exact ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.b h),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.c h),
-    FlatOperation.forAll_witnessCongr_of_formalSubcircuit _ _ (by omega)
-      Gadgets.Or.Or8.computableWitnesses (fun _ h => by
-        have hb : Expression.eval env.toEnvironment input.b
-            = Expression.eval env'.toEnvironment input.b := by
-          simpa [circuit_norm] using congrArg Inputs.b h
-        have hc : Expression.eval env.toEnvironment input.c
-            = Expression.eval env'.toEnvironment input.c := by
-          simpa [circuit_norm] using congrArg Inputs.c h
-        simp [circuit_norm, hb, hc])⟩
+  exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
+    (Gadgets.BitwiseByte.computableWitnesses .or two_pow_eight_lt) (fun h => by
+      have hb := Inputs.eval_congr_b h
+      have hc := Inputs.eval_congr_c h
+      simp only [circuit_norm, hb, hc])
 
 end OrByte
 
 namespace XorByte
 
-/-- The `XOR` provider has computable witnesses: two bit decompositions, then the result cell
-computed from the two operands (its correctness carried by a static lookup, which declares no
-cells). -/
+/-- The `XOR` provider composes the bitwise gadget's input-local witnesses. -/
 theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  refine ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.b h),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.c h),
-    fun _ h => ?_⟩
-  rw [Inputs.eval_congr_b h, Inputs.eval_congr_c h]
+  exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
+    (Gadgets.BitwiseByte.computableWitnesses .xor two_pow_eight_lt) (fun h => by
+      have hb := Inputs.eval_congr_b h
+      have hc := Inputs.eval_congr_c h
+      simp only [circuit_norm, hb, hc])
 
 end XorByte
 

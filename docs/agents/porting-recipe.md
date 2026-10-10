@@ -1,7 +1,7 @@
 # Porting recipe — adding a new chip
 
 A checklist for porting one SP1 instruction/operation into the four-artifact chain. The two complete templates
-are **Add** (carry arithmetic) and **Bitwise** (byte-level via `ByteXorTable`); clone whichever is closer.
+are **Add** (carry arithmetic) and **Bitwise** (typed byte-channel interactions); clone whichever is closer.
 Read `../architecture.md` first for what each artifact is, and `proof-patterns.md` for the proof skeleton.
 
 ## Reference sources (read-only)
@@ -27,10 +27,9 @@ future chip. Keep these files axiom-clean.
 - Namespace `SP1Clean.<Op>Operation`. Variable block `{p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]`.
 - `main`: witness the result limbs/bytes; impose byte/range checks as **`byteChannel` pulls**
   (`byteChannel.pullIf input.is_real ⟨opcode, is_real * value, width, 0⟩`, `Model/Channels.lean`)
-  — the single shared byte foundation, faithful to SP1's `send_byte`. The legacy local-column
-  `Gadgets.ToBits.rangeCheck` / `ByteXorTable` + opcode-selected Lagrange pattern is **superseded** (kept
-  only in `BitwiseU16Operation`, which can't compose the byte-level op — FormalCircuit duality). See
-  `proof-patterns.md` for the pull recipe and the sub-gadget composition rule below.
+  — the single shared byte foundation, faithful to SP1's `send_byte`. The byte providers discharge those requests with polynomial bit decomposition;
+  `ToClean/Gadgets/BitwiseByte.lean` supplies the bundled lookup-free bitwise gadget.
+  Do not reintroduce legacy static lookups in an exportable component.
 - `RawSpec` (carry-bool/range or per-byte form), the `*_of_<raw>` / `<raw>_of_*` cores, the semantic `Spec`,
   `soundness`, `completeness`, and `circuit : FormalCircuit`.
 - Verify: `#print axioms <Op>Operation.circuit` is clean.

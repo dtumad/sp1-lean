@@ -6,7 +6,7 @@ python3 scripts/check_pins.py
 mkdir -p .lake/ensemble-export
 scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
-  SP1CleanTest.Core.InstructionExport \
+  SP1CleanTest.Core.InstructionExport SP1CleanTest.Core.ByteProviderExport \
   2>&1 | tee "$scratch/build.log"
 python3 - "$scratch" <<'PY'
 import hashlib
@@ -37,7 +37,7 @@ command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP
 files = ["fixed_membership.rs", "fixed_membership.reference.json"] + [
     re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "_instruction.rs"
     for _, name, _ in CHIPS
-]
+] + [name + "_byte_provider.rs" for name in ["and", "or", "xor", "u8_range", "ltu", "msb"]]
 for directory in [out, out / "repeat"]:
     directory.mkdir(exist_ok=True)
     result = subprocess.run(command, env=dict(os.environ, ENSEMBLE_EXPORT_OUT=str(directory)),
@@ -59,21 +59,21 @@ PY
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export --test clean_export \
-    --test instruction_export 2>&1 | tee "$scratch/rust.log"
+    --test instruction_export --test byte_provider_export 2>&1 | tee "$scratch/rust.log"
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export,mprotect \
-    --test instruction_export 2>&1 | tee "$scratch/rust-mprotect.log"
+    --test instruction_export --test byte_provider_export 2>&1 | tee "$scratch/rust-mprotect.log"
 python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
+import re
 import sys
 assert len(sys.argv) == 3
-# Each instruction test reuses one trace for witness, mutation and open-bus checks.
-for path, counts in zip(sys.argv[1:], [[3, 25], [25]]):
+# Require every binary's exact success count, including both three-test suites.
+for path, counts in zip(sys.argv[1:], [[3, 3, 25], [3, 25]]):
     log = Path(path).read_text()
-    if (log.count("test result: ok.") != len(counts)
-            or any(log.count(f"test result: ok. {count} passed; 0 failed;") != 1
-                   for count in counts) or "warning:" in log):
+    actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
+    if sorted(actual) != counts or "warning:" in log:
         raise SystemExit(f"Rust export comparison did not complete cleanly: {path}")
 PY
-echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 instruction comparisons"
+echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 instruction and byte-provider comparisons"

@@ -28,6 +28,11 @@ interpreter or scheduler.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
   mprotect semantics remain outside their scope. Exact cases and counts live in the
   [coverage table](../rust/sp1-comparison/README.md).
+- All six native byte providers export without legacy lookups. AND/OR/XOR share a bundled
+  bit-decomposition gadget in `ToClean`; the other providers use the same upstream bit primitives.
+  Rust compares all byte pairs and four field multiplicities against SP1's actual preprocessed
+  table and AIR, retaining every message occurrence. Native polynomial membership and SP1's
+  authenticated preprocessing have different row layouts.
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
   migration evidence while provider coverage and live consumers move to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,
@@ -70,9 +75,10 @@ not in the library source. Additive gaps belong in ToClean; canonical upstream r
 changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixture establishes the backend boundary. The instruction comparison keeps
-external buses open and checks that each instruction alone cannot claim balanced execution. The complete native
-inventory still contains legacy lookups, which built-in lowering rejects. Migrate those providers
-and all instruction consumers before retiring chip JSON comparison. Rust tests do not establish
+external buses open and checks that each instruction alone cannot claim balanced execution. The native instruction/provider subset is lookup-free. The complete installed memory/host
+inventory still contains legacy snapshot, program, permission and source-table lookups, which
+built-in lowering rejects. Migrate those tables and all live consumers before retiring chip JSON
+comparison. Rust tests do not establish
 cryptographic security or a formal lowering theorem.
 
 The reviewed upgrade target is [SP1 v6.8.1](https://github.com/succinctlabs/sp1/releases/tag/v6.8.1).

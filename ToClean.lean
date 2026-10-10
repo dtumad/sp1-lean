@@ -19,6 +19,7 @@ public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.LookupProjection
 public import ToClean.Gadgets.ComputableWitnesses
+public import ToClean.Gadgets.BitwiseByte
 public import ToClean.Air.ChannelRegistry
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension

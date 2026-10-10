@@ -1,6 +1,6 @@
 import SP1Clean.Faithful.CoreAIR
 import SP1Clean.Composition.Table
-import SP1Clean.Proofs.Completeness.Providers
+import SP1Clean.Proofs.Completeness.ProviderInteractions
 
 /-! # Exact preprocessing to native Byte/Range/Program providers
 
@@ -1304,86 +1304,6 @@ private theorem program_interactionsWith_program
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
     circuit_norm]
 
-private theorem and8_interactionsWith
-    (channel : RawChannel (ZMod p)) (offset : ℕ)
-    (input : Var Gadgets.And.And8.Inputs (ZMod p)) (ops : Operations (ZMod p)) :
-    Operations.interactionsWith channel
-        (.subcircuit (Gadgets.And.And8.circuit.toSubcircuit offset input) :: ops) =
-      Operations.interactionsWith channel ops := by
-  apply InteractionRecovery.interactionsWith_formalSubcircuit_eq_nil
-  · change channel ∉ ([] : List (RawChannel (ZMod p)))
-    exact List.not_mem_nil
-  · change channel ∉ ([] : List (RawChannel (ZMod p)))
-    exact List.not_mem_nil
-
-private theorem or8_interactionsWith
-    (channel : RawChannel (ZMod p)) (offset : ℕ)
-    (input : Var Gadgets.Or.Or8.Inputs (ZMod p)) (ops : Operations (ZMod p)) :
-    Operations.interactionsWith channel
-        (.subcircuit (Gadgets.Or.Or8.circuit.toSubcircuit offset input) :: ops) =
-      Operations.interactionsWith channel ops := by
-  apply InteractionRecovery.interactionsWith_formalSubcircuit_eq_nil
-  · change channel ∉ ([] : List (RawChannel (ZMod p)))
-    exact List.not_mem_nil
-  · change channel ∉ ([] : List (RawChannel (ZMod p)))
-    exact List.not_mem_nil
-
-private theorem and_interactionsWith_byte
-    (input : Var ByteChip.AndByte.Inputs (ZMod p)) (offset : ℕ) :
-    Operations.interactionsWith Channels.byteChannel.toRaw
-      ((ByteChip.AndByte.main input).operations offset) =
-      [(pushedIf (channel := Channels.byteChannel) input.multiplicity
-        (⟨0,
-          Gadgets.And.And8.circuit.output { x := input.b, y := input.c }
-            (offset +
-              (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.b +
-              (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.c),
-          input.b, input.c⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
-  simp only [ByteChip.AndByte.main, Circuit.operations, Circuit.bind_def,
-    subcircuit, assertion, Operations.localLength]
-  simp only [Operations.interactionsWith_append, rangeCheck8_interactionsWith,
-    and8_interactionsWith]
-  simp only [Channel.pushIf, Operations.interactionsWith_interact,
-    Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    circuit_norm, Nat.add_zero]
-
-private theorem or_interactionsWith_byte
-    (input : Var ByteChip.OrByte.Inputs (ZMod p)) (offset : ℕ) :
-    Operations.interactionsWith Channels.byteChannel.toRaw
-      ((ByteChip.OrByte.main input).operations offset) =
-      [(pushedIf (channel := Channels.byteChannel) input.multiplicity
-        (⟨1,
-          Gadgets.Or.Or8.circuit.output { x := input.b, y := input.c }
-            (offset +
-              (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.b +
-              (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.c),
-          input.b, input.c⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
-  simp only [ByteChip.OrByte.main, Circuit.operations, Circuit.bind_def,
-    subcircuit, assertion, Operations.localLength]
-  simp only [Operations.interactionsWith_append, rangeCheck8_interactionsWith,
-    or8_interactionsWith]
-  simp only [Channel.pushIf, Operations.interactionsWith_interact,
-    Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    circuit_norm, Nat.add_zero]
-
-private theorem xor_interactionsWith_byte
-    (input : Var ByteChip.XorByte.Inputs (ZMod p)) (offset : ℕ) :
-    Operations.interactionsWith Channels.byteChannel.toRaw
-      ((ByteChip.XorByte.main input).operations offset) =
-      [(pushedIf (channel := Channels.byteChannel) input.multiplicity
-        (⟨2,
-          var ⟨offset +
-            (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.b +
-            (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.c⟩,
-          input.b, input.c⟩ : ByteRow (Expression (ZMod p)))).toRaw] := by
-  simp only [ByteChip.XorByte.main, Circuit.operations, Circuit.bind_def,
-    witnessField, lookup, assertion, Operations.localLength]
-  simp only [Operations.interactionsWith_append, rangeCheck8_interactionsWith,
-    Operations.interactionsWith_witness, Operations.interactionsWith_lookup]
-  simp only [Channel.pushIf, Operations.interactionsWith_interact,
-    Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel, List.nil_append,
-    circuit_norm, Nat.add_zero]
-
 private theorem ltu_interactionsWith_byte
     (input : Var ByteChip.Ltu.Inputs (ZMod p)) (offset : ℕ) :
     Operations.interactionsWith Channels.byteChannel.toRaw
@@ -1558,49 +1478,6 @@ private theorem msbInput_get_one (input : ByteChip.MSB.Inputs (ZMod p)) :
   simp only [components, ProvableStruct.componentsToElements]
   rfl
 
-private theorem and_main_output_eq
-    (input : Var ByteChip.AndByte.Inputs (ZMod p)) (offset : ℕ) :
-    (ByteChip.AndByte.main input).output offset =
-      Gadgets.And.And8.circuit.output { x := input.b, y := input.c }
-        (offset +
-          (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.b +
-          (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.c) := by
-  rfl
-
-private theorem and_buildRow_result_val
-    (input : ByteChip.AndByte.Inputs (ZMod p))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
-    let inputVar : Var ByteChip.AndByte.Inputs (ZMod p) :=
-      varFromOffset ByteChip.AndByte.Inputs 0
-    let result := Gadgets.And.And8.circuit.output
-      { x := inputVar.b, y := inputVar.c }
-      (size ByteChip.AndByte.Inputs +
-        (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength inputVar.b +
-        (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength inputVar.c)
-    (Expression.eval
-      (Environment.fromArray (component.buildRow input data hint) data) result).val =
-      input.b.val &&& input.c.val := by
-  dsimp only
-  let component := ({ circuit := ByteChip.AndByte.circuit } : Component (ZMod p))
-  let env := Environment.fromArray (component.buildRow input data hint) data
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.AndByte.computableWitnesses bounds (by trivial)).1
-  have hinput : component.rowInput env = input := by
-    exact component.rowInput_buildRow input data data hint
-  simp only [Air.Flat.Component.Spec] at hspec
-  rw [hinput] at hspec
-  have hresult : (Expression.eval env
-      ((ByteChip.AndByte.circuit (p := p)).output
-        (varFromOffset ByteChip.AndByte.Inputs 0) (size ByteChip.AndByte.Inputs))).val =
-      input.b.val &&& input.c.val := by
-    simpa only [component, Air.Flat.Component.rowOutput, circuit_norm] using hspec.2
-  rw [← and_main_output_eq]
-  rw [← show (ByteChip.AndByte.circuit (p := p)).main = ByteChip.AndByte.main from rfl]
-  rw [(ByteChip.AndByte.circuit (p := p)).elaborated.output_eq]
-  exact hresult
-
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem andInput_get_zero (input : ByteChip.AndByte.Inputs (ZMod p)) :
     (toElements input)[0] = input.b := by
@@ -1625,49 +1502,6 @@ private theorem andInput_get_two (input : ByteChip.AndByte.Inputs (ZMod p)) :
   simp only [components, ProvableStruct.componentsToElements]
   rfl
 
-private theorem or_main_output_eq
-    (input : Var ByteChip.OrByte.Inputs (ZMod p)) (offset : ℕ) :
-    (ByteChip.OrByte.main input).output offset =
-      Gadgets.Or.Or8.circuit.output { x := input.b, y := input.c }
-        (offset +
-          (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.b +
-          (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.c) := by
-  rfl
-
-private theorem or_buildRow_result_val
-    (input : ByteChip.OrByte.Inputs (ZMod p))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
-    let inputVar : Var ByteChip.OrByte.Inputs (ZMod p) :=
-      varFromOffset ByteChip.OrByte.Inputs 0
-    let result := Gadgets.Or.Or8.circuit.output
-      { x := inputVar.b, y := inputVar.c }
-      (size ByteChip.OrByte.Inputs +
-        (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength inputVar.b +
-        (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength inputVar.c)
-    (Expression.eval
-      (Environment.fromArray (component.buildRow input data hint) data) result).val =
-      input.b.val ||| input.c.val := by
-  dsimp only
-  let component := ({ circuit := ByteChip.OrByte.circuit } : Component (ZMod p))
-  let env := Environment.fromArray (component.buildRow input data hint) data
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.OrByte.computableWitnesses bounds (by trivial)).1
-  have hinput : component.rowInput env = input := by
-    exact component.rowInput_buildRow input data data hint
-  simp only [Air.Flat.Component.Spec] at hspec
-  rw [hinput] at hspec
-  have hresult : (Expression.eval env
-      ((ByteChip.OrByte.circuit (p := p)).output
-        (varFromOffset ByteChip.OrByte.Inputs 0) (size ByteChip.OrByte.Inputs))).val =
-      input.b.val ||| input.c.val := by
-    simpa only [component, Air.Flat.Component.rowOutput, circuit_norm] using hspec.2
-  rw [← or_main_output_eq]
-  rw [← show (ByteChip.OrByte.circuit (p := p)).main = ByteChip.OrByte.main from rfl]
-  rw [(ByteChip.OrByte.circuit (p := p)).elaborated.output_eq]
-  exact hresult
-
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem orInput_get_zero (input : ByteChip.OrByte.Inputs (ZMod p)) :
     (toElements input)[0] = input.b := by
@@ -1691,46 +1525,6 @@ private theorem orInput_get_two (input : ByteChip.OrByte.Inputs (ZMod p)) :
   simp only [toElements, ProvableStruct.structToElements_eq, ProvableStruct.toComponents]
   simp only [components, ProvableStruct.componentsToElements]
   rfl
-
-private theorem xor_main_output_eq
-    (input : Var ByteChip.XorByte.Inputs (ZMod p)) (offset : ℕ) :
-    (ByteChip.XorByte.main input).output offset =
-      var ⟨offset +
-        (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.b +
-        (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength input.c⟩ := by
-  rfl
-
-private theorem xor_buildRow_result_val
-    (input : ByteChip.XorByte.Inputs (ZMod p))
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (bounds : input.b.val < 2 ^ 8 ∧ input.c.val < 2 ^ 8) :
-    let component := ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
-    let inputVar : Var ByteChip.XorByte.Inputs (ZMod p) :=
-      varFromOffset ByteChip.XorByte.Inputs 0
-    let result : Expression (ZMod p) := var ⟨size ByteChip.XorByte.Inputs +
-      (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength inputVar.b +
-      (Gadgets.ToBits.rangeCheck 8 ByteChip.two_pow_eight_lt).localLength inputVar.c⟩
-    (Expression.eval
-      (Environment.fromArray (component.buildRow input data hint) data) result).val =
-      input.b.val ^^^ input.c.val := by
-  dsimp only
-  let component := ({ circuit := ByteChip.XorByte.circuit } : Component (ZMod p))
-  let env := Environment.fromArray (component.buildRow input data hint) data
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.XorByte.computableWitnesses bounds (by trivial)).1
-  have hinput : component.rowInput env = input := by
-    exact component.rowInput_buildRow input data data hint
-  simp only [Air.Flat.Component.Spec] at hspec
-  rw [hinput] at hspec
-  have hresult : (Expression.eval env
-      ((ByteChip.XorByte.circuit (p := p)).output
-        (varFromOffset ByteChip.XorByte.Inputs 0) (size ByteChip.XorByte.Inputs))).val =
-      input.b.val ^^^ input.c.val := by
-    simpa only [component, Air.Flat.Component.rowOutput, circuit_norm] using hspec.2
-  rw [← xor_main_output_eq]
-  rw [← show (ByteChip.XorByte.circuit (p := p)).main = ByteChip.XorByte.main from rfl]
-  rw [(ByteChip.XorByte.circuit (p := p)).elaborated.output_eq]
-  exact hresult
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem xorInput_get_zero (input : ByteChip.XorByte.Inputs (ZMod p)) :
@@ -1906,9 +1700,9 @@ private theorem andRow_nativeAccesses
   rw [nativeAccesses_byteOnly ByteChip.AndByte.circuit only]
   rw [Air.Flat.Component.rowOperations_mk]
   rw [show (ByteChip.AndByte.circuit (p := p)).main = ByteChip.AndByte.main from rfl]
-  rw [and_interactionsWith_byte]
+  rw [Soundness.and_interactionsWith_byte]
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
-  rw [and_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
+  rw [Soundness.and_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.AndByte.Inputs 0 :
         ByteChip.AndByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
@@ -1956,9 +1750,9 @@ private theorem orRow_nativeAccesses
   rw [nativeAccesses_byteOnly ByteChip.OrByte.circuit only]
   rw [Air.Flat.Component.rowOperations_mk]
   rw [show (ByteChip.OrByte.circuit (p := p)).main = ByteChip.OrByte.main from rfl]
-  rw [or_interactionsWith_byte]
+  rw [Soundness.or_interactionsWith_byte]
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
-  rw [or_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
+  rw [Soundness.or_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.OrByte.Inputs 0 :
         ByteChip.OrByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by
@@ -2006,9 +1800,9 @@ private theorem xorRow_nativeAccesses
   rw [nativeAccesses_byteOnly ByteChip.XorByte.circuit only]
   rw [Air.Flat.Component.rowOperations_mk]
   rw [show (ByteChip.XorByte.circuit (p := p)).main = ByteChip.XorByte.main from rfl]
-  rw [xor_interactionsWith_byte]
+  rw [Soundness.xor_interactionsWith_byte]
   simp only [List.map_cons, List.map_nil, toAccess_pushIf_byte]
-  rw [xor_buildRow_result_val _ _ _ (contract.byteOperandBounds hrow)]
+  rw [Soundness.xor_buildRow_result _ _ _ (contract.byteOperandBounds hrow)]
   have hbVar :
       (varFromOffset ByteChip.XorByte.Inputs 0 :
         ByteChip.XorByte.Inputs (Expression (ZMod p))).b = var ⟨0⟩ := by

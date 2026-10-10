@@ -8,24 +8,13 @@ namespace SP1Clean.Audit.BranchEnsemble
 
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
 
-/-- ByteXor's original static enumeration, also used internally by AND and OR providers. -/
-def xorFixed : FiniteLookup Fp where
-  table := (Gadgets.Xor.ByteXorTable (p := SP1Prime)).toRaw
-  rows := List.ofFn fun (index : Fin (256 * 256)) =>
-    let pair := ByteUtils.splitTwoBytes index
-    toElements ((ByteUtils.fromByte pair.1, ByteUtils.fromByte pair.2,
-      ByteUtils.fromByte (pair.1 ^^^ pair.2)) : fieldTriple Fp)
-  realizes := by
-    intro data row
-    exact staticTable_realizes _ data row
-
 /-- Full finite lookup meanings, including installed tables with no physical rows in this fixture. -/
 def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
   let registers := FiniteLookup.ofStatic (target.registerTable (p := SP1Prime))
   let memory := FiniteLookup.ofStatic (target.memory.fixedTable (p := SP1Prime) (2 ^ 48))
   [FiniteLookup.ofStatic (source.sail.memorySnapshot.registerTable (p := SP1Prime)),
     FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
-    FiniteLookup.ofStatic (image.programTable (p := SP1Prime)), xorFixed,
+    FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
     FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime)),
     FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
     FiniteLookup.ofStatic (HintQueue.sourceTable (p := SP1Prime) []),
@@ -35,8 +24,8 @@ def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
 
 
 /-- Static lookup indices for every installed component, including all currently empty providers. -/
-def componentLookupIndices : List (List (Fin 10)) :=
-  [[0], [1, 1, 1, 1, 1, 1, 1, 1], [], [], [], [], [2], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [3], [3], [3], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [4], [5], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [6], [7], [], [], [8], [9, 9, 9, 9, 9, 9, 9, 9]]
+def componentLookupIndices : List (List (Fin 9)) :=
+  [[0], [1, 1, 1, 1, 1, 1, 1, 1], [], [], [], [], [2], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [3], [4], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [5], [6], [], [], [7], [8, 8, 8, 8, 8, 8, 8, 8]]
 
 /-- Component selection ranges over all 89 installed physical slots. -/
 abbrev componentAt (target : MemorySnapshot) (index : Fin 89) : Component Fp :=
@@ -45,11 +34,10 @@ abbrev componentAt (target : MemorySnapshot) (index : Fin 89) : Component Fp :=
 /-- The lookup rows promised for one installed component. -/
 def fixedFor (target : MemorySnapshot) (index : Fin 89) : List (RawTable Fp) :=
   (componentLookupIndices[index.val]'(by change index.val < 89; exact index.isLt)).map fun table =>
-    ((fixed target)[table.val]'(by change table.val < 10; exact table.isLt)).table
+    ((fixed target)[table.val]'(by change table.val < 9; exact table.isLt)).table
 
 attribute [local circuit_norm]
-  Gadgets.And.And8.circuit
-  Gadgets.And.And8.main
+  Gadgets.BitwiseByte.circuit
   Gadgets.Conditional.circuit
   Gadgets.Conditional.main
   Gadgets.Equality.circuit
@@ -59,8 +47,6 @@ attribute [local circuit_norm]
   Gadgets.IsZero.circuit
   Gadgets.IsZero.main
   Gadgets.IsZeroField.circuit
-  Gadgets.Or.Or8.circuit
-  Gadgets.Or.Or8.main
   SP1Clean.AddChip.circuit
   SP1Clean.AddChip.main
   SP1Clean.AddOperation.circuit
@@ -324,7 +310,7 @@ attribute [local circuit_norm] List.append_eq Component.rowOperations
   GeneralFormalCircuit.WithHint.toSubcircuit_lookups FormalCircuit.toSubcircuit_lookups
   Operations.lookups_toFlat Operations.lookups Operations.toNested_toFlat FlatOperation.lookups
   Gadgets.ToBits.rangeCheck Gadgets.ToBits.toBits
-  fixedFor componentLookupIndices fixed xorFixed FiniteLookup.ofStatic
+  fixedFor componentLookupIndices fixed FiniteLookup.ofStatic
   InitialMemoryLookup.circuitNamed InitialMemoryRead.circuitNamed
   OrderedFinalProvider.registerCircuit OrderedFinalProvider.ramCircuit
 
@@ -963,7 +949,7 @@ theorem lookup_slot (target : MemorySnapshot) (index : Fin 89) :
 theorem component_lookups (target : MemorySnapshot) :
     (assembly target).tables.map (fun component => component.rowOperations.lookups.map (·.table)) =
       componentLookupIndices.map (fun indices => indices.map fun index =>
-        ((fixed target)[index.val]'(by change index.val < 10; exact index.isLt)).table) := by
+        ((fixed target)[index.val]'(by change index.val < 9; exact index.isLt)).table) := by
   apply List.ext_getElem
   · simp only [List.length_map]
     rfl
