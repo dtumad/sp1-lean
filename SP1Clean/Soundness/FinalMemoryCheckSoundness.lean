@@ -51,7 +51,7 @@ theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble sou
     (interface : Interface target auxiliary) (checked : witness.Constraints)
     (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
     (balanced : witness.BalancedChannel (FinalMemoryValue.channel true).toRaw) :
-    ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.value.record := by
+    ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.record := by
   have bytes : (FinalMemoryReceipts.ramTable (receiptWitness witness)).ChannelGuarantees witness.data byteChannel.toRaw := by
     rw [ramFinalTable_eq]
     exact ramFinalSlot.table_channelGuarantees witness byteChannel.toRaw
@@ -60,7 +60,7 @@ theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble sou
     (receiptWitness_constraints witness checked) bytes
   intro input present
   exact finalized _ ((ram_receipts_perm_of_balancedChannel witness interface balanced).mem_iff.mp
-    (List.mem_map_of_mem (f := fun input : FinalRamCheck.Inputs (ZMod p) => input.value.record) present))
+    (List.mem_map_of_mem (f := fun input : FinalRamCheck.Inputs (ZMod p) => input.record) present))
 
 /-- Target comparison uses Byte guarantees, fixed target membership and complete receipt balances.
 All facts concern the original physical rows; the enclosing assembly proves them from acceptance. -/
@@ -99,7 +99,7 @@ theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source targe
 /-- The full accepted assembly derives RAM address provenance from its actual finalizer. -/
 theorem ramInputs_finalSpec (witness : EnsembleWitness (ensemble source target auxiliary channels names))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
-    ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.value.record :=
+    ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.record :=
   ramInputs_finalSpec_of_channels witness interface checked (byte_guarantees witness interface checked balanced)
     (balanced _ (by simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
       FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent]))

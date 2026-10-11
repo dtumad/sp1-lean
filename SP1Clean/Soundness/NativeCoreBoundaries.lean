@@ -32,7 +32,7 @@ private theorem initialView_spec (image : ProgramImage)
     · change [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
       simp
-    · change (List.replicate 42 byteChannel.toRaw ++
+    · change (List.replicate 38 byteChannel.toRaw ++
         [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
         List.replicate 4 byteChannel.toRaw) ⊆ _
       simp

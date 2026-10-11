@@ -46,14 +46,14 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
 private def word (address : ℕ) : Word Fp := bitVecToWord (BitVec.ofNat 64 address)
 
 private def ramInput (previous address current : ℕ) :
-    OrderedInitialProvider.Inputs InitialRamProvider.Inputs Fp :=
-  ⟨InitialMemoryRead.populate image.initialMemory address,
+    OrderedInitialProvider.Inputs Word Fp :=
+  ⟨word address,
     OrderedBoundary.populate (word previous) (word current)⟩
 
 private def registerInput (previous index current : ℕ) : OrderedInitialProvider.Inputs field Fp :=
   ⟨index, OrderedBoundary.populate (word previous) (word current)⟩
 
-/-- info: exportable ✓ (644 witness cells) -/
+/-- info: exportable ✓ (872 witness cells) -/
 #guard_msgs in
 #assert_exportable (OrderedInitialProvider.ramCircuit (p := SP1Prime) image)
 
@@ -63,7 +63,7 @@ private def registerInput (previous index current : ℕ) : OrderedInitialProvide
 
 /-- Valid ordered RAM rows cross limb boundaries and reach the last aligned guest cell. -/
 theorem constructedRamRows : [65536, 131064, 131072, 2 ^ 48 - 8].all (fun address =>
-    ((OrderedInitialProvider.populateRam? image 32 address).map fun input =>
+    ((OrderedSnapshotProvider.populateRam? 32 address).map fun input =>
       let result := evaluate (OrderedInitialProvider.ramCircuit image).main input
       result.1 && (result.2 ==
         ([(0 : Fp), 0, (word address)[0], (word address)[1], (word address)[2]] ++

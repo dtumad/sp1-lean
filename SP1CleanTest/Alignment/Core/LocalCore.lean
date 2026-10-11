@@ -578,7 +578,7 @@ private def storeRomRows : List Row :=
       previous index)).toList)
   [sourceRow 0 1, sourceRow 2 2,
     (1, (toElements (OrderedSnapshotProvider.populate
-      (InitialMemoryRead.populate (p := SP1Prime) storeRomSource.sail.memory 65536) 3 65536)).toList),
+      (word 65536) 3 65536)).toList),
     terminal 2 65537,
     (3, finalRecord 0 1 13 0), (3, finalRecord 2 2 12 65536),
     (4, finalRecord 3 65536 10 0x00110000), terminal 5 65537,
@@ -613,7 +613,7 @@ private def sameValueRomRows : List Row :=
       previous index)).toList)
   [sourceRow 0 1, sourceRow 2 2,
     (1, (toElements (OrderedSnapshotProvider.populate
-      (InitialMemoryRead.populate (p := SP1Prime) sameValueRomSource.sail.memory 65536) 3 65536)).toList),
+      (word 65536) 3 65536)).toList),
     terminal 2 65537,
     (3, finalRecord 0 1 13 0x23), (3, finalRecord 2 2 12 65536),
     (4, finalRecord 3 65536 10 0x00110023), terminal 5 65537,
@@ -649,7 +649,7 @@ private def besideRomRows : List Row :=
       previous index)).toList)
   [sourceRow 0 1, sourceRow 2 2,
     (1, (toElements (OrderedSnapshotProvider.populate
-      (InitialMemoryRead.populate (p := SP1Prime) besideRomSource.sail.memory 65536) 3 65536)).toList),
+      (word 65536) 3 65536)).toList),
     terminal 2 65537,
     (3, finalRecord 0 1 13 127), (3, finalRecord 2 2 12 65540),
     (4, finalRecord 3 65536 10 0x7f00110023), terminal 5 65537,

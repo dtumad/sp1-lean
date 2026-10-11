@@ -18,11 +18,9 @@ open SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-abbrev Inputs := InitialMemoryRead.Inputs
-
 /-- The address gadget checks an aligned read without an immediate offset. -/
-def addressInput {R : Type} [Zero R] [One R] (input : Inputs R) : AddressOperation.Inputs R :=
-  ⟨input.bytes[0].address, #v[0, 0, 0, 0], 0, 0, 0, 1⟩
+def addressInput {R : Type} [Zero R] [One R] (input : Word R) : AddressOperation.Inputs R :=
+  ⟨input, #v[0, 0, 0, 0], 0, 0, 0, 1⟩
 
 /-- The actual message emitted by the provider; the address is the checked gadget's output. -/
 def message {R : Type} [Zero R] (address : Circuits.Types.AddressOperation R)
@@ -35,8 +33,8 @@ private theorem zero_u64 : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) := by
   apply Word.isU64_of_cases <;> norm_num
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem address_assumptions (input : Inputs (ZMod p))
-    (bound : Word.isU64 input.bytes[0].address) :
+private theorem address_assumptions (input : Word (ZMod p))
+    (bound : Word.isU64 input) :
     AddressOperation.SoundnessAssumptions (addressInput input) :=
   ⟨bound, zero_u64, Or.inr rfl⟩
 
@@ -48,9 +46,9 @@ private theorem key_reorder (a b c total : ℕ)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Aligned 48-bit addresses decode to exactly the RAM word that was authenticated. -/
-private theorem ram_location (input : Inputs (ZMod p))
+private theorem ram_location (input : Word (ZMod p))
     (value : Word (ZMod p)) (address : Circuits.Types.AddressOperation (ZMod p))
-    (footprint : Word.toNat input.bytes[0].address + 8 ≤ 2 ^ 48)
+    (footprint : Word.toNat input + 8 ≤ 2 ^ 48)
     (checked : AddressOperation.Spec (addressInput input) address) :
     (MemoryMsg.locOf (message address value)).CanonicalAddress ∧
       Word.toNat (MemoryBoundary.address (message address value)) =
@@ -59,12 +57,12 @@ private theorem ram_location (input : Inputs (ZMod p))
   have zero_nat : Word.toNat (#v[0, 0, 0, 0] : Word (ZMod p)) = 0 := by
     simp [Word.toNat]
   simp only [AddressOperation.ValidAddress, addressInput, zero_nat,
-    Nat.mod_eq_of_lt (by omega : Word.toNat input.bytes[0].address < 2 ^ 64),
-    Nat.mod_eq_of_lt (by omega : Word.toNat input.bytes[0].address < 2 ^ 48),
+    Nat.mod_eq_of_lt (by omega : Word.toNat input < 2 ^ 64),
+    Nat.mod_eq_of_lt (by omega : Word.toNat input < 2 ^ 48),
     ZMod.val_zero, mul_zero, add_zero] at facts
   have sumEq : (Word.toNat (addressInput input).b + Word.toNat (addressInput input).cc) % 2 ^ 48 =
-      Word.toNat input.bytes[0].address := by
-    exact (congrArg (fun value => (Word.toNat input.bytes[0].address + value) % 2 ^ 48) zero_nat).trans
+      Word.toNat input := by
+    exact (congrArg (fun value => (Word.toNat input + value) % 2 ^ 48) zero_nat).trans
       ((congrArg (fun value => value % 2 ^ 48) (Nat.add_zero _)).trans
         (Nat.mod_eq_of_lt (by omega)))
   have location := MemoryBoundary.ram_location_of_key (message address value) _ facts.2.1 facts.1 facts.2.2.symm
@@ -72,11 +70,11 @@ private theorem ram_location (input : Inputs (ZMod p))
   exact ⟨location.1, location.2.1⟩
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem address_eq (input : Inputs (ZMod p)) (value : Word (ZMod p))
+private theorem address_eq (input : Word (ZMod p)) (value : Word (ZMod p))
     (address : Circuits.Types.AddressOperation (ZMod p))
-    (footprint : Word.toNat input.bytes[0].address + 8 ≤ 2 ^ 48)
+    (footprint : Word.toNat input + 8 ≤ 2 ^ 48)
     (checked : AddressOperation.Spec (addressInput input) address) :
-    Word.toNat (MemoryBoundary.address (message address value)) = Word.toNat input.bytes[0].address := by
+    Word.toNat (MemoryBoundary.address (message address value)) = Word.toNat input := by
   have raw := key_reorder _ _ _ _ checked.1
   have packed : Word.toNat (MemoryBoundary.address (message address value)) =
       (Word.toNat (addressInput input).b + Word.toNat (addressInput input).cc) % 2 ^ 48 := by
@@ -84,24 +82,24 @@ private theorem address_eq (input : Inputs (ZMod p)) (value : Word (ZMod p))
       zero_mul, add_zero] using raw
   have zero_nat : Word.toNat (#v[0, 0, 0, 0] : Word (ZMod p)) = 0 := by simp [Word.toNat]
   exact packed.trans
-    ((congrArg (fun value => (Word.toNat input.bytes[0].address + value) % 2 ^ 48) zero_nat).trans
+    ((congrArg (fun value => (Word.toNat input + value) % 2 ^ 48) zero_nat).trans
       ((congrArg (fun value => value % 2 ^ 48) (Nat.add_zero _)).trans
         (Nat.mod_eq_of_lt (by omega))))
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The pushed RAM record has the canonical value from the supplied finite snapshot. -/
-theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
+theorem snapshotSpec (snapshot : MemorySnapshot) (input : Word (ZMod p))
     (value : Word (ZMod p)) (address : Circuits.Types.AddressOperation (ZMod p))
     (read : InitialMemoryRead.Spec snapshot.memory input value)
     (checked : AddressOperation.Spec (addressInput input) address) :
-    MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input.bytes[0].address) (message address value) := by
+    MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input) (message address value) := by
   refine ⟨?_, address_eq input value address read.2.1 checked⟩
   have location := ram_location input value address read.2.1 checked
   have queryEq := address_eq input value address read.2.1 checked
   have lower := (AddressOperation.validAddress_of_spec checked).2.1
   simp only [addressInput, show Word.toNat (#v[0, 0, 0, 0] : Word (ZMod p)) = 0 by
     simp [Word.toNat], add_zero,
-    Nat.mod_eq_of_lt (by have := read.2.1; omega : Word.toNat input.bytes[0].address < 2 ^ 48)] at lower
+    Nat.mod_eq_of_lt (by have := read.2.1; omega : Word.toNat input < 2 ^ 48)] at lower
   have content : snapshot.read (MemoryMsg.locOf (message address value)) = Word.toBitVec64 value := by
     rw [snapshot.read_of_ram_address _ (by rw [← location.2, queryEq]; omega),
       ← location.2, queryEq]
@@ -116,7 +114,7 @@ theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
       · exact checked.2.2.2.2.2.2.2.2.2
       · norm_num [MemoryBoundary.address], location.2⟩⟩
 
-def main (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) :
+def main (snapshot : MemorySnapshot) (input : Var Word (ZMod p)) :
     Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
   let value ← InitialMemoryRead.circuit snapshot.memory input
   let address ← AddressOperation.circuit (addressInput input)
@@ -125,10 +123,10 @@ def main (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) :
   return record
 
 instance elaborated (snapshot : MemorySnapshot) :
-    ElaboratedCircuit (ZMod p) Inputs MemoryMsg (main snapshot) := by
+    ElaboratedCircuit (ZMod p) Word MemoryMsg (main snapshot) := by
   elaborate_circuit
 
-theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs (ZMod p)) (offset : ℕ) :
+theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Word (ZMod p)) (offset : ℕ) :
     ((main snapshot input).operations offset).interactionsWith memoryChannel.toRaw =
       [(memoryChannel.pushed ((elaborated snapshot).output input offset)).toRaw] := by
   have readEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
@@ -140,49 +138,48 @@ theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Inputs
   simp only [main, circuit_norm]
   simp only [Operations.interactionsWith] at readEmpty addressEmpty ⊢
   simp only [GeneralFormalCircuit.toSubcircuit_interactions, readEmpty, addressEmpty, List.nil_append]
-  rfl
+  simp only [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
+    AddressOperation.circuit, circuit_norm]
 
-def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
+def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Word MemoryMsg where
   name := "sp1.native.memory.snapshot.ram"
   main := main snapshot
   elaborated := elaborated snapshot
-  Spec input output _ := MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input.bytes[0].address) output
+  Spec input output _ := MemoryBoundary.SnapshotAtSpec snapshot (Word.toNat input) output
   ProverAssumptions input _ _ :=
-    InitialMemoryRead.ProverAssumptions snapshot.memory input ∧
+    InitialMemoryRead.ProverAssumptions input ∧
       AddressOperation.Assumptions (addressInput input)
   channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
     circuit_proof_start [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed, AddressOperation.circuit, addressInput, message]
-    rw [InitialMemoryRead.eval_base env _ _ h_input] at h_holds
-    have checked := (h_holds.2 (address_assumptions ⟨input_bytes⟩ h_holds.1.1)).2.2.2 rfl
-    have valid := snapshotSpec snapshot ⟨input_bytes⟩ _ _ h_holds.1 checked
+    have checked := (h_holds.2 (address_assumptions input h_holds.1.1)).2.2.2 rfl
+    have valid := snapshotSpec snapshot input _ _ h_holds.1 checked
     simp only [message, circuit_norm] at valid
     exact ⟨valid, fun _ _ => ⟨valid.1.1, valid.1.2.1⟩⟩
   completeness := by
     circuit_proof_start [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed, AddressOperation.circuit, addressInput, message]
-    rw [InitialMemoryRead.eval_base env.toEnvironment _ _ h_input]
     exact h_assumptions
 
 /-- Construct a row from a semantic address, rejecting unaligned or reserved memory. -/
-def populate? (snapshot : MemorySnapshot) (address : ℕ) : Option (Inputs (ZMod p)) :=
+def populate? (address : ℕ) : Option (Word (ZMod p)) :=
   if 2 ^ 16 ≤ address ∧ address % 8 = 0 then
-    InitialMemoryRead.populate? snapshot.memory address
+    InitialMemoryRead.populate? address
   else none
 
-theorem populate?_sound (snapshot : MemorySnapshot) (address : ℕ) (input : Inputs (ZMod p))
-    (found : populate? snapshot address = some input) :
-    InitialMemoryRead.ProverAssumptions snapshot.memory input ∧
+theorem populate?_sound (address : ℕ) (input : Word (ZMod p))
+    (found : populate? address = some input) :
+    InitialMemoryRead.ProverAssumptions input ∧
       AddressOperation.Assumptions (addressInput input) ∧
-        Word.toNat input.bytes[0].address = address := by
+        Word.toNat input = address := by
   unfold populate? at found
   split at found
   next valid =>
-    have read := InitialMemoryRead.populate?_sound snapshot.memory address input found
-    have footprint := (InitialMemoryRead.populate?_isSome_iff (p := p) snapshot.memory address).mp
+    have read := InitialMemoryRead.populate?_sound address input found
+    have footprint := (InitialMemoryRead.populate?_isSome_iff (p := p) address).mp
       (by rw [found]; rfl)
     refine ⟨read.1, ?_, read.2⟩
-    change Word.isU64 input.bytes[0].address ∧ _
-    refine ⟨(read.1 0).1.1, zero_u64, Or.inr rfl, ?_,
+    change Word.isU64 input ∧ _
+    refine ⟨read.1.1, zero_u64, Or.inr rfl, ?_,
       Or.inl rfl, Or.inl rfl, Or.inl rfl, ?_, ?_⟩ <;>
       simp only [addressInput, show Word.toNat (#v[0, 0, 0, 0] : Word (ZMod p)) = 0 by
         simp [Word.toNat], read.2, ZMod.val_zero, mul_zero, add_zero,
@@ -195,8 +192,8 @@ theorem populate?_sound (snapshot : MemorySnapshot) (address : ℕ) (input : Inp
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Row construction is total on exactly the semantic domain of aligned guest RAM cells. -/
-theorem populate?_isSome_iff (snapshot : MemorySnapshot) (address : ℕ) :
-    (populate? (p := p) snapshot address).isSome = true ↔
+theorem populate?_isSome_iff (address : ℕ) :
+    (populate? (p := p) address).isSome = true ↔
       2 ^ 16 ≤ address ∧ address < 2 ^ 48 ∧ address % 8 = 0 := by
   unfold populate?
   split
@@ -210,7 +207,7 @@ theorem populate?_isSome_iff (snapshot : MemorySnapshot) (address : ℕ) :
 
 /-- RAM initialization authenticates each of its eight source bytes at the memory key. -/
 @[circuit_norm] theorem main_lookupNames (snapshot : MemorySnapshot)
-    (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    (input : Var Word (ZMod p)) (offset : ℕ) :
     ((main snapshot input).operations offset).lookups.map (·.table.name) =
       List.replicate 8 "sp1.native.initial_memory" := by
   simp [main, InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,

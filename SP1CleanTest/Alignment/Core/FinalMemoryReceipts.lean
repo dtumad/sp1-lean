@@ -45,8 +45,7 @@ private def original (registers ram : List (Channels.MemoryMsg Fp))
      Table.build { circuit := FinalRegisterValue.circuit target } checkedRegisters
       (fun _ _ => #[]) (ProverHint.empty Fp),
      Table.build { circuit := FinalRamValue.circuit target }
-      (checkedRam.map fun item => ⟨item, InitialMemoryRead.populate target.memory
-        (Word.toNat (MemoryBoundary.address item))⟩) (fun _ _ => #[]) (ProverHint.empty Fp)]
+      checkedRam (fun _ _ => #[]) (ProverHint.empty Fp)]
     () (by rfl)
 
 private def ledger {ens : Ensemble Fp unit} (witness : EnsembleWitness ens)

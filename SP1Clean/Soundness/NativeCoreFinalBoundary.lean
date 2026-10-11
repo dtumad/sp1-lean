@@ -123,7 +123,7 @@ private theorem initialTables_final_silent {image : ProgramImage}
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
       memoryChannel, byteChannel, Channel.toRaw]
   · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
-      (List.replicate 42 byteChannel.toRaw ++
+      (List.replicate 38 byteChannel.toRaw ++
         [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
         List.replicate 4 byteChannel.toRaw ++
         [memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw])
