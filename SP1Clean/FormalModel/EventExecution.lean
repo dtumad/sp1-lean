@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.Execution
+import SP1Clean.Model.Core.Profile
 import SP1Clean.Model.Semantics.EventTime
 
 /-! # What the ensemble certifies, when a shard can also make a syscall
@@ -80,7 +81,7 @@ read at the transcript's syscall events. Stating the agreement rather than dupli
 is what keeps the semantic and native sides from drifting — the same discipline
 `WithinOrdinaryRowLimit` follows for the row budget. -/
 theorem EventSegmentWitness.canonicalSyscallCodes_iff (w : EventSegmentWitness) :
-    w.CanonicalSyscallCodes ↔ SP1Clean.CoreProfile.CanonicalSyscallCodes w.syscallEvents := by
+    w.CanonicalSyscallCodes ↔ SP1Clean.Model.Core.Profile.CanonicalSyscallCodes w.syscallEvents := by
   constructor
   · intro h e he
     rw [EventSegmentWitness.syscallEvents, List.mem_filterMap] at he

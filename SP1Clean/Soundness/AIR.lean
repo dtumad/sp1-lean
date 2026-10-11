@@ -64,11 +64,11 @@ def SupportedCoreNativeRelation :
 
 This is the ordinary native relation restricted in place; it does not introduce another native
 witness or copy any constraint/boundary field.  It projects the physical active-row count into the
-same `CoreProfile.WithinOrdinaryRowLimit` predicate used by the semantic relation. -/
+same `Model.Core.Profile.WithinOrdinaryRowLimit` predicate used by the semantic relation. -/
 def SupportedCoreNativeShardRelation :
     WitnessRelation.Relation (SupportedCoreStatement p) (SupportedCoreNativeWitness p) :=
   SupportedCoreNativeRelation.restrict fun _ witness =>
-    CoreProfile.WithinOrdinaryRowLimit
+    Model.Core.Profile.WithinOrdinaryRowLimit
       (realDecodedInstructionRows witness.data witness.tables).length
 
 

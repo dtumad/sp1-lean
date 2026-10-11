@@ -311,7 +311,7 @@ theorem syscallStepFact_of_witness (handler : ExecutableSyscallHandler) (prog : 
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (providerBound : ProgramProviderBound prog witness)
-    (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
+    (canonicalCodes : SP1Clean.Model.Core.Profile.CanonicalSyscallCodes (syscallEventsOf witness))
     (payload : SyscallAdvancePayload (p := p) handler)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (currency : ∀ mp ∈
@@ -356,7 +356,7 @@ theorem syscallFrameFact_of_witness (handler : ExecutableSyscallHandler) (prog :
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (providerBound : ProgramProviderBound prog witness)
-    (canonicalCodes : SP1Clean.CoreProfile.CanonicalSyscallCodes (syscallEventsOf witness))
+    (canonicalCodes : SP1Clean.Model.Core.Profile.CanonicalSyscallCodes (syscallEventsOf witness))
     (payload : SyscallAdvancePayload (p := p) handler)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
     (currency : ∀ mp ∈

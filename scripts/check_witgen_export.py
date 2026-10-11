@@ -47,7 +47,7 @@ def source_dumps(root=ROOT):
     directory = root / "export/sp1dump"
     inventory(directory, ["index.json", *(f"{n}.dump.json" for n in NAMES)])
     index = read_json(directory / "index.json")
-    pin = read_json(root / "scripts/provenance.json")["sp1"]["extractorRevision"]
+    pin = read_json(root / "scripts/provenance.json")["sp1"]["legacy"]["extractorRevision"]
     require(index["schemaVersion"] == 1 and index["chips"] == sorted(NAMES)
             and index["sp1Commit"] == pin, "SP1 dump index differs from the independent inventory/pin")
     dumps = {}

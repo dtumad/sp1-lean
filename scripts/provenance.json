@@ -9,8 +9,12 @@
     "generatedFiles": 161
   },
   "sp1": {
-    "semanticVersion": "v6.4.0",
-    "semanticRevision": "f66b4bff51d0ccff51d152e0f7f66b2ffedf3529",
-    "extractorRevision": "b5616f908c393d6050970630871f69afe233a21c"
+    "version": "v6.9.0",
+    "revision": "b8387fa61e1361d90ee7de49f551863418ca0f08",
+    "legacy": {
+      "semanticVersion": "v6.4.0",
+      "semanticRevision": "f66b4bff51d0ccff51d152e0f7f66b2ffedf3529",
+      "extractorRevision": "b5616f908c393d6050970630871f69afe233a21c"
+    }
   }
 }

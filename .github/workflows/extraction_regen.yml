@@ -25,7 +25,7 @@ jobs:
         run: |
           PIN=$(python3 - <<'EOF'
           import json
-          print(json.load(open("scripts/provenance.json"))["sp1"]["extractorRevision"])
+          print(json.load(open("scripts/provenance.json"))["sp1"]["legacy"]["extractorRevision"])
           EOF
           )
           echo "sha=$PIN" >> "$GITHUB_OUTPUT"

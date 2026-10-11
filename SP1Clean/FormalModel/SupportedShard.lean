@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.CoreShard
 import SP1Clean.FormalModel.Execution
-import SP1Clean.FormalModel.CoreProfile
+import SP1Clean.Model.Core.Profile
 import SP1Clean.Model.Semantics.TransitionView
 import SP1Clean.Model.Semantics.ProgramCommitment
 
@@ -65,7 +65,7 @@ def SupportedHaltingTrace (program : GuestProgram)
     (execution : Machine.EventExecutionTrace) : Prop :=
   (∀ located ∈ execution.locatedTransitions.dropLast,
     located.transition.event = .ordinary → SupportedSP1Transition program located) ∧
-  _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit
+  _root_.SP1Clean.Model.Core.Profile.WithinOrdinaryRowLimit
     (Machine.ordinaryTransitionCount execution.transitions.dropLast)
 
 /-- Recover the un-split routing obligation on an all-ordinary trace: every located transition is
@@ -168,7 +168,7 @@ def supportedCoreShardContract {p : ℕ} [Fact p.Prime] :
   executionValid := fun _ witness execution =>
     execution.HaltFree ∧
       AllTransitionsSupported witness.program execution ∧
-      _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit execution.ordinarySteps
+      _root_.SP1Clean.Model.Core.Profile.WithinOrdinaryRowLimit execution.ordinarySteps
 
 /-- The single capacity-bounded semantic language for the supported native Core profile. -/
 abbrev SupportedCoreShardExecutionValid {p : ℕ} [Fact p.Prime] :=
@@ -230,7 +230,7 @@ theorem evaluatedTrace_facts {p : ℕ} [Fact p.Prime]
         some (supportedCoreShardBoundary statement).finalPc ∧
       execution.AllOrdinary ∧
       AllTransitionsSupported witness.program execution ∧
-      _root_.SP1Clean.CoreProfile.WithinOrdinaryRowLimit execution.steps := by
+      _root_.SP1Clean.Model.Core.Profile.WithinOrdinaryRowLimit execution.steps := by
   obtain ⟨events, trace, -, evaluated, traceValid, clocked, finalClock, initialPc, finalPc,
       supportedProfile⟩ := valid.executionTrace rfl ordinary
   obtain ⟨-, supported, limit⟩ := supportedProfile

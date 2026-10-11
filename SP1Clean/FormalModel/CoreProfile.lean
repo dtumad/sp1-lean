@@ -1,9 +1,7 @@
 import Mathlib.Data.List.Nodup
 import SP1Clean.Extracted.CoreAIRManifest
-import SP1Clean.Model.Machine.Syscall
-import SP1Clean.Model.Core.NativeLayout
 
-/-! # The pinned SP1 Core AIR profile
+/-! # Legacy extracted SP1 Core AIR profile
 
 This file is the small, hand-auditable manifest for the AIR target.  It is transcribed from
 `RiscvAir::machine` in the pinned Rust checkout, rather than inferred from whichever extracted Lean
@@ -17,7 +15,7 @@ theorem. -/
 
 namespace SP1Clean.CoreProfile
 
-/-- Exact Rust checkout used as the current semantic ground truth: the v6.4.0 release tag.  The
+/-- Exact Rust checkout used by the legacy extraction evidence: the v6.4.0 release tag.  The
 extraction compiler has its own separately audited provenance — a fully committed branch based
 directly on this tag. -/
 def sp1SemanticRevision : String := "f66b4bff51d0ccff51d152e0f7f66b2ffedf3529"
@@ -25,37 +23,6 @@ def sp1SemanticRevision : String := "f66b4bff51d0ccff51d152e0f7f66b2ffedf3529"
 /-- Human-readable description emitted by `git describe --tags --always` at the semantic
 revision. -/
 def sp1SemanticDescription : String := "v6.4.0"
-
-/-- Maximum execution-clock budget of one Core shard in the pinned executor.  This is
-`MAX_SHARD_SIZE = 1 << 24` from `crates/core/executor/src/opts.rs` at
-`sp1SemanticRevision`.  The ordinary instruction schedule consumes eight clock ticks per row. -/
-def maxShardCycles : ℕ := Model.Core.NativeLayout.maxShardTicks
-
-/-- Maximum number of ordinary instruction rows in a shard that uses no syscall windows. -/
-def maxOrdinaryTransitions : ℕ := maxShardCycles / 8
-
-@[simp] theorem maxOrdinaryTransitions_eq : maxOrdinaryTransitions = 2 ^ 21 := by decide
-
-/-- The single pinned Core capacity predicate.  Semantic executions project `steps` into it and
-native AIR witnesses project their active instruction-row count into it; neither direction owns a
-separate spelling of the row budget. -/
-def WithinOrdinaryRowLimit (rows : ℕ) : Prop :=
-  rows ≤ maxOrdinaryTransitions
-
-/-- Every syscall in this supported profile uses a full-word canonical inline code.
-
-The AIR selects syscall arms from byte 0 and uses byte 1 for dispatch multiplicity. The executor
-instead calls `SyscallCode::from_u32` on `x5 as u32`, rejecting unrecognized low-32-bit codes but
-ignoring the upper 32 bits. Requiring the entire 64-bit register to equal an inline code is therefore
-a profile restriction; successful executor dispatch alone does not establish it. For example,
-`0x100000003 as u32` selects `ENTER_UNCONSTRAINED`, although that raw word is not canonical here.
-The row proofs do not derive this premise from AIR validity.
-
-It is stated over the shard's syscall events so that neither direction owns a separate spelling: the
-semantic side projects its transcript's syscall events into it, the native side its active syscall
-rows' decoded events — exactly the arrangement `WithinOrdinaryRowLimit` uses for the row budget. -/
-def CanonicalSyscallCodes (events : List SP1Clean.Machine.CoreSyscallEvent) : Prop :=
-  ∀ e ∈ events, e.IsInlineCanonical
 
 /-- Generated AIR artifacts and the hand-audited profile name the same unmodified Rust source. -/
 theorem checkedIn_semanticRevision :

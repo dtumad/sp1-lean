@@ -18,7 +18,7 @@ abbrev sailMemory : AddressRange := ⟨0, 2 ^ 48⟩
 /-- Two 24-bit clock limbs. Individual accesses must also fit their local limb window. -/
 abbrev clocks : AddressRange := ⟨0, 2 ^ 48⟩
 
-/-- MAX_SHARD_SIZE from the pinned v6.4.0 executor's opts.rs, measured in clock ticks.
+/-- MAX_SHARD_SIZE from the released executor's opts.rs, measured in clock ticks.
 This constant does not assert that an existing native ensemble enforces the limit. -/
 abbrev maxShardTicks : ℕ := 2 ^ 24
 

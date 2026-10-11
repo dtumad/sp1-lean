@@ -12,6 +12,40 @@ from lean_flags import load_lakefile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def sp1_pin_errors(cargo: str, locked: str, sp1: dict) -> list[str]:
+    """Check every direct and transitive SP1 crate against the reviewed release."""
+    errors = []
+    version, revision = sp1["version"], sp1["revision"]
+    repository = "https://github.com/succinctlabs/sp1"
+    if not re.fullmatch(r"v\d+\.\d+\.\d+", version):
+        errors.append("SP1 target must be a stable release")
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        errors.append("SP1 target must use a full commit")
+    direct = re.findall(r"^(sp1-[\w-]+|slop-[\w-]+)\s*=\s*(.+)$", cargo, re.M)
+    if not direct or len({name for name, _ in direct}) != len(direct):
+        errors.append("missing or duplicate direct SP1 dependencies")
+    for name, raw in direct:
+        attributes = dict(re.findall(r'(\w+)\s*=\s*"([^"]+)"', raw))
+        if (attributes.get("git") != repository or attributes.get("rev") != revision
+                or any(key in attributes for key in ("path", "branch", "tag"))):
+            errors.append(f"{name}: direct SP1 pin differs from release provenance")
+    found = set()
+    expected = f"git+{repository}?rev={revision}#{revision}"
+    for block in locked.split("[[package]]"):
+        fields = dict(re.findall(r'^(name|version|source) = "([^"]+)"$', block, re.M))
+        name = fields.get("name", "")
+        if not name.startswith(("sp1-", "slop-")) or name == "sp1-clean-comparison":
+            continue
+        if name in found:
+            errors.append(f"{name}: duplicate locked SP1 package")
+        found.add(name)
+        if fields.get("source") != expected or fields.get("version") != version.removeprefix("v"):
+            errors.append(f"{name}: locked SP1 pin differs from release provenance")
+    if not {name for name, _ in direct} <= found:
+        errors.append("direct SP1 dependencies missing from lockfile")
+    return errors
+
+
 def tree_hash(root: Path) -> tuple[str, int]:
     """Hash the generated model with paths, preserving the generator's historical digest."""
     files = [root / "LeanRV64D.lean", *sorted(
@@ -78,9 +112,11 @@ def check(root: Path) -> list[str]:
             "Lean toolchain must name an exact release")
     provenance = json.loads((root / "scripts/provenance.json").read_text())
     sail, sp1 = provenance["sail"], provenance["sp1"]
+    errors.extend(sp1_pin_errors(cargo, locked, sp1))
+    legacy = sp1["legacy"]
     for name, revision in [(key, sail[key]) for key in
                            ("compilerRevision", "modelRevision", "baseSnapshot")] + [
-                               (key, sp1[key]) for key in ("semanticRevision", "extractorRevision")]:
+                               (key, legacy[key]) for key in ("semanticRevision", "extractorRevision")]:
         require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)), f"{name}: expected full commit")
     model_hash, model_files = tree_hash(root)
     require((model_hash, model_files) == (sail["generatedTreeSha256"], sail["generatedFiles"]),
@@ -90,10 +126,10 @@ def check(root: Path) -> list[str]:
     require(config_hash == sail["configSha256"], "Sail platform config differs from provenance")
     profile = (root / "SP1Clean/FormalModel/CoreProfile.lean").read_text()
     semantic = re.search(r'def sp1SemanticRevision : String := "([0-9a-f]{40})"', profile)
-    require(semantic is not None and semantic[1] == sp1["semanticRevision"],
-            "Lean semantic revision differs from SP1 provenance")
+    require(semantic is not None and semantic[1] == legacy["semanticRevision"],
+            "legacy Lean semantic revision differs from extraction provenance")
     dumps = json.loads((root / "export/sp1dump/index.json").read_text())
-    require(dumps.get("sp1Commit") == sp1["extractorRevision"],
+    require(dumps.get("sp1Commit") == legacy["extractorRevision"],
             "SP1 dumps differ from the extractor revision")
 
     libraries = {library["name"]: library for library in config["lean_lib"]}
