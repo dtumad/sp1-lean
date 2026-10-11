@@ -25,7 +25,7 @@ the latter do not claim agreement with a released layout sharing that group.
 
 `scripts/check_release_surface.py` checks this record against both Rust inventory snapshots and
 the target revision in provenance. After the full test build, its `--native` option also reads the
-actual installed 91-component assembly; the full audit runs this check. The Cargo inventory tests
+actual installed 93-component assembly; the full audit runs this check. The Cargo inventory tests
 independently authenticate the snapshots against released Rust source. No generated Lean registry
 serves as the Rust reference.
 
@@ -64,6 +64,18 @@ that output and exercises these boundaries:
   and counts from independent input lists. Backend checks bind public requests and reject
   mutations of every count, including duplicate and padding rows. A fixed eligibility tag keeps
   real zero requests distinct from inactive rows without a custom scheduler.
+- RAM byte/word reads, source providers and target validators are exported through Clean. Rust
+  independently checks sparse bytes, carries, first-entry precedence, native bounds, malformed
+  limbs and the full generated rows/ledgers against Lean. Closed source/target interval-provider
+  ensembles bind every public endpoint and byte; backend mutations cover all counts and padding.
+  These are native RAM tests, not agreement with SP1's global-memory digest machinery.
+
+Five legacy lookup meanings still block full export: program, syscall code, write permission,
+hint nodes and hint words. Clean's current scheduler also rejects multiple handlers for one
+channel, so the separate Byte providers need upstream routing support or consolidation before
+whole-assembly generation. The component tests use the existing row adapter and independently
+check external interactions; they do not establish complete ensemble balance.
+
 - All 25 production instruction components use the same comparison harness:
 
   | Component | SP1 event / padding rows | Column mutations | Cases |

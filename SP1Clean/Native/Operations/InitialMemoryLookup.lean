@@ -1,6 +1,7 @@
 import SP1Clean.FormalModel.Contracts.InitialMemory
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
+import ToClean.Air.StaticProvider
 
 /-! # Address-based initial-memory byte reads
 
@@ -18,6 +19,11 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- The semantic domain of a byte read. -/
 def ProverAssumptions (limit : ℕ) (address : Word (ZMod p)) : Prop :=
   Word.isU64 address ∧ Word.toNat address < limit
+
+/-- Source and target intervals use separate fixed-column membership channels. -/
+def membership (memory : ByteMemory) (limit : ℕ) (name : String) :
+    StaticTable (ZMod p) MemoryIntervalRow :=
+  { memory.fixedTable limit with name := name }
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem compare_lower {address lower : Word (ZMod p)}
@@ -48,7 +54,7 @@ def main (memory : ByteMemory) (limit : ℕ) (address : Var Word (ZMod p))
     (tableName : String := "sp1.native.initial_memory") : Circuit (ZMod p) (Expression (ZMod p)) := do
   let interval ← witness (var := Var MemoryIntervalRow)
     (intervalFE memory limit (address.map Witgen.FExpr.expr))
-  lookup { (memory.fixedTable limit).toTable with name := tableName } interval
+  (membership memory limit tableName).channel.pull ⟨interval, 1⟩
   assertion WordRangeCheck.circuit address
   let lower ← witness (var := Var Circuits.Types.LtOperationUnsigned)
     (comparisonFE (address.map Witgen.FExpr.expr) (interval.lower.map Witgen.FExpr.expr))
@@ -74,7 +80,8 @@ instance elaborated (memory : ByteMemory) (limit : ℕ) (tableName : String) :
     ElaboratedCircuit (ZMod p) Word field (main memory limit (tableName := tableName)) where
   localLength _ := 89
   output _ offset := (varFromOffset MemoryIntervalRow offset : Var MemoryIntervalRow (ZMod p)).value
-  channelsWithGuarantees := [SP1Clean.Channels.byteChannel.toRaw]
+  channelsWithGuarantees :=
+    [(membership memory limit tableName).channel.toRaw, SP1Clean.Channels.byteChannel.toRaw]
 
 /-- Sound and complete byte read with an explicit fixed-table identity. -/
 def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64)
@@ -85,7 +92,8 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
   Spec input output _ := Spec memory limit input output
   ProverAssumptions input _ _ := ProverAssumptions limit input
   soundness := by
-    circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec]
+    circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec,
+      membership, StaticTable.channel]
     obtain ⟨member, addressBound, lowerSpec, lowerZero, upperSpec, upperOne⟩ := h_holds
     have ranges := memory.fixedTable_sound limit limitBound _ member
     have lower := lowerSpec ⟨fun _ => ⟨addressBound, ranges.1⟩, Or.inr rfl⟩
@@ -94,7 +102,7 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
     exact ⟨addressBound, memory.fixedTable_read limit limitBound _ member _ inside⟩
   completeness := by
     circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec,
-      ProverAssumptions]
+      ProverAssumptions, membership, StaticTable.channel]
     have inputEval (i : ℕ) (hi : i < 4) :
         (input_var.map Witgen.FExpr.expr)[i].eval { env := env } = input[i] := by
       simpa only [Vector.getElem_map, Witgen.FExpr.eval] using
@@ -156,7 +164,7 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
 @[circuit_norm, explicit_circuit_norm] theorem circuit_guarantees (memory : ByteMemory) (limit : ℕ)
     (bound : limit < 2 ^ 64) (tableName : String := "sp1.native.initial_memory") :
     (circuitNamed (p := p) memory limit bound tableName).channelsWithGuarantees =
-      [SP1Clean.Channels.byteChannel.toRaw] := rfl
+      [(membership memory limit tableName).channel.toRaw, SP1Clean.Channels.byteChannel.toRaw] := rfl
 
 @[circuit_norm, explicit_circuit_norm] theorem circuit_requirements (memory : ByteMemory) (limit : ℕ)
     (bound : limit < 2 ^ 64) (tableName : String := "sp1.native.initial_memory") :
@@ -166,20 +174,18 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
 abbrev circuit (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 64) :=
   circuitNamed (p := p) memory limit limitBound "sp1.native.initial_memory"
 
-/-- The sole lookup authenticates the internally witnessed interval. -/
+/-- Interval authentication is supplied by the fixed-column membership channel. -/
 theorem main_lookups (memory : ByteMemory) (limit : ℕ)
     (input : Var Word (ZMod p)) (name : String) (offset : ℕ) :
-    ((main memory limit input name).operations offset).lookups =
-      [⟨{ (memory.fixedTable (p := p) limit).toTable with name := name }.toRaw,
-        toElements (varFromOffset MemoryIntervalRow offset : Var MemoryIntervalRow (ZMod p))⟩] := by
+    ((main memory limit input name).operations offset).lookups = [] := by
   simp [main, WordRangeCheck.circuit, LtOperationUnsigned.circuit,
     LtOperationUnsigned.main, U16CompareOperation.circuit, U16CompareOperation.main,
     Gadgets.Equality.main, circuit_norm]
 
-/-- The byte read's lookup uses the supplied fixed-table key. -/
+/-- Byte reads have no legacy lookups. -/
 @[circuit_norm] theorem main_lookupNames (memory : ByteMemory) (limit : ℕ)
     (input : Var Word (ZMod p)) (name : String) (offset : ℕ) :
-    ((main memory limit input name).operations offset).lookups.map (·.table.name) = [name] := by
+    ((main memory limit input name).operations offset).lookups.map (·.table.name) = [] := by
   rw [main_lookups]
   rfl
 

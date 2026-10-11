@@ -3,7 +3,7 @@ import SP1Clean.Soundness.FinalMemoryChecks
 
 /-! # Complete target Memory checks in the physical host assembly
 
-The existing host assembly keeps every CPU, host, source and final-order table. The target consumers and fixed register provider are appended to its resource block, the original finalizers publish their
+The existing host assembly keeps every CPU, host, source and final-order table. The target consumers and fixed membership providers are appended to its resource block, the original finalizers publish their
 full records, and the canonical change demand runs once in the verifier. These additions use
 existing circuits and typed physical slots. Receipt projection preserves every row and canonical
 data; selecting a smaller inventory requires separate constraint and channel transport.
@@ -68,14 +68,14 @@ registered by the same host assembly as every other resource. -/
   HostHintQueueBoundary.ensemble image source final bankFinal others
     (resources ++ FinalMemoryChecks.checkTables target) channels names
 
-/-- The original core and handler positions are unchanged; three resource tables are added. -/
+/-- The original core and handler positions are unchanged; four resource tables are added. -/
 theorem base_tables_length (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
     (names : UniqueNames image source target others resources) :
     (base image source target final bankFinal others resources channels names).tables.length =
-      67 + others.length + resources.length := by
+      69 + others.length + resources.length := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
     ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
     HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, List.length_set]
@@ -163,7 +163,7 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (target : Memor
   (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).install
     (withReceipts image source target final bankFinal others resources channels names)
 
-/-- The original host table block before the target consumers and fixed register provider, prior to the padding wrapper. -/
+/-- The original host table block before the target consumers and fixed membership providers, prior to the padding wrapper. -/
 def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) :=
   HostLocalCore.tables image source
@@ -172,7 +172,7 @@ def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)
 /-- The prefix contains exactly the original core, receiver registry and resource block. -/
 theorem prefix_length (image : ProgramImage) (source : ExecutionSnapshot)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) :
-    (beforeChecks image source others resources).length = 64 + others.length + resources.length := by
+    (beforeChecks image source others resources).length = 65 + others.length + resources.length := by
   rw [beforeChecks, HostLocalCore.tables_length]
   simp only [List.length_append, List.length_map, List.length_cons, List.length_nil,
     HostHintReadHandoff.wordResources]
@@ -196,7 +196,7 @@ theorem tables_eq : (ensemble image source target final bankFinal others resourc
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, base_tables_eq]
 
 /-- Typed registration of each target validator or fixed provider survives all three unrelated table replacements. -/
-def checkSlot (index : Fin 3) : TableSlot (ensemble image source target final bankFinal others resources channels names).tables
+def checkSlot (index : Fin 4) : TableSlot (ensemble image source target final bankFinal others resources channels names).tables
     ((FinalMemoryChecks.checkTables (p := p) target)[index.val]'(by
       simpa only [FinalMemoryChecks.checkTables, List.length_cons, List.length_nil] using index.isLt)) := by
   let slot := (TableSlot.ofIndex (FinalMemoryChecks.checkTables (p := p) target)

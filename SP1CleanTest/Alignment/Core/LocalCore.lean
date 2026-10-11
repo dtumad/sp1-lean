@@ -12,7 +12,7 @@ import Clean.Circuit.WitnessExport
 /-! # Complete local-assembly constraint and ledger regression
 
 The fixture starts at clock 9 with nonzero source registers and executes ADD. Rows are interpreted
-at their actual indices in the 60-table local assembly. All assertions, fixed lookups, public
+at their actual indices in the 61-table local assembly. All assertions, fixed lookups, public
 verifier interactions, channel membership, count bounds, and full-message balances are checked.
 Byte/Range demands are closed by executing the actual provider circuits. An active HINT_LEN fixture
 checks the wide syscall edge and all three Memory pairs, and records the unclosed host-result
@@ -52,7 +52,9 @@ private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1P
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map (fun row => evaluateRow image source row guarded)
   let consumers := evaluated.flatMap Prod.snd
-  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
+  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers ++
+    StaticMembership.providerLedger
+      (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
   evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       (assembly.channels.map RawChannel.name).contains name &&
@@ -312,9 +314,9 @@ private def commitRows : List Row :=
     (6, ((DecodedProgramProvider.populate? (p := SP1Prime) syscallImage (65536, 0x00000073) 1).map
       (fun input => (toElements input).toList)).getD []),
     (57, List.replicate (size HaltChip.Inputs) 0),
-    (58, (toElements commitInstruction).toList), (64, (toElements commitHandler).toList),
-    (86, (toElements (commitHandler.next 0)).toList),
-    (87, (toElements (HostCommitBoundary.start
+    (58, (toElements commitInstruction).toList), (65, (toElements commitHandler).toList),
+    (87, (toElements (commitHandler.next 0)).toList),
+    (88, (toElements (HostCommitBoundary.start
       (HostCommitEnsemble.sourceValues true commitSource.host))).toList)]
 
 /-- Separate Memory balance only to identify the cause of a negative fixture. Full acceptance
@@ -337,7 +339,9 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
   let consumers := evaluated.flatMap Prod.snd
-  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
+  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers ++
+    StaticMembership.providerLedger
+      (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
   let balanced (entry : String × List Fp × Fp) :=
     ((ledger.filter (fun other => other.1 == entry.1 && other.2.1 == entry.2.1)).map
       (fun other => other.2.2)).sum == 0
@@ -371,9 +375,9 @@ theorem untouchedCommitMemory :
 theorem rejectsCommitBoundaries :
     [checkCommit commitSource.host commitRows,
      checkCommit { commitTarget with deferred := commitTarget.deferred.set 0 0 } commitRows,
-     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 86)),
      checkCommit commitTarget (commitRows.filter (fun row => row.1 != 87)),
-     checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 86))] =
+     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 88)),
+     checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 87))] =
       [false, false, false, false, false] := by native_decide
 
 /-- The installed interaction-only public verifier contains no native witness closure. -/
@@ -388,7 +392,7 @@ theorem installedVerifier_exportable :
 #guard_msgs in
 #assert_exportable (HaltPaddingChip.circuit (p := SP1Prime))
 
-/-- An active ECALL closes the actual 60-table ledger with all three nonzero source registers,
+/-- An active ECALL closes the actual 61-table ledger with all three nonzero source registers,
 its wide State edge, the changed result, and source/final inventories. No syscall row is erased. -/
 theorem activeSyscallLocalShard :
     check syscallImage syscallSource syscallPublic (syscallRows 3) = true := by native_decide
@@ -482,8 +486,8 @@ theorem rejectsForgedHalt :
       [false, false, false] := by native_decide
 
 private def unchangedBanks (host : HostState) : List Row :=
-  [(86, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
-   (87, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues true host))).toList)]
+  [(87, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
+   (88, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues true host))).toList)]
 
 private def haltInstruction (exit : ℕ) : HostCallChip.Inputs Fp :=
   ⟨{ syscallInput 0 with
@@ -501,7 +505,7 @@ private def installedHaltRows (exit : ℕ) (legacy : Bool) : List Row :=
   (if legacy then haltRows exit else
     (haltRows exit).filter (fun row => row.1 != 57) ++
       [(58, (toElements (haltInstruction exit)).toList),
-       (62, (toElements (HostHaltChip.populate ((haltInstruction exit).message 0))).toList)]) ++
+       (63, (toElements (HostHaltChip.populate ((haltInstruction exit).message 0))).toList)]) ++
     unchangedBanks (haltSource exit).host
 
 private def checkInstalledHalt (exit publicExit : ℕ) (rows : List Row) : Bool :=
@@ -524,7 +528,7 @@ theorem rejectsInstalledExitForgery :
     [checkInstalledHalt 65536 65535 (installedHaltRows 65536 false),
      checkInstalledHalt 0 1 (installedHaltRows 0 false),
      checkInstalledHalt 0 0 (installedHaltRows 0 false ++
-       (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 62)),
+       (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 63)),
      checkInstalledHalt 0 0 (installedHaltRows 0 false ++
        [(57, List.replicate (size HaltChip.Inputs) 0)])] =
       [false, false, false, false] := by native_decide
@@ -595,7 +599,7 @@ theorem unguardedStoreIntoRom :
       Word.toBitVec64 storeRomInput.store_value = 0x00110000 := by native_decide
 
 private def permissionRow (address : ℕ) : Row :=
-  (60, ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage address).map
+  (61, ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage address).map
     (fun input => (toElements input).toList)).getD [])
 
 private def sameValueRomSource : ExecutionSnapshot :=
@@ -662,7 +666,7 @@ an attempted provider row whose query is ROM but whose interval was selected for
 theorem protectedRejectsStoreIntoRom :
     [check storeRomImage storeRomSource publicInput storeRomRows true,
      check storeRomImage storeRomSource publicInput (storeRomRows ++ [permissionRow 65540]) true,
-     check storeRomImage storeRomSource publicInput (storeRomRows ++ [(60,
+     check storeRomImage storeRomSource publicInput (storeRomRows ++ [(61,
        ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage 65540).map
          (fun input => (toElements { input with address := Address.ofNat 65536 }).toList)).getD [])]) true] =
       [false, false, false] := by native_decide

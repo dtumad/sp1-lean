@@ -30,12 +30,14 @@ private theorem boundary_programPulls (image : ProgramImage) (component : Compon
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel,
       memoryChannel, byteChannel, Channel.toRaw]
   · change programChannel.toRaw ∉
-      (List.replicate 38 byteChannel.toRaw ++
+      ((InitialMemoryRead.circuit (p := p) image.initialMemory).channelsWithGuarantees ++
+        List.replicate 2 byteChannel.toRaw ++
         [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
         List.replicate 4 byteChannel.toRaw ++
         [memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw])
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel,
-      memoryChannel, byteChannel, Channel.toRaw]
+      memoryChannel, byteChannel, InitialMemoryRead.circuit, InitialMemoryLookup.membership,
+      StaticTable.channel, circuit_norm]
   · change programChannel.toRaw ∉
       [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw]
@@ -64,12 +66,19 @@ theorem component_program_source (image : ProgramImage) (component : Component (
   change component ∈ tables image at member
   have split : tables (p := p) image =
       ((InitialMemoryEnsemble.views image).map (·.component) ++
-        FinalMemoryEnsemble.inventory.views.map (·.component)) ++ afterFinalTables image := by
+        FinalMemoryEnsemble.inventory.views.map (·.component)) ++ (afterFinalTables image ++ [ramMembership image]) := by
     simp only [tables, afterInitialTables, afterFinalTables, List.append_assoc]
   rw [split, List.mem_append] at member
   rcases member with boundary | interior
   · exact Or.inr (boundary_programPulls image component boundary)
-  · exact interior_program_source image component interior
+  · rcases List.mem_append.mp interior with native | fixed
+    · exact interior_program_source image component native
+    · obtain rfl := List.mem_singleton.mp fixed
+      right
+      apply programPulls_of_silent
+      change programChannel.toRaw ∉ [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48)
+        "sp1.native.initial_memory").channel.toRaw]
+      simp [programChannel, InitialMemoryLookup.membership, StaticTable.channel, Channel.toRaw]
 
 /-- Boot checks and boundary traffic emit no Program interactions in the actual verifier. -/
 theorem verifier_program_silent (image : ProgramImage) (env : Environment (ZMod p)) :

@@ -59,10 +59,14 @@ def afterInitialTables (image : ProgramImage) : List (Component (ZMod p)) :=
     [{ circuit := DecodedProgramProvider.circuit image }] ++ sp1Tables ++
     (sp1ProviderTables.take 23 ++ sp1ProviderTables.drop 26)
 
+/-- Fixed intervals authenticate boot RAM requests through the same channel as local snapshots. -/
+def ramMembership (image : ProgramImage) : Component (ZMod p) :=
+  (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").component
+
 /-- Both memory inventories precede ordinary instructions; the order is an assembly detail.
 The legacy unauthenticated Program/init/final providers are absent. -/
 def tables (image : ProgramImage) : List (Component (ZMod p)) :=
-  (InitialMemoryEnsemble.views image).map (·.component) ++ afterInitialTables image
+  (InitialMemoryEnsemble.views image).map (·.component) ++ (afterInitialTables image ++ [ramMembership image])
 
 /-- The boot verifier retains exactly its five public assertions. -/
 theorem verifierMain_constraints (image : ProgramImage) (input : Var SP1PublicIO (ZMod p))
@@ -165,7 +169,8 @@ def baseEnsemble (image : ProgramImage) : Ensemble (ZMod p) SP1PublicIO where
   tables := tables image
   unique_names := by exact of_decide_eq_true rfl
   channels := (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ::
-    (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw :: sp1Ensemble.channels
+    (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ::
+    (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw :: sp1Ensemble.channels
   verifier := verifierInteractions image
 
 /-- The boot assertions have a channel disjoint from all registered and actual traffic. -/
@@ -243,7 +248,7 @@ theorem boot_balanced_iff {image : ProgramImage}
   simp only [bound, true_or, true_and, verifierChecks_iff,
     ProvableType.eval_fromInput_varFromOffset_zero]
 
-theorem tables_length (image : ProgramImage) : (tables (p := p) image).length = 59 := by
+theorem tables_length (image : ProgramImage) : (tables (p := p) image).length = 60 := by
   simp [tables, afterInitialTables, InitialMemoryEnsemble.views, OrderedMemoryEnsemble.Inventory.views,
     FinalMemoryEnsemble.inventory, sp1Tables_length, sp1ProviderTables_length]
 
@@ -305,7 +310,8 @@ private theorem component_finished_requirements (image : ProgramImage)
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
-      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+      (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw])
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements channel env := by
   have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
@@ -313,10 +319,24 @@ private theorem component_finished_requirements (image : ProgramImage)
     Operations.requirements_of_not_mem _ _ _
       (component.inChannelsOrRequirements_of_constraints env constraints) channel notRequired
   simp only [ensemble, tables, List.mem_append] at member
-  rcases member with member | member
+  rcases member with member | member | fixed
   · exact absent (fun required => outside (List.mem_cons_of_mem _
-      (boundary_requirements image component (List.mem_append_left _ member) required)))
-  · exact afterInitialTables_finished_requirements image component member channel outside env constraints
+      (by
+        have used := boundary_requirements image component (List.mem_append_left _ member) required
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
+        tauto)))
+  · exact afterInitialTables_finished_requirements image component member channel (fun inside => outside (by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at inside ⊢
+      tauto)) env constraints
+
+  · obtain rfl := List.mem_singleton.mp fixed
+    apply absent
+    change channel ∉ [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48)
+      "sp1.native.initial_memory").channel.toRaw]
+    intro used
+    apply outside
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
+    tauto
 
 /-- Byte and Program guarantees hold for the public verifier and every physical table. -/
 theorem finishedChannel_guarantees (image : ProgramImage)
@@ -331,7 +351,8 @@ theorem finishedChannel_guarantees (image : ProgramImage)
       (member : channel ∈ (baseEnsemble (p := p) image).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
         (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
-        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]) :
+        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+        (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]) :
       (ensemble image).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
         ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
     apply witness.channelGuarantees_of_component_requirements channel constraints
@@ -347,5 +368,42 @@ theorem finishedChannel_guarantees (image : ProgramImage)
     simp [circuit_norm, OrderedBoundary.channel, OrderedInitialProvider.channelName,
       OrderedFinalProvider.channelName, programChannel])
   exact ⟨⟨byte.1, program.1⟩, fun table member => ⟨byte.2 table member, program.2 table member⟩⟩
+
+/-- Boot membership is derived from fixed columns and the assembly's own RAM ledger. -/
+theorem ram_guarantees_of_balance (image : ProgramImage)
+    (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannel
+      (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw) :
+    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data
+      (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw := by
+  apply (witness.channelGuarantees_of_requirements _ balanced ?_ ?_).2
+  · intro interaction emitted _
+    exact verifierProgram_requirements image (bootChannel image).name _ interaction emitted
+  · intro table member
+    have location := EnsembleWitness.mem_component_of_mem member
+    simp only [ensemble, tables, List.mem_append, List.mem_singleton] at location
+    rcases location with initial | native | fixed
+    · intro row rowMember
+      apply Operations.requirements_of_not_mem _ _ _
+        (table.component.inChannelsOrRequirements_of_constraints _ (constraints table member row rowMember))
+      intro required
+      have used := boundary_requirements image table.component (List.mem_append_left _ initial) required
+      simp [StaticTable.channel, InitialMemoryLookup.membership, memoryChannel,
+        OrderedBoundary.channel, OrderedInitialProvider.channelName,
+        OrderedFinalProvider.channelName, Channel.toRaw] at used
+    · intro row rowMember
+      apply afterInitialTables_finished_requirements image table.component native _ ?_
+        _ (constraints table member row rowMember)
+      simp [StaticTable.channel, InitialMemoryLookup.membership,
+        stateChannel, memoryChannel, OrderedBoundary.channel,
+        OrderedInitialProvider.channelName, OrderedFinalProvider.channelName, Channel.toRaw]
+    · have assumptions : table.Assumptions witness.data := by
+        intro row _
+        rw [fixed]
+        trivial
+      intro row rowMember interaction emitted _
+      exact (table.component.weakSoundness_of_no_guarantees (by rw [fixed]; rfl)
+        (table.circuitAssumptions (witness.data_consistent table member) assumptions row rowMember)
+        (constraints table member row rowMember)).2 interaction emitted
 
 end SP1Clean.Soundness.NativeCore

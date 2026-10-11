@@ -7,7 +7,7 @@ import Clean.Circuit.WitnessExport
 /-! # Arbitrary source-snapshot AIR regressions
 
 Execute the real witness programs and check all flattened assertions, concrete fixed lookups,
-nonzero Byte messages, and the fixed register membership ledger. These are provider regressions, not a whole-machine balance claim.
+nonzero Byte messages, and both fixed membership ledgers. These are provider regressions, not a whole-machine balance claim.
 -/
 
 namespace SP1CleanTest.Core.SnapshotBoundary
@@ -36,18 +36,17 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
   let circuit := program (varFromOffset Input 0)
   let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
   let operations := (circuit.operations (size Input)).toFlat
-  let tables := [FiniteLookup.ofStatic (snapshot.memory.fixedTable (p := SP1Prime) (2 ^ 48))]
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => tables.any fun fixed => lookup.table.name == fixed.table.name &&
-        fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+    | .lookup .. => false
     | .interact interaction => interaction.channel.name != "SP1Byte" || env interaction.mult == 0 ||
         byteValid (interaction.msg.map env).toList
     | .witness .. => true
   let ledger := (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult)
-  (valid && StaticMembership.check snapshot.registerTable ledger,
+  (valid && StaticMembership.check snapshot.registerTable ledger &&
+      StaticMembership.check (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory") ledger,
     (toElements (ProvableType.eval env (circuit.output (size Input)))).toList)
 
 private def name : String := "SP1NativeSourceMemoryOrder"
@@ -116,7 +115,7 @@ theorem constructedRam : [65536, 131064, 131072, 2 ^ 48 - 8].all (fun address =>
         (bitVecToWord (p := SP1Prime) (snapshot.memory.readWord address)).toList)).getD false) = true := by
   native_decide
 
-/-- A row built from different source memory cannot authenticate under this snapshot's lookup. -/
+/-- A row built from different source memory cannot authenticate under this snapshot's fixed membership. -/
 theorem rejectsForgedRam :
     let forged := { snapshot with memory := snapshot.memory.write 65536 99 }
     ((SnapshotRamProvider.populate? 65536).map fun input =>

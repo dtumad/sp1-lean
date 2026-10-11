@@ -178,7 +178,7 @@ private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     channel ∉ (boundary source final bankFinal).circuit.channels := by
   have checked : (LocalCore.baseEnsemble (p := p) image source).channels.all
       (fun core => !((boundary source final bankFinal).circuit.channels.map RawChannel.name).contains core.name) = true := by
-    simp only [LocalCore.baseEnsemble, List.all_cons, StaticTable.channel,
+    simp only [LocalCore.baseEnsemble, List.all_cons, StaticTable.channel, InitialMemoryLookup.membership,
       MemorySnapshot.registerTable, StaticTable.ofRows]
     rfl
   intro used
@@ -275,10 +275,10 @@ variable {availableNames : ((HostLocalCore.tables image source
 
 theorem extraTables_eq
     (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames)) :
-    extraTables (projected witness) = witness.tables.drop 84 := by
-  change (((projected witness).tables.drop 61).drop 21).drop 2 = _
+    extraTables (projected witness) = witness.tables.drop 85 := by
+  change (((projected witness).tables.drop 62).drop 21).drop 2 = _
   rw [List.drop_drop, List.drop_drop]
-  exact projected_drop witness 84 (by decide)
+  exact projected_drop witness 85 (by decide)
 
 /-- The complete queue ledger includes the verifier's endpoints and each physical handler row. -/
 theorem queue_balanced

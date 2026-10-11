@@ -81,7 +81,8 @@ theorem boundaryVerifier_requirements (env : Environment (ZMod p)) :
 
 /-- Native execution components followed by the source's fixed membership provider. -/
 def afterSourceTables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
-  NativeCore.afterInitialTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot]
+  NativeCore.afterInitialTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot,
+    SnapshotMemoryEnsemble.ramMembership source.sail.memorySnapshot]
 
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++ afterSourceTables image source
@@ -116,12 +117,13 @@ def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble 
   tables := tables image source
   unique_names := by
     simp only [tables, afterSourceTables, List.map_append, List.map_cons, List.map_nil,
-      SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
-      MemorySnapshot.registerTable, StaticTable.ofRows]
+      SnapshotMemoryEnsemble.registerMembership, SnapshotMemoryEnsemble.ramMembership,
+      InitialMemoryLookup.membership, StaticTable.component, StaticTable.provider,
+      MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership]
     exact of_decide_eq_true rfl
   channels := (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ::
     (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ::
-    source.sail.memorySnapshot.registerTable.channel.toRaw :: sp1Ensemble.channels
+    source.sail.memorySnapshot.registerTable.channel.toRaw :: (InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw :: sp1Ensemble.channels
   verifier := boundaryVerifier
 
 /-- Install all eight source checks with the generic public-assertion adapter. -/
@@ -155,7 +157,7 @@ theorem verifier_requirements (image : ProgramImage) (source : ExecutionSnapshot
   exact ⟨boundaryVerifier_requirements env, Verifier.checkZeros_requirements _ _ _⟩
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
-    (tables (p := p) image source).length = 60 := by
+    (tables (p := p) image source).length = 61 := by
   simp [tables, afterSourceTables, SnapshotMemoryEnsemble.inventory, NativeCore.afterInitialTables,
     OrderedMemoryEnsemble.Inventory.views, FinalMemoryEnsemble.inventory,
     sp1Tables_length, sp1ProviderTables_length]
@@ -178,7 +180,8 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-      source.sail.memorySnapshot.registerTable.channel.toRaw])
+      source.sail.memorySnapshot.registerTable.channel.toRaw,
+      (InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw])
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements channel env := by
   have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
@@ -194,11 +197,15 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
   · rcases List.mem_append.mp member with native | fixed
     · exact NativeCore.afterInitialTables_finished_requirements image component native channel
         (fun inside => outside (List.mem_append_left _ inside)) env constraints
-    · obtain rfl := List.mem_singleton.mp fixed
-      apply absent
-      change channel ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
-      exact fun inside => outside (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-        (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ inside))))
+    · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+      rcases fixed with rfl | rfl
+      all_goals
+        apply absent
+        intro used
+        apply outside
+        simp only [SnapshotMemoryEnsemble.registerMembership, SnapshotMemoryEnsemble.ramMembership,
+          StaticTable.component, StaticTable.provider, List.mem_cons, List.not_mem_nil, or_false] at used ⊢
+        tauto
 
 /-- The local assembly supplies its own Byte and Program guarantees, including for both
 source providers. No provider validity or memory-content premise is accepted here. -/
@@ -215,7 +222,8 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
         (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
         (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-        source.sail.memorySnapshot.registerTable.channel.toRaw]) :
+        source.sail.memorySnapshot.registerTable.channel.toRaw,
+      (InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]) :
       (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
         ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
     apply witness.channelGuarantees_of_component_requirements channel constraints
@@ -227,11 +235,11 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
   have byte := closed byteChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
       OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
-      MemorySnapshot.registerTable, StaticTable.ofRows])
+      MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership])
   have program := closed programChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
       OrderedFinalProvider.channelName, programChannel, StaticTable.channel,
-      MemorySnapshot.registerTable, StaticTable.ofRows])
+      MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership])
   exact ⟨⟨byte.1, program.1⟩, fun table member => ⟨(byte.2 table member), (program.2 table member)⟩⟩
 
 /-- Program guarantees use only this channel's balance, so host extensions can retain their
@@ -247,25 +255,32 @@ theorem program_guarantees_of_balance (image : ProgramImage) (source : Execution
   · exact fun component mem env holds => component_finished_requirements image source component mem
       programChannel.toRaw (by simp [circuit_norm, OrderedBoundary.channel,
         SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel,
-        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows]) env holds
+        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership]) env holds
 
 /-- Fixed register rows discharge every provider requirement. Channel balance then authenticates
 the sparse source requests against those rows, using the witness's canonical prover data. -/
-theorem register_guarantees_of_balance (image : ProgramImage) (source : ExecutionSnapshot)
+theorem membership_guarantees_of_balance (image : ProgramImage) (source : ExecutionSnapshot)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (balanced : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw) :
+    (channel : RawChannel (ZMod p))
+    (known : channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot)
+    (balanced : witness.BalancedChannel channel) :
     (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data
-        source.sail.memorySnapshot.registerTable.channel.toRaw ∧
+        channel ∧
       ∀ table ∈ witness.tables,
-        table.ChannelGuarantees witness.data source.sail.memorySnapshot.registerTable.channel.toRaw := by
+        table.ChannelGuarantees witness.data channel := by
+  let : channel.Consistent := by
+    rcases List.mem_cons.mp known with rfl | known
+    · infer_instance
+    · obtain rfl := List.mem_singleton.mp known
+      infer_instance
   apply witness.channelGuarantees_of_requirements _ balanced
   · intro interaction emitted _
     exact verifier_requirements image source _ interaction emitted
   · intro table member
     have location := EnsembleWitness.mem_component_of_mem member
     simp only [ensemble, PublicVerifier.install, baseEnsemble, tables, afterSourceTables,
-      List.mem_append, List.mem_singleton] at location
+      List.mem_append] at location
     rcases location with sourceTable | native | fixed
     · intro row rowMember
       apply Operations.requirements_of_not_mem _ _ _
@@ -273,22 +288,32 @@ theorem register_guarantees_of_balance (image : ProgramImage) (source : Executio
           (constraints table member row rowMember))
       intro required
       have used := source_requirements source table.component sourceTable required
-      simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
+        List.not_mem_nil, or_false] at known
+      rcases known with rfl | rfl
+      all_goals simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows,
         memoryChannel, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
         Channel.toRaw] at used
     · intro row rowMember
       apply NativeCore.afterInitialTables_finished_requirements image table.component native _ ?_
         _ (constraints table member row rowMember)
-      simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
+        List.not_mem_nil, or_false] at known
+      rcases known with rfl | rfl
+      all_goals simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows,
         stateChannel, memoryChannel, OrderedBoundary.channel,
         OrderedInitialProvider.channelName,
         OrderedFinalProvider.channelName, Channel.toRaw]
     · have assumptions : table.Assumptions witness.data := by
         intro row _
-        rw [fixed]
-        trivial
+        rcases List.mem_cons.mp fixed with fixed | fixed
+        · rw [fixed]; trivial
+        · rw [List.mem_singleton.mp fixed]; trivial
       intro row rowMember interaction emitted _
-      exact (table.component.weakSoundness_of_no_guarantees (by rw [fixed]; rfl)
+      exact (table.component.weakSoundness_of_no_guarantees (by
+          rcases List.mem_cons.mp fixed with fixed | fixed
+          · rw [fixed]; rfl
+          · rw [List.mem_singleton.mp fixed]; rfl)
         (table.circuitAssumptions (witness.data_consistent table member) assumptions row rowMember)
         (constraints table member row rowMember)).2 interaction emitted
 
@@ -310,7 +335,7 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
   apply component_finished_requirements image source component member byteChannel.toRaw ?_ env constraints
   simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
     OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
-    MemorySnapshot.registerTable, StaticTable.ofRows]
+    MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership]
 
 /-- The local assembly derives the ordering interface from its Byte, State, and source-check ledgers. -/
 theorem orderingChannels_of_constraints {image : ProgramImage} {source : ExecutionSnapshot}

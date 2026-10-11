@@ -1,7 +1,7 @@
 # Build products and dependencies, including nested Rust/Node tools.
 .lake/
 /build/
-target/
+target
 node_modules
 *.olean
 *.olean.private

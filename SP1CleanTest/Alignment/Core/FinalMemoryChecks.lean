@@ -31,7 +31,7 @@ private theorem names (target : MemorySnapshot) :
       (Soundness.FinalMemoryChecks.checkTables target ++ auxiliary)).map
         (fun component : Component Fp => component.circuit.name)).Nodup := by
   simp only [Soundness.FinalMemoryChecks.checkTables, List.map_append, List.map_cons, List.map_nil,
-    StaticTable.component, StaticTable.provider, FinalRegisterValue.membership]
+    StaticTable.component, StaticTable.provider, FinalRegisterValue.membership, InitialMemoryLookup.membership]
   exact of_decide_eq_true rfl
 
 private def assembly (target : MemorySnapshot) :=
@@ -48,16 +48,18 @@ theorem resourceInterface (target : MemorySnapshot) : Soundness.FinalMemoryCheck
     · exact List.mem_of_mem_take provider
   have silence : auxiliary.all (fun component =>
       !(component.circuit.channels.map RawChannel.name).contains "sp1.native.target_registers" &&
+      !(component.circuit.channels.map RawChannel.name).contains "sp1.native.target_memory" &&
       !(component.circuit.channels.map RawChannel.name).contains "SP1FinalRegisterValue" &&
       !(component.circuit.channels.map RawChannel.name).contains "SP1FinalRamValue" &&
       !(component.circuit.channels.map RawChannel.name).contains "SP1FinalMemoryChange") = true := rfl
   refine ⟨?_, ?_, ?_, ?_⟩
-  · intro component member used
+  · intro channel known component member used
     have silent := List.all_eq_true.mp silence component member
     have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    change (component.circuit.channels.map RawChannel.name).contains "sp1.native.target_registers" = true at present
-    rw [present] at silent
-    simp at silent
+    simp only [Soundness.FinalMemoryChecks.membershipChannels, List.mem_cons, List.not_mem_nil, or_false] at known
+    rcases known with rfl | rfl <;>
+      simp only [StaticTable.channel, FinalRegisterValue.membership, InitialMemoryLookup.membership, Channel.toRaw] at present <;>
+      rw [present] at silent <;> simp at silent
   · intro component member env checked
     exact sp1_component_finished_requirements component (members component member)
       Channels.byteChannel.toRaw (by simp [Channels.byteChannel, Channels.stateChannel,
@@ -87,7 +89,7 @@ private def finalizer (index previous : ℕ) (record : Channels.MemoryMsg Fp) : 
     (Word.toNat (MemoryBoundary.address record)))).toList)
 
 private def memory (record : Channels.MemoryMsg Fp) : Row :=
-  (6, (toElements (⟨record.clk_high, record.clk_low, record.addr0, record.addr1,
+  (7, (toElements (⟨record.clk_high, record.clk_low, record.addr0, record.addr1,
     record.addr2, record.value, 1⟩ : MemoryProviderChip.Inputs Fp)).toList)
 
 private def registerCheck (record : Channels.MemoryMsg Fp) (selected : Fp) : Row :=
@@ -104,20 +106,15 @@ private def rows : List Row :=
   [finalizer 0 0 registers, finalizer 1 2 ram, terminal 65537,
     registerCheck registers 1, ramCheck ram 1, memory registers, memory ram]
 
-private def evaluate (target : MemorySnapshot) (component : Component Fp) (inputs : List Fp) :
+private def evaluate (_target : MemorySnapshot) (component : Component Fp) (inputs : List Fp) :
     Bool × Ledger :=
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let memory := target.memory.fixedTable (p := SP1Prime) (2 ^ 48)
-  let fixed : List (String × Array (Array Fp)) :=
-    [("sp1.native.target_memory", Array.ofFn fun i : Fin memory.length =>
-      (toElements (memory.row i)).toArray)]
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => fixed.any fun table => lookup.table.name == table.1 &&
-        table.2.any (fun row => row == (lookup.entry.map env).toArray)
+    | .lookup .. => false
     | .witness .. | .interact .. => true
   (valid, (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
@@ -131,12 +128,12 @@ private def byteProvider (entry : String × List Fp × Fp) : Option Row :=
   if entry.1 != "SP1Byte" || entry.2.2 == 0 then none else
   match entry.2.1 with
   | [opcode, a, b, c] =>
-    if opcode == 3 then some (8, [b, c, -entry.2.2])
-    else if opcode == 4 then some (12, [b, c, -entry.2.2])
-    else if opcode == 5 then some (8, [b, -entry.2.2])
-    else if opcode == 6 && b.val < 17 then some (13 + b.val, [a, -entry.2.2])
-    else some (30, [])
-  | _ => some (30, [])
+    if opcode == 3 then some (9, [b, c, -entry.2.2])
+    else if opcode == 4 then some (13, [b, c, -entry.2.2])
+    else if opcode == 5 then some (9, [b, -entry.2.2])
+    else if opcode == 6 && b.val < 17 then some (14 + b.val, [a, -entry.2.2])
+    else some (31, [])
+  | _ => some (31, [])
 
 private def verifierLedger (target : MemorySnapshot) : Ledger :=
   let env : Environment Fp := Environment.fromInput (Input := unit) () (fun _ _ => #[])
@@ -150,7 +147,8 @@ private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Boo
   let evaluated := initial ++ providers.map (evaluateRow target)
   let consumerLedger := evaluated.flatMap Prod.snd
   let ledger := consumerLedger ++ StaticMembership.providerLedger
-    (FinalRegisterValue.membership target) consumerLedger
+    (FinalRegisterValue.membership target) consumerLedger ++ StaticMembership.providerLedger
+      (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory") consumerLedger
   evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       ((assembly target).channels.map RawChannel.name).contains name &&
@@ -186,7 +184,7 @@ private def mutationResults : List Bool :=
      check { target with memory := target.memory.write 65543 18 } rows,
      check target rows false,
      check target (rows.filter (fun row => row.1 != 2)),
-     check target (rows.filter (fun row => row.1 != 6))]
+     check target (rows.filter (fun row => row.1 != 7))]
 
 /-- Complete-record matching, Boolean selection, target coverage, Byte closure, and final order
 are all enforced by the same accepted witness. -/

@@ -158,7 +158,7 @@ private theorem baseNames :
 private def assembly :=
   HostHintReadLocal.ensemble (p := SP1Prime) image source HostCallReceivers.available [] [] baseNames
 
-/-- Build every physical slot, retaining unused verifier-fixed register rows at count zero. -/
+/-- Build every physical slot, retaining unused verifier-fixed membership rows at count zero. -/
 private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
     (inputs : ℕ → List (List Fp)) : EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
@@ -170,10 +170,10 @@ private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
 
 private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (permissions : List (WritePermissionProvider.Inputs Fp)) (index : ℕ) : List (List Fp) :=
-  if index == 60 then permissions.map (fun row => (toElements row).toList)
-  else if index == 61 then calls.map (fun row => (toElements row).toList)
-  else if index == 82 || index == 83 then
-    (rows.filter (fun row => row.1 == (index == 83))).map (fun row => (toElements row.2).toList)
+  if index == 61 then permissions.map (fun row => (toElements row).toList)
+  else if index == 62 then calls.map (fun row => (toElements row).toList)
+  else if index == 83 || index == 84 then
+    (rows.filter (fun row => row.1 == (index == 84))).map (fun row => (toElements row.2).toList)
   else []
 
 /-- A physical ensemble witness used to test cursor extraction. Other channels are deliberately
@@ -182,7 +182,7 @@ private def installed (calls : List (HostHintReadChip.Inputs Fp)) (rows : List H
     (permissions : List (WritePermissionProvider.Inputs Fp) := []) : EnsembleWitness assembly :=
   buildWitness assembly (installedInputs calls rows permissions)
 
-/-- The installed 84-table assembly retains exactly the handler and both physical word tables.
+/-- The installed 85-table assembly retains exactly the handler and both physical word tables.
 Its complete cursor balances with reversed multi-call rows; missing handlers, missing words,
 and orphan consumers fail at the same whole-witness channel boundary. The named prover data
 contains the actual handler inputs in physical order. -/
@@ -192,7 +192,7 @@ theorem installedCursor :
     let handler := HostHintReadLocal.handlerTable witness
     let tables := HostHintReadLocal.wordTables witness
     let cursor := cursorLedger witness.interactions
-    witness.tables.length = 84 ∧ handler.table = (handlers calls).table ∧
+    witness.tables.length = 85 ∧ handler.table = (handlers calls).table ∧
       witness.data "sp1.native.hint_read" (size HostHintReadChip.Inputs) =
         (calls.map toElements).toArray ∧
       tables.map (·.table) = (consumers rows).map (·.table) ∧
@@ -241,8 +241,8 @@ theorem installedPermissions :
 private def sourceInputs (calls : List (HostHintReadChip.Inputs Fp))
     (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
     (index : ℕ) : List (List Fp) :=
-  if index == 84 then nodes.map (fun row => (toElements row).toList)
-  else if index == 85 then records.map (fun row => (toElements row).toList)
+  if index == 85 then nodes.map (fun row => (toElements row).toList)
+  else if index == 86 then records.map (fun row => (toElements row).toList)
   else installedInputs calls rows [] index
 
 private def recordSnapshot (actual : List Bytes) : ExecutionSnapshot :=
@@ -276,7 +276,7 @@ theorem installedRecords :
     let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
     let witness := withSources hints calls rows nodes records
     let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
-    witness.tables.length = 88 ∧ sourceRowsChecked hints nodes records = true ∧
+    witness.tables.length = 89 ∧ sourceRowsChecked hints nodes records = true ∧
       HintReadFixtures.balanced (recordLedger witness.interactions) = true ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records).interactions) = false ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows nodes (records.drop 1)).interactions) = false ∧
@@ -350,7 +350,7 @@ theorem installedQueueEndpoints :
     let projected := Soundness.HostHintQueueBoundary.projected witness
     let endpoints := queueLedger ((queueAssembly hints final).verifierOperations.interactionValues
       (Environment.fromInput witness.publicInput witness.data))
-    witness.tables.length = 88 ∧ projected.tables.length = 88 ∧
+    witness.tables.length = 89 ∧ projected.tables.length = 89 ∧
       witness.tables.map (·.table) = projected.tables.map (·.table) ∧
       endpoints = [queueEndpoint (SP1Clean.HostHintQueueBoundary.initial hints) 1,
         queueEndpoint final (-1)] ∧

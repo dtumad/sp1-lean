@@ -24,6 +24,15 @@ This table is separate from the ordered Memory providers and contributes no Memo
 def registerMembership (snapshot : MemorySnapshot) : Component (ZMod p) :=
   snapshot.registerTable.component
 
+/-- The normalized source intervals authenticate every byte of sparse RAM requests. -/
+def ramMembership (snapshot : MemorySnapshot) : Component (ZMod p) :=
+  (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").component
+
+/-- Both fixed membership ledgers are private to this source snapshot. -/
+def membershipChannels (snapshot : MemorySnapshot) : List (RawChannel (ZMod p)) :=
+  [snapshot.registerTable.channel.toRaw,
+   (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]
+
 def registerView (snapshot : MemorySnapshot) :
     TransitionView (OrderedBoundary.channel (p := p) channelName) :=
   OrderedMemoryEnsemble.providerView channelName (by decide)
@@ -94,24 +103,31 @@ theorem inventory_unique_names (snapshot : MemorySnapshot) :
     SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit, channelName]
   decide
 
-/-- Source rows use Byte, Memory, private ordering and fixed register membership. -/
+/-- Source rows use Byte, Memory, private ordering and fixed snapshot membership. -/
 theorem view_channels_subset (snapshot : MemorySnapshot) (id : TableId) :
     (viewFor (p := p) snapshot id).component.circuit.channels ⊆
       [byteChannel.toRaw, memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
-        snapshot.registerTable.channel.toRaw] := by
+        snapshot.registerTable.channel.toRaw,
+        (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw] := by
   cases id
   · change (snapshot.registerTable.channel.toRaw :: byteChannel.toRaw :: (OrderedBoundary.channel channelName).toRaw ::
       [byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
         memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
     simp
-  · change (List.replicate 38 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
-      List.replicate 4 byteChannel.toRaw ++ [memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
-    generalize (byteChannel (p := p)).toRaw = byte, (memoryChannel (p := p)).toRaw = memory,
+  · change ((InitialMemoryRead.circuit (p := p) snapshot.memory).channelsWithGuarantees ++
+      List.replicate 2 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
+      List.replicate 4 byteChannel.toRaw ++
+      [memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
+    simp only [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed_guarantees]
+    generalize (byteChannel (p := p)).toRaw = byte,
+      (memoryChannel (p := p)).toRaw = memory,
       (OrderedBoundary.channel (p := p) channelName).toRaw = control,
-      (snapshot.registerTable (p := p)).channel.toRaw = registers
-    simp only [List.subset_def, List.mem_append, List.mem_replicate,
+      (snapshot.registerTable (p := p)).channel.toRaw = registers,
+      (InitialMemoryLookup.membership (p := p) snapshot.memory (2 ^ 48)
+        "sp1.native.initial_memory").channel.toRaw = ram
+    simp only [List.subset_def, List.mem_append, List.mem_replicate, List.mem_flatten,
       List.mem_cons, List.not_mem_nil, or_false]
-    tauto
+    aesop
   · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
       (OrderedBoundary.channel channelName).toRaw] ⊆ _
     simp
@@ -151,19 +167,32 @@ theorem view_spec (snapshot : MemorySnapshot) (id : TableId) (env : Environment 
     (constraints : (viewFor snapshot id).component.operations.ConstraintsHold env)
     (byte : (viewFor snapshot id).component.operations.ChannelGuarantees byteChannel.toRaw env)
     (registers : (viewFor snapshot id).component.operations.ChannelGuarantees
-      snapshot.registerTable.channel.toRaw env) :
+      snapshot.registerTable.channel.toRaw env)
+    (ram : (viewFor snapshot id).component.operations.ChannelGuarantees
+      (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw env) :
     (viewFor snapshot id).component.Spec env := by
   have assumptions : (viewFor snapshot id).component.CircuitAssumptions env := by cases id <;> trivial
   have channels : (viewFor (p := p) snapshot id).component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
-        snapshot.registerTable.channel.toRaw] := by
+        snapshot.registerTable.channel.toRaw,
+        (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw] := by
     cases id
     · change [snapshot.registerTable.channel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
         byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
       simp
-    · change (List.replicate 38 byteChannel.toRaw ++
-        [(OrderedBoundary.channel channelName).toRaw] ++ List.replicate 4 byteChannel.toRaw) ⊆ _
-      simp
+    · change ((InitialMemoryRead.circuit (p := p) snapshot.memory).channelsWithGuarantees ++
+        List.replicate 2 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
+        List.replicate 4 byteChannel.toRaw) ⊆ _
+      simp only [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed_guarantees]
+      generalize (byteChannel (p := p)).toRaw = byte,
+        (memoryChannel (p := p)).toRaw = memory,
+        (OrderedBoundary.channel (p := p) channelName).toRaw = control,
+        (snapshot.registerTable (p := p)).channel.toRaw = registers,
+        (InitialMemoryLookup.membership (p := p) snapshot.memory (2 ^ 48)
+          "sp1.native.initial_memory").channel.toRaw = ram
+      simp only [List.subset_def, List.mem_append, List.mem_replicate, List.mem_flatten,
+        List.mem_cons, List.not_mem_nil, or_false]
+      aesop
     · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] ⊆ _
       simp
   apply (Component.weakSoundness assumptions constraints ?_).1
@@ -173,7 +202,9 @@ theorem view_spec (snapshot : MemorySnapshot) (id : TableId) (env : Environment 
   · exact byte
   · rcases List.mem_cons.mp member with rfl | member
     · exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
-    · obtain rfl := List.mem_singleton.mp member
-      exact registers
+    · rcases List.mem_cons.mp member with rfl | member
+      · exact registers
+      · obtain rfl := List.mem_singleton.mp member
+        exact ram
 
 end SP1Clean.Soundness.SnapshotMemoryEnsemble

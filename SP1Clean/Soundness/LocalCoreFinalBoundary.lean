@@ -22,7 +22,8 @@ The omitted initialization tables are silent on the final ordering channel. -/
 def finalWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p)
-      (NativeCore.afterFinalTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot]) []
+      (NativeCore.afterFinalTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot,
+          SnapshotMemoryEnsemble.ramMembership source.sail.memorySnapshot]) []
       (by
         have unique := (baseEnsemble (p := p) image source).unique_names
         change ((tables image source).map (·.circuit.name)).Nodup at unique
@@ -33,7 +34,8 @@ def finalWitness {image : ProgramImage} {source : ExecutionSnapshot}
     rw [List.map_drop, witness.tables_map_component]
     change (tables image source).drop 3 =
       FinalMemoryEnsemble.inventory.views.map (·.component) ++
-        (NativeCore.afterFinalTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot])
+        (NativeCore.afterFinalTables image ++ [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot,
+          SnapshotMemoryEnsemble.ramMembership source.sail.memorySnapshot])
     rw [tables]
     have length : ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.map (·.component)).length = 3 := rfl
     rw [List.drop_left' length, afterSourceTables, NativeCore.afterInitialTables_eq, List.append_assoc])
@@ -95,7 +97,7 @@ private theorem sourceTables_final_silent {image : ProgramImage} {source : Execu
   have allowed := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id
   intro used
   simpa [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-    memoryChannel, byteChannel, StaticTable.channel, MemorySnapshot.registerTable,
+    memoryChannel, byteChannel, StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
     StaticTable.ofRows, Channel.toRaw] using allowed used
 
 /-- The certified boundary program fixes the final inventory's two ordering endpoints. -/
@@ -162,16 +164,23 @@ theorem finalWitness_interactions {image : ProgramImage} {source : ExecutionSnap
 /-- The final ordering channel is absent from the execution suffix and source membership table. -/
 theorem afterFinalTables_silent (image : ProgramImage) (source : ExecutionSnapshot) :
     ∀ component ∈ NativeCore.afterFinalTables (p := p) image ++
-        [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot],
+        [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot,
+          SnapshotMemoryEnsemble.ramMembership source.sail.memorySnapshot],
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels := by
   intro component member
   rcases List.mem_append.mp member with native | fixed
   · exact NativeCore.afterFinalTables_silent image component native
-  · obtain rfl := List.mem_singleton.mp fixed
-    change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
-      [source.sail.memorySnapshot.registerTable.channel.toRaw]
-    simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
-      OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl
+    · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
+        [source.sail.memorySnapshot.registerTable.channel.toRaw]
+      simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+        OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw]
+    · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
+        [(InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48)
+          "sp1.native.initial_memory").channel.toRaw]
+      simp [StaticTable.channel, InitialMemoryLookup.membership,
+        OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw]
 
 /-- The final inventory has one record per decoded location before any value is grounded.
 This includes uniqueness across the register/RAM split and across duplicate physical rows. -/

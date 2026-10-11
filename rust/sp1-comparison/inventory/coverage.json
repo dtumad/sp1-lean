@@ -74,14 +74,17 @@
       "lean": [
         "SP1Clean/Proofs/Chips/OrderedSnapshotProvider.lean",
         "SP1Clean/Proofs/Chips/OrderedFinalProvider.lean",
-        "SP1Clean/Soundness/FinalMemoryCheckSoundness.lean"
+        "SP1Clean/Soundness/FinalMemoryCheckSoundness.lean",
+        "SP1Clean/Native/Operations/InitialMemoryLookup.lean",
+        "SP1Clean/Native/Operations/FinalRamValue.lean"
       ],
       "export": "subcomponent",
       "comparisonKind": "native-backend",
       "comparison": [
-        "rust/sp1-comparison/tests/clean_export.rs"
+        "rust/sp1-comparison/tests/clean_export.rs",
+        "rust/sp1-comparison/tests/ram_export.rs"
       ],
-      "limit": "Source/target register membership exports are tested. Ordered wrappers, RAM, terminals and complete assembly remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
+      "limit": "Source/target register and RAM membership and RAM byte/word rows are tested. Ordered wrappers, terminals and complete assembly remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
     },
     "program": {
       "lean": [
@@ -271,7 +274,7 @@
   },
   "native": [
     {"name": "sp1.native.memory.snapshot.registers.SP1NativeMemoryInitOrder", "width": 149, "inputWidth": 21, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.memory.snapshot.ram.SP1NativeMemoryInitOrder", "width": 892, "inputWidth": 20, "fixedWidth": 0, "group": "memory", "lookups": ["sp1.native.initial_memory", "sp1.native.initial_memory", "sp1.native.initial_memory", "sp1.native.initial_memory", "sp1.native.initial_memory", "sp1.native.initial_memory", "sp1.native.initial_memory", "sp1.native.initial_memory"]},
+    {"name": "sp1.native.memory.snapshot.ram.SP1NativeMemoryInitOrder", "width": 892, "inputWidth": 20, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.SP1NativeMemoryInitOrder.terminal", "width": 140, "inputWidth": 12, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.memory.final.registers.SP1NativeMemoryFinalOrder", "width": 158, "inputWidth": 25, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.memory.final.ram.SP1NativeMemoryFinalOrder", "width": 221, "inputWidth": 25, "fixedWidth": 0, "group": "memory", "lookups": []},
@@ -330,6 +333,7 @@
     {"name": "sp1.native.halt", "width": 25, "inputWidth": 25, "fixedWidth": 0, "group": "halt", "lookups": []},
     {"name": "sp1.native.host_call", "width": 79, "inputWidth": 71, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.syscall_code"]},
     {"name": "sp1.native.source_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
+    {"name": "sp1.native.initial_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []},
     {"name": "sp1.native.write_permission", "width": 97, "inputWidth": 9, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.write_permission"]},
     {"name": "sp1.native.hint_read", "width": 368, "inputWidth": 66, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.host_halt", "width": 94, "inputWidth": 30, "fixedWidth": 0, "group": "host", "lookups": []},
@@ -359,8 +363,9 @@
     {"name": "sp1.native.commit.terminal", "width": 82, "inputWidth": 34, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.commit_deferred.terminal", "width": 82, "inputWidth": 34, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.memory.check.registers.changes", "width": 10, "inputWidth": 10, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.memory.check.ram.changes", "width": 750, "inputWidth": 10, "fixedWidth": 0, "group": "memory", "lookups": ["sp1.native.target_memory", "sp1.native.target_memory", "sp1.native.target_memory", "sp1.native.target_memory", "sp1.native.target_memory", "sp1.native.target_memory", "sp1.native.target_memory", "sp1.native.target_memory"]},
-    {"name": "sp1.native.target_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []}
+    {"name": "sp1.native.memory.check.ram.changes", "width": 750, "inputWidth": 10, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.target_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
+    {"name": "sp1.native.target_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []}
   ],
   "publicWidth": 48,
   "verifier": "verifier"

@@ -104,7 +104,7 @@ theorem state_interiors {image : ProgramImage}
         typedTableInteractionsWith (systemTable witness 1) witness.data stateChannel ++
         typedTableInteractionsWith (systemTable witness 2) witness.data stateChannel ++
         typedTableInteractionsWith (systemTable witness 3) witness.data stateChannel := by
-  have length : witness.tables.length = 59 := by
+  have length : witness.tables.length = 60 := by
     rw [← witness.same_length]; exact tables_length image
   have programSilent : typedTableInteractionsWith (programTable witness) witness.data stateChannel = [] := by
     apply typedTableInteractions_nil
@@ -118,10 +118,14 @@ theorem state_interiors {image : ProgramImage}
     simp [stateChannel_eq_byteChannel_false, stateChannel_eq_memoryChannel_false]
   have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
     rw [List.drop_eq_getElem_cons (by omega)]; rfl
+  have ramSilent : typedTableInteractionsWith (ramMembershipTable witness) witness.data stateChannel = [] := by
+    apply typedTableInteractions_nil
+    exact ramMembershipTable_silent witness stateChannel.toRaw (by simp [stateChannel, Channel.toRaw])
   have tail : witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
-      systemTable witness 2, systemTable witness 3] := by
+      systemTable witness 2, systemTable witness 3, ramMembershipTable witness] := by
     rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
       List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+      List.drop_eq_getElem_cons (by omega),
       List.drop_eq_nil_of_le (by omega)]
     rfl
   have split := congrArg (List.flatMap (typedTableInteractionsWith · witness.data stateChannel))
@@ -130,7 +134,7 @@ theorem state_interiors {image : ProgramImage}
   rw [← split, head, List.flatMap_cons, programSilent, List.nil_append,
     flatMap_split witness.tables _ 7 25, flatMap_split witness.tables _ 32 23,
     byteTables_state_silent, List.nil_append, tail]
-  simp only [List.flatMap_cons, List.flatMap_nil, refreshSilent, List.nil_append,
+  simp only [List.flatMap_cons, List.flatMap_nil, ramSilent, refreshSilent, List.nil_append,
     List.append_nil, List.append_assoc, instructionTables]
 
 private theorem verifierMain_stateInteractions (image : ProgramImage)

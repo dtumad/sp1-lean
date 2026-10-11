@@ -3,6 +3,7 @@ import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
 import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
+import SP1CleanTest.Core.RamExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -36,7 +37,8 @@ private def exportEnsembleFixture : IO Unit := do
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
-      SP1CleanTest.Core.StaticProviderExport.rustExports do
+      SP1CleanTest.Core.StaticProviderExport.rustExports ++
+      SP1CleanTest.Core.RamExport.rustExports do
     let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
@@ -124,6 +126,33 @@ private def exportEnsembleFixture : IO Unit := do
         pure (physicalReference witness)
     pure <| Json.mkObj [("name", toJson name), ("cases", toJson cases), ("unused", unused)]
   IO.FS.writeFile (out / "static_membership.reference.json") ((toJson staticFixtures).compress ++ "\n")
+  let ramFixtures ← ["sp1.native.initial_memory", "sp1.native.target_memory"].mapM fun name => do
+    let cases ← SP1CleanTest.Core.RamExport.cases.mapM fun (label, requests, expected) => do
+      let fields := [("name", toJson label),
+        ("publicInput", toJson ((toElements requests).toArray.map (·.val))),
+        ("accepted", toJson expected)]
+      match SP1CleanTest.Core.RamExport.generate name requests with
+      | .error message =>
+        if expected then throw (IO.userError s!"{label}: {message}")
+        pure <| Json.mkObj (fields ++ [("error", toJson message)])
+      | .ok witness =>
+        unless expected && (SP1CleanTest.Core.RamExport.description name).checkWitness
+            SP1Clean.SP1Prime witness do
+          throw (IO.userError s!"unexpected RAM membership acceptance: {label}")
+        pure <| Json.mkObj (fields ++ [("witness", physicalReference witness)])
+    pure (name, toJson cases)
+  IO.FS.writeFile (out / "ram_membership.reference.json") ((Json.mkObj ramFixtures).compress ++ "\n")
+  let ramRows := SP1CleanTest.Core.RamExport.rowCases.map fun (name, component, inputs) =>
+    (name, toJson (inputs.map fun cells =>
+      let input := fromElements (Vector.ofFn fun index => cells[index.val]?.getD 0)
+      let row := component.buildRow input (fun _ _ => #[]) (ProverHint.empty _)
+      let env := Environment.fromArray row (fun _ _ => #[])
+      Json.mkObj [("input", toJson (cells.map (·.val))), ("row", toJson (row.map (·.val))),
+        ("interactions", toJson (component.rowOperations.interactionValues env |>.map fun entry =>
+          Json.mkObj [("channel", toJson entry.channel.name),
+            ("message", toJson (entry.msg.map (·.val))),
+            ("multiplicity", toJson entry.mult.val), ("assumeGuarantees", toJson entry.assumeGuarantees)]))]))
+  IO.FS.writeFile (out / "ram_rows.reference.json") ((Json.mkObj ramRows).compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture

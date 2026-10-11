@@ -80,13 +80,12 @@ def baseRows : List Row :=
 def withoutRam : List Row :=
   baseRows.filter (fun row => !([1, 2, 4, 5].contains row.1)) ++ [terminal 2 4, terminal 5 4]
 
-def evaluate (image : ProgramImage) (source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
+def evaluate (image : ProgramImage) (_source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
     (extraLookups : List (FiniteLookup Fp) := []) : Bool × Ledger :=
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let fixed := [FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
-    FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
+  let fixed := [FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
     FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
     FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))] ++ extraLookups
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>

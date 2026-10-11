@@ -74,18 +74,24 @@ theorem memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
   rw [← split, ← splitTail, List.append_assoc]
   rfl
 
-/-- Native interior rows have signed-unit Memory traffic; the fixed register provider is silent. -/
+/-- Native interior rows have signed-unit Memory traffic; both fixed membership providers are silent. -/
 theorem interior_memoryBinary (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (tables image source).drop 6) :
     NativeCore.MemoryBinary component := by
   change component ∈ NativeCore.afterFinalTables image ++
-    [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot] at member
+    [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot,
+      SnapshotMemoryEnsemble.ramMembership source.sail.memorySnapshot] at member
   rcases List.mem_append.mp member with native | fixed
   · exact NativeCore.interior_memoryBinary image component native
-  · obtain rfl := List.mem_singleton.mp fixed
-    apply NativeCore.memoryBinary_of_silent
-    change memoryChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
-    simp [memoryChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl
+    · apply NativeCore.memoryBinary_of_silent
+      change memoryChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+      simp [memoryChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
+    · apply NativeCore.memoryBinary_of_silent
+      change memoryChannel.toRaw ∉ [(InitialMemoryLookup.membership source.sail.memorySnapshot.memory
+        (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]
+      simp [memoryChannel, StaticTable.channel, InitialMemoryLookup.membership, Channel.toRaw]
 
 /-- Every interaction of the unchanged interior has signed-unit multiplicity or zero. -/
 theorem memoryInterior_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}

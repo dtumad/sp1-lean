@@ -5,7 +5,7 @@ import Clean.Circuit.WitnessExport
 /-! # Initial-memory AIR regressions
 
 These checks run the circuit's witness program and evaluate its actual flattened assertions and
-fixed lookups. Interaction balance belongs to the ensemble tests. The negative cases distinguish
+membership pulls. Interaction balance belongs to the ensemble tests. The negative cases distinguish
 fixed-row authentication from address containment: either can fail while the other still holds.
 -/
 
@@ -22,18 +22,20 @@ private def memory : ByteMemory := ⟨[(7, 42), (0, 13), (7, 9), (15, 255)]⟩
 #guard_msgs in
 #assert_exportable (circuit (p := SP1Clean.SP1Prime) memory 16 (by norm_num))
 
-/-- Evaluate flattened assertions and the concrete initial-memory lookup; balance is checked separately. -/
+/-- Evaluate flattened assertions and concrete initial-memory membership; balance is checked separately. -/
 def localConstraints (memory : ByteMemory) (limit : ℕ) (env : Environment Fp)
     (operations : List (FlatOperation Fp)) : Bool :=
   operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup =>
-      if arity : lookup.table.arity = size MemoryIntervalRow then
-        lookup.table.name == "sp1.native.initial_memory" && (memory.intervals limit).any fun interval =>
-          toElements (interval.encode (p := SP1Clean.SP1Prime)) == arity ▸ lookup.entry.map env
-      else false
-    | .witness .. | .interact .. => true
+    | .interact interaction =>
+      if interaction.channel.name == "sp1.native.initial_memory" then
+        (memory.intervals limit).any fun interval =>
+          (toElements (interval.encode (p := SP1Clean.SP1Prime))).toList ++ [1] ==
+            (interaction.msg.map env).toList
+      else true
+    | .lookup .. => false
+    | .witness .. => true
 
 /-- Mutations replace the selected interval and recompute honest comparison columns. This lets
 containment failures remain distinct from forged fixed-row payloads. -/

@@ -9,29 +9,26 @@ namespace SP1Clean.Audit.BranchEnsemble
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
 
 /-- Full finite lookup meanings, including installed tables with no physical rows in this fixture. -/
-def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
-  let memory := FiniteLookup.ofStatic (target.memory.fixedTable (p := SP1Prime) (2 ^ 48))
-  [FiniteLookup.ofStatic (source.sail.memory.fixedTable (p := SP1Prime) (2 ^ 48)),
-    FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
+def fixed (_target : MemorySnapshot) : List (FiniteLookup Fp) :=
+  [FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
     FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime)),
     FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
     FiniteLookup.ofStatic (HintQueue.sourceTable (p := SP1Prime) []),
-    FiniteLookup.ofStatic (HintQueue.sourceWordTable (p := SP1Prime) []),
-    { memory with table := { memory.table with name := "sp1.native.target_memory" } }]
+    FiniteLookup.ofStatic (HintQueue.sourceWordTable (p := SP1Prime) [])]
 
 
 /-- Static lookup indices for every installed component, including all currently empty providers. -/
-def componentLookupIndices : List (List (Fin 7)) :=
-  [[], [0, 0, 0, 0, 0, 0, 0, 0], [], [], [], [], [1], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [2], [], [3], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [4], [5], [], [], [], [6, 6, 6, 6, 6, 6, 6, 6], []]
+def componentLookupIndices : List (List (Fin 5)) :=
+  [[], [], [], [], [], [], [0], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [1], [], [], [2], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [3], [4], [], [], [], [], [], []]
 
-/-- Component selection ranges over all 91 installed physical slots. -/
-abbrev componentAt (target : MemorySnapshot) (index : Fin 91) : Component Fp :=
-  (assembly target).tables[index.val]'(by change index.val < 91; exact index.isLt)
+/-- Component selection ranges over all 93 installed physical slots. -/
+abbrev componentAt (target : MemorySnapshot) (index : Fin 93) : Component Fp :=
+  (assembly target).tables[index.val]'(by change index.val < 93; exact index.isLt)
 
 /-- The lookup rows promised for one installed component. -/
-def fixedFor (target : MemorySnapshot) (index : Fin 91) : List (RawTable Fp) :=
-  (componentLookupIndices[index.val]'(by change index.val < 91; exact index.isLt)).map fun table =>
-    ((fixed target)[table.val]'(by change table.val < 7; exact table.isLt)).table
+def fixedFor (target : MemorySnapshot) (index : Fin 93) : List (RawTable Fp) :=
+  (componentLookupIndices[index.val]'(by change index.val < 93; exact index.isLt)).map fun table =>
+    ((fixed target)[table.val]'(by change table.val < 5; exact table.isLt)).table
 
 attribute [local circuit_norm]
   Gadgets.BitwiseByte.circuit
@@ -289,13 +286,7 @@ attribute [local circuit_norm]
   SP1Clean.WritePermissionProvider.main
 
 
-/-- Source-memory lookup naming is fixed independently of the sparse row inventory. -/
-private theorem memory_table_name (memory : ByteMemory) (limit : ℕ) :
-    (memory.fixedTable (p := SP1Prime) limit).name = "sp1.native.initial_memory" := by
-  rw [ByteMemory.fixedTable]
-  rfl
-
-attribute [local circuit_norm] memory_table_name supportedChipFor RangeChip.circuitFor
+attribute [local circuit_norm] supportedChipFor RangeChip.circuitFor
   ProtectedStore.byte ProtectedStore.half ProtectedStore.word ProtectedStore.double
   DivRemChip.populateRow DivRemChip.constrainRow DivRemChip.assertZeros
   HostHintQueue.source HostHintQueue.sourceMain HostHintQueue.sourceWord HostHintQueue.sourceWordMain
@@ -322,7 +313,6 @@ private theorem lookup_slot_1 (target : MemorySnapshot) :
     (componentAt target 1).rowOperations.lookups.map (·.table) = fixedFor target 1 := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
-  rfl
 
 /-- Raw lookup identities at physical component 2. -/
 private theorem lookup_slot_2 (target : MemorySnapshot) :
@@ -671,12 +661,6 @@ private theorem lookup_slot_59 (target : MemorySnapshot) :
     (componentAt target 59).rowOperations.lookups.map (·.table) = fixedFor target 59 := by
   rfl
 
-/-- Raw lookup identities at physical component 60. -/
-private theorem lookup_slot_60 (target : MemorySnapshot) :
-    (componentAt target 60).rowOperations.lookups.map (·.table) = fixedFor target 60 := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
-
 /-- Raw lookup identities at physical component 61. -/
 private theorem lookup_slot_61 (target : MemorySnapshot) :
     (componentAt target 61).rowOperations.lookups.map (·.table) = fixedFor target 61 := by
@@ -850,16 +834,33 @@ private theorem lookup_slot_89 (target : MemorySnapshot) :
     (componentAt target 89).rowOperations.lookups.map (·.table) = fixedFor target 89 := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
-  rfl
 
-/-- The fixed target provider has no legacy lookup. -/
+/-- Raw lookup identities at physical component 90. -/
 private theorem lookup_slot_90 (target : MemorySnapshot) :
     (componentAt target 90).rowOperations.lookups.map (·.table) = fixedFor target 90 := by
+  conv_lhs => arg 2; arg 1; arg 1; whnf
+  simp [circuit_norm]
+
+/-- The fixed target provider has no legacy lookup. -/
+private theorem lookup_slot_91 (target : MemorySnapshot) :
+    (componentAt target 91).rowOperations.lookups.map (·.table) = fixedFor target 91 := by
+  conv_lhs => arg 2; arg 1; arg 1; whnf
+  simp [circuit_norm, StaticTable.provider]
+
+/-- The fixed RAM provider has no legacy lookup. -/
+private theorem lookup_slot_60 (target : MemorySnapshot) :
+    (componentAt target 60).rowOperations.lookups.map (·.table) = fixedFor target 60 := by
+  conv_lhs => arg 2; arg 1; arg 1; whnf
+  simp [circuit_norm, StaticTable.provider]
+
+/-- The fixed RAM provider has no legacy lookup. -/
+private theorem lookup_slot_92 (target : MemorySnapshot) :
+    (componentAt target 92).rowOperations.lookups.map (·.table) = fixedFor target 92 := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- Each installed component has exactly its listed fixed-table predicates. -/
-theorem lookup_slot (target : MemorySnapshot) (index : Fin 91) :
+theorem lookup_slot (target : MemorySnapshot) (index : Fin 93) :
     (componentAt target index).rowOperations.lookups.map (·.table) = fixedFor target index := by
   fin_cases index
   · exact lookup_slot_0 target
@@ -953,19 +954,21 @@ theorem lookup_slot (target : MemorySnapshot) (index : Fin 91) :
   · exact lookup_slot_88 target
   · exact lookup_slot_89 target
   · exact lookup_slot_90 target
+  · exact lookup_slot_91 target
+  · exact lookup_slot_92 target
 
 /-- Actual lookup predicates, not just names, agree with the finite realization inventory. -/
 theorem component_lookups (target : MemorySnapshot) :
     (assembly target).tables.map (fun component => component.rowOperations.lookups.map (·.table)) =
       componentLookupIndices.map (fun indices => indices.map fun index =>
-        ((fixed target)[index.val]'(by change index.val < 7; exact index.isLt)).table) := by
+        ((fixed target)[index.val]'(by change index.val < 5; exact index.isLt)).table) := by
   apply List.ext_getElem
   · simp only [List.length_map]
     rfl
   intro index bound otherBound
   simp only [List.getElem_map]
   have indexBound := otherBound
-  change index < 91 at indexBound
+  change index < 93 at indexBound
   exact lookup_slot target ⟨index, indexBound⟩
 
 /-- Every installed static lookup has an authenticated finite realization by table identity. -/

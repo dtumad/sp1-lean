@@ -103,7 +103,7 @@ def finalSeeds : List Seed :=
 /-- Every published final receipt is checked against the fixed complete target snapshot. -/
 def validatorSeeds : List Seed :=
   (orderedMemory true).map fun record =>
-    Seed.ofCells 88 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
+    Seed.ofCells 89 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
 /-- Terminate the actual finite ordered register inventory. -/
 def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0
@@ -117,7 +117,7 @@ def programSeeds : List Seed :=
     Seed.ofCells 6 (toElements (DecodedProgramProvider.inputOfMessage message (-entry.2.2))).toList
 /-- Unchanged host-bank endpoints, physically present even though this step makes no host call. -/
 def hostTerminals : List Seed :=
-  [86, 87].map fun index =>
+  [87, 88].map fun index =>
     Seed.ofCells index (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList
 /-- All non-Byte rows use the compiler and its demanded authentication inventory. -/
 def consumerSeeds : List Seed :=
@@ -156,12 +156,13 @@ def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List 
   let providers ← (verifier ++ ledgers.flatten).mapM byteSeed?
   let generated := providers.filterMap id
   if generated.all (seedValid target) then some (consumers ++ generated) else none
-/-- Every table remains installed, including all fixed register rows at their actual counts. -/
+/-- Every table remains installed, including all fixed membership rows at their actual counts. -/
 def builtTables (target : MemorySnapshot) (seeds : List Seed) : List (Table Fp) :=
   let components := (assembly target).tables
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
-    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name]
+    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
+    "sp1.native.initial_memory", "sp1.native.target_memory"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
   SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
 
@@ -171,9 +172,9 @@ theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed) :
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
-/-- Building rows never changes the complete 91-table host inventory. -/
+/-- Building rows never changes the complete 93-table host inventory. -/
 theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed) :
-    (builtTables target seeds).length = 91 := by
+    (builtTables target seeds).length = 93 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   rfl
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/

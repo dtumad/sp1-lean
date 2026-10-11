@@ -48,7 +48,7 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMo
   verifier := (LocalCore.ensemble image source).verifier
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
-    (tables (p := p) image source).length = 61 := by
+    (tables (p := p) image source).length = 62 := by
   simp only [tables, List.length_append, List.length_set, List.length_singleton, LocalCore.tables_length]
 
 end SP1Clean.Soundness.ProtectedLocalCore

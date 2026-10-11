@@ -294,7 +294,7 @@ private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
 /-- The installed verifier retains all 19 source occurrences and all ten boot-check occurrences,
 including zero-valued checks. It adds no committed table. -/
 theorem nativeVerifierInventory :
-    (Soundness.NativeCore.ensemble (p := SP1Prime) image).tables.length = 59 ∧
+    (Soundness.NativeCore.ensemble (p := SP1Prime) image).tables.length = 60 ∧
     (nativeVerifierLedger bootPublic).length = 29 ∧
     ((nativeVerifierLedger bootPublic).filter fun interaction =>
       interaction.channel.name == (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name).length = 10 := by
@@ -353,10 +353,10 @@ private def localVerifierRow (snapshot : ExecutionSnapshot) (pi : SP1PublicIO Fp
     (Soundness.LocalCore.sourceChannel (p := SP1Prime) image snapshot).name
     Soundness.SnapshotMemoryEnsemble.channelName
 
-/-- All eight checks survive installation, including zero-valued checks; the 60 committed
+/-- All eight checks survive installation, including zero-valued checks; the 61 committed
 tables and the original 19 verifier occurrences remain intact. -/
 theorem localVerifierInventory :
-    (Soundness.LocalCore.ensemble (p := SP1Prime) image source).tables.length = 60 ∧
+    (Soundness.LocalCore.ensemble (p := SP1Prime) image source).tables.length = 61 ∧
     (localVerifierLedger source localPublic).length = 35 ∧
     ((localVerifierLedger source localPublic).filter fun interaction => interaction.channel.name ==
       (Soundness.LocalCore.sourceChannel (p := SP1Prime) image source).name).length = 16 := by

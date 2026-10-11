@@ -24,11 +24,12 @@ theorem component_program_source (image : ProgramImage) (source : ExecutionSnaps
   have split : tables (p := p) image source =
       (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
         FinalMemoryEnsemble.inventory.views.map (·.component) ++ NativeCore.afterFinalTables image ++
-        [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot] := by
+        [SnapshotMemoryEnsemble.registerMembership source.sail.memorySnapshot,
+          SnapshotMemoryEnsemble.ramMembership source.sail.memorySnapshot] := by
     simp only [tables, afterSourceTables, NativeCore.afterInitialTables,
       NativeCore.afterFinalTables, List.append_assoc]
-  simp only [split, List.mem_append, List.mem_singleton] at member
-  rcases member with ((initial | final) | interior) | rfl
+  simp only [split, List.mem_append] at member
+  rcases member with ((initial | final) | interior) | fixed
   · right
     apply NativeCore.programPulls_of_silent
     obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
@@ -36,7 +37,7 @@ theorem component_program_source (image : ProgramImage) (source : ExecutionSnaps
     intro used
     have subset := SnapshotMemoryEnsemble.view_channels_subset (p := p) source.sail.memorySnapshot id used
     simp [programChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, StaticTable.channel, MemorySnapshot.registerTable,
+      SnapshotMemoryEnsemble.channelName, StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
       StaticTable.ofRows, Channel.toRaw] at subset
   · right
     apply NativeCore.programPulls_of_silent
@@ -48,11 +49,18 @@ theorem component_program_source (image : ProgramImage) (source : ExecutionSnaps
       programChannel_eq_memoryChannel_false, false_or] at subset
     exact (by decide : "SP1Program" ≠ OrderedFinalProvider.channelName) (congrArg RawChannel.name subset)
   · exact NativeCore.interior_program_source image component interior
-  · right
-    apply NativeCore.programPulls_of_silent
-    change programChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
-    simp [programChannel, StaticTable.channel, MemorySnapshot.registerTable,
-      StaticTable.ofRows, Channel.toRaw]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl
+    · right
+      apply NativeCore.programPulls_of_silent
+      change programChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
+      simp [programChannel, StaticTable.channel, MemorySnapshot.registerTable,
+        StaticTable.ofRows, Channel.toRaw]
+    · right
+      apply NativeCore.programPulls_of_silent
+      change programChannel.toRaw ∉ [(InitialMemoryLookup.membership source.sail.memorySnapshot.memory
+        (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]
+      simp [programChannel, StaticTable.channel, InitialMemoryLookup.membership, Channel.toRaw]
 
 /-- Source assertions retain their fresh channel and cannot manufacture Program fetches. -/
 theorem verifier_program_silent (image : ProgramImage) (source : ExecutionSnapshot)

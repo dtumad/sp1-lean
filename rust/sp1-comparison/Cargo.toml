@@ -65,3 +65,7 @@ required-features = ["instruction-export"]
 [[test]]
 name = "byte_provider_export"
 required-features = ["instruction-export"]
+
+[[test]]
+name = "ram_export"
+required-features = ["instruction-export"]

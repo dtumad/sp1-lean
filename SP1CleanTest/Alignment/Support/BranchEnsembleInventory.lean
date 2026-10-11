@@ -7,12 +7,12 @@ namespace SP1Clean.Audit.BranchEnsemble
 
 open Circuit Air.Flat SP1Clean.Model.Core
 
-/-- All seven legacy fixed tables keep their original names, with explicit target-snapshot namespaces. -/
+/-- The five remaining legacy fixed meanings retain their original identities. -/
 theorem fixed_names (target : MemorySnapshot) : (fixed target).map (·.table.name) =
-    ["sp1.native.initial_memory", "sp1.native.program",
+    ["sp1.native.program",
       "sp1.native.syscall_code", "sp1.native.write_permission", "sp1.native.hint_source_nodes",
-      "sp1.native.hint_source_words", "sp1.native.target_memory"] := by
-  simp only [List.map_cons, List.map_nil, fixed, FiniteLookup.ofStatic, ByteMemory.fixedTable,
+      "sp1.native.hint_source_words"] := by
+  simp only [List.map_cons, List.map_nil, fixed, FiniteLookup.ofStatic,
     ProgramImage.programTable, SyscallKind.fixedTable, ProgramImage.writePermissionTable,
     HintQueue.sourceTable, HintQueue.sourceWordTable, StaticTable.ofRows,
     StaticTable.toTable, Table.toRaw]

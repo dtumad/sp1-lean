@@ -3,7 +3,7 @@ import SP1Clean.Soundness.HostFinalMemoryInventory
 
 /-! # Complete target Memory comparison from raw host acceptance
 
-The actual host witness supplies Byte closure and all four private channel balances.
+The actual host witness supplies Byte closure and all five private channel balances.
 The existing boundary theorem then checks the complete target, including every location
 outside the physical final inventory. No endpoint certificate or witness-selected change
 inventory is a premise. Full mixed Sail/host endpoint reconstruction remains a later consumer.
@@ -41,8 +41,10 @@ theorem checkFinal_of_channels
   · have member : FinalMemoryChange.channel.toRaw ∈ privateChannels (p := p) target := by simp [privateChannels]
     exact boundaryWitness_balancedChannel witness interface _ member (balances _ member)
 
-  · have member : (FinalRegisterValue.membership target).channel.toRaw ∈ privateChannels (p := p) target := by
-      simp [privateChannels]
+  · intro channel known
+    have member : channel ∈ privateChannels (p := p) target := by
+      simp only [FinalMemoryChecks.membershipChannels, List.mem_cons, List.not_mem_nil, or_false] at known
+      rcases known with rfl | rfl <;> simp [privateChannels]
     exact boundaryWitness_balancedChannel witness interface _ member (balances _ member)
 
 /-- Complete raw host AIR acceptance implies the existing finite target Memory comparison.
@@ -58,11 +60,11 @@ theorem checkFinal
   · intro channel member
     apply balanced
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl <;>
+    rcases member with rfl | rfl | rfl | rfl | rfl <;>
       simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, circuit_norm]
-    apply Or.inl
-    simp [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
+    all_goals apply Or.inl
+    all_goals simp [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
       ClosedVerifier.install, ClosedVerifier.withInteractions, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
       HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble,
       FinalMemoryChecks.checkTables, StaticTable.component, StaticTable.provider, circuit_norm]

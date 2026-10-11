@@ -189,15 +189,19 @@ def circuitNamed (memory : ByteMemory) (tableName : String) : GeneralFormalCircu
 
 @[circuit_norm, explicit_circuit_norm] theorem circuitNamed_guarantees (memory : ByteMemory) (tableName : String) :
     (circuitNamed (p := p) memory tableName).channelsWithGuarantees =
-      List.replicate 36 SP1Clean.Channels.byteChannel.toRaw := rfl
+      [(InitialMemoryLookup.membership memory (2 ^ 48) tableName).channel.toRaw,
+        SP1Clean.Channels.byteChannel.toRaw] ++
+      (List.replicate 7 (List.replicate 4 SP1Clean.Channels.byteChannel.toRaw ++
+        [(InitialMemoryLookup.membership memory (2 ^ 48) tableName).channel.toRaw,
+          SP1Clean.Channels.byteChannel.toRaw])).flatten := rfl
 
 /-- Source-memory specialization of the named fixed word read. -/
 abbrev circuit (memory : ByteMemory) := circuitNamed (p := p) memory "sp1.native.initial_memory"
 
-/-- Every byte retains its own lookup occurrence, including the repeated table key. -/
+/-- Word authentication uses membership channels, with no legacy lookups. -/
 @[circuit_norm] theorem main_lookupNames (memory : ByteMemory)
     (input : Var Word (ZMod p)) (name : String) (offset : ℕ) :
-    ((main memory input name).operations offset).lookups.map (·.table.name) = List.replicate 8 name := by
+    ((main memory input name).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, InitialMemoryLookup.circuitNamed, AddOperation.circuit, AddOperation.main,
     circuit_norm]
 

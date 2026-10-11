@@ -20,36 +20,49 @@ private theorem initialView_spec (image : ProgramImage)
     (view : TransitionView (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName))
     (member : view ∈ InitialMemoryEnsemble.views image) (env : Environment (ZMod p))
     (constraints : view.component.operations.ConstraintsHold env)
-    (byte : view.component.operations.ChannelGuarantees byteChannel.toRaw env) :
+    (byte : view.component.operations.ChannelGuarantees byteChannel.toRaw env)
+    (ram : view.component.operations.ChannelGuarantees
+      (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw env) :
     view.component.Spec env := by
   have assumptions : view.component.CircuitAssumptions env := by
     simp only [InitialMemoryEnsemble.views, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;> trivial
   have channels : view.component.circuit.channelsWithGuarantees ⊆
-      [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] := by
+      [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
+        (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw] := by
     simp only [InitialMemoryEnsemble.views, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl
     · change [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
       simp
-    · change (List.replicate 38 byteChannel.toRaw ++
+    · change ((InitialMemoryRead.circuit (p := p) image.initialMemory).channelsWithGuarantees ++
+        List.replicate 2 byteChannel.toRaw ++
         [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
         List.replicate 4 byteChannel.toRaw) ⊆ _
-      simp
+      simp only [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed_guarantees]
+      generalize (byteChannel (p := p)).toRaw = byte,
+        (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName).toRaw = control,
+        (InitialMemoryLookup.membership (p := p) image.initialMemory (2 ^ 48)
+          "sp1.native.initial_memory").channel.toRaw = ram
+      simp only [List.subset_def, List.mem_append, List.mem_replicate, List.mem_flatten,
+        List.mem_cons, List.not_mem_nil, or_false]
+      aesop
     · change [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ⊆ _
-      exact List.Subset.refl _
+      simp
   apply (Component.weakSoundness assumptions constraints ?_).1
   rw [Operations.guarantees_iff _ _ _ (view.component.inChannelsOrGuarantees env)]
   intro channel member
   rcases List.mem_cons.mp (channels member) with rfl | member
   · exact byte
-  · obtain rfl := List.mem_singleton.mp member
-    exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+  · rcases List.mem_cons.mp member with rfl | member
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+    · obtain rfl := List.mem_singleton.mp member
+      exact ram
 
 /-- A proof view of the actual combined table list, with just the initialization verifier.
 No row or prover data is synthesized or replaced. -/
 def initialWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
-    EnsembleWitness (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables (p := p) image) []
+    EnsembleWitness (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables (p := p) image ++ [ramMembership image]) []
       (baseEnsemble image).unique_names) :=
   EnsembleWitness.ofTables _ witness.tables () witness.tables_map_component
 
@@ -68,9 +81,11 @@ theorem initialTables_spec {image : ProgramImage} (witness : EnsembleWitness (en
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
   have tableMem : table ∈ witness.tables := List.mem_of_mem_take member
   have byte := ((finishedChannel_guarantees image witness constraints balanced).2 table tableMem).1 row rowMem
+  have ram := ram_guarantees_of_balance image witness constraints
+    (balanced _ (by simp [ensemble, baseEnsemble])) table tableMem row rowMem
   have checked := constraints table tableMem row rowMem
-  rw [← same] at byte checked ⊢
-  exact initialView_spec image view viewMem _ checked byte
+  rw [← same] at byte ram checked ⊢
+  exact initialView_spec image view viewMem _ checked byte ram
 
 /-- Initial records decoded from the combined AIR have the actual checked image's boot value,
 zero timestamp, and canonical location. The theorem accepts raw constraints and balance only. -/
@@ -177,10 +192,18 @@ theorem initial_records_locations_nodup {image : ProgramImage}
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((InitialMemoryEnsemble.records (initialWitness witness)).map MemoryMsg.locOf).Nodup := by
   apply (InitialMemoryEnsemble.inventory image).records_locations_nodup_of_tables
-    (initialWitness witness) (afterInitialTables_silent image) (initialTables_spec witness constraints balanced)
-  change BalancedInteractions ((initialWitness witness).interactionsWith _)
-  rw [initialWitness_interactions]
-  exact balanced _ (List.mem_append_left _ (List.mem_cons_self ..))
+    (initialWitness witness) (fun component member => ?_) (initialTables_spec witness constraints balanced)
+  · change BalancedInteractions ((initialWitness witness).interactionsWith _)
+    rw [initialWitness_interactions]
+    exact balanced _ (List.mem_append_left _ (List.mem_cons_self ..))
+  · rcases List.mem_append.mp member with native | fixed
+    · exact afterInitialTables_silent image component native
+    · obtain rfl := List.mem_singleton.mp fixed
+      change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
+        [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]
+      simp [InitialMemoryLookup.membership, StaticTable.channel, OrderedBoundary.channel,
+        OrderedInitialProvider.channelName, Channel.toRaw]
+
 
 omit [Fact (2 ^ 24 < p)] in
 theorem component_spec_of_byte (component : Component (ZMod p))
