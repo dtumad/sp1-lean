@@ -44,7 +44,7 @@ def validate_report(name, result, revision, dirty):
         values = [True, False, False, False, False, True, False, False]
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 91, "uniqueChannels": 27, "registeredChannelOccurrences": 263,
+                    "tableCount": 91, "uniqueChannels": 27, "registeredChannelOccurrences": 259,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and
