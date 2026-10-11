@@ -13,59 +13,42 @@ open Circuit SP1Clean.Model.Core SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-abbrev Inputs := SnapshotRamProvider.Inputs
 abbrev addressInput := @SnapshotRamProvider.addressInput
 abbrev message := @SnapshotRamProvider.message
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The pushed RAM record has its canonical value in the actual native boot state. -/
-theorem initialSpec (image : ProgramImage) (input : Inputs (ZMod p))
+theorem initialSpec (image : ProgramImage) (input : Word (ZMod p))
     (value : Word (ZMod p)) (address : Circuits.Types.AddressOperation (ZMod p))
     (read : InitialMemoryRead.Spec image.initialMemory input value)
     (checked : AddressOperation.Spec (addressInput input) address) :
-    MemoryBoundary.InitialAtSpec image (Word.toNat input.bytes[0].address) (message address value) := by
+    MemoryBoundary.InitialAtSpec image (Word.toNat input) (message address value) := by
   have valid := SnapshotRamProvider.snapshotSpec image.memorySnapshot input value address read checked
   exact ⟨valid.1.initial, valid.2⟩
 
 abbrev main (image : ProgramImage) := SnapshotRamProvider.main (p := p) image.memorySnapshot
 
 instance elaborated (image : ProgramImage) :
-    ElaboratedCircuit (ZMod p) Inputs MemoryMsg (main image) :=
+    ElaboratedCircuit (ZMod p) Word MemoryMsg (main image) :=
   SnapshotRamProvider.elaborated image.memorySnapshot
 
-theorem main_memory_interactions (image : ProgramImage) (input : Var Inputs (ZMod p)) (offset : ℕ) :
+theorem main_memory_interactions (image : ProgramImage) (input : Var Word (ZMod p)) (offset : ℕ) :
     ((main image input).operations offset).interactionsWith memoryChannel.toRaw =
       [(memoryChannel.pushed ((elaborated image).output input offset)).toRaw] :=
   SnapshotRamProvider.main_memory_interactions image.memorySnapshot input offset
 
-def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs MemoryMsg where
+def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Word MemoryMsg where
   name := "sp1.native.memory.initial.ram"
   main := main image
   elaborated := elaborated image
-  Spec input output _ := MemoryBoundary.InitialAtSpec image (Word.toNat input.bytes[0].address) output
+  Spec input output _ := MemoryBoundary.InitialAtSpec image (Word.toNat input) output
   ProverAssumptions input _ _ :=
-    InitialMemoryRead.ProverAssumptions image.initialMemory input ∧
+    InitialMemoryRead.ProverAssumptions input ∧
       AddressOperation.Assumptions (addressInput input)
   channelsWithRequirements := [memoryChannel.toRaw]
   soundness := ((SnapshotRamProvider.circuit image.memorySnapshot).weakenSpec
-    (fun input output _ => MemoryBoundary.InitialAtSpec image (Word.toNat input.bytes[0].address) output)
+    (fun input output _ => MemoryBoundary.InitialAtSpec image (Word.toNat input) output)
     (fun _ _ _ valid => ⟨valid.1.initial, valid.2⟩)).soundness
   completeness := (SnapshotRamProvider.circuit image.memorySnapshot).completeness
-
-abbrev populate? (image : ProgramImage) := SnapshotRamProvider.populate? (p := p) image.memorySnapshot
-
-theorem populate?_sound (image : ProgramImage) (address : ℕ) (input : Inputs (ZMod p))
-    (found : populate? image address = some input) :
-    InitialMemoryRead.ProverAssumptions image.initialMemory input ∧
-      AddressOperation.Assumptions (addressInput input) ∧
-        Word.toNat input.bytes[0].address = address :=
-  SnapshotRamProvider.populate?_sound image.memorySnapshot address input found
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Row construction is total on exactly the semantic domain of aligned guest RAM cells. -/
-theorem populate?_isSome_iff (image : ProgramImage) (address : ℕ) :
-    (populate? (p := p) image address).isSome = true ↔
-      2 ^ 16 ≤ address ∧ address < 2 ^ 48 ∧ address % 8 = 0 :=
-  SnapshotRamProvider.populate?_isSome_iff image.memorySnapshot address
 
 end SP1Clean.InitialRamProvider

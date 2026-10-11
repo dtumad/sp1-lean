@@ -56,7 +56,7 @@ private def name : String := "SP1NativeSourceMemoryOrder"
 #guard_msgs in
 #assert_exportable (OrderedSnapshotProvider.registerCircuit (p := SP1Prime) name snapshot)
 
-/-- info: exportable ✓ (644 witness cells) -/
+/-- info: exportable ✓ (872 witness cells) -/
 #guard_msgs in
 #assert_exportable (OrderedSnapshotProvider.ramCircuit (p := SP1Prime) name snapshot)
 
@@ -109,7 +109,7 @@ theorem emptyAndDuplicateFixedRows :
 
 /-- Explicit and default-zero RAM bytes are authenticated, including the last aligned word. -/
 theorem constructedRam : [65536, 131064, 131072, 2 ^ 48 - 8].all (fun address =>
-    ((OrderedSnapshotProvider.populateRam? snapshot 32 address).map fun input =>
+    ((OrderedSnapshotProvider.populateRam? 32 address).map fun input =>
       let result := evaluate (OrderedSnapshotProvider.ramCircuit name snapshot).main input
       let word := bitVecToWord (p := SP1Prime) (BitVec.ofNat 64 address)
       result == (true, [(0 : Fp), 0, word[0], word[1], word[2]] ++
@@ -119,8 +119,8 @@ theorem constructedRam : [65536, 131064, 131072, 2 ^ 48 - 8].all (fun address =>
 /-- A row built from different source memory cannot authenticate under this snapshot's lookup. -/
 theorem rejectsForgedRam :
     let forged := { snapshot with memory := snapshot.memory.write 65536 99 }
-    ((SnapshotRamProvider.populate? forged 65536).map fun input =>
-      (evaluate (SnapshotRamProvider.circuit snapshot).main input).1) = some false := by native_decide
+    ((SnapshotRamProvider.populate? 65536).map fun input =>
+      (evaluate (SnapshotRamProvider.circuit forged).main input).1) = some false := by native_decide
 
 /-- Ordering still binds to the authenticated location; it cannot be a witness-selected key. -/
 theorem rejectsUnrelatedKey :

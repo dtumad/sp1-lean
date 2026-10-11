@@ -30,7 +30,7 @@ private theorem boundary_programPulls (image : ProgramImage) (component : Compon
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel,
       memoryChannel, byteChannel, Channel.toRaw]
   · change programChannel.toRaw ∉
-      (List.replicate 42 byteChannel.toRaw ++
+      (List.replicate 38 byteChannel.toRaw ++
         [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
         List.replicate 4 byteChannel.toRaw ++
         [memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw])

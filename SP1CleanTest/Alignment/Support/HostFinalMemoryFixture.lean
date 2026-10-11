@@ -35,8 +35,7 @@ def registerCheck (index clock value : ℕ) (selected : Fp) : Row :=
   (88, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
 
 def ramCheck (clock : ℕ) : Row :=
-  (89, (toElements (⟨⟨record 65536 clock (target.memory.readWord 65536).toNat,
-    InitialMemoryRead.populate target.memory 65536⟩, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
+  (89, (toElements (⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
 
 def terminals : List Row :=
   [86, 87].map fun index => (index, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)

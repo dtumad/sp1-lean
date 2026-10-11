@@ -104,7 +104,7 @@ theorem view_channels_subset (snapshot : MemorySnapshot) (id : TableId) :
       [byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
         memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
     simp
-  · change (List.replicate 42 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
+  · change (List.replicate 38 byteChannel.toRaw ++ [(OrderedBoundary.channel channelName).toRaw] ++
       List.replicate 4 byteChannel.toRaw ++ [memoryChannel.toRaw, (OrderedBoundary.channel channelName).toRaw]) ⊆ _
     generalize (byteChannel (p := p)).toRaw = byte, (memoryChannel (p := p)).toRaw = memory,
       (OrderedBoundary.channel (p := p) channelName).toRaw = control,
@@ -161,7 +161,7 @@ theorem view_spec (snapshot : MemorySnapshot) (id : TableId) (env : Environment 
     · change [snapshot.registerTable.channel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
         byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] ⊆ _
       simp
-    · change (List.replicate 42 byteChannel.toRaw ++
+    · change (List.replicate 38 byteChannel.toRaw ++
         [(OrderedBoundary.channel channelName).toRaw] ++ List.replicate 4 byteChannel.toRaw) ⊆ _
       simp
     · change [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] ⊆ _

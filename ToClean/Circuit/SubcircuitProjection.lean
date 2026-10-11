@@ -120,6 +120,16 @@ end WithHint
       simp only [List.flatten_cons, Operations.lookups_append, List.map_cons,
         List.flatten_cons, ih]
 
+/-- Mapping a fixed range preserves each iteration's lookup occurrences. -/
+@[circuit_norm] theorem Circuit.mapFinRange_lookups
+    {F : Type} [FiniteField F] {β : Type} {m : ℕ} [NeZero m]
+    (body : Fin m → Circuit F β) (constant : Circuit.ConstantLength body) (offset : ℕ) :
+    ((Circuit.mapFinRange m body constant).operations offset).lookups =
+      (List.ofFn fun (i : Fin m) =>
+        ((body i).operations (offset + i * (body 0).localLength)).lookups).flatten := by
+  rw [Circuit.mapFinRange.operations_eq, Operations.lookups_flatten, List.map_ofFn]
+  rfl
+
 @[circuit_norm] theorem Circuit.forEach_constraints
     {F : Type} [FiniteField F] {α : Type} {m : ℕ} [Inhabited α]
     (xs : Vector α m) (body : α → Circuit F Unit) (constant : Circuit.ConstantLength body)

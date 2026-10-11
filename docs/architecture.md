@@ -24,7 +24,10 @@ The core index is [SP1Clean/Core.lean](../SP1Clean/Core.lean); the full index is
 Execution memory retains newest-write history. Fixed intervals normalize memory or the program's
 protection mask to sorted, bounded nonzero entries, preserving every in-range read. Each interval
 table has at most twice its live-entry count plus one rows, independently of redundant writes and
-explicit zeros.
+explicit zeros. Byte and word reads take only an address; their selected intervals and comparison
+columns are internal witnesses generated through Clean's built-in IR. Word reads authenticate all
+eight bytes and require the complete footprint to fit in native memory. Final RAM validation
+takes the complete memory record directly, retaining its clock and value in the receipt ledger.
 
 ## Consolidation direction
 

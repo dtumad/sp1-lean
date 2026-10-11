@@ -85,9 +85,8 @@ private def ram : Channels.MemoryMsg Fp := record 65536 (target.memory.readWord 
 
 private def registerRow (value : Channels.MemoryMsg Fp) := evaluate target (FinalRegisterValue.circuit target) value
 
-private def ramRow (snapshot : MemorySnapshot) (value : Channels.MemoryMsg Fp) (address : ℕ) :=
-  evaluate snapshot (FinalRamValue.circuit snapshot)
-    ⟨value, InitialMemoryRead.populate snapshot.memory address⟩
+private def ramRow (snapshot : MemorySnapshot) (value : Channels.MemoryMsg Fp) :=
+  evaluate snapshot (FinalRamValue.circuit snapshot) value
 
 private def registerReceipt := evaluate target
   (FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit)
@@ -101,7 +100,7 @@ private def ramReceipt := evaluate target
 #guard_msgs in
 #assert_exportable (FinalRegisterValue.circuit (p := SP1Prime) target)
 
-/-- info: exportable ✓ (512 witness cells) -/
+/-- info: exportable ✓ (740 witness cells) -/
 #guard_msgs in
 #assert_exportable (FinalRamValue.circuit (p := SP1Prime) target)
 
@@ -128,15 +127,15 @@ theorem rejectsForgedValues :
     [(registerRow { register with value := word 124 }).1,
      (registerRow { register with addr1 := 1 }).1,
      (registerRow { register with addr0 := 32 }).1,
-     (ramRow target { ram with value := word 9 } 65536).1,
-     (ramRow target ram 65544).1,
-     (ramRow { target with memory := target.memory.write 65543 18 } ram 65536).1,
-     (ramRow target (record (2 ^ 48 - 7) 0 264) (2 ^ 48 - 7)).1] =
+     (ramRow target { ram with value := word 9 }).1,
+     (ramRow target { ram with addr0 := 8 }).1,
+     (ramRow { target with memory := target.memory.write 65543 18 } ram).1,
+     (ramRow target (record (2 ^ 48 - 7) 0 264)).1] =
       [false, false, false, false, false, false, false] := by native_decide
 
 /-- Full-record accounting rejects missing, duplicate, wrong-clock, and wrong-kind consumers. -/
 theorem receiptAccounting :
-    [balanced [ramRow target ram 65536, registerReceipt, ramReceipt, registerRow register],
+    [balanced [ramRow target ram, registerReceipt, ramReceipt, registerRow register],
      balanced [registerReceipt],
      balanced [registerReceipt, registerRow register, registerRow register],
      balanced [registerReceipt, registerRow { register with clk_low := 9 }],
@@ -151,7 +150,7 @@ private def registerCheck (value : Channels.MemoryMsg Fp) (selected : Fp) :=
 
 private def ramCheck (value : Channels.MemoryMsg Fp) (selected : Fp) :=
   evaluate target (FinalRamCheck.circuit target)
-    ⟨⟨value, InitialMemoryRead.populate target.memory 65536⟩, selected⟩
+    ⟨value, selected⟩
 
 private def changes (before after : MemorySnapshot) :=
   evaluate after (FinalMemoryChangeBoundary.closed (p := SP1Prime) before after).circuit ()
@@ -202,7 +201,7 @@ theorem changeConstructors :
 #guard_msgs in
 #assert_exportable (FinalRegisterCheck.circuit (p := SP1Prime) target)
 
-/-- info: exportable ✓ (512 witness cells) -/
+/-- info: exportable ✓ (740 witness cells) -/
 #guard_msgs in
 #assert_exportable (FinalRamCheck.circuit (p := SP1Prime) target)
 

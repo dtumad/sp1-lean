@@ -332,6 +332,7 @@ import SP1Clean.Native.Operations.HostCommitEndpoint
 import SP1Clean.Native.Operations.HostExitBoundary
 import SP1Clean.Native.Operations.HostRamBytes
 import SP1Clean.Native.Operations.InitialMemoryLookup
+import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
 import SP1Clean.Native.Operations.InitialMemoryRead
 import SP1Clean.Circuits.Gadgets.IsEqualWord
 import SP1Clean.Circuits.Gadgets.IsZero

@@ -14,12 +14,6 @@ namespace SP1Clean.FinalRamValue
 
 open Model.Core Channels Semantics
 
-structure Inputs (F : Type) where
-  record : MemoryMsg F
-  read : InitialMemoryRead.Inputs F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
 variable {p : ℕ} [Fact p.Prime]
 
 def Spec (target : MemorySnapshot) (record : MemoryMsg (ZMod p)) : Prop :=

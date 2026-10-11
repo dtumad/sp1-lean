@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
-import SP1Clean.Proofs.Chips.OrderedMemoryProvider
+import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Proofs.Chips.InitialRamProvider
 import SP1Clean.Proofs.Chips.InitialRegisterProvider
 
@@ -42,7 +42,7 @@ def circuit (name : String) (image : ProgramImage)
 def channelName : String := "SP1NativeMemoryInitOrder"
 
 def ramCircuit (image : ProgramImage) :
-    GeneralFormalCircuit (ZMod p) (Inputs InitialRamProvider.Inputs) MemoryMsg :=
+    GeneralFormalCircuit (ZMod p) (Inputs Word) MemoryMsg :=
   circuit channelName image (InitialRamProvider.circuit image) (fun _ _ _ valid => valid.1)
 
 def registerCircuit (image : ProgramImage) :
@@ -68,40 +68,25 @@ theorem populate_assumptions (name : String) (image : ProgramImage)
   exact OrderedMemoryProvider.populate_assumptions name (MemoryBoundary.InitialSpec image) provider
     query bindsAt (fun _ valid => valid.canonical) payload previous data hint prover assumes bound increases
 
-/-- The complete ordered RAM row constructor has no proof inputs or external column hints. -/
-def populateRam? (image : ProgramImage) (previous address : ℕ) :
-    Option (Inputs InitialRamProvider.Inputs (ZMod p)) :=
-  if previous < address + 1 then
-    (InitialRamProvider.populate? image address).map (fun payload => populate payload previous address)
-  else none
-
+/-- The shared address-only constructor satisfies the boot provider contract. -/
 theorem populateRam?_sound (image : ProgramImage) (previous address : ℕ)
-    (input : Inputs InitialRamProvider.Inputs (ZMod p))
-    (found : populateRam? image previous address = some input)
+    (input : Inputs Word (ZMod p))
+    (found : OrderedSnapshotProvider.populateRam? previous address = some input)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (ramCircuit image).ProverAssumptions input data hint := by
-  unfold populateRam? at found
+  unfold OrderedSnapshotProvider.populateRam? at found
   split at found
   next increases =>
     obtain ⟨payload, generated, rfl⟩ := Option.map_eq_some_iff.mp found
-    have valid := InitialRamProvider.populate?_sound image address payload generated
-    have domain := (InitialRamProvider.populate?_isSome_iff (p := p) image address).mp
+    have valid := SnapshotRamProvider.populate?_sound address payload generated
+    have domain := (SnapshotRamProvider.populate?_isSome_iff (p := p) address).mp
       (by rw [generated]; rfl)
     have built := populate_assumptions channelName image (InitialRamProvider.circuit image)
-      (fun input => Word.toNat input.bytes[0].address) (fun _ _ _ spec => spec)
+      (fun input => Word.toNat input) (fun _ _ _ spec => spec)
       payload previous data hint ⟨valid.1, valid.2.1⟩ trivial
       (by rw [valid.2.2]; exact domain.2.1) (by rw [valid.2.2]; exact increases)
     simpa only [ramCircuit, valid.2.2] using built
   next invalid => contradiction
-
-omit [Fact (2 ^ 17 < p)] in
-theorem populateRam?_isSome_iff (image : ProgramImage) (previous address : ℕ) :
-    (populateRam? (p := p) image previous address).isSome = true ↔
-      previous < address + 1 ∧ 2 ^ 16 ≤ address ∧ address < 2 ^ 48 ∧ address % 8 = 0 := by
-  simp only [populateRam?]
-  split
-  next increases => simp only [Option.isSome_map, InitialRamProvider.populate?_isSome_iff, increases, true_and]
-  next invalid => simp only [Option.isSome_none, Bool.false_eq_true, invalid, false_and]
 
 /-- A register needs only its index and the preceding key; x0 uses current key one. -/
 theorem populateRegister_assumptions (image : ProgramImage) (index : BitVec 5) (previous : ℕ)

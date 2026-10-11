@@ -1,30 +1,21 @@
-import SP1Clean.Model.Core.MemoryTable
-import SP1Clean.Circuits.Types.LtOperationUnsigned
+import SP1Clean.Model.Core.Memory
+import SP1Clean.Math.Word
 
-/-! # Native initial-memory byte lookup contract
+/-! # Initial-memory byte-read contract
 
-The public meaning is a byte read from the canonical sparse initial image. Interval endpoints and
-comparison columns are internal row data; callers of the semantic theorem only see the bounded
-address and its byte value. The executable input constructor supplies those internal columns.
+A bounded address determines one byte in the supplied sparse memory. Interval endpoints and
+comparison columns belong to the circuit implementation, below this input/output contract.
 -/
 
 namespace SP1Clean.InitialMemoryLookup
 
 open SP1Clean.Model.Core
 
-structure Inputs (F : Type) where
-  address : Word F
-  interval : MemoryIntervalRow F
-  lowerCompare : Circuits.Types.LtOperationUnsigned F
-  upperCompare : Circuits.Types.LtOperationUnsigned F
-deriving ProvableStruct
-provable_struct_eval_lemmas Inputs
-
 variable {p : ℕ} [Fact p.Prime]
 
-/-- The lookup establishes the byte at an in-range address in the fixed initial memory. -/
-def Spec (memory : ByteMemory) (limit : ℕ) (input : Inputs (ZMod p)) : Prop :=
-  Word.isU64 input.address ∧ Word.toNat input.address < limit ∧
-    input.interval.value = (memory.read (Word.toNat input.address)).toNat
+/-- The returned byte is exactly the memory value at the bounded address. -/
+def Spec (memory : ByteMemory) (limit : ℕ) (address : Word (ZMod p)) (value : ZMod p) : Prop :=
+  Word.isU64 address ∧ Word.toNat address < limit ∧
+    value = (memory.read (Word.toNat address)).toNat
 
 end SP1Clean.InitialMemoryLookup

@@ -94,8 +94,7 @@ private def registerCheck (record : Channels.MemoryMsg Fp) (selected : Fp) : Row
   (3, (toElements (⟨record, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
 
 private def ramCheck (record : Channels.MemoryMsg Fp) (selected : Fp) : Row :=
-  (4, (toElements (⟨⟨record, InitialMemoryRead.populate target.memory
-    (Word.toNat (MemoryBoundary.address record))⟩, selected⟩ : FinalRamCheck.Inputs Fp)).toList)
+  (4, (toElements (⟨record, selected⟩ : FinalRamCheck.Inputs Fp)).toList)
 
 private def terminal (previous : ℕ) : Row :=
   (2, (toElements (OrderedBoundaryEnd.populate (word previous)
@@ -176,9 +175,7 @@ theorem projectionLosesByteBalance : projectedByteBalance = false := by native_d
 /-- Empty identity inventories still retain the canonical ordering terminal and its Byte closure. -/
 theorem emptyIdentity : check source [terminal 0] = true := by native_decide
 
-/-- Complete-record matching, Boolean selection, target coverage, Byte closure, and final order
-are all enforced by the same accepted witness. -/
-theorem rejectsMutations :
+private def mutationResults : List Bool :=
     [check target (rows.filter (fun row => row.1 != 4)),
      check target (rows ++ [ramCheck ram 1]),
      check target (rows.map fun row => if row.1 == 3 then registerCheck registers 0 else row),
@@ -189,7 +186,10 @@ theorem rejectsMutations :
      check { target with memory := target.memory.write 65543 18 } rows,
      check target rows false,
      check target (rows.filter (fun row => row.1 != 2)),
-     check target (rows.filter (fun row => row.1 != 6))] = List.replicate 11 false := by
-  native_decide
+     check target (rows.filter (fun row => row.1 != 6))]
+
+/-- Complete-record matching, Boolean selection, target coverage, Byte closure, and final order
+are all enforced by the same accepted witness. -/
+theorem rejectsMutations : mutationResults = List.replicate 11 false := by native_decide
 
 end SP1CleanTest.Alignment.Core.FinalMemoryChecks

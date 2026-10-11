@@ -55,7 +55,7 @@ def sourceRegister (previous index : ℕ) : Row :=
 
 def sourceRam : Row :=
   (1, (toElements (OrderedSnapshotProvider.populate
-    (InitialMemoryRead.populate (p := SP1Prime) snapshot.memory 65536) 4 65536)).toList)
+    (word 65536) 4 65536)).toList)
 
 def terminal (table previous : ℕ) : Row :=
   (table, (toElements (OrderedBoundaryEnd.populate (word previous)
