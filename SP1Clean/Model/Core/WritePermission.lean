@@ -92,7 +92,11 @@ theorem writableIntervals_length_le (image : ProgramImage) :
     (image.protectionMask.intervals (2 ^ 48))
   change _ ≤ _ at filtered
   apply le_trans filtered
-  simpa only [protectionMask, List.length_map] using bound
+  have support := image.protectionMask.supportBelow_card_le (2 ^ 48)
+  have rows : image.protectionMask.entries.length = image.romBytes.length := by
+    simp only [protectionMask, List.length_map]
+  rw [rows] at support
+  omega
 
 /-- Deterministic finite lookup for permission-row construction. -/
 def writableIntervalAt? (image : ProgramImage) (address : ℕ) : Option MemoryInterval :=

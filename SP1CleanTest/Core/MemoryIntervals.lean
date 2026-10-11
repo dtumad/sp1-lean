@@ -9,13 +9,22 @@ open SP1Clean.Model.Core
 
 private def memory : ByteMemory := ⟨[(7, 42), (0, 13), (7, 9), (15, 255), (16, 99)]⟩
 
+example : (memory.canonicalBelow 16).entries = [(0, 13), (7, 42), (15, 255)] := by
+  native_decide
+
+/-- Newer zero writes erase old nonzero values; redundant/out-of-window history costs no rows. -/
+private def zeroHistory : ByteMemory :=
+  ⟨[(7, 0), (7, 255), (16, 1), (0, 0)] ++ List.replicate 64 (7, 0)⟩
+
+example : (zeroHistory.intervals 16) = [⟨0, 16, 0⟩] := by native_decide
+
 example : (List.range 17).map (fun query =>
     (memory.intervalAt? 16 query).map (·.value)) =
     [some 13, some 0, some 0, some 0, some 0, some 0, some 0, some 42,
       some 0, some 0, some 0, some 0, some 0, some 0, some 0, some 255, none] := by
   native_decide
 
-example : (memory.intervals 16).length ≤ 2 * memory.entries.length + 1 :=
+example : (memory.intervals 16).length ≤ 2 * (memory.supportBelow 16).card + 1 :=
   memory.intervals_length_le 16
 
 example : (memory.intervalAt? 0 0).isSome = false := by native_decide

@@ -21,6 +21,11 @@ The current import rules are encoded in [layering.txt](../scripts/layering.txt);
 The core index is [SP1Clean/Core.lean](../SP1Clean/Core.lean); the full index is
 [SP1Clean.lean](../SP1Clean.lean). Tests never feed production imports.
 
+Execution memory retains newest-write history. Fixed intervals normalize memory or the program's
+protection mask to sorted, bounded nonzero entries, preserving every in-range read. Each interval
+table has at most twice its live-entry count plus one rows, independently of redundant writes and
+explicit zeros.
+
 ## Consolidation direction
 
 [#16](https://github.com/dtumad/sp1-lean/issues/16) moves ownership into purpose-oriented

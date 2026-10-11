@@ -1,11 +1,12 @@
-import SP1Clean.Model.Core.Memory
+import SP1Clean.Model.Core.MemoryNormalization
 
 /-! # Finite interval tables for sparse initial memory
 
 A fixed lookup table cannot enumerate the native 48-bit address space. Constant-value intervals
-represent zero-filled gaps and explicit bytes in one finite table. Each sparse update splits the
-interval containing its address; the first binding in the update history still wins. No sorting,
-prover-supplied nonmembership evidence, or dense memory enumeration is required.
+represent zero-filled gaps and live bytes in one finite table. Normalize the update history to
+sorted nonzero support before splitting intervals, so its size depends on represented memory.
+The first binding still determines each byte; no prover-supplied nonmembership evidence or dense
+memory enumeration is required.
 
 Empty intervals are harmless: they contain no address and need no special padding semantics.
 -/
@@ -129,12 +130,12 @@ private def intervalRows (limit : ℕ) : List (ℕ × BitVec 8) → List MemoryI
       (intervalRows limit rest).flatMap (fun interval => interval.write address value)
 
 /-- A finite, concrete table realizing sparse memory throughout the bounded address space. -/
-def intervals (memory : ByteMemory) (limit : ℕ) : List MemoryInterval :=
+private def rawIntervals (memory : ByteMemory) (limit : ℕ) : List MemoryInterval :=
   intervalRows limit memory.entries
 
 /-- Every in-range address belongs to exactly one table row; out-of-range addresses belong to none. -/
-theorem intervals_count (memory : ByteMemory) (limit query : ℕ) :
-    (memory.intervals limit).countP (fun interval => decide (interval.Contains query)) =
+private theorem rawIntervals_count (memory : ByteMemory) (limit query : ℕ) :
+    (memory.rawIntervals limit).countP (fun interval => decide (interval.Contains query)) =
       if query < limit then 1 else 0 := by
   rcases memory with ⟨entries⟩
   change (intervalRows limit entries).countP _ = _
@@ -144,23 +145,23 @@ theorem intervals_count (memory : ByteMemory) (limit query : ℕ) :
       rw [intervalRows, MemoryInterval.writes_count, ih]
 
 /-- The fixed table grows with the supplied sparse image, not the size of the address space. -/
-theorem intervals_length_le (memory : ByteMemory) (limit : ℕ) :
-    (memory.intervals limit).length ≤ 2 * memory.entries.length + 1 := by
+private theorem rawIntervals_length_le (memory : ByteMemory) (limit : ℕ) :
+    (memory.rawIntervals limit).length ≤ 2 * memory.entries.length + 1 := by
   rcases memory with ⟨entries⟩
   change (intervalRows limit entries).length ≤ 2 * entries.length + 1
   induction entries with
   | nil => simp [intervalRows]
   | cons entry rest ih =>
       rw [intervalRows, MemoryInterval.writes_length]
-      have count := (ByteMemory.mk rest).intervals_count limit entry.1
+      have count := (ByteMemory.mk rest).rawIntervals_count limit entry.1
       change (intervalRows limit rest).countP _ = _ at count
       rw [count]
       simp only [List.length_cons]
       split <;> omega
 
 /-- Every endpoint fits the chosen address-space bound. -/
-theorem intervals_bounds (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
-    (member : interval ∈ memory.intervals limit) :
+private theorem rawIntervals_bounds (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
+    (member : interval ∈ memory.rawIntervals limit) :
     interval.lower ≤ interval.upper ∧ interval.upper ≤ limit := by
   rcases memory with ⟨entries⟩
   change interval ∈ intervalRows limit entries at member
@@ -173,8 +174,8 @@ theorem intervals_bounds (memory : ByteMemory) (limit : ℕ) (interval : MemoryI
       exact source.write_bounds entry.1 limit entry.2 (ih source sourceMem) interval nextMem
 
 /-- Lookup membership and interval containment imply the exact canonical memory value. -/
-theorem intervals_sound (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
-    (member : interval ∈ memory.intervals limit) (query : ℕ) (inside : interval.Contains query) :
+private theorem rawIntervals_sound (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
+    (member : interval ∈ memory.rawIntervals limit) (query : ℕ) (inside : interval.Contains query) :
     query < limit ∧ memory.read query = interval.value := by
   rcases memory with ⟨entries⟩
   change interval ∈ intervalRows limit entries at member
@@ -192,8 +193,8 @@ theorem intervals_sound (memory : ByteMemory) (limit : ℕ) (interval : MemoryIn
 
 /-- Every in-range address has a lookup row. Table generation therefore adds no execution-
 dependent readiness condition to memory initialization. -/
-theorem intervals_complete (memory : ByteMemory) (limit query : ℕ) (inside : query < limit) :
-    ∃ interval ∈ memory.intervals limit, interval.Contains query := by
+private theorem rawIntervals_complete (memory : ByteMemory) (limit query : ℕ) (inside : query < limit) :
+    ∃ interval ∈ memory.rawIntervals limit, interval.Contains query := by
   rcases memory with ⟨entries⟩
   change ∃ interval ∈ intervalRows limit entries, interval.Contains query
   induction entries with
@@ -202,6 +203,40 @@ theorem intervals_complete (memory : ByteMemory) (limit query : ℕ) (inside : q
       obtain ⟨interval, member, contains⟩ := ih
       obtain ⟨next, nextMem, nextContains⟩ := interval.write_complete entry.1 query entry.2 contains
       exact ⟨next, List.mem_flatMap.mpr ⟨interval, member, nextMem⟩, nextContains⟩
+
+/-- Fixed intervals depend on live memory, not its update history. -/
+def intervals (memory : ByteMemory) (limit : ℕ) : List MemoryInterval :=
+  (memory.canonicalBelow limit).rawIntervals limit
+
+/-- Every bounded address belongs to exactly one interval, including zero-filled gaps. -/
+theorem intervals_count (memory : ByteMemory) (limit query : ℕ) :
+    (memory.intervals limit).countP (fun interval => decide (interval.Contains query)) =
+      if query < limit then 1 else 0 :=
+  (memory.canonicalBelow limit).rawIntervals_count limit query
+
+/-- The interval inventory is bounded by semantic live-byte support. -/
+theorem intervals_length_le (memory : ByteMemory) (limit : ℕ) :
+    (memory.intervals limit).length ≤ 2 * (memory.supportBelow limit).card + 1 := by
+  have bound := (memory.canonicalBelow limit).rawIntervals_length_le limit
+  simpa only [intervals, canonicalBelow_length] using bound
+
+/-- Every endpoint fits the chosen address-space bound. -/
+theorem intervals_bounds (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
+    (member : interval ∈ memory.intervals limit) :
+    interval.lower ≤ interval.upper ∧ interval.upper ≤ limit :=
+  (memory.canonicalBelow limit).rawIntervals_bounds limit interval member
+
+/-- Fixed-row membership and containment establish the original memory's byte value. -/
+theorem intervals_sound (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
+    (member : interval ∈ memory.intervals limit) (query : ℕ) (inside : interval.Contains query) :
+    query < limit ∧ memory.read query = interval.value := by
+  have facts := (memory.canonicalBelow limit).rawIntervals_sound limit interval member query inside
+  exact ⟨facts.1, by simpa only [canonicalBelow_read, if_pos facts.1] using facts.2⟩
+
+/-- Normalization loses no address and adds no caller readiness condition. -/
+theorem intervals_complete (memory : ByteMemory) (limit query : ℕ) (inside : query < limit) :
+    ∃ interval ∈ memory.intervals limit, interval.Contains query :=
+  (memory.canonicalBelow limit).rawIntervals_complete limit query inside
 
 /-- Finite interval lookup characterizes the memory function exactly. -/
 theorem intervals_iff (memory : ByteMemory) (limit query : ℕ) (value : BitVec 8) :
