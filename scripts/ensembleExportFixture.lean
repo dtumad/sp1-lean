@@ -4,6 +4,7 @@ import SP1CleanTest.Core.ByteProviderExport
 import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
+import SP1CleanTest.Core.UnifiedByteBenchmarks
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -25,6 +26,65 @@ private def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
       ("multiplicity", toJson interaction.mult.val),
       ("assumeGuarantees", toJson interaction.assumeGuarantees)]))]
 
+private def expressionDegree : Expression (ZMod SP1Clean.SP1Prime) → ℕ
+  | .var _ => 1
+  | .const _ => 0
+  | .add left right => max (expressionDegree left) (expressionDegree right)
+  | .mul left right => expressionDegree left + expressionDegree right
+
+private def componentMetrics (component : Air.Flat.Component (ZMod SP1Clean.SP1Prime)) : Json :=
+  let constraints := component.rowOperations.constraints
+  Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
+    ("constraints", toJson constraints.length),
+    ("degreeBound", toJson ((constraints.map expressionDegree).foldl max 0))]
+
+private def unifiedByteReference : IO Json := do
+  let cases ← SP1CleanTest.Core.UnifiedByteExport.cases.mapM fun (name, rows, expected) => do
+    let fields := [("name", toJson name),
+      ("publicInput", toJson (rows.flatMap fun row => (toElements row).toList.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.UnifiedByteExport.generate rows with
+    | .error message =>
+      if expected then throw (IO.userError s!"{name}: {message}")
+      pure (Json.mkObj (fields ++ [("error", toJson message)]))
+    | .ok witness =>
+      unless (SP1CleanTest.Core.UnifiedByteExport.description rows.length).checkWitness
+          SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected consolidated byte acceptance: {name}")
+      pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+  let workloads ← match SP1CleanTest.Core.UnifiedByteBenchmarks.workloads with
+    | .ok values => pure values
+    | .error message => throw (IO.userError message)
+  let benchmarks ← workloads.mapM fun (name, rows) => do
+    let baseline ← match SP1CleanTest.Core.UnifiedByteBenchmarks.generate rows with
+      | .ok witness => do
+        unless (SP1CleanTest.Core.UnifiedByteBenchmarks.description rows.length).checkWitness
+            SP1Clean.SP1Prime witness do
+          throw (IO.userError s!"unbalanced baseline: {name}")
+        pure (physicalReference witness)
+      | .error message => throw (IO.userError s!"baseline {name}: {message}")
+    let candidate ← match SP1CleanTest.Core.UnifiedByteExport.generate rows with
+      | .ok witness => do
+        unless (SP1CleanTest.Core.UnifiedByteExport.description rows.length).checkWitness
+            SP1Clean.SP1Prime witness do
+          throw (IO.userError s!"unbalanced candidate: {name}")
+        pure (physicalReference witness)
+      | .error message => throw (IO.userError s!"candidate {name}: {message}")
+    pure (Json.mkObj [("name", toJson name),
+      ("publicInput", toJson (rows.flatMap fun row => (toElements row).toList.map (·.val))),
+      ("baseline", baseline), ("candidate", candidate)])
+  let sources := SP1CleanTest.Core.UnifiedByteBenchmarks.sources.map fun source =>
+    Json.mkObj [("name", toJson source.name),
+      ("input", toJson ((toElements source.input).toList.map (·.val))),
+      ("row", toJson (source.row.map (·.val))),
+      ("interactions", toJson (source.interactions.map fun entry => Json.mkObj [
+        ("channel", toJson entry.channel.name), ("message", toJson (entry.msg.map (·.val))),
+        ("multiplicity", toJson entry.mult.val), ("assumeGuarantees", toJson entry.assumeGuarantees)]))]
+  return Json.mkObj [("cases", toJson cases), ("benchmarks", toJson benchmarks),
+    ("sources", toJson sources),
+    ("candidateMetrics", componentMetrics SP1CleanTest.Core.UnifiedByteExport.component),
+    ("baselineMetrics", toJson (SP1CleanTest.Core.UnifiedByteBenchmarks.components.map componentMetrics))]
+
 private def exportEnsembleFixture : IO Unit := do
   let out := System.FilePath.mk
     ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/ensemble-export/manual")
@@ -33,12 +93,16 @@ private def exportEnsembleFixture : IO Unit := do
     | .ok value => pure value
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
+  let byteBenchmarks ← match SP1CleanTest.Core.UnifiedByteBenchmarks.rustExports with
+    | .ok exports => pure exports
+    | .error message => throw (IO.userError message)
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++
-      SP1CleanTest.Core.RamExport.rustExports do
+      SP1CleanTest.Core.RamExport.rustExports ++
+      SP1CleanTest.Core.UnifiedByteExport.rustExports ++ byteBenchmarks do
     let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
@@ -153,6 +217,7 @@ private def exportEnsembleFixture : IO Unit := do
             ("message", toJson (entry.msg.map (·.val))),
             ("multiplicity", toJson entry.mult.val), ("assumeGuarantees", toJson entry.assumeGuarantees)]))]))
   IO.FS.writeFile (out / "ram_rows.reference.json") ((Json.mkObj ramRows).compress ++ "\n")
+  IO.FS.writeFile (out / "unified_byte.reference.json") ((← unifiedByteReference).compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture

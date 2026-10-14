@@ -123,6 +123,24 @@ every native column with three deltas. Out-of-range operands must fail even at z
 zero padding balances, and unmatched nonzero provider rows fail. These tests also run with
 `mprotect` enabled; they establish no additional mode semantics or ensemble count bounds.
 
+The uninstalled unified Byte/Range prototype is compared with every row of SP1's actual Byte
+and Range preprocessing and AIR, at the same four standalone count classes. The Range comparison
+retains both copies of its zero-width row. Closed tests use Clean's ordinary scheduler, check full
+Lean/Rust rows and ledgers, and exercise repeated requests, all widths, 64/65 distinct requests,
+malformed inputs, selectors, counts, padding and public binding. The installed providers remain
+the baseline; no full-machine or additional mode coverage follows from this prototype.
+
+The cost fixture closes identical empty, single-op, range-heavy, mixed, ADD, BEQ, LoadByte and
+64/65-request workloads with either layout. Instruction demands come from checked circuit rows
+and are independently reproduced in Rust. Baseline rows are preallocated without handlers;
+the candidate uses demand aggregation. Physical padding and occurrence counts remain separate.
+The export check runs one warmup and three sequential samples per layout. To repeat just the
+measurements, run `python3 scripts/measure_byte_providers.py --artifacts <export-dir>
+--binary <unified_byte_export-test-binary>`.
+The ignored report records widths, constraints, degree bounds, padded cells, source bytes,
+generation/prove/verify times and per-process peak RSS with the same backend test configuration;
+these small fixtures do not predict performance at production trace sizes or security parameters.
+
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
 reject an active row without providers. This is not a full-ensemble acceptance or completeness test.

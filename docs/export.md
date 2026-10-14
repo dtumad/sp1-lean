@@ -97,7 +97,15 @@ chip JSON comparison.
 
 Clean's current scheduler selects handlers by channel and direction and rejects multiple matches.
 SP1's separate Byte providers share a channel, so complete generation needs upstream routing support
-or a consolidated provider. The existing test adapter constructs component rows with Clean's
+or a consolidated provider. `ByteChip/Unified` is an uninstalled prototype for the latter: one
+proved circuit checks the exact union of SP1's Byte and Range tables, including fixed unused
+columns and widths 0–16. Its `ByteProviderSpec` is stronger than the existing consumer guarantee
+`ByteRowSpec`. Generic one-hot and variable-width range gadgets live in `ToClean`; all witnesses
+use Clean's IR. Closed tests use the unmodified scheduler and compare complete Lean/Rust ledgers.
+The prototype remains separate until measurements and review choose consolidation or upstream
+routing; it does not change the installed inventory or retire migration evidence.
+
+The existing test adapter constructs component rows with Clean's
 runtime, then independently checks their external interactions. It is not a production scheduler
 or evidence of full-ensemble balance. Rust tests establish neither cryptographic security nor a
 formal lowering theorem.
