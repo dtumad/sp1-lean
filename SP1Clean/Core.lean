@@ -133,6 +133,7 @@ import SP1Clean.Math.WordEquality
 import SP1Clean.Model.BalanceBridge
 import SP1Clean.Model.BusMessages
 import SP1Clean.Model.ByteTable
+import SP1Clean.Model.ByteProvider
 import SP1Clean.Model.Channels
 import SP1Clean.Model.CleanLedger
 import SP1Clean.Model.Core.AddressRange
@@ -405,6 +406,7 @@ import SP1Clean.Proofs.Chips.BranchChip.Witgen
 import SP1Clean.Proofs.Chips.ByteChip.ByteChip
 import SP1Clean.Proofs.Chips.ByteChip.Provider
 import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+import SP1Clean.Proofs.Chips.ByteChip.Unified
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
 import SP1Clean.Proofs.Chips.DecodedProgramProvider
