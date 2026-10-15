@@ -84,10 +84,20 @@ theorem memoryInterior_signedBinary {image : ProgramImage}
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp rowMem
   have componentMem := List.mem_map_of_mem (f := fun t : Table (ZMod p) => t.component) tableMem
   rw [List.map_drop, witness.tables_map_component] at componentMem
-  change table.component ∈ afterFinalTables image at componentMem
-  exact interior_memoryBinary image table.component componentMem witness.data physical
-    (constraints table (List.mem_of_mem_drop tableMem)
-      physical physicalMem) interaction.raw emitted
+  change table.component ∈ afterFinalTables image ++ [ramMembership image] at componentMem
+  rcases List.mem_append.mp componentMem with componentMem | fixed
+  · exact interior_memoryBinary image table.component componentMem witness.data physical
+      (constraints table (List.mem_of_mem_drop tableMem)
+        physical physicalMem) interaction.raw emitted
+
+  · have silent : table.interactionsWith witness.data memoryChannel.toRaw = [] := by
+      apply table.interactionsWith_nil_of_channel_not_mem
+      rw [List.mem_singleton.mp fixed]
+      change memoryChannel.toRaw ∉ [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48)
+        "sp1.native.initial_memory").channel.toRaw]
+      simp [memoryChannel, InitialMemoryLookup.membership, StaticTable.channel, Channel.toRaw]
+    rw [silent] at rowMem
+    exact (List.not_mem_nil rowMem).elim
 
 /-- Raw constraints force signed-unit multiplicities throughout the combined Memory ledger.
 This includes both inventories and all active system rows. -/

@@ -57,7 +57,7 @@ theorem verifier_permission_silent (image : ProgramImage) (source : ExecutionSna
   intro member
   exact old_channel_ne_permission _ (List.mem_append_left _ member) rfl
 
-/-- Every active request in the actual 60-table ledger names a writable native byte address. -/
+/-- Every active request in the actual 61-table ledger names a writable native byte address. -/
 theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)

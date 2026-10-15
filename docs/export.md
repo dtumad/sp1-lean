@@ -39,6 +39,11 @@ interpreter or scheduler.
   row/count mutations. Unused-provider cases retain all 32 fixed rows and zero-count occurrences.
   Arbitrary local snapshots are distinct from SP1's boot-only initialization. Generation alone
   does not establish acceptance: malformed address limbs can balance while violating assertions.
+- Source and target RAM use the same fixed membership provider for normalized byte intervals.
+  Byte/word reads and source/target row programs export through Clean. Independent Rust checks
+  cover sparse gaps, first-entry precedence, address bounds, generated rows and complete ledgers.
+  Closed interval-provider ensembles test fixed endpoints/bytes, counts, padding and public binding.
+  Full ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
 - Static membership retains original row order and uses a fixed eligibility tag to select the
   first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty tables
   have one inactive row; other heights round up to a power of two. Capacity proofs must account
@@ -84,12 +89,18 @@ against the Lean emitter pin. Generated Rust and reference rows live in the igno
 not in the library source. Additive gaps belong in ToClean; canonical upstream representation
 changes may justify a minimal temporary dependency patch.
 
-The fixed-membership fixture establishes the backend boundary. The instruction comparison keeps
-external buses open and checks that each instruction alone cannot claim balanced execution. The native instruction/provider subset is lookup-free. The complete installed memory/host
-inventory still contains legacy snapshot, program, permission and source-table lookups, which
-built-in lowering rejects. Migrate those tables and all live consumers before retiring chip JSON
-comparison. Rust tests do not establish
-cryptographic security or a formal lowering theorem.
+The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
+external buses open and check that an isolated active component cannot claim balanced execution.
+Five installed legacy lookup meanings remain: program, syscall code, write permission, hint nodes
+and hint words. Built-in lowering rejects these forms; migrate their consumers before retiring
+chip JSON comparison.
+
+Clean's current scheduler selects handlers by channel and direction and rejects multiple matches.
+SP1's separate Byte providers share a channel, so complete generation needs upstream routing support
+or a consolidated provider. The existing test adapter constructs component rows with Clean's
+runtime, then independently checks their external interactions. It is not a production scheduler
+or evidence of full-ensemble balance. Rust tests establish neither cryptographic security nor a
+formal lowering theorem.
 
 The reviewed upgrade target is [SP1 v6.9.0](https://github.com/succinctlabs/sp1/releases/tag/v6.9.0).
 The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,

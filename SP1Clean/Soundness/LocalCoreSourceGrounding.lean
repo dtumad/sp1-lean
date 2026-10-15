@@ -77,7 +77,8 @@ theorem memoryInitialFrontier_content_of_channels {image : ProgramImage} {source
     (constraints : witness.Constraints)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
-    (registers : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw)
+    (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
+      witness.BalancedChannel channel)
     {loc : MemLoc} {message : MemoryMsg (ZMod p)}
     (present : memoryInitialFrontier witness loc = some message) :
     MemoryMsg.locOf message = loc ∧ MemoryBoundary.SnapshotSpec source.sail.memorySnapshot message ∧
@@ -85,7 +86,7 @@ theorem memoryInitialFrontier_content_of_channels {image : ProgramImage} {source
   have member := List.mem_filter.mp (List.mem_of_head? present)
   have same := of_decide_eq_true member.2
   have authentic := (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_valid_of_tables
-    (sourceWitness witness) (sourceTables_spec_of_channels witness constraints bytes registers) _ member.1
+    (sourceWitness witness) (sourceTables_spec_of_channels witness constraints bytes membership) _ member.1
   refine ⟨same, authentic, ?_⟩
   rw [← same]
   exact authentic.locContent ((source_balanced_iff witness).mp sourceChecks).1.memory
@@ -101,7 +102,10 @@ theorem memoryInitialFrontier_content {image : ProgramImage} {source : Execution
   memoryInitialFrontier_content_of_channels witness constraints
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble])) present
+    (fun channel known => balanced channel (by
+      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
+        List.not_mem_nil, or_false] at known
+      rcases known with rfl | rfl <;> simp [ensemble, PublicVerifier.install, baseEnsemble])) present
 
 /-- Source constraints and channel closure supply the complete live-memory invariant at local genesis.
 No memory-truth or source-timestamp premise is supplied by the caller. -/
@@ -110,13 +114,14 @@ theorem memoryInitialFrontier_liveOK_of_channels {image : ProgramImage} {source 
     (constraints : witness.Constraints)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
-    (registers : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw)
+    (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
+      witness.BalancedChannel channel)
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) :
     LiveOKG trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) := by
   intro loc message present
   obtain ⟨same, authentic, content⟩ :=
-    memoryInitialFrontier_content_of_channels witness constraints sourceChecks bytes registers present
+    memoryInitialFrontier_content_of_channels witness constraints sourceChecks bytes membership present
   have atStart : LocalValueAtG trajectory source.sail.realize timeline loc (timeline.start 0) message.value :=
     (localValueAtG_stepStart_iff initial).mpr content
   refine ⟨same, ⟨authentic.1, authentic.2.1, ?_⟩, atStart, ?_⟩
@@ -137,7 +142,10 @@ theorem memoryInitialFrontier_liveOK {image : ProgramImage} {source : ExecutionS
   memoryInitialFrontier_liveOK_of_channels witness constraints
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble]))
+    (fun channel known => balanced channel (by
+      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
+        List.not_mem_nil, or_false] at known
+      rcases known with rfl | rfl <;> simp [ensemble, PublicVerifier.install, baseEnsemble]))
     trajectory timeline initial
 
 end SP1Clean.Soundness.LocalCore

@@ -944,3 +944,161 @@ fn target_register_backend_binds_clocks_values_addresses_and_counts() {
         }
     }
 }
+
+#[path = "support/ram.rs"]
+#[allow(dead_code)]
+mod ram;
+
+fn check_ram_membership<P: Program<F>, S: GeneratedAirSpec>(name: &str) {
+    let reference: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/ram_membership.reference.json"
+    )))
+    .unwrap();
+    let source = ram::intervals();
+    let first = ram::interval(65536, 65537, 17);
+    let mut requests: Vec<_> = source
+        .iter()
+        .map(|row| ([row.clone(), first.clone()].concat(), true))
+        .collect();
+    requests.push(([first.clone(), first.clone()].concat(), true));
+    for bad in [
+        ram::interval(65536, 65537, 99),
+        ram::interval(65535, 65537, 17),
+        ram::interval(65536, 65538, 17),
+    ] {
+        requests.push(([bad, first.clone()].concat(), false));
+    }
+    assert_eq!(P::FIXED_WIDTHS, &[10]);
+    let fixed = S::fixed_trace::<F>(0).unwrap();
+    assert_eq!((fixed.height(), fixed.width()), (16, 10));
+    let fixed_rows: Vec<_> = (0..16)
+        .map(|index| {
+            source
+                .get(index)
+                .map(|row| [row.clone(), vec![1]].concat())
+                .unwrap_or(vec![0; 10])
+        })
+        .collect();
+    assert_eq!(
+        fixed.values,
+        fixed_rows
+            .iter()
+            .flatten()
+            .copied()
+            .map(field)
+            .collect::<Vec<_>>()
+    );
+    let cases = reference[name].as_array().unwrap();
+    assert_eq!(cases.len(), requests.len());
+    for ((public, accepted), case) in requests.iter().zip(cases) {
+        assert_eq!(case["publicInput"], serde_json::json!(public));
+        assert_eq!(case["accepted"], *accepted);
+        let fields: Vec<_> = public.iter().copied().map(field).collect();
+        let result = clean_backend::witness_generation::generate::<F, P>(&fields, &[]);
+        assert_eq!(result.is_ok(), *accepted);
+        let Ok(witness) = result else { continue };
+        let rows: Vec<_> = fixed_rows
+            .iter()
+            .map(|row| {
+                let count = if row[9] == 1 {
+                    public
+                        .chunks_exact(9)
+                        .filter(|request| *request == &row[..9])
+                        .count() as u64
+                } else {
+                    0
+                };
+                [row.clone(), vec![count]].concat()
+            })
+            .collect();
+        let ledger: Vec<_> = public
+            .chunks_exact(9)
+            .map(|row| {
+                interaction(
+                    name,
+                    F::ORDER_U64 - 1,
+                    [row.to_vec(), vec![1]].concat(),
+                    true,
+                )
+            })
+            .chain(
+                rows.iter()
+                    .map(|row| interaction(name, row[10], row[..10].to_vec(), false)),
+            )
+            .collect();
+        let actual = physical_reference::<P>(&fields, &witness.tables);
+        assert_eq!(
+            actual,
+            serde_json::json!({"tables": [rows], "interactions": ledger})
+        );
+        assert_eq!(actual, case["witness"]);
+    }
+    let public: Vec<_> = [first.clone(), first]
+        .concat()
+        .into_iter()
+        .map(field)
+        .collect();
+    let statement = GeneratedEnsemble::<F, S>::new(&[16]).unwrap();
+    assert_eq!(statement.interaction_count(), 18);
+    for height in [0, 8, 32] {
+        assert!(GeneratedEnsemble::<F, S>::new(&[height]).is_err());
+    }
+    let traces = clean_backend::witness_generation::generate::<F, P>(&public, &[])
+        .unwrap()
+        .into_traces()
+        .unwrap();
+    assert_eq!((traces[0].height(), traces[0].width()), (16, 1));
+    let config = config();
+    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
+    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    for cell in 0..public.len() {
+        let mut forged = public.clone();
+        forged[cell] += field(1);
+        assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+    }
+    // Every demanded, unused, empty-interval and padding row retains a bound count.
+    for row in 0..16 {
+        let mut forged = traces.clone();
+        forged[0].values[row] += field(1);
+        assert_backend_rejection(|| {
+            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
+            verify_ensemble(&config, &statement, &proof, &public).is_err()
+        });
+    }
+    // Equal padding messages can cancel; eligibility must still forbid both nonzero counts.
+    let mut forged = traces.clone();
+    forged[0].values[14] = field(1);
+    forged[0].values[15] = -field(1);
+    assert_backend_rejection(|| {
+        let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
+        verify_ensemble(&config, &statement, &proof, &public).is_err()
+    });
+}
+
+macro_rules! ram_membership_fixture {
+    ($module:ident, $file:literal, $program:ident, $air:ident, $channel:literal) => {
+        #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+        mod $module {
+            include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/", $file));
+            #[test]
+            fn interval_rows_counts_and_backend_mutations() {
+                super::check_ram_membership::<$program, $air>($channel);
+            }
+        }
+    };
+}
+ram_membership_fixture!(
+    source_ram,
+    "ram_source_membership.rs",
+    RamSourceMembership,
+    RamSourceMembershipAirSpec,
+    "sp1.native.initial_memory"
+);
+ram_membership_fixture!(
+    target_ram,
+    "ram_target_membership.rs",
+    RamTargetMembership,
+    RamTargetMembershipAirSpec,
+    "sp1.native.target_memory"
+);

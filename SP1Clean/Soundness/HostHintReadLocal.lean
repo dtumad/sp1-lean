@@ -159,7 +159,7 @@ private theorem cursor_fresh : HintReadWordChip.stateChannel.toRaw ∉
       SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HintReadWordChip.stateChannel,
       Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
       Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
-      StaticTable.channel, MemorySnapshot.registerTable,
+      StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
       StaticTable.ofRows, Channel.toRaw] at present
   · have same := (List.mem_singleton.mp member).symm
     have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same

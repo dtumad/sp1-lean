@@ -7,7 +7,7 @@ mkdir -p .lake/ensemble-export
 scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
   SP1CleanTest.Core.InstructionExport SP1CleanTest.Core.ByteProviderExport \
-  SP1CleanTest.Core.SnapshotRegisterExport SP1CleanTest.Core.StaticProviderExport \
+  SP1CleanTest.Core.SnapshotRegisterExport SP1CleanTest.Core.StaticProviderExport SP1CleanTest.Core.RamExport \
   2>&1 | tee "$scratch/build.log"
 python3 - "$scratch" <<'PY'
 import hashlib
@@ -38,7 +38,9 @@ command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP
 files = ["fixed_membership.rs", "fixed_membership.reference.json", "snapshot_registers.rs",
          "snapshot_registers_empty.rs", "snapshot_registers.reference.json", "target_registers.rs",
          "target_registers_empty.rs", "target_registers.reference.json",
-         "static_membership.reference.json"] + [
+         "static_membership.reference.json", "ram_membership.reference.json", "ram_rows.reference.json",
+         "ram_byte.rs", "ram_word.rs", "ram_source.rs", "ram_target.rs",
+         "ram_source_membership.rs", "ram_target_membership.rs"] + [
     "static_" + name + suffix + ".rs"
     for name in ["empty", "singleton", "uneven", "duplicates", "zeroes"]
     for suffix in ["", "_unused"]
@@ -68,18 +70,18 @@ PY
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export --test clean_export \
-    --test instruction_export --test byte_provider_export 2>&1 | tee "$scratch/rust.log"
+    --test instruction_export --test byte_provider_export --test ram_export 2>&1 | tee "$scratch/rust.log"
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export,mprotect \
-    --test clean_export --test instruction_export --test byte_provider_export 2>&1 | tee "$scratch/rust-mprotect.log"
+    --test clean_export --test instruction_export --test byte_provider_export --test ram_export 2>&1 | tee "$scratch/rust-mprotect.log"
 python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import re
 import sys
 assert len(sys.argv) == 3
 # Require every binary's exact success count in both configurations.
-for path, counts in zip(sys.argv[1:], [[3, 15, 25], [3, 15, 25]]):
+for path, counts in zip(sys.argv[1:], [[3, 4, 17, 25], [3, 4, 17, 25]]):
     log = Path(path).read_text()
     actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
     if sorted(actual) != counts or "warning:" in log:

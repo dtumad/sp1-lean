@@ -32,28 +32,25 @@ def record (address clock value : ℕ) : Channels.MemoryMsg Fp :=
   ⟨0, clock, (word address)[0], (word address)[1], (word address)[2], word value⟩
 
 def registerCheck (index clock value : ℕ) (selected : Fp) : Row :=
-  (88, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
+  (89, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
 
 def ramCheck (clock : ℕ) : Row :=
-  (89, (toElements (⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
+  (90, (toElements (⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
 
 def terminals : List Row :=
-  [86, 87].map fun index => (index, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)
+  [87, 88].map fun index => (index, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)
 
 def rows : List Row :=
   coreRows ++ terminals ++ [registerCheck 1 13 123 1, registerCheck 2 12 100 0,
     registerCheck 3 11 23 0, ramCheck 0]
 
-def fixed (target : MemorySnapshot) : List (FiniteLookup Fp) :=
-  let memory := FiniteLookup.ofStatic (target.memory.fixedTable (p := SP1Prime) (2 ^ 48))
-  [{ memory with table := { memory.table with name := "sp1.native.target_memory" } }]
-
-/-- Retain all 91 physical tables, including every fixed register row, in their declared order. -/
+/-- Retain all 93 physical tables, including every fixed membership row, in their declared order. -/
 def builtTables (target : MemorySnapshot) (rows : List Row) : List (Table Fp) :=
   let components := (assembly target).tables
   let inputs := fun index => (rows.filter (fun row => row.1 == index)).map (·.2)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
-    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name]
+    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
+    "sp1.native.initial_memory", "sp1.native.target_memory"]
   let ledger := StaticMembership.demandLedger components inputs channels (fun _ _ => #[]) (ProverHint.empty Fp)
   StaticMembership.buildTables components inputs ledger (fun _ _ => #[]) (ProverHint.empty Fp)
 
@@ -67,7 +64,6 @@ def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row)
 def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) : Bool :=
   let installed := assembly target
   let registered := installed.channels.map RawChannel.name
-  let lookups := fixed target
   let consumers := witness target input rows
   let providers := consumers.interactions.filterMap fun interaction =>
     SP1CleanTest.Core.LocalCore.Fixture.byteProvider
@@ -80,7 +76,7 @@ def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
     match installed.tables[row.1]? with
     | none => false
     | some component => component.fixedColumns.isNone &&
-        (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2 lookups).1
+        (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2).1
   valid && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       registered.contains name &&
@@ -97,15 +93,15 @@ def identityRows : List Row :=
 /-- Named actual outcomes. These are fixture checks, not proof certificates. -/
 def results : List (String × Bool × Bool) :=
   [("active-add", true, check target header rows),
-   ("missing-ram-validator", false, check target header (rows.filter (fun row => row.1 != 89))),
+   ("missing-ram-validator", false, check target header (rows.filter (fun row => row.1 != 90))),
    ("duplicate-ram-validator", false, check target header (rows ++ [ramCheck 0])),
    ("wrong-final-record-clock", false,
-     check target header (rows.map fun row => if row.1 == 89 then ramCheck 1 else row)),
+     check target header (rows.map fun row => if row.1 == 90 then ramCheck 1 else row)),
    ("missing-unchanged-register-validators", false,
      check target header (coreRows ++ terminals ++ [registerCheck 1 13 123 1, ramCheck 0])),
    ("changed-untouched-x31", false, check { target with registers := target.registers.set 31 1 } header rows),
    ("changed-untouched-ram", false, check { target with memory := target.memory.write 65544 1 } header rows),
-   ("missing-bank-terminal", false, check target header (rows.filter (fun row => row.1 != 86))),
+   ("missing-bank-terminal", false, check target header (rows.filter (fun row => row.1 != 87))),
    ("empty-identity", true, check source.sail.memorySnapshot identityHeader identityRows)]
 
 end SP1CleanTest.Alignment.Core.HostFinalMemory.Fixture

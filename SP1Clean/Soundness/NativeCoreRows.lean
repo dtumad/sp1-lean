@@ -21,9 +21,32 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
 private theorem witness_length {image : ProgramImage}
-    (witness : EnsembleWitness (ensemble (p := p) image)) : witness.tables.length = 59 := by
+    (witness : EnsembleWitness (ensemble (p := p) image)) : witness.tables.length = 60 := by
   rw [← witness.same_length]
   exact tables_length image
+
+/-- Fixed interval rows remain in the physical inventory, independently of RAM demand. -/
+def ramMembershipTable {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image)) : Table (ZMod p) :=
+  witness.tables[59]'(by have := witness_length witness; omega)
+
+theorem ramMembershipTable_component {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image)) :
+    (ramMembershipTable witness).component = ramMembership image :=
+  (witness.same_circuits 59 (by
+    change 59 < (tables image).length
+    rw [tables_length]; decide)).symm
+
+/-- Fixed membership contributes only its own ledger, including all zero-count rows. -/
+theorem ramMembershipTable_silent {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image))
+    (channel : RawChannel (ZMod p)) (different : channel.name ≠ "sp1.native.initial_memory") :
+    channel ∉ (ramMembershipTable witness).component.circuit.channels := by
+  rw [ramMembershipTable_component]
+  change channel ∉ [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48)
+    "sp1.native.initial_memory").channel.toRaw]
+  intro member
+  exact different (congrArg RawChannel.name (List.mem_singleton.mp member))
 
 /-- The physical refresh, StateBump, HALT, and syscall tables, in their registered order. -/
 def systemTable {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
@@ -53,10 +76,11 @@ theorem systemTable_constraints {image : ProgramImage}
 private theorem systemTables_eq {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
-      systemTable witness 2, systemTable witness 3] := by
+      systemTable witness 2, systemTable witness 3, ramMembershipTable witness] := by
   have length := witness_length witness
   rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
     List.drop_eq_getElem_cons (by omega), List.drop_eq_getElem_cons (by omega),
+    List.drop_eq_getElem_cons (by omega),
     List.drop_eq_nil_of_le (by omega)]
   rfl
 
@@ -91,13 +115,16 @@ theorem memoryInterior_split {image : ProgramImage}
     rw [systemTable_component]
     change memoryChannel.toRaw ∉ [byteChannel.toRaw, stateChannel.toRaw]
     simp [memoryChannel_eq_byteChannel_false, memoryChannel_eq_stateChannel_false]
+  have ramSilent : typedTableInteractionsWith (ramMembershipTable witness) witness.data memoryChannel = [] := by
+    apply typedTableInteractions_nil
+    exact ramMembershipTable_silent witness _ (by simp [memoryChannel, Channel.toRaw])
   have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
     rw [List.drop_eq_getElem_cons (by have := witness_length witness; omega)]
     rfl
   rw [memoryInterior, head, List.flatMap_cons, programSilent, List.nil_append,
     flatMap_split witness.tables _ 7 25, flatMap_split witness.tables _ 32 23,
     byteTables_memory_silent, List.nil_append, systemTables_eq]
-  simp only [List.flatMap_cons, List.flatMap_nil, stateSilent, List.nil_append,
+  simp only [List.flatMap_cons, List.flatMap_nil, stateSilent, ramSilent, List.nil_append,
     List.append_nil, List.append_assoc, instructionTables]
 
 /-- Active ordinary rows decoded from the unchanged physical instruction batch. -/

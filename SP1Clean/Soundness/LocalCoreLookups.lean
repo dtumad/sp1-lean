@@ -3,12 +3,11 @@ import SP1Clean.Soundness.EnsembleLookups
 
 /-! # Fixed lookup constraints in the local execution assembly
 
-Remaining source RAM lookups and decoded ROM lookups are fixed by the supplied snapshot and image.
-Registers use a fixed-column channel provider, and native byte providers are lookup-free.
-The remaining lookup predicates ignore prover data.
-Local constraints therefore survive canonical-data changes when physical row cells are retained.
-This proof uses the actual lookup predicates, preserving every repeated RAM lookup, and adds no
-metadata-agreement or provider-validity premise. Channel guarantees remain separate obligations.
+Decoded ROM and syscall-code predicates are fixed by the supplied image and profile.
+Source register and RAM membership use fixed-column channel providers; native byte providers
+are lookup-free. The remaining lookup predicates ignore prover data, so local constraints
+survive canonical-data changes when physical row cells are retained. Channel guarantees
+remain separate obligations, established from actual balance and fixed prefixes.
 -/
 
 namespace SP1Clean.Soundness.LocalCore
@@ -45,10 +44,6 @@ private theorem source_constraints_setData (source : ExecutionSnapshot) (compone
     {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
     (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
     component.operations.ConstraintsHold (Environment.fromArray row data') := by
-  have eval_eq : Expression.eval (Environment.fromArray row data) =
-      Expression.eval (Environment.fromArray row data') :=
-    funext fun expression => Expression.eval_congr
-      (env := Environment.fromArray row data) (env' := Environment.fromArray row data') rfl expression
   simp only [SnapshotMemoryEnsemble.views_eq, List.map_cons, List.map_nil,
     List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl
@@ -62,11 +57,6 @@ private theorem source_constraints_setData (source : ExecutionSnapshot) (compone
       InitialMemoryRead.main, InitialMemoryLookup.circuitNamed, InitialMemoryLookup.main_lookups,
       AddOperation.circuit, AddOperation.main,
       AddressOperation.circuit] at used
-  all_goals rcases used with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals
-    simp only [Lookup.Contains, eval_eq, _root_.Table.toRaw]
-    exact fun h => h
-
 /-- Fixed source/ROM lookups and native providers depend on physical cells, not generation data.
 This transports local constraints across canonical projections without asserting data equality. -/
 theorem component_constraints_setData (image : ProgramImage) (source : ExecutionSnapshot)
@@ -78,9 +68,10 @@ theorem component_constraints_setData (image : ProgramImage) (source : Execution
   · exact source_constraints_setData source component snapshot checked
   rcases List.mem_append.mp rest with rest | fixed
   swap
-  · obtain rfl := List.mem_singleton.mp fixed
-    apply Component.constraintsHold_setData _ ?_ checked
-    simp [SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl
+    all_goals apply Component.constraintsHold_setData _ ?_ checked
+    all_goals simp [SnapshotMemoryEnsemble.registerMembership, SnapshotMemoryEnsemble.ramMembership, StaticTable.component, StaticTable.provider,
       Component.lookups_eq, Component.rowOperations, circuit_norm]
   rcases List.mem_append.mp rest with retained | provider
   · rcases List.mem_append.mp retained with boundary | instruction

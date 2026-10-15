@@ -147,7 +147,7 @@ theorem register_ledger (witness : EnsembleWitness (ensemble source target auxil
     simp [FinalMemoryValue.channel, OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw])]
   rw [if_neg (by simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])]
   rw [table_silent ramFinalSlot witness _ (by rfl), table_silent terminalSlot witness _ (by rfl),
-    table_silent ramSlot witness _ (by rfl), table_silent membershipSlot witness _ (by rfl), register_pulls]
+    table_silent ramSlot witness _ (by rfl), table_silent membershipSlot witness _ (by rfl), table_silent ramMembershipSlot witness _ (by rfl), register_pulls]
   rw [← registerFinalTable_eq]
   simp only [List.nil_append, List.append_nil]
   exact congrArg (fun ledger => ledger ++ (registerInputs witness).map
@@ -164,7 +164,7 @@ theorem ram_ledger (witness : EnsembleWitness (ensemble source target auxiliary 
     simp [FinalMemoryValue.channel, OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw])]
   rw [if_neg (by simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])]
   rw [table_silent registerFinalSlot witness _ (by rfl), table_silent terminalSlot witness _ (by rfl),
-    table_silent registerSlot witness _ (by rfl), table_silent membershipSlot witness _ (by rfl), ram_pulls]
+    table_silent registerSlot witness _ (by rfl), table_silent membershipSlot witness _ (by rfl), table_silent ramMembershipSlot witness _ (by rfl), ram_pulls]
   rw [← ramFinalTable_eq]
   simp only [List.nil_append, List.append_nil]
   exact congrArg (fun ledger => ledger ++ (ramInputs witness).map
@@ -244,7 +244,7 @@ theorem changes_ledger (witness : EnsembleWitness (ensemble source target auxili
     simp [FinalMemoryChange.channel, OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw])]
   rw [if_pos rfl, table_silent registerFinalSlot witness _ (by rfl),
     table_silent ramFinalSlot witness _ (by rfl), table_silent terminalSlot witness _ (by rfl),
-    table_silent membershipSlot witness _ (by rfl), register_changes, ram_changes]
+    table_silent membershipSlot witness _ (by rfl), table_silent ramMembershipSlot witness _ (by rfl), register_changes, ram_changes]
   simp only [FinalMemoryChangeCoverage.ledger, validationRows, List.map_append,
     List.map_map, Function.comp_def, List.append_nil, List.append_assoc]
   exact List.perm_append_comm.trans (List.Perm.of_eq (List.append_assoc ..))

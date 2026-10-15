@@ -49,8 +49,8 @@ theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnap
     simp only [baseEnsemble, sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
     tauto
   simp only [ensemble, PublicVerifier.install, baseEnsemble, tables, afterSourceTables,
-    List.mem_append, List.mem_singleton] at member
-  rcases member with initial | remaining | rfl
+    List.mem_append] at member
+  rcases member with initial | remaining | fixed
   · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
     intro channel used
@@ -81,10 +81,17 @@ theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnap
       · exact fun _ used => core (inside used)
       · intro channel used
         exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-          (List.mem_cons_of_mem _ (syscallInstrsProvider_channels_subset used)))
-  · change [source.sail.memorySnapshot.registerTable.channel.toRaw] ⊆ _
-    intro channel member
-    obtain rfl := List.mem_singleton.mp member
-    simp [baseEnsemble]
+          (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (syscallInstrsProvider_channels_subset used))))
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl
+    · change [source.sail.memorySnapshot.registerTable.channel.toRaw] ⊆ _
+      intro channel member
+      obtain rfl := List.mem_singleton.mp member
+      simp [baseEnsemble]
+    · change [(InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48)
+        "sp1.native.initial_memory").channel.toRaw] ⊆ _
+      intro channel member
+      obtain rfl := List.mem_singleton.mp member
+      simp [baseEnsemble]
 
 end SP1Clean.Soundness.LocalCore

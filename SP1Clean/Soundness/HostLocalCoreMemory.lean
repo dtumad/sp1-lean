@@ -153,7 +153,7 @@ private theorem interior_component_binary
     NativeCore.MemoryBinary component := by
   obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
   rw [List.getElem_drop]
-  by_cases core : 6 + index < 60
+  by_cases core : 6 + index < 61
   · rw [core_component image source auxiliary ⟨6 + index, core⟩]
     split
     · exact wrapper_memoryBinary
@@ -171,14 +171,14 @@ private theorem interior_component_binary
         simpa only [Operations.ConstraintsHold, projection.1, projection.2.1] using constraints) interaction
       simpa only [Operations.interactionValuesWith, projection.2.2 memoryChannel.toRaw (by
         simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw])] using emitted
-  · by_cases last : 6 + index = 60
-    · have equal : index = 54 := by omega
+  · by_cases last : 6 + index = 61
+    · have equal : index = 55 := by omega
       subst index
       change NativeCore.MemoryBinary ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p))
       apply NativeCore.memoryBinary_of_silent
       change memoryChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
       simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
-    · have extra : 61 ≤ 6 + index := by omega
+    · have extra : 62 ≤ 6 + index := by omega
       simp only [tables] at bound ⊢
       rw [List.getElem_append_right (by
         simp only [List.length_set, ProtectedLocalCore.tables_length]; exact extra)]
@@ -249,13 +249,14 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
       (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉ component.circuit.channels)
     (finalSilent : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ component.circuit.channels)
-    (registerSilent : ∀ component ∈ auxiliary,
-      source.sail.memorySnapshot.registerTable.channel.toRaw ∉ component.circuit.channels)
+    (membershipSilent : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
+      ∀ component ∈ auxiliary, channel ∉ component.circuit.channels)
     (constraints : witness.Constraints) (byteBalanced : witness.BalancedChannel byteChannel.toRaw)
     (memoryBalanced : witness.BalancedChannel memoryChannel.toRaw)
     (sourceBalanced : witness.BalancedChannel (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
     (finalBalanced : witness.BalancedChannel (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw)
-    (registerBalanced : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw)
+    (membershipBalanced : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
+      witness.BalancedChannel channel)
     (binary : ∀ component ∈ auxiliary, NativeCore.MemoryBinary component) (loc : MemLoc) :
     TimedGrounding.optMS (LocalCore.memoryInitialFrontier (localWitness witness) loc) +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
@@ -265,15 +266,16 @@ theorem memory_frontier_balance (witness : EnsembleWitness (ensemble image sourc
           (↑(consumedMessages (memoryInterior witness)) : Multiset _) := by
   have checked := localWitness_constraints witness constraints
   have bytes := localWitness_byte witness interface constraints byteBalanced
-  have registers : (localWitness witness).BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw := by
+  have membership (channel : RawChannel (ZMod p))
+      (known : channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot) : (localWitness witness).BalancedChannel channel := by
     change BalancedInteractions ((localWitness witness).interactionsWith _)
-    rw [localWitness_registers witness registerSilent]
-    exact registerBalanced
+    rw [localWitness_membership witness channel known (membershipSilent channel known)]
+    exact membershipBalanced channel known
   apply NativeCore.memoryBoundary_frontier_balance _ _ _ _ ?_ ?_
     (memory_records_perm witness constraints memoryBalanced binary) loc
   · apply (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_locations_nodup_of_tables
       (LocalCore.sourceWitness (localWitness witness)) (LocalCore.afterSourceTables_silent image source)
-      (LocalCore.sourceTables_spec_of_channels _ checked bytes registers)
+      (LocalCore.sourceTables_spec_of_channels _ checked bytes membership)
     change BalancedInteractions ((LocalCore.sourceWitness (localWitness witness)).interactionsWith _)
     rw [LocalCore.sourceWitness_interactions, localWitness_other witness _
       (by simp [LocalCore.baseEnsemble])

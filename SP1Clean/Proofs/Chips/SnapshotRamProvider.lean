@@ -205,11 +205,11 @@ theorem populate?_isSome_iff (address : ℕ) :
     rintro ⟨lower, _, aligned⟩
     exact invalid ⟨lower, aligned⟩
 
-/-- RAM initialization authenticates each of its eight source bytes at the memory key. -/
+/-- RAM initialization authenticates all eight bytes through the fixed membership channel. -/
 @[circuit_norm] theorem main_lookupNames (snapshot : MemorySnapshot)
     (input : Var Word (ZMod p)) (offset : ℕ) :
     ((main snapshot input).operations offset).lookups.map (·.table.name) =
-      List.replicate 8 "sp1.native.initial_memory" := by
+      [] := by
   simp [main, InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
     AddressOperation.circuit, circuit_norm]
 

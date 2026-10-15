@@ -27,23 +27,24 @@ theorem afterInitialTables_eq (image : ProgramImage) :
 
 /-- The final proof inventory inherits distinct names from the complete physical assembly. -/
 theorem final_unique_names (image : ProgramImage) :
-    ((afterInitialTables (p := p) image).map (·.circuit.name)).Nodup := by
+    ((afterInitialTables (p := p) image ++ [ramMembership image]).map
+      (fun component : Component (ZMod p) => component.circuit.name)).Nodup := by
   have names := (baseEnsemble (p := p) image).unique_names
   simp only [baseEnsemble, tables, List.map_append, List.nodup_append] at names
-  exact names.2.1
+  simpa only [List.map_append, List.nodup_append] using names.2.1
 
 /-- The unchanged physical suffix, with its own canonical data and fixed ordering verifier.
 The omitted initialization tables are silent on the final ordering channel. -/
 def finalWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
-    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image) []
-      (by simpa only [afterInitialTables_eq] using final_unique_names (p := p) image)) :=
+    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image ++ [ramMembership image]) []
+      (by simpa only [afterInitialTables_eq, List.append_assoc] using final_unique_names (p := p) image)) :=
   EnsembleWitness.ofTables _ (witness.tables.drop 3) () (by
     rw [List.map_drop, witness.tables_map_component]
     change (tables image).drop 3 =
-      FinalMemoryEnsemble.inventory.views.map (·.component) ++ afterFinalTables image
+      FinalMemoryEnsemble.inventory.views.map (·.component) ++ (afterFinalTables image ++ [ramMembership image])
     rw [tables]
     have length : ((InitialMemoryEnsemble.views (p := p) image).map (·.component)).length = 3 := rfl
-    rw [List.drop_left' length, afterInitialTables_eq])
+    rw [List.drop_left' length, afterInitialTables_eq, List.append_assoc])
 
 /-- Finalizer contracts follow before any Memory guarantees or execution facts are available. -/
 theorem finalTables_spec {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
@@ -123,12 +124,14 @@ private theorem initialTables_final_silent {image : ProgramImage}
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
       memoryChannel, byteChannel, Channel.toRaw]
   · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
-      (List.replicate 38 byteChannel.toRaw ++
+      ((InitialMemoryRead.circuit (p := p) image.initialMemory).channelsWithGuarantees ++
+        List.replicate 2 byteChannel.toRaw ++
         [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
         List.replicate 4 byteChannel.toRaw ++
         [memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw])
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
-      memoryChannel, byteChannel, Channel.toRaw]
+      memoryChannel, byteChannel, InitialMemoryRead.circuit, InitialMemoryLookup.membership,
+      StaticTable.channel, circuit_norm]
   · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
       [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw]
@@ -197,10 +200,18 @@ theorem final_records_locations_nodup {image : ProgramImage}
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((FinalMemoryEnsemble.records (finalWitness witness)).map MemoryMsg.locOf).Nodup := by
   apply FinalMemoryEnsemble.inventory.records_locations_nodup_of_tables
-    (finalWitness witness) (afterFinalTables_silent image) (finalTables_spec witness constraints balanced)
-  change BalancedInteractions ((finalWitness witness).interactionsWith _)
-  rw [finalWitness_interactions]
-  exact balanced _ (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+    (finalWitness witness) (fun component member => ?_) (finalTables_spec witness constraints balanced)
+  · change BalancedInteractions ((finalWitness witness).interactionsWith _)
+    rw [finalWitness_interactions]
+    exact balanced _ (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+
+  · rcases List.mem_append.mp member with native | fixed
+    · exact afterFinalTables_silent image component native
+    · obtain rfl := List.mem_singleton.mp fixed
+      change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉
+        [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]
+      simp [InitialMemoryLookup.membership, StaticTable.channel, OrderedBoundary.channel,
+        OrderedFinalProvider.channelName, Channel.toRaw]
 
 /-- The final inventory is precisely the negative Memory ledger of its three physical tables. -/
 theorem final_memory_interactions {image : ProgramImage}

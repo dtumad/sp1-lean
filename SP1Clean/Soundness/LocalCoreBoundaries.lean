@@ -29,7 +29,8 @@ theorem sourceTables_spec_of_channels {image : ProgramImage} {source : Execution
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
-    (registers : witness.BalancedChannel source.sail.memorySnapshot.registerTable.channel.toRaw) :
+    (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
+      witness.BalancedChannel channel) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
       table.Spec witness.data := by
   intro table member row rowMem
@@ -41,12 +42,15 @@ theorem sourceTables_spec_of_channels {image : ProgramImage} {source : Execution
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
   have tableMem : table ∈ witness.tables := List.mem_of_mem_take member
   have byte := bytes table tableMem row rowMem
-  have register := (register_guarantees_of_balance image source witness constraints registers).2
-    table tableMem row rowMem
+  have register := (membership_guarantees_of_balance image source witness constraints _
+    (List.mem_cons_self ..) (membership _ (List.mem_cons_self ..))).2 table tableMem row rowMem
+  have ram := (membership_guarantees_of_balance image source witness constraints _
+    (List.mem_cons_of_mem _ (List.mem_singleton_self _))
+    (membership _ (List.mem_cons_of_mem _ (List.mem_singleton_self _)))).2 table tableMem row rowMem
   have checked := constraints table tableMem row rowMem
-  rw [← same] at byte register checked ⊢
+  rw [← same] at byte register ram checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-  exact SnapshotMemoryEnsemble.view_spec source.sail.memorySnapshot id _ checked byte register
+  exact SnapshotMemoryEnsemble.view_spec source.sail.memorySnapshot id _ checked byte register ram
 
 theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -55,7 +59,10 @@ theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
       table.Spec witness.data :=
   sourceTables_spec_of_channels witness constraints
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble]))
+    (fun channel known => balanced channel (by
+      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
+        List.not_mem_nil, or_false] at known
+      rcases known with rfl | rfl <;> simp [ensemble, PublicVerifier.install, baseEnsemble]))
 
 /-- Every physical source record authenticates its complete value against the fixed source. -/
 theorem source_records_authentic {image : ProgramImage} {source : ExecutionSnapshot}
@@ -115,11 +122,17 @@ theorem afterSourceTables_silent (image : ProgramImage) (source : ExecutionSnaps
   intro component member
   rcases List.mem_append.mp member with native | fixed
   · exact NativeCore.afterInitialTables_silent image component native
-  · obtain rfl := List.mem_singleton.mp fixed
-    change (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉
-      [source.sail.memorySnapshot.registerTable.channel.toRaw]
-    simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
-      OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, Channel.toRaw]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl
+    · change (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉
+        [source.sail.memorySnapshot.registerTable.channel.toRaw]
+      simp [StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows,
+        OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, Channel.toRaw]
+    · change (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉
+        [(InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48)
+          "sp1.native.initial_memory").channel.toRaw]
+      simp [StaticTable.channel, InitialMemoryLookup.membership,
+        OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, Channel.toRaw]
 
 /-- Distinct source locations follow from the combined AIR, including across register/RAM tables. -/
 theorem source_records_locations_nodup {image : ProgramImage} {source : ExecutionSnapshot}
