@@ -7,7 +7,7 @@ mod backend;
 #[path = "support/export.rs"]
 mod export_support;
 
-use backend::{assert_backend_rejection, config, physical_reference};
+use backend::{assert_backend_rejection, benchmark_config, config, physical_reference};
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::{
     prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, GeneratedEnsemble,
@@ -33,6 +33,9 @@ macro_rules! generated {
         }
     };
 }
+generated!(fixed_single, "preprocessed_byte_1.rs");
+generated!(fixed_mixed, "preprocessed_byte_7.rs");
+generated!(fixed_repeated, "preprocessed_byte_9.rs");
 generated!(row, "unified_byte_row.rs");
 generated!(empty, "unified_byte_0.rs");
 generated!(single, "unified_byte_1.rs");
@@ -422,10 +425,14 @@ fn measure<P: Program<F>, S: GeneratedAirSpec>(
     let start = Instant::now();
     let witness = generate::<F, P>(&public, &[]).unwrap();
     let generation = start.elapsed();
-    assert_eq!(
-        physical_reference::<P>(&public, &witness.tables),
-        case[layout]
-    );
+    if layout == "fixed" {
+        assert_fixed_counts(&witness.tables, &public);
+    } else {
+        assert_eq!(
+            physical_reference::<P>(&public, &witness.tables),
+            case[layout]
+        );
+    }
     assert!(witness
         .tables
         .iter()
@@ -438,11 +445,12 @@ fn measure<P: Program<F>, S: GeneratedAirSpec>(
         "widths": S::WIDTHS, "paddedCells": cells, "occurrences": statement.interaction_count(),
         "generationNs": generation.as_nanos() as u64});
     if benchmark {
-        let config = config();
+        let config = benchmark_config();
         let traces = witness.into_traces().unwrap();
         let start = Instant::now();
         let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
         result["proveNs"] = json!(start.elapsed().as_nanos() as u64);
+        result["proofJsonBytes"] = json!(serde_json::to_vec(&proof).unwrap().len());
         let start = Instant::now();
         verify_ensemble(&config, &statement, &proof, &public).unwrap();
         result["verifyNs"] = json!(start.elapsed().as_nanos() as u64);
@@ -453,17 +461,23 @@ fn measure<P: Program<F>, S: GeneratedAirSpec>(
 macro_rules! comparison {
     ($module:ident, $name:literal) => {
         mod $module {
-            generated!(baseline, concat!("byte_baseline_", $name, ".rs"));
+            generated!(baseline, concat!("byte_routed_", $name, ".rs"));
+            generated!(fixed, concat!("byte_fixed_", $name, ".rs"));
             generated!(candidate, concat!("byte_candidate_", $name, ".rs"));
             pub fn run(case: &super::Value, layout: &str, benchmark: bool) -> super::Value {
                 match layout {
-                    "baseline" => super::measure::<
-                        baseline::ByteBaseline,
-                        baseline::ByteBaselineAirSpec,
-                    >(case, layout, benchmark),
+                    "baseline" => {
+                        super::measure::<baseline::ByteRouted, baseline::ByteRoutedAirSpec>(
+                            case, layout, benchmark,
+                        )
+                    }
                     "candidate" => super::measure::<
                         candidate::UnifiedByte,
                         candidate::UnifiedByteAirSpec,
+                    >(case, layout, benchmark),
+                    "fixed" => super::measure::<
+                        fixed::PreprocessedByte,
+                        fixed::PreprocessedByteAirSpec,
                     >(case, layout, benchmark),
                     _ => unreachable!(),
                 }
@@ -503,7 +517,7 @@ fn provider_layout_measurements() {
             "load-byte" => bench_load::run,
             _ => panic!("unrecognized benchmark {name}"),
         };
-        for kind in ["baseline", "candidate"] {
+        for kind in ["baseline", "candidate", "fixed"] {
             if layout.as_deref().is_some_and(|layout| layout != kind) {
                 continue;
             }
@@ -514,5 +528,325 @@ fn provider_layout_measurements() {
                 println!("BYTE_MEASUREMENT {}", run(case, kind, benchmark));
             }
         }
+    }
+}
+
+#[test]
+fn fixed_columns_and_interactions_match_all_released_physical_rows() {
+    type P = fixed_single::PreprocessedByte;
+    type S = fixed_single::PreprocessedByteAirSpec;
+    let byte = ByteChip::<SP1Field>::default();
+    let range = RangeChip::<SP1Field>::default();
+    let program = Sp1Program::default();
+    let expected = [
+        byte.generate_preprocessed_trace(&program).unwrap(),
+        range.generate_preprocessed_trace(&program).unwrap(),
+    ];
+    for (component, source) in expected.iter().enumerate() {
+        let fixed = S::fixed_trace::<F>(component).unwrap();
+        assert_eq!(fixed.width, source.width());
+        assert_eq!(fixed.values.len(), source.values.len());
+        for (a, b) in fixed.values.iter().zip(&source.values) {
+            assert_eq!(a.as_canonical_u64(), b.as_canonical_u64());
+        }
+        let count_width = if component == 0 { 6 } else { 1 };
+        for (i, fixed_row) in source.values.chunks(source.width()).enumerate() {
+            for count in [0, 1, 2, F::ORDER_U64 - 1] {
+                let mut evaluated = evaluation(fixed_row, &vec![count; count_width]);
+                if component == 0 {
+                    byte.eval(&mut evaluated);
+                } else {
+                    range.eval(&mut evaluated);
+                }
+                let mut native = fixed.values[i * fixed.width..(i + 1) * fixed.width].to_vec();
+                native.extend(vec![F::from_u64(count); count_width]);
+                let actual = P::interactions(component, &native);
+                assert_eq!(actual.len(), evaluated.ledger.len());
+                for (entry, (channel, mult, message)) in actual.iter().zip(&evaluated.ledger) {
+                    assert_eq!(entry.channel, channel);
+                    assert!(!entry.assume_guarantees);
+                    assert_eq!(entry.multiplicity.as_canonical_u64(), *mult);
+                    assert_eq!(
+                        entry
+                            .message
+                            .iter()
+                            .map(PrimeField64::as_canonical_u64)
+                            .collect::<Vec<_>>(),
+                        *message
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn source_counts(requests: &[F]) -> Vec<Vec<F>> {
+    use sp1_core_executor::{events::ByteLookupEvent, ByteOpcode, ExecutionRecord};
+    let mut record = ExecutionRecord::default();
+    let opcodes = [
+        ByteOpcode::AND,
+        ByteOpcode::OR,
+        ByteOpcode::XOR,
+        ByteOpcode::U8Range,
+        ByteOpcode::LTU,
+        ByteOpcode::MSB,
+        ByteOpcode::Range,
+    ];
+    for request in requests.chunks_exact(4) {
+        let v = request
+            .iter()
+            .map(PrimeField64::as_canonical_u64)
+            .collect::<Vec<_>>();
+        let event = ByteLookupEvent {
+            opcode: opcodes[v[0] as usize],
+            a: v[1].try_into().unwrap(),
+            b: v[2].try_into().unwrap(),
+            c: v[3].try_into().unwrap(),
+        };
+        *record.byte_lookups.entry(event).or_default() += 1;
+    }
+    let byte =
+        ByteChip::<SP1Field>::default().generate_trace(&record, &mut ExecutionRecord::default());
+    let range =
+        RangeChip::<SP1Field>::default().generate_trace(&record, &mut ExecutionRecord::default());
+    [byte, range]
+        .into_iter()
+        .map(|trace| {
+            trace
+                .values
+                .iter()
+                .map(|x| F::from_u64(x.as_canonical_u64()))
+                .collect()
+        })
+        .collect()
+}
+
+fn assert_fixed_counts(tables: &[Vec<Vec<F>>], requests: &[F]) {
+    for (component, expected) in source_counts(requests).iter().enumerate() {
+        let prefix = [7, 2][component];
+        let actual = tables[component]
+            .iter()
+            .flat_map(|row| row[prefix..].iter().copied())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            &actual, expected,
+            "canonical SP1 multiplicities in component {component}"
+        );
+    }
+}
+
+#[test]
+fn fixed_generation_matches_source_counts_and_rejects_malformed_keys() {
+    let lean: Value = serde_json::from_str(include_str!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/preprocessed_byte.reference.json"
+    )))
+    .unwrap();
+    let public = fields(&lean["publicInput"]);
+    let witness = generate::<F, fixed_repeated::PreprocessedByte>(&public, &[]).unwrap();
+    let rows = witness
+        .tables
+        .iter()
+        .map(|table| {
+            table
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(PrimeField64::as_canonical_u64)
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(json!(rows), lean["tables"]);
+    assert_fixed_counts(&witness.tables, &public);
+    for case in reference()["cases"].as_array().unwrap() {
+        let public = fields(&case["publicInput"]);
+        if public.len() != 4 {
+            continue;
+        }
+        let generated = generate::<F, fixed_single::PreprocessedByte>(&public, &[]);
+        if case["accepted"] == false {
+            assert!(generated.is_err(), "{}", case["name"]);
+        } else {
+            assert_fixed_counts(&generated.unwrap().tables, &public);
+        }
+    }
+    let public = fields(&reference()["cases"][2]["publicInput"]);
+    let witness = generate::<F, fixed_repeated::PreprocessedByte>(&public, &[]).unwrap();
+    assert_fixed_counts(&witness.tables, &public);
+    assert_eq!(witness.tables[1][0][2], F::ZERO);
+    assert_eq!(witness.tables[1][1][2], F::from_u64(4));
+}
+
+#[test]
+fn fixed_backend_binds_counts_public_requests_and_fixed_heights() {
+    type P = fixed_mixed::PreprocessedByte;
+    type S = fixed_mixed::PreprocessedByteAirSpec;
+    let public = fields(&reference()["cases"][1]["publicInput"]);
+    let witness = generate::<F, P>(&public, &[]).unwrap();
+    assert_fixed_counts(&witness.tables, &public);
+    let statement = GeneratedEnsemble::<F, S>::new(&[65536, 131072]).unwrap();
+    assert_eq!(statement.interaction_count(), 65536 * 6 + 131072 + 7);
+    assert!(matches!(
+        GeneratedEnsemble::<F, S>::new(&[32768, 131072]),
+        Err(EnsembleShapeError::FixedTraceHeight { .. })
+    ));
+    let config = config();
+    let traces = witness.into_traces().unwrap();
+    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
+    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let mut changed_public = public.clone();
+    changed_public[1] += F::ONE;
+    assert!(verify_ensemble(&config, &statement, &proof, &changed_public).is_err());
+    for component in 0..2 {
+        for column in 0..S::WIDTHS[component] {
+            let mut changed = traces.clone();
+            changed[component].values[column] += F::ONE;
+            assert_backend_rejection(|| {
+                let (proof, _) = prove_ensemble(&config, &statement, changed, &public).unwrap();
+                verify_ensemble(&config, &statement, &proof, &public).is_err()
+            });
+        }
+    }
+    // All 256 rows for this b have the same MSB key; AIR must allow moving its count.
+    let mut redistributed = traces.clone();
+    redistributed[0].values[32768 * 6 + 5] -= F::ONE;
+    redistributed[0].values[32769 * 6 + 5] += F::ONE;
+    let (proof, _) = prove_ensemble(&config, &statement, redistributed, &public).unwrap();
+    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    // Duplicate physical keys may redistribute counts in adversarial valid AIR rows.
+    let zero = vec![F::from_u64(6), F::ZERO, F::ZERO, F::ZERO];
+    let mut witness = generate::<F, fixed_single::PreprocessedByte>(&zero, &[]).unwrap();
+    witness.tables[1][0][2] = F::ONE;
+    witness.tables[1][1][2] = F::ZERO;
+    let statement =
+        GeneratedEnsemble::<F, fixed_single::PreprocessedByteAirSpec>::new(&[65536, 131072])
+            .unwrap();
+    let (proof, _) =
+        prove_ensemble(&config, &statement, witness.into_traces().unwrap(), &zero).unwrap();
+    verify_ensemble(&config, &statement, &proof, &zero).unwrap();
+}
+
+fn large_workload(n: usize, hot: bool) -> Vec<F> {
+    (0..n)
+        .flat_map(|i| {
+            let (op, seed) = if hot {
+                ((i % 2) * 3, 0)
+            } else {
+                (i % 4, i / 4)
+            };
+            let (b, c) = (seed / 256, seed % 256);
+            let key = match op {
+                0 => [0, b & c, b, c],
+                1 => [1, b | c, b, c],
+                2 => [2, b ^ c, b, c],
+                _ => [6, seed, 16, 0],
+            };
+            key.map(|x| F::from_u64(x as u64))
+        })
+        .collect()
+}
+
+fn measure_large<P: Program<F>, S: GeneratedAirSpec>(n: usize, hot: bool, layout: &str) -> Value {
+    let input = large_workload(n, hot);
+    let start = Instant::now();
+    let witness = generate::<F, P>(&[], &input).unwrap();
+    let generation = start.elapsed();
+    assert_eq!(witness.tables[0].concat(), input, "runtime request table");
+    let mut balance = std::collections::BTreeMap::<Vec<u64>, F>::new();
+    for (component, table) in witness.tables.iter().enumerate() {
+        for row in table {
+            for interaction in P::interactions(component, row) {
+                *balance
+                    .entry(
+                        interaction
+                            .message
+                            .iter()
+                            .map(PrimeField64::as_canonical_u64)
+                            .collect(),
+                    )
+                    .or_default() += interaction.multiplicity;
+            }
+        }
+    }
+    assert!(balance.values().all(|count| *count == F::ZERO));
+    if layout == "fixed" {
+        assert_fixed_counts(&witness.tables[1..], &input);
+    }
+    let heights = witness.tables.iter().map(Vec::len).collect::<Vec<_>>();
+    let statement = GeneratedEnsemble::<F, S>::new(&heights).unwrap();
+    let cells: usize = heights.iter().zip(S::WIDTHS).map(|(h, w)| h * w).sum();
+    let config = benchmark_config();
+    let traces = witness.into_traces().unwrap();
+    let start = Instant::now();
+    let (proof, _) = prove_ensemble(&config, &statement, traces, &[]).unwrap();
+    let prove = start.elapsed();
+    let start = Instant::now();
+    verify_ensemble(&config, &statement, &proof, &[]).unwrap();
+    json!({"name": format!("{}-{n}", if hot {"hot"} else {"mixed-distinct"}),
+        "layout": layout, "generationNs": generation.as_nanos() as u64,
+        "proveNs": prove.as_nanos() as u64, "verifyNs": start.elapsed().as_nanos() as u64,
+        "paddedCells": cells, "heights": heights, "widths": S::WIDTHS,
+        "occurrences": statement.interaction_count(),
+        "proofJsonBytes": serde_json::to_vec(&proof).unwrap().len()})
+}
+
+macro_rules! large_comparison {
+    ($module:ident, $size:literal) => {
+        mod $module {
+            generated!(
+                baseline,
+                concat!("byte_large_routed_", stringify!($size), ".rs")
+            );
+            generated!(
+                candidate,
+                concat!("byte_large_candidate_", stringify!($size), ".rs")
+            );
+            generated!(
+                fixed,
+                concat!("byte_large_fixed_", stringify!($size), ".rs")
+            );
+            pub fn run(hot: bool, layout: &str) -> super::Value {
+                match layout {
+                    "baseline" => super::measure_large::<
+                        baseline::ByteRouted,
+                        baseline::ByteRoutedAirSpec,
+                    >($size, hot, layout),
+                    "candidate" => super::measure_large::<
+                        candidate::UnifiedByte,
+                        candidate::UnifiedByteAirSpec,
+                    >($size, hot, layout),
+                    "fixed" => super::measure_large::<
+                        fixed::PreprocessedByte,
+                        fixed::PreprocessedByteAirSpec,
+                    >($size, hot, layout),
+                    _ => unreachable!(),
+                }
+            }
+        }
+    };
+}
+large_comparison!(large_1024, 1024);
+large_comparison!(large_16384, 16384);
+large_comparison!(large_65536, 65536);
+
+#[test]
+fn large_provider_layout_measurements() {
+    let Ok(name) = std::env::var("BYTE_BENCH_CASE") else {
+        return;
+    };
+    let layout = std::env::var("BYTE_BENCH_LAYOUT").unwrap();
+    let (kind, size) = name.rsplit_once('-').unwrap();
+    let run = match size {
+        "1024" => large_1024::run,
+        "16384" => large_16384::run,
+        "65536" => large_65536::run,
+        _ => panic!("unknown size {size}"),
+    };
+    assert!(matches!(kind, "hot" | "mixed-distinct"));
+    let _ = run(kind == "hot", &layout);
+    for _ in 0..3 {
+        println!("BYTE_MEASUREMENT {}", run(kind == "hot", &layout));
     }
 }

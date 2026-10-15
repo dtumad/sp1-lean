@@ -5,6 +5,7 @@ import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
 import SP1CleanTest.Core.UnifiedByteBenchmarks
+import SP1CleanTest.Core.PreprocessedByteExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -96,13 +97,16 @@ private def exportEnsembleFixture : IO Unit := do
   let byteBenchmarks ← match SP1CleanTest.Core.UnifiedByteBenchmarks.rustExports with
     | .ok exports => pure exports
     | .error message => throw (IO.userError message)
+  let preprocessed ← match SP1CleanTest.Core.PreprocessedByteExport.rustExports with
+    | .ok exports => pure exports
+    | .error message => throw (IO.userError message)
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++
       SP1CleanTest.Core.RamExport.rustExports ++
-      SP1CleanTest.Core.UnifiedByteExport.rustExports ++ byteBenchmarks do
+      SP1CleanTest.Core.UnifiedByteExport.rustExports ++ byteBenchmarks ++ preprocessed do
     let source ← match result with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
@@ -218,6 +222,16 @@ private def exportEnsembleFixture : IO Unit := do
             ("multiplicity", toJson entry.mult.val), ("assumeGuarantees", toJson entry.assumeGuarantees)]))]))
   IO.FS.writeFile (out / "ram_rows.reference.json") ((Json.mkObj ramRows).compress ++ "\n")
   IO.FS.writeFile (out / "unified_byte.reference.json") ((← unifiedByteReference).compress ++ "\n")
+  let (_, requests, _) := SP1CleanTest.Core.UnifiedByteExport.cases[1]!
+  let requests := requests ++ [SP1CleanTest.Core.UnifiedByteExport.request 6 0 0 0,
+    SP1CleanTest.Core.UnifiedByteExport.request 5 1 128 0]
+  let fixedReference ← match SP1CleanTest.Core.PreprocessedByteExport.generate requests with
+    | .ok witness => pure (Json.mkObj [
+      ("publicInput", toJson (requests.flatMap fun row => (toElements row).toList.map (·.val))),
+      ("tables", toJson (witness.tables.map fun table =>
+        table.table.map fun row => row.map (·.val)))])
+    | .error message => throw (IO.userError message)
+  IO.FS.writeFile (out / "preprocessed_byte.reference.json") (fixedReference.compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
 #eval exportEnsembleFixture

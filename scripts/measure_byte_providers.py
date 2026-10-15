@@ -2,7 +2,7 @@
 """Measure the existing Rust comparison test with isolated per-layout peak RSS.
 
 Build unified_byte_export with check_ensemble_export.sh first. Each subprocess performs
-one warmup and three sequential samples using the shared backend test configuration.
+one warmup and three sequential samples using the Plonky3 benchmark FRI configuration.
 All output, including generated sources, belongs in the ignored export directory.
 """
 
@@ -22,13 +22,16 @@ def main():
     out = args.artifacts.resolve()
     reference = json.loads((out / "unified_byte.reference.json").read_text())
     measurements = []
-    for case in reference["benchmarks"]:
-        for layout in ["baseline", "candidate"]:
-            name = case["name"]
+    cases = [(case["name"], False) for case in reference["benchmarks"]]
+    cases += [(f"{kind}-{n}", True) for n in [1024, 16384, 65536]
+              for kind in ["mixed-distinct", "hot"]]
+    for name, large in cases:
+        for layout in ["baseline", "candidate", "fixed"]:
             log = out / f"measure-{name}-{layout}.log"
             env = dict(os.environ, BYTE_BENCH_CASE=name, BYTE_BENCH_LAYOUT=layout,
                        RAYON_NUM_THREADS="2")
-            command = [str(args.binary.resolve()), "--exact", "provider_layout_measurements",
+            test = "large_provider_layout_measurements" if large else "provider_layout_measurements"
+            command = [str(args.binary.resolve()), "--exact", test,
                        "--nocapture", "--test-threads=1"]
             with log.open("w") as output:
                 process = subprocess.Popen(command, env=env, stdout=output, stderr=subprocess.STDOUT)
@@ -42,14 +45,22 @@ def main():
                 raise SystemExit(f"Incomplete measurement: {log}")
             if any(sample["name"] != name or sample["layout"] != layout for sample in samples):
                 raise SystemExit(f"Wrong measurement selection: {log}")
+            exported_layout = "routed" if layout == "baseline" else layout
+            source = (f"byte_large_{exported_layout}_{name.rsplit('-', 1)[1]}.rs"
+                      if large else f"byte_{exported_layout}_{name}.rs")
             measurements.append({
                 "name": name, "layout": layout, "samples": samples,
                 "peakRssBytes": usage.ru_maxrss * (1 if platform.system() == "Darwin" else 1024),
-                "exportBytes": (out / f"byte_{layout}_{name}.rs").stat().st_size,
+                "exportBytes": (out / source).stat().st_size,
             })
             print(f"Measured {name}/{layout}", flush=True)
     result = {"platform": platform.platform(), "threads": 2, "warmups": 1,
-              "samplesPerLayout": 3, "peakRssScope": "one layout process including warmup",
+              "samplesPerLayout": 3,
+              "friProfile": "Plonky3 create_benchmark_fri_params",
+              "proveScope": "includes preprocessing on every invocation; no reusable-key API",
+              "proofSizeEncoding": "JSON bytes, not a canonical binary protocol encoding",
+              "largeBoundary": "common runtime request table; public binding tested by small fixtures",
+              "peakRssScope": "one layout process including warmup",
               "candidateMetrics": reference["candidateMetrics"],
               "baselineMetrics": reference["baselineMetrics"], "measurements": measurements}
     (out / "byte-provider-measurements.json").write_text(json.dumps(result, indent=2) + "\n")
