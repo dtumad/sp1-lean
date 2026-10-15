@@ -5,7 +5,7 @@ use p3_challenger::DuplexChallenger;
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::{extension::BinomialExtensionField, Field, PrimeField64};
-use p3_fri::{create_test_fri_params, TwoAdicFriPcs};
+use p3_fri::{create_benchmark_fri_params, create_test_fri_params, TwoAdicFriPcs};
 use p3_koala_bear::{KoalaBear as F, Poseidon2KoalaBear};
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
@@ -22,13 +22,26 @@ type Pcs = TwoAdicFriPcs<F, Radix2DitParallel<F>, Mmcs, ChallengeMmcs>;
 pub type Config = StarkConfig<Pcs, Challenge, Challenger>;
 
 pub fn config() -> Config {
+    configured(false)
+}
+
+#[allow(dead_code)]
+pub fn benchmark_config() -> Config {
+    configured(true)
+}
+
+fn configured(benchmark: bool) -> Config {
     let mut rng = SmallRng::seed_from_u64(7);
     let permutation = Perm::new_from_rng_128(&mut rng);
     let mmcs = Mmcs::new(
         Hash::new(permutation.clone()),
         Compress::new(permutation.clone()),
     );
-    let fri = create_test_fri_params(ChallengeMmcs::new(mmcs.clone()), 0);
+    let fri = if benchmark {
+        create_benchmark_fri_params(ChallengeMmcs::new(mmcs.clone()))
+    } else {
+        create_test_fri_params(ChallengeMmcs::new(mmcs.clone()), 0)
+    };
     let pcs = Pcs::new(Radix2DitParallel::default(), mmcs, fri);
     Config::new(pcs, Challenger::new(permutation))
 }

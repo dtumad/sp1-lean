@@ -71,10 +71,11 @@ that output and exercises these boundaries:
   These are native RAM tests, not agreement with SP1's global-memory digest machinery.
 
 Five legacy lookup meanings still block full export: program, syscall code, write permission,
-hint nodes and hint words. Clean's current scheduler also rejects multiple handlers for one
-channel, so the separate Byte providers need upstream routing support or consolidation before
-whole-assembly generation. The component tests use the existing row adapter and independently
-check external interactions; they do not establish complete ensemble balance.
+hint nodes and hint words. The experimental Clean pin adds message predicates and indexed
+preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
+whole-assembly generation still needs its own routing, data and completeness contracts.
+The component tests use the existing row adapter and independently check external interactions;
+they do not establish complete ensemble balance.
 
 - All 25 production instruction components use the same comparison harness:
 
@@ -130,16 +131,27 @@ Lean/Rust rows and ledgers, and exercise repeated requests, all widths, 64/65 di
 malformed inputs, selectors, counts, padding and public binding. The installed providers remain
 the baseline; no full-machine or additional mode coverage follows from this prototype.
 
-The cost fixture closes identical empty, single-op, range-heavy, mixed, ADD, BEQ, LoadByte and
-64/65-request workloads with either layout. Instruction demands come from checked circuit rows
-and are independently reproduced in Rust. Baseline rows are preallocated without handlers;
-the candidate uses demand aggregation. Physical padding and occurrence counts remain separate.
-The export check runs one warmup and three sequential samples per layout. To repeat just the
-measurements, run `python3 scripts/measure_byte_providers.py --artifacts <export-dir>
---binary <unified_byte_export-test-binary>`.
-The ignored report records widths, constraints, degree bounds, padded cells, source bytes,
-generation/prove/verify times and per-process peak RSS with the same backend test configuration;
-these small fixtures do not predict performance at production trace sizes or security parameters.
+A second uninstalled provider experiment matches SP1's physical preprocessing: 65,536 Byte
+rows (seven fixed columns and six counts) and 131,072 Range rows (two fixed columns and one
+count). Kernel proofs establish membership and canonical index coverage. Rust compares every
+fixed cell and interaction with released preprocessing/AIR, compares honest counts with SP1's
+trace generators, and checks complete generated rows against Lean. Duplicate keys remain valid
+at every physical occurrence; canonical indexing is an honest-generation choice.
+
+The cost fixture compares the 23 specialized providers with message routing, the unified provider,
+and these two fixed tables. It retains the nine small workloads and adds mixed distinct and
+repeated-key workloads at 1,024, 16,384 and 65,536 requests. Large cases use the same runtime
+request table in all layouts; public binding is tested separately by the small fixtures. All
+layouts use Clean's generator and Plonky3's benchmark FRI parameters, with two threads, one
+warmup and three samples. Prove/verify times include preprocessing on every call: the backend
+currently has no reusable-preprocessing API. Reports also record committed cells, occurrences,
+source bytes, JSON proof bytes and per-process peak RSS. JSON size is not a wire-format size,
+and this profile makes no whole-system security claim.
+
+Run `python3 scripts/measure_byte_providers.py --artifacts <export-dir>
+--binary <unified_byte_export-test-binary>` to repeat measurements after fresh export.
+Artifacts stay under the ignored `.lake/ensemble-export` tree. Installation and upstream
+adoption require review of the complete costs and proof obligations.
 
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
