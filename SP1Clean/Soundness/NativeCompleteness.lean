@@ -76,7 +76,7 @@ noncomputable def supported_core_native_shard_functionalCompleteness
     WitnessRelation.FunctionalCompleteness (SupportedCoreNativeShardRelation (p := p))
       (SupportedCoreNativeAdmissibleShardRelation (p := p)) :=
   (supported_core_native_functionalCompleteness (p := p)).restrictAir
-    (fun _ witness => CoreProfile.WithinOrdinaryRowLimit
+    (fun _ witness => Model.Core.Profile.WithinOrdinaryRowLimit
       (realDecodedInstructionRows witness.data witness.tables).length) (by
     intro statement witness valid
     obtain ⟨semantic, ready, -⟩ := valid
@@ -84,7 +84,7 @@ noncomputable def supported_core_native_shard_functionalCompleteness
     obtain ⟨-, -, -, -, -, -, -, limit⟩ :=
       Execution.SupportedCoreShardExecutionValid.evaluatedTrace_facts semantic ready.syscallFree
     change
-      CoreProfile.WithinOrdinaryRowLimit
+      Model.Core.Profile.WithinOrdinaryRowLimit
         (realDecodedInstructionRows (nativeTrace statement execution).witness.data
           (nativeTrace statement execution).witness.tables).length
     rw [ready.activeInstructionRows_length

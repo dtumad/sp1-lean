@@ -34,7 +34,7 @@ for arg in "$@"; do
 done
 
 SP1_DIR="${SP1_DIR:-../sp1}"
-PIN=$(python3 -c 'import json; print(json.load(open("scripts/provenance.json"))["sp1"]["extractorRevision"])')
+PIN=$(python3 -c 'import json; print(json.load(open("scripts/provenance.json"))["sp1"]["legacy"]["extractorRevision"])')
 if [[ -z "$PIN" ]]; then
   echo "FAIL: could not read extractorRevision from scripts/provenance.json" >&2
   exit 1

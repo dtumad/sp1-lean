@@ -46,7 +46,7 @@ class WitnessExportTests(unittest.TestCase):
     def dump_files(self):
         self.put("export/sp1dump/Add.dump.json", self.dump)
         self.put("export/sp1dump/index.json", {"schemaVersion": 1, "chips": ["Add"], "sp1Commit": "pin"})
-        self.put("scripts/provenance.json", {"sp1": {"extractorRevision": "pin"}})
+        self.put("scripts/provenance.json", {"sp1": {"legacy": {"extractorRevision": "pin"}}})
 
     def save_fixture(self):
         self.put("testdata/Add.trace.json", self.fixture)
@@ -87,7 +87,7 @@ class WitnessExportTests(unittest.TestCase):
             self.validate()
 
     def test_dump_pin_mismatch(self):
-        self.put("scripts/provenance.json", {"sp1": {"extractorRevision": "other"}})
+        self.put("scripts/provenance.json", {"sp1": {"legacy": {"extractorRevision": "other"}}})
         with self.assertRaisesRegex(ValueError, "inventory/pin"):
             self.validate()
 

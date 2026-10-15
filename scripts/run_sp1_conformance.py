@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
     try:
         sp1 = args.sp1_dir.resolve()
-        pin = read_json(ROOT / "scripts/provenance.json")["sp1"]["extractorRevision"]
+        pin = read_json(ROOT / "scripts/provenance.json")["sp1"]["legacy"]["extractorRevision"]
         revision = subprocess.check_output(["git", "-C", str(sp1), "rev-parse", "HEAD"], text=True).strip()
         dirty = subprocess.check_output(["git", "-C", str(sp1), "status", "--porcelain",
                                          "--untracked-files=no"], text=True)

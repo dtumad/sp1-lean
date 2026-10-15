@@ -100,13 +100,13 @@ theorem anchorExecution_semantic :
       exact anchorState_pc
     · exact ⟨fun transition member => absurd member List.not_mem_nil,
         fun located member => absurd member List.not_mem_nil,
-        by simp [CoreProfile.WithinOrdinaryRowLimit,
+        by simp [Model.Core.Profile.WithinOrdinaryRowLimit,
           Machine.EventExecutionTrace.ordinarySteps, Machine.ordinaryTransitionCount]⟩
 
 /-- The zero-step shard is strictly inside the pinned Core row budget. -/
 theorem anchorExecution_withinCoreRowLimit :
-    CoreProfile.WithinOrdinaryRowLimit anchorExecution.steps := by
-  simp [CoreProfile.WithinOrdinaryRowLimit]
+    Model.Core.Profile.WithinOrdinaryRowLimit anchorExecution.steps := by
+  simp [Model.Core.Profile.WithinOrdinaryRowLimit]
 
 /-- The optional compiler succeeds definitionally on the empty chronological transition list. -/
 theorem anchorExecution_compileExecution?_eq :

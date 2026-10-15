@@ -59,6 +59,7 @@ for name in files:
 hashes = {name: hashlib.sha256((out / name).read_bytes()).hexdigest() for name in files}
 (out / "provenance.json").write_text(json.dumps({
     "cleanRevision": revision,
+    "sp1Revision": json.loads(Path("scripts/provenance.json").read_text())["sp1"]["revision"],
     "sourceRevision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
     "artifacts": hashes,
 }, indent=2) + "\n")

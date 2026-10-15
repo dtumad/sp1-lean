@@ -49,7 +49,7 @@ def SupportedCoreBootHaltRelation :
       -- `SupportedCoreNativeRelation` carries it: the grounding engine does not yet walk a syscall
       -- row's memory touches. It goes when the engine's row carrier admits them.
       SyscallTableInactive witness ∧
-      CoreProfile.WithinOrdinaryRowLimit
+      Model.Core.Profile.WithinOrdinaryRowLimit
         (realDecodedInstructionRows witness.data witness.tables).length
 
 /-- A boot→halt witness is in particular an ordinary capacity-bounded native shard witness, so

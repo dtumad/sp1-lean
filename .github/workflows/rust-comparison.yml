@@ -4,11 +4,17 @@ on:
   pull_request:
     paths:
       - 'rust/sp1-comparison/**'
+      - 'scripts/provenance.json'
+      - 'scripts/check_pins.py'
+      - 'scripts/check_release_surface.py'
       - '.github/workflows/rust-comparison.yml'
   push:
     branches: [main]
     paths:
       - 'rust/sp1-comparison/**'
+      - 'scripts/provenance.json'
+      - 'scripts/check_pins.py'
+      - 'scripts/check_release_surface.py'
       - '.github/workflows/rust-comparison.yml'
   workflow_dispatch:
 
@@ -34,5 +40,9 @@ jobs:
           key: ${{ matrix.features }}
       - name: Formatting
         run: cargo fmt --manifest-path rust/sp1-comparison/Cargo.toml --check
+      - name: Reviewed release pins and coverage
+        run: |
+          python3 scripts/check_pins.py
+          python3 scripts/check_release_surface.py
       - name: Inventory from pinned Rust source
         run: cargo test --locked --manifest-path rust/sp1-comparison/Cargo.toml --features '${{ matrix.features }}'

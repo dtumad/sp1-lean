@@ -22,7 +22,7 @@ interpreter or scheduler.
   and backend proofs exercise public binding, row constraints and rejected mutations.
 - All 25 supported instruction families export through the same built-in path. Rust compares
   generated witnesses, local constraint satisfaction and complete
-  interaction multisets with SP1 v6.8.1's supervisor AIR, including padding and column mutations.
+  interaction multisets with SP1 v6.9.0's supervisor AIR, including padding and column mutations.
   Multi-opcode components use explicit selectors without hints. Comparisons retain repeated and
   zero-multiplicity messages, including the multiplication gadget's caller-supplied result word.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
@@ -91,10 +91,21 @@ built-in lowering rejects. Migrate those tables and all live consumers before re
 comparison. Rust tests do not establish
 cryptographic security or a formal lowering theorem.
 
-The reviewed upgrade target is [SP1 v6.8.1](https://github.com/succinctlabs/sp1/releases/tag/v6.8.1).
-The active legacy evidence remains on the version in provenance.json until migration passes.
+The reviewed upgrade target is [SP1 v6.9.0](https://github.com/succinctlabs/sp1/releases/tag/v6.9.0).
+The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,
+independently of extraction. Cargo and the reviewed coverage record must agree with the release
+revision in provenance.json. The nested legacy provenance authenticates old generated evidence
+only until its remaining consumers and comparison coverage are replaced; it is deleted with that
+pipeline, rather than retained as another supported version.
 Review loader byte preservation, host output behavior, instruction execution, verifier behavior
 and table layouts separately; an unchanged instruction AIR does not imply unchanged system semantics.
+
+Native `ProgramImage` consumes decoded instructions and byte memory; ELF parsing is an external
+boundary. Guest public-output bytes are separate from the executor's bounded stdout/stderr display
+snapshots. `HINT_READ` always writes a final padded word, including for zero or word-aligned lengths;
+ordinary memory-initialization events do not add an empty word. The released executor regressions
+in `rust/sp1-comparison/tests/release_semantics.rs` check these byte boundaries and instruction
+execution behavior. They do not prove translation from ELF or executor equivalence.
 
 The migration must cover:
 
@@ -111,10 +122,11 @@ A function being data-only does not by itself establish that it can be exported.
 
 ## Coverage and mprotect
 
-The coverage record must compare the actual pinned Rust inventory independently of Lean's
-registry, per configuration: tables/widths, witness support, tested comparison, semantic proof
-and deliberate differences. Native ROM/host strengthening can require a restricted comparison
-domain; label it.
+The [coverage record](../rust/sp1-comparison/inventory/coverage.json) accounts for both released
+configurations and the complete installed native inventory: tables/widths, export support,
+comparison evidence, semantic proofs and deliberate differences. The audit checks actual Lean
+components; Cargo separately checks the Rust snapshots against source. Native ROM/host strengthening
+requires a restricted comparison domain, recorded with each group's limits.
 
 Rust's mode-associated columns include zero-width supervisor fields and populated user/mprotect
 fields. The legacy IntoShape extraction skips mode-dependent fields and explicitly rejects

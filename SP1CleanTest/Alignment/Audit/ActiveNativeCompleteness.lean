@@ -219,7 +219,7 @@ theorem activeExecution_semantic :
     · exact ⟨Machine.EventExecutionTrace.haltFree_of_allOrdinary activeExecution_allOrdinary,
         activeExecution_supported,
         by
-          simp only [CoreProfile.WithinOrdinaryRowLimit,
+          simp only [Model.Core.Profile.WithinOrdinaryRowLimit,
             Machine.EventExecutionTrace.ordinarySteps, Machine.ordinaryTransitionCount]
           decide⟩
 
@@ -227,10 +227,10 @@ theorem activeExecution_semantic :
 theorem activeTrace_boundedNativeRelation :
     SupportedCoreNativeShardRelation activeStatement activeTrace.witness :=
   ⟨activeTrace_nativeRelation, by
-    change CoreProfile.WithinOrdinaryRowLimit
+    change Model.Core.Profile.WithinOrdinaryRowLimit
       (realDecodedInstructionRows activeTrace.witness.data activeTrace.witness.tables).length
     rw [active_real_decoded_instruction_row_count]
-    simp [CoreProfile.WithinOrdinaryRowLimit]⟩
+    simp [Model.Core.Profile.WithinOrdinaryRowLimit]⟩
 
 /-- Bounded native soundness reconstructs the same shared semantic language from a genuinely
 active circuit-built witness.  Together with `activeExecution_semantic` and the compiler checks

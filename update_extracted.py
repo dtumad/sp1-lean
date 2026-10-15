@@ -146,7 +146,7 @@ CHIP_ONLY_HELPERS: Set[str] = {
 DEFAULT_SP1_DIR = "../sp1"
 # The legacy Rust-to-Lean pipeline and dump checker share this provenance record.
 _SP1_PROVENANCE = json.loads(
-    (Path(__file__).resolve().parent / "scripts/provenance.json").read_text())["sp1"]
+    (Path(__file__).resolve().parent / "scripts/provenance.json").read_text())["sp1"]["legacy"]
 SP1_SEMANTIC_COMMIT = _SP1_PROVENANCE["semanticRevision"]
 SP1_PINNED_COMMIT = _SP1_PROVENANCE["extractorRevision"]
 

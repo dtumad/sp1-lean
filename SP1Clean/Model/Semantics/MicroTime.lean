@@ -218,7 +218,7 @@ theorem chainState_of_sailChain {s0 s : SailState} :
 /-! ## The location content at a micro-time
 
 The window arithmetic below is SP1's, not ours. The three constants name the two Rust sources
-they must track (at the pinned semantic revision, `FormalModel/CoreProfile.lean`):
+they must track (at the release revision in `scripts/provenance.json`):
 
 - `crates/core/executor/src/lib.rs` — `pub const CLK_INC: u32 = 8`: every ordinary (non-syscall)
   row advances the bus clock by eight, so execution step `k` occupies `[c0 + 8k, c0 + 8(k+1))`.

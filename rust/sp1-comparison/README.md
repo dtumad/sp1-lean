@@ -1,6 +1,6 @@
 # Released SP1 comparison
 
-This crate reads the installed AIR inventory directly from SP1 v6.8.1. Its Git dependency
+This crate reads the installed AIR inventory directly from SP1 v6.9.0. Its Git dependency
 and Cargo lockfile are independent of the legacy Rust-to-Lean extraction checkout.
 
 ```sh
@@ -13,6 +13,21 @@ and every cluster occurrence. Shared layout records reduce repetition; cluster i
 order and repeated entries. A pin or layout change fails the snapshot test and needs review.
 Regenerate explicitly with `cargo run --locked --manifest-path rust/sp1-comparison/Cargo.toml`,
 adding `--features mprotect` for that configuration.
+
+The reviewed [coverage record](inventory/coverage.json) classifies every released layout and every
+installed native component. The same source layout has the same status in both configurations;
+additional user layouts remain explicitly outside the native profile. Ordered native entries retain
+component occurrences, widths and legacy lookup occurrences. Evidence is grouped to avoid duplicating
+proof paths and scope limits. `component` means built-in export with a Rust comparison;
+`subcomponent` means only part of that group's assembly is exported; `none` remains an open gap.
+The comparison kind distinguishes released-SP1 agreement tests from native-only backend tests;
+the latter do not claim agreement with a released layout sharing that group.
+
+`scripts/check_release_surface.py` checks this record against both Rust inventory snapshots and
+the target revision in provenance. After the full test build, its `--native` option also reads the
+actual installed 91-component assembly; the full audit runs this check. The Cargo inventory tests
+independently authenticate the snapshots against released Rust source. No generated Lean registry
+serves as the Rust reference.
 
 The inventory checks establish layout drift only. Fresh Clean Rust is compiled against the backend
 pinned to the same revision as the Lean emitter and compared with SP1:
@@ -107,8 +122,8 @@ reverses Byte, Memory and Program signs to match Clean's provider-to-consumer gu
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables
 the backend fixture alone; `instruction-export` also enables the live SP1 instruction and byte-provider comparisons.
 
-The Lean semantic profile and existing migration evidence remain on their separately recorded
-revision until instruction comparisons and the semantic review pass.
+The native semantic restrictions are independent of extraction. Existing reverse-extraction
+evidence retains its original provenance until replacement coverage allows the pipeline's deletion.
 Neither inventory coverage nor a statically optional carrier establishes mprotect correctness.
 
 Track remaining provider, ensemble and mode coverage in [#28](https://github.com/dtumad/sp1-lean/issues/28)

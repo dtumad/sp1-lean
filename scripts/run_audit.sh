@@ -200,6 +200,7 @@ if [ "$run_main" -eq 1 ]; then
   python3 scripts/check_trust.py --scope main || fail=1
 fi
 if [ "$run_test" -eq 1 ]; then
+  python3 scripts/check_release_surface.py --native || fail=1
   python3 scripts/check_trust.py --scope test || fail=1
 fi
 

@@ -80,6 +80,45 @@ class PinTests(unittest.TestCase):
         path.write_text(path.read_text().replace("#" + clean["rev"], "#" + "0" * 40))
         self.assertTrue(any("locked Clean Rust backend" in e for e in check_pins.check(self.root)))
 
+    def test_direct_sp1_pin_drift(self):
+        path = self.root / "rust/sp1-comparison/Cargo.toml"
+        pin = json.loads((self.root / "scripts/provenance.json").read_text())["sp1"]["revision"]
+        path.write_text(path.read_text().replace(pin, "0" * 40, 1))
+        self.assertTrue(any("direct SP1 pin" in e for e in check_pins.check(self.root)))
+
+    def test_locked_sp1_pin_drift(self):
+        path = self.root / "rust/sp1-comparison/Cargo.lock"
+        pin = json.loads((self.root / "scripts/provenance.json").read_text())["sp1"]["revision"]
+        path.write_text(path.read_text().replace("#" + pin, "#" + "0" * 40, 1))
+        self.assertTrue(any("locked SP1 pin" in e for e in check_pins.check(self.root)))
+
+    def test_wrong_sp1_repository(self):
+        path = self.root / "rust/sp1-comparison/Cargo.toml"
+        path.write_text(path.read_text().replace("https://github.com/succinctlabs/sp1",
+                                                "https://example.org/sp1", 1))
+        self.assertTrue(any("direct SP1 pin" in e for e in check_pins.check(self.root)))
+
+    def test_sp1_release_must_be_stable(self):
+        self.edit_json("scripts/provenance.json", lambda data: data["sp1"].update(version="v7.0.0-rc1"))
+        self.assertTrue(any("stable release" in e for e in check_pins.check(self.root)))
+
+    def test_sp1_release_version_matches_lock(self):
+        self.edit_json("scripts/provenance.json", lambda data: data["sp1"].update(version="v99.0.0"))
+        self.assertTrue(any("locked SP1 pin" in e for e in check_pins.check(self.root)))
+
+    def test_missing_sp1_lock_package(self):
+        path = self.root / "rust/sp1-comparison/Cargo.lock"
+        blocks = path.read_text().split("[[package]]")
+        path.write_text("[[package]]".join(b for b in blocks if '\nname = "sp1-core-machine"\n' not in b))
+        self.assertTrue(any("missing from lockfile" in e for e in check_pins.check(self.root)))
+
+    def test_duplicate_sp1_lock_package(self):
+        path = self.root / "rust/sp1-comparison/Cargo.lock"
+        blocks = path.read_text().split("[[package]]")
+        block = next(b for b in blocks if '\nname = "sp1-core-machine"\n' in b)
+        path.write_text(path.read_text() + "[[package]]" + block)
+        self.assertTrue(any("duplicate locked SP1" in e for e in check_pins.check(self.root)))
+
 
 if __name__ == "__main__":
     unittest.main()

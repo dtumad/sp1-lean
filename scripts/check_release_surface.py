@@ -7,9 +7,18 @@ still has every one of those audit entry points and its independently generated 
 Fresh native artifacts have a separate generation gate.
 """
 
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+import hashlib
+import json
 from pathlib import Path
 import re
+import subprocess
 import sys
+
+from lean_flags import flags_for, load_lakefile
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,6 +54,74 @@ CHIPS = [
 ]
 
 
+def coverage_errors(record: dict, inventories: dict, revision: str,
+                    native: dict | None = None, root: Path = ROOT) -> list[str]:
+    """Check reviewed annotations against independent source and installed native inventories.
+
+    Existence of an evidence file does not prove its claim; the tests and Lean build do that.
+    Never infer Rust agreement from a generated Lean registry.
+    """
+    errors = []
+    if record["revision"] != revision:
+        errors.append("coverage review belongs to a different SP1 revision")
+    groups = record["groups"]
+    for name, group in groups.items():
+        if (group["export"] not in {"none", "subcomponent", "component"}
+                or not group["limit"]):
+            errors.append(f"{name}: invalid coverage status or missing scope limit")
+        if (group["comparisonKind"] not in {"none", "native-backend", "sp1-component"}
+                or (group["comparisonKind"] == "none") != (not group["comparison"])):
+            errors.append(f"{name}: comparison evidence or kind differs")
+        if group["export"] == "component" and not group["comparison"]:
+            errors.append(f"{name}: exported component lacks Rust comparison evidence")
+        for path in group["lean"] + group["comparison"]:
+            if not (root / path).is_file():
+                errors.append(f"{name}: missing evidence {path}")
+    layouts = {table["name"] for inv in inventories.values() for table in inv["layouts"]}
+    if set(record["released"]) != layouts:
+        errors.append("released coverage has missing or stale layouts")
+    for mode, inventory in inventories.items():
+        digest = hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if record["inventories"].get(mode) != digest:
+            errors.append(f"{mode}: released inventory differs from the coverage review")
+        for table in inventory["layouts"]:
+            group = record["released"].get(table["name"])
+            if group not in groups:
+                errors.append(f"{mode}/{table['name']}: unknown coverage group")
+            if mode == "supervisor" and group == "user":
+                errors.append(f"{table['name']}: supervisor layout classified as user-only")
+    for table in record["native"]:
+        if table["group"] not in groups:
+            errors.append(f"{table['name']}: unknown native coverage group")
+        if table["lookups"] and groups.get(table["group"], {}).get("export") == "component":
+            errors.append(f"{table['name']}: legacy lookup cannot claim built-in export")
+    if record["verifier"] not in groups:
+        errors.append("missing public verifier coverage")
+    if native is not None:
+        actual = [{key: table[key] for key in ("name", "width", "inputWidth", "fixedWidth")} |
+                  {"lookups": table["lookups"]} for table in native["tables"]]
+        expected = [{key: value for key, value in table.items() if key != "group"}
+                    for table in record["native"]]
+        if actual != expected:
+            errors.append("native coverage differs from installed component order, widths or lookups")
+        if [table["slot"] for table in native["tables"]] != list(range(len(actual))):
+            errors.append("native inventory lost component occurrences")
+        if record["publicWidth"] != native["publicWidth"]:
+            errors.append("native public-input width differs")
+    return errors
+
+
+def read_native_inventory() -> dict:
+    """Use current oleans, after the full test build; reject diagnostics or incomplete execution."""
+    result = subprocess.run(
+        ["lake", "env", "lean", *flags_for(load_lakefile(ROOT / "lakefile.toml"), "SP1CleanTest"),
+         "scripts/releaseInventory.lean"], cwd=ROOT, text=True, capture_output=True)
+    if result.returncode or result.stderr:
+        raise ValueError(f"native inventory failed: {result.stdout}\n{result.stderr}")
+    # A single complete JSON object is required, even if Lean exits zero after a stack overflow.
+    return json.loads(result.stdout)
+
+
 def instruction_export_errors(lean: str, rust: str) -> list[str]:
     """Check built-in export registrations independently of generated artifacts."""
     names = [name for _, name, _ in CHIPS]
@@ -66,6 +143,10 @@ def instruction_export_errors(lean: str, rust: str) -> list[str]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--native", action="store_true",
+                        help="also check installed native inventory; requires current test oleans")
+    args = parser.parse_args()
     def fail(message: str) -> None:
         print(f"FAIL: {message}")
         failures.append(message)
@@ -75,6 +156,19 @@ def main() -> None:
             fail(f"missing {role}: {path.relative_to(ROOT)}")
 
     failures: list[str] = []
+    try:
+        directory = ROOT / "rust/sp1-comparison/inventory"
+        record = json.loads((directory / "coverage.json").read_text())
+        inventories = {mode: json.loads((directory / (mode + ".json")).read_text())
+                       for mode in ("supervisor", "mprotect")}
+        revision = json.loads((ROOT / "scripts/provenance.json").read_text())["sp1"]["revision"]
+        for error in coverage_errors(record, inventories, revision,
+                                     read_native_inventory() if args.native else None):
+            fail(error)
+        counts = Counter(table["group"] for table in record["native"])
+        print("Reviewed native coverage: " + ", ".join(f"{key}={value}" for key, value in counts.items()))
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        fail(f"invalid release coverage: {error}")
     expected_ids = [chip_id for chip_id, _, _ in CHIPS]
     expected_names = {name for _, name, _ in CHIPS}
 

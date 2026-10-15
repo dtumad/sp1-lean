@@ -2,7 +2,7 @@
 .lake/
 /build/
 target/
-node_modules/
+node_modules
 *.olean
 *.olean.private
 *.olean.server
