@@ -224,6 +224,14 @@ theorem typedTableInteractionsWith_eq_flatMap (table : Table F) (data : ProverDa
   unfold typedTableInteractionsWith
   exact List.flatMap_congr fun _ _ => typedInteractionValuesWith_congr _ _ rfl
 
+/-- Replacing stored evaluation data preserves the literal typed interaction list. -/
+@[simp] theorem typedTableInteractionsWith_setData (table : Table F) (data : ProverData F)
+    (channel : Channel F Message) :
+    typedTableInteractionsWith { table with data } channel =
+      typedTableInteractionsWith table channel := by
+  rw [typedTableInteractionsWith_eq_flatMap _ data,
+    typedTableInteractionsWith_eq_flatMap table data]
+
 /-- Erasing the typed table view recovers Clean's actual interaction list. -/
 @[simp] theorem typedTableInteractionsWith_raw (table : Table F) (channel : Channel F Message) :
     (typedTableInteractionsWith table channel).map TypedInteraction.raw =

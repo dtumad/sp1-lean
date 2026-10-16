@@ -33,15 +33,36 @@ local instance nativeProgramAgreementFieldBound : Fact (2 ^ 24 < p) :=
 
 /-! ## Stable physical Program table and key projection -/
 
-/-- The stable Program-provider position of an assembled witness is its generated Program table. -/
+/-- Generated Program-provider rows evaluated at canonical witness data. -/
 theorem SupportedCoreTraceWitness.programProviderTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    programProviderTable trace.witness = trace.providerTableFor .program := by
-  unfold programProviderTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
-    SupportedCoreTraceWitness.providerTables, programProviderIndex, instructionTableCount,
-    byteProviderTableCount, rangeProviderTableCount, InstructionChipId.all, ProviderTableId.all,
-    ByteProviderId.all]
+    programProviderTable trace.witness = { trace.providerTableFor .program with data := trace.data } := rfl
+
+/-- A generated Program table exposes the literal entry ledger at canonical witness data. -/
+theorem SupportedCoreTraceWitness.programProviderTable_cleanAccesses
+    (trace : SupportedCoreTraceWitness p)
+    (fits : ∀ entry ∈ trace.providerOccurrences .program, RomKeyFits entry) :
+    tableCleanAccesses (programProviderTable trace.witness) =
+      (trace.providerOccurrences .program).map fun entry =>
+        actualProviderAccess (p := p) (programEntryAccess entry) entry.multiplicity := by
+  rw [trace.programProviderTable_witness, tableCleanAccesses_setData]
+  exact program_traceTable_actualAccesses _ _ _ (trace.providerCapacity .program) fits
+
+/-- Canonical Program closure exposes the recounted key list. Keeping the table proof at an
+abstract trace leaves native compiler terms folded in semantic consumers. -/
+theorem SupportedCoreTraceWitness.canonicalClosure_programCleanAccesses
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity)
+    (servable : trace.DemandServable) :
+    tableCleanAccesses (programProviderTable (trace.canonicalClosure capacity).witness) =
+      trace.closureRomEntries.map fun entry =>
+        actualProviderAccess (p := p) (programEntryAccess entry) entry.multiplicity := by
+  rw [programProviderTable_cleanAccesses]
+  · simp only [SupportedCoreTraceWitness.canonicalClosure_providerOccurrences,
+      SupportedCoreTraceWitness.canonicalProviderOccurrences]
+  · simp only [SupportedCoreTraceWitness.canonicalClosure_providerOccurrences,
+      SupportedCoreTraceWitness.canonicalProviderOccurrences]
+    exact trace.closureRomEntries_romKeyFits servable
+
 
 /-- The typed Program token is exactly the canonical `ProgramRow` key of its recovered message. -/
 private theorem word_toList {R : Type} (word : Vector R 4) :
@@ -197,24 +218,14 @@ theorem nativeTrace_programProviderBound
     { raw := raw
       channel_eq := (programProviderTable (nativeTrace statement execution).witness).channel_eq_of_mem_interactionsWith member }
   have rawMem : raw ∈
-      (programProviderTable (nativeTrace statement execution).witness).interactions
-        (nativeTrace statement execution).witness.data := by
+      (programProviderTable (nativeTrace statement execution).witness).interactions := by
     rw [Air.Flat.Table.interactionsWith_eq_filter] at member
     exact (List.mem_filter.mp member).1
   have accessMem : Interaction.toAccess raw ∈
       tableCleanAccesses
         (programProviderTable (nativeTrace statement execution).witness) :=
     List.mem_map_of_mem rawMem
-  rw [(nativeTrace statement execution).programProviderTable_witness] at accessMem
-  rw [tableCleanAccesses_setData _ _
-    (nativeBaseTrace statement execution).generationData] at accessMem
-  simp only [nativeTrace, SupportedCoreTraceWitness.providerTableFor,
-    SupportedCoreTraceWitness.canonicalClosure_providerOccurrences,
-    SupportedCoreTraceWitness.canonicalProviderOccurrences,
-    SupportedCoreTraceWitness.canonicalClosure_generationData,
-    SupportedCoreTraceWitness.canonicalClosure_hint] at accessMem
-  rw [program_traceTable_actualAccesses _ _ _
-    ((nativeBaseTrace statement execution).closureRomEntries_romKeyFits servable)] at accessMem
+  rw [nativeTrace, SupportedCoreTraceWitness.canonicalClosure_programCleanAccesses _ _ servable] at accessMem
   obtain ⟨entry, entryMem, accessEq⟩ := List.mem_map.mp accessMem
   obtain ⟨key, filteredKeyMem, entryEq⟩ := List.mem_map.mp entryMem
   subst entry

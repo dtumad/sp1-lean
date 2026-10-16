@@ -85,10 +85,25 @@ noncomputable def compileLocatedTransitions? (program : GuestProgram) :
           finalClock := tail.finalClock
           finalFrontier := tail.finalFrontier }
 
-/-- Compile the chronological trace view evaluated from a common shard witness. -/
+/-- Compile the chronological trace view evaluated from a common shard witness. The existing
+ordinary-shard limit is checked before constructing physical tables; oversized transcripts are
+outside that semantic domain and return `none`, without truncating any admitted execution. -/
 noncomputable def compileExecution? (program : GuestProgram)
     (execution : Machine.EventExecutionTrace) (initialClock : ℕ) : Option CompiledExecution :=
-  compileLocatedTransitions? program initialClock AccessFrontier.initial execution.locatedTransitions
+  if execution.steps ≤ Model.Core.Profile.maxOrdinaryTransitions then
+    compileLocatedTransitions? program initialClock AccessFrontier.initial execution.locatedTransitions
+  else none
+
+/-- On the existing semantic domain, the capacity check preserves the complete chronological fold.
+Success also supplies the bound needed by physical construction, without a caller proof input. -/
+theorem compileExecution?_eq_some_iff (program : GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) (compiled : CompiledExecution) :
+    compileExecution? program execution initialClock = some compiled ↔
+      Model.Core.Profile.WithinOrdinaryRowLimit execution.steps ∧
+        compileLocatedTransitions? program initialClock AccessFrontier.initial
+          execution.locatedTransitions = some compiled := by
+  unfold compileExecution? Model.Core.Profile.WithinOrdinaryRowLimit
+  split <;> simp_all
 
 /-- Harmless total fallback used only off the compiler's supported image.  The public
 `NativeCompilerReady` predicate proves that the optional compiler returned `some`, so every theorem
@@ -155,19 +170,32 @@ theorem compileExecution_rows_length_le (program : GuestProgram)
   | some compiled =>
       rw [compileExecution_eq_of_some generated]
       simpa only [Machine.EventExecutionTrace.locatedTransitions_length] using
-        (compileLocatedTransitions?_rows_length generated).le
+        (compileLocatedTransitions?_rows_length
+          ((compileExecution?_eq_some_iff ..).mp generated).2).le
+
+/-- Every total compiler result fits the existing semantic row limit. On a failed or oversized
+input the result is empty; on success the check above certifies the unchanged complete fold. -/
+theorem compileExecution_rows_length_le_limit (program : GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
+    Model.Core.Profile.WithinOrdinaryRowLimit
+      (compileExecution program execution initialClock).rows.length := by
+  cases generated : compileExecution? program execution initialClock with
+  | none =>
+      simp [compileExecution, generated, emptyCompiledExecution,
+        Model.Core.Profile.WithinOrdinaryRowLimit]
+  | some compiled =>
+      exact (compileExecution_rows_length_le program execution initialClock).trans
+        ((compileExecution?_eq_some_iff ..).mp generated).1
 
 /-- The existing semantic shard limit supplies Clean's instruction-table capacity.
 No additional compiler footprint or physical readiness premise is required. Provider expansion
 and padding have separate bounds; this theorem concerns the unpadded instruction buckets. -/
 theorem compileExecution_instruction_capacity (program : GuestProgram)
-    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
-    (bounded : Model.Core.Profile.WithinOrdinaryRowLimit execution.steps)
-    (id : InstructionChipId) :
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) (id : InstructionChipId) :
     ((compileExecution program execution initialClock).instructionEvents id).length ≤ UInt64.size := by
   exact ((CompiledExecution.instructionEvents_length_le _ id).trans
-    (compileExecution_rows_length_le program execution initialClock)).trans
-      (bounded.trans (show Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size from by decide))
+    (compileExecution_rows_length_le_limit program execution initialClock)).trans
+      (show Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size from by decide)
 
 /-- The retained semantic transitions are exactly the input list, in order. -/
 theorem compileLocatedTransitions?_located
@@ -266,12 +294,14 @@ theorem compileLocatedTransitions?_exists_of_views
 introduced. -/
 theorem compileExecution?_exists_of_views
     {program : GuestProgram} {execution : Machine.EventExecutionTrace} {initialClock : ℕ}
+    (bounded : Model.Core.Profile.WithinOrdinaryRowLimit execution.steps)
     (ready : ∀ located ∈ execution.locatedTransitions,
       ∃ view : SP1TransitionView,
         projectSP1Transition? program located = some view ∧
           ∀ frontier clock, InstructionEventReady view frontier clock) :
-    ∃ compiled, compileExecution? program execution initialClock = some compiled :=
-  compileLocatedTransitions?_exists_of_views ready
+    ∃ compiled, compileExecution? program execution initialClock = some compiled := by
+  obtain ⟨compiled, generated⟩ := compileLocatedTransitions?_exists_of_views ready
+  exact ⟨compiled, (compileExecution?_eq_some_iff ..).mpr ⟨bounded, generated⟩⟩
 
 /-- Execution-level preservation of the chronological operational carrier. -/
 theorem compileExecution?_located
@@ -279,7 +309,7 @@ theorem compileExecution?_located
     {compiled : CompiledExecution}
     (generated : compileExecution? program execution initialClock = some compiled) :
     compiled.rows.map CompiledLocatedInstruction.located = execution.locatedTransitions :=
-  compileLocatedTransitions?_located generated
+  compileLocatedTransitions?_located ((compileExecution?_eq_some_iff ..).mp generated).2
 
 end SP1Clean.TraceGen
 
@@ -315,11 +345,11 @@ theorem SupportedCoreShardExecutionValid.compileExecution?_exists_of_instruction
         (witness.evaluatedTrace (supportedCoreShardModel (p := p))) initialClock =
           some compiled := by
   let execution := witness.evaluatedTrace (supportedCoreShardModel (p := p))
-  obtain ⟨-, -, -, -, -, ordinaryTrace, supported, -⟩ := valid.evaluatedTrace_facts ordinary
+  obtain ⟨-, -, -, -, -, ordinaryTrace, supported, bounded⟩ := valid.evaluatedTrace_facts ordinary
   have statementSupported : ∀ located ∈ execution.locatedTransitions,
       SupportedSP1Transition statement.program located := by
     simpa only [valid.program_eq] using supported.all_of_allOrdinary ordinaryTrace
-  apply TraceGen.compileExecution?_exists_of_views
+  apply TraceGen.compileExecution?_exists_of_views bounded
   intro located member
   obtain ⟨view, projected, -⟩ := (statementSupported located member).view
   exact ⟨view, projected, ready located member view projected⟩

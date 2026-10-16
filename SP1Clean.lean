@@ -176,6 +176,8 @@ import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
+import SP1Clean.Proofs.Completeness.NativeBaseTrace
+import SP1Clean.Proofs.Completeness.NativeClosureCapacity
 import SP1Clean.Proofs.Completeness.NativeBoundaryAgreement
 import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
 import SP1Clean.Proofs.Completeness.NativeProgramAgreement

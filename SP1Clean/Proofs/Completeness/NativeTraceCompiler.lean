@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Completeness.ExecutionInventory
+import SP1Clean.Proofs.Completeness.NativeClosureCapacity
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
 import SP1Clean.Proofs.Completeness.ConsumerClosure
@@ -55,70 +55,12 @@ local instance nativeTraceCompilerFieldBound : Fact (2 ^ 24 < p) :=
 
 /-! ## The proof-independent trace map -/
 
-/-- Decode the public initial clock once, at the same boundary used by execution semantics and
-the committed prover-data encoder. -/
-def nativeInitialClock (statement : SupportedCoreStatement p) : ℕ :=
-  SP1Clean.Semantics.clkNat statement.publicValues.init_clk_high
-    statement.publicValues.init_clk_low
-
-/-- Decode the public final clock. -/
-def nativeFinalClock (statement : SupportedCoreStatement p) : ℕ :=
-  SP1Clean.Semantics.clkNat statement.publicValues.final_clk_high
-    statement.publicValues.final_clk_low
-
-/-- Decode the public initial program counter into the field-free State-history representation. -/
-def nativeInitialPc (statement : SupportedCoreStatement p) : ℕ :=
-  (supportedPcBits statement.publicValues.init_pc0 statement.publicValues.init_pc1
-    statement.publicValues.init_pc2).toNat
-
-/-- Decode the public final program counter. -/
-def nativeFinalPc (statement : SupportedCoreStatement p) : ℕ :=
-  (supportedPcBits statement.publicValues.final_pc0 statement.publicValues.final_pc1
-    statement.publicValues.final_pc2).toNat
-
-/-- The canonical field-free endpoints used by the State hand-off proof. -/
-def nativeStateBoundary (statement : SupportedCoreStatement p) : StateBoundary :=
-  StateBoundary.canonical (nativeInitialClock statement) (nativeInitialPc statement)
-    (nativeFinalClock statement) (nativeFinalPc statement)
-
-/-- Provider/boundary occurrences determined before preprocessed closure. -/
-def nativeBaseProviderOccurrences (compiled : CompiledExecution) :
-    (id : ProviderTableId) → List id.Occurrence
-  | .byte _ => []
-  | .range _ => []
-  | .program => []
-  | .memoryInit => memoryInitialEntries compiled.memoryHistory
-  | .memoryFinalize => memoryFinalEntries compiled.memoryHistory
-  | .memoryBump => compiled.memoryBumps
-  | .stateBump => stateBumpEvents compiled.routedEvents
-  | .halt => []
-  -- The syscall table is empty rather than one padding row: its Exit push is positively gated, so
-  -- it needs no anti-gated companion to balance the verifier's ungated pull.
-  | .syscallInstrs => []
-
-/-- Assemble the unique unclosed native trace from one chronological compiler result.  The three
-preprocessed provider families are empty here; `canonicalClosure` below reconstructs them from
-this trace's own evaluated consumer interactions. -/
-noncomputable def nativeBaseTraceOfCompiled (statement : SupportedCoreStatement p)
-    (compiled : CompiledExecution) : SupportedCoreTraceWitness p where
-  instructionEvents := compiled.instructionEvents
-  providerOccurrences := nativeBaseProviderOccurrences compiled
-  generationData := Commit.dataOfAt statement.program (nativeInitialClock statement)
-  hint := ProverHint.empty (ZMod p)
-  boundary := statement.publicValues
-
-/-- Total base trace.  Outside the supported compiler image this uses `compileExecution`'s empty
-fallback; admissibility proves that branch unreachable. -/
-noncomputable def nativeBaseTrace (statement : SupportedCoreStatement p)
-    (execution : Machine.EventExecutionTrace) : SupportedCoreTraceWitness p :=
-  nativeBaseTraceOfCompiled statement
-    (TraceGen.compileExecution statement.program execution (nativeInitialClock statement))
-
 /-- The one final native trace: deterministic semantic compilation followed by deterministic
 provider recounting. -/
 noncomputable def nativeTrace (statement : SupportedCoreStatement p)
     (execution : Machine.EventExecutionTrace) : SupportedCoreTraceWitness p :=
   (nativeBaseTrace statement execution).canonicalClosure
+    (nativeBaseTrace_canonicalCapacity statement execution)
 
 /-- The sole remaining representation seam for State compilation: physical instruction rows,
 decoded in chip-table order, project to the field-free links of the same bucketed events.  Bump
@@ -189,14 +131,6 @@ def NativeProgramRowProjection (statement : SupportedCoreStatement p)
             instrToProgramRow' (rowPcVec row) compiledRow.view.decoded = some row ∧
             key = ProgramChip.programRowKey row
 
-@[simp] theorem nativeBaseTraceOfCompiled_publicValues
-    (statement : SupportedCoreStatement p) (compiled : CompiledExecution) :
-    (nativeBaseTraceOfCompiled statement compiled).publicValues = statement.publicValues := rfl
-
-@[simp] theorem nativeBaseTrace_publicValues
-    (statement : SupportedCoreStatement p) (execution : Machine.EventExecutionTrace) :
-    (nativeBaseTrace statement execution).publicValues = statement.publicValues := rfl
-
 @[simp] theorem nativeTrace_publicValues
     (statement : SupportedCoreStatement p) (execution : Machine.EventExecutionTrace) :
     (nativeTrace statement execution).publicValues = statement.publicValues := rfl
@@ -204,35 +138,6 @@ def NativeProgramRowProjection (statement : SupportedCoreStatement p)
 @[simp] theorem nativeTrace_witness_publicInput
     (statement : SupportedCoreStatement p) (execution : Machine.EventExecutionTrace) :
     (nativeTrace statement execution).witness.publicInput = statement.publicValues := rfl
-
-/-! ## Local trace well-formedness -/
-
-/-- The base trace's table-local side conditions are exactly the compiler's indexed event facts,
-the two refresh schedulers' facts, and the public limb bounds.  Boundary inventories are valid by
-construction. -/
-theorem nativeBaseTraceOfCompiled_wellFormed
-    (statement : SupportedCoreStatement p) (compiled : CompiledExecution)
-    (publicWellFormed : statement.publicValues.LimbBounds)
-    (compiledWellFormed : compiled.WellFormed)
-    (stateBumpsReady : StateBumpReady compiled.routedEvents) :
-    (nativeBaseTraceOfCompiled statement compiled).WellFormed := by
-  constructor
-  · intro id event member
-    exact compiledWellFormed.instruction id event member
-  · intro id event member
-    cases id with
-    | byte provider => cases provider <;> simp [nativeBaseTraceOfCompiled,
-        nativeBaseProviderOccurrences] at member
-    | range width => simp [nativeBaseTraceOfCompiled, nativeBaseProviderOccurrences] at member
-    | program => simp [nativeBaseTraceOfCompiled, nativeBaseProviderOccurrences] at member
-    | memoryInit =>
-        exact memoryInitialEntries_wellFormed compiled.memoryHistory event member
-    | memoryFinalize => trivial
-    | memoryBump => exact compiledWellFormed.memoryBumps event member
-    | stateBump => exact stateBumpEvents_wellFormed stateBumpsReady event member
-    | halt => exact event.elim
-    | syscallInstrs => exact event.elim
-  · exact publicWellFormed
 
 /-! ## Explicit readiness of the one compiled trace -/
 
@@ -295,7 +200,8 @@ theorem NativeTraceReady.baseWellFormed
     (ready : NativeTraceReady statement execution)
     (publicWellFormed : statement.publicValues.LimbBounds) :
     (nativeBaseTrace statement execution).WellFormed :=
-  nativeBaseTraceOfCompiled_wellFormed statement _ publicWellFormed
+  nativeBaseTraceOfCompiled_wellFormed statement _
+    (compileExecution_capacity statement.program execution (nativeInitialClock statement)) publicWellFormed
     ready.compiledWellFormed ready.stateBumps
 
 /-- Provider recounting preserves well-formedness because every demanded key is servable. -/
@@ -305,6 +211,7 @@ theorem NativeTraceReady.wellFormed
     (publicWellFormed : statement.publicValues.LimbBounds) :
     (nativeTrace statement execution).WellFormed := by
   exact (nativeBaseTrace statement execution).canonicalClosure_wellFormed
+    (nativeBaseTrace_canonicalCapacity statement execution)
     (ready.baseWellFormed publicWellFormed) ready.demandServable
 
 /-- The exact assertion system of all 55 native tables plus the verifier row. -/

@@ -56,8 +56,8 @@ theorem romEntryOfKey_wellFormed {key : LookupAccessList.LookupKey} {multiplicit
 /-- Replacing the preprocessed-provider window by the canonical closure preserves generated-trace
 well-formedness.  For Byte/Range/Program, `DemandServable` proves the rebuilt rows valid; every
 instruction, boundary, and bump occurrence is preserved from the base trace. -/
-theorem canonicalClosure_wellFormed (wf : trace.WellFormed)
-    (servable : trace.DemandServable) : trace.canonicalClosure.WellFormed where
+theorem canonicalClosure_wellFormed (capacity : trace.CanonicalCapacity) (wf : trace.WellFormed)
+    (servable : trace.DemandServable) : (trace.canonicalClosure capacity).WellFormed where
   instruction id event eventMem := wf.instruction id event eventMem
   provider id entry entryMem := by
     rw [canonicalClosure_providerOccurrences] at entryMem

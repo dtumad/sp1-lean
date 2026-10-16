@@ -118,9 +118,11 @@ decision's binary and semantic properties. All 25 instruction chips now use empt
 Providers may still require external witness data under their own contracts.
 
 The instruction-event registry lives with semantic trace contracts, below physical assembly.
-Chronological compiler inventories likewise derive refresh and Memory boundary records before
-building tables. Capacity proofs use the canonical access plan and existing semantic shard limit;
-provider recounting and fixed-table padding remain separate obligations.
+Chronological inventories derive refresh and Memory boundary records before `NativeBaseTrace`
+assembles tables through registry-indexed input builders. The checked compiler supplies physical
+capacity from the existing semantic shard limit. `NativeClosureCapacity` also bounds recounted
+provider lists from the actual consumer circuits; its internal estimates add no caller premise.
+Exact channel accounting and fixed-table padding remain separate obligations.
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
@@ -151,8 +153,9 @@ upstream `UInt64` index space. Ensemble construction makes every table's stored 
 the canonical data derived from the complete inventory. Generation inputs remain separate.
 The semantic State and Memory inventories sit below physical assembly; the compiler derives
 their row bounds from the existing shard limit. Generic constructors must account for capacity,
-including fixed-table padding; they may not
-silently truncate, deduplicate or drop rows to fit.
+including fixed-table padding; they may not silently truncate, deduplicate or drop rows to fit.
+Replacing stored data preserves decoded physical rows and literal interaction lists, but does
+not establish agreement of data-dependent semantic predicates.
 
 A projected witness derives canonical data from its retained physical rows. Prove row-layout,
 lookup and channel-guarantee transport at the actual two data environments; dropping tables or

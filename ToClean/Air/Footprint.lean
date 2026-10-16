@@ -23,6 +23,12 @@ variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 noncomputable def Component.channelWidth (component : Component F) (channel : RawChannel F) : ℕ :=
   (component.operations.interactionsWith channel).length
 
+/-- The complete ledger counts every syntactic interaction on every physical row. -/
+theorem Table.interactions_length (table : Table F) :
+    table.interactions.length = table.length * table.component.operations.interactions.length := by
+  simp only [Table.interactions, List.length_flatMap, Operations.interactionValues, List.length_map]
+  simp [Table.length, List.sum_replicate]
+
 /-- Every physical row contributes its full circuit width, even if all multiplicities are zero. -/
 theorem Table.interactionsWith_length (table : Table F) (channel : RawChannel F) :
     (table.interactionsWith channel).length = table.length * table.component.channelWidth channel := by

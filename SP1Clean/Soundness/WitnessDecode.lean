@@ -151,6 +151,16 @@ noncomputable def decodeInstructionTables :
       table.table.map (⟨chip, ·⟩) ++ decodeInstructionTables chips tables
   | _, _ => []
 
+/-- Decoding retains physical cells and descriptors, independently of stored prover data. -/
+theorem decodeInstructionTables_setData (chips : List (SupportedChip p))
+    (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) :
+    decodeInstructionTables chips (tables.map fun table => { table with data }) =
+      decodeInstructionTables chips tables := by
+  induction chips generalizing tables with
+  | nil => simp [decodeInstructionTables]
+  | cons chip chips ih =>
+      cases tables <;> simp [decodeInstructionTables, ih]
+
 /-- A decoded row retains both its descriptor's position and the corresponding physical row.
 This provenance survives component extensions whose additional channels are absent from the decoder. -/
 theorem position_of_mem_decodeInstructionTables
@@ -175,6 +185,12 @@ theorem position_of_mem_decodeInstructionTables
 noncomputable def decodedInstructionRows (tables : List (Table (ZMod p))) :
     List (DecodedInstructionRow p) :=
   decodeInstructionTables (supportedChips (p := p)) (tables.take 25)
+
+/-- Canonical data derivation preserves the complete decoded physical instruction stream. -/
+@[simp] theorem decodedInstructionRows_withDerivedData (tables : List (Table (ZMod p))) :
+    decodedInstructionRows (p := p) (withDerivedData tables) = decodedInstructionRows tables := by
+  simp only [decodedInstructionRows, withDerivedData, ← List.map_take,
+    decodeInstructionTables_setData]
 
 /-- Positional alignment identifies each physical table with its supported circuit descriptor.
 Evaluation data is supplied explicitly to both the decoder and the physical ledger. -/

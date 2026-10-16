@@ -34,7 +34,7 @@ variable (trace : SupportedCoreTraceWitness p)
 /-- Filtering the literal Clean ledgers of a table list to one ensemble channel is exactly the
 erasure of the typed view of those same evaluated interactions. -/
 theorem tablesCleanAccesses_filterKind_eq_typed {Message : TypeMap} [ProvableType Message]
-    (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+    (tables : List (Table (ZMod p)))
     (channel : Channel (ZMod p) Message)
     (K : InteractionKind) (hkind : kindOf channel.name = K)
     (hchannel : channel.toRaw ∈ (sp1Ensemble (p := p)).channels)
@@ -45,7 +45,7 @@ theorem tablesCleanAccesses_filterKind_eq_typed {Message : TypeMap} [ProvableTyp
         (Interaction.toAccess ∘ TypedInteraction.raw) := by
   simp only [tablesCleanAccesses, List.filter_flatMap, List.map_flatMap]
   refine List.flatMap_congr fun table tableMem => ?_
-  rw [tableCleanAccesses_filterKind table data channel.toRaw K hkind
+  rw [tableCleanAccesses_filterKind table channel.toRaw K hkind
     (fun interaction interactionMem interactionKind =>
       interactions_channel_eq_of_kindOf table (hcomponents table tableMem) channel.toRaw
         hchannel interaction interactionMem
@@ -57,10 +57,10 @@ theorem tablesCleanAccesses_filterKind_eq_typed {Message : TypeMap} [ProvableTyp
 theorem skeletonTable_component_mem (table : Table (ZMod p))
     (tableMem : table ∈ trace.skeletonTables) :
     table.component ∈ (sp1Ensemble (p := p)).tables := by
-  apply Air.Flat.EnsembleWitness.component_mem_tables_of_mem (witness := trace.witness)
-  rw [trace.witness_tables]
+  rw [← trace.tables_map_component]
   rw [skeletonTables, List.mem_append] at tableMem
-  exact tableMem.elim List.mem_of_mem_take List.mem_of_mem_drop
+  exact List.mem_map.mpr ⟨table,
+    tableMem.elim List.mem_of_mem_take List.mem_of_mem_drop, rfl⟩
 
 /-- The memory-initialization provider does not name the Program channel. -/
 theorem memoryInitProgramInteractions_eq_nil :
@@ -113,7 +113,7 @@ theorem syscallInstrsInteractions_eq_nil {Message : TypeMap} [ProvableType Messa
     typedTableInteractionsWith (trace.providerTableFor .syscallInstrs) channel = [] := by
   rw [typedTableInteractionsWith,
     show (trace.providerTableFor (p := p) .syscallInstrs).table = [] from
-      SyscallInstrsChip.traceTable_table _ _ _]
+      rfl]
   rfl
 
 /-- The non-preprocessed provider suffix's Program interactions are exactly the halt table's
@@ -148,7 +148,7 @@ theorem verifierProgramLedger_eq_nil :
   simp only [typedInteractionValuesWith_raw, List.map_nil] at silent
   have selectedMem : interaction ∈ (sp1Ensemble (p := p)).verifierOperations.interactionValuesWith
       programChannel.toRaw (Environment.fromInput trace.witness.publicInput trace.witness.data) := by
-    rw [Operations.interactionValuesWith_eq_filter]
+    rw [Operations.interactionValuesWith_eq_filter, trace.witness_data]
     exact List.mem_filter.mpr ⟨emitted, by simp only [same, decide_true]⟩
   rw [silent] at selectedMem
   exact List.not_mem_nil selectedMem
@@ -165,7 +165,7 @@ theorem skeleton_program_mult_nonpos (wf : trace.WellFormed) {access : LookupAcc
     List.mem_filter.mpr ⟨accessMem, by simpa only [LookupAccessList.keyOf, decide_eq_true_eq]
       using program⟩
   rw [skeletonLedger, List.filter_append, trace.verifierProgramLedger_eq_nil, List.nil_append,
-    tablesCleanAccesses_filterKind_eq_typed trace.skeletonTables trace.data programChannel
+    tablesCleanAccesses_filterKind_eq_typed trace.skeletonTables programChannel
       InteractionKind.Program rfl (by simp [sp1Ensemble_channels])
       trace.skeletonTable_component_mem] at filteredMem
   obtain ⟨interaction, interactionMem, rfl⟩ := List.mem_map.mp filteredMem
@@ -176,7 +176,8 @@ theorem skeleton_program_mult_nonpos (wf : trace.WellFormed) {access : LookupAcc
         decodedWitnessInstructionInteractionsWith trace.witness.data trace.witness.tables
           programChannel := by
       rw [decodedWitnessInstructionInteractionsWith_eq_tables trace.witness programChannel,
-        trace.witness_tables]
+        trace.witness_tables, Air.Flat.withDerivedData, ← List.map_take]
+      simp only [List.flatMap_map, typedTableInteractionsWith_setData]
       exact List.mem_flatMap.mpr ⟨table, instruction, interactionMem⟩
     have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
     rcases decodedWitnessProgramInteractions_pullShape trace.witness constraints interaction
@@ -197,7 +198,8 @@ theorem skeleton_program_mult_nonpos (wf : trace.WellFormed) {access : LookupAcc
       exact List.mem_flatMap.mpr ⟨table, suffix, interactionMem⟩
     rw [trace.providerSuffixProgramInteractions_eq] at suffixMem
     -- the halt table's Program interactions are gated pulls: mult ∈ {0, -1}
-    rw [← trace.haltTable_witness, ← trace.witness_data, haltTable_typedProgram] at suffixMem
+    rw [← typedTableInteractionsWith_setData (trace.providerTableFor .halt) trace.data,
+      ← trace.haltTable_witness, haltTable_typedProgram] at suffixMem
     obtain ⟨row, rowMem, hmem⟩ := List.mem_flatMap.mp suffixMem
     rw [List.mem_singleton] at hmem
     subst hmem

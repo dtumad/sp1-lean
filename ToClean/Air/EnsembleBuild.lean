@@ -115,12 +115,9 @@ def EnsembleWitness.ofTables (ens : Ensemble F PublicIO) (tables : List (Table F
     (EnsembleWitness.ofTables ens tables publicInput hmap).tables = withDerivedData tables := rfl
 
 /-- Canonicalizing the data keeps every physical row in its original position. -/
-@[simp] theorem EnsembleWitness.ofTables_rows (ens : Ensemble F PublicIO)
-    (tables : List (Table F)) (publicInput : PublicIO F)
-    (hmap : tables.map (·.component) = ens.tables) :
-    (EnsembleWitness.ofTables ens tables publicInput hmap).tables.map (·.table) =
-      tables.map (·.table) := by
-  simp [ofTables, withDerivedData]
+@[simp] theorem withDerivedData_map_table (tables : List (Table F)) :
+    (withDerivedData tables).map (·.table) = tables.map (·.table) := by
+  simp [withDerivedData]
 
 /-- The environment is derived from the supplied committed rows. -/
 @[simp] theorem EnsembleWitness.ofTables_data (ens : Ensemble F PublicIO)

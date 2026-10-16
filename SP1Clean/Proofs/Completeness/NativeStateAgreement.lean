@@ -24,83 +24,78 @@ local instance nativeStateAgreementFieldBound : Fact (2 ^ 24 < p) :=
 
 /-! ## Stable physical tables -/
 
-/-- The stable final provider position of an assembled witness is its generated StateBump table. -/
+/-- The generated StateBump rows, evaluated at the witness's canonical prover data. -/
 theorem SupportedCoreTraceWitness.stateBumpTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    stateBumpTable trace.witness = trace.providerTableFor .stateBump := by
-  unfold stateBumpTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
-    SupportedCoreTraceWitness.providerTables, stateBumpIndex, instructionTableCount,
-    stateSilentProviderTableCount, InstructionChipId.all, ProviderTableId.all,
-    ByteProviderId.all]
+    stateBumpTable trace.witness = { trace.providerTableFor .stateBump with data := trace.data } := rfl
 
-/-- Canonical closure keeps the exact physical Halt table. -/
-@[simp] theorem SupportedCoreTraceWitness.canonicalClosure_haltTable
-    (trace : SupportedCoreTraceWitness p) :
-    haltTable trace.canonicalClosure.witness = haltTable trace.witness := by
-  rw [trace.canonicalClosure.haltTable_witness, trace.haltTable_witness]
+/-- Canonical closure preserves the physical Halt rows. -/
+@[simp] theorem SupportedCoreTraceWitness.canonicalClosure_haltRows
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    (haltTable (trace.canonicalClosure capacity).witness).table = (haltTable trace.witness).table := by
+  rw [(trace.canonicalClosure capacity).haltTable_witness, trace.haltTable_witness]
   rfl
 
-/-- Canonical closure keeps the exact physical StateBump table, not merely its occurrence list. -/
-@[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateBumpTable
-    (trace : SupportedCoreTraceWitness p) :
-    stateBumpTable trace.canonicalClosure.witness = stateBumpTable trace.witness := by
-  rw [trace.canonicalClosure.stateBumpTable_witness, trace.stateBumpTable_witness]
+/-- Canonical closure preserves the physical StateBump rows. -/
+@[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateBumpRows
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    (stateBumpTable (trace.canonicalClosure capacity).witness).table = (stateBumpTable trace.witness).table := by
+  rw [(trace.canonicalClosure capacity).stateBumpTable_witness, trace.stateBumpTable_witness]
   rfl
 
 /-- Canonical closure keeps the exact decoded instruction-row stream. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_decodedInstructionRows
-    (trace : SupportedCoreTraceWitness p) :
-    decodedInstructionRows (p := p) trace.canonicalClosure.tables =
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    decodedInstructionRows (p := p) (trace.canonicalClosure capacity).tables =
       decodedInstructionRows (p := p) trace.tables := by
   unfold decodedInstructionRows
   change decodeInstructionTables supportedChips
-      (trace.canonicalClosure.tables.take instructionTableCount) =
+      ((trace.canonicalClosure capacity).tables.take instructionTableCount) =
     decodeInstructionTables supportedChips (trace.tables.take instructionTableCount)
-  rw [trace.canonicalClosure.tables_take_instructionTables,
+  rw [(trace.canonicalClosure capacity).tables_take_instructionTables,
     trace.tables_take_instructionTables, trace.canonicalClosure_instructionTables]
 
 /-- Therefore canonical closure preserves the instruction half of the State ledger verbatim. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateInstrLinks
-    (trace : SupportedCoreTraceWitness p) :
-    stateInstrLinks trace.canonicalClosure = stateInstrLinks trace := by
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    stateInstrLinks (trace.canonicalClosure capacity) = stateInstrLinks trace := by
   simp only [stateInstrLinks, SupportedCoreTraceWitness.witness_data,
-    SupportedCoreTraceWitness.witness_tables, trace.canonicalClosure_decodedInstructionRows]
+    SupportedCoreTraceWitness.witness_tables, decodedInstructionRows_withDerivedData,
+    trace.canonicalClosure_decodedInstructionRows]
   have decoded (row : DecodedInstructionRow p) :=
-    row.toChipRow_setData trace.canonicalClosure.data trace.data
+    row.toChipRow_setData (trace.canonicalClosure capacity).data trace.data
   simp only [decoded]
-  rfl
 
 /-- Canonical closure also preserves the StateBump half verbatim. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateBumpLinks
-    (trace : SupportedCoreTraceWitness p) :
-    stateBumpLinks trace.canonicalClosure = stateBumpLinks trace := by
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    stateBumpLinks (trace.canonicalClosure capacity) = stateBumpLinks trace := by
   have decoded (row : Array (ZMod p)) :
-      stateBumpRow trace.canonicalClosure.witness.data row =
+      stateBumpRow (trace.canonicalClosure capacity).witness.data row =
         stateBumpRow trace.witness.data row :=
     ProvableType.valueFromOffset_congr StateBumpChip.Inputs 0
-      (env := Environment.fromArray row trace.canonicalClosure.witness.data)
+      (env := Environment.fromArray row (trace.canonicalClosure capacity).witness.data)
       (env' := Environment.fromArray row trace.witness.data) (fun _ _ => rfl)
-  simp only [stateBumpLinks, trace.canonicalClosure_stateBumpTable, decoded]
+  simp only [stateBumpLinks, trace.canonicalClosure_stateBumpRows, decoded]
 
 /-- Both public State tokens survive canonical closure. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateInitToken
-    (trace : SupportedCoreTraceWitness p) :
-    stateInitToken trace.canonicalClosure = stateInitToken trace := by
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    stateInitToken (trace.canonicalClosure capacity) = stateInitToken trace := by
   simp only [stateInitToken, SupportedCoreTraceWitness.witness_publicInput,
     SupportedCoreTraceWitness.canonicalClosure_publicValues]
 
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_stateFinalToken
-    (trace : SupportedCoreTraceWitness p) :
-    stateFinalToken trace.canonicalClosure = stateFinalToken trace := by
+    (trace : SupportedCoreTraceWitness p) (capacity : trace.CanonicalCapacity) :
+    stateFinalToken (trace.canonicalClosure capacity) = stateFinalToken trace := by
   simp only [stateFinalToken, SupportedCoreTraceWitness.witness_publicInput,
     SupportedCoreTraceWitness.canonicalClosure_publicValues]
 
 /-- Any base-trace agreement transports through the closure operation without a new premise. -/
 theorem StateTraceAgreement.canonicalClosure
     {trace : SupportedCoreTraceWitness p} {events : List RoutedEvent}
-    {initial final : StateRecord} (agreement : StateTraceAgreement trace events initial final) :
-    StateTraceAgreement trace.canonicalClosure events initial final where
+    {initial final : StateRecord} (capacity : trace.CanonicalCapacity) (agreement : StateTraceAgreement trace events initial final) :
+    StateTraceAgreement (trace.canonicalClosure capacity) events initial final where
   instruction := by simpa using agreement.instruction
   bumps := by simpa using agreement.bumps
   initial := by simpa using agreement.initial
@@ -174,18 +169,18 @@ theorem nativeStateBoundary_final_toMessage
 /-- The two boundary-token fields of base State agreement are consequences of public limb
 well-formedness, not trace-assembly assumptions. -/
 theorem nativeBaseTraceOfCompiled_stateInitToken
-    (statement : SupportedCoreStatement p) (compiled : CompiledExecution)
+    (statement : SupportedCoreStatement p) (compiled : CompiledExecution) (capacity : compiled.Capacity)
     (wellFormed : statement.publicValues.LimbBounds) :
-    stateInitToken (nativeBaseTraceOfCompiled statement compiled) =
+    stateInitToken (nativeBaseTraceOfCompiled statement compiled capacity) =
       (nativeStateBoundary statement).initial.key (p := p) := by
   unfold stateInitToken StateRecord.key
   change msgToken stateChannel (initialBoundaryStateMessage statement.publicValues) = _
   rw [nativeStateBoundary_initial_toMessage statement wellFormed]
 
 theorem nativeBaseTraceOfCompiled_stateFinalToken
-    (statement : SupportedCoreStatement p) (compiled : CompiledExecution)
+    (statement : SupportedCoreStatement p) (compiled : CompiledExecution) (capacity : compiled.Capacity)
     (wellFormed : statement.publicValues.LimbBounds) :
-    stateFinalToken (nativeBaseTraceOfCompiled statement compiled) =
+    stateFinalToken (nativeBaseTraceOfCompiled statement compiled capacity) =
       (nativeStateBoundary statement).final.key (p := p) := by
   unfold stateFinalToken StateRecord.key
   change msgToken stateChannel (finalBoundaryStateMessage statement.publicValues) = _
@@ -257,8 +252,8 @@ theorem SupportedCoreTraceWitness.decodedInstructionRows_witness
       InstructionChipId.all.flatMap fun id =>
         (trace.instructionTableFor id).table.map fun physical =>
           (DecodedInstructionRow.mk (supportedChipFor (p := p) id) physical) := by
+  rw [trace.witness_tables, decodedInstructionRows_withDerivedData]
   unfold decodedInstructionRows
-  rw [trace.witness_tables]
   change decodeInstructionTables supportedChips
       (trace.tables.take instructionTableCount) = _
   rw [trace.tables_take_instructionTables]
@@ -395,7 +390,7 @@ theorem SupportedCoreTraceWitness.stateBumpLinks_eq_occurrences
           msgToken stateChannel
             (StateBumpChip.pushedMessage (stateBumpCols (p := p) event))) := by
   rw [stateBumpLinks, trace.stateBumpTable_witness]
-  simp only [SupportedCoreTraceWitness.providerTableFor, StateBumpChip.component]
+  simp only [SupportedCoreTraceWitness.providerTableFor]
   have active : ∀ input ∈ stateBumpTraceInputs (p := p)
       (trace.providerOccurrences .stateBump), signedVal input.is_real = 1 := by
     intro input inputMem
@@ -422,10 +417,10 @@ theorem SupportedCoreTraceWitness.stateBumpLinks_eq_occurrences
 /-- The base compiler's built StateBump links are exactly the separately stored physical bump
 links derived from the chronological instruction stream. -/
 theorem nativeBaseTraceOfCompiled_stateBumpLinks
-    (statement : SupportedCoreStatement p) (compiled : CompiledExecution) :
-    stateBumpLinks (nativeBaseTraceOfCompiled statement compiled) =
+    (statement : SupportedCoreStatement p) (compiled : CompiledExecution) (capacity : compiled.Capacity) :
+    stateBumpLinks (nativeBaseTraceOfCompiled statement compiled capacity) =
       physicalStateBumpLinks (p := p) compiled.routedEvents := by
-  rw [(nativeBaseTraceOfCompiled statement compiled).stateBumpLinks_eq_occurrences]
+  rw [(nativeBaseTraceOfCompiled statement compiled capacity).stateBumpLinks_eq_occurrences]
   simp only [nativeBaseTraceOfCompiled, nativeBaseProviderOccurrences]
   induction compiled.routedEvents with
   | nil => rfl
@@ -453,16 +448,16 @@ theorem nativeBaseTraceOfCompiled_stateBumpLinks
 /-- Once the one instruction-row projection is known, every other field of base State agreement
 is generated data. -/
 theorem nativeBaseTraceOfCompiled_stateAgreement
-    (statement : SupportedCoreStatement p) (compiled : CompiledExecution)
+    (statement : SupportedCoreStatement p) (compiled : CompiledExecution) (capacity : compiled.Capacity)
     (publicWellFormed : statement.publicValues.LimbBounds)
-    (instruction : stateInstrLinks (nativeBaseTraceOfCompiled statement compiled) =
+    (instruction : stateInstrLinks (nativeBaseTraceOfCompiled statement compiled capacity) =
       physicalInstructionStateLinks (p := p) compiled.routedEvents) :
-    StateTraceAgreement (nativeBaseTraceOfCompiled statement compiled) compiled.routedEvents
+    StateTraceAgreement (nativeBaseTraceOfCompiled statement compiled capacity) compiled.routedEvents
       (nativeStateBoundary statement).initial (nativeStateBoundary statement).final where
   instruction := instruction
-  bumps := nativeBaseTraceOfCompiled_stateBumpLinks statement compiled
-  initial := nativeBaseTraceOfCompiled_stateInitToken statement compiled publicWellFormed
-  final := nativeBaseTraceOfCompiled_stateFinalToken statement compiled publicWellFormed
+  bumps := nativeBaseTraceOfCompiled_stateBumpLinks statement compiled capacity
+  initial := nativeBaseTraceOfCompiled_stateInitToken statement compiled capacity publicWellFormed
+  final := nativeBaseTraceOfCompiled_stateFinalToken statement compiled capacity publicWellFormed
 
 /-- Canonical provider closure upgrades the narrow row projection to full final-trace agreement. -/
 theorem nativeTrace_stateAgreement
@@ -473,8 +468,9 @@ theorem nativeTrace_stateAgreement
       (TraceGen.compileExecution statement.program execution
         (nativeInitialClock statement)).routedEvents
       (nativeStateBoundary statement).initial (nativeStateBoundary statement).final := by
-  apply StateTraceAgreement.canonicalClosure
-  apply nativeBaseTraceOfCompiled_stateAgreement statement _ publicWellFormed
+  apply StateTraceAgreement.canonicalClosure (nativeBaseTrace_canonicalCapacity statement execution)
+  apply nativeBaseTraceOfCompiled_stateAgreement statement _
+    (compileExecution_capacity statement.program execution (nativeInitialClock statement)) publicWellFormed
   exact projection
 
 /-- StateBump selector binarity is generated data, not a readiness premise. -/
@@ -538,7 +534,7 @@ theorem NativeTraceReady.activeInstructionRows_length
       change (TraceGen.compileExecution statement.program execution
         (nativeInitialClock statement)).rows.length = execution.locatedTransitions.length
       rw [TraceGen.compileExecution_eq_of_some generatedEq]
-      exact TraceGen.compileLocatedTransitions?_rows_length generatedEq
+      exact TraceGen.compileLocatedTransitions?_rows_length ((compileExecution?_eq_some_iff _ _ _ _).mp generatedEq).2
     _ = execution.steps := execution.locatedTransitions_length
 
 end SP1Clean.Soundness

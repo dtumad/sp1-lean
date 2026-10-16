@@ -448,24 +448,12 @@ theorem memoryFinalizeBuildRowCleanAccesses
 /-- The stable Memory-init witness position is the trace's generated init table. -/
 theorem SupportedCoreTraceWitness.memoryInitProviderTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    memoryInitProviderTable trace.witness = trace.providerTableFor .memoryInit := by
-  unfold memoryInitProviderTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
-    SupportedCoreTraceWitness.providerTables, memoryInitProviderIndex, programProviderIndex,
-    instructionTableCount,
-    byteProviderTableCount, rangeProviderTableCount, InstructionChipId.all,
-    ProviderTableId.all, ByteProviderId.all]
+    memoryInitProviderTable trace.witness = { trace.providerTableFor .memoryInit with data := trace.data } := rfl
 
 /-- The stable Memory-finalize witness position is the trace's generated final table. -/
 theorem SupportedCoreTraceWitness.memoryFinalizeProviderTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    memoryFinalizeProviderTable trace.witness =
-      trace.providerTableFor .memoryFinalize := by
-  unfold memoryFinalizeProviderTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
-    SupportedCoreTraceWitness.providerTables, memoryFinalizeProviderIndex,
-    programProviderIndex, instructionTableCount, byteProviderTableCount,
-    rangeProviderTableCount, InstructionChipId.all, ProviderTableId.all, ByteProviderId.all]
+    memoryFinalizeProviderTable trace.witness = { trace.providerTableFor .memoryFinalize with data := trace.data } := rfl
 
 /-- The literal Clean ledger of a generated Memory-init table is its entry-key push list. -/
 theorem SupportedCoreTraceWitness.memoryInitTableCleanAccesses
@@ -474,11 +462,11 @@ theorem SupportedCoreTraceWitness.memoryInitTableCleanAccesses
       (trace.providerOccurrences .memoryInit).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (entry.multiplicityField (p := p))) := by
-  rw [trace.memoryInitProviderTable_witness]
-  unfold SupportedCoreTraceWitness.providerTableFor MemoryProviderChip.traceInputs
+  rw [trace.memoryInitProviderTable_witness, tableCleanAccesses_setData]
+  unfold SupportedCoreTraceWitness.providerTableFor SupportedCoreTraceWitness.providerInputsFor MemoryProviderChip.traceInputs
   apply tableCleanAccesses_build_map_singleton
   intro entry _
-  exact memoryInitBuildRowCleanAccesses entry trace.generationData trace.witness.data trace.hint
+  exact memoryInitBuildRowCleanAccesses entry trace.generationData trace.generationData trace.hint
 
 /-- The literal Clean ledger of a generated Memory-finalize table is its entry-key pull list. -/
 theorem SupportedCoreTraceWitness.memoryFinalizeTableCleanAccesses
@@ -487,24 +475,24 @@ theorem SupportedCoreTraceWitness.memoryFinalizeTableCleanAccesses
       (trace.providerOccurrences .memoryFinalize).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (-(entry.multiplicityField (p := p)))) := by
-  rw [trace.memoryFinalizeProviderTable_witness]
-  unfold SupportedCoreTraceWitness.providerTableFor MemoryFinalizeChip.traceInputs
+  rw [trace.memoryFinalizeProviderTable_witness, tableCleanAccesses_setData]
+  unfold SupportedCoreTraceWitness.providerTableFor SupportedCoreTraceWitness.providerInputsFor MemoryFinalizeChip.traceInputs
   apply tableCleanAccesses_build_map_singleton
   intro entry _
-  exact memoryFinalizeBuildRowCleanAccesses entry trace.generationData trace.witness.data trace.hint
+  exact memoryFinalizeBuildRowCleanAccesses entry trace.generationData trace.generationData trace.hint
 
 omit [Fact (2 ^ 25 < p)] in
 /-- On a single-channel table, the typed-channel access projection is the literal Clean ledger. -/
 theorem typedTableAccessLedgerEqClean
     {Message : TypeMap} [ProvableType Message]
-    (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (table : Table (ZMod p))
     (channel : Channel (ZMod p) Message)
     (only : table.component.operations.interactions =
       table.component.operations.interactionsWith channel.toRaw) :
     ((typedTableInteractionsWith table channel).map fun interaction =>
         Interaction.toAccess interaction.raw) = tableCleanAccesses table := by
   have erased := congrArg (List.map Interaction.toAccess)
-    (typedTableInteractionsWith_raw table data channel)
+    (typedTableInteractionsWith_raw table channel)
   simp only [List.map_map, Function.comp_def] at erased
   rw [erased]
   unfold tableCleanAccesses Table.interactionsWith Table.interactions
@@ -518,13 +506,13 @@ theorem SupportedCoreTraceWitness.memoryInitTableAccessLedger
       (trace.providerOccurrences .memoryInit).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (entry.multiplicityField (p := p))) := by
-  rw [trace.memoryInitProviderTable_witness]
+  rw [trace.memoryInitProviderTable_witness, typedTableInteractionsWith_setData]
   calc
     _ = tableCleanAccesses (trace.providerTableFor .memoryInit) := by
       apply typedTableAccessLedgerEqClean
       exact interactions_eq_interactionsWith_of_onlyChannel _ memoryChannel.toRaw
         Ledger.onlyChannel_MemoryProvider
-    _ = _ := by simpa only [trace.memoryInitProviderTable_witness] using
+    _ = _ := by simpa only [trace.memoryInitProviderTable_witness, tableCleanAccesses_setData] using
       trace.memoryInitTableCleanAccesses
 
 /-- Actual typed finalize-table accesses equal the canonical entry-key pulls. -/
@@ -534,13 +522,13 @@ theorem SupportedCoreTraceWitness.memoryFinalizeTableAccessLedger
       (trace.providerOccurrences .memoryFinalize).map fun entry =>
         accessAt (MemoryHistoryAccess.entryKey (p := p) entry)
           (signedVal (-(entry.multiplicityField (p := p)))) := by
-  rw [trace.memoryFinalizeProviderTable_witness]
+  rw [trace.memoryFinalizeProviderTable_witness, typedTableInteractionsWith_setData]
   calc
     _ = tableCleanAccesses (trace.providerTableFor .memoryFinalize) := by
       apply typedTableAccessLedgerEqClean
       exact interactions_eq_interactionsWith_of_onlyChannel _ memoryChannel.toRaw
         Ledger.onlyChannel_MemoryFinalize
-    _ = _ := by simpa only [trace.memoryFinalizeProviderTable_witness] using
+    _ = _ := by simpa only [trace.memoryFinalizeProviderTable_witness, tableCleanAccesses_setData] using
       trace.memoryFinalizeTableCleanAccesses
 
 /-- The typed init-table messages are exactly the messages of its canonical source entries. -/

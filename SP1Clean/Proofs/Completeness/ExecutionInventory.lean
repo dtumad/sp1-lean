@@ -110,17 +110,24 @@ theorem compileExecution_schedule_lengths (program : Soundness.Target.GuestProgr
   | none => simp [compileExecution, generated, emptyCompiledExecution]
   | some compiled =>
       rw [compileExecution_eq_of_some generated]
-      exact compileLocatedTransitions?_schedule_lengths generated
+      exact compileLocatedTransitions?_schedule_lengths
+        ((compileExecution?_eq_some_iff ..).mp generated).2
 
 /-- Each access role can create at most one register refresh. -/
+theorem CompiledExecution.memoryBumps_length_le (compiled : CompiledExecution)
+    (schedules : ∀ row ∈ compiled.rows, row.instruction.schedule.accesses.length ≤ 3) :
+    compiled.memoryBumps.length ≤ 3 * compiled.rows.length := by
+  apply flatMap_length_le _ _ 3
+  intro row member
+  exact (List.length_filterMap_le _ _).trans (schedules row member)
+
+/-- The compiler's refresh count is bounded by the original semantic transcript. -/
 theorem compileExecution_memoryBumps_length_le (program : Soundness.Target.GuestProgram)
     (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
-    (compileExecution program execution initialClock).memoryBumps.length ≤ 3 * execution.steps := by
-  apply (flatMap_length_le _ _ 3 ?_).trans
-    (Nat.mul_le_mul_left 3 (compileExecution_rows_length_le program execution initialClock))
-  intro row member
-  exact (List.length_filterMap_le _ _).trans
-    (compileExecution_schedule_lengths program execution initialClock row member)
+    (compileExecution program execution initialClock).memoryBumps.length ≤ 3 * execution.steps :=
+  ((compileExecution program execution initialClock).memoryBumps_length_le
+    (compileExecution_schedule_lengths program execution initialClock)).trans
+      (Nat.mul_le_mul_left 3 (compileExecution_rows_length_le program execution initialClock))
 
 /-- A scheduled role expands to its instruction access and at most one preceding refresh. -/
 theorem MemoryHistoryAccess.ofAccessSchedule_length_le (clock : ℕ) (schedule : AccessSchedule) :
@@ -131,15 +138,21 @@ theorem MemoryHistoryAccess.ofAccessSchedule_length_le (clock : ℕ) (schedule :
   cases access.memoryBump? <;> simp
 
 /-- The full chronological Memory history includes refreshes without duplicating other accesses. -/
-theorem compileExecution_memoryHistory_length_le (program : Soundness.Target.GuestProgram)
-    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
-    (compileExecution program execution initialClock).memoryHistory.length ≤ 6 * execution.steps := by
-  apply (flatMap_length_le _ _ 6 ?_).trans
-    (Nat.mul_le_mul_left 6 (compileExecution_rows_length_le program execution initialClock))
+theorem CompiledExecution.memoryHistory_length_le (compiled : CompiledExecution)
+    (schedules : ∀ row ∈ compiled.rows, row.instruction.schedule.accesses.length ≤ 3) :
+    compiled.memoryHistory.length ≤ 6 * compiled.rows.length := by
+  apply flatMap_length_le _ _ 6
   intro row member
   exact (MemoryHistoryAccess.ofAccessSchedule_length_le _ _).trans
-    (Nat.mul_le_mul_left 2
-      (compileExecution_schedule_lengths program execution initialClock row member))
+    (Nat.mul_le_mul_left 2 (schedules row member))
+
+/-- The compiler's complete Memory history is bounded by the semantic transcript. -/
+theorem compileExecution_memoryHistory_length_le (program : Soundness.Target.GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
+    (compileExecution program execution initialClock).memoryHistory.length ≤ 6 * execution.steps :=
+  ((compileExecution program execution initialClock).memoryHistory_length_le
+    (compileExecution_schedule_lengths program execution initialClock)).trans
+      (Nat.mul_le_mul_left 6 (compileExecution_rows_length_le program execution initialClock))
 
 /-- Boundary generation emits one row per touched location, never per refresh occurrence. -/
 theorem memoryBoundaryEntries_length_le (stream : List MemoryHistoryAccess) :
@@ -150,17 +163,19 @@ theorem memoryBoundaryEntries_length_le (stream : List MemoryHistoryAccess) :
     (List.dedup_sublist _).length_le.trans (List.length_map _).le
   exact ⟨bounded, bounded⟩
 
-/-- Existing semantic row limits suffice for refresh and both Memory boundary tables. -/
+/-- Existing semantic row limits suffice for refresh and both Memory boundary tables. The total
+compiler checks that limit; its unsupported and oversized fallback has empty inventories. -/
 theorem compileExecution_memory_capacity (program : Soundness.Target.GuestProgram)
-    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
-    (bounded : Model.Core.Profile.WithinOrdinaryRowLimit execution.steps) :
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
     (compileExecution program execution initialClock).memoryBumps.length ≤ UInt64.size ∧
       (memoryInitialEntries (compileExecution program execution initialClock).memoryHistory).length ≤ UInt64.size ∧
       (memoryFinalEntries (compileExecution program execution initialClock).memoryHistory).length ≤ UInt64.size := by
-  have refreshBound := compileExecution_memoryBumps_length_le program execution initialClock
-  have historyBound := compileExecution_memoryHistory_length_le program execution initialClock
+  have schedules := compileExecution_schedule_lengths program execution initialClock
+  have refreshBound := (compileExecution program execution initialClock).memoryBumps_length_le schedules
+  have historyBound := (compileExecution program execution initialClock).memoryHistory_length_le schedules
   have boundaryBound := memoryBoundaryEntries_length_le
     (compileExecution program execution initialClock).memoryHistory
+  have bounded := compileExecution_rows_length_le_limit program execution initialClock
   have limit : 6 * Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size := by decide
   unfold Model.Core.Profile.WithinOrdinaryRowLimit at bounded
   omega
@@ -174,13 +189,36 @@ theorem compileExecution_stateBumps_length_le (program : Soundness.Target.GuestP
   rw [CompiledExecution.routedEvents, List.length_map]
   exact compileExecution_rows_length_le program execution initialClock
 
-/-- The unchanged semantic shard limit also supplies the State table's physical capacity. -/
+/-- The checked semantic shard limit also supplies the State table's physical capacity. -/
 theorem compileExecution_state_capacity (program : Soundness.Target.GuestProgram)
-    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
-    (bounded : Model.Core.Profile.WithinOrdinaryRowLimit execution.steps) :
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
     (stateBumpEvents (compileExecution program execution initialClock).routedEvents).length ≤
-      UInt64.size :=
-  (compileExecution_stateBumps_length_le program execution initialClock).trans
-    (bounded.trans (show Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size from by decide))
+      UInt64.size := by
+  apply (stateBumpEvents_length_le _).trans
+  rw [CompiledExecution.routedEvents, List.length_map]
+  exact (compileExecution_rows_length_le_limit program execution initialClock).trans
+    (show Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size from by decide)
+
+/-- Exact representability of the inventories used by physical assembly. This proof bundle stores
+no additional rows and imposes no condition on semantic execution or circuit validity. -/
+structure CompiledExecution.Capacity (compiled : CompiledExecution) : Prop where
+  instruction : ∀ id, (compiled.instructionEvents id).length ≤ UInt64.size
+  memoryBumps : compiled.memoryBumps.length ≤ UInt64.size
+  memoryInitial : (memoryInitialEntries compiled.memoryHistory).length ≤ UInt64.size
+  memoryFinal : (memoryFinalEntries compiled.memoryHistory).length ≤ UInt64.size
+  stateBumps : (stateBumpEvents compiled.routedEvents).length ≤ UInt64.size
+
+/-- The existing unsupported-input fallback has no physical instruction or provider rows. -/
+theorem emptyCompiledExecution_capacity (clock : ℕ) : (emptyCompiledExecution clock).Capacity := by
+  constructor <;> intros <;> exact Nat.zero_le _
+
+/-- The total checked compiler always supplies the exact physical capacities. Successful
+compilation preserves all input transitions; unsupported inputs use the existing empty result. -/
+theorem compileExecution_capacity (program : Soundness.Target.GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
+    (compileExecution program execution initialClock).Capacity := by
+  obtain ⟨refreshes, initial, final⟩ := compileExecution_memory_capacity program execution initialClock
+  exact ⟨compileExecution_instruction_capacity program execution initialClock, refreshes, initial,
+    final, compileExecution_state_capacity program execution initialClock⟩
 
 end SP1Clean.TraceGen

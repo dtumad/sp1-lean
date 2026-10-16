@@ -182,6 +182,7 @@ layout: `[a, multiplicity]`, then the `rangeCheck 16` bit block (little-endian, 
 exactly the first bit). -/
 def rangeWidth16 : RangeChip.Width := ⟨16, by norm_num⟩
 
+/-- Two physical Range rows with counts four and six for the public boundary requests. -/
 def range16Table : Table (ZMod SP1Prime) where
   component := { circuit := RangeChip.circuitFor rangeWidth16, Assumptions := (RangeChip.circuitFor rangeWidth16).Assumptions }
   table := [#[1, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -318,6 +319,7 @@ theorem jointTables_components : jointTables.map (·.component) = (sp1Ensemble (
       List.getElem_set_ne (Ne.symm h47), List.getElem_set_ne (Ne.symm h25)]
     simp [emptyTables, emptyTableOf]
 
+/-- Boundary-only ensemble with data derived from its complete physical inventory. -/
 noncomputable def jointWitness : SupportedCoreNativeWitness SP1Prime :=
   EnsembleWitness.ofTables _ jointTables pv jointTables_components
 
@@ -415,7 +417,7 @@ theorem balancedInteractions_pair {F : Type} [FiniteField F] [DecidableEq F]
       exact add_zero 0
 
 /-- The empty interaction list balances (over a positive-characteristic field). -/
-theorem balancedInteractions_nil {F : Type} [FiniteField F] [DecidableEq F]
+theorem balancedInteractions_nil {F : Type} [FiniteField F]
     (hchar : (0 : ℕ) < ringChar F ∨ ringChar F = 0) :
     BalancedInteractions ([] : List (Interaction F)) := by
   constructor
