@@ -149,7 +149,9 @@ Projected ledgers retain every fixed row, including unused intervals and zero-co
 Each Clean table stores its evaluation data and a proof that its physical row count fits the
 upstream `UInt64` index space. Ensemble construction makes every table's stored data agree with
 the canonical data derived from the complete inventory. Generation inputs remain separate.
-Generic constructors must account for capacity, including fixed-table padding; they may not
+The semantic State and Memory inventories sit below physical assembly; the compiler derives
+their row bounds from the existing shard limit. Generic constructors must account for capacity,
+including fixed-table padding; they may not
 silently truncate, deduplicate or drop rows to fit.
 
 A projected witness derives canonical data from its retained physical rows. Prove row-layout,

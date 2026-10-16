@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
 import Clean.Air.FlatComponent
+import ToClean.Circuit.SubcircuitProjection
 
 /-! # Full-register syscall authentication from raw native AIR
 
@@ -23,8 +24,9 @@ theorem profile_of_constraints (input : Var SyscallInstrsChip.Inputs (ZMod p))
   have guarded := (FlatOperation.constraintsHold_append.mp constraints).2
   have spec := (SyscallCodeGuard.circuit.toSubcircuit offset
     ⟨input.op_a_memory.prev_value, input.is_real⟩).soundness env (by trivial) guarded (by
-      simp [FormalAssertion.toSubcircuit, SyscallCodeGuard.circuit, SyscallCodeGuard.main,
-        circuit_norm, FlatOperation.interactions])
+      rw [FormalAssertion.toSubcircuit_toFlat, FlatOperation.guarantees_toFlat]
+      simp only [SyscallCodeGuard.circuit, Operations.FullGuarantees,
+        SyscallCodeGuard.main_interactions, List.not_mem_nil, IsEmpty.forall_iff, implies_true])
   convert spec.1 using 1
   have memoryEval (memory : Circuits.Types.RegisterAccessCols (Expression (ZMod p))) :
       (ProvableStruct.eval env memory).prev_value = memory.prev_value.map (Expression.eval env) := by
@@ -60,16 +62,17 @@ theorem constraints_original (env : Environment (ZMod p))
   exact (Component.constraintsHold_iff env).mpr
     (main_constraints_original _ _ env ((Component.constraintsHold_iff env).mp constraints))
 
-/-- The additional code lookup changes no channel message or multiplicity. -/
+/-- The additional code assertions change no channel message or multiplicity. -/
 theorem interactions_original :
     ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.interactions =
       ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).operations.interactions := by
   rw [Component.interactions_eq, Component.interactions_eq]
   simp only [Component.rowOperations, circuit, main, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-    SyscallCodeGuard.circuit, SyscallCodeGuard.main]
+    SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, List.append_nil]
 
-theorem width_original : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).width =
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).width := rfl
+/-- Six shared products keep the native guard at degree three. -/
+theorem width_eq : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).width =
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).width + 6 := rfl
 
 end SP1Clean.CoreSyscallChip

@@ -124,7 +124,7 @@ private theorem wrapper_memorySigns (input : Var HostCallChip.Inputs (ZMod p))
   rcases List.mem_append.mp member with original | extra
   · simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
       GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-      SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit,
+      SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit,
       Operations.interactionsWith] at original
     change interaction ∈ (((SyscallInstrsChip.main input.instruction).operations offset).interactionsWith
       memoryChannel.toRaw).map _ at original

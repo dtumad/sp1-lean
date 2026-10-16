@@ -186,6 +186,7 @@ import SP1Clean.Proofs.Completeness.ProviderTables
 import SP1Clean.Proofs.Completeness.ProviderWitgen
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.Proofs.Completeness.StateHistory
+import SP1Clean.Proofs.Completeness.StateInventory
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Proofs.Sail.InstructionDecode
 import SP1Clean.Proofs.Sail.InstructionDecode.Families

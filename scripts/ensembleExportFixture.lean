@@ -1,4 +1,5 @@
 import SP1CleanTest.Core.EnsembleExport
+import SP1CleanTest.Core.SyscallCodeExport
 import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
 import SP1CleanTest.Core.SnapshotRegisterExport
@@ -94,6 +95,9 @@ private def exportEnsembleFixture : IO Unit := do
     | .ok value => pure value
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
+  IO.FS.writeFile (out / "syscall_code_guard.reference.json")
+    ((Json.mkObj [("cases", SP1CleanTest.Core.SyscallCodeExport.reference),
+      ("metrics", componentMetrics SP1CleanTest.Core.SyscallCodeExport.component)]).compress ++ "\n")
   let byteBenchmarks ← match SP1CleanTest.Core.UnifiedByteBenchmarks.rustExports with
     | .ok exports => pure exports
     | .error message => throw (IO.userError message)
@@ -102,6 +106,7 @@ private def exportEnsembleFixture : IO Unit := do
     | .error message => throw (IO.userError message)
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
+      SP1CleanTest.Core.SyscallCodeExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++

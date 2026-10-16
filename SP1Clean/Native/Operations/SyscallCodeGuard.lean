@@ -1,12 +1,14 @@
 import SP1Clean.FormalModel.Contracts.CoreSyscall
-import Clean.Circuit.Subcircuit
+import ToClean.Circuit.SubcircuitProjection
+import Clean.Gadgets.Equality
 import Clean.Utils.Tactics
 
-/-! # A sound and complete fixed lookup of the native syscall profile
+/-! # Canonical native syscall words without a lookup
 
-The gate is boolean. Multiplying all four code limbs by it makes padding query canonical HALT,
-while active rows query their actual full register. No auxiliary columns or channel assumptions
-are needed, and the fixed table has a canonical finite export realization.
+The eight permitted low limbs are roots of a polynomial. Six shared products keep every AIR
+constraint at degree at most three, and active rows must have zero upper limbs. The boolean gate
+leaves padding unconstrained. Clean supplies witness generation and Rust lowering directly;
+there is no fixed provider or channel assumption at this boundary.
 -/
 
 namespace SP1Clean.SyscallCodeGuard
@@ -15,42 +17,77 @@ open Circuit Model.Core
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+private theorem canonical_iff (word : Word (ZMod p)) :
+    word.isU64 ∧ SyscallKind.Supported word.toBitVec64 ↔
+      (word[0] = 0 ∨ word[0] = 2 ∨ word[0] = 3 ∨ word[0] = 16 ∨
+        word[0] = 26 ∨ word[0] = 27 ∨ word[0] = 240 ∨ word[0] = 241) ∧
+      word[1] = 0 ∧ word[2] = 0 ∧ word[3] = 0 := by
+  rw [← SyscallKind.mem_encoded_iff]
+  have eta : word = #v[word[0], word[1], word[2], word[3]] := by
+    ext i hi
+    interval_cases i <;> rfl
+  rw [eta]
+  simp [SyscallKind.all, SyscallKind.encode, SyscallKind.code, Soundness.Target.bitVecToWord,
+    Array.mk.injEq]
+  tauto
+
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero (input.is_real * (input.is_real - 1))
-  lookup SyscallKind.fixedTable.toTable (input.code.map (input.is_real * ·))
+  let x := input.code[0]
+  let p2 <== x * (x - 2)
+  let p3 <== p2 * (x - 3)
+  let p4 <== p3 * (x - 16)
+  let p5 <== p4 * (x - 26)
+  let p6 <== p5 * (x - 27)
+  let p7 <== p6 * (x - 240)
+  assertZero (input.is_real * (p7 * (x - 241)))
+  assertZero (input.is_real * input.code[1])
+  assertZero (input.is_real * input.code[2])
+  assertZero (input.is_real * input.code[3])
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The guard introduces no ledger occurrences. -/
+@[circuit_norm] theorem main_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).interactions = [] := by
+  simp [main, circuit_norm, FormalAssertion.toSubcircuit_interactions,
+    Gadgets.Equality.circuit, Gadgets.Equality.main]
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Every check lowers directly to arithmetic AIR. -/
+@[circuit_norm] theorem main_lookups (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
+  simp [main, circuit_norm, Gadgets.Equality.circuit, Gadgets.Equality.main]
 
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
+  localLength _ := 6
   output _ _ := ()
   channelsWithGuarantees := []
 
-omit [Fact (2 ^ 17 < p)] in
-@[local circuit_norm] private theorem eval_masked (env : Environment (ZMod p))
-    (gate : Expression (ZMod p)) (code : Word (Expression (ZMod p))) :
-    (code.map (gate * ·)).map (Expression.eval env) =
-      (code.map (Expression.eval env)).map (Expression.eval env gate * ·) := by
-  simp only [Vector.map_map, Function.comp_def]
-  rfl
-
 theorem soundness : FormalAssertion.Soundness (ZMod p) main (fun _ => True) Spec := by
-  circuit_proof_start [Spec, Lookup.Soundness, Table.toRaw]
-  obtain ⟨binary, member⟩ := h_holds
+  circuit_proof_start [Spec]
+  obtain ⟨binary, h2, h3, h4, h5, h6, h7, low, high1, high2, high3⟩ := h_holds
   refine ⟨?_, ?_⟩
   · simpa only [mul_eq_zero, sub_eq_zero] using binary
   · intro real
-    simpa only [real, one_mul, Vector.map_id'] using (SyscallKind.fixedTable_spec _).mp member
+    apply (canonical_iff _).mpr
+    rw [← h_input.1]
+    simp only [Vector.getElem_map]
+    simp only [h7, h6, h5, h4, h3, h2, real, one_mul, mul_eq_zero, sub_eq_zero]
+      at low high1 high2 high3
+    exact ⟨by tauto, high1, high2, high3⟩
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main (fun _ => True) Spec := by
-  circuit_proof_start [Spec, Lookup.Completeness, Table.toRaw]
+  circuit_proof_start [Spec]
+  obtain ⟨h2, h3, h4, h5, h6, h7⟩ := h_env
+  simp only [h7, h6, h5, h4, h3, h2]
   obtain ⟨binary, valid⟩ := h_spec
   rcases binary with zero | one
-  · have halt_zero : SyscallKind.encode (p := p) .halt = Vector.replicate 4 0 := by
-      simp [SyscallKind.encode, SyscallKind.code, Soundness.Target.bitVecToWord]
-      rfl
-    simpa only [zero, zero_mul, Vector.map_const', halt_zero]
-      using And.intro (mul_zero (0 : ZMod p)) (SyscallKind.encode_spec (p := p) .halt)
-  · simpa only [one, sub_self, mul_zero, one_mul, Vector.map_id', true_and]
-      using (SyscallKind.fixedTable_spec _).mpr (valid one)
+  · simp [zero]
+  · have canonical := (canonical_iff _).mp (valid one)
+    rw [← h_input.1] at canonical
+    simp only [Vector.getElem_map] at canonical
+    simp only [one, sub_self, mul_zero, one_mul, mul_eq_zero, sub_eq_zero]
+    tauto
 
 def circuit : FormalAssertion (ZMod p) Inputs :=
   { main, elaborated, Assumptions := fun _ => True, Spec, soundness, completeness }

@@ -198,7 +198,7 @@ import SP1Clean.Model.Core.SailRegisterEquality
 import SP1Clean.Model.Core.SourceExecution
 import SP1Clean.Model.Core.SourceSnapshot
 import SP1Clean.Model.Core.SyscallCode
-import SP1Clean.Model.Core.SyscallTable
+import SP1Clean.Model.Core.SyscallEncoding
 import SP1Clean.Model.Core.WritePermission
 import SP1Clean.Model.FinalMemoryValue
 import SP1Clean.Model.FinalMemoryChange

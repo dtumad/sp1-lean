@@ -5,7 +5,7 @@ import ToClean.Air.FiniteLookup
 
 /-! # Executing native host-circuit regressions
 
-Evaluate complete witness programs, local assertions, and the fixed syscall lookup. Byte and
+Evaluate complete witness programs, local assertions, and any supplied fixed lookups. Byte and
 Memory and host-read guarantees are checked directly; Program messages must be the fixture's canonical ECALL
 at the supplied address (default `2^16`). Structural-channel messages are retained for each test's ledger assertions.
 These fixture checks do not assert whole-machine balance or authentic boot-memory contents.
@@ -35,11 +35,10 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
   let env : Environment Fp := { honest with get := fun i =>
     if corrupt == (some (i - inputs.length)) && inputs.length ≤ i then honest.get i + 1 else honest.get i }
   let operations := (program.operations inputs.length).toFlat
-  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => (fixed :: lookups).any fun table => lookup.table.name == table.table.name &&
+    | .lookup lookup => lookups.any fun table => lookup.table.name == table.table.name &&
       table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
     | .witness .. => true
     | .interact interaction =>

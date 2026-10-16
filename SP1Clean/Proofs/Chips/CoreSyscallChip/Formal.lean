@@ -4,7 +4,7 @@ import SP1Clean.Native.Chips.CoreSyscallChip.Defs
 
 The resulting contract includes both the whole instruction chip's semantics and the enforced
 eight-code profile. The exact Rust-faithfulness anchor stays on the original instruction circuit;
-the additional native lookup is deliberately outside that claim.
+the additional native assertions is deliberately outside that claim.
 -/
 
 namespace SP1Clean.CoreSyscallChip

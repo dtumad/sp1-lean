@@ -91,9 +91,15 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-Five installed legacy lookup meanings remain: program, syscall code, write permission, hint nodes
-and hint words. Built-in lowering rejects these forms; migrate their consumers before retiring
+Four installed legacy lookup meanings remain: program, write permission, hint nodes and hint
+words. Built-in lowering rejects these forms; migrate their consumers before retiring
 chip JSON comparison.
+
+The native eight-call syscall profile uses degree-three arithmetic assertions and six shared
+products. Its full-register contract remains independent of channel balance. Clean exports the
+production guard and its witness program; Rust checks the selected codes against SP1’s pinned
+enum, rejects upper-limb aliases and unselected calls, and checks generated rows and tampered
+products. This profile is deliberately stricter than the executor’s truncating syscall dispatch.
 
 The Clean patch supports message-filtered demand handlers and checked indexing into preallocated
 providers. Production keeps SP1's specialized Byte providers: the channel payload selects the

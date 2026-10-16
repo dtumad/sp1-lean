@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Completeness.ExecutionCompiler
 import SP1Clean.Proofs.Completeness.MemoryHistory
+import SP1Clean.Proofs.Completeness.StateInventory
 
 /-! # Native compiler inventories and capacity
 
@@ -163,5 +164,23 @@ theorem compileExecution_memory_capacity (program : Soundness.Target.GuestProgra
   have limit : 6 * Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size := by decide
   unfold Model.Core.Profile.WithinOrdinaryRowLimit at bounded
   omega
+
+/-- The chronological compiler needs at most one State refresh per semantic transition. -/
+theorem compileExecution_stateBumps_length_le (program : Soundness.Target.GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
+    (stateBumpEvents (compileExecution program execution initialClock).routedEvents).length ≤
+      execution.steps := by
+  apply (stateBumpEvents_length_le _).trans
+  rw [CompiledExecution.routedEvents, List.length_map]
+  exact compileExecution_rows_length_le program execution initialClock
+
+/-- The unchanged semantic shard limit also supplies the State table's physical capacity. -/
+theorem compileExecution_state_capacity (program : Soundness.Target.GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
+    (bounded : Model.Core.Profile.WithinOrdinaryRowLimit execution.steps) :
+    (stateBumpEvents (compileExecution program execution initialClock).routedEvents).length ≤
+      UInt64.size :=
+  (compileExecution_stateBumps_length_le program execution initialClock).trans
+    (bounded.trans (show Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size from by decide))
 
 end SP1Clean.TraceGen

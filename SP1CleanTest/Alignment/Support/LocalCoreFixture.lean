@@ -1,6 +1,6 @@
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Model.Core.SyscallTable
+import SP1Clean.Model.Core.SyscallEncoding
 import ToClean.Air.FiniteLookup
 import SP1CleanTest.Core.StaticMembership
 
@@ -86,8 +86,7 @@ def evaluate (image : ProgramImage) (_source : ExecutionSnapshot) (component : C
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
   let fixed := [FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))] ++ extraLookups
+    FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime))] ++ extraLookups
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0

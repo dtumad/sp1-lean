@@ -2646,8 +2646,6 @@
  ["docBlame", "SP1Clean.Model.Core.SailSnapshot.memory"],
  ["docBlame", "SP1Clean.Model.Core.SailSnapshot.output"],
  ["docBlame", "SP1Clean.Model.Core.SailSnapshot.registers"],
- ["docBlame", "SP1Clean.Model.Core.SyscallKind.encode"],
- ["docBlame", "SP1Clean.Model.Core.SyscallKind.fixedTable"],
  ["docBlame", "SP1Clean.Model.Core.WritePermissionInterval.encode"],
  ["docBlame", "SP1Clean.Model.Core.WritePermissionInterval.lower"],
  ["docBlame", "SP1Clean.Model.Core.WritePermissionInterval.upper"],

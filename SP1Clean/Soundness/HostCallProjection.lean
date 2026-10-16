@@ -139,7 +139,7 @@ private theorem main_other_interactions (channel : RawChannel (ZMod p))
   rw [HostCallChip.main_other_interactions channel byte memory host]
   simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-    SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit,
+    SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit,
     Operations.interactionsWith]
 
 private theorem main_byte_subset (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -149,7 +149,7 @@ private theorem main_byte_subset (row : Var HostCallChip.Inputs (ZMod p)) (offse
   simp only [GeneralFormalCircuit.toSubcircuit_interactions,
     FormalCircuit.toSubcircuit_interactions, CoreSyscallChip.circuit,
     CoreSyscallChip.main, circuit_norm, FormalAssertion.toSubcircuit_interactions,
-    SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit,
+    SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit,
     Operations.interactionsWith]
   simp only [List.filter_append]
   exact List.subset_append_left _ _
@@ -194,7 +194,7 @@ private theorem main_memory_values (input : Var HostCallChip.Inputs (ZMod p)) (o
       ((SyscallInstrsChip.main input.instruction).operations offset).interactionsWith memoryChannel.toRaw := by
     simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
       GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-      SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit, Operations.interactionsWith]
+      SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit, Operations.interactionsWith]
   rw [core]
   congr 1
   simp only [List.map_cons, List.map_nil, Channel.eval_pulledIf, Channel.eval_pushedIf]

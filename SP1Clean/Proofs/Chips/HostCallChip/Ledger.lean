@@ -48,7 +48,7 @@ theorem selector_of_constraints (input : Var Inputs (ZMod p)) (offset : ℕ)
   simp only [circuit_norm] at constraints
   have equality := (FlatOperation.constraintsHold_append.mp
     (FlatOperation.constraintsHold_append.mp constraints).2).1
-  have spec := (Gadgets.IsEqual.circuit.toSubcircuit offset
+  have spec := (Gadgets.IsEqual.circuit.toSubcircuit (offset + 6)
     (input.instruction.op_a_memory.prev_value, const writeWord)).soundness env (by trivial) equality (by
       rw [FlatOperation.guarantees_iff_forall_mem]
       intro interaction member
@@ -67,7 +67,7 @@ theorem main_memory_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
         (input.read (selector input offset)).pushed).toRaw] := by
   rw [operations_eq]
   have reader := Readers.RegisterRead.main_memory_interactions
-    (input.read (selector input offset)) (offset + 8)
+    (input.read (selector input offset)) (offset + 6 + 8)
   simp only [Operations.interactionsWith, Circuit.operations] at reader ⊢
   simp only [circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, List.filter_append, equality_empty,
     Readers.RegisterRead.circuit, reader, List.nil_append]
@@ -82,7 +82,7 @@ theorem main_host_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
       byteChannel, memoryChannel, stateChannel, programChannel, exitChannel, syscallChannel,
       publicValuesChannel])
   have readEmpty := InteractionRecovery.interactionsWith_main_eq_nil
-    Readers.RegisterRead.circuit.base channel.toRaw (input.read (selector input offset)) (offset + 8)
+    Readers.RegisterRead.circuit.base channel.toRaw (input.read (selector input offset)) (offset + 6 + 8)
     (by simp [Readers.RegisterRead.circuit, circuit_norm, channel, byteChannel, memoryChannel])
   rw [operations_eq]
   simp only [Operations.interactionsWith, Circuit.operations] at coreEmpty readEmpty ⊢
@@ -97,7 +97,7 @@ theorem main_other_interactions (target : RawChannel (ZMod p))
     ((main input).operations offset).interactionsWith target =
       ((CoreSyscallChip.circuit.main input.instruction).operations offset).interactionsWith target := by
   have readEmpty := InteractionRecovery.interactionsWith_main_eq_nil
-    Readers.RegisterRead.circuit.base target (input.read (selector input offset)) (offset + 8)
+    Readers.RegisterRead.circuit.base target (input.read (selector input offset)) (offset + 6 + 8)
     (by simp [Readers.RegisterRead.circuit, circuit_norm, notByte, notMemory])
   rw [operations_eq]
   simp only [Operations.interactionsWith, Circuit.operations] at readEmpty ⊢

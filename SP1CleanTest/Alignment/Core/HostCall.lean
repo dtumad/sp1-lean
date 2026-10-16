@@ -1,7 +1,6 @@
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
-import ToClean.Air.FiniteLookup
 import Clean.Circuit.WitnessExport
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -11,7 +10,7 @@ import ToClean.Air.TableBuild
 
 /-! # Executed instruction-to-host handoff regressions
 
-Run complete syscall rows through the witness program, all assertions, the fixed code lookup,
+Run complete syscall rows through the witness program, all assertions,
 and Byte/Memory/Program local checks. State, Exit and PublicValues balance, and the host effects,
 remain whole-ensemble obligations outside these local satisfiability tests.
 -/
@@ -43,15 +42,13 @@ private def evaluate (input : Inputs Fp) (corruptSelector := false) :
   let program := HostCallChip.main (varFromOffset Inputs 0)
   let honest := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
   let env : Environment Fp := if corruptSelector then
-      { honest with get := fun i => if i == size Inputs + 1 then 1 - honest.get i else honest.get i }
+      { honest with get := fun i => if i == size Inputs + 6 + 1 then 1 - honest.get i else honest.get i }
     else honest
   let operations := (program.operations (size Inputs)).toFlat
-  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => lookup.table.name == fixed.table.name &&
-      fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+    | .lookup _ => false
     | .witness .. => true
     | .interact interaction =>
       if env interaction.mult == 0 then true
@@ -126,7 +123,7 @@ theorem rejectedAliases :
       !(evaluate { (row 2) with instruction := { (row 2).instruction with
         op_a_memory := ⟨code, ⟨0, 4⟩⟩ } }).1) = true := by native_decide
 
-/-- info: exportable ✓ (8 witness cells) -/
+/-- info: exportable ✓ (14 witness cells) -/
 #guard_msgs in
 #assert_exportable (HostCallChip.circuit (p := SP1Prime))
 
@@ -219,14 +216,12 @@ private def physicalLedger (table : Table Fp) (name : String) : List (String × 
         some (name, (interaction.msg.map env).toList, env interaction.mult) else none
 
 private def physicalChecks (table : Table Fp) : Bool :=
-  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   table.table.all fun physical =>
     let env := Environment.fromArray physical (deriveProverData [table])
     table.component.rowOperations.toFlat.all fun operation =>
       match operation with
       | .assert expression => env expression == 0
-      | .lookup lookup => lookup.table.name == fixed.table.name &&
-          fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+      | .lookup _ => false
       | .witness .. | .interact .. => true
 
 /-- An installed WRITE row plus padding retains its instruction prefix, original constraints, and State

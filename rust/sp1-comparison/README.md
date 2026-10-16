@@ -70,8 +70,14 @@ that output and exercises these boundaries:
   ensembles bind every public endpoint and byte; backend mutations cover all counts and padding.
   These are native RAM tests, not agreement with SP1's global-memory digest machinery.
 
-Five legacy lookup meanings still block full export: program, syscall code, write permission,
-hint nodes and hint words. The experimental Clean pin adds message predicates and indexed
+- The full-register syscall guard exports as arithmetic AIR with six shared witness products,
+  eleven assertions and maximum degree three. Rust checks every 16-bit low code against the
+  eight selected variants of SP1's enum, compares twelve Lean reference rows, rejects upper-limb
+  aliases and nonboolean activity, and mutates every product on active and padded rows. This
+  checks the stricter native code profile; host effects remain separate obligations.
+
+Four legacy lookup meanings still block full export: program, write permission, hint nodes and
+hint words. The experimental Clean pin adds message predicates and indexed
 preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
 whole-assembly generation still needs its own routing, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;
