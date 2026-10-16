@@ -37,16 +37,16 @@ def circuit (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryM
     exact h_assumptions
 
 theorem width (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    ({ circuit := circuit ram provider } : Component (ZMod p)).width = ({ circuit := provider } : Component (ZMod p)).width := rfl
+    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).width = ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).width := rfl
 
 theorem constraints (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    ({ circuit := circuit ram provider } : Component (ZMod p)).operations.constraints =
-      ({ circuit := provider } : Component (ZMod p)).operations.constraints := by
+    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.constraints =
+      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.constraints := by
   simp only [Component.constraints_eq, Component.rowOperations, circuit, circuit_norm]
 
 theorem lookups (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg) :
-    ({ circuit := circuit ram provider } : Component (ZMod p)).operations.lookups =
-      ({ circuit := provider } : Component (ZMod p)).operations.lookups := by
+    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.lookups =
+      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.lookups := by
   simp only [Component.lookups_eq, Component.rowOperations, circuit, circuit_norm]
 
 /-- Exactly one new receipt is appended, at the original provider's full output record. -/
@@ -60,8 +60,8 @@ theorem receipt_interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod
 
 theorem interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg)
     (selected : RawChannel (ZMod p)) (different : selected ≠ (FinalMemoryValue.channel ram).toRaw) :
-    ({ circuit := circuit ram provider } : Component (ZMod p)).operations.interactionsWith selected =
-      ({ circuit := provider } : Component (ZMod p)).operations.interactionsWith selected := by
+    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.interactionsWith selected =
+      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.interactionsWith selected := by
   simp only [Component.interactionsWith_eq, Component.rowOperations, circuit, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, Ne.symm different, ↓reduceIte, List.append_nil]
   rfl

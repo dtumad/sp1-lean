@@ -100,7 +100,7 @@ theorem exactProviderTables_constraints {Digest : Type}
     (contract : ExactProviderTransportContract binds statement
       executionWitness memoryBoundaryWitness inventory skeleton) :
     ∀ table ∈ exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint,
-      table.Constraints data := by
+      table.Constraints := by
   intro table tableMem
   simp only [exactProviderTables, List.mem_append] at tableMem
   rcases tableMem with (tableMem | tableMem) | tableMem
@@ -122,10 +122,10 @@ theorem exactProviderTables_cleanAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (recount : PreprocessedProviderRecountContract executionWitness inventory skeleton) :
     tablesCleanAccesses
-        (exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint) data =
+        (exactProviderTables executionWitness memoryBoundaryWitness inventory skeleton data hint) =
       recountedPreprocessedProviderAccesses inventory skeleton ++
-        tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) data ++
-        tablesCleanAccesses (extractedBumpTables executionWitness data) data := by
+        tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) ++
+        tablesCleanAccesses (extractedBumpTables executionWitness data) := by
   simp only [exactProviderTables, tablesCleanAccesses, List.flatMap_append]
   have preprocessing :=
     extractedPreprocessedProviderTables_cleanAccesses recount data hint

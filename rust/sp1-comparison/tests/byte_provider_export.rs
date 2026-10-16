@@ -8,7 +8,7 @@ mod export_support;
 
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
-use export_support::{Ledger, NativeEvaluation, RowWitness, Sp1Evaluation};
+use export_support::{Ledger, RowWitness, Sp1Evaluation};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use slop_air::Air;
@@ -20,50 +20,20 @@ use sp1_hypercube::air::{MachineAir, SP1_PROOF_NUM_PV_ELTS};
 use sp1_primitives::SP1Field;
 
 macro_rules! generated_byte {
-    ($module:ident, $file:literal, $program:ident, $air:ident) => {
+    ($module:ident, $file:literal, $program:ident) => {
         #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
         mod $module {
             include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/", $file));
         }
-        use $module::{$air, $program};
+        use $module::Ensemble as $program;
     };
 }
-generated_byte!(
-    and_byte,
-    "and_byte_provider.rs",
-    AndByteProvider,
-    AndByteProviderAirSpec
-);
-generated_byte!(
-    or_byte,
-    "or_byte_provider.rs",
-    OrByteProvider,
-    OrByteProviderAirSpec
-);
-generated_byte!(
-    xor_byte,
-    "xor_byte_provider.rs",
-    XorByteProvider,
-    XorByteProviderAirSpec
-);
-generated_byte!(
-    range_byte,
-    "u8_range_byte_provider.rs",
-    U8RangeByteProvider,
-    U8RangeByteProviderAirSpec
-);
-generated_byte!(
-    ltu_byte,
-    "ltu_byte_provider.rs",
-    LtuByteProvider,
-    LtuByteProviderAirSpec
-);
-generated_byte!(
-    msb_byte,
-    "msb_byte_provider.rs",
-    MsbByteProvider,
-    MsbByteProviderAirSpec
-);
+generated_byte!(and_byte, "and_byte_provider.rs", AndByteProvider);
+generated_byte!(or_byte, "or_byte_provider.rs", OrByteProvider);
+generated_byte!(xor_byte, "xor_byte_provider.rs", XorByteProvider);
+generated_byte!(range_byte, "u8_range_byte_provider.rs", U8RangeByteProvider);
+generated_byte!(ltu_byte, "ltu_byte_provider.rs", LtuByteProvider);
+generated_byte!(msb_byte, "msb_byte_provider.rs", MsbByteProvider);
 
 fn input<P: Program<F>>(b: u64, c: u64, multiplicity: u64) -> Vec<F> {
     match P::PROVER_INPUTS {
@@ -74,22 +44,22 @@ fn input<P: Program<F>>(b: u64, c: u64, multiplicity: u64) -> Vec<F> {
 }
 
 fn valid<S: GeneratedAirSpec>(row: &[F]) -> bool {
-    let constraints = S::constraints::<NativeEvaluation>(0, &[], row);
+    let constraints = S::constraints::<F>(0, row);
     assert!(!constraints.is_empty());
     constraints.iter().all(|value| *value == F::ZERO)
 }
 
-fn check<P: Program<F>, S: GeneratedAirSpec>(b: u64, c: u64, count: u64, mutate: bool) -> Ledger {
+fn check<P: Program<F> + GeneratedAirSpec>(b: u64, c: u64, count: u64, mutate: bool) -> Ledger {
     assert_eq!(P::COMPONENTS, 1);
-    assert_eq!(S::FIXED_WIDTHS, &[0]);
+    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[0]);
     let inputs = input::<P>(b, c, count);
     let witness = generate::<F, RowWitness<P>>(&[], &inputs).unwrap();
     assert_eq!(witness.tables.len(), 1);
     assert_eq!(witness.tables[0].len(), 1);
     let row = &witness.tables[0][0];
-    assert_eq!(S::WIDTHS, &[row.len()]);
+    assert_eq!(P::WIDTHS, &[row.len()]);
     assert_eq!(&row[..inputs.len()], inputs);
-    assert!(valid::<S>(row));
+    assert!(valid::<P>(row));
     if mutate {
         for column in 0..row.len() {
             for delta in [1, 256, F::ORDER_U64 - 1] {
@@ -97,14 +67,14 @@ fn check<P: Program<F>, S: GeneratedAirSpec>(b: u64, c: u64, count: u64, mutate:
                 changed[column] += F::from_u64(delta);
                 // Multiplicity is an unconstrained input; all other cells are uniquely determined.
                 assert_eq!(
-                    valid::<S>(&changed),
+                    valid::<P>(&changed),
                     column == inputs.len() - 1,
                     "byte row ({b}, {c}, {count}), column {column}, delta {delta}"
                 );
             }
         }
     }
-    let ledger: Ledger = P::interactions(0, row)
+    let ledger: Ledger = <P as Program<F>>::interactions(0, row)
         .into_iter()
         .map(|entry| {
             (
@@ -132,12 +102,12 @@ fn all_byte_pairs_and_counts_match_released_preprocessing_and_air() {
     assert_eq!((trace.height(), trace.width()), (65536, 7));
     assert_eq!(NUM_BYTE_OPS, 6);
     let providers: [fn(u64, u64, u64, bool) -> Ledger; 6] = [
-        check::<AndByteProvider, AndByteProviderAirSpec>,
-        check::<OrByteProvider, OrByteProviderAirSpec>,
-        check::<XorByteProvider, XorByteProviderAirSpec>,
-        check::<U8RangeByteProvider, U8RangeByteProviderAirSpec>,
-        check::<LtuByteProvider, LtuByteProviderAirSpec>,
-        check::<MsbByteProvider, MsbByteProviderAirSpec>,
+        check::<AndByteProvider>,
+        check::<OrByteProvider>,
+        check::<XorByteProvider>,
+        check::<U8RangeByteProvider>,
+        check::<LtuByteProvider>,
+        check::<MsbByteProvider>,
     ];
     let counts = [0, 1, 2, F::ORDER_U64 - 1];
     let edges = [0, 1, 127, 128, 254, 255];
@@ -188,7 +158,7 @@ fn all_byte_pairs_and_counts_match_released_preprocessing_and_air() {
     }
 }
 
-fn malformed<P: Program<F>, S: GeneratedAirSpec>() {
+fn malformed<P: Program<F> + GeneratedAirSpec>() {
     for count in [0, 1, 2, F::ORDER_U64 - 1] {
         for operand in 0..P::PROVER_INPUTS - 1 {
             for value in [256, 257, 65536, F::ORDER_U64 - 1] {
@@ -196,7 +166,7 @@ fn malformed<P: Program<F>, S: GeneratedAirSpec>() {
                 inputs[operand] = F::from_u64(value);
                 let witness = generate::<F, RowWitness<P>>(&[], &inputs).unwrap();
                 assert!(
-                    !valid::<S>(&witness.tables[0][0]),
+                    !valid::<P>(&witness.tables[0][0]),
                     "non-byte input must fail even at count zero"
                 );
             }
@@ -210,20 +180,20 @@ fn malformed<P: Program<F>, S: GeneratedAirSpec>() {
 
 #[test]
 fn out_of_range_inputs_are_rejected_independently_of_multiplicity() {
-    malformed::<AndByteProvider, AndByteProviderAirSpec>();
-    malformed::<OrByteProvider, OrByteProviderAirSpec>();
-    malformed::<XorByteProvider, XorByteProviderAirSpec>();
-    malformed::<U8RangeByteProvider, U8RangeByteProviderAirSpec>();
-    malformed::<LtuByteProvider, LtuByteProviderAirSpec>();
-    malformed::<MsbByteProvider, MsbByteProviderAirSpec>();
+    malformed::<AndByteProvider>();
+    malformed::<OrByteProvider>();
+    malformed::<XorByteProvider>();
+    malformed::<U8RangeByteProvider>();
+    malformed::<LtuByteProvider>();
+    malformed::<MsbByteProvider>();
 }
 
-fn open_bus<P: Program<F>, S: GeneratedAirSpec>() {
+fn open_bus<P: Program<F> + GeneratedAirSpec>() {
     let padding = P::padding();
     assert_eq!(padding.len(), 1);
     assert_eq!(padding[0].input, input::<P>(0, 0, 0));
     let witness = generate::<F, P>(&[], &input::<P>(0, 0, 0)).unwrap();
-    assert!(valid::<S>(&witness.tables[0][0]));
+    assert!(valid::<P>(&witness.tables[0][0]));
     for count in [1, 2, F::ORDER_U64 - 1] {
         assert!(
             matches!(
@@ -237,10 +207,10 @@ fn open_bus<P: Program<F>, S: GeneratedAirSpec>() {
 
 #[test]
 fn zero_padding_balances_but_unmatched_provider_rows_do_not() {
-    open_bus::<AndByteProvider, AndByteProviderAirSpec>();
-    open_bus::<OrByteProvider, OrByteProviderAirSpec>();
-    open_bus::<XorByteProvider, XorByteProviderAirSpec>();
-    open_bus::<U8RangeByteProvider, U8RangeByteProviderAirSpec>();
-    open_bus::<LtuByteProvider, LtuByteProviderAirSpec>();
-    open_bus::<MsbByteProvider, MsbByteProviderAirSpec>();
+    open_bus::<AndByteProvider>();
+    open_bus::<OrByteProvider>();
+    open_bus::<XorByteProvider>();
+    open_bus::<U8RangeByteProvider>();
+    open_bus::<LtuByteProvider>();
+    open_bus::<MsbByteProvider>();
 }

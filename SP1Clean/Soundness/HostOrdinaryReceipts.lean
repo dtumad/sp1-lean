@@ -48,7 +48,10 @@ private theorem protected_component (index : Fin 25) :
     (ProtectedLocalCore.tables (p := p) image source)[7 + index.val]'(by
       rw [ProtectedLocalCore.tables_length]; omega) =
         { circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
-          rw [InstructionChipId.all_length]; exact index.isLt)) } := by
+          rw [InstructionChipId.all_length]; exact index.isLt))
+          Assumptions := (ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
+            rw [InstructionChipId.all_length]; exact index.isLt))).Assumptions
+          circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
   rw [ProtectedLocalCore.tables_getElem image source (7 + index.val) (by omega)]
   fin_cases index <;> rfl
 
@@ -58,7 +61,10 @@ theorem original_component (index : Fin 25) :
       rw [base_length]
       omega) =
       { circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
-        rw [InstructionChipId.all_length]; exact index.isLt)) } := by
+        rw [InstructionChipId.all_length]; exact index.isLt))
+        Assumptions := (ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
+          rw [InstructionChipId.all_length]; exact index.isLt))).Assumptions
+        circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
   change (HostFinalMemory.ensemble image source target.sail.memorySnapshot final target.host
     others resources channels names).tables[7 + index.val]'_ = _
   simp only [HostFinalMemory.tables_eq]
@@ -76,8 +82,7 @@ private theorem replacement_layout
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
     let extended := replace index.val original
     extended.circuit.name = original.circuit.name ∧
-      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns ∧
-        ∀ rows arity, extended.proverRows rows arity = original.proverRows rows arity := by
+      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns := by
   dsimp only
   by_cases within : 7 ≤ index.val ∧ index.val < 32
   · rw [show replace index.val _ = ProtectedOrdinaryReceipt.component
@@ -87,9 +92,9 @@ private theorem replacement_layout
       ⟨index.val - 7, by omega⟩
     simp only [show 7 + (index.val - 7) = index.val by omega] at selected
     rw [selected]
-    exact ⟨rfl, ProtectedOrdinaryReceipt.width _, rfl, fun _ _ => rfl⟩
+    exact ⟨rfl, ProtectedOrdinaryReceipt.width _, rfl⟩
   · rw [show replace index.val _ = _ from dif_neg within]
-    exact ⟨rfl, rfl, rfl, fun _ _ => rfl⟩
+    exact ⟨rfl, rfl, rfl⟩
 
 /-- Install the producers without moving or removing any physical table. -/
 def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
@@ -138,7 +143,7 @@ def instructionTable (index : Fin 25)
 /-- Installed receipts use the sole existing decoder on the actual physical table arrays. -/
 theorem instructionTable_receipts (index : Fin 25)
     (witness : EnsembleWitness (ensemble image source target final others resources channels names)) :
-    (instructionTable index witness).interactionsWith witness.data InstructionReceipt.channel.toRaw =
+    (instructionTable index witness).interactionsWith InstructionReceipt.channel.toRaw =
       (instructionTable index witness).table.map (fun physical =>
         let row := (supportedChipFor (p := p) (InstructionChipId.all[index.val]'(by
           rw [InstructionChipId.all_length]; exact index.isLt))).decodeRow witness.data physical
@@ -146,13 +151,16 @@ theorem instructionTable_receipts (index : Fin 25)
   have registered := (slot (image := image) (source := source) (target := target) (final := final)
     (others := others) (resources := resources) (channels := channels) (names := names) index).table_component witness
   change (instructionTable index witness).component = _ at registered
-  simp only [Table.interactionsWith, registered, ProtectedOrdinaryReceipt.row_receipt]
+  have shared : (instructionTable index witness).data = witness.data :=
+    witness.same_data _ ((slot index).table_mem witness)
+  simp only [Table.interactionsWith, registered, ProtectedOrdinaryReceipt.row_receipt,
+    Table.environment, shared]
   exact List.map_eq_flatMap.symm
 
 /-- Physical cost includes every disabled padding occurrence. -/
 theorem instructionTable_receipt_count (index : Fin 25)
     (witness : EnsembleWitness (ensemble image source target final others resources channels names)) :
-    ((instructionTable index witness).interactionsWith witness.data InstructionReceipt.channel.toRaw).length =
+    ((instructionTable index witness).interactionsWith InstructionReceipt.channel.toRaw).length =
       (instructionTable index witness).length := by
   rw [instructionTable_receipts, List.length_map]
 
@@ -189,8 +197,7 @@ private theorem layout (image : ProgramImage) (source target : ExecutionSnapshot
     let extended := (ensemble image source target final others resources channels names).tables[index.val]'(by
       rw [tables_length]; exact index.isLt)
     extended.circuit.name = original.circuit.name ∧
-      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns ∧
-        ∀ rows arity, extended.proverRows rows arity = original.proverRows rows arity := by
+      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns := by
   dsimp only
   unfold ensemble
   dsimp only
@@ -202,7 +209,7 @@ def baseWitness (witness : EnsembleWitness (ensemble image source target final o
     EnsembleWitness (HostSailBoundary.ensemble image source target final others resources channels names) :=
   witness.projectPrefix (HostSailBoundary.ensemble image source target final others resources channels names)
     (by rw [tables_length])
-    (fun index => by exact (layout image source target final others resources channels names index).2.1.symm.le) (fun index => by exact (layout image source target final others resources channels names index).2.2.1.symm)
+    (fun index => by exact (layout image source target final others resources channels names index).2.1.symm.le) (fun index => by exact (layout image source target final others resources channels names index).2.2.symm)
 
 private theorem construction_layout (index : Fin
     (ensemble (p := p) image source target final others resources channels names).tables.length) :
@@ -210,8 +217,7 @@ private theorem construction_layout (index : Fin
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]'(
       Nat.lt_of_lt_of_eq index.isLt tables_length)
     extended.circuit.name = original.circuit.name ∧
-      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns ∧
-        ∀ rows arity, extended.proverRows rows arity = original.proverRows rows arity := by
+      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns := by
   have facts := layout image source target final others resources channels names
     ⟨index.val, Nat.lt_of_lt_of_eq index.isLt tables_length⟩
   constructor
@@ -225,7 +231,7 @@ def construct (witness : EnsembleWitness
   witness.projectPrefix (ensemble image source target final others resources channels names)
     (by rw [tables_length])
     (fun index => (construction_layout index).2.1.le)
-    (fun index => (construction_layout index).2.2.1)
+    (fun index => (construction_layout index).2.2)
 
 /-- Retaining every name and input layout preserves the complete canonical data function. -/
 theorem baseWitness_data (witness : EnsembleWitness
@@ -238,8 +244,6 @@ theorem baseWitness_data (witness : EnsembleWitness
     exact (layout image source target final others resources channels names index).2.1.symm
   · intro index
     rw [(layout image source target final others resources channels names index).1]
-  · intro index rows arity
-    exact ((layout image source target final others resources channels names index).2.2.2 rows arity).symm
   · rw [← tables_length, List.drop_length]
     simp
 
@@ -254,8 +258,6 @@ theorem construct_data (witness : EnsembleWitness
     exact (construction_layout index).2.1
   · intro index
     rw [(construction_layout index).1]
-  · intro index rows arity
-    exact (construction_layout index).2.2.2 rows arity
   · rw [tables_length, List.drop_length]
     simp
 
@@ -327,8 +329,8 @@ theorem baseWitness_balancedChannel
 theorem baseWitness_channelGuarantees
     (witness : EnsembleWitness (ensemble image source target final others resources channels names))
     (channel : RawChannel (ZMod p)) (different : channel ≠ InstructionReceipt.channel.toRaw)
-    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel) :
-    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees (baseWitness witness).data channel := by
+    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees channel) :
+    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees channel := by
   apply witness.projectPrefix_channelGuarantees_of _ _ _ channel ?_ guarantees
   intro index row width valid
   rw [← (layout image source target final others resources channels names index).2.1, ← width, Array.extract_size]

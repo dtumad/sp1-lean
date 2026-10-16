@@ -70,7 +70,7 @@ def byteFixed : FixedColumns Fp where
 omit [Fact (2 ^ 17 < p)] in
 /-- The exported row formula agrees with the mathematical byte-pair enumeration. -/
 theorem byteFixed_row {i : ℕ} (bound : i < 65536) :
-    (byteFixed (p := p)).row i = (byteValues (i / 256) (i % 256)).toArray := by
+    (byteFixed (p := p)).row (UInt64.ofNat i) = (byteValues (i / 256) (i % 256)).toArray := by
   have hi : i < UInt64.size := by change i < 18446744073709551616; omega
   simp [FixedColumns.row, byteFixed, Witgen.RowProgram.ofFExprs, Witgen.RowProgram.eval,
     Witgen.evalSteps, Witgen.VExpr.eval, Witgen.FExpr.eval, Witgen.U64Expr.eval,
@@ -103,18 +103,18 @@ def byteComponent : Component Fp where
   circuit := byteCircuit
   fixedColumns := some byteFixed
   Assumptions _ _ := True
-  assumptions_imply_circuit := by
-    intro i row data fixed _ _
-    have decodedPrefix := FixedRowAt.input_prefix (Suffix := fields 6) data
+  circuit_assumptions_of_assumptions := by
+    intro i input data fixed _ _
+    have fixedCells := FixedInputAt.input_prefix (input := input)
       (show (byteFixed (p := p)).width = size (fields 7) from rfl) fixed
-    change ∀ op : Fin 6, ByteProviderSpec (byteMessages
-      (valueFromOffset ByteInput 0 (Environment.fromArray row data)).1)[op]
-    rw [decodedPrefix, byteFixed_row fixed.1]
-    have decoded (v : Vector Fp 7) : fromElements (inputRow (fields 7) v.toArray) = v := by
-      ext j hj
-      interval_cases j <;> simp [inputRow, fromElements, ProvableType.fromElements, size]
+    have height : i.toNat < 65536 := (fixed _ rfl).1
+    have rowEq := byteFixed_row (p := p) height
+    simp only [UInt64.ofNat_toNat] at rowEq
+    rw [rowEq] at fixedCells
+    have decoded : input.1 = byteValues (i.toNat / 256) (i.toNat % 256) :=
+      Vector.toArray_inj.mp fixedCells
+    change ∀ op : Fin 6, ByteProviderSpec (byteMessages input.1)[op]
     rw [decoded]
-    have height : i < 65536 := fixed.1
     exact byteValues_spec (by omega) (Nat.mod_lt _ (by decide))
   fixed_width_le_input := by change 7 ≤ 13; decide
 
@@ -177,7 +177,7 @@ def rangeFixed : FixedColumns Fp where
 omit [Fact (2 ^ 17 < p)] in
 /-- The compact range initializer reproduces SP1's enumeration, including row zero. -/
 theorem rangeFixed_row {i : ℕ} (bound : i < 131072) :
-    (rangeFixed (p := p)).row i =
+    (rangeFixed (p := p)).row (UInt64.ofNat i) =
       #[((i % 2 ^ rangeBits 16 i : ℕ) : Fp), ((rangeBits 16 i : ℕ) : Fp)] := by
   have hi64 : i < UInt64.size := by change i < 18446744073709551616; omega
   have bits := rangeBits_le 16 i
@@ -224,18 +224,19 @@ def rangeComponent : Component Fp where
   circuit := rangeCircuit
   fixedColumns := some rangeFixed
   Assumptions _ _ := True
-  assumptions_imply_circuit := by
-    intro i row data fixed _ _
-    have decodedPrefix := FixedRowAt.input_prefix (Suffix := field) data
+  circuit_assumptions_of_assumptions := by
+    intro i input data fixed _ _
+    have fixedCells := FixedInputAt.input_prefix (input := input)
       (show (rangeFixed (p := p)).width = size (fields 2) from rfl) fixed
-    change ByteProviderSpec (rangeMessage
-      (valueFromOffset RangeInput 0 (Environment.fromArray row data)).1)
-    rw [decodedPrefix, rangeFixed_row fixed.1]
-    have decoded (a b : Fp) : fromElements (inputRow (fields 2) #[a, b]) = #v[a, b] := by
-      ext j hj
-      interval_cases j <;> simp [inputRow, fromElements, ProvableType.fromElements, size]
+    have height : i.toNat < 131072 := (fixed _ rfl).1
+    have rowEq := rangeFixed_row (p := p) height
+    simp only [UInt64.ofNat_toNat] at rowEq
+    rw [rowEq] at fixedCells
+    have decoded : input.1 = #v[((i.toNat % 2 ^ rangeBits 16 i.toNat : ℕ) : Fp),
+        ((rangeBits 16 i.toNat : ℕ) : Fp)] := Vector.toArray_inj.mp fixedCells
+    change ByteProviderSpec (rangeMessage input.1)
     rw [decoded]
-    exact rangeValues_spec (Nat.mod_lt _ (by positivity)) (rangeBits_le 16 i)
+    exact rangeValues_spec (Nat.mod_lt _ (by positivity)) (rangeBits_le 16 i.toNat)
   fixed_width_le_input := by change 2 ≤ 3; decide
 
 /-- SP1's honest index for a range key, including index one for the zero-width key. -/
@@ -256,7 +257,7 @@ theorem rangeBits_index {n bits a : ℕ} (hb : bits ≤ n) (ha : a < 2 ^ bits) :
 omit [Fact (2 ^ 17 < p)] in
 /-- Every valid range member occurs at the canonical physical index. -/
 theorem rangeFixed_coverage {a bits : ℕ} (ha : a < 2 ^ bits) (hb : bits ≤ 16) :
-    (rangeFixed (p := p)).row (2 ^ bits + a) = #[(a : Fp), (bits : Fp)] := by
+    (rangeFixed (p := p)).row (UInt64.ofNat (2 ^ bits + a)) = #[(a : Fp), (bits : Fp)] := by
   have power : 2 ^ bits ≤ 2 ^ 16 := Nat.pow_le_pow_right (by decide) hb
   rw [rangeFixed_row (by omega), rangeBits_index hb ha]
   simp [Nat.mod_eq_of_lt ha]
@@ -264,7 +265,7 @@ theorem rangeFixed_coverage {a bits : ℕ} (ha : a < 2 ^ bits) (hb : bits ≤ 16
 omit [Fact (2 ^ 17 < p)] in
 /-- Every byte pair occurs at SP1's canonical index (MSB uses `c = 0`). -/
 theorem byteFixed_coverage {b c : ℕ} (hb : b < 256) (hc : c < 256) :
-    (byteFixed (p := p)).row (256 * b + c) = (byteValues b c).toArray := by
+    (byteFixed (p := p)).row (UInt64.ofNat (256 * b + c)) = (byteValues b c).toArray := by
   rw [byteFixed_row (by omega)]
   congr 2 <;> omega
 

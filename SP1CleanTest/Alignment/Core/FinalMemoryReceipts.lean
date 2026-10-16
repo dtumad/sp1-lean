@@ -24,28 +24,30 @@ private def record (address clock : ℕ) : Channels.MemoryMsg Fp :=
   ⟨0, clock, word[0], word[1], word[2], Target.bitVecToWord 0⟩
 
 private def consumers : List (Component Fp) :=
-  [{ circuit := FinalRegisterValue.circuit target }, { circuit := FinalRamValue.circuit target }]
+  [{ circuit := FinalRegisterValue.circuit target, Assumptions := (FinalRegisterValue.circuit target).Assumptions }, { circuit := FinalRamValue.circuit target, Assumptions := (FinalRamValue.circuit target).Assumptions }]
 
 private theorem names :
     (((FinalMemoryEnsemble.inventory (p := SP1Prime)).views.map (·.component) ++ consumers).map
       (·.circuit.name)).Nodup := by decide
 
 private def original (registers ram : List (Channels.MemoryMsg Fp))
-    (checkedRegisters checkedRam : List (Channels.MemoryMsg Fp)) :
+    (checkedRegisters checkedRam : List (Channels.MemoryMsg Fp))
+    (bounded : registers.length ≤ UInt64.size ∧ ram.length ≤ UInt64.size ∧
+      checkedRegisters.length ≤ UInt64.size ∧ checkedRam.length ≤ UInt64.size := by decide) :
     EnsembleWitness (FinalMemoryEnsemble.ensemble consumers [] names) :=
   EnsembleWitness.ofTables _
-    [Table.build { circuit := OrderedFinalProvider.registerCircuit }
+    [Table.build { circuit := OrderedFinalProvider.registerCircuit, Assumptions := (OrderedFinalProvider.registerCircuit).Assumptions }
       (registers.map fun item => OrderedMemoryProvider.populate item 0
-        (Word.toNat (MemoryBoundary.address item))) (fun _ _ => #[]) (ProverHint.empty Fp),
-     Table.build { circuit := OrderedFinalProvider.ramCircuit }
+        (Word.toNat (MemoryBoundary.address item))) (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (List.length_map _).le.trans bounded.1),
+     Table.build { circuit := OrderedFinalProvider.ramCircuit, Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions }
       (ram.map fun item => OrderedMemoryProvider.populate item 2
-        (Word.toNat (MemoryBoundary.address item))) (fun _ _ => #[]) (ProverHint.empty Fp),
+        (Word.toNat (MemoryBoundary.address item))) (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (List.length_map _).le.trans bounded.2.1),
      Table.build (FinalMemoryEnsemble.viewFor .terminal).component []
-      (fun _ _ => #[]) (ProverHint.empty Fp),
-     Table.build { circuit := FinalRegisterValue.circuit target } checkedRegisters
-      (fun _ _ => #[]) (ProverHint.empty Fp),
-     Table.build { circuit := FinalRamValue.circuit target }
-      checkedRam (fun _ _ => #[]) (ProverHint.empty Fp)]
+      (fun _ _ => #[]) (ProverHint.empty Fp) (by decide),
+     Table.build { circuit := FinalRegisterValue.circuit target, Assumptions := (FinalRegisterValue.circuit target).Assumptions } checkedRegisters
+      (fun _ _ => #[]) (ProverHint.empty Fp) bounded.2.2.1,
+     Table.build { circuit := FinalRamValue.circuit target, Assumptions := (FinalRamValue.circuit target).Assumptions }
+      checkedRam (fun _ _ => #[]) (ProverHint.empty Fp) bounded.2.2.2]
     () (by rfl)
 
 private def ledger {ens : Ensemble Fp unit} (witness : EnsembleWitness ens)
@@ -57,8 +59,10 @@ private def balanced (interactions : List (Array Fp × Fp)) : Bool :=
   interactions.length < SP1Prime && interactions.all fun interaction =>
     ((interactions.filter fun other => other.1 == interaction.1).map Prod.snd).sum == 0
 
-private def receipts (registers ram checkedRegisters checkedRam : List (Channels.MemoryMsg Fp)) : Bool :=
-  let witness := Soundness.FinalMemoryReceipts.lift (original registers ram checkedRegisters checkedRam)
+private def receipts (registers ram checkedRegisters checkedRam : List (Channels.MemoryMsg Fp))
+    (bounded : registers.length ≤ UInt64.size ∧ ram.length ≤ UInt64.size ∧
+      checkedRegisters.length ≤ UInt64.size ∧ checkedRam.length ≤ UInt64.size := by decide) : Bool :=
+  let witness := Soundness.FinalMemoryReceipts.lift (original registers ram checkedRegisters checkedRam bounded)
   balanced (ledger witness "SP1FinalRegisterValue") && balanced (ledger witness "SP1FinalRamValue")
 
 /-- Receipt insertion retains the original arrays, heights, and decoded Memory inventory. -/

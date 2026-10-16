@@ -23,13 +23,13 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 /-- The unchanged physical Memory ledger after the two three-table inventories. -/
 noncomputable def memoryInterior {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : List (TypedInteraction (memoryChannel (p := p))) :=
-  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · witness.data memoryChannel)
+  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · memoryChannel)
 
 /-- The interior adapter preserves every raw interaction, including disabled interactions. -/
 theorem memoryInterior_raw {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (memoryInterior witness).map TypedInteraction.raw =
-      (witness.tables.drop 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) := by
+      (witness.tables.drop 6).flatMap (·.interactionsWith memoryChannel.toRaw) := by
   simp only [memoryInterior, List.map_flatMap, typedTableInteractionsWith_raw]
 
 /-- The actual public verifier emits no Memory traffic, including its source assertions. -/
@@ -64,11 +64,11 @@ theorem memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
   rw [← source_memory_interactions witness, ← final_memory_interactions witness]
   change (ensemble image source).verifierOperations.interactionValuesWith memoryChannel.toRaw
     (Environment.fromInput witness.publicInput witness.data) ++
-    witness.tables.flatMap (·.interactionsWith witness.data memoryChannel.toRaw) = _
+    witness.tables.flatMap (·.interactionsWith memoryChannel.toRaw) = _
   rw [verifier_memory_silent, List.nil_append]
-  have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith witness.data memoryChannel.toRaw))
+  have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
     (List.take_append_drop 3 witness.tables)
-  have splitTail := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith witness.data memoryChannel.toRaw))
+  have splitTail := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
     (List.take_append_drop 3 (witness.tables.drop 3))
   simp only [List.flatMap_append, List.drop_drop] at split splitTail
   rw [← split, ← splitTail, List.append_assoc]
@@ -105,9 +105,11 @@ theorem memoryInterior_signedBinary {image : ProgramImage} {source : ExecutionSn
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp rowMem
   have componentMem := List.mem_map_of_mem (f := fun t : Table (ZMod p) => t.component) tableMem
   rw [List.map_drop, witness.tables_map_component] at componentMem
+  have checked := constraints table (List.mem_of_mem_drop tableMem) physical physicalMem
+  have shared : table.data = witness.data := witness.same_data table (List.mem_of_mem_drop tableMem)
+  simp only [Table.environment, shared] at checked emitted
   exact interior_memoryBinary image source table.component componentMem witness.data physical
-    (constraints table (List.mem_of_mem_drop tableMem)
-      physical physicalMem) interaction.raw emitted
+    checked interaction.raw emitted
 
 /-- Raw constraints force signed-unit multiplicities throughout the combined Memory ledger.
 This includes both inventories and all active system rows. -/

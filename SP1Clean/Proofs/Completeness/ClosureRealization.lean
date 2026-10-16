@@ -596,7 +596,7 @@ theorem providerLedger_multiplicitySum (hreal : trace.ClosureRealized)
 
 /-- The public verifier's accesses followed by all 55 physical table ledgers. -/
 def fullLedger : LookupAccessList :=
-  trace.verifierLedger ++ tablesCleanAccesses trace.tables trace.data
+  trace.verifierLedger ++ tablesCleanAccesses trace.tables
 
 /-- The assembled table list really is the skeleton's two pieces with the provider window between
 them. -/

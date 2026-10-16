@@ -397,10 +397,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       (initialBoundaryStateMessage statement.publicValues)
       fin orderedRows)
     (haltTouches : List (TimedGrounding.Touch p))
-    (haltProducedEq : producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+    (haltProducedEq : producedMessages (typedTableInteractionsWith (haltTable witness)
       Channels.memoryChannel) =
         haltTouches.map (fun tc => (tc : TimedGrounding.Touch p).2))
-    (haltConsumedEq : consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+    (haltConsumedEq : consumedMessages (typedTableInteractionsWith (haltTable witness)
       Channels.memoryChannel) =
         haltTouches.map (fun tc => (tc : TimedGrounding.Touch p).1.1))
     (haltLocEq : ∀ tc ∈ haltTouches,
@@ -587,10 +587,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       TimedGrounding.optMS (memoryInitFrontier witness loc) +
           TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))),
       Channels.MemoryMsg.ClkBound m ∧ m.clk_high.val < 2 ^ 24 := by
     intro loc m memberM
@@ -625,10 +625,10 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       TimedGrounding.optMS (memoryFinalizeFrontier witness loc) +
           TimedGrounding.pullsAt (orderedRows.map alignedRow) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))),
       Channels.MemoryMsg.ClkBound m ∧ m.clk_high.val < 2 ^ 24 :=
     fun loc => forall_mem_of_balance (widened loc) (pushGood loc)
@@ -671,7 +671,7 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
     have pulledMem : MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row) ∈
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = Semantics.MemoryMsg.locOf
             (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row)))
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             Channels.memoryChannel)) : Multiset (Channels.MemoryMsg (ZMod p))) := by
       rw [Multiset.mem_filter, Multiset.mem_coe,
         memoryBump_consumedMessages_eq witness constraints]
@@ -685,12 +685,12 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
       (MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row),
         MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row))) with bumpDef
   have bumpSnd : bump.map Prod.snd =
-      producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+      producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
         Channels.memoryChannel) := by
     rw [memoryBump_producedMessages_eq witness constraints, bumpDef, List.map_map]
     rfl
   have bumpFst : bump.map Prod.fst =
-      consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+      consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
         Channels.memoryChannel) := by
     rw [memoryBump_consumedMessages_eq witness constraints, bumpDef, List.map_map]
     rfl
@@ -792,35 +792,35 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
     calc TimedGrounding.optMS (memoryInitFrontier witness loc) +
           (TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+              (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
                 Channels.memoryChannel)))) +
           Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               Channels.memoryChannel)))
         = TimedGrounding.optMS (memoryInitFrontier witness loc) +
             TimedGrounding.pushesAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+              (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
                 Channels.memoryChannel))) +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+              (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
                 Channels.memoryChannel))) := by
           abel
       _ = TimedGrounding.optMS (memoryFinalizeFrontier witness loc) +
             TimedGrounding.pullsAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+              (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
                 Channels.memoryChannel))) +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
                 Channels.memoryChannel))) := widenedLoc
       _ = TimedGrounding.optMS (memoryFinalizeFrontier witness loc) +
           (TimedGrounding.pullsAt (orderedRows.map alignedRow) loc +
             Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+              (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
                 Channels.memoryChannel)))) +
           Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               Channels.memoryChannel))) := by
           abel
   -- Eliminate the refresh pairs and realize the rewritten pulls row by row; then split the
@@ -1965,16 +1965,17 @@ theorem supported_core_witness_grounding
       -- assemble the halt table's Memory guarantee from the balance-derived pull facts,
       -- and extract the full semantic `Spec`
       have tableEq := witness_haltTable_table_eq_of_mem witness constraints balanced haltMem
-      have memGuar : (haltTable witness).ChannelGuarantees witness.data Channels.memoryChannel.toRaw := by
+      have memGuar : (haltTable witness).ChannelGuarantees Channels.memoryChannel.toRaw := by
         intro row rowMem
         have rowIsHalt : row = halt := by
           rw [tableEq] at rowMem
           exact List.mem_singleton.mp rowMem
         rw [rowIsHalt, haltTable_component]
+        simp only [Table.environment, haltTable_data]
         refine channelGuarantees_of_consumedMessages _ Channels.memoryChannel _
           (by have := Fact.out (p := 2 ^ 25 < p); omega) ?_
         have rowConsumed : consumedMessages (typedInteractionValuesWith
-            ({ circuit := HaltChip.circuit } : Component (ZMod p)).operations Channels.memoryChannel
+            ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).operations Channels.memoryChannel
             (Environment.fromArray halt witness.data)) =
             [HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x5_memory 5,
              HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x10_memory 10,
@@ -1983,9 +1984,9 @@ theorem supported_core_witness_grounding
           rw [haltRealEq] at tableConsumed
           rw [typedTableInteractionsWith, tableEq] at tableConsumed
           simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil] at tableConsumed
-          rw [show (haltTable witness).component = ({ circuit := HaltChip.circuit } : Component (ZMod p))
+          rw [show (haltTable witness).component = ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p))
             from haltTable_component witness] at tableConsumed
-          exact tableConsumed
+          simpa only [Table.environment, haltTable_data] using tableConsumed
         rw [rowConsumed]
         intro msg msgMem
         rcases List.mem_cons.mp msgMem with rfl | msgMem

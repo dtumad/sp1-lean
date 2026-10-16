@@ -50,7 +50,8 @@ theorem wrapper_memory_interactions (env : Environment (ZMod p))
 
 /-- Both boundary inventories retain their components and complete physical row arrays. -/
 theorem boundary_tables (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    (localWitness witness).tables.take 6 = witness.tables.take 6 := by
+    (localWitness witness).tables.take 6 =
+      (witness.tables.take 6).map (fun table => { table with data := (localWitness witness).data }) := by
   unfold localWitness
   apply witness.projectPrefix_take (target := LocalCore.ensemble image source) _ _ _ 6
     (by change 6 ≤ (LocalCore.tables image source).length; rw [LocalCore.tables_length]; decide)
@@ -60,11 +61,11 @@ theorem boundary_tables (witness : EnsembleWitness (ensemble image source auxili
 /-- Every physical interior interaction, including zero multiplicities, is retained. -/
 noncomputable def memoryInterior (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     List (TypedInteraction (memoryChannel (p := p))) :=
-  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · witness.data memoryChannel)
+  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · memoryChannel)
 
 theorem memoryInterior_raw (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     (memoryInterior witness).map TypedInteraction.raw =
-      (witness.tables.drop 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) := by
+      (witness.tables.drop 6).flatMap (·.interactionsWith memoryChannel.toRaw) := by
   simp only [memoryInterior, List.map_flatMap, typedTableInteractionsWith_raw]
 
 /-- Exact full-ledger decomposition into the unchanged boundaries and the extended interior. -/
@@ -85,15 +86,12 @@ theorem memory_interactions (witness : EnsembleWitness (ensemble image source au
       (memoryChannel.emittedValue (-1)) ++ _
   rw [← LocalCore.source_memory_interactions, ← LocalCore.final_memory_interactions]
   change witness.interactionsWith memoryChannel.toRaw =
-    ((localWitness witness).tables.take 3).flatMap (·.interactionsWith (localWitness witness).data memoryChannel.toRaw) ++
-    (((localWitness witness).tables.drop 3).take 3).flatMap (·.interactionsWith (localWitness witness).data memoryChannel.toRaw) ++ _
+    ((localWitness witness).tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) ++
+    (((localWitness witness).tables.drop 3).take 3).flatMap (·.interactionsWith memoryChannel.toRaw) ++ _
   rw [← List.flatMap_append, ← List.take_add, boundary_tables]
-  have retained : (witness.tables.take 6).flatMap (·.interactionsWith (localWitness witness).data memoryChannel.toRaw) =
-      (witness.tables.take 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) :=
-    List.flatMap_congr fun table _ => table.interactionsWith_setData _ _ _
-  rw [retained]
+  simp only [List.flatMap_map, Table.interactionsWith_setData]
   change witness.verifierInteractionsWith memoryChannel.toRaw ++
-    witness.tables.flatMap (·.interactionsWith witness.data memoryChannel.toRaw) = _
+    witness.tables.flatMap (·.interactionsWith memoryChannel.toRaw) = _
   have silent : witness.verifierInteractionsWith memoryChannel.toRaw = [] := by
     rw [← localWitness_verifier_interactions witness memoryChannel.toRaw (by
       simp [LocalCore.baseEnsemble, sp1Ensemble_channels])]
@@ -130,7 +128,7 @@ private theorem wrapper_memorySigns (input : Var HostCallChip.Inputs (ZMod p))
       Operations.interactionsWith] at original
     change interaction ∈ (((SyscallInstrsChip.main input.instruction).operations offset).interactionsWith
       memoryChannel.toRaw).map _ at original
-    rw [Faithful.syscallInstrsInteractionsWith_memory] at original
+    rw [SyscallInstrsChip.Ledger.syscallInstrsInteractionsWith_memory] at original
     apply signedVal_binary_of_selector_gated _ _ real
     simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false] at original
     rcases original with rfl | rfl | rfl | rfl | rfl | rfl
@@ -174,7 +172,7 @@ private theorem interior_component_binary
   · by_cases last : 6 + index = 61
     · have equal : index = 55 := by omega
       subst index
-      change NativeCore.MemoryBinary ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p))
+      change NativeCore.MemoryBinary ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p))
       apply NativeCore.memoryBinary_of_silent
       change memoryChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
       simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
@@ -198,7 +196,7 @@ theorem memoryInterior_signedBinary (witness : EnsembleWitness (ensemble image s
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp rowMem
   have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) tableMem
   rw [List.map_drop, witness.tables_map_component] at componentMem
-  exact interior_component_binary binary table.component componentMem witness.data physical
+  exact interior_component_binary binary table.component componentMem table.data physical
     (constraints table (List.mem_of_mem_drop tableMem)
       physical physicalMem) interaction.raw emitted
 

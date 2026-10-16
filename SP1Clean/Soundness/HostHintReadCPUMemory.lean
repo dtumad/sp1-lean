@@ -93,11 +93,14 @@ private theorem handler_queue_member
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
-    (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) witness.data := by
+    (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) := by
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
   simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
     List.zip_cons_cons, List.flatMap_cons]
-  exact List.mem_append_left _ (List.mem_map.mpr ⟨physical, physicalMem, rfl⟩)
+  refine List.mem_append_left _ (List.mem_map.mpr ⟨physical, physicalMem, ?_⟩)
+  have shared : (handlerTable witness).data = witness.data :=
+    witness.same_data _ (handlerTable_mem witness)
+  simp only [Table.environment, shared]
 
 /-- Every physical word belongs to an actual active syscall with the handler's complete call.
 The clock is derived from the two installed ledgers, independently of Memory-value guarantees. -/
@@ -106,9 +109,9 @@ theorem word_cpu
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (steps : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (steps : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
+    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
     ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
       ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
         HostCallLedger.call env = (HostHintReadCoverage.input handler).call ∧
@@ -138,21 +141,23 @@ theorem handler_writes
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
     ∃ node, HintQueue.node? store (Address.toNat (HostHintReadCoverage.input env).node.pointer) = some node ∧
       ((TransitionView.readIndexedRows HintReadCoverage.variants
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data
-          (wordTables_aligned witness)) witness.data).map
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness)
+          (wordTables_aligned witness))).map
           HintReadWrites.produced).Perm
         (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) node.bytes) := by
   have valid : HostHintReadCoverage.handler.Spec env := by
     obtain ⟨physical, present, same⟩ := List.mem_map.mp member
     have checked := handler_spec witness interface store authenticated constraints records physical present
-    rwa [handlerTable_component, same] at checked
+    have shared : (handlerTable witness).data = witness.data :=
+      witness.same_data _ (handlerTable_mem witness)
+    rwa [Table.environment, shared, handlerTable_component, same] at checked
   have bound := HostQueueHistory.records_of_witness witness store authenticated records
     (none, env) (handler_queue_member witness env member)
   have steps := word_steps witness interface store authenticated constraints records
-  have fixed := HintReadCoverage.selection_fixed (wordTables witness) witness.data
+  have fixed := HintReadCoverage.selection_fixed (wordTables witness)
     (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) (wordTables_aligned witness)
-  apply HostHintReadWrites.writes_of_records env _ witness.data valid
-    (TransitionView.selectTables_aligned _ _ witness.data (fun last => (HintReadCoverage.view last).component)
+  apply HostHintReadWrites.writes_of_records env _ valid
+    (TransitionView.selectTables_aligned _ _ (fun last => (HintReadCoverage.view last).component)
       (HostHintReadPartition.keepWord _) fixed (wordTables_aligned witness))
     (steps.select (HostHintReadPartition.keepWord _) fixed)
     (balanced_for_of_channels witness interface constraints ordering calls cursor env member) store bound.1 bound.2
@@ -164,9 +169,9 @@ private theorem wordsAt_tables (data : ProverData (ZMod p)) (tables : List (Tabl
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables)
     (event : ExecutionRow p) :
-    wordsAt data (TransitionView.readIndexedRows HintReadCoverage.variants tables data) event =
+    wordsAt data (TransitionView.readIndexedRows HintReadCoverage.variants tables) event =
       TransitionView.readIndexedRows HintReadCoverage.variants
-        (HostHintReadPartition.tablesFor (cpuClock data event) tables data aligned) data := by
+        (HostHintReadPartition.tablesFor (cpuClock data event) tables aligned) := by
   rw [HostHintReadPartition.rows_for]
   rfl
 
@@ -180,10 +185,10 @@ theorem handler_wordsAt
     (env : Environment (ZMod p))
     (handler : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
-    wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) event =
+    wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) event =
       TransitionView.readIndexedRows HintReadCoverage.variants
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data
-          (wordTables_aligned witness)) witness.data := by
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness)
+          (wordTables_aligned witness)) := by
   obtain ⟨physical, _, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at witness interface
     constraints calls ordering (none, env) (handler_queue_member witness env handler) event member clock
   have same := congrArg (fun message : HostCallChip.Message (ZMod p) =>
@@ -202,9 +207,9 @@ theorem wordsAt_addresses_nodup
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (event : ExecutionRow p) :
     ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables witness) witness.data) event).map (fun row => (HintReadWrites.produced row).1)).Nodup := by
+      (wordTables witness)) event).map (fun row => (HintReadWrites.produced row).1)).Nodup := by
   by_cases empty : wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables witness) witness.data) event = []
+      (wordTables witness)) event = []
   · simp only [empty, List.map_nil, List.nodup_nil]
   obtain ⟨row, present⟩ := List.exists_mem_of_ne_nil _ empty
   obtain ⟨physical, selected⟩ := List.mem_filter.mp present
@@ -245,12 +250,12 @@ theorem wordsAt_locations_nodup
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (event : ExecutionRow p) :
     ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables witness) witness.data) event).map (fun row => MemoryMsg.locOf (touch row).2)).Nodup := by
+      (wordTables witness)) event).map (fun row => MemoryMsg.locOf (touch row).2)).Nodup := by
   have distinct := wordsAt_addresses_nodup witness interface store authenticated constraints records calls cursor ordering event
   have same : ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables witness) witness.data) event).map (fun row => (HintReadWrites.produced row).1)) =
+      (wordTables witness)) event).map (fun row => (HintReadWrites.produced row).1)) =
       ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables witness) witness.data) event).map (fun row => (MemoryMsg.locOf (touch row).2).busAddress)) := by
+        (wordTables witness)) event).map (fun row => (MemoryMsg.locOf (touch row).2).busAddress)) := by
     apply List.map_congr_left
     intro row member
     exact address_loc row (word_touches witness interface constraints records.byte row (List.mem_filter.mp member).1)
@@ -266,7 +271,7 @@ theorem source_word_steps
       (sourceResources source.host.io.hints) channels
       (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    HintReadCoverage.Steps (wordTables (HostHintQueueBoundary.projected witness)) witness.data := by
+    HintReadCoverage.Steps (wordTables (HostHintQueueBoundary.projected witness)) := by
   have steps := word_steps (HostHintQueueBoundary.projected witness)
     (source_interface source.host.io.hints)
     (HintQueue.ofList source.host.io.hints).1 (HostHintQueueBoundary.source_authentication witness constraints)
@@ -295,7 +300,7 @@ private theorem wordsAt_nil_of_not_read
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
     (notRead : ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code) :
     wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables witness) witness.data) event = [] := by
+      (wordTables witness)) event = [] := by
   apply List.eq_nil_iff_forall_not_mem.mpr
   intro row present
   obtain ⟨physical, selected⟩ := List.mem_filter.mp present
@@ -315,7 +320,9 @@ private theorem wordsAt_nil_of_not_read
     obtain ⟨physical, physicalMem, same⟩ := List.mem_map.mp handlerMem
     have checked := handler_spec witness interface _
       authenticated constraints records physical physicalMem
-    rwa [handlerTable_component, same] at checked
+    have shared : (handlerTable witness).data = witness.data :=
+      witness.same_data _ (handlerTable_mem witness)
+    rwa [Table.environment, shared, handlerTable_component, same] at checked
   exact notRead _ sameEvent (read_call_code (HostCallLedger.input env) _ _ sameCall spec)
 
 /-- Only an authenticated HINT_READ can own added hint RAM rows. CPU clock uniqueness rules
@@ -329,7 +336,7 @@ theorem source_wordsAt_nil_of_not_read
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (notRead : ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code) :
     wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event = [] := by
+      (wordTables (HostHintQueueBoundary.projected witness))) event = [] := by
   have empty := wordsAt_nil_of_not_read (HostHintQueueBoundary.projected witness)
     (source_interface source.host.io.hints) _
     (HostHintQueueBoundary.source_authentication witness constraints)
@@ -349,12 +356,12 @@ theorem words_partition
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (steps : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (steps : HintReadCoverage.Steps (wordTables witness))
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness))) :
     (cpu.flatMap (wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables witness) witness.data))).Perm
-      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) := by
+      (wordTables witness)))).Perm
+      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) := by
   have unique := LocalCore.executionRows_times_nodup_of_orderingChannels (HostLocalCore.localWitness witness)
     (HostLocalCore.localWitness_constraints witness constraints)
     ordering
@@ -362,7 +369,7 @@ theorem words_partition
   have uniqueKeys := clock_keys_nodup witness.data cpu _ exhaustive unique
   have partition := List.flatMap_filter_key_perm
     (cpu.map (cpuClock witness.data))
-    (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) wordClock uniqueKeys (by
+    (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) wordClock uniqueKeys (by
       intro row member
       obtain ⟨_, _, env, _, _, physical, time⟩ := word_cpu witness interface constraints calls cursor steps row member
       exact List.mem_map.mpr ⟨.syscall (HostCallLedger.input env).instruction,
@@ -379,8 +386,8 @@ theorem source_words_partition
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) :
     (cpu.flatMap (wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data))).Perm
-      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data) := by
+      (wordTables (HostHintQueueBoundary.projected witness))))).Perm
+      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness))) := by
   have partition := words_partition (HostHintQueueBoundary.projected witness)
     (source_interface source.host.io.hints)
     (HostHintQueueBoundary.projected_constraints witness constraints)
@@ -400,10 +407,10 @@ theorem source_memory_partition
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) :
     (cpu.flatMap (fun event =>
       (wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).flatMap (fun row =>
+        (wordTables (HostHintQueueBoundary.projected witness))) event).flatMap (fun row =>
           [memoryChannel.pulledValue (touch row).1.1, memoryChannel.pushedValue (touch row).2]))).Perm
-      ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (·.interactionsWith witness.data memoryChannel.toRaw)) := by
-  rw [HintReadWriteLedger.memory_ledger _ witness.data (wordTables_aligned (HostHintQueueBoundary.projected witness))]
+      ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (·.interactionsWith memoryChannel.toRaw)) := by
+  rw [HintReadWriteLedger.memory_ledger _ (wordTables_aligned (HostHintQueueBoundary.projected witness))]
   have perm := (source_words_partition witness constraints balanced cpu exhaustive).flatMap_right
     (fun row => [memoryChannel.pulledValue (touch row).1.1, memoryChannel.pushedValue (touch row).2])
   simpa only [List.flatMap_assoc, touch] using perm
@@ -416,7 +423,7 @@ theorem source_locations_nodup
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p) :
     ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).map
+      (wordTables (HostHintQueueBoundary.projected witness))) event).map
         (fun row => MemoryMsg.locOf (touch row).2)).Nodup := by
   have distinct := wordsAt_locations_nodup (HostHintQueueBoundary.projected witness)
     (source_interface source.host.io.hints)
@@ -454,7 +461,7 @@ theorem source_touches_chain
     (event : ExecutionRow p) (loc : MemLoc) :
     List.IsChain (fun a b : TimedGrounding.Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
       (((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).map touch).filter
+        (wordTables (HostHintQueueBoundary.projected witness))) event).map touch).filter
           (fun access => MemoryMsg.locOf access.2 = loc)) :=
   touches_chain _ (source_locations_nodup witness constraints balanced event) loc
 
@@ -467,14 +474,13 @@ theorem source_touches_at (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p) :
     ∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event,
+      (wordTables (HostHintQueueBoundary.projected witness))) event,
       TimedGrounding.TouchOK (StateMsg.timeNat (event.edge witness.data).1) (touch row).1 (touch row).2 ∧
       MemoryMsg.ClkBound (touch row).2 ∧ MemoryMsg.timeNat (touch row).1.1 < MemoryMsg.timeNat (touch row).2 := by
   intro row member
   obtain ⟨physical, clock⟩ := List.mem_filter.mp member
   have retained : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) (HostHintQueueBoundary.projected witness).data := by
-    simpa only [HostHintQueueBoundary.projected_data] using physical
+      (wordTables (HostHintQueueBoundary.projected witness)) := physical
   have facts := source_word_touches witness constraints balanced row retained
   refine ⟨?_, facts.pushLow, source_word_order valid witness constraints balanced row retained⟩
   exact touch_at witness.data event row facts (of_decide_eq_true clock)

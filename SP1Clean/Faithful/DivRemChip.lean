@@ -1112,8 +1112,8 @@ def divRemChipRowCodec :
     rowOutput_eq := by
       change ProvableType.eval _ ((DivRemChip.main _).output _) = _
       rw [DivRemChip.elaborated.output_eq]
-      rw [Air.Flat.Component.rowInputVar_mk,
-        Air.Flat.Component.rowOffset_mk]
+      rw [Air.Flat.Component.rowInputVar,
+        Air.Flat.Component.rowOffset]
       exact eval_divRemChipDirectOutput (p := p) cols data }
 
 omit [Fact (2 ^ 24 < p)] in

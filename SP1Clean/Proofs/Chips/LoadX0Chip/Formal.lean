@@ -384,9 +384,9 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := LoadX0Chip.circuit (p := p) } :
+    ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     LoadX0Chip.circuit_main_eq]
   simp [LoadX0Chip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,

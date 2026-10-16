@@ -88,53 +88,62 @@ theorem computableWitnesses (enabled : Bool) :
   · simp only [CircuitType.eval_expression_prover_to_verifier, eval_counter]
     simpa only [ProvableStruct.eval_eq_eval] using congrArg (fun input : Inputs (ZMod p) => input.previous.counter) h
 
-/-- The standard table builder preserves one row per supplied observation input. -/
-def construct (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) : Table (ZMod p) :=
-  Table.build { circuit := circuit enabled } inputs data (ProverHint.empty (ZMod p))
+/-- The standard table builder preserves every supplied observation input within Clean's physical
+row-index capacity. This is a table representation bound, separate from execution semantics. -/
+def construct (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
+    (bounded : inputs.length ≤ UInt64.size) : Table (ZMod p) :=
+  Table.build { circuit := circuit enabled, Assumptions := (circuit enabled).Assumptions }
+    inputs data (ProverHint.empty (ZMod p)) bounded
 
-/-- Semantic observation inputs construct all physical constraints without an extra readiness premise. -/
+/-- Semantic observation inputs construct all physical constraints. -/
 theorem construct_constraints (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data).Constraints data :=
-  Table.build_constraints _ _ _ _ _ (computableWitnesses enabled) valid
+    (bounded : inputs.length ≤ UInt64.size)
+    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data bounded).Constraints :=
+  Table.build_constraints _ _ _ _ bounded _ (computableWitnesses enabled) valid
 
 /-- Generated rows also supply every local channel guarantee, including all counter Byte checks. -/
 theorem construct_guarantees (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data).Guarantees data :=
-  Table.build_guarantees _ _ _ _ _ (computableWitnesses enabled) valid
+    (bounded : inputs.length ≤ UInt64.size)
+    (valid : ∀ input ∈ inputs, Spec enabled input) : (construct enabled inputs data bounded).Guarantees :=
+  Table.build_guarantees _ _ _ _ bounded _ (computableWitnesses enabled) valid
 
 /-- Physical height is exactly the supplied observation count. -/
-theorem construct_length (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p)) :
-    (construct enabled inputs data).length = inputs.length := List.length_map ..
+theorem construct_length (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
+    (bounded : inputs.length ≤ UInt64.size) :
+    (construct enabled inputs data bounded).length = inputs.length := List.length_map ..
 
 /-- Reading the generated physical rows recovers the exact supplied observation inventory. -/
-theorem construct_inputs (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p)) :
-    (construct enabled inputs data).table.map (fun physical =>
+theorem construct_inputs (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p))
+    (bounded : inputs.length ≤ UInt64.size) :
+    (construct enabled inputs data bounded).table.map (fun physical =>
       valueFromOffset Inputs 0 (Environment.fromArray physical evaluationData)) = inputs := by
   simp only [construct, Table.build, List.map_map]
   have decode (input : Inputs (ZMod p)) :=
-    Component.rowInput_buildRow ({ circuit := circuit enabled } : Component (ZMod p)) input data evaluationData (ProverHint.empty _)
-  change inputs.map (fun input => ({ circuit := circuit enabled } : Component (ZMod p)).rowInput
-    (Environment.fromArray (({ circuit := circuit enabled } : Component (ZMod p)).buildRow input data (ProverHint.empty _)) evaluationData)) = inputs
+    Component.rowInput_buildRow ({ circuit := circuit enabled, Assumptions := (circuit enabled).Assumptions } : Component (ZMod p)) input data evaluationData (ProverHint.empty _)
+  change inputs.map (fun input => ({ circuit := circuit enabled, Assumptions := (circuit enabled).Assumptions } : Component (ZMod p)).rowInput
+    (Environment.fromArray (({ circuit := circuit enabled, Assumptions := (circuit enabled).Assumptions } : Component (ZMod p)).buildRow input data (ProverHint.empty _)) evaluationData)) = inputs
   simp only [decode, List.map_id']
 
 /-- Constructed consumers pull precisely the supplied receipt sequence. -/
-theorem construct_receipts (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p)) :
-    (construct enabled inputs data).interactionsWith evaluationData InstructionReceipt.channel.toRaw =
+theorem construct_receipts (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
+    (bounded : inputs.length ≤ UInt64.size) :
+    (construct enabled inputs data bounded).interactionsWith InstructionReceipt.channel.toRaw =
       inputs.map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
   have decoded := congrArg (List.map fun input => InstructionReceipt.channel.pulledValue input.receipt)
-    (construct_inputs enabled inputs data evaluationData)
-  simp only [Table.interactionsWith, construct, Table.build, receipt_values]
+    (construct_inputs enabled inputs data data bounded)
+  simp only [Table.interactionsWith, Table.environment, construct, Table.build, receipt_values]
   rw [← List.map_eq_flatMap]
   simpa only [List.map_map, Function.comp_def, construct, Table.build] using decoded
 
 /-- Constructed observation links preserve each supplied previous/next pair literally. -/
-theorem construct_states (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data evaluationData : ProverData (ZMod p)) :
-    (construct enabled inputs data).interactionsWith evaluationData stateChannel.toRaw = inputs.flatMap (fun input =>
+theorem construct_states (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
+    (bounded : inputs.length ≤ UInt64.size) :
+    (construct enabled inputs data bounded).interactionsWith stateChannel.toRaw = inputs.flatMap (fun input =>
       [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next]) := by
   have decoded := congrArg (List.flatMap fun input =>
     [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next])
-    (construct_inputs enabled inputs data evaluationData)
-  simpa only [Table.interactionsWith, construct, Table.build, state_values,
+    (construct_inputs enabled inputs data data bounded)
+  simpa only [Table.interactionsWith, Table.environment, construct, Table.build, state_values,
     List.flatMap_map] using decoded
 
 end OrdinaryObservation

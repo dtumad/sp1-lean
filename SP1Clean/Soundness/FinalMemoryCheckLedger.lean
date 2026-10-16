@@ -21,23 +21,25 @@ variable {names : (((FinalMemoryEnsemble.inventory (p := p)).views.map Transitio
 open scoped Classical
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem single_interaction (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : Component (ZMod p))
+private theorem single_interaction (table : Table (ZMod p)) (component : Component (ZMod p))
     (same : table.component = component) (channel : RawChannel (ZMod p))
     (message : Environment (ZMod p) → Interaction (ZMod p))
     (row : ∀ env, component.operations.interactionValuesWith channel env = [message env]) :
-    table.interactionsWith data channel = table.table.map (fun input => message (Environment.fromArray input data)) := by
+    table.interactionsWith channel = table.table.map (fun input => message (table.environment input)) := by
   simp only [Table.interactionsWith, same, row]
   exact List.map_eq_flatMap.symm
 
 /-- One full register receipt is consumed for every actual validation row. -/
 theorem register_pulls (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
-    (registerSlot.table witness).interactionsWith witness.data (FinalMemoryValue.channel false).toRaw =
+    (registerSlot.table witness).interactionsWith (FinalMemoryValue.channel false).toRaw =
       (registerInputs witness).map (fun input => (FinalMemoryValue.channel false).pulledValue input.record) := by
-  rw [single_interaction _ witness.data _ (registerSlot.table_component witness)
+  rw [single_interaction _ _ (registerSlot.table_component witness)
     (FinalMemoryValue.channel false).toRaw
     (fun env => (FinalMemoryValue.channel false).pulledValue
-      (({ circuit := FinalRegisterCheck.circuit target } : Component (ZMod p)).rowInput env).record) ?_]
-  · simp only [registerInputs, List.map_map, Function.comp_def]
+      (({ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions } : Component (ZMod p)).rowInput env).record) ?_]
+  · simp only [registerInputs, List.map_map, Function.comp_def, Table.environment,
+      witness.same_data (registerSlot.table witness) (registerSlot.table_mem witness)]
+    rfl
   · intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
     change ((FinalRegisterCheck.main target (varFromOffset FinalRegisterCheck.Inputs 0)).operations
@@ -47,13 +49,15 @@ theorem register_pulls (witness : EnsembleWitness (ensemble source target auxili
 
 /-- One full RAM receipt is consumed for every actual validation row. -/
 theorem ram_pulls (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
-    (ramSlot.table witness).interactionsWith witness.data (FinalMemoryValue.channel true).toRaw =
+    (ramSlot.table witness).interactionsWith (FinalMemoryValue.channel true).toRaw =
       (ramInputs witness).map (fun input => (FinalMemoryValue.channel true).pulledValue input.record) := by
-  rw [single_interaction _ witness.data _ (ramSlot.table_component witness)
+  rw [single_interaction _ _ (ramSlot.table_component witness)
     (FinalMemoryValue.channel true).toRaw
     (fun env => (FinalMemoryValue.channel true).pulledValue
-      (({ circuit := FinalRamCheck.circuit target } : Component (ZMod p)).rowInput env).record) ?_]
-  · simp only [ramInputs, List.map_map, Function.comp_def]
+      (({ circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions } : Component (ZMod p)).rowInput env).record) ?_]
+  · simp only [ramInputs, List.map_map, Function.comp_def, Table.environment,
+      witness.same_data (ramSlot.table witness) (ramSlot.table_mem witness)]
+    rfl
   · intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
     change ((FinalRamCheck.main target (varFromOffset FinalRamCheck.Inputs 0)).operations
@@ -63,13 +67,15 @@ theorem ram_pulls (witness : EnsembleWitness (ensemble source target auxiliary c
 
 /-- Physical register selection occurrences, including disabled ones. -/
 theorem register_changes (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
-    (registerSlot.table witness).interactionsWith witness.data FinalMemoryChange.channel.toRaw =
+    (registerSlot.table witness).interactionsWith FinalMemoryChange.channel.toRaw =
       (registerInputs witness).map (fun input => FinalMemoryChange.channel.pushedIfValue input.selected
         (FinalMemoryChange.key false input.record)) := by
-  rw [single_interaction _ witness.data _ (registerSlot.table_component witness) FinalMemoryChange.channel.toRaw
-    (fun env => let input := ({ circuit := FinalRegisterCheck.circuit target } : Component (ZMod p)).rowInput env
+  rw [single_interaction _ _ (registerSlot.table_component witness) FinalMemoryChange.channel.toRaw
+    (fun env => let input := ({ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions } : Component (ZMod p)).rowInput env
       FinalMemoryChange.channel.pushedIfValue input.selected (FinalMemoryChange.key false input.record)) ?_]
-  · simp only [registerInputs, List.map_map, Function.comp_def]
+  · simp only [registerInputs, List.map_map, Function.comp_def, Table.environment,
+      witness.same_data (registerSlot.table witness) (registerSlot.table_mem witness)]
+    rfl
   · intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
     change ((FinalRegisterCheck.main target (varFromOffset FinalRegisterCheck.Inputs 0)).operations
@@ -79,13 +85,15 @@ theorem register_changes (witness : EnsembleWitness (ensemble source target auxi
 
 /-- Physical RAM selection occurrences, including disabled ones. -/
 theorem ram_changes (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
-    (ramSlot.table witness).interactionsWith witness.data FinalMemoryChange.channel.toRaw =
+    (ramSlot.table witness).interactionsWith FinalMemoryChange.channel.toRaw =
       (ramInputs witness).map (fun input => FinalMemoryChange.channel.pushedIfValue input.selected
         (FinalMemoryChange.key true input.record)) := by
-  rw [single_interaction _ witness.data _ (ramSlot.table_component witness) FinalMemoryChange.channel.toRaw
-    (fun env => let input := ({ circuit := FinalRamCheck.circuit target } : Component (ZMod p)).rowInput env
+  rw [single_interaction _ _ (ramSlot.table_component witness) FinalMemoryChange.channel.toRaw
+    (fun env => let input := ({ circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions } : Component (ZMod p)).rowInput env
       FinalMemoryChange.channel.pushedIfValue input.selected (FinalMemoryChange.key true input.record)) ?_]
-  · simp only [ramInputs, List.map_map, Function.comp_def]
+  · simp only [ramInputs, List.map_map, Function.comp_def, Table.environment,
+      witness.same_data (ramSlot.table witness) (ramSlot.table_mem witness)]
+    rfl
   · intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
     change ((FinalRamCheck.main target (varFromOffset FinalRamCheck.Inputs 0)).operations
@@ -97,7 +105,7 @@ private theorem table_silent {component : Component (ZMod p)}
     (slot : TableSlot (ensemble source target auxiliary channels names).tables component)
     (witness : EnsembleWitness (ensemble source target auxiliary channels names)) (channel : RawChannel (ZMod p))
     (absent : (component.circuit.channels.map RawChannel.name).contains channel.name = false) :
-    (slot.table witness).interactionsWith witness.data channel = [] := by
+    (slot.table witness).interactionsWith channel = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   rw [slot.table_component witness]
   intro member

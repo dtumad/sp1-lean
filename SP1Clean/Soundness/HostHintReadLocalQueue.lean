@@ -90,11 +90,11 @@ private theorem wrapper_queue_silent : stateChannel.toRaw ∉ (HostCallLedger.pr
 omit [Fact (2 ^ 25 < p)] in
 /-- Keep physical lists opaque while checking a silent component block: unfolding the installed
 inventory here duplicates its boundary views through the projected list operations. -/
-private theorem tables_queue_silent (physical : List (Table (ZMod p))) (data : ProverData (ZMod p))
+private theorem tables_queue_silent (physical : List (Table (ZMod p)))
     (components : List (Component (ZMod p))) (same : physical.map (·.component) = components)
     (checked : components.all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains (stateChannel (p := p)).toRaw.name) = true) :
-    physical.flatMap (·.interactionsWith data stateChannel.toRaw) = [] := by
+    physical.flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply table.interactionsWith_nil_of_channel_not_mem
@@ -107,30 +107,30 @@ private theorem tables_queue_silent (physical : List (Table (ZMod p))) (data : P
 
 private theorem control_queue_silent
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
-    (((HostLocalHandoff.receiverTables witness).drop 1).take 18).flatMap (·.interactionsWith witness.data stateChannel.toRaw) = [] := by
-  apply tables_queue_silent _ _ (((HostCallReceivers.available (p := p)).map (·.component)).take 18)
+    (((HostLocalHandoff.receiverTables witness).drop 1).take 18).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
+  apply tables_queue_silent _ (((HostCallReceivers.available (p := p)).map (·.component)).take 18)
   · simp only [List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
       List.map_cons, List.drop_succ_cons, List.drop_zero]
   · rfl
 
 private theorem word_queue_silent
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
-    (wordTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) = [] := by
-  exact tables_queue_silent _ _ wordResources (wordTables_components witness) rfl
+    (wordTables witness).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
+  exact tables_queue_silent _ wordResources (wordTables_components witness) rfl
 
 /-- This accounts for every installed table. No endpoint or future allocation contribution is dropped. -/
 theorem queue_interactions
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
     witness.interactionsWith stateChannel.toRaw =
-      (queueTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) ++
-        (extraTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) := by
+      (queueTables witness).flatMap (·.interactionsWith stateChannel.toRaw) ++
+        (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) := by
   rw [HostLocalCore.interactions_split_new witness _ (by
     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
           simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))) queue_fresh
     (by simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw])]
-  have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith witness.data stateChannel.toRaw = [] := by
+  have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith stateChannel.toRaw = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [HostLocalCore.hostCallTable_component]
     exact wrapper_queue_silent
@@ -150,8 +150,8 @@ theorem queue_interactions
   simp only [List.flatMap_append, control_queue_silent, List.nil_append, List.drop_drop]
   rw [← words]
   simp only [List.flatMap_append]
-  change _ ++ ((wordTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) ++
-    (extraTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw)) = _
+  change _ ++ ((wordTables witness).flatMap (·.interactionsWith stateChannel.toRaw) ++
+    (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw)) = _
   rw [word_queue_silent, List.nil_append]
   simp only [queueTables, List.flatMap_cons, extraTables, List.append_assoc]
 
@@ -161,14 +161,14 @@ theorem queue_specs
     (interface : ExtensionInterface HostCallReceivers.available resources) (store : HintQueue.Store)
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : RecordChannels witness) :
-    ∀ table ∈ queueTables witness, table.Spec witness.data := by
+    ∀ table ∈ queueTables witness, table.Spec := by
   intro table member
   have present := queueTables_mem witness table member
   rcases List.mem_cons.mp member with rfl | member
   · exact handler_spec witness interface store authenticated constraints balanced
   have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   simp only [List.map_drop, HostLocalHandoff.receiverTables_components] at mapped
-  change table.component ∈ [{ circuit := HostHintLengthChip.circuit false }, { circuit := HostHintLengthChip.circuit true }] at mapped
+  change table.component ∈ [{ circuit := HostHintLengthChip.circuit false, Assumptions := (HostHintLengthChip.circuit false).Assumptions }, { circuit := HostHintLengthChip.circuit true, Assumptions := (HostHintLengthChip.circuit true).Assumptions }] at mapped
   simp only [List.mem_cons, List.not_mem_nil, or_false] at mapped
   have nodes := node_guarantees witness store authenticated balanced.node table present
   have checked := constraints table present
@@ -188,17 +188,17 @@ theorem queue_ordered_of_endpoints
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (initial final : State (ZMod p))
-    (endpoints : (extraTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) =
+    (endpoints : (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) =
       [stateChannel.pushedValue initial, stateChannel.pulledValue final]) :
     ∃ path : List (HostQueueOrder.Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) witness.data) ∧
+      path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness)) ∧
       Walk.IsWalk HostQueueOrder.edge initial final path := by
   have ledger := balanced stateChannel.toRaw (auxiliary_channel_registered image source HostCallReceivers.available
     resources channels HostHintReadCoverage.handler (by simp [receiver]) stateChannel.toRaw (by
       simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]))
   change BalancedInteractions (witness.interactionsWith stateChannel.toRaw) at ledger
   rw [queue_interactions, endpoints] at ledger
-  exact HostQueueOrder.ordered _ witness.data (queueTables_aligned witness)
+  exact HostQueueOrder.ordered _ (queueTables_aligned witness)
     (queue_specs witness interface store authenticated constraints (RecordChannels.of_balanced witness balanced)) initial final
     (balancedInteractions_of_perm ledger (List.perm_append_comm ..))
 
@@ -210,8 +210,8 @@ theorem queue_rows_nil_of_silent_resources
     (authenticated : RecordAuthentication witness store)
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) witness.data = [] := by
-  have extra : (extraTables witness).flatMap (·.interactionsWith witness.data stateChannel.toRaw) = [] := by
+    TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) = [] := by
+  have extra : (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply table.interactionsWith_nil_of_channel_not_mem
@@ -223,7 +223,7 @@ theorem queue_rows_nil_of_silent_resources
       simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]))
   change BalancedInteractions (witness.interactionsWith stateChannel.toRaw) at ledger
   rw [queue_interactions, extra, List.append_nil] at ledger
-  exact HostQueueOrder.rows_nil_of_balanced _ witness.data (queueTables_aligned witness)
+  exact HostQueueOrder.rows_nil_of_balanced _ (queueTables_aligned witness)
     (queue_specs witness interface store authenticated constraints (RecordChannels.of_balanced witness balanced)) ledger
 
 /-- The fixed source registration lacks queue boundaries: all its queue handlers are necessarily
@@ -233,7 +233,7 @@ theorem source_queue_rows_nil
       (sourceResources source.host.io.hints) channels
       (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
-    TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) witness.data = [] := by
+    TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) = [] := by
   apply queue_rows_nil_of_silent_resources witness (source_interface source.host.io.hints)
     (HintQueue.ofList source.host.io.hints).1
     (source_record_authentication witness _ (.refl _) constraints) _ constraints balanced

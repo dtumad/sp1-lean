@@ -27,13 +27,15 @@ def description (target : MemorySnapshot) : EnsembleCheck ((assembly target).wit
   verifier_channels_complete := verifier_channels_complete target
 
 /-- Check actual physical rows and all original channels after equivalent registry reindexing. -/
-def checkPhysical (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed) : Bool :=
-  (description target).checkWitness SP1Prime ((witness target input seeds).withChannels (channels target))
+def checkPhysical (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
+    (bounded : seeds.length ≤ UInt64.size) : Bool :=
+  (description target).checkWitness SP1Prime ((witness target input seeds bounded).withChannels (channels target))
 
 /-- The Boolean checker proves the raw predicates on the original full host assembly. -/
-theorem checkPhysical_iff (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed) :
-    checkPhysical target input seeds = true ↔
-      (witness target input seeds).Constraints ∧ (witness target input seeds).BalancedChannels := by
+theorem checkPhysical_iff (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
+    (bounded : seeds.length ≤ UInt64.size) :
+    checkPhysical target input seeds bounded = true ↔
+      (witness target input seeds bounded).Constraints ∧ (witness target input seeds bounded).BalancedChannels := by
   rw [checkPhysical, EnsembleCheck.checkWitness_iff]
   exact and_congr (EnsembleWitness.withChannels_constraints _ _)
     (EnsembleWitness.withChannels_balanced _ _ (channels_membership target))
@@ -42,6 +44,7 @@ theorem checkPhysical_iff (target : MemorySnapshot) (input : SP1PublicIO Fp) (se
 def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) : Bool :=
   match seeds? target input consumers with
   | none => false
-  | some seeds => checkPhysical target input seeds
+  | some seeds => if bounded : seeds.length ≤ UInt64.size then
+      checkPhysical target input seeds bounded else false
 
 end SP1Clean.Audit.BranchEnsemble

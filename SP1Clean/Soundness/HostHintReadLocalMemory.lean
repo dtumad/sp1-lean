@@ -50,7 +50,7 @@ theorem word_touches {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel byteChannel.toRaw) :
-    ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data,
+    ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness),
       HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram := by
   intro row member
   obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
@@ -64,7 +64,7 @@ theorem word_touches {image : ProgramImage} {source : ExecutionSnapshot}
   rw [Component.channelGuarantees_iff] at bytes
   simp only [HintReadCoverage.view, Component.rowOperations, HintReadWordChip.circuit] at checked bytes
   have facts := word_access last (varFromOffset HintReadWordChip.Inputs 0)
-    (size HintReadWordChip.Inputs) (Environment.fromArray physical witness.data) checked bytes
+    (size HintReadWordChip.Inputs) (table.environment physical) checked bytes
   simpa only [eval_varFromOffset_valueFromOffset, HintReadCoverage.rowInput] using facts
 
 omit [Fact (2 ^ 25 < p)] in
@@ -88,7 +88,7 @@ theorem call_word_touches {image : ProgramImage} {source : ExecutionSnapshot}
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel byteChannel.toRaw)
     (key : ZMod p × ZMod p) :
     ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants
-      (HostHintReadPartition.tablesFor key (wordTables witness) witness.data (wordTables_aligned witness)) witness.data,
+      (HostHintReadPartition.tablesFor key (wordTables witness) (wordTables_aligned witness)),
       TimedGrounding.TouchOK (clkNat key.1 key.2)
         ((HintReadCoverage.rowInput row).ram.prior, clkNat key.1 key.2)
         (HintReadCoverage.rowInput row).ram.pushed := by
@@ -106,11 +106,11 @@ theorem word_memory_sublist {image : ProgramImage} {source : ExecutionSnapshot}
     {names : ((HostLocalCore.tables image source
       ((receiver :: others).map (·.component) ++ (wordResources ++ resources))).map (·.circuit.name)).Nodup}
     (witness : EnsembleWitness (ensemble image source others resources channels names)) :
-    ((TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data).flatMap (fun row =>
+    ((TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)).flatMap (fun row =>
       [memoryChannel.pulledValue (HintReadCoverage.rowInput row).ram.prior,
        memoryChannel.pushedValue (HintReadCoverage.rowInput row).ram.pushed])).Sublist
       ((HostLocalCore.memoryInterior witness).map TypedInteraction.raw) := by
-  rw [HostLocalCore.memoryInterior_raw, ← HintReadWriteLedger.memory_ledger _ witness.data (wordTables_aligned witness)]
+  rw [HostLocalCore.memoryInterior_raw, ← HintReadWriteLedger.memory_ledger _ (wordTables_aligned witness)]
   have suffix : (witness.tables.drop 62).Sublist (witness.tables.drop 6) := by
     simpa only [List.drop_drop] using List.drop_sublist 56 (witness.tables.drop 6)
   have physical : (wordTables witness).Sublist (witness.tables.drop 6) :=
@@ -135,10 +135,10 @@ private theorem word_typed_memory (row : HintReadCoverage.Row (p := p)) :
     TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw]
   exact HintReadWriteLedger.row_memory_values row
 
-private theorem word_push_bound (last : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
+private theorem word_push_bound (last : Bool) (table : Table (ZMod p))
     (component : table.component = (HintReadCoverage.view last).component)
-    (constraints : table.Constraints data) (bytes : table.ChannelGuarantees data byteChannel.toRaw) :
-    ∀ message ∈ producedMessages (typedTableInteractionsWith table data memoryChannel),
+    (constraints : table.Constraints) (bytes : table.ChannelGuarantees byteChannel.toRaw) :
+    ∀ message ∈ producedMessages (typedTableInteractionsWith table memoryChannel),
       MemoryMsg.ClkBound message := by
   intro message member
   rw [typedTableInteractionsWith, producedMessages_flatMap] at member
@@ -150,9 +150,9 @@ private theorem word_push_bound (last : Bool) (table : Table (ZMod p)) (data : P
   rw [Component.channelGuarantees_iff] at byte
   simp only [HintReadCoverage.view, Component.rowOperations, HintReadWordChip.circuit] at checked byte
   have bounds := word_access last (varFromOffset HintReadWordChip.Inputs 0) (size HintReadWordChip.Inputs)
-    (Environment.fromArray physical data) checked byte
+    (table.environment physical) checked byte
   rw [eval_varFromOffset_valueFromOffset] at bounds
-  rw [word_typed_memory (last, Environment.fromArray physical data)] at emitted
+  rw [word_typed_memory (last, table.environment physical)] at emitted
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
   have pos : signedVal (1 : ZMod p) = 1 := by
     rw [signedVal_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
@@ -263,7 +263,7 @@ theorem source_word_touches
       (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) (HostHintQueueBoundary.projected witness).data,
+      (wordTables (HostHintQueueBoundary.projected witness)),
       HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram :=
   word_touches (HostHintQueueBoundary.projected witness)
     (source_interface source.host.io.hints)
@@ -297,8 +297,6 @@ theorem source_memory_push_bound (valid : image.Valid)
       MemoryMsg.ClkBound message := by
   let retained := HostHintQueueBoundary.projected witness
   have checked : retained.Constraints := by exact HostHintQueueBoundary.projected_constraints witness constraints
-  have physicalChecks : ∀ table ∈ retained.tables, table.Constraints retained.data :=
-    (EnsembleWitness.constraints_iff retained).mp checked
   have byteBalanced := (HostHintQueueBoundary.record_channels witness balanced).byte
   have bytes := byte_guarantees retained (source_interface source.host.io.hints) checked byteBalanced
   apply HostLocalCore.memoryInterior_push_bound valid retained checked bytes
@@ -313,16 +311,16 @@ theorem source_memory_push_bound (valid : image.Valid)
         (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++ sourceResources source.host.io.hints := by
       simpa only [List.mem_append, or_assoc, or_left_comm, or_comm] using componentMem
     have present : table ∈ retained.tables := List.mem_of_mem_drop member
-    have tableChecked : table.Constraints retained.data := physicalChecks table present
-    have tableBytes : table.ChannelGuarantees retained.data byteChannel.toRaw := bytes table present
+    have tableChecked : table.Constraints := checked table present
+    have tableBytes : table.ChannelGuarantees byteChannel.toRaw := bytes table present
     rcases split with word | other
     · simp only [wordResources, List.mem_cons, List.not_mem_nil, or_false] at word
       rcases word with component | component
-      · exact word_push_bound false table retained.data component tableChecked tableBytes
-      · exact word_push_bound true table retained.data component tableChecked tableBytes
-    · have silent := table.interactionsWith_nil_of_channel_not_mem (data := retained.data)
+      · exact word_push_bound false table component tableChecked tableBytes
+      · exact word_push_bound true table component tableChecked tableBytes
+    · have silent := table.interactionsWith_nil_of_channel_not_mem
         (source_memory_silent source table.component other)
-      have typed : typedTableInteractionsWith table retained.data memoryChannel = [] := by
+      have typed : typedTableInteractionsWith table memoryChannel = [] := by
         apply (List.map_eq_nil_iff (f := TypedInteraction.raw)).mp
         rwa [typedTableInteractionsWith_raw]
       simp [typed, producedMessages]
@@ -356,7 +354,7 @@ theorem source_word_order (valid : image.Valid)
       (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) (HostHintQueueBoundary.projected witness).data,
+      (wordTables (HostHintQueueBoundary.projected witness)),
       MemoryMsg.timeNat (HintReadCoverage.rowInput row).ram.prior <
         MemoryMsg.timeNat (HintReadCoverage.rowInput row).ram.pushed := by
   intro row member

@@ -1,5 +1,4 @@
-import SP1Clean.Proofs.Completeness.ExecutionCompiler
-import SP1Clean.Proofs.Completeness.MemoryHistory
+import SP1Clean.Proofs.Completeness.ExecutionInventory
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
 import SP1Clean.Proofs.Completeness.ConsumerClosure
@@ -38,34 +37,6 @@ def ledger {p : ℕ} [NeZero p] (access : MemoryHistoryAccess) : LookupAccessLis
 
 end MemoryHistoryAccess
 
-namespace CompiledExecution
-
-/-- The chronological dependent instruction stream retained by the global compiler. -/
-def routedEvents (compiled : CompiledExecution) : List RoutedEvent :=
-  compiled.rows.map fun row => row.instruction.routed
-
-/-- The single chronological Memory-record stream.  Each scheduled role expands its optional
-refresh before the instruction access which consumes it. -/
-def memoryHistory (compiled : CompiledExecution) : List MemoryHistoryAccess :=
-  compiled.rows.flatMap fun row =>
-    MemoryHistoryAccess.ofAccessSchedule row.clock row.instruction.schedule
-
-/-- Instruction-owned history transitions, still in chronological row/role order. -/
-def instructionMemoryHistory (compiled : CompiledExecution) : List MemoryHistoryAccess :=
-  compiled.rows.flatMap fun row =>
-    row.instruction.stamped.map (MemoryHistoryAccess.ofStamped row.clock)
-
-/-- Refresh-owned history transitions, in chronological row/role order. -/
-def bumpMemoryHistory (compiled : CompiledExecution) : List MemoryHistoryAccess :=
-  compiled.memoryBumps.map MemoryHistoryAccess.ofMemoryBump
-
-@[simp] theorem instructionEvents_eq_ofChronological (compiled : CompiledExecution) :
-    compiled.instructionEvents = EventBuckets.ofChronological compiled.routedEvents := rfl
-
-@[simp] theorem memoryHistory_nil :
-    (emptyCompiledExecution 0).memoryHistory = [] := rfl
-
-end CompiledExecution
 
 end SP1Clean.TraceGen
 
@@ -169,7 +140,7 @@ noncomputable def physicalInstructionMemoryLedger
 /-- The physical MemoryBump-table part of the native Memory ledger. -/
 noncomputable def physicalMemoryBumpLedger
     (trace : SupportedCoreTraceWitness p) : LookupAccessList :=
-  (typedTableInteractionsWith (memoryBumpTable trace.witness) trace.witness.data Channels.memoryChannel).map
+  (typedTableInteractionsWith (memoryBumpTable trace.witness) Channels.memoryChannel).map
     fun interaction => Interaction.toAccess interaction.raw
 
 /-- The residual representation seam for native Memory generation: active instruction and refresh

@@ -42,13 +42,13 @@ def skeletonTables : List (Table (ZMod p)) :=
 /-- Public verifier demand followed by physical consumer demand. Preprocessed providers are
 absent, so their recounted multiplicities cannot depend on their own ledger contributions. -/
 def skeletonLedger : LookupAccessList :=
-  trace.verifierLedger ++ tablesCleanAccesses trace.skeletonTables trace.data
+  trace.verifierLedger ++ tablesCleanAccesses trace.skeletonTables
 
 @[simp] theorem skeletonLedger_eq :
     trace.skeletonLedger =
       trace.verifierLedger ++ tablesCleanAccesses
         (trace.tables.take instructionTableCount ++
-          trace.tables.drop (instructionTableCount + preprocessedProviderTableCount)) trace.data := rfl
+          trace.tables.drop (instructionTableCount + preprocessedProviderTableCount)) := rfl
 
 /-- How many times the shard's consumers ask for one provider key.
 
@@ -193,7 +193,7 @@ def providerLedger : LookupAccessList :=
 
 Every step is one of the eight Tier-2 lemmas; nothing here evaluates a row. -/
 theorem preprocessedProviderLedger_eq (hwf : trace.WellFormed) (hfit : trace.CountsFit) :
-    tablesCleanAccesses trace.preprocessedProviderTables trace.data = trace.providerLedger := by
+    tablesCleanAccesses trace.preprocessedProviderTables = trace.providerLedger := by
   rw [tablesCleanAccesses_setData _ trace.data trace.generationData]
   rw [preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,

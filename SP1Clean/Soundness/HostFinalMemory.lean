@@ -111,12 +111,12 @@ private theorem base_boundary_component (index : Fin 6) :
 
 private theorem base_register_component :
     (base image source target final bankFinal others resources channels names).tables[3]'(by rw [base_tables_length]; omega) =
-      { circuit := OrderedFinalProvider.registerCircuit } :=
+      { circuit := OrderedFinalProvider.registerCircuit, Assumptions := (OrderedFinalProvider.registerCircuit).Assumptions } :=
   (base_boundary_component (index := ⟨3, by decide⟩)).trans (by rfl)
 
 private theorem base_ram_component :
     (base image source target final bankFinal others resources channels names).tables[4]'(by rw [base_tables_length]; omega) =
-      { circuit := OrderedFinalProvider.ramCircuit } :=
+      { circuit := OrderedFinalProvider.ramCircuit, Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions } :=
   (base_boundary_component (index := ⟨4, by decide⟩)).trans (by rfl)
 
 /-- Publish complete receipts at the original register-finalizer position. -/
@@ -134,9 +134,9 @@ private theorem withRegisters_ram_component :
       simp only [withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         List.length_set, base_tables_length]
       omega) =
-      { circuit := OrderedFinalProvider.ramCircuit } := by
+      { circuit := OrderedFinalProvider.ramCircuit, Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions } := by
   change ((base image source target final bankFinal others resources channels names).tables.set 3
-    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit })[4]'(by
+    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions })[4]'(by
       rw [List.length_set, base_tables_length]; omega) = _
   rw [List.getElem_set_ne (by decide : 3 ≠ 4)]
   exact base_ram_component
@@ -190,8 +190,8 @@ theorem base_tables_eq : (base image source target final bankFinal others resour
 /-- Both wrappers act on the original finalizers; appended targets are retained literally. -/
 theorem tables_eq : (ensemble image source target final bankFinal others resources channels names).tables =
     (((beforeChecks image source others resources ++ FinalMemoryChecks.checkTables target).set 57 HaltPaddingChip.component).set 3
-      { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit }).set 4
-      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit } := by
+      { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions }).set 4
+      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions } := by
   simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, base_tables_eq]
 
@@ -207,8 +207,8 @@ def checkSlot (index : Fin 4) : TableSlot (ensemble image source target final ba
     rw [prefix_length]
     omega
   exact (((slot.setOther 57 HaltPaddingChip.component (by omega)).setOther 3
-    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit } (by change 3 ≠ slot.index.val; omega)).setOther 4
-      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit } (by change 4 ≠ slot.index.val; omega)).cast tables_eq.symm
+    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions } (by change 3 ≠ slot.index.val; omega)).setOther 4
+      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions } (by change 4 ≠ slot.index.val; omega)).cast tables_eq.symm
 
 /-- The three original finalizer positions, with the two receipt wrappers installed. -/
 def finalSlot (index : Fin 3) : TableSlot
@@ -221,8 +221,8 @@ def finalSlot (index : Fin 3) : TableSlot
       FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set, base_tables_length]
     omega⟩, ?_⟩
   change (((base image source target final bankFinal others resources channels names).tables.set 3
-    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit }).set 4
-    { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit })[3 + index.val]'(by
+    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions }).set 4
+    { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions })[3 + index.val]'(by
       rw [List.length_set, List.length_set, base_tables_length]; omega) = _
   fin_cases index <;> dsimp only
   · rw [List.getElem_set_ne (by decide : 4 ≠ 3), List.getElem_set_self]
@@ -296,16 +296,16 @@ theorem baseWitness_channelGuarantees
     (channel : RawChannel (ZMod p))
     (registers : channel ≠ (FinalMemoryValue.channel false).toRaw)
     (ram : channel ≠ (FinalMemoryValue.channel true).toRaw)
-    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel) :
-    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees (baseWitness witness).data channel :=
+    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees channel) :
+    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees channel :=
   FinalReceiptEnsemble.project_channelGuarantees (registerWitness witness) channel registers
     (FinalReceiptEnsemble.project_channelGuarantees (receiptWitness witness) channel ram guarantees)
 
 /-- Existing host proofs inherit Byte guarantees from the complete physical acceptance argument. -/
 theorem baseWitness_byte
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
-    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees (baseWitness witness).data byteChannel.toRaw :=
+    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
+    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees byteChannel.toRaw :=
   baseWitness_channelGuarantees witness byteChannel.toRaw
     (by simp [byteChannel, FinalMemoryValue.channel, Channel.toRaw])
     (by simp [byteChannel, FinalMemoryValue.channel, Channel.toRaw]) guarantees

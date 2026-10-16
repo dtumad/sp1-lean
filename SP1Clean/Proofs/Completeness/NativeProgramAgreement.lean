@@ -203,8 +203,7 @@ theorem nativeTrace_programProviderBound
     exact (List.mem_filter.mp member).1
   have accessMem : Interaction.toAccess raw ∈
       tableCleanAccesses
-        (programProviderTable (nativeTrace statement execution).witness)
-        (nativeTrace statement execution).witness.data :=
+        (programProviderTable (nativeTrace statement execution).witness) :=
     List.mem_map_of_mem rawMem
   rw [(nativeTrace statement execution).programProviderTable_witness] at accessMem
   rw [tableCleanAccesses_setData _ _

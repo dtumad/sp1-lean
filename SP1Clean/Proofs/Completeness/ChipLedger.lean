@@ -299,15 +299,15 @@ theorem memoryLedger_eq (trace : SupportedCoreTraceWitness p) :
       ((decodedInstructionRows (p := p) trace.witness.tables).flatMap fun decoded =>
         (decoded.interactionsWith trace.witness.data (Channels.memoryChannel (p := p))).map
           fun i => Interaction.toAccess i.raw) ++
-      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness) trace.witness.data
+      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness)
             (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness) trace.witness.data
+        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-          (((typedTableInteractionsWith (memoryBumpTable trace.witness) trace.witness.data
+          (((typedTableInteractionsWith (memoryBumpTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-            (((typedTableInteractionsWith (haltTable trace.witness) trace.witness.data
+            (((typedTableInteractionsWith (haltTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-              ((typedTableInteractionsWith (syscallInstrsTable trace.witness) trace.witness.data
+              ((typedTableInteractionsWith (syscallInstrsTable trace.witness)
                 (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw))))) := by
   rw [memoryLedger_eq_channelLedger, ← typedEnsembleInteractionsWith_raw,
     typedEnsembleMemoryInteractions_eq]

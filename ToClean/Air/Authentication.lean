@@ -58,25 +58,25 @@ theorem Component.Authenticates.mono {component : Component F} {channel : Channe
 
 /-- Authentication of actual physical sources may depend on facts established elsewhere in the
 ensemble, such as an earlier state or memory transition. It does not quantify over unused rows. -/
-def Table.Authenticates (table : Table F) (data : ProverData F) (channel : Channel F Record)
+def Table.Authenticates (table : Table F) (channel : Channel F Record)
     (property : Record F → Prop) : Prop :=
   ∀ physical ∈ table.table,
-    ∀ interaction ∈ table.component.operations.interactionValuesWith channel.toRaw (Environment.fromArray physical data),
+    ∀ interaction ∈ table.component.operations.interactionValuesWith channel.toRaw (table.environment physical),
       interaction.mult ≠ 0 → interaction.mult ≠ -1 →
         ∃ record, interaction.msg = (toElements record).toArray ∧ property record
 
 /-- Unconditional component-local source proofs authenticate every constrained row of a table. -/
-theorem Table.Authenticates.of_component (table : Table F) (data : ProverData F) (channel : Channel F Record)
+theorem Table.Authenticates.of_component (table : Table F) (channel : Channel F Record)
     (property : Record F → Prop) (source : table.component.Authenticates channel property)
-    (constraints : table.Constraints data) : table.Authenticates data channel property :=
-  fun physical member => source (Environment.fromArray physical data) (constraints physical member)
+    (constraints : table.Constraints) : table.Authenticates channel property :=
+  fun physical member => source (table.environment physical) (constraints physical member)
 
 /-- A complete physical ledger transports source meaning to each unit consumer. -/
-theorem authenticated_pull_of_tables (tables : List (Table F)) (data : ProverData F)
+theorem authenticated_pull_of_tables (tables : List (Table F))
     (channel : Channel F Record) (property : Record F → Prop)
-    (sources : ∀ table ∈ tables, table.Authenticates data channel property)
-    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith data channel.toRaw))) (record : Record F)
-    (member : channel.pulledValue record ∈ tables.flatMap (·.interactionsWith data channel.toRaw)) : property record := by
+    (sources : ∀ table ∈ tables, table.Authenticates channel property)
+    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith channel.toRaw))) (record : Record F)
+    (member : channel.pulledValue record ∈ tables.flatMap (·.interactionsWith channel.toRaw)) : property record := by
   obtain ⟨provider, providerMem, samePayload, nonzero, notPull⟩ :=
     exists_push_of_pull _ balanced (channel.pulledValue record) member rfl
   obtain ⟨table, tableMem, providerMem⟩ := List.mem_flatMap.mp providerMem
@@ -106,8 +106,8 @@ theorem EnsembleWitness.authenticated_pull (witness : EnsembleWitness assembly)
     rcases EnsembleWitness.mem_interactionsWith.mp providerMem with emitted | ⟨table, tableMem, emitted⟩
     · exact verifier provider emitted nonzero notPull
     · obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp emitted
-      exact Table.Authenticates.of_component table witness.data channel property
-        (sources _ (EnsembleWitness.mem_component_of_mem tableMem)) (constraints table tableMem)
+      exact Table.Authenticates.of_component table channel property
+        (sources _ (EnsembleWitness.component_mem_tables_of_mem tableMem)) (constraints table tableMem)
         physical physicalMem provider emitted nonzero notPull
   obtain ⟨actual, payload, valid⟩ := authenticated
   have equal := congrArg (fromElements (M := Record))
@@ -138,7 +138,7 @@ theorem EnsembleWitness.channelGuarantees_of_authenticated_pulls (witness : Ense
     (authenticated : ∀ record, channel.pulledValue record ∈ witness.interactionsWith channel.toRaw →
       channel.Guarantees record witness.data) :
     assembly.VerifierChannelGuarantees witness.publicInput witness.data channel.toRaw ∧
-      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel.toRaw := by
+      ∀ table ∈ witness.tables, table.ChannelGuarantees channel.toRaw := by
   have guarantees : ∀ interaction ∈ witness.interactionsWith channel.toRaw,
       interaction.Guarantees witness.data := by
     intro interaction emitted
@@ -151,8 +151,9 @@ theorem EnsembleWitness.channelGuarantees_of_authenticated_pulls (witness : Ense
     intro interaction emitted
     exact guarantees interaction (EnsembleWitness.mem_interactionsWith.mpr (Or.inl emitted))
   · intro table member
-    rw [table.channelGuarantees_iff_forall witness.data channel.toRaw]
+    rw [table.channelGuarantees_iff_forall channel.toRaw]
     intro interaction emitted
+    rw [witness.same_data table member]
     exact guarantees interaction
       (EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, member, emitted⟩))
 

@@ -18,18 +18,23 @@ theorem seeds_present : (seeds? target header consumerSeeds).isSome = true := by
 /-- Exact successful provider construction, without a fallback witness. -/
 def activeSeeds : List Seed := (seeds? target header consumerSeeds).get seeds_present
 
+/-- The actual finite inventory fits Clean's physical row-count type. -/
+theorem activeSeeds_bounded : activeSeeds.length ≤ UInt64.size := by native_decide
+
 /-- The actual witness on `HostFinalMemory.ensemble`, retaining its complete original registry. -/
-def activeWitness : EnsembleWitness (assembly target) := witness target header activeSeeds
+def activeWitness : EnsembleWitness (assembly target) := witness target header activeSeeds activeSeeds_bounded
 
 /-- All 93 tables remain installed, including empty instruction and host components. -/
-theorem activeWitness_length : activeWitness.tables.length = 93 := builtTables_length target activeSeeds
+theorem activeWitness_length : activeWitness.tables.length = 93 := by
+  simpa only [activeWitness, witness, EnsembleWitness.ofTables_tables,
+    withDerivedData, List.length_map] using builtTables_length target activeSeeds activeSeeds_bounded
 
 /-- Concrete execution of the generic authenticated checker accepts all rows and channels. -/
-theorem active_checked : checkPhysical target header activeSeeds = true := by native_decide
+theorem active_checked : checkPhysical target header activeSeeds activeSeeds_bounded = true := by native_decide
 
 /-- Raw Clean constraints and all channel balances hold on the original assembled witness. -/
 theorem accepted : activeWitness.Constraints ∧ activeWitness.BalancedChannels :=
-  (checkPhysical_iff target header activeSeeds).mp active_checked
+  (checkPhysical_iff target header activeSeeds activeSeeds_bounded).mp active_checked
 
 /-- The original assembled Clean relation has this concrete public statement. -/
 theorem statement : (assembly target).Statement header :=

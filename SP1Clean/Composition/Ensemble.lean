@@ -292,7 +292,7 @@ included, on every transported row. Each conjunct is one citation of that chip's
 proofs and nothing new.
 -/
 theorem transportedFor_constraints (valid : rows.Valid) (id : InstructionChipId) :
-    (rows.transportedFor data id).Constraints data := by
+    (rows.transportedFor data id).Constraints := by
   cases id with
   | add => exact transportTable_constraints addChip_faithful _ data (valid.forId .add)
   | addi => exact transportTable_constraints addiChip_faithful _ data (valid.forId .addi)
@@ -324,7 +324,7 @@ theorem transportedFor_constraints (valid : rows.Valid) (id : InstructionChipId)
   | aluX0 => exact transportTable_constraints aluX0Chip_faithful _ data (valid.forId .aluX0)
 
 theorem transported_constraints (valid : rows.Valid) :
-    ∀ table ∈ transported rows data, table.Constraints data := by
+    ∀ table ∈ transported rows data, table.Constraints := by
   intro table tableMem
   rw [transported] at tableMem
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp tableMem

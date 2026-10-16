@@ -26,7 +26,7 @@ def CircuitMemorySelectorGated {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
   ∀ data physical,
-    let component : Component (ZMod p) := { circuit := circuit }
+    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
     let env := Environment.fromArray physical data
     component.operations.ConstraintsHold env →
       ∀ interaction ∈ component.operations.interactionsWith memoryChannel.toRaw,
@@ -342,7 +342,7 @@ theorem circuitMemorySelectorGated_of_main {Input Output : TypeMap}
   intro data physical
   dsimp only
   intro constraints interaction interactionMem
-  let component : Component (ZMod p) := { circuit := circuit }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
   let env := Environment.fromArray physical data
   let input : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -351,7 +351,7 @@ theorem circuitMemorySelectorGated_of_main {Input Output : TypeMap}
   have interactionMem' : interaction ∈
       ((circuit.main input).operations offset).interactionsWith memoryChannel.toRaw := by
     simpa only [component, Component.interactionsWith_eq,
-      Component.rowOperations_mk] using interactionMem
+      Component.rowOperations] using interactionMem
   have gated := shape input offset env mainConstraints interaction interactionMem'
   have inputEq : Eval.eval env input = component.rowInput env :=
     eval_varFromOffset_valueFromOffset Input 0 env

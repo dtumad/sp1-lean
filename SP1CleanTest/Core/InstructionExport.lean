@@ -41,34 +41,31 @@ open ComponentExport
 /-- All supported instruction families in release order. DivRem alone selects DIVU on padding;
 the other components generate their padding witnesses from zero inputs. -/
 def rustExports : List (String × Except String String) := [
-  ("add_instruction.rs", exportRust "AddInstruction" AddChip.circuit),
-  ("addi_instruction.rs", exportRust "AddiInstruction" AddiChip.circuit),
-  ("addw_instruction.rs", exportRust "AddwInstruction" AddwChip.circuit),
-  ("sub_instruction.rs", exportRust "SubInstruction" SubChip.circuit),
-  ("subw_instruction.rs", exportRust "SubwInstruction" SubwChip.circuit),
-  ("bitwise_instruction.rs", exportRust "BitwiseInstruction" BitwiseChip.circuit),
-  ("lt_instruction.rs", exportRust "LtInstruction" LtChip.circuit),
-  ("shift_left_instruction.rs", exportRust "ShiftLeftInstruction" ShiftLeftChip.circuit),
-  ("shift_right_instruction.rs", exportRust "ShiftRightInstruction" ShiftRightChip.circuit),
-  ("jal_instruction.rs", exportRust "JalInstruction" JalChip.circuit),
-  ("jalr_instruction.rs", exportRust "JalrInstruction" JalrChip.circuit),
-  ("branch_instruction.rs", exportRust "BranchInstruction" BranchChip.circuit),
-  ("u_type_instruction.rs", exportRust "UTypeInstruction" UTypeChip.circuit),
-  ("load_byte_instruction.rs", exportRust "LoadByteInstruction" LoadByteChip.circuit),
-  ("load_half_instruction.rs", exportRust "LoadHalfInstruction" LoadHalfChip.circuit),
-  ("load_word_instruction.rs", exportRust "LoadWordInstruction" LoadWordChip.circuit),
-  ("load_double_instruction.rs", exportRust "LoadDoubleInstruction" LoadDoubleChip.circuit),
-  ("load_x0_instruction.rs", exportRust "LoadX0Instruction" LoadX0Chip.circuit),
-  ("store_byte_instruction.rs", exportRust "StoreByteInstruction" StoreByteChip.circuit),
-  ("store_half_instruction.rs", exportRust "StoreHalfInstruction" StoreHalfChip.circuit),
-  ("store_word_instruction.rs", exportRust "StoreWordInstruction" StoreWordChip.circuit),
-  ("store_double_instruction.rs", exportRust "StoreDoubleInstruction" StoreDoubleChip.circuit),
-  ("mul_instruction.rs", exportRust "MulInstruction" MulChip.circuit),
-  ("div_rem_instruction.rs", Extraction.Rust.ensembleToRust "DivRemInstruction"
-    (ensemble { circuit := DivRemChip.circuit })
-    ({ config DivRemChip.Inputs with
-      padding := [{ input := (toElements (TraceGen.divRemPaddingInputs (p := SP1Prime))).toArray }] } :
-      WitnessGeneration.Config Fp DivRemChip.Inputs)),
-  ("alu_x0_instruction.rs", exportRust "AluX0Instruction" AluX0Chip.circuit)]
+  ("add_instruction.rs", exportRust AddChip.circuit),
+  ("addi_instruction.rs", exportRust AddiChip.circuit),
+  ("addw_instruction.rs", exportRust AddwChip.circuit),
+  ("sub_instruction.rs", exportRust SubChip.circuit),
+  ("subw_instruction.rs", exportRust SubwChip.circuit),
+  ("bitwise_instruction.rs", exportRust BitwiseChip.circuit),
+  ("lt_instruction.rs", exportRust LtChip.circuit),
+  ("shift_left_instruction.rs", exportRust ShiftLeftChip.circuit),
+  ("shift_right_instruction.rs", exportRust ShiftRightChip.circuit),
+  ("jal_instruction.rs", exportRust JalChip.circuit),
+  ("jalr_instruction.rs", exportRust JalrChip.circuit),
+  ("branch_instruction.rs", exportRust BranchChip.circuit),
+  ("u_type_instruction.rs", exportRust UTypeChip.circuit),
+  ("load_byte_instruction.rs", exportRust LoadByteChip.circuit),
+  ("load_half_instruction.rs", exportRust LoadHalfChip.circuit),
+  ("load_word_instruction.rs", exportRust LoadWordChip.circuit),
+  ("load_double_instruction.rs", exportRust LoadDoubleChip.circuit),
+  ("load_x0_instruction.rs", exportRust LoadX0Chip.circuit),
+  ("store_byte_instruction.rs", exportRust StoreByteChip.circuit),
+  ("store_half_instruction.rs", exportRust StoreHalfChip.circuit),
+  ("store_word_instruction.rs", exportRust StoreWordChip.circuit),
+  ("store_double_instruction.rs", exportRust StoreDoubleChip.circuit),
+  ("mul_instruction.rs", exportRust MulChip.circuit),
+  ("div_rem_instruction.rs", exportRust DivRemChip.circuit
+    (toElements (TraceGen.divRemPaddingInputs (p := SP1Prime))).toArray),
+  ("alu_x0_instruction.rs", exportRust AluX0Chip.circuit)]
 
 end SP1CleanTest.Core.InstructionExport

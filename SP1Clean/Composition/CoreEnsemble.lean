@@ -192,9 +192,9 @@ def exactNativeSkeletonLedger {Digest : Type}
     (executionWitness memoryBoundaryWitness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) : LookupAccessList :=
   exactNativeVerifierLedger statement data ++
-    tablesCleanAccesses ((extractedInstructionRows executionWitness).transported data) data ++
-    tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) data ++
-    tablesCleanAccesses (extractedBumpTables executionWitness data) data
+    tablesCleanAccesses ((extractedInstructionRows executionWitness).transported data) ++
+    tablesCleanAccesses (extractedMemoryBoundaryTables memoryBoundaryWitness data hint) ++
+    tablesCleanAccesses (extractedBumpTables executionWitness data)
 
 /-! ## 55-table assembly -/
 
@@ -236,7 +236,7 @@ theorem exactNativeTables_constraints {Digest : Type}
       executionWitness memoryBoundaryWitness inventory
       (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)) :
     ∀ table ∈ exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint,
-      table.Constraints data := by
+      table.Constraints := by
   intro table tableMem
   simp only [exactNativeTables, List.mem_append] at tableMem
   rcases tableMem with tableMem | tableMem
@@ -305,7 +305,7 @@ theorem exactNativeEnsembleWitness_constraints {Digest : Type}
       ).Constraints := by
   intro table member row rowMem
   apply Soundness.sp1Table_constraints_setData table.component
-    (EnsembleWitness.mem_component_of_mem (witness :=
+    (EnsembleWitness.component_mem_tables_of_mem (witness :=
       exactNativeEnsembleWitness statement executionWitness memoryBoundaryWitness inventory data hint) member)
     (data := data)
   exact exactNativeTables_constraints statement executionWitness memoryBoundaryWitness
@@ -353,8 +353,7 @@ theorem exactNativeAllCleanAccesses_perm {Digest : Type}
   rw [exactNativeAllCleanAccesses, EnsembleWitness.interactions, List.map_append,
     List.map_flatMap]
   change (exactNativeVerifierLedger statement witness.data ++
-    tablesCleanAccesses (exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint)
-      witness.data).Perm _
+    tablesCleanAccesses (exactNativeTables statement executionWitness memoryBoundaryWitness inventory data hint)).Perm _
   rw [exactNativeVerifierLedger_setData statement witness.data data,
     tablesCleanAccesses_setData _ witness.data data]
   rw [exactNativeTables, tablesCleanAccesses_append,
@@ -364,12 +363,12 @@ theorem exactNativeAllCleanAccesses_perm {Digest : Type}
   simp only [tablesCleanAccesses]
   let consumerHead : LookupAccessList :=
     exactNativeVerifierLedger statement data ++
-    ((extractedInstructionRows executionWitness).transported data).flatMap (fun table => tableCleanAccesses table data)
+    ((extractedInstructionRows executionWitness).transported data).flatMap (fun table => tableCleanAccesses table)
   let providerLedger : LookupAccessList := recountedPreprocessedProviderAccesses inventory
     (exactNativeSkeletonLedger statement executionWitness memoryBoundaryWitness data hint)
   let systemTail : LookupAccessList :=
-    (extractedMemoryBoundaryTables memoryBoundaryWitness data hint).flatMap (fun table => tableCleanAccesses table data) ++
-      (extractedBumpTables executionWitness data).flatMap (fun table => tableCleanAccesses table data)
+    (extractedMemoryBoundaryTables memoryBoundaryWitness data hint).flatMap (fun table => tableCleanAccesses table) ++
+      (extractedBumpTables executionWitness data).flatMap (fun table => tableCleanAccesses table)
   refine List.Perm.trans (l₂ := consumerHead ++ (providerLedger ++ systemTail))
     (List.Perm.of_eq ?_) ?_
   · simp only [consumerHead, providerLedger, systemTail, List.append_assoc]

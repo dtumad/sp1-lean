@@ -314,8 +314,8 @@ def storeHalfChipRowCodec :
     rowOutput_eq := by
       change ProvableType.eval _ ((StoreHalfChip.main _).output _) = _
       rw [StoreHalfChip.elaborated.output_eq]
-      rw [Air.Flat.Component.rowInputVar_mk,
-        Air.Flat.Component.rowOffset_mk]
+      rw [Air.Flat.Component.rowInputVar,
+        Air.Flat.Component.rowOffset]
       exact (evalStoreHalfDirectOutput (p := p)
         (storeHalfChipInput cols) (storeHalfChipLocals cols) data).trans
           (storeHalfChipColumnsOfInput_roundtrip cols) }
@@ -1076,7 +1076,7 @@ theorem storeHalfChipConstraintsConstructive
       (storeHalfChipOracle.deconfigure rustCols) data
     List.Forall (· = 0)
         (storeHalfChipOracle.assertZeros rustCols) ↔
-      ({ circuit := StoreHalfChip.circuit (p := p) } :
+      ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
@@ -1084,31 +1084,31 @@ theorem storeHalfChipConstraintsConstructive
   let assignment := storeHalfChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput StoreHalfChip.main assignment.environment
-        ({ circuit := StoreHalfChip.circuit (p := p) } :
+        ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        ({ circuit := StoreHalfChip.circuit (p := p) } :
+        ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [StoreHalfChip.circuit_main_eq] at h
     exact h
   have hfaithful := storeHalfChipConstraintsFaithful
     (p := p) assignment.environment
-    ({ circuit := StoreHalfChip.circuit (p := p) } :
+    ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    ({ circuit := StoreHalfChip.circuit (p := p) } :
+    ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0)
           (storeHalfChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            ({ circuit := StoreHalfChip.circuit (p := p) } :
+            ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols,
       ChipOracle.nativeAssertZeros_deconfigure,
-      Air.Flat.Component.rowOperations_mk,
-      Air.Flat.Component.rowInputVar_mk,
-      Air.Flat.Component.rowOffset_mk,
+      Air.Flat.Component.rowOperations,
+      Air.Flat.Component.rowInputVar,
+      Air.Flat.Component.rowOffset,
       StoreHalfChip.circuit_main_eq] using hfaithful
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
@@ -1656,7 +1656,7 @@ theorem storeHalfChipInteractionsConstructive
       (storeHalfChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        ({ circuit := StoreHalfChip.circuit (p := p) } :
+        ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).operations)
       (storeHalfChipOracle.rustAccesses rustCols) := by
   dsimp only
@@ -1664,26 +1664,26 @@ theorem storeHalfChipInteractionsConstructive
   let assignment := storeHalfChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput StoreHalfChip.main assignment.environment
-        ({ circuit := StoreHalfChip.circuit (p := p) } :
+        ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        ({ circuit := StoreHalfChip.circuit (p := p) } :
+        ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [StoreHalfChip.circuit_main_eq] at h
     exact h
   have hfaithful := storeHalfChipInteractionsFaithful
     (p := p) assignment.environment
-    ({ circuit := StoreHalfChip.circuit (p := p) } :
+    ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    ({ circuit := StoreHalfChip.circuit (p := p) } :
+    ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (StoreHalfChip.circuit (p := p))
     assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,
-    Air.Flat.Component.rowOperations_mk,
-    Air.Flat.Component.rowInputVar_mk,
-    Air.Flat.Component.rowOffset_mk,
+    Air.Flat.Component.rowOperations,
+    Air.Flat.Component.rowInputVar,
+    Air.Flat.Component.rowOffset,
     StoreHalfChip.circuit_main_eq] using hfaithful
 
 theorem storeHalfChip_faithful :

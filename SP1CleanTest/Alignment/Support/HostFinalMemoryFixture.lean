@@ -45,7 +45,8 @@ def rows : List Row :=
     registerCheck 3 11 23 0, ramCheck 0]
 
 /-- Retain all 93 physical tables, including every fixed membership row, in their declared order. -/
-def builtTables (target : MemorySnapshot) (rows : List Row) : List (Table Fp) :=
+def builtTables (target : MemorySnapshot) (rows : List Row)
+    (bounded : rows.length ≤ UInt64.size) : List (Table Fp) :=
   let components := (assembly target).tables
   let inputs := fun index => (rows.filter (fun row => row.1 == index)).map (·.2)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
@@ -53,23 +54,27 @@ def builtTables (target : MemorySnapshot) (rows : List Row) : List (Table Fp) :=
     "sp1.native.initial_memory", "sp1.native.target_memory"]
   let ledger := StaticMembership.demandLedger components inputs channels (fun _ _ => #[]) (ProverHint.empty Fp)
   StaticMembership.buildTables components inputs ledger (fun _ _ => #[]) (ProverHint.empty Fp)
+    (fun _ => (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded))
 
 /-- Only committed physical rows determine the verifier's data environment. -/
-def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
+def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row)
+    (bounded : rows.length ≤ UInt64.size) :
     EnsembleWitness (assembly target) :=
-  EnsembleWitness.ofTables _ (builtTables target rows) input (by
+  EnsembleWitness.ofTables _ (builtTables target rows bounded) input (by
     unfold builtTables
     exact StaticMembership.buildTables_components (F := Fp) ..)
 
 def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) : Bool :=
+  if bounded : rows.length ≤ UInt64.size then
   let installed := assembly target
   let registered := installed.channels.map RawChannel.name
-  let consumers := witness target input rows
+  let consumers := witness target input rows bounded
   let providers := consumers.interactions.filterMap fun interaction =>
     SP1CleanTest.Core.LocalCore.Fixture.byteProvider
       (interaction.channel.name, interaction.msg.toList, interaction.mult)
   let completeRows := rows ++ providers
-  let built := witness target input completeRows
+  if completeBounded : completeRows.length ≤ UInt64.size then
+  let built := witness target input completeRows completeBounded
   let ledger := built.interactions.map fun interaction =>
     (interaction.channel.name, interaction.msg.toList, interaction.mult)
   let valid := completeRows.all fun row =>
@@ -81,6 +86,8 @@ def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
     ledger.all fun (name, message, _) =>
       registered.contains name &&
         ((ledger.filter fun entry => entry.1 == name && entry.2.1 == message).map (·.2.2)).sum == 0
+  else false
+  else false
 
 def identityHeader : SP1PublicIO Fp :=
   { header with final_clk_0_16 := 9, final_pc0 := 0 }

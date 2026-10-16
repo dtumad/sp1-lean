@@ -47,7 +47,7 @@ private theorem verifier_exit (witness : EnsembleWitness (ensemble (p := p) imag
   exact preserved.trans raw
 
 private theorem prefix_silent (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    (witness.tables.take 57).flatMap (·.interactionsWith witness.data exitChannel.toRaw) = [] := by
+    (witness.tables.take 57).flatMap (·.interactionsWith exitChannel.toRaw) = [] := by
   have checked : ((NativeCore.afterInitialTables (p := p) image).take 54).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (exitChannel (p := p)).toRaw.name) = true := rfl
@@ -90,7 +90,7 @@ theorem exit_interactions (witness : EnsembleWitness (ensemble (p := p) image so
         (exitProducers witness).map (fun entry => exitChannel.pushedIfValue entry.1 entry.2) := by
   have length : witness.tables.length = 61 := by
     rw [← witness.same_length]; exact tables_length image source
-  have ramSilent : (ramMembershipTable witness).interactionsWith witness.data exitChannel.toRaw = [] := by
+  have ramSilent : (ramMembershipTable witness).interactionsWith exitChannel.toRaw = [] := by
     apply (ramMembershipTable witness).interactionsWith_nil_of_channel_not_mem
     exact ramMembershipTable_silent witness exitChannel.toRaw (by simp [exitChannel, Channel.toRaw])
   have tail : witness.tables.drop 57 =
@@ -100,7 +100,7 @@ theorem exit_interactions (witness : EnsembleWitness (ensemble (p := p) image so
       List.drop_eq_getElem_cons (by omega),
       List.drop_eq_nil_of_le (by omega)]
     rfl
-  have registerSilent : (registerMembershipTable witness).interactionsWith witness.data exitChannel.toRaw = [] := by
+  have registerSilent : (registerMembershipTable witness).interactionsWith exitChannel.toRaw = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [registerMembershipTable_component]
     change exitChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
@@ -112,8 +112,8 @@ theorem exit_interactions (witness : EnsembleWitness (ensemble (p := p) image so
   simp only [typedTableInteractionsWith_raw, List.map_flatMap, List.map_cons,
     List.map_nil, TypedInteraction.pushedIfValue_raw] at halt syscall
   rw [EnsembleWitness.interactionsWith, verifier_exit]
-  change _ ++ witness.tables.flatMap (·.interactionsWith witness.data exitChannel.toRaw) = _
-  have split := congrArg (List.flatMap (fun table : Table (ZMod p) => table.interactionsWith witness.data exitChannel.toRaw))
+  change _ ++ witness.tables.flatMap (·.interactionsWith exitChannel.toRaw) = _
+  have split := congrArg (List.flatMap (fun table : Table (ZMod p) => table.interactionsWith exitChannel.toRaw))
     (List.take_append_drop 57 witness.tables)
   rw [List.flatMap_append, prefix_silent, List.nil_append, tail] at split
   rw [← split]

@@ -23,7 +23,7 @@ variable {F : Type} [FiniteField F] {Input Output : TypeMap}
 variable [ProvableType Input] [ProvableType Output]
 
 theorem rowOutput_mk (circuit : GeneralFormalCircuit F Input Output) (env : Environment F) :
-    ({ circuit } : Component F).rowOutput env =
+    ({ circuit, Assumptions := circuit.Assumptions } : Component F).rowOutput env =
       eval env (circuit.output (varFromOffset Input 0) (size Input)) := rfl
 
 /-- Equal committed cells decode to the same output, independently of the data environment. -/

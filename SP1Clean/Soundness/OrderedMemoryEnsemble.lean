@@ -49,7 +49,7 @@ def providerView {Payload : TypeMap} [ProvableType Payload] (name : String) (dis
     (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record)
     (privateChannel : (OrderedBoundary.channel name).toRaw ∉ provider.channels) :
     TransitionView (OrderedBoundary.channel (p := p) name) where
-  component := { circuit := OrderedMemoryProvider.circuit name recordSpec provider binds canonical }
+  component := { circuit := OrderedMemoryProvider.circuit name recordSpec provider binds canonical, Assumptions := (OrderedMemoryProvider.circuit name recordSpec provider binds canonical).Assumptions }
   edge env :=
     let input := valueFromOffset (OrderedMemoryProvider.Inputs Payload) 0 env
     (input.link.previous, input.link.current)
@@ -71,7 +71,7 @@ private theorem eval_terminal_previous (env : Environment (ZMod p))
 
 def terminalView (name : String) (distinct : name ≠ "SP1Byte") :
     TransitionView (OrderedBoundary.channel (p := p) name) where
-  component := { circuit := OrderedBoundaryEnd.circuit name endKey }
+  component := { circuit := OrderedBoundaryEnd.circuit name endKey, Assumptions := (OrderedBoundaryEnd.circuit name endKey).Assumptions }
   edge env := ((valueFromOffset OrderedBoundary.TerminalInputs 0 env).previous, endKey)
   interactions := by
     intro env
@@ -125,7 +125,7 @@ variable {channels : List (RawChannel (ZMod p))}
 variable {names : ((inventory.views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
 
 def indexedRows (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) :=
-  TransitionView.readIndexedRows inventory.tableIds (witness.tables.take inventory.views.length) witness.data
+  TransitionView.readIndexedRows inventory.tableIds (witness.tables.take inventory.views.length)
 
 def records (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) : List (MemoryMsg (ZMod p)) :=
   (inventory.indexedRows witness).filterMap fun row => inventory.recordFor row.1 row.2
@@ -137,26 +137,26 @@ theorem memory_interactions_eq (witness : EnsembleWitness (inventory.ensemble au
     (effect : MemoryMsg (ZMod p) → Interaction (ZMod p))
     (realizes : ∀ id env, (inventory.viewFor id).component.operations.interactionValuesWith memoryChannel.toRaw env =
       ((inventory.recordFor id env).toList).map effect) :
-    (witness.tables.take inventory.views.length).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
+    (witness.tables.take inventory.views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
       (inventory.records witness).map effect := by
   have aligned := OrderedBoundaryEnsemble.tables_aligned witness
   change List.Forall₂ _ (inventory.tableIds.map inventory.viewFor) _ at aligned
   rw [List.forall₂_map_left_iff] at aligned
   rw [TransitionView.readIndexedRows_interactions inventory.tableIds
-    (fun id => (inventory.viewFor id).component) _ witness.data _ aligned]
+    (fun id => (inventory.viewFor id).component) _ _ aligned]
   simp only [realizes, records, indexedRows, List.filterMap_eq_flatMap_toList, List.map_flatMap]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem indexedRows_spec_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
-    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec witness.data) :
+    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
     ∀ row ∈ inventory.indexedRows witness, (inventory.viewFor row.1).component.Spec row.2 := by
-  apply TransitionView.readIndexedRows_spec inventory.tableIds inventory.viewFor _ witness.data
+  apply TransitionView.readIndexedRows_spec inventory.tableIds inventory.viewFor _
   · exact OrderedBoundaryEnsemble.tables_aligned witness
   · exact valid
 
 omit [Fact (2 ^ 17 < p)] in
 theorem records_valid_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
-    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec witness.data) :
+    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
     ∀ record ∈ inventory.records witness, recordSpec record := by
   intro record member
   obtain ⟨row, member, found⟩ := List.mem_filterMap.mp member
@@ -168,14 +168,14 @@ omit [Fact (2 ^ 17 < p)] in
 theorem records_locations_nodup_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
-    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec witness.data)
+    (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec)
     (balanced : witness.BalancedChannel (OrderedBoundary.channel name).toRaw) :
     ((inventory.records witness).map MemoryMsg.locOf).Nodup := by
   have unique := OrderedBoundaryEnsemble.keys_nodup_of_tables witness privateChannel (by
     intro view member env spec
     obtain ⟨id, _, rfl⟩ := List.mem_map.mp member
     exact inventory.strict id env spec) valid balanced
-  have indexed := TransitionView.readIndexedRows_keys_nodup inventory.tableIds inventory.viewFor _ witness.data Word.toNat
+  have indexed := TransitionView.readIndexedRows_keys_nodup inventory.tableIds inventory.viewFor _ Word.toNat
     inventory.views rfl unique
   have decoded := List.nodup_filterMap_of_nodup_map (inventory.indexedRows witness)
     (fun row => Word.toNat ((inventory.viewFor row.1).edge row.2).2)

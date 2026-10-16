@@ -44,6 +44,7 @@ private theorem haltRows_advancing {image : ProgramImage}
         StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1 + (ExecutionRow.halt row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact halt_advancing _ (haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
     ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 2)).1 physicalMem real)
 
 private theorem syscallRows_advancing {image : ProgramImage}
@@ -55,9 +56,11 @@ private theorem syscallRows_advancing {image : ProgramImage}
         StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1 + (ExecutionRow.syscall row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact syscall_advancing _ (syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
     ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)).1 physicalMem real)
     (syscall_halt_binary _ witness.data (systemTable_component witness 3) (systemTable_constraints witness constraints 3) physicalMem)
     real (syscallInstrsRow_pcArm_spec_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
       (systemTable_constraints witness constraints 3) physicalMem)
 
 /-- Clock progress and the PC preservation/range-check dichotomy come from each physical row. -/
@@ -81,6 +84,7 @@ private theorem stateBumps_spec {image : ProgramImage}
     StateBumpChip.Spec row ∧ row.is_real = 1 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact ⟨stateBumpTable_spec_of_component _ witness.data (systemTable_component witness 1)
+    (witness.same_data _ (systemTable_mem witness 1))
     (systemTable_constraints witness constraints 1)
     ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 1)).1 _ physicalMem, real⟩
 

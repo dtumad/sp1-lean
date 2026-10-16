@@ -34,7 +34,7 @@ private def runBranchEnsembleExample : IO Unit := do
     16777216 * header.final_clk_24_32.val + 4294967296 * header.final_clk_32_48.val
   let event := SP1Clean.Audit.BranchCompilerRoundTrip.event
   let tableStats := activeWitness.tables.zipIdx.map fun (table, position) => rowStats position table
-  let physicalLedger := activeWitness.tables.flatMap (·.interactions activeWitness.data)
+  let physicalLedger := activeWitness.tables.flatMap (·.interactions)
   let verifierLedger := (assembly target).verifierOperations.interactionValues
     (Environment.fromInput header activeWitness.data)
   let report := Json.mkObj [

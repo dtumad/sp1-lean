@@ -122,6 +122,10 @@ def handlerTable (witness : EnsembleWitness (ensemble image source others resour
 def wordTables (witness : EnsembleWitness (ensemble image source others resources channels names)) :=
   (HostLocalHandoff.resourceTables witness).take 2
 
+theorem handlerTable_mem (witness : EnsembleWitness (ensemble image source others resources channels names)) :
+    handlerTable witness ∈ witness.tables :=
+  HostLocalHandoff.receiverTable_mem witness _
+
 theorem handlerTable_component (witness : EnsembleWitness (ensemble image source others resources channels names)) :
     (handlerTable witness).component = HostHintReadCoverage.handler := by
   rw [handlerTable, HostLocalHandoff.receiverTable_component]
@@ -179,13 +183,13 @@ private theorem wrapper_cursor_silent : HintReadWordChip.stateChannel.toRaw ∉
 theorem cursor_interactions (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) :
     witness.interactionsWith HintReadWordChip.stateChannel.toRaw =
-      (handlerTable witness).interactionsWith witness.data HintReadWordChip.stateChannel.toRaw ++
-        (wordTables witness).flatMap (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw) := by
+      (handlerTable witness).interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        (wordTables witness).flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw) := by
   rw [HostLocalCore.interactions_split_new witness _ (by simp [HostLocalCore.baseEnsemble]) cursor_fresh (by
     intro same
     have names := congrArg RawChannel.name same
     simp [HintReadWordChip.stateChannel, WritePermissionProvider.channel, Channel.toRaw] at names)]
-  have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith witness.data HintReadWordChip.stateChannel.toRaw = [] := by
+  have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith HintReadWordChip.stateChannel.toRaw = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [HostLocalCore.hostCallTable_component]
     exact wrapper_cursor_silent
@@ -198,7 +202,7 @@ theorem cursor_interactions (witness : EnsembleWitness (ensemble image source ot
     change (receiver :: others).length = (HostLocalHandoff.receiverTables witness).length at bound
     exact (List.cons_getElem_drop_succ (l := HostLocalHandoff.receiverTables witness) (n := 0) (h := by simp only [List.length_cons] at bound; omega)).symm
   have receiverSilent : ((HostLocalHandoff.receiverTables witness).drop 1).flatMap
-      (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw) = [] := by
+      (·.interactionsWith HintReadWordChip.stateChannel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply table.interactionsWith_nil_of_channel_not_mem
@@ -208,7 +212,7 @@ theorem cursor_interactions (witness : EnsembleWitness (ensemble image source ot
     simpa only [List.map_drop, HostLocalHandoff.receiverTables_components, List.map_cons,
       List.drop_succ_cons, List.drop_zero] using mapped
   have resourceSilent : ((HostLocalHandoff.resourceTables witness).drop 2).flatMap
-      (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw) = [] := by
+      (·.interactionsWith HintReadWordChip.stateChannel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply table.interactionsWith_nil_of_channel_not_mem
@@ -229,8 +233,8 @@ theorem cursor_balanced_of_balancedChannel (witness : EnsembleWitness (ensemble 
     (interface : ExtensionInterface others resources)
     (balanced : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw) :
     BalancedInteractions
-      ((handlerTable witness).interactionsWith witness.data HintReadWordChip.stateChannel.toRaw ++
-        (wordTables witness).flatMap (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw)) := by
+      ((handlerTable witness).interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        (wordTables witness).flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) := by
   rw [← cursor_interactions witness interface]
   exact balanced
 
@@ -238,8 +242,8 @@ theorem cursor_balanced_of_balancedChannel (witness : EnsembleWitness (ensemble 
 theorem cursor_balanced (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (balanced : witness.BalancedChannels) :
     BalancedInteractions
-      ((handlerTable witness).interactionsWith witness.data HintReadWordChip.stateChannel.toRaw ++
-        (wordTables witness).flatMap (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw)) :=
+      ((handlerTable witness).interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        (wordTables witness).flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) :=
   cursor_balanced_of_balancedChannel witness interface
     (balanced _ (by simp [ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble]))
 
@@ -273,12 +277,16 @@ theorem balanced_for_of_channels (witness : EnsembleWitness (ensemble image sour
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
     BalancedInteractions
       (HostHintReadCoverage.handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data (wordTables_aligned witness)).flatMap
-          (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw)) :=
-  HostHintReadPartition.balanced_for (handlerTable witness) (handlerTable_component witness)
-    (wordTables witness) witness.data (wordTables_aligned witness) env member
-    (handler_clocks_nodup_of_channels witness interface constraints ordering calls)
-    (cursor_balanced_of_balancedChannel witness interface cursor)
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) (wordTables_aligned witness)).flatMap
+          (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) := by
+  have shared : (handlerTable witness).data = witness.data :=
+    witness.same_data _ (handlerTable_mem witness)
+  apply HostHintReadPartition.balanced_for (handlerTable witness) (handlerTable_component witness)
+    (wordTables witness) (wordTables_aligned witness) env
+  · simpa only [Table.environment, shared] using member
+  · simpa only [Table.environment, shared] using
+      handler_clocks_nodup_of_channels witness interface constraints ordering calls
+  · exact cursor_balanced_of_balancedChannel witness interface cursor
 
 /-- No supplied handler ledger, word-table alignment, uniqueness, or per-call balance is needed. -/
 theorem balanced_for (witness : EnsembleWitness (ensemble image source others resources channels names))
@@ -287,8 +295,8 @@ theorem balanced_for (witness : EnsembleWitness (ensemble image source others re
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
     BalancedInteractions
       (HostHintReadCoverage.handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data (wordTables_aligned witness)).flatMap
-          (·.interactionsWith witness.data HintReadWordChip.stateChannel.toRaw)) :=
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) (wordTables_aligned witness)).flatMap
+          (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) :=
   balanced_for_of_channels witness interface constraints
     (HostLocalCore.orderingChannels witness (auxiliaryInterface interface) constraints balanced)
     (balanced _ (List.mem_append_left _ (List.mem_cons_self ..)))
@@ -299,22 +307,25 @@ theorem consumer_has_handler_of_balancedChannel
     (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
+    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
     ∃ env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
-      HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous :=
-  HostHintReadPartition.consumer_has_handler (handlerTable witness) (handlerTable_component witness)
-    (wordTables witness) witness.data (wordTables_aligned witness) wordSpecs
-    (cursor_balanced_of_balancedChannel witness interface cursor) row member
+      HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous := by
+  have shared : (handlerTable witness).data = witness.data :=
+    witness.same_data _ (handlerTable_mem witness)
+  simpa only [Table.environment, shared] using
+    HostHintReadPartition.consumer_has_handler (handlerTable witness) (handlerTable_component witness)
+      (wordTables witness) (wordTables_aligned witness) wordSpecs
+      (cursor_balanced_of_balancedChannel witness interface cursor) row member
 
 /-- An installed consumer cannot belong to a call absent from the physical handler table.
 Authenticated word-step contracts suffice; prior Memory values and timestamps are separate. -/
 theorem consumer_has_handler (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (balanced : witness.BalancedChannels)
-    (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
+    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
     ∃ env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
       HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous :=
   consumer_has_handler_of_balancedChannel witness interface

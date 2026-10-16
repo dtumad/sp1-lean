@@ -68,21 +68,21 @@ private theorem unit_signs : signedVal (1 : ZMod p) = 1 ∧ signedVal (-1 : ZMod
     norm_num
 
 /-- Both physical word variants emit exactly one prior and one pushed complete record. -/
-theorem word_memory_messages (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem word_memory_messages (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) :
-    producedMessages (tables.flatMap (typedTableInteractionsWith · data memoryChannel)) =
-        (TransitionView.readIndexedRows HintReadCoverage.variants tables data).map (fun row => (touch row).2) ∧
-      consumedMessages (tables.flatMap (typedTableInteractionsWith · data memoryChannel)) =
-        (TransitionView.readIndexedRows HintReadCoverage.variants tables data).map (fun row => (touch row).1.1) := by
-  have ledger : tables.flatMap (typedTableInteractionsWith · data memoryChannel) =
-      (TransitionView.readIndexedRows HintReadCoverage.variants tables data).flatMap (fun row =>
+    producedMessages (tables.flatMap (typedTableInteractionsWith · memoryChannel)) =
+        (TransitionView.readIndexedRows HintReadCoverage.variants tables).map (fun row => (touch row).2) ∧
+      consumedMessages (tables.flatMap (typedTableInteractionsWith · memoryChannel)) =
+        (TransitionView.readIndexedRows HintReadCoverage.variants tables).map (fun row => (touch row).1.1) := by
+  have ledger : tables.flatMap (typedTableInteractionsWith · memoryChannel) =
+      (TransitionView.readIndexedRows HintReadCoverage.variants tables).flatMap (fun row =>
         [TypedInteraction.pulledIfValue memoryChannel 1 (touch row).1.1,
          TypedInteraction.pushedIfValue memoryChannel 1 (touch row).2]) := by
     apply List.map_injective_iff.mpr TypedInteraction.raw_injective
     simp only [List.map_flatMap, typedTableInteractionsWith_raw, List.map_cons, List.map_nil,
       TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw, touch]
-    exact HintReadWriteLedger.memory_ledger tables data aligned
+    exact HintReadWriteLedger.memory_ledger tables aligned
   rw [ledger, producedMessages_flatMap, consumedMessages_flatMap]
   simp [producedMessages, consumedMessages, unit_signs.1, unit_signs.2]
   exact ⟨List.flatMap_pure_eq_map _ _, List.flatMap_pure_eq_map _ _⟩
@@ -117,7 +117,7 @@ theorem wrapper_disabled
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (bytes : witness.BalancedChannel byteChannel.toRaw)
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data) :
+    (specs : ∀ table ∈ queueTables witness, table.Spec) :
     ∀ env ∈ (HostLocalCore.hostCallTable witness).table.map (Environment.fromArray · witness.data),
       (HostCallProjection.extraRead env).is_real = 0 := by
   have safe := (HostQueueCallProjection.calls_projection witness interface constraints bytes specs).1
@@ -126,7 +126,9 @@ theorem wrapper_disabled
   have checked : HostCallLedger.producer.operations.ConstraintsHold env := by
     obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
     have checked := constraints _ (HostLocalCore.hostCallTable_mem witness) physical present
-    rwa [HostLocalCore.hostCallTable_component] at checked
+    have shared : (HostLocalCore.hostCallTable witness).data = witness.data :=
+      witness.same_data _ (HostLocalCore.hostCallTable_mem witness)
+    rwa [Table.environment, shared, HostLocalCore.hostCallTable_component] at checked
   rcases HostCallLedger.binary_of_constraints env checked with inactive | active
   · simp only [HostCallProjection.extraRead, HostCallChip.Inputs.read, inactive, zero_mul]
   · apply extra_disabled (HostCallLedger.input env)
@@ -153,8 +155,8 @@ private theorem auxiliary_memory_words
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (silent : ∀ component ∈ (HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++ resources,
       memoryChannel.toRaw ∉ component.circuit.channels) :
-    HostLocalCore.auxiliaryMemory witness = (wordTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel) := by
-  have receivers : (HostLocalHandoff.receiverTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel) = [] := by
+    HostLocalCore.auxiliaryMemory witness = (wordTables witness).flatMap (typedTableInteractionsWith · memoryChannel) := by
+  have receivers : (HostLocalHandoff.receiverTables witness).flatMap (typedTableInteractionsWith · memoryChannel) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply typedTableInteractions_nil
@@ -163,7 +165,7 @@ private theorem auxiliary_memory_words
     rw [← HostLocalHandoff.receiverTables_components witness]
     exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   have resourcesSilent : ((HostLocalHandoff.resourceTables witness).drop 2).flatMap
-      (typedTableInteractionsWith · witness.data memoryChannel) = [] := by
+      (typedTableInteractionsWith · memoryChannel) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply typedTableInteractions_nil
@@ -198,10 +200,10 @@ theorem source_memory_messages
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     (producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
       (producedMessages (LocalCore.memoryInterior (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
-        producedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · witness.data memoryChannel))) ∧
+        producedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · memoryChannel))) ∧
     (consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
       (consumedMessages (LocalCore.memoryInterior (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
-        consumedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · witness.data memoryChannel))) := by
+        consumedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · memoryChannel))) := by
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
@@ -221,7 +223,7 @@ noncomputable def sourceExecutionRows
       (source_unique_names image source source.host.io.hints))) : List (RowFacts p) :=
   (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map
     (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data))
+      (wordTables (HostHintQueueBoundary.projected witness))))
 
 /-- Every active physical Memory record is in its enlarged CPU row or an actual refresh pair.
 No host access remains as an unaccounted side ledger. -/
@@ -246,14 +248,14 @@ theorem source_execution_memory_projection
       ExecutionRow.facts witness.data := funext fun row => row.facts_setData _ _
   rw [sameFacts] at original
   have enlarged := eventFacts_memory witness.data
-    (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data)
+    (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)))
     (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) loc
   have partition := source_words_partition witness constraints balanced _ (List.Perm.refl _)
   have groupedPushes := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
     (Multiset.coe_eq_coe.mpr (partition.map (fun row => (touch row).2)))
   have groupedPulls := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
     (Multiset.coe_eq_coe.mpr (partition.map (fun row => (touch row).1.1)))
-  have words := word_memory_messages _ witness.data (wordTables_aligned (HostHintQueueBoundary.projected witness))
+  have words := word_memory_messages _ (wordTables_aligned (HostHintQueueBoundary.projected witness))
   have messages := source_memory_messages witness constraints balanced
   have fullPushes := congrArg (Multiset.filter (fun message => MemoryMsg.locOf message = loc))
     (Multiset.coe_eq_coe.mpr messages.1)
@@ -398,7 +400,7 @@ private theorem source_word_owner
     (eventMem : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) :
+      (wordTables (HostHintQueueBoundary.projected witness))) event) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness)) witness.data,
       event = .syscall (HostCallLedger.input env).instruction := by
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
@@ -430,7 +432,7 @@ private theorem source_word_disjoint (valid : image.Valid)
     (message : MemoryMsg (ZMod p)) (messageMem : message ∈ (event.facts witness.data).memPushes)
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) :
+      (wordTables (HostHintQueueBoundary.projected witness))) event) :
     MemoryMsg.locOf message ≠ MemoryMsg.locOf (touch row).2 := by
   obtain ⟨env, active, same⟩ := source_word_owner witness constraints balanced event eventMem row member
   have committed := HostLocalCore.hostCall_program_committed valid (HostHintQueueBoundary.projected witness)
@@ -442,8 +444,7 @@ private theorem source_word_disjoint (valid : image.Valid)
   rw [same] at messageMem
   obtain ⟨index, location⟩ := syscall_register_pushes _ operands message messageMem
   have retained : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) (HostHintQueueBoundary.projected witness).data := by
-    simpa only [HostHintQueueBoundary.projected_data] using (List.mem_filter.mp member).1
+      (wordTables (HostHintQueueBoundary.projected witness)) := (List.mem_filter.mp member).1
   have facts := source_word_touches witness constraints balanced row retained
   rw [location]
   exact (ram_not_register _ facts index).symm
@@ -459,7 +460,7 @@ theorem source_event_aligned (valid : image.Valid)
     (eventMem : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     ∃ aligned, AlignedFacts aligned (eventFacts witness.data
       (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
+        (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
   have interface := source_interface (p := p) source.host.io.hints
@@ -479,7 +480,7 @@ theorem source_event_aligned (valid : image.Valid)
   rw [ExecutionRow.edge_eq_facts] at hostFacts
   have combined := append_aligned facts
     ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).map touch)
+      (wordTables (HostHintQueueBoundary.projected witness))) event).map touch)
     (by
       intro access member
       obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
@@ -523,7 +524,7 @@ theorem source_ordered_aligned_rows (valid : image.Valid)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered ∧
       List.Forall₂ AlignedFacts rows (ordered.map (eventFacts witness.data
         (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data))) ∧
+          (wordTables (HostHintQueueBoundary.projected witness))))) ∧
       ∀ loc, pushesAt rows loc = pushesAt (sourceExecutionRows witness) loc ∧
         pullsAt rows loc = pullsAt (sourceExecutionRows witness) loc := by
   obtain ⟨ordered, exhaustive, walk⟩ := HostLocalCore.executionRows_ordered_of_orderingChannels
@@ -532,7 +533,7 @@ theorem source_ordered_aligned_rows (valid : image.Valid)
     (HostHintQueueBoundary.projected_orderingChannels witness (source_interface source.host.io.hints) constraints balanced)
   simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at walk
   obtain ⟨rows, aligned⟩ := align_facts (ordered.map (eventFacts witness.data
-    (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data))) (by
+    (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness))))) (by
       intro original member
       obtain ⟨event, present, rfl⟩ := List.mem_map.mp member
       exact source_event_aligned valid witness constraints balanced event (exhaustive.mem_iff.mp present))

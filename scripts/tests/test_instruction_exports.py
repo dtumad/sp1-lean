@@ -36,13 +36,19 @@ class InstructionExportTests(unittest.TestCase):
         self.assertIn("Rust instruction comparison registrations differ",
                       instruction_export_errors(self.lean, rust))
 
-    def test_wrong_program_or_air_is_rejected(self):
-        for name in ("JalInstruction", "JalInstructionAirSpec"):
+    def test_wrong_module_or_program_is_rejected(self):
+        for name in ("generated_jal", "JalInstruction"):
             with self.subTest(name=name):
-                rust = self.rust.replace(name + "\n", "OtherProgram\n", 1)
-                rust = rust.replace(name + ",\n", "OtherProgram,\n", 1)
-                self.assertNotEqual(rust, self.rust)
+                rust, count = re.subn(r'\b' + name + r'\b', 'OtherProgram', self.rust, count=1)
+                self.assertEqual(count, 1)
                 self.assertTrue(instruction_export_errors(self.lean, rust))
+
+    def test_wrong_generated_ensemble_is_rejected(self):
+        rust = self.rust.replace('use $module::Ensemble as $program;',
+                                 'use generated_add::Ensemble as $program;')
+        self.assertNotEqual(rust, self.rust)
+        self.assertIn("Rust instruction comparisons must use each generated ensemble",
+                      instruction_export_errors(self.lean, rust))
 
 
 class ReleaseCoverageTests(unittest.TestCase):

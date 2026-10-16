@@ -75,7 +75,7 @@ def SupportedChip.rdGuard (chip : SupportedChip p) : RdGuard :=
 def SupportedChip.table (chip : SupportedChip p) : Component (ZMod p) :=
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  { circuit := chip.circuit }
+  { circuit := chip.circuit, Assumptions := (chip.circuit).Assumptions }
 
 /-- Whether this descriptor claims an instruction dispatch key. -/
 def SupportedChip.claims (chip : SupportedChip p) (opcode : Opcode) (rdIsX0 : Bool) : Bool :=

@@ -27,7 +27,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
 theorem checkFinal_of_channels
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface target others resources) (checked : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balances : ∀ channel ∈ privateChannels (p := p) target, witness.BalancedChannel channel) :
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by

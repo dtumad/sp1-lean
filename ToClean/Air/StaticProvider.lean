@@ -1,6 +1,6 @@
 module
 
-public import Clean.Air.FlatComponent
+public import ToClean.Air.FixedPrefix
 public import Clean.Circuit.WitnessIRSugar
 public import Clean.Utils.Tactics
 public import Clean.Utils.Tactics.ProvableStructDeriving
@@ -124,35 +124,37 @@ theorem spec_iff_fixedEntry (table : StaticTable F Row) (row : Row F) :
     simpa only [equal] using valid.2
 
 /-- Enumerate the typed table through Clean's index-aware fixed-column IR. -/
-def fixedColumns (table : StaticTable F Row) : FixedColumns F where
-  height := table.height
+def fixedColumns (table : StaticTable F Row) (bounded : table.height < UInt64.size) : FixedColumns F where
+  height := UInt64.ofNatLT table.height bounded
   program := .ofFExprs (Vector.ofFn fun column : Fin (size (Entry Row)) =>
-    .listGetAtIndex ((Vector.ofFn fun index : Fin table.height =>
-      (toElements (table.fixedEntry index.val))[column.val]).toList.map .const))
+    .listGet ((Vector.ofFn fun index : Fin table.height =>
+      (toElements (table.fixedEntry index.val))[column.val]).toList.map .const) .idx)
   valid := by
     simp only [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs,
       Witgen.VExpr.validForRow, Vector.toList_ofFn, List.all_nil, Bool.true_and,
       decide_eq_true_eq, List.all_eq_true, List.forall_mem_ofFn_iff]
     intro column
-    simp only [Witgen.FExpr.validForRow]
+    simp only [Witgen.FExpr.validForRow, Witgen.U64Expr.validForRow, Bool.and_true]
     exact Witgen.FExprList.validForRow_map_const _ _
 
 /-- Fixed columns are exactly the message prefix; multiplicities remain committed columns. -/
-@[simp] theorem fixedColumns_width (table : StaticTable F Row) :
-    table.fixedColumns.width = size (Entry Row) := rfl
+@[simp] theorem fixedColumns_width (table : StaticTable F Row) (bounded : table.height < UInt64.size) :
+    (table.fixedColumns bounded).width = size (Entry Row) := rfl
 
 /-- Fixed columns already have their final physical height before witness generation. -/
-@[simp] theorem fixedColumns_height (table : StaticTable F Row) :
-    table.fixedColumns.height = table.height := rfl
+@[simp] theorem fixedColumns_height (table : StaticTable F Row) (bounded : table.height < UInt64.size) :
+    (table.fixedColumns bounded).height.toNat = table.height := rfl
 
 /-- The canonical row program realizes every enumerated row without a native witness closure. -/
-theorem fixedColumns_row (table : StaticTable F Row) (index : Fin table.height) :
-    table.fixedColumns.row index.val = (toElements (table.fixedEntry index.val)).toArray := by
+theorem fixedColumns_row (table : StaticTable F Row) (bounded : table.height < UInt64.size)
+    (index : Fin table.height) :
+    (table.fixedColumns bounded).row (UInt64.ofNat index.val) = (toElements (table.fixedEntry index.val)).toArray := by
   apply Array.ext
   · simp [FixedColumns.row, fixedColumns, Witgen.RowProgram.ofFExprs]
   · intro column left right
     simp [FixedColumns.row, fixedColumns, Witgen.RowProgram.eval, Witgen.RowProgram.ofFExprs,
-      Witgen.VExpr.eval, Witgen.FExpr.eval, Witgen.evalList_map_vector_const, index.isLt]
+      Witgen.VExpr.eval, Witgen.FExpr.eval, Witgen.U64Expr.eval, Witgen.evalList_map_vector_const,
+      Nat.mod_eq_of_lt (index.isLt.trans bounded), index.isLt]
 
 /-- A membership provider emits the authenticated message at its supplied multiplicity.
 The fixed prefix authenticates eligibility; inactive rows must have zero multiplicity. -/
@@ -192,34 +194,22 @@ def provider (table : StaticTable F Row) :
 
 /-- Membership follows from the verifier-fixed prefix, with no residual provider-validity
 assumption on the ensemble or its caller. Counts are the only prover-owned input cells. -/
-def component (table : StaticTable F Row) : Component F where
+def component (table : StaticTable F Row) (bounded : table.height < UInt64.size) : Component F where
   circuit := table.provider
-  fixedColumns := some table.fixedColumns
+  fixedColumns := some (table.fixedColumns bounded)
   Assumptions _ _ := True
-  assumptions_imply_circuit := by
-    intro index row data fixed _ _
-    obtain ⟨bound, fixedPrefix⟩ := fixed
-    change index < table.height at bound
-    rw [fixedColumns_row table ⟨index, bound⟩] at fixedPrefix
-    have rowWidth : size (Entry Row) ≤ row.size := by
-      have width := congrArg Array.size fixedPrefix
-      simp only [fixedColumns_width, Array.size_extract, Nat.sub_zero,
-        Vector.size_toArray] at width
-      omega
-    have decoded : (valueFromOffset (ProvablePair (Entry Row) field) 0
-        (Environment.fromArray row data)).1 = table.fixedEntry index := by
-      change fromElements (M := Entry Row) _ = table.fixedEntry index
-      rw [← ProvableType.fromElements_toElements (table.fixedEntry index)]
-      congr 1
-      apply Vector.ext
-      intro column columnBound
-      have columnWidth : column < ProvableStruct.combinedSize (Entry Row) := columnBound
-      have cells := congrArg (fun array : Array F => array[column]?.getD 0) fixedPrefix
-      simpa [valueFromOffset, size, ProvablePair.instance, Array.getElem?_extract, Vector.getElem_extract,
-        Vector.getElem_mapRange, columnWidth, Nat.lt_of_lt_of_le columnBound rowWidth] using cells
-    change _ ≠ 0 → _ = 1 ∧ table.Spec _
+  circuit_assumptions_of_assumptions := by
+    intro index input data fixed _ _
+    have bound : index.toNat < table.height := (fixed (table.fixedColumns bounded) (by simp)).1
+    have fixedCells := fixed.input_prefix (by rfl)
+    have rowEq := table.fixedColumns_row bounded ⟨index.toNat, bound⟩
+    simp only [UInt64.ofNat_toNat] at rowEq
+    rw [rowEq] at fixedCells
+    have decoded := congrArg (fromElements (M := Entry Row)) (Vector.toArray_inj.mp fixedCells)
+    simp only [ProvableType.fromElements_toElements] at decoded
+    change input.1.eligible ≠ 0 → input.1.eligible = 1 ∧ table.Spec input.1.payload
     rw [decoded]
-    exact table.fixedEntry_spec index
+    exact table.fixedEntry_spec index.toNat
   fixed_width_le_input := by
     change size (Entry Row) ≤ size (Entry Row) + 1
     omega

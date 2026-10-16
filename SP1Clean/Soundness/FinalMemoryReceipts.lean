@@ -102,7 +102,7 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names
       FinalReceiptEnsemble.records (registerWitness witness) ++ FinalReceiptEnsemble.records witness := by
   rw [FinalMemoryEnsemble.records_eq]
   simp only [FinalReceiptEnsemble.records, original_data witness]
-  simp only [original, registerWitness, FinalReceiptEnsemble.project, EnsembleWitness.ofTables_tables,
+  simp only [original, registerWitness, FinalReceiptEnsemble.project, EnsembleWitness.ofCanonicalTables,
     FinalReceiptEnsemble.table, TableSlot.table, FinalReceiptEnsemble.slot, List.getElem_set_self,
     List.getElem_set_ne (by decide : 0 ≠ 1), List.getElem_set_ne (by decide : 1 ≠ 0), Table.withComponent_rows]
   congr 1
@@ -112,7 +112,7 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names
 
 /-- The receipt records are precisely the actual Memory pulls of the original three final tables. -/
 theorem memory_receipts (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    ((original witness).tables.take 3).flatMap (·.interactionsWith (original witness).data memoryChannel.toRaw) =
+    ((original witness).tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
       (FinalReceiptEnsemble.records (registerWitness witness) ++ FinalReceiptEnsemble.records witness).map
         (memoryChannel.emittedValue (-1)) := by
   rw [← records_eq]
@@ -134,19 +134,14 @@ private theorem ram_silent :
 
 /-- Exact register-receipt accounting includes every finalizer's value and private timestamp. -/
 theorem register_receipts (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    (registerTable witness).interactionsWith witness.data (FinalMemoryValue.channel false).toRaw =
+    (registerTable witness).interactionsWith (FinalMemoryValue.channel false).toRaw =
       (FinalReceiptEnsemble.records (registerWitness witness)).map
         (FinalMemoryValue.channel false).pushedValue :=
-by
-  have result := FinalReceiptEnsemble.table_receipts (registerWitness witness) register_silent
-  have same := congrArg (fun data : ProverData (ZMod p) =>
-    (registerTable witness).interactionsWith data (FinalMemoryValue.channel false).toRaw)
-    (registerWitness_data witness)
-  exact same.symm.trans result
+  FinalReceiptEnsemble.table_receipts (registerWitness witness) register_silent
 
 /-- Exact RAM-receipt accounting includes every finalizer's value and private timestamp. -/
 theorem ram_receipts (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    (ramTable witness).interactionsWith witness.data (FinalMemoryValue.channel true).toRaw =
+    (ramTable witness).interactionsWith (FinalMemoryValue.channel true).toRaw =
       (FinalReceiptEnsemble.records witness).map (FinalMemoryValue.channel true).pushedValue :=
   FinalReceiptEnsemble.table_receipts _ ram_silent
 
@@ -154,21 +149,22 @@ theorem ram_receipts (witness : EnsembleWitness (ensemble auxiliary channels nam
 are needed locally; Memory values and timestamps still come from the global grounding proof. -/
 theorem ram_records_spec (witness : EnsembleWitness (ensemble auxiliary channels names))
     (constraints : witness.Constraints)
-    (bytes : (ramTable witness).ChannelGuarantees witness.data byteChannel.toRaw) :
+    (bytes : (ramTable witness).ChannelGuarantees byteChannel.toRaw) :
     ∀ record ∈ FinalReceiptEnsemble.records witness, MemoryBoundary.RamFinalSpec record := by
   intro record member
   obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp member
   have checks := constraints (ramTable witness)
     (List.getElem_mem _) row rowMem
   have guarantees := bytes row rowMem
+  simp only [Table.environment, witness.same_data (ramTable witness) (List.getElem_mem _)] at checks guarantees
   change (FinalReceiptEnsemble.table witness).component.operations.ConstraintsHold _ at checks
   change (FinalReceiptEnsemble.table witness).component.operations.ChannelGuarantees _ _ at guarantees
   rw [FinalReceiptEnsemble.table_component witness] at checks guarantees
   rw [Operations.ConstraintsHold, FinalMemoryReceipt.constraints,
     FinalMemoryReceipt.lookups] at checks
   have providerBytes := Operations.channelGuarantees_of_interactionsWith_subset
-    ({ circuit := ramCircuit } : Component (ZMod p)).operations
-    ({ circuit := FinalMemoryReceipt.circuit true ramCircuit } : Component (ZMod p)).operations
+    ({ circuit := ramCircuit, Assumptions := (ramCircuit).Assumptions } : Component (ZMod p)).operations
+    ({ circuit := FinalMemoryReceipt.circuit true ramCircuit, Assumptions := ramCircuit.Assumptions } : Component (ZMod p)).operations
     byteChannel.toRaw (by
       rw [FinalMemoryReceipt.interactions true ramCircuit byteChannel.toRaw (by
         intro equal
@@ -180,8 +176,8 @@ theorem ram_records_spec (witness : EnsembleWitness (ensemble auxiliary channels
 
 /-- The only added occurrences are one receipt for each register row and one for each RAM row. -/
 theorem receipt_cost (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    ((registerTable witness).interactionsWith witness.data (FinalMemoryValue.channel false).toRaw).length +
-      ((ramTable witness).interactionsWith witness.data (FinalMemoryValue.channel true).toRaw).length =
+    ((registerTable witness).interactionsWith (FinalMemoryValue.channel false).toRaw).length +
+      ((ramTable witness).interactionsWith (FinalMemoryValue.channel true).toRaw).length =
       (registerTable witness).length + (ramTable witness).length := by
   rw [register_receipts, ram_receipts]
   simp only [FinalReceiptEnsemble.records, List.length_map, registerTable, ramTable, Table.length]

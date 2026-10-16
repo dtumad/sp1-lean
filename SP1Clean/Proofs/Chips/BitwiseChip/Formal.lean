@@ -618,9 +618,9 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := BitwiseChip.circuit (p := p) } :
+    ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     BitwiseChip.circuit_main_eq]
   simp [BitwiseChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,

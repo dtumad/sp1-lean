@@ -26,6 +26,18 @@ def membership (memory : ByteMemory) (limit : ℕ) (name : String) :
   { memory.fixedTable limit with name := name }
 
 omit [Fact (2 ^ 17 < p)] in
+/-- The complete 48-bit memory inventory, including padding, fits Clean's physical row index. -/
+theorem membership_height_lt_uint64 (memory : ByteMemory) (name : String) :
+    (membership (p := p) memory (2 ^ 48) name).height < UInt64.size := by
+  have length := memory.fixedTable_length_le (p := p) (2 ^ 48)
+  have padded := (membership (p := p) memory (2 ^ 48) name).height_lt_double
+  change (memory.fixedTable (p := p) (2 ^ 48)).height < UInt64.size
+  change (memory.fixedTable (p := p) (2 ^ 48)).height <
+    2 * max (memory.fixedTable (p := p) (2 ^ 48)).length 1 at padded
+  norm_num [UInt64.size] at *
+  omega
+
+omit [Fact (2 ^ 17 < p)] in
 private theorem compare_lower {address lower : Word (ZMod p)}
     {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (spec : LtOperationUnsigned.Spec ⟨address, lower, cols, 1⟩)

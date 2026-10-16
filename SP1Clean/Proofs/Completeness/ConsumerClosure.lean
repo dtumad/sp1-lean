@@ -40,14 +40,14 @@ theorem tablesCleanAccesses_filterKind_eq_typed {Message : TypeMap} [ProvableTyp
     (hchannel : channel.toRaw ∈ (sp1Ensemble (p := p)).channels)
     (hcomponents : ∀ table ∈ tables,
       table.component ∈ (sp1Ensemble (p := p)).tables) :
-    (tablesCleanAccesses tables data).filter (fun access => access.1 = K) =
-      (tables.flatMap (typedTableInteractionsWith · data channel)).map
+    (tablesCleanAccesses tables).filter (fun access => access.1 = K) =
+      (tables.flatMap (typedTableInteractionsWith · channel)).map
         (Interaction.toAccess ∘ TypedInteraction.raw) := by
   simp only [tablesCleanAccesses, List.filter_flatMap, List.map_flatMap]
   refine List.flatMap_congr fun table tableMem => ?_
   rw [tableCleanAccesses_filterKind table data channel.toRaw K hkind
     (fun interaction interactionMem interactionKind =>
-      interactions_channel_eq_of_kindOf table data (hcomponents table tableMem) channel.toRaw
+      interactions_channel_eq_of_kindOf table (hcomponents table tableMem) channel.toRaw
         hchannel interaction interactionMem
         (interactionKind.trans hkind.symm))]
   rw [← typedTableInteractionsWith_raw]
@@ -57,14 +57,14 @@ theorem tablesCleanAccesses_filterKind_eq_typed {Message : TypeMap} [ProvableTyp
 theorem skeletonTable_component_mem (table : Table (ZMod p))
     (tableMem : table ∈ trace.skeletonTables) :
     table.component ∈ (sp1Ensemble (p := p)).tables := by
-  apply Air.Flat.EnsembleWitness.mem_component_of_mem (witness := trace.witness)
+  apply Air.Flat.EnsembleWitness.component_mem_tables_of_mem (witness := trace.witness)
   rw [trace.witness_tables]
   rw [skeletonTables, List.mem_append] at tableMem
   exact tableMem.elim List.mem_of_mem_take List.mem_of_mem_drop
 
 /-- The memory-initialization provider does not name the Program channel. -/
 theorem memoryInitProgramInteractions_eq_nil :
-    typedTableInteractionsWith (trace.providerTableFor .memoryInit) trace.data programChannel = [] := by
+    typedTableInteractionsWith (trace.providerTableFor .memoryInit) programChannel = [] := by
   apply List.map_eq_nil_iff.mp
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -73,7 +73,7 @@ theorem memoryInitProgramInteractions_eq_nil :
 
 /-- The memory-finalization provider does not name the Program channel. -/
 theorem memoryFinalizeProgramInteractions_eq_nil :
-    typedTableInteractionsWith (trace.providerTableFor .memoryFinalize) trace.data programChannel = [] := by
+    typedTableInteractionsWith (trace.providerTableFor .memoryFinalize) programChannel = [] := by
   apply List.map_eq_nil_iff.mp
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -82,7 +82,7 @@ theorem memoryFinalizeProgramInteractions_eq_nil :
 
 /-- The memory-bump provider does not name the Program channel. -/
 theorem memoryBumpProgramInteractions_eq_nil :
-    typedTableInteractionsWith (trace.providerTableFor .memoryBump) trace.data programChannel = [] := by
+    typedTableInteractionsWith (trace.providerTableFor .memoryBump) programChannel = [] := by
   apply List.map_eq_nil_iff.mp
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -94,7 +94,7 @@ theorem memoryBumpProgramInteractions_eq_nil :
 
 /-- The state-bump provider does not name the Program channel. -/
 theorem stateBumpProgramInteractions_eq_nil :
-    typedTableInteractionsWith (trace.providerTableFor .stateBump) trace.data programChannel = [] := by
+    typedTableInteractionsWith (trace.providerTableFor .stateBump) programChannel = [] := by
   apply List.map_eq_nil_iff.mp
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -110,7 +110,7 @@ buses. This is precisely the fact that stops holding when the compiler learns to
 and it is why the syscall table can join the ensemble before the compiler can fill it. -/
 theorem syscallInstrsInteractions_eq_nil {Message : TypeMap} [ProvableType Message]
     (channel : Channel (ZMod p) Message) :
-    typedTableInteractionsWith (trace.providerTableFor .syscallInstrs) trace.data channel = [] := by
+    typedTableInteractionsWith (trace.providerTableFor .syscallInstrs) channel = [] := by
   rw [typedTableInteractionsWith,
     show (trace.providerTableFor (p := p) .syscallInstrs).table = [] from
       SyscallInstrsChip.traceTable_table _ _ _]
@@ -120,8 +120,8 @@ theorem syscallInstrsInteractions_eq_nil {Message : TypeMap} [ProvableType Messa
 gated ECALL fetch pulls (the four Memory/State system tables are Program-silent). -/
 theorem providerSuffixProgramInteractions_eq :
     (trace.providerTables.drop preprocessedProviderTableCount).flatMap
-      (typedTableInteractionsWith · trace.data programChannel) =
-    typedTableInteractionsWith (trace.providerTableFor .halt) trace.data programChannel := by
+      (typedTableInteractionsWith · programChannel) =
+    typedTableInteractionsWith (trace.providerTableFor .halt) programChannel := by
   rw [providerTables_drop_preprocessed]
   simp only [List.flatMap_cons, List.flatMap_nil,
     trace.memoryInitProgramInteractions_eq_nil,
@@ -192,7 +192,7 @@ theorem skeleton_program_mult_nonpos (wf : trace.WellFormed) {access : LookupAcc
       norm_num
   · have suffixMem : interaction ∈
         (trace.providerTables.drop preprocessedProviderTableCount).flatMap
-          (typedTableInteractionsWith · trace.data programChannel) := by
+          (typedTableInteractionsWith · programChannel) := by
       rw [tables_drop_preprocessed] at suffix
       exact List.mem_flatMap.mpr ⟨table, suffix, interactionMem⟩
     rw [trace.providerSuffixProgramInteractions_eq] at suffixMem

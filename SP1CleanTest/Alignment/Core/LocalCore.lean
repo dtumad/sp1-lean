@@ -52,9 +52,11 @@ private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1P
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map (fun row => evaluateRow image source row guarded)
   let consumers := evaluated.flatMap Prod.snd
-  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers ++
+  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
+    (SnapshotRegisterProvider.membership_height_lt_uint64 source.sail.memorySnapshot) ++
     StaticMembership.providerLedger
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
+        (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory")
   evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       (assembly.channels.map RawChannel.name).contains name &&
@@ -339,9 +341,11 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
   let consumers := evaluated.flatMap Prod.snd
-  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers ++
+  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
+    (SnapshotRegisterProvider.membership_height_lt_uint64 source.sail.memorySnapshot) ++
     StaticMembership.providerLedger
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
+        (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory")
   let balanced (entry : String × List Fp × Fp) :=
     ((ledger.filter (fun other => other.1 == entry.1 && other.2.1 == entry.2.1)).map
       (fun other => other.2.2)).sum == 0
@@ -686,7 +690,7 @@ private def receiptPermission (source : ExecutionSnapshot) (input : StoreByteChi
     (permissions : List (List Fp)) : Bool :=
   let produced := receiptStore source input
   let providers := permissions.map fun row =>
-    evaluate storeRomImage source { circuit := WritePermissionProvider.circuit storeRomImage } row
+    evaluate storeRomImage source { circuit := WritePermissionProvider.circuit storeRomImage, Assumptions := (WritePermissionProvider.circuit storeRomImage).Assumptions } row
   let ledger := ((produced :: providers).flatMap (·.2)).filter
     (fun entry => entry.1 == (WritePermissionProvider.channel (p := SP1Prime)).name)
   produced.1 && providers.all (·.1) && ledger.all (fun key =>

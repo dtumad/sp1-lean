@@ -116,14 +116,14 @@ theorem stateBumpChip_size_eq :
 /-- The reconstructed row has exactly the flat component's width — 14 cells, no witness block. -/
 theorem stateBumpPhysicalRow_size (cols : Extracted.StateBumpCols (ZMod p)) :
     (stateBumpPhysicalRow (stateBumpDeconfigure cols)).size =
-      ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).width := by
+      ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).width := by
   rw [stateBumpPhysicalRow, inputFirstRow_size, Air.Flat.Component.width, stateBumpChip_size_eq]
   simp
 
 /-- The reconstructed row decodes back to the native row the codec started from. -/
 theorem stateBumpEnvironment_rowInput (cols : Extracted.StateBumpCols (ZMod p))
     (data : ProverData (ZMod p)) :
-    ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).rowInput
+    ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).rowInput
         (stateBumpEnvironment cols data) = stateBumpDeconfigure cols :=
   rowInput_inputFirstRow _ _ _ _
 
@@ -369,12 +369,12 @@ theorem stateBumpChipConstraintsConstructive
     (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)) :
     List.Forall (· = 0)
         ((stateBumpChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-      ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
+      ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.ConstraintsHold
         (stateBumpEnvironment rustCols data) := by
   refine Iff.trans ?_
     (constraintsHold_iff_nativeAssertZeros (StateBumpChip.circuit (p := p))
       (stateBumpEnvironment rustCols data) StateBumpChip.lookups_empty).symm
-  rw [Air.Flat.Component.rowOperations_mk, StateBumpChip.circuit_main_eq]
+  rw [Air.Flat.Component.rowOperations, StateBumpChip.circuit_main_eq]
   exact stateBumpChipConstraintsFaithful preprocessed publicValues
     (stateBumpEnvironment rustCols data)
     (varFromOffset StateBumpChip.Inputs 0) (size StateBumpChip.Inputs) rustCols
@@ -386,10 +386,10 @@ theorem stateBumpChipInteractionsConstructive
     (preprocessed : Vector (ZMod p) 0) (publicValues : Vector (ZMod p) 160)
     (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)) :
     nativeAccesses (stateBumpEnvironment rustCols data)
-        ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations =
+        ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations =
       (stateBumpChipOracle preprocessed publicValues).rustAccesses rustCols := by
   rw [nativeAccesses_component_eq_rowOperations (StateBumpChip.circuit (p := p)),
-    Air.Flat.Component.rowOperations_mk, StateBumpChip.circuit_main_eq]
+    Air.Flat.Component.rowOperations, StateBumpChip.circuit_main_eq]
   exact stateBumpChipInteractionsFaithful preprocessed publicValues
     (stateBumpEnvironment rustCols data)
     (varFromOffset StateBumpChip.Inputs 0) (size StateBumpChip.Inputs) rustCols
@@ -405,7 +405,7 @@ theorem stateBumpChip_faithful
     (∀ (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)),
         List.Forall (· = 0)
             ((stateBumpChipOracle preprocessed publicValues).assertZeros rustCols) ↔
-          ({ circuit := StateBumpChip.circuit (p := p) } :
+          ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } :
             Air.Flat.Component (ZMod p)).operations.ConstraintsHold
               (stateBumpEnvironment rustCols data)) ∧
       ∀ (rustCols : Extracted.StateBumpCols (ZMod p)) (data : ProverData (ZMod p)),
@@ -414,7 +414,7 @@ theorem stateBumpChip_faithful
           List.Perm
             (LookupAccessList.active
               (nativeAccesses (stateBumpEnvironment rustCols data)
-                ({ circuit := StateBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations))
+                ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations))
             (LookupAccessList.active
               ((stateBumpChipOracle preprocessed publicValues).rustAccesses rustCols)) :=
   ⟨stateBumpChipConstraintsConstructive preprocessed publicValues,

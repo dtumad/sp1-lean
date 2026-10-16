@@ -44,6 +44,11 @@ namespace CompiledExecution
 def instructionEvents (compiled : CompiledExecution) : EventBuckets :=
   EventBuckets.ofChronological (compiled.rows.map fun row => row.instruction.routed)
 
+/-- Routing preserves occurrences and cannot enlarge an instruction's physical input list. -/
+theorem instructionEvents_length_le (compiled : CompiledExecution) (id : InstructionChipId) :
+    (compiled.instructionEvents id).length ≤ compiled.rows.length := by
+  exact (EventBuckets.length_le _ id).trans (List.length_map _).le
+
 /-- MemoryBump events remain in chronological row/role order. -/
 def memoryBumps (compiled : CompiledExecution) : List MemoryBumpEvent :=
   compiled.rows.flatMap fun row => row.instruction.memoryBumps
@@ -140,6 +145,29 @@ theorem compileLocatedTransitions?_rows_length
                   subst compiled
                   simp only [List.length_cons]
                   exact congrArg Nat.succ (ih tailEq)
+
+/-- The total compiler never emits more instruction rows than the semantic transcript contains. -/
+theorem compileExecution_rows_length_le (program : GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ) :
+    (compileExecution program execution initialClock).rows.length ≤ execution.steps := by
+  cases generated : compileExecution? program execution initialClock with
+  | none => simp [compileExecution, generated, emptyCompiledExecution]
+  | some compiled =>
+      rw [compileExecution_eq_of_some generated]
+      simpa only [Machine.EventExecutionTrace.locatedTransitions_length] using
+        (compileLocatedTransitions?_rows_length generated).le
+
+/-- The existing semantic shard limit supplies Clean's instruction-table capacity.
+No additional compiler footprint or physical readiness premise is required. Provider expansion
+and padding have separate bounds; this theorem concerns the unpadded instruction buckets. -/
+theorem compileExecution_instruction_capacity (program : GuestProgram)
+    (execution : Machine.EventExecutionTrace) (initialClock : ℕ)
+    (bounded : Model.Core.Profile.WithinOrdinaryRowLimit execution.steps)
+    (id : InstructionChipId) :
+    ((compileExecution program execution initialClock).instructionEvents id).length ≤ UInt64.size := by
+  exact ((CompiledExecution.instructionEvents_length_le _ id).trans
+    (compileExecution_rows_length_le program execution initialClock)).trans
+      (bounded.trans (show Model.Core.Profile.maxOrdinaryTransitions ≤ UInt64.size from by decide))
 
 /-- The retained semantic transitions are exactly the input list, in order. -/
 theorem compileLocatedTransitions?_located

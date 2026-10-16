@@ -184,9 +184,11 @@ private def boundaryProgram : Verifier.Program F fieldPair where
   main input := do
     Verifier.push state input.1
     Verifier.pull state input.2
+  Spec _ _ := True
+  soundness := by intros; trivial
 
 private def baseEnsemble : Ensemble F fieldPair where
-  tables := [{ circuit := transition }]
+  tables := [{ circuit := transition, Assumptions := (transition).Assumptions }]
   unique_names := List.nodup_singleton _
   channels := [state.toRaw]
   verifier := boundaryProgram
@@ -210,7 +212,7 @@ def decodeRow (row : Array F) : fieldPair F :=
   (row[0]?.getD 0, row[1]?.getD 0)
 
 private theorem transition_constraints (env : Environment F) :
-    ({ circuit := transition } : Component F).operations.ConstraintsHold env ↔
+    ({ circuit := transition, Assumptions := (transition).Assumptions } : Component F).operations.ConstraintsHold env ↔
       (env.get 0).val < 15 ∧ (env.get 1).val = (env.get 0).val + 1 := by
   rw [Component.constraintsHold_iff]
   simp only [Component.rowOperations, transition, transitionMain, circuit_norm,
@@ -234,7 +236,7 @@ private theorem verifier_checks (input : fieldPair F) (data : ProverData F) :
     rangeProduct_zero, explicit_provable_type]
 
 private theorem transition_interactions (env : Environment F) :
-    ({ circuit := transition } : Component F).operations.interactionValuesWith state.toRaw env =
+    ({ circuit := transition, Assumptions := (transition).Assumptions } : Component F).operations.interactionValuesWith state.toRaw env =
       [state.pulledValue (env.get 0), state.pushedValue (env.get 1)] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
     Component.rowOperations, transition, transitionMain, circuit_norm]
@@ -248,22 +250,22 @@ private theorem verifier_interactions (env : Environment F) :
     Channel.emitted, Channel.pulled, explicit_provable_type]
 
 /-- A table witness from explicit transition pairs, useful also for adversarial regressions. -/
-def witnessOfRows (input : fieldPair F) (rows : List (fieldPair F)) : EnsembleWitness ensemble where
-  tables := [{
-    component := { circuit := transition }
+def witnessOfRows (input : fieldPair F) (rows : List (fieldPair F))
+    (bounded : rows.length ≤ UInt64.size) : EnsembleWitness ensemble :=
+  EnsembleWitness.ofTables ensemble [{
+    component := { circuit := transition, Assumptions := (transition).Assumptions }
     table := rows.map (fun row => #[row.1, row.2])
+    data := fun _ _ => #[]
+    length_le := by simpa only [List.length_map] using bounded
     uniform_width := by
       intro row member
       obtain ⟨pair, _, rfl⟩ := List.mem_map.mp member
       rfl
-  }]
-  publicInput := input
-  same_length := rfl
-  same_circuits := by intro i bound; have : i = 0 := by change i < 1 at bound; omega
-                      subst i; rfl
+    fixed_rows_match := by trivial
+  }] input rfl
 
 private theorem one_table (witness : EnsembleWitness ensemble) :
-    ∃ table, witness.tables = [table] ∧ table.component = { circuit := transition } := by
+    ∃ table, witness.tables = [table] ∧ table.component = { circuit := transition, Assumptions := (transition).Assumptions } := by
   have length : witness.tables.length = 1 := witness.same_length.symm
   obtain ⟨table, tables⟩ := List.length_eq_one_iff.mp length
   refine ⟨table, tables, ?_⟩
@@ -271,22 +273,22 @@ private theorem one_table (witness : EnsembleWitness ensemble) :
   simpa only [tables, ensemble, PublicVerifier.install, baseEnsemble, List.getElem_cons_zero] using circuit.symm
 
 private theorem witness_constraints (witness : EnsembleWitness ensemble) (table : Table F)
-    (tables : witness.tables = [table]) (component : table.component = { circuit := transition }) :
+    (tables : witness.tables = [table]) (component : table.component = { circuit := transition, Assumptions := (transition).Assumptions }) :
     witness.Constraints ↔
       ∀ row ∈ table.table, (decodeRow row).1.val < 15 ∧
         (decodeRow row).2.val = (decodeRow row).1.val + 1 := by
-  change (∀ current ∈ witness.tables, current.Constraints witness.data) ↔ _
+  change (∀ current ∈ witness.tables, current.Constraints) ↔ _
   simp only [tables, List.mem_singleton, forall_eq, Table.Constraints, component,
     transition_constraints]
   rfl
 
 private theorem witness_ledger (witness : EnsembleWitness ensemble) (table : Table F)
-    (tables : witness.tables = [table]) (component : table.component = { circuit := transition }) :
+    (tables : witness.tables = [table]) (component : table.component = { circuit := transition, Assumptions := (transition).Assumptions }) :
     witness.interactionsWith state.toRaw = state.transitionLedger
       witness.publicInput.1 witness.publicInput.2 table.table decodeRow := by
   simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
     ensemble, boundaryChecks.install_verifier_interactions baseEnsemble _ _ check_channel_ne_state,
-    EnsembleWitness.tableContext, TableContext.interactionsWith, tables,
+    EnsembleWitness.toTables, Tables.interactionsWith, tables,
     List.flatMap_cons, List.flatMap_nil, List.append_nil, Table.interactionsWith,
     component, transition_interactions]
   rw [show baseEnsemble.verifierOperations = boundaryProgram.circuitOperations from rfl,
@@ -380,11 +382,12 @@ private theorem consecutiveRows_walk (initial count : ℕ) :
     simpa only [equal] using ih (initial + 1)
 
 /-- The compiler's concrete witness obeys exactly the semantic row contracts. -/
-theorem witnessOfRows_constraints (input : fieldPair F) (rows : List (fieldPair F)) :
-    (witnessOfRows input rows).Constraints ↔
+theorem witnessOfRows_constraints (input : fieldPair F) (rows : List (fieldPair F))
+    (bounded : rows.length ≤ UInt64.size) :
+    (witnessOfRows input rows bounded).Constraints ↔
       ∀ row ∈ rows, row.1.val < 15 ∧ row.2.val = row.1.val + 1 := by
-  have contract := witness_constraints (witnessOfRows input rows)
-    ((witnessOfRows input rows).tables[0]'(by change 0 < 1; decide)) rfl rfl
+  have contract := witness_constraints (witnessOfRows input rows bounded)
+    ((witnessOfRows input rows bounded).tables[0]'(by change 0 < 1; decide)) rfl rfl
   rw [contract]
   constructor
   · intro valid row member
@@ -396,16 +399,19 @@ theorem witnessOfRows_constraints (input : fieldPair F) (rows : List (fieldPair 
     exact valid pair pairMember
 
 /-- Every row and both boundary messages occur in the actual typed-channel ledger. -/
-theorem witnessOfRows_ledger (input : fieldPair F) (rows : List (fieldPair F)) :
-    (witnessOfRows input rows).interactionsWith state.toRaw =
+theorem witnessOfRows_ledger (input : fieldPair F) (rows : List (fieldPair F))
+    (bounded : rows.length ≤ UInt64.size) :
+    (witnessOfRows input rows bounded).interactionsWith state.toRaw =
       state.transitionLedger input.1 input.2 rows id := by
-  have ledger := witness_ledger (witnessOfRows input rows)
-    ((witnessOfRows input rows).tables[0]'(by change 0 < 1; decide)) rfl rfl
-  simpa [witnessOfRows, Channel.transitionLedger, decodeRow, List.flatMap_map] using ledger
+  have ledger := witness_ledger (witnessOfRows input rows bounded)
+    ((witnessOfRows input rows bounded).tables[0]'(by change 0 < 1; decide)) rfl rfl
+  simpa [witnessOfRows, EnsembleWitness.ofTables, withDerivedData,
+    Table.environment, Channel.transitionLedger, decodeRow, List.flatMap_map] using ledger
 
 /-- Exact physical interaction count, including both boundary interactions. -/
-theorem witnessOfRows_interaction_count (input : fieldPair F) (rows : List (fieldPair F)) :
-    ((witnessOfRows input rows).interactionsWith state.toRaw).length = 2 * rows.length + 2 := by
+theorem witnessOfRows_interaction_count (input : fieldPair F) (rows : List (fieldPair F))
+    (bounded : rows.length ≤ UInt64.size) :
+    ((witnessOfRows input rows bounded).interactionsWith state.toRaw).length = 2 * rows.length + 2 := by
   rw [witnessOfRows_ledger]
   simp only [Channel.transitionLedger, List.length_append, List.length_cons,
     List.length_nil, List.length_flatMap]
@@ -416,7 +422,8 @@ theorem witnessOfRows_interaction_count (input : fieldPair F) (rows : List (fiel
 private theorem consecutiveRows_valid (input : fieldPair F) (count : ℕ)
     (initialBound : input.1.val ≤ 15) (finalBound : input.2.val ≤ 15)
     (length : input.2.val = input.1.val + count) :
-    (witnessOfRows input (consecutiveRows input.1.val count)).Valid input := by
+    (witnessOfRows input (consecutiveRows input.1.val count)
+      (by rw [consecutiveRows_length]; norm_num [UInt64.size]; omega)).Valid input := by
   refine ⟨rfl, ?_, ?_⟩
   · rw [witnessOfRows_constraints]
     exact consecutiveRows_spec _ _ (by omega)
@@ -424,9 +431,10 @@ private theorem consecutiveRows_valid (input : fieldPair F) (count : ℕ)
     refine ⟨?_, boundary_count, (verifier_checks input _).mpr ⟨initialBound, finalBound⟩⟩
     intro channel member
     obtain rfl := List.mem_singleton.mp member
-    change BalancedInteractions ((boundaryChecks.project (witnessOfRows input _)).interactionsWith state.toRaw)
+    change BalancedInteractions ((boundaryChecks.project (witnessOfRows input _ _)).interactionsWith state.toRaw)
     rw [boundaryChecks.project_interactions (ens := baseEnsemble)
-      (witnessOfRows input (consecutiveRows input.1.val count)) state.toRaw check_channel_ne_state]
+      (witnessOfRows input (consecutiveRows input.1.val count)
+      (by rw [consecutiveRows_length]; norm_num [UInt64.size]; omega)) state.toRaw check_channel_ne_state]
     rw [witnessOfRows_ledger, Channel.transitionLedger_balanced_iff]
     constructor
     · left
@@ -440,9 +448,10 @@ private theorem consecutiveRows_valid (input : fieldPair F) (count : ℕ)
 
 /-- Executable data-only compilation; invalid boundaries and incorrect event counts are rejected. -/
 def compile (input : fieldPair F) (events : List Event) : Option (EnsembleWitness ensemble) :=
-  if input.1.val ≤ 15 ∧ input.2.val ≤ 15 ∧ events.length ≤ 15 ∧
+  if accepted : input.1.val ≤ 15 ∧ input.2.val ≤ 15 ∧ events.length ≤ 15 ∧
       input.2.val = input.1.val + events.length then
-    some (witnessOfRows input (consecutiveRows input.1.val events.length))
+    some (witnessOfRows input (consecutiveRows input.1.val events.length)
+      (by rw [consecutiveRows_length]; have bound := accepted.2.2.1; norm_num [UInt64.size]; omega))
   else none
 
 /-- A successful compilation validates both the supplied execution and its raw AIR witness. -/
@@ -467,7 +476,7 @@ theorem compile_complete (input : fieldPair F) (events : List Event)
     ∃ witness, compile input events = some witness := by
   obtain ⟨trace, initialBound, finalBound, countBound⟩ := execution
   have length := trace_length trace
-  exact ⟨_, if_pos ⟨initialBound, finalBound, countBound, length⟩⟩
+  exact ⟨_, dif_pos ⟨initialBound, finalBound, countBound, length⟩⟩
 
 /-- The closed proof-independent compiler interface. -/
 def compiler : EnsembleCompiler ensemble (List Event) (Interpretation machine boundary admissible) where
@@ -489,7 +498,8 @@ theorem statement_iff (input : fieldPair F) :
 /-- The semantic budget implies the exact compiler State count fits strictly below the characteristic. -/
 theorem compiled_interaction_bound (input : fieldPair F) (events : List Event)
     (admitted : admissible input events) :
-    ((witnessOfRows input (consecutiveRows input.1.val events.length)).interactionsWith state.toRaw).length
+    ((witnessOfRows input (consecutiveRows input.1.val events.length)
+      (by rw [consecutiveRows_length]; have bound := admitted.2.2; norm_num [UInt64.size]; omega)).interactionsWith state.toRaw).length
       = 2 * events.length + 2 ∧ 2 * events.length + 2 ≤ 32 ∧ (32 : ℕ) < 97 := by
   rw [witnessOfRows_interaction_count, consecutiveRows_length]
   exact ⟨rfl, by have bound := admitted.2.2; omega, by decide⟩

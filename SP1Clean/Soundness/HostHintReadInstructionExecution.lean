@@ -26,15 +26,17 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 private theorem instruction_staticInputs
     (witness : EnsembleWitness (LocalCore.ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
-    (program : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data programChannel.toRaw)
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
+    (program : ∀ table ∈ witness.tables, table.ChannelGuarantees programChannel.toRaw)
     {row : DecodedInstructionRow p} (member : row ∈ LocalCore.instructionRows witness) :
     DecodedRowStaticInputs row witness.data :=
   ⟨mem_chip_of_mem_decodeInstructionTables member,
     LocalCore.instructionRows_constraints witness constraints row member,
     channelGuarantees_of_mem_decodeInstructionTables witness.data _ (LocalCore.instructionTables_aligned witness)
+      (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
       (fun table tableMem => byte table (LocalCore.instructionTables_mem witness tableMem)) row member,
     channelGuarantees_of_mem_decodeInstructionTables witness.data _ (LocalCore.instructionTables_aligned witness)
+      (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
       (fun table tableMem => program table (LocalCore.instructionTables_mem witness tableMem)) row member⟩
 
 private theorem instruction_inputs (valid : image.Valid)
@@ -114,10 +116,10 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.instruction row)) ∧
+          (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.instruction row)) := by
+          (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.instruction row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]

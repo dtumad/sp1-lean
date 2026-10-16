@@ -49,10 +49,10 @@ private theorem ram_key (record : MemoryMsg (ZMod p)) (valid : MemoryBoundary.Ra
 the target checker or supplied independently of the receipt ledger. -/
 theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names))
     (interface : Interface target auxiliary) (checked : witness.Constraints)
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balanced : witness.BalancedChannel (FinalMemoryValue.channel true).toRaw) :
     ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.record := by
-  have bytes : (FinalMemoryReceipts.ramTable (receiptWitness witness)).ChannelGuarantees witness.data byteChannel.toRaw := by
+  have bytes : (FinalMemoryReceipts.ramTable (receiptWitness witness)).ChannelGuarantees byteChannel.toRaw := by
     rw [ramFinalTable_eq]
     exact ramFinalSlot.table_channelGuarantees witness byteChannel.toRaw
       byte
@@ -66,7 +66,7 @@ theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble sou
 All facts concern the original physical rows; the enclosing assembly proves them from acceptance. -/
 theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names))
     (interface : Interface target auxiliary) (checked : witness.Constraints)
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (receipts : ∀ ram, witness.BalancedChannel (FinalMemoryValue.channel ram).toRaw)
     (changes : witness.BalancedChannel FinalMemoryChange.channel.toRaw)
     (membership : ∀ channel ∈ membershipChannels target, witness.BalancedChannel channel) :

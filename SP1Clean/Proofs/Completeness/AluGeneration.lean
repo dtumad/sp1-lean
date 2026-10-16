@@ -26,7 +26,7 @@ theorem aluEvents_addTable_constraints (g : GenState) (clk : ℕ) (steps : List 
     (hs : ∀ s ∈ steps, s.WellFormed) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (Table.build (AddChip.component (p := p))
-      (AddChip.traceInputs (aluEvents g clk steps) padding) data hint).Constraints data :=
+      (AddChip.traceInputs (aluEvents g clk steps) padding) data hint).Constraints :=
   AddChip.traceTable_constraints _ _ _ _ (aluEvents_wellFormed steps g clk hb hclk hs)
 
 /-- The same table satisfies its channel guarantees, so the messages it pushes carry the payloads
@@ -36,7 +36,7 @@ theorem aluEvents_addTable_guarantees (g : GenState) (clk : ℕ) (steps : List A
     (hs : ∀ s ∈ steps, s.WellFormed) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (Table.build (AddChip.component (p := p))
-      (AddChip.traceInputs (aluEvents g clk steps) padding) data hint).Guarantees data :=
+      (AddChip.traceInputs (aluEvents g clk steps) padding) data hint).Guarantees :=
   AddChip.traceTable_guarantees _ _ _ _ (aluEvents_wellFormed steps g clk hb hclk hs)
 
 /-- **`Sub` too** — the R-type family shares the adapter, so the fold serves every chip in it
@@ -46,7 +46,7 @@ theorem aluEvents_subTable_constraints (g : GenState) (clk : ℕ) (steps : List 
     (hs : ∀ s ∈ steps, s.WellFormed) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (Table.build (SubChip.component (p := p))
-      (SubChip.traceInputs (aluEvents g clk steps) padding) data hint).Constraints data :=
+      (SubChip.traceInputs (aluEvents g clk steps) padding) data hint).Constraints :=
   SubChip.traceTable_constraints _ _ _ _ (aluEvents_wellFormed steps g clk hb hclk hs)
 
 
@@ -67,7 +67,7 @@ theorem sailRun_addTable_constraints
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (Table.build (AddChip.component (p := p))
       (AddChip.traceInputs
-        (aluEvents GenState.initial 1 (aluStepsFrom decode s n)) padding) data hint).Constraints data :=
+        (aluEvents GenState.initial 1 (aluStepsFrom decode s n)) padding) data hint).Constraints :=
   aluEvents_addTable_constraints _ _ _ initial_bounded_at_genesis (by norm_num)
     (aluStepsFrom_wellFormed hpc hpres hrd n s hP) padding data hint
 
@@ -81,7 +81,7 @@ theorem sailRun_subTable_constraints
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     (Table.build (SubChip.component (p := p))
       (SubChip.traceInputs
-        (aluEvents GenState.initial 1 (aluStepsFrom decode s n)) padding) data hint).Constraints data :=
+        (aluEvents GenState.initial 1 (aluStepsFrom decode s n)) padding) data hint).Constraints :=
   aluEvents_subTable_constraints _ _ _ initial_bounded_at_genesis (by norm_num)
     (aluStepsFrom_wellFormed hpc hpres hrd n s hP) padding data hint
 

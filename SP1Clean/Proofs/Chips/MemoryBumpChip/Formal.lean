@@ -169,8 +169,8 @@ set_option linter.unusedSectionVars false in
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := MemoryBumpChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk, MemoryBumpChip.circuit_main_eq]
+    ({ circuit := MemoryBumpChip.circuit (p := p), Assumptions := (MemoryBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, MemoryBumpChip.circuit_main_eq]
   change Operations.lookups
     ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
       .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p)) = _

@@ -124,8 +124,8 @@ theorem keys_nodup (image : ProgramImage) (auxiliary : List (Component (ZMod p))
 def recordFor (image : ProgramImage) (id : TableId) (env : Environment (ZMod p)) :
     Option (MemoryMsg (ZMod p)) :=
   match id with
-  | .registers => some (({ circuit := OrderedInitialProvider.registerCircuit image } : Component (ZMod p)).rowOutput env)
-  | .ram => some (({ circuit := OrderedInitialProvider.ramCircuit image } : Component (ZMod p)).rowOutput env)
+  | .registers => some (({ circuit := OrderedInitialProvider.registerCircuit image, Assumptions := (OrderedInitialProvider.registerCircuit image).Assumptions } : Component (ZMod p)).rowOutput env)
+  | .ram => some (({ circuit := OrderedInitialProvider.ramCircuit image, Assumptions := (OrderedInitialProvider.ramCircuit image).Assumptions } : Component (ZMod p)).rowOutput env)
   | .terminal => none
 
 theorem recordFor_spec (image : ProgramImage) (id : TableId) (env : Environment (ZMod p))
@@ -162,7 +162,7 @@ variable {channels : List (RawChannel (ZMod p))}
 variable {names : (((views (p := p) image).map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
 
 def indexedRows (witness : EnsembleWitness (ensemble image auxiliary channels names)) :=
-  TransitionView.readIndexedRows tableIds (witness.tables.take (views (p := p) image).length) witness.data
+  TransitionView.readIndexedRows tableIds (witness.tables.take (views (p := p) image).length)
 
 def records (witness : EnsembleWitness (ensemble image auxiliary channels names)) : List (MemoryMsg (ZMod p)) :=
   (indexedRows witness).filterMap fun row => recordFor image row.1 row.2
@@ -214,7 +214,7 @@ theorem recordFor_interactions (image : ProgramImage) (id : TableId) (env : Envi
 
 /-- The physical boundary tables emit precisely the decoded records, with unit multiplicity. -/
 theorem memory_interactions_eq (witness : EnsembleWitness (ensemble image auxiliary channels names)) :
-    (witness.tables.take (inventory (p := p) image).views.length).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
+    (witness.tables.take (inventory (p := p) image).views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
       (records witness).map memoryChannel.pushedValue := by
   exact (inventory image).memory_interactions_eq witness memoryChannel.pushedValue (recordFor_interactions image)
 

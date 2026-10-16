@@ -55,32 +55,37 @@ def finalRecords
 /-- The proof view owns no independently supplied rows. -/
 @[simp] theorem boundaryWitness_tables
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
-    (boundaryWitness witness).tables = boundaryTables witness := rfl
+    (boundaryWitness witness).tables = withDerivedData (boundaryTables witness) := rfl
 
 /-- Row assertions survive selection of the boundary inventory. -/
 theorem boundaryWitness_constraints
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (checked : witness.Constraints) : (boundaryWitness witness).Constraints := by
   intro table member row rowMember
-  apply FinalMemoryChecks.component_constraints_setData table.component
-    (EnsembleWitness.mem_component_of_mem member)
-  exact checked table (boundaryTables_subset witness member) row rowMember
+  have registered := EnsembleWitness.component_mem_tables_of_mem member
+  rw [boundaryWitness_tables, withDerivedData] at member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  exact FinalMemoryChecks.component_constraints_setData original.component registered
+    (checked original (boundaryTables_subset witness originalMember) row rowMember)
 
 /-- Byte predicates depend on the retained messages, not the selected canonical data map. -/
 theorem boundaryWitness_byte
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
-    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
+    (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (boundaryWitness witness).tables,
-      table.ChannelGuarantees (boundaryWitness witness).data byteChannel.toRaw := by
+      table.ChannelGuarantees byteChannel.toRaw := by
   intro table member row rowMember interaction emitted same
-  have inherited := guarantees table (boundaryTables_subset witness member) row rowMember interaction emitted same
-  have eval_eq : Expression.eval (Environment.fromArray row witness.data) =
-      Expression.eval (Environment.fromArray row (boundaryWitness witness).data) :=
+  rw [boundaryWitness_tables, withDerivedData] at member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  have inherited := guarantees original (boundaryTables_subset witness originalMember)
+    row rowMember interaction emitted same
+  have eval_eq : Expression.eval (Environment.fromArray row original.data) =
+      Expression.eval (Environment.fromArray row (deriveProverData (boundaryTables witness))) :=
     funext fun expression => Expression.eval_congr
-      (env := Environment.fromArray row witness.data)
-      (env' := Environment.fromArray row (boundaryWitness witness).data) rfl expression
+      (env := Environment.fromArray row original.data)
+      (env' := Environment.fromArray row (deriveProverData (boundaryTables witness))) rfl expression
   rcases interaction with ⟨declared, mult, msg, assume⟩
   cases same
-  simpa only [AbstractInteraction.Guarantees, eval_eq, byteChannel, Channel.toRaw] using inherited
+  simpa only [AbstractInteraction.Guarantees, Table.environment, eval_eq, byteChannel, Channel.toRaw] using inherited
 
 end SP1Clean.Soundness.HostFinalMemory

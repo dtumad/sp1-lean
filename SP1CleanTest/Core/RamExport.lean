@@ -29,24 +29,28 @@ def table (name : String) : StaticTable Fp MemoryIntervalRow :=
   InitialMemoryLookup.membership memory (2 ^ 48) name
 
 def verifier (name : String) : Verifier.Program Fp Requests where
+  Spec _ _ := True
+  soundness := by intros; trivial
   main requests := do
     Verifier.pull (table name).channel ⟨requests[0], 1⟩
     Verifier.pull (table name).channel ⟨requests[1], 1⟩
 
 def ensemble (name : String) : Ensemble Fp Requests where
-  tables := [(table name).component]
+  tables := [(table name).component (InitialMemoryLookup.membership_height_lt_uint64 memory name)]
   unique_names := by simp
   channels := [(table name).channel.toRaw]
   verifier := verifier name
 
-def config (name : String) : WitnessGeneration.Config Fp unit where
-  modes := [.preallocated {
-    rows := (table name).height
-    input := .ofFExprs #v[.const 0]
-    input_valid := by rfl
-    handlers := [{ interaction := 0, column := 10 }]
-  }]
-  padding := [{ input := Array.replicate 11 0, minimumRows := (table name).height }]
+def config (name : String) : WitnessGeneration.Config Fp where
+  components := [((table name).provider.name, {
+    mode := .preallocated {
+      rows := UInt64.ofNat (table name).height
+      input := .ofFExprs #v[.const 0]
+      input_valid := by rfl
+      handlers := [{ interaction := 0, column := 10 }]
+    }
+    padding := { input := Array.replicate 11 0, minimumRows := UInt64.ofNat (table name).height }
+  })]
   fuel := 8
 
 def description (name : String) : Air.Flat.EnsembleCheck (ensemble name) where
@@ -65,7 +69,7 @@ def description (name : String) : Air.Flat.EnsembleCheck (ensemble name) where
 
 def generate (name : String) (requests : Requests Fp) :
     Except String (EnsembleWitness (ensemble name)) :=
-  WitnessGeneration.generate (ensemble name) (config name) requests ()
+  WitnessGeneration.generate (ComponentExport.fixture (ensemble name)) (config name) requests () |>.mapError toString
 
 /-- The complete normalized interval inventory, then a repeated request and independent forgeries. -/
 def cases : List (String × Requests Fp × Bool) :=
@@ -78,22 +82,23 @@ def cases : List (String × Requests Fp × Bool) :=
      ("forged-upper", #v[(⟨65536, 65538, 17⟩ : MemoryInterval).encode, first], false)]
 
 def exportRow {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
-    (name : String) (circuit : GeneralFormalCircuit Fp Input Output) : Except String String :=
-  let component := ComponentExport.ensemble { circuit }
-  let registered := { component with channels := component.channels ++
+    (circuit : GeneralFormalCircuit Fp Input Output) : Except String String :=
+  let component : Component Fp := { circuit, Assumptions := circuit.Assumptions }
+  let rowEnsemble := ComponentExport.ensemble component
+  let registered := { rowEnsemble with channels := rowEnsemble.channels ++
     [(table "sp1.native.initial_memory").channel.toRaw,
      (table "sp1.native.target_memory").channel.toRaw, (FinalMemoryValue.channel true).toRaw] }
-  Extraction.Rust.ensembleToRust name registered (ComponentExport.config Input)
+  Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture registered Input) (ComponentExport.config component)
 
 def rustExports : List (String × Except String String) :=
-  [("ram_byte.rs", exportRow "RamByte" (InitialMemoryLookup.circuit memory (2 ^ 48) (by norm_num))),
-   ("ram_word.rs", exportRow "RamWord" (InitialMemoryRead.circuit memory)),
-   ("ram_source.rs", exportRow "RamSource" (SnapshotRamProvider.circuit snapshot)),
-   ("ram_target.rs", exportRow "RamTarget" (FinalRamValue.circuit snapshot)),
-   ("ram_source_membership.rs", Extraction.Rust.ensembleToRust "RamSourceMembership"
-     (ensemble "sp1.native.initial_memory") (config "sp1.native.initial_memory")),
-   ("ram_target_membership.rs", Extraction.Rust.ensembleToRust "RamTargetMembership"
-     (ensemble "sp1.native.target_memory") (config "sp1.native.target_memory"))]
+  [("ram_byte.rs", exportRow (InitialMemoryLookup.circuit memory (2 ^ 48) (by norm_num))),
+   ("ram_word.rs", exportRow (InitialMemoryRead.circuit memory)),
+   ("ram_source.rs", exportRow (SnapshotRamProvider.circuit snapshot)),
+   ("ram_target.rs", exportRow (FinalRamValue.circuit snapshot)),
+   ("ram_source_membership.rs", Backends.Plonky3.Print.ensembleToRust
+     (ComponentExport.fixture (ensemble "sp1.native.initial_memory")) (config "sp1.native.initial_memory")),
+   ("ram_target_membership.rs", Backends.Plonky3.Print.ensembleToRust
+     (ComponentExport.fixture (ensemble "sp1.native.target_memory")) (config "sp1.native.target_memory"))]
 
 /-- Public test inputs cover carries, sparse gaps, native bounds and malformed field limbs. -/
 def rowCases : List (String × Component Fp × List (List Fp)) :=
@@ -106,10 +111,10 @@ def rowCases : List (String × Component Fp × List (List Fp)) :=
     let addr := Soundness.Target.bitVecToWord (p := SP1Prime) (BitVec.ofNat 64 address)
     let value := Soundness.Target.bitVecToWord (p := SP1Prime) (memory.readWord address)
     [(3 : Fp), 17, addr[0], addr[1], addr[2]] ++ value.toList
-  [("byte", { circuit := InitialMemoryLookup.circuit memory (2 ^ 48) (by norm_num) }, inputs),
-   ("word", { circuit := InitialMemoryRead.circuit memory }, inputs),
-   ("source", { circuit := SnapshotRamProvider.circuit snapshot }, inputs),
-   ("target", { circuit := FinalRamValue.circuit snapshot },
+  [("byte", { circuit := InitialMemoryLookup.circuit memory (2 ^ 48) (by norm_num), Assumptions := (InitialMemoryLookup.circuit memory (2 ^ 48) (by norm_num)).Assumptions }, inputs),
+   ("word", { circuit := InitialMemoryRead.circuit memory, Assumptions := (InitialMemoryRead.circuit memory).Assumptions }, inputs),
+   ("source", { circuit := SnapshotRamProvider.circuit snapshot, Assumptions := (SnapshotRamProvider.circuit snapshot).Assumptions }, inputs),
+   ("target", { circuit := FinalRamValue.circuit snapshot, Assumptions := (FinalRamValue.circuit snapshot).Assumptions },
      records ++ [[3, 17, 0, 1, 0, 99, 0, 0, 0], [3, 17, 65536, 0, 0, 17, 0, 0, 0]])]
 
 theorem cases_correct :

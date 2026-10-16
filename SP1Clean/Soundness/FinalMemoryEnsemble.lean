@@ -83,8 +83,8 @@ theorem view_spec (id : TableId) (env : Environment (ZMod p))
 
 def recordFor (id : TableId) (env : Environment (ZMod p)) : Option (MemoryMsg (ZMod p)) :=
   match id with
-  | .registers => some (({ circuit := registerCircuit } : Component (ZMod p)).rowOutput env)
-  | .ram => some (({ circuit := ramCircuit } : Component (ZMod p)).rowOutput env)
+  | .registers => some (({ circuit := registerCircuit, Assumptions := (registerCircuit).Assumptions } : Component (ZMod p)).rowOutput env)
+  | .ram => some (({ circuit := ramCircuit, Assumptions := (ramCircuit).Assumptions } : Component (ZMod p)).rowOutput env)
   | .terminal => none
 
 /-- Finalizer contracts read only committed cells. Dropping unrelated tables changes canonical
@@ -153,12 +153,12 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names
       (witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
         OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
         OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
-          (fun row => ({ circuit := registerCircuit } : Component (ZMod p)).rowOutput
+          (fun row => ({ circuit := registerCircuit, Assumptions := (registerCircuit).Assumptions } : Component (ZMod p)).rowOutput
             (Environment.fromArray row witness.data)) ++
       (witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
         OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
         OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
-          (fun row => ({ circuit := ramCircuit } : Component (ZMod p)).rowOutput
+          (fun row => ({ circuit := ramCircuit, Assumptions := (ramCircuit).Assumptions } : Component (ZMod p)).rowOutput
             (Environment.fromArray row witness.data)) := by
   have length : 3 ≤ witness.tables.length := by
     rw [← witness.same_length]
@@ -170,12 +170,12 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names
       List.take_succ_eq_append_getElem (by omega : 0 < witness.tables.length)]
     rfl
   change ((TransitionView.readIndexedRows [TableId.registers, .ram, .terminal]
-    (witness.tables.take 3) witness.data).filterMap fun row => recordFor row.1 row.2) = _
+    (witness.tables.take 3)).filterMap fun row => recordFor row.1 row.2) = _
   rw [front]
   simp only [TransitionView.readIndexedRows, List.zip_cons_cons, List.zip_nil_right,
     List.flatMap_cons, List.flatMap_nil, List.filterMap_append, List.filterMap_map,
     Function.comp_def, recordFor, List.filterMap_eq_map', List.filterMap_none,
-    List.append_nil]
+    List.append_nil, Table.environment, witness.same_data _ (List.getElem_mem _), EnsembleWitness.data]
 
 theorem records_valid (witness : EnsembleWitness (ensemble auxiliary channels names))
     (valid : witness.Spec) : ∀ record ∈ records witness, MemoryBoundary.FinalSpec record :=
@@ -220,7 +220,7 @@ theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
 
 /-- The physical boundary tables emit precisely the decoded records, with unit multiplicity. -/
 theorem memory_interactions_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
+    (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
       (records witness).map (memoryChannel.emittedValue (-1)) := by
   exact inventory.memory_interactions_eq witness (memoryChannel.emittedValue (-1)) recordFor_interactions
 

@@ -129,16 +129,18 @@ def instruction_export_errors(lean: str, rust: str) -> list[str]:
              for name in names]
     exported = re.findall(r'\("([^"]+_instruction\.rs)",', lean)
     registrations = re.findall(
-        r'generated_instruction!\(\s*\w+,\s*"([^"]+)",\s*(\w+),\s*(\w+)\s*\);',
+        r'generated_instruction!\(\s*(\w+),\s*"([^"]+)",\s*(\w+)\s*\);',
         rust,
     )
-    expected = [(file, name + "Instruction", name + "InstructionAirSpec")
+    expected = [("generated_" + file.removesuffix("_instruction.rs"), file, name + "Instruction")
                 for file, name in zip(files, names)]
     errors = []
     if exported != files:
         errors.append("built-in instruction exporter inventory/order differs")
     if registrations != expected:
         errors.append("Rust instruction comparison registrations differ")
+    if not re.search(r'use\s+\$module::Ensemble\s+as\s+\$program\s*;', rust):
+        errors.append("Rust instruction comparisons must use each generated ensemble")
     return errors
 
 

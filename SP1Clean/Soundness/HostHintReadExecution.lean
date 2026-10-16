@@ -110,10 +110,10 @@ theorem GroundingCarrier.halt_engineFacts (valid : image.Valid)
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.halt row)) ∧
+          (wordTables (HostHintQueueBoundary.projected witness))) (.halt row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.halt row)) := by
+          (wordTables (HostHintQueueBoundary.projected witness))) (.halt row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.halt row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]
@@ -133,7 +133,7 @@ theorem GroundingCarrier.ground (valid : image.Valid)
     (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
       LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline (event.facts witness.data).statePull ∧
       ∀ pull ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+          (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
         MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
           LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
       LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline

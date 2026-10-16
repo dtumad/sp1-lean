@@ -69,8 +69,8 @@ def systemTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : E
 theorem systemTable_component {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 4) :
     (systemTable witness index).component =
-      ([{ circuit := MemoryBumpChip.circuit }, { circuit := StateBumpChip.circuit }, { circuit := HaltChip.circuit },
-        { circuit := SyscallInstrsChip.circuit }] : List (Component (ZMod p)))[index.val] := by
+      ([{ circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }, { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }, { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions },
+        { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }] : List (Component (ZMod p)))[index.val] := by
   have same := witness.same_circuits (55 + index.val)
     (by change 55 + index.val < (tables image source).length; rw [tables_length]; omega)
   apply same.symm.trans
@@ -83,7 +83,7 @@ theorem systemTable_mem {image : ProgramImage} {source : ExecutionSnapshot}
 
 theorem systemTable_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
-    (index : Fin 4) : (systemTable witness index).Constraints witness.data :=
+    (index : Fin 4) : (systemTable witness index).Constraints :=
   constraints _ (systemTable_mem witness index)
 
 private theorem systemTables_eq {image : ProgramImage} {source : ExecutionSnapshot}
@@ -100,7 +100,7 @@ private theorem systemTables_eq {image : ProgramImage} {source : ExecutionSnapsh
 
 private theorem byteTables_memory_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · witness.data memoryChannel) = [] := by
+    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · memoryChannel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply typedTableInteractions_nil
@@ -115,26 +115,26 @@ tables. Fixed Program, Byte/Range, and StateBump are proved Memory-silent. -/
 theorem memoryInterior_split {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     memoryInterior witness =
-      (instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel) ++
-      typedTableInteractionsWith (systemTable witness 0) witness.data memoryChannel ++
-      typedTableInteractionsWith (systemTable witness 2) witness.data memoryChannel ++
-      typedTableInteractionsWith (systemTable witness 3) witness.data memoryChannel := by
-  have programSilent : typedTableInteractionsWith (programTable witness) witness.data memoryChannel = [] := by
+      (instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel) ++
+      typedTableInteractionsWith (systemTable witness 0) memoryChannel ++
+      typedTableInteractionsWith (systemTable witness 2) memoryChannel ++
+      typedTableInteractionsWith (systemTable witness 3) memoryChannel := by
+  have programSilent : typedTableInteractionsWith (programTable witness) memoryChannel = [] := by
     apply typedTableInteractions_nil
     rw [programTable_component]
     change memoryChannel.toRaw ∉ [programChannel.toRaw]
     simp [memoryChannel_eq_programChannel_false]
-  have stateSilent : typedTableInteractionsWith (systemTable witness 1) witness.data memoryChannel = [] := by
+  have stateSilent : typedTableInteractionsWith (systemTable witness 1) memoryChannel = [] := by
     apply typedTableInteractions_nil
     rw [systemTable_component]
     change memoryChannel.toRaw ∉ [byteChannel.toRaw, stateChannel.toRaw]
     simp [memoryChannel_eq_byteChannel_false, memoryChannel_eq_stateChannel_false]
-  have registerSilent : typedTableInteractionsWith (registerMembershipTable witness) witness.data memoryChannel = [] := by
+  have registerSilent : typedTableInteractionsWith (registerMembershipTable witness) memoryChannel = [] := by
     apply typedTableInteractions_nil
     rw [registerMembershipTable_component]
     change memoryChannel.toRaw ∉ [source.sail.memorySnapshot.registerTable.channel.toRaw]
     simp [memoryChannel, StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw]
-  have ramSilent : typedTableInteractionsWith (ramMembershipTable witness) witness.data memoryChannel = [] := by
+  have ramSilent : typedTableInteractionsWith (ramMembershipTable witness) memoryChannel = [] := by
     apply typedTableInteractions_nil
     exact ramMembershipTable_silent witness _ (by simp [memoryChannel, Channel.toRaw])
   have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
@@ -167,11 +167,11 @@ noncomputable def memoryRefreshes {image : ProgramImage} {source : ExecutionSnap
 /-- Selecting active ordinary rows preserves both complete Memory message lists. -/
 theorem activeInstructionRows_memory {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints) :
-    producedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel)) =
+    producedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel)) =
         (activeInstructionRows witness).flatMap (·.producedMemoryMessages witness.data) ∧
-    consumedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel)) =
+    consumedMessages ((instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel)) =
         (activeInstructionRows witness).flatMap (·.consumedMemoryMessages witness.data) := by
-  have ledger : (instructionTables witness).flatMap (typedTableInteractionsWith · witness.data memoryChannel) =
+  have ledger : (instructionTables witness).flatMap (typedTableInteractionsWith · memoryChannel) =
       (instructionRows witness).flatMap (·.interactionsWith witness.data memoryChannel) :=
     (decodedInstructionInteractionsWith_eq_tables witness.data memoryChannel
       (instructionTables_aligned witness)).symm

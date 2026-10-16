@@ -56,12 +56,13 @@ def verifier (image : ProgramImage) : GeneralFormalCircuit (ZMod p) SP1PublicIO 
 /-- The remaining core components, after the initialization inventory. -/
 def afterInitialTables (image : ProgramImage) : List (Component (ZMod p)) :=
   FinalMemoryEnsemble.inventory.views.map (·.component) ++
-    [{ circuit := DecodedProgramProvider.circuit image }] ++ sp1Tables ++
+    [{ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions }] ++ sp1Tables ++
     (sp1ProviderTables.take 23 ++ sp1ProviderTables.drop 26)
 
 /-- Fixed intervals authenticate boot RAM requests through the same channel as local snapshots. -/
 def ramMembership (image : ProgramImage) : Component (ZMod p) :=
   (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").component
+      (InitialMemoryLookup.membership_height_lt_uint64 image.initialMemory "sp1.native.initial_memory")
 
 /-- Both memory inventories precede ordinary instructions; the order is an assembly detail.
 The legacy unauthenticated Program/init/final providers are absent. -/
@@ -95,6 +96,8 @@ private theorem verifierInteractions_admitted (image : ProgramImage) (input : Va
 def verifierInteractions (image : ProgramImage) : Verifier.Program (ZMod p) SP1PublicIO where
   main input := Verifier.ofInteractions ((verifierMain image input).operations 0).interactions
     (verifierInteractions_admitted image input)
+  Spec _ _ := True
+  soundness := by intros; trivial
 
 theorem verifierInteractions_interactions (image : ProgramImage) (input : Var SP1PublicIO (ZMod p)) :
     ((verifierInteractions image).main input).circuitOperations.interactions =
@@ -206,13 +209,13 @@ theorem boot_interactions {image : ProgramImage}
         ).circuitOperations.interactionValuesWith (bootChannel image)
           (Environment.fromInput witness.publicInput witness.data) := by
   have fresh := VerifierChannel.fresh "sp1.native.boot" (baseEnsemble (p := p) image)
-  have physical : witness.tableContext.interactionsWith (bootChannel image) = [] := by
+  have physical : witness.toTables.interactionsWith (bootChannel image) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply List.flatMap_eq_nil_iff.mpr
     intro row _
     exact fresh.tables table.component
-      (EnsembleWitness.mem_component_of_mem (witness := witness) member) _
+      (EnsembleWitness.component_mem_tables_of_mem (witness := witness) member) _
   change (verifierProgram image _).circuitOperations.interactionValuesWith (bootChannel image)
     (Environment.fromInput witness.publicInput witness.data) ++ _ = _
   rw [verifierProgram_values, show (verifierInteractions image).circuitOperations.interactionValuesWith
@@ -294,7 +297,7 @@ theorem afterInitialTables_finished_requirements (image : ProgramImage)
   · exact absent (fun required => outside (List.mem_cons_of_mem _
       (boundary_requirements image component (List.mem_append_right _ member) required)))
   · have required := (Component.weakSoundness_of_no_guarantees
-      ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) rfl (by trivial) constraints).2
+      ({ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions } : Component (ZMod p)) rfl (by trivial) constraints).2
     exact fun interaction emitted _ => required interaction emitted
   · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
@@ -345,8 +348,8 @@ theorem finishedChannel_guarantees (image : ProgramImage)
     ((ensemble image).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
       (ensemble image).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw) ∧
     ∀ table ∈ witness.tables,
-      table.ChannelGuarantees witness.data byteChannel.toRaw ∧
-        table.ChannelGuarantees witness.data programChannel.toRaw := by
+      table.ChannelGuarantees byteChannel.toRaw ∧
+        table.ChannelGuarantees programChannel.toRaw := by
   have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
       (member : channel ∈ (baseEnsemble (p := p) image).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
@@ -354,7 +357,7 @@ theorem finishedChannel_guarantees (image : ProgramImage)
         (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
         (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]) :
       (ensemble image).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
-        ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
+        ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
     apply witness.channelGuarantees_of_component_requirements channel constraints
       (balanced channel (List.mem_append_left _ member))
     · intro input data interaction emitted _
@@ -374,13 +377,13 @@ theorem ram_guarantees_of_balance (image : ProgramImage)
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannel
       (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw) :
-    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data
+    ∀ table ∈ witness.tables, table.ChannelGuarantees
       (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw := by
   apply (witness.channelGuarantees_of_requirements _ balanced ?_ ?_).2
   · intro interaction emitted _
     exact verifierProgram_requirements image (bootChannel image).name _ interaction emitted
   · intro table member
-    have location := EnsembleWitness.mem_component_of_mem member
+    have location := EnsembleWitness.component_mem_tables_of_mem member
     simp only [ensemble, tables, List.mem_append, List.mem_singleton] at location
     rcases location with initial | native | fixed
     · intro row rowMember
@@ -397,13 +400,13 @@ theorem ram_guarantees_of_balance (image : ProgramImage)
       simp [StaticTable.channel, InitialMemoryLookup.membership,
         stateChannel, memoryChannel, OrderedBoundary.channel,
         OrderedInitialProvider.channelName, OrderedFinalProvider.channelName, Channel.toRaw]
-    · have assumptions : table.Assumptions witness.data := by
+    · have assumptions : table.Assumptions := by
         intro row _
         rw [fixed]
         trivial
       intro row rowMember interaction emitted _
       exact (table.component.weakSoundness_of_no_guarantees (by rw [fixed]; rfl)
-        (table.circuitAssumptions (witness.data_consistent table member) assumptions row rowMember)
+        (table.circuitAssumptions_of_dataConsistency (witness.dataConsistency_of_mem table member) assumptions row rowMember)
         (constraints table member row rowMember)).2 interaction emitted
 
 end SP1Clean.Soundness.NativeCore

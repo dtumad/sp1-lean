@@ -109,7 +109,7 @@ theorem channel_not_mem (ens : Ensemble F PublicIO) : check.channel ens ∉ ens.
 /-- Forget the additional public check, preserving the literal committed table list. -/
 def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (check.install ens)) :
     EnsembleWitness ens :=
-  EnsembleWitness.ofTables ens witness.tables witness.publicInput witness.tables_map_component
+  witness.withEnsemble ens rfl
 
 /-- Projection preserves public input. -/
 @[simp] theorem project_publicInput {ens : Ensemble F PublicIO}
@@ -129,8 +129,7 @@ def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (check.instal
 /-- Use the same committed rows as a candidate for the strengthened verifier. -/
 def lift {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens) :
     EnsembleWitness (check.install ens) :=
-  EnsembleWitness.ofTables (check.install ens) witness.tables witness.publicInput
-    witness.tables_map_component
+  witness.withEnsemble (check.install ens) rfl
 
 /-- Physical constraints are identical; the public checks are enforced through balance. -/
 theorem project_constraints {ens : Ensemble F PublicIO}
@@ -175,13 +174,13 @@ theorem installed_check_interactions {ens : Ensemble F PublicIO}
         (Environment.fromInput witness.publicInput witness.data) := by
   have fresh := check.fresh ens
   have original := VerifierChannel.Fresh.empty_ledger check.name fresh (check.project witness)
-  have physical : witness.tableContext.interactionsWith (check.channel ens) = [] := by
+  have physical : witness.toTables.interactionsWith (check.channel ens) = [] := by
     simpa only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
-      fresh.verifier, List.nil_append, EnsembleWitness.tableContext,
-      TableContext.interactionsWith, project_tables, project_data] using original
+      fresh.verifier, List.nil_append, EnsembleWitness.toTables,
+      Tables.interactionsWith, project_tables, project_data] using original
   change (ens.verifier.andThen (check.program ens)).circuitOperations.interactionValuesWith (check.channel ens)
     (Environment.fromInput witness.publicInput witness.data) ++
-      witness.tableContext.interactionsWith (check.channel ens) = _
+      witness.toTables.interactionsWith (check.channel ens) = _
   rw [Verifier.Program.andThen_values, fresh.verifier, List.nil_append, physical, List.append_nil]
 
 /-- Installation preserves old balance and enforces the new assertions with their exact count bound. -/

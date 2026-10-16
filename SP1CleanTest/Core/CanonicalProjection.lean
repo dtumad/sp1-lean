@@ -23,6 +23,8 @@ private def component (name : String) (width : ℕ) : Component Fp where
 private def table (name : String) (row : Array Fp) : Table Fp where
   component := component name row.size
   table := [row]
+  data := fun _ _ => #[]
+  length_le := by simp only [List.length_singleton]; decide
   uniform_width := by
     intro candidate member
     obtain rfl := List.mem_singleton.mp member
@@ -53,7 +55,7 @@ theorem narrowRow : projected.tables[0].table = [#[1]] := by decide
 
 /-- A read at the discarded boundary changes value, so scope checking is necessary for projection. -/
 theorem discardedCellIsRejected :
-    Extraction.expressionBadVariable 1 (Expression.var (F := Fp) ⟨1⟩) = some 1 ∧
+    Backends.expressionBadVariable 1 (Expression.var (F := Fp) ⟨1⟩) = some 1 ∧
       Expression.eval (Environment.fromArray #[1, 2, 3] original.data) (.var ⟨1⟩) ≠
         Expression.eval (Environment.fromArray #[1] projected.data) (.var ⟨1⟩) := by
   decide
@@ -96,7 +98,6 @@ theorem changedCircuitData (name : String) (different : name ≠ "removed") (ari
   apply original.projectPrefix_data_of_layout (target := checkedTarget) (by decide) _ _
   · intro index; fin_cases index <;> rfl
   · intro index; fin_cases index <;> rfl
-  · intro index; fin_cases index <;> intros <;> rfl
   · intro candidate member
     change candidate ∈ [component "removed" 1] at member
     obtain rfl := List.mem_singleton.mp member
@@ -116,6 +117,8 @@ theorem changedCircuitRejectsRow : ¬ checkedProjection.Constraints := by
 private def repeated : Table Fp where
   component := component "repeated" 1
   table := [#[1], #[0], #[1]]
+  data := fun _ _ => #[]
+  length_le := by decide
   uniform_width := by
     intro candidate member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
@@ -124,14 +127,14 @@ private def repeated : Table Fp where
 
 /-- Filtering retains repeated physical occurrences rather than deduplicating their values. -/
 theorem repeatedRows :
-    (repeated.filterRows (fun _ _ => #[]) (fun env => decide (env.get 0 = 1)) (by trivial)).table =
+    (repeated.filterRows (fun env => decide (env.get 0 = 1)) (by trivial)).table =
       [#[1], #[1]] := by decide
 
 /-- A nonempty fixed table cannot be discarded through the row-selection interface. -/
 theorem fixedRowsCannotDisappear (physical : Table Fp) (columns : FixedColumns Fp)
-    (fixed : physical.component.fixedColumns = some columns) (positive : 0 < columns.height) :
-    ¬ physical.component.fixedRowsMatch (physical.table.filter fun _ => false) := by
-  simp only [List.filter_false, Component.fixedRowsMatch, fixed, FixedColumns.RowsMatch, List.map_nil]
+    (fixed : physical.component.fixedColumns = some columns) (positive : 0 < columns.height.toNat) :
+    ¬ physical.component.FixedRowsMatch (physical.table.filter fun _ => false) := by
+  simp only [List.filter_false, Component.FixedRowsMatch, fixed, FixedColumns.RowsMatch, List.map_nil]
   intro equal
   have lengths := congrArg List.length equal
   simp only [List.length_nil, List.length_map, List.length_range] at lengths

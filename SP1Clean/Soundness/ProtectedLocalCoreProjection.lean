@@ -21,10 +21,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 theorem tables_getElem (image : ProgramImage) (source : ExecutionSnapshot)
     (index : ℕ) (bound : index < 61) :
     (tables (p := p) image source)[index]'(by rw [tables_length]; omega) =
-      if 28 = index then { circuit := ProtectedStore.double } else
-      if 27 = index then { circuit := ProtectedStore.word } else
-      if 26 = index then { circuit := ProtectedStore.half } else
-      if 25 = index then { circuit := ProtectedStore.byte } else
+      if 28 = index then { circuit := ProtectedStore.double, Assumptions := (ProtectedStore.double).Assumptions } else
+      if 27 = index then { circuit := ProtectedStore.word, Assumptions := (ProtectedStore.word).Assumptions } else
+      if 26 = index then { circuit := ProtectedStore.half, Assumptions := (ProtectedStore.half).Assumptions } else
+      if 25 = index then { circuit := ProtectedStore.byte, Assumptions := (ProtectedStore.byte).Assumptions } else
       (LocalCore.tables image source)[index]'(by rw [LocalCore.tables_length]; exact bound) := by
   simp only [tables]
   rw [List.getElem_append_left (by
@@ -117,20 +117,32 @@ theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
       rw [← (localWitness witness).same_length]
       change index.val < (LocalCore.tables (p := p) image source).length
       rw [LocalCore.tables_length]; exact index.isLt) =
-      (witness.tables[index.val]'(by
+      { (witness.tables[index.val]'(by
         rw [← witness.same_length]; change index.val < (tables image source).length
         rw [tables_length]; omega)).withComponent
         ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt))
-        (by rw [← witness.same_circuits]; exact (component_layout image source index).1)
-        (by rw [← witness.same_circuits]; exact (component_layout image source index).2) := by
+        (by rw [← witness.same_circuits]; exact (component_layout (p := p) image source index).1)
+        (by rw [← witness.same_circuits]; exact (component_layout image source index).2) with
+        data := (localWitness witness).data } := by
   rw [localWitness, witness.projectPrefix_getElem (index := ⟨index.val, by
     change index.val < (LocalCore.tables (p := p) image source).length
     rw [LocalCore.tables_length]; exact index.isLt⟩)]
   rw [Table.ext_iff]
-  refine ⟨rfl, ?_⟩
-  apply Table.projectPrefix_rows_of_width_eq
-  rw [← witness.same_circuits]
-  exact (component_layout image source index).1
+  refine ⟨rfl, ?_, rfl⟩
+  let original := witness.tables[index.val]'(by
+    rw [← witness.same_length]
+    change index.val < (tables image source).length
+    rw [tables_length]; omega)
+  let component := (LocalCore.tables (p := p) image source)[index.val]'(by
+    rw [LocalCore.tables_length]; exact index.isLt)
+  have sameWidth : component.width = original.component.width := by
+    rw [← witness.same_circuits]
+    exact (component_layout (p := p) image source index).1
+  have sameFixed : component.fixedColumns = original.component.fixedColumns := by
+    rw [← witness.same_circuits]
+    exact (component_layout (p := p) image source index).2
+  have rows := original.projectPrefix_rows_of_width_eq component sameWidth.le sameFixed sameWidth
+  exact rows
 
 theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -153,16 +165,15 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
 private theorem provider_suffix_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw) :
-    (witness.tables.drop 61).flatMap (·.interactionsWith witness.data channel) = [] := by
+    (witness.tables.drop 61).flatMap (·.interactionsWith channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   rw [List.map_drop, witness.tables_map_component] at mapped
   change table.component ∈ (tables image source).drop 61 at mapped
-  have length : ((((LocalCore.tables (p := p) image source).set 25 { circuit := ProtectedStore.byte }).set 26
-      { circuit := ProtectedStore.half }).set 27 { circuit := ProtectedStore.word } |>.set 28 { circuit := ProtectedStore.double }).length = 61 := by
-    simp only [List.length_set, LocalCore.tables_length]
-  rw [tables, List.drop_left' length] at mapped
+  rw [tables, List.drop_left'] at mapped
+  swap
+  · simp only [List.length_set, LocalCore.tables_length]
   obtain same := List.mem_singleton.mp mapped
   apply table.interactionsWith_nil_of_channel_not_mem
   rw [same]

@@ -20,6 +20,14 @@ open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
+omit [Fact (2 ^ 17 < p)] in
+theorem membership_height_lt_uint64 (snapshot : MemorySnapshot) :
+    (snapshot.registerTable (p := p)).height < UInt64.size := by
+  have padded := (snapshot.registerTable (p := p)).height_lt_double
+  rw [snapshot.registerTable_length] at padded
+  norm_num [UInt64.size] at *
+  omega
+
 abbrev Inputs := RegisterSnapshotRow
 
 def message {R : Type} [Zero R] (input : Inputs R) : MemoryMsg R :=

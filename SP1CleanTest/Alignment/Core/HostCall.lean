@@ -156,14 +156,18 @@ private def instructionOfCall (message : HostCallChip.Message Fp) : Inputs Fp :=
       op_c_memory := ⟨message.arg2, ⟨0, message.clk_low + 1⟩⟩
       op_a_value := message.result } }
 
-private def instructionTable (rows : List (Inputs Fp)) : Table Fp :=
-  Table.build Soundness.HostCallLedger.producer rows (fun _ _ => #[]) (ProverHint.empty Fp)
+private def instructionTable (rows : List (Inputs Fp))
+    (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
+  Table.build Soundness.HostCallLedger.producer rows (fun _ _ => #[]) (ProverHint.empty Fp) bounded
 
-private def handlerTable (rows : List (HostHintReadChip.Inputs Fp)) : Table Fp :=
-  Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp)
+private def handlerTable (rows : List (HostHintReadChip.Inputs Fp))
+    (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
+  Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp) bounded
 
-private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp)) : Bool :=
-  let tables := [instructionTable instructions, handlerTable handlers]
+private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp))
+    (instructionBound : instructions.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide)
+    (handlerBound : handlers.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Bool :=
+  let tables := [instructionTable instructions instructionBound, handlerTable handlers handlerBound]
   let data := deriveProverData tables
   let ledger := tables.flatMap fun table =>
     table.table.flatMap fun physical =>
@@ -259,12 +263,12 @@ private def registeredTables : List (Table Fp) :=
   List.ofFn fun index : Fin views.length =>
     if index.val = 0 then handlerTable [hintHandler 1]
     else if index.val = 2 then Table.build (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
-      [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp)
+      [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide))
     else if index.val = 19 then Table.build (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
-      [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp)
-    else Table.build views[index].component [] (fun _ _ => #[]) (ProverHint.empty Fp) (by
+      [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide))
+    else Table.build views[index].component [] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact Nat.zero_le _) (by
       have noFixed : views[index].component.fixedColumns = none := by fin_cases index <;> rfl
-      simp only [Component.fixedRowsMatch, noFixed])
+      simp only [Component.FixedRowsMatch, noFixed])
 
 /-- The heterogeneous physical tables retain the exact registered components, without casts. -/
 private theorem registeredTables_components :
@@ -286,7 +290,7 @@ theorem registeredReceiverHandoff :
     let instructions := instructionTable (padding :: (messages.map instructionOfCall).reverse ++ [padding])
     let ledger := registeredTables.flatMap fun table => physicalLedger table "sp1.native.host_call"
     views.length = 21 ∧ registeredTables.all physicalChecks = true ∧ physicalChecks instructions = true ∧
-      (ReceiverView.messages views registeredTables (deriveProverData registeredTables)).map toElements = messages.map toElements ∧
+      (ReceiverView.messages views registeredTables).map toElements = messages.map toElements ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger) = true ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger.drop 1) = false ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger ++ ledger.take 1) = false := by

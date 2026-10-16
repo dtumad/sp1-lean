@@ -11,9 +11,9 @@ addition supplies a semantic row/table construction theorem: honest circuit witn
 circuit's prover assumptions imply the resulting physical constraints and channel guarantees.
 It does not establish scheduler completeness or agreement with final derived data.
 
-Rows are built at explicit prover data and a shared hint. A table stores
-only its component and physical rows; its constraints and ledger are evaluated at the enclosing
-ensemble's canonical data. The congruence lemmas identify which obligations survive a data change.
+Rows are built at explicit prover data and a shared hint. A table records that data with its
+physical rows; ensemble assembly replaces it with the data derived from the complete inventory.
+The congruence lemmas identify which obligations survive a data change.
 Fixed-column tables require the same exact fixed-prefix invariant as Clean's `Table` constructor.
 
 The missing upstream capabilities are the row-layout and completeness lemmas, plus environment
@@ -286,7 +286,7 @@ theorem buildRow_of_localLength_zero (c : Component F) (input : c.Input F) (data
   simpa using this
 
 /-- Decode the verifier's fixed prefix followed by prover-owned suffix cells. -/
-def fixedInput (c : Component F) (fixed : FixedColumns F) (index : ℕ) (suffix : Array F) :
+def fixedInput (c : Component F) (fixed : FixedColumns F) (index : UInt64) (suffix : Array F) :
     c.Input F :=
   fromElements (Vector.ofFn fun cell : Fin (size c.Input) =>
     if cell.val < fixed.width then (fixed.row index)[cell.val]?.getD 0
@@ -294,7 +294,7 @@ def fixedInput (c : Component F) (fixed : FixedColumns F) (index : ℕ) (suffix 
 
 /-- Honest row generation preserves every verifier-fixed input cell. -/
 theorem buildRow_fixedInput_prefix (c : Component F) (fixed : FixedColumns F)
-    (columns : c.fixedColumns = some fixed) (index : ℕ) (suffix : Array F)
+    (columns : c.fixedColumns = some fixed) (index : UInt64) (suffix : Array F)
     (data : ProverData F) (hint : ProverHint F) :
     (c.buildRow (c.fixedInput fixed index suffix) data hint).extract 0 fixed.width = fixed.row index := by
   have width : fixed.width ≤ size c.Input := by
@@ -328,20 +328,22 @@ namespace Table
 
 /-- A physical table's literal ledger depends only on its committed cells. Semantic channel
 predicates and lookup constraints still require their own data-transport arguments. -/
-theorem interactionsWith_setData (table : Table F) (data data' : ProverData F)
+theorem interactionsWith_setData (table : Table F) (data : ProverData F)
     (channel : RawChannel F) :
-    table.interactionsWith data channel = table.interactionsWith data' channel := by
+    ({ table with data } : Table F).interactionsWith channel = table.interactionsWith channel := by
   apply congrArg List.flatten
   exact List.map_congr_left fun _ _ => table.component.interactionValuesWith_setData channel
 
 /-- Build physical rows with one hint shared by all inputs. -/
 def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
-    (hint : ProverHint F)
-    (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)) := by
+    (hint : ProverHint F) (bounded : inputs.length ≤ UInt64.size)
+    (fixed : c.FixedRowsMatch (inputs.map (c.buildRow · data hint)) := by
       preserve_tactic_target
       trivial) : Table F where
   component := c
   table := inputs.map (c.buildRow · data hint)
+  data := data
+  length_le := by simpa only [List.length_map] using bounded
   uniform_width := by
     intro row member
     obtain ⟨input, _, rfl⟩ := List.mem_map.mp member
@@ -354,10 +356,10 @@ This is a semantic table constructor; channel scheduling remains Clean's respons
 def buildPreallocated (c : Component F) (fixed : FixedColumns F)
     (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
     (data : ProverData F) (hint : ProverHint F) : Table F :=
-  build c ((List.range fixed.height).map fun index => c.fixedInput fixed index (suffix index))
-    data hint (by
-      simp only [Component.fixedRowsMatch, columns, FixedColumns.RowsMatch, List.map_map]
-      exact List.map_congr_left fun index _ => c.buildRow_fixedInput_prefix fixed columns index _ data hint)
+  build c ((List.range fixed.height.toNat).map fun index => c.fixedInput fixed (UInt64.ofNat index) (suffix index))
+    data hint (by simpa only [List.length_map, List.length_range] using Nat.le_of_lt fixed.height.toNat_lt) (by
+      simp only [Component.FixedRowsMatch, columns, FixedColumns.RowsMatch, List.map_map]
+      exact List.map_congr_left fun index _ => c.buildRow_fixedInput_prefix fixed columns (UInt64.ofNat index) _ data hint)
 
 @[simp] theorem buildPreallocated_component (c : Component F) (fixed : FixedColumns F)
     (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
@@ -367,38 +369,44 @@ def buildPreallocated (c : Component F) (fixed : FixedColumns F)
 @[simp] theorem buildPreallocated_length (c : Component F) (fixed : FixedColumns F)
     (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
     (data : ProverData F) (hint : ProverHint F) :
-    (buildPreallocated c fixed columns suffix data hint).length = fixed.height := by
+    (buildPreallocated c fixed columns suffix data hint).length = fixed.height.toNat := by
   simp [buildPreallocated, build, length]
 
 /-- Build ordinary input rows, or allocate the complete fixed trace with the supplied suffixes.
 The fixed prefix always comes from the component's verifier-owned program. -/
 def buildWithFixed (c : Component F) (inputs : List (c.Input F))
-    (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F) : Table F :=
+    (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F)
+    (bounded : inputs.length ≤ UInt64.size) : Table F :=
   match columns : c.fixedColumns with
-  | none => build c inputs data hint (by simp only [Component.fixedRowsMatch, columns])
+  | none => build c inputs data hint bounded (by simp only [Component.FixedRowsMatch, columns])
   | some fixed => buildPreallocated c fixed columns (suffix fixed) data hint
 
 @[simp] theorem buildWithFixed_component (c : Component F) (inputs : List (c.Input F))
     (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F) :
-    (buildWithFixed c inputs suffix data hint).component = c := by
+    ∀ bounded, (buildWithFixed c inputs suffix data hint bounded).component = c := by
+  intro bounded
   unfold buildWithFixed
   split <;> rfl
 
 section ConstantHint
 variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hint : ProverHint F)
-  (fixed : c.fixedRowsMatch (inputs.map (c.buildRow · data hint)))
+  (bounded : inputs.length ≤ UInt64.size)
+  (fixed : c.FixedRowsMatch (inputs.map (c.buildRow · data hint)))
 
-@[simp] lemma build_component : (build c inputs data hint fixed).component = c := rfl
+@[simp] lemma build_component : (build c inputs data hint bounded fixed).component = c := rfl
 
 @[simp] lemma build_table :
-    (build c inputs data hint fixed).table = inputs.map (c.buildRow · data hint) := rfl
+    (build c inputs data hint bounded fixed).table = inputs.map (c.buildRow · data hint) := rfl
 
-@[simp] lemma build_length : (build c inputs data hint fixed).length = inputs.length := List.length_map ..
+@[simp] lemma build_length : (build c inputs data hint bounded fixed).length = inputs.length := List.length_map ..
+
+/-- Generation records the environment used by the row witnesses. -/
+@[simp] theorem build_data : (build c inputs data hint bounded fixed).data = data := rfl
 
 /-- Honest constant-hint witnesses satisfy the physical constraints at the generation data. -/
 theorem build_constraints (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
-    (build c inputs data hint fixed).Constraints data := by
+    (build c inputs data hint bounded fixed).Constraints := by
   intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).1
@@ -406,30 +414,30 @@ theorem build_constraints (h_computable : c.circuit.base.ComputableWitnessesWith
 /-- Honest constant-hint witnesses satisfy the channel guarantees at the generation data. -/
 theorem build_guarantees (h_computable : c.circuit.base.ComputableWitnessesWithData)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
-    (build c inputs data hint fixed).Guarantees data := by
+    (build c inputs data hint bounded fixed).Guarantees := by
   intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).2
 
 /-- The literal per-channel ledger at any evaluation data. -/
 theorem build_interactions (evaluationData : ProverData F) (channel : RawChannel F) :
-    (build c inputs data hint fixed).interactionsWith evaluationData channel =
+    ({ build c inputs data hint bounded fixed with data := evaluationData } : Table F).interactionsWith channel =
       inputs.flatMap fun input => c.operations.interactionValuesWith channel
         (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
-  simp only [interactionsWith, build_table, build_component, List.flatMap_map]
+  simp only [interactionsWith, build, environment, List.flatMap_map]
 
 /-- All interaction occurrences at any evaluation data. -/
 theorem build_interactionValues (evaluationData : ProverData F) :
-    (build c inputs data hint fixed).interactions evaluationData =
+    ({ build c inputs data hint bounded fixed with data := evaluationData } : Table F).interactions =
       inputs.flatMap fun input => c.operations.interactionValues
         (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
-  simp only [interactions, build_table, build_component, List.flatMap_map]
+  simp only [interactions, build, environment, List.flatMap_map]
 
 end ConstantHint
 
 /-- Every emitted occurrence belongs to one of the component's declared channels. -/
-theorem channel_mem_channels_of_mem_interactions (table : Table F) (data : ProverData F) :
-    ∀ i ∈ table.interactions data, i.channel ∈ table.component.circuit.channels := by
+theorem channel_mem_channels_of_mem_interactions (table : Table F) :
+    ∀ i ∈ table.interactions, i.channel ∈ table.component.circuit.channels := by
   rw [Table.forall_interactions_iff]
   intro _ _ i interactionMem
   rw [AbstractInteraction.eval_channel]
@@ -440,4 +448,12 @@ theorem channel_mem_channels_of_mem_interactions (table : Table F) (data : Prove
   exact ⟨i, interactionMem, rfl⟩
 
 end Table
+
+/-- Installing canonical data preserves all physical interaction occurrences. Channel predicates
+still require their own data-transport proof; this equality concerns the literal ledger only. -/
+@[simp] theorem withDerivedData_interactionsWith (tables : List (Table F)) (channel : RawChannel F) :
+    (withDerivedData tables).flatMap (·.interactionsWith channel) =
+      tables.flatMap (·.interactionsWith channel) := by
+  simp only [withDerivedData, List.flatMap_map, Table.interactionsWith_setData]
+
 end Air.Flat

@@ -1,6 +1,6 @@
 module
 
-public import Clean.Circuit.Verifier
+public import Clean.Air.Verifier
 
 /-! # Certified interaction lists in a public verifier
 
@@ -22,7 +22,8 @@ def ofInteractions (interactions : List (AbstractInteraction F))
       if interaction.assumeGuarantees then interaction.Requirements env else interaction.Guarantees env) :
     Verifier F Unit :=
   ((), interactions.attach.map fun interaction =>
-    .interact interaction.val (valid interaction.val interaction.property))
+    .interact interaction.val (fun assumes env => by
+      simpa only [assumes, if_true] using valid interaction.val interaction.property env))
 
 /-- Importing certified operations retains the literal source interaction list. -/
 theorem ofInteractions_interactions (interactions : List (AbstractInteraction F)) (valid) :

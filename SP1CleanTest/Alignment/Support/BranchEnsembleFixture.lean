@@ -157,7 +157,8 @@ def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List 
   let generated := providers.filterMap id
   if generated.all (seedValid target) then some (consumers ++ generated) else none
 /-- Every table remains installed, including all fixed membership rows at their actual counts. -/
-def builtTables (target : MemorySnapshot) (seeds : List Seed) : List (Table Fp) :=
+def builtTables (target : MemorySnapshot) (seeds : List Seed)
+    (bounded : seeds.length ≤ UInt64.size) : List (Table Fp) :=
   let components := (assembly target).tables
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
@@ -165,22 +166,29 @@ def builtTables (target : MemorySnapshot) (seeds : List Seed) : List (Table Fp) 
     "sp1.native.initial_memory", "sp1.native.target_memory"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
   SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
+    (fun index => by
+      dsimp only [inputs]
+      rw [List.length_map]
+      exact (List.length_filter_le _ _).trans bounded)
 
 /-- All built tables retain the assembly's original component identities and order. -/
-theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed) :
-    (builtTables target seeds).map (·.component) = (assembly target).tables := by
+theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed)
+    (bounded : seeds.length ≤ UInt64.size) :
+    (builtTables target seeds bounded).map (·.component) = (assembly target).tables := by
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
 /-- Building rows never changes the complete 93-table host inventory. -/
-theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed) :
-    (builtTables target seeds).length = 93 := by
+theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed)
+    (bounded : seeds.length ≤ UInt64.size) :
+    (builtTables target seeds bounded).length = 93 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   rfl
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/
-def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed) :
+def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
+    (bounded : seeds.length ≤ UInt64.size) :
     EnsembleWitness (assembly target) :=
-  EnsembleWitness.ofTables _ (builtTables target seeds) input (builtTables_components target seeds)
+  EnsembleWitness.ofTables _ (builtTables target seeds bounded) input (builtTables_components target seeds bounded)
 
 /-- The finite source is exactly the source of the official Sail/compiler regression. -/
 theorem source_realizes : source.realize = ⟨BranchCompilerRoundTrip.source, {}, 1⟩ := rfl

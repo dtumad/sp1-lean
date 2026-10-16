@@ -239,8 +239,8 @@ def mulChipRowCodec :
     rowOutput_eq := by
       change ProvableType.eval _ ((MulChip.main _).output _) = _
       rw [MulChip.elaborated.output_eq]
-      rw [Air.Flat.Component.rowInputVar_mk,
-        Air.Flat.Component.rowOffset_mk]
+      rw [Air.Flat.Component.rowInputVar,
+        Air.Flat.Component.rowOffset]
       exact (eval_mulChipDirectOutput (p := p) (mulChipInput cols)
         (mulChipLocals cols) data).trans
           (mulChipColumnsOfInput_roundtrip cols) }
@@ -1820,36 +1820,36 @@ theorem mulChip_constraints_constructive
     let assignment := mulChipRowCodec.assignment
       (mulChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (mulChipOracle.assertZeros rustCols) ↔
-      ({ circuit := MulChip.circuit (p := p) } :
+      ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
   let cols := mulChipOracle.deconfigure rustCols
   let assignment := mulChipRowCodec.assignment cols data
   have hbind : BindsChipOutput MulChip.main assignment.environment
-      ({ circuit := MulChip.circuit (p := p) } :
+      ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      ({ circuit := MulChip.circuit (p := p) } :
+      ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [MulChip.circuit_main_eq] at h
     exact h
   have hfaithful := mulChip_constraints_faithful
     assignment.environment
-    ({ circuit := MulChip.circuit (p := p) } :
+    ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    ({ circuit := MulChip.circuit (p := p) } :
+    ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (mulChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            ({ circuit := MulChip.circuit (p := p) } :
+            ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols, ChipOracle.nativeAssertZeros_deconfigure,
-      Air.Flat.Component.rowOperations_mk,
-      Air.Flat.Component.rowInputVar_mk,
-      Air.Flat.Component.rowOffset_mk,
+      Air.Flat.Component.rowOperations,
+      Air.Flat.Component.rowInputVar,
+      Air.Flat.Component.rowOffset,
       MulChip.circuit_main_eq] using hfaithful
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
@@ -3069,32 +3069,32 @@ theorem mulChip_interactions_constructive
     List.Perm
       (LookupAccessList.active
         (nativeAccesses assignment.environment
-          ({ circuit := MulChip.circuit (p := p) } :
+          ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
             Air.Flat.Component (ZMod p)).operations))
       (LookupAccessList.active (mulChipOracle.rustAccesses rustCols)) := by
   dsimp only
   let cols := mulChipOracle.deconfigure rustCols
   let assignment := mulChipRowCodec.assignment cols data
   have hbind : BindsChipOutput MulChip.main assignment.environment
-      ({ circuit := MulChip.circuit (p := p) } :
+      ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).rowInputVar
-      ({ circuit := MulChip.circuit (p := p) } :
+      ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [MulChip.circuit_main_eq] at h
     exact h
   have hfaithful := mulChip_interactions_faithful
     assignment.environment
-    ({ circuit := MulChip.circuit (p := p) } :
+    ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    ({ circuit := MulChip.circuit (p := p) } :
+    ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (MulChip.circuit (p := p)) assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,
-    Air.Flat.Component.rowOperations_mk,
-    Air.Flat.Component.rowInputVar_mk,
-    Air.Flat.Component.rowOffset_mk,
+    Air.Flat.Component.rowOperations,
+    Air.Flat.Component.rowInputVar,
+    Air.Flat.Component.rowOffset,
     MulChip.circuit_main_eq] using hfaithful
 
 /-- Whole-chip faithfulness package for the complete pinned v6.4.0 Mul AIR. -/

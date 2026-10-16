@@ -84,7 +84,7 @@ theorem executionRows_nil_of_stopped {image : ProgramImage} {source : ExecutionS
 theorem memoryRefreshes_push_bounds_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.2 := by
   intro pair member
   obtain ⟨row, rowMem, pairMem⟩ := List.mem_flatMap.mp member
@@ -158,7 +158,7 @@ theorem memory_consumed_bounds {image : ProgramImage} {source : ExecutionSnapsho
 private theorem active_refresh_order {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     {row : MemoryBumpChip.Inputs (ZMod p)}
     (member : row ∈ activeSystemRows (systemTable witness 0) (memoryBumpRow witness.data) (·.is_real)) :
     MemoryClockBounds (MemoryBumpChip.pulledMessage row) →
@@ -175,7 +175,7 @@ Memory ledger bounds their actual prior records. -/
 theorem memoryRefreshes_order_of_bounds {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (prior : ∀ pair ∈ memoryRefreshes witness, MemoryClockBounds pair.1) :
     ∀ pair ∈ memoryRefreshes witness, MemoryMsg.timeNat pair.1 < MemoryMsg.timeNat pair.2 := by
   intro pair member

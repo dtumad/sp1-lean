@@ -191,7 +191,7 @@ theorem extracted_instructionTables_constraints
     (witness : Witness (SP1Clean.CoreAIR.Current.Row p))
     (valid : SP1Clean.CoreAIR.Current.Relation binds .execution statement witness)
     (data : ProverData (ZMod p)) :
-    ∀ table ∈ (extractedInstructionRows witness).transported data, table.Constraints data :=
+    ∀ table ∈ (extractedInstructionRows witness).transported data, table.Constraints :=
   ExtractedInstructionRows.transported_constraints _ _
     (extractedInstructionRows_valid statement witness valid)
 

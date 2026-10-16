@@ -55,10 +55,10 @@ private theorem payload_of_program_emission
     (emission : ∀ input offset, ((provider.main input).operations offset).interactionsWith
       programChannel.toRaw = [(programChannel.pushedIf input.multiplicity input.toMessage).toRaw])
     (env : Environment (ZMod p)) (interaction : Interaction (ZMod p))
-    (member : interaction ∈ ({ circuit := provider } : Air.Flat.Component (ZMod p)).operations.interactionValuesWith
+    (member : interaction ∈ ({ circuit := provider, Assumptions := (provider).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionValuesWith
       programChannel.toRaw env) :
     interaction.msg = (toElements
-      (({ circuit := provider } : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray := by
+      (({ circuit := provider, Assumptions := (provider).Assumptions } : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray := by
   rw [Operations.interactionValuesWith, Air.Flat.Component.interactionsWith_eq] at member
   change interaction ∈ (((provider.main (varFromOffset ProgramProviderChip.Inputs 0)).operations
     (size ProgramProviderChip.Inputs)).interactionsWith programChannel.toRaw).map _ at member
@@ -75,10 +75,10 @@ private theorem payload_of_program_emission
 /-- The evaluated ledger preserves the complete provider input as its Program payload. -/
 theorem program_interaction_payload (rom : StaticTable (ZMod p) ProgramMsg)
     (env : Environment (ZMod p)) (interaction : Interaction (ZMod p))
-    (member : interaction ∈ ({ circuit := circuit rom } : Air.Flat.Component (ZMod p)).operations.interactionValuesWith
+    (member : interaction ∈ ({ circuit := circuit rom, Assumptions := (circuit rom).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionValuesWith
       programChannel.toRaw env) :
     interaction.msg = (toElements
-      (({ circuit := circuit rom } : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray :=
+      (({ circuit := circuit rom, Assumptions := (circuit rom).Assumptions } : Air.Flat.Component (ZMod p)).rowInput env).toMessage).toArray :=
   payload_of_program_emission (circuit rom) (main_program_interactions rom) env interaction member
 
 /-- The fixed program provider authenticates exactly the supplied ROM table. -/

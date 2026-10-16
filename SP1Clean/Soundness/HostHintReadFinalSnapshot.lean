@@ -199,14 +199,21 @@ theorem source_execution_with_memory (valid : image.Valid)
   rw [terminal] at host
   have nextPc := carrier.nextPC valid constraints balanced path.replay
   rw [pc] at nextPc
-  exact ⟨carrier.events, target, hints, path, carrier.writesPermitted valid constraints balanced, carrier.exhaustive.map ExecutionRow.event, clock, pc,
-    carrier.final_memory valid constraints balanced target path.replay,
-    carrier.final_memory_domain valid constraints balanced path.replay,
-    carrier.runtime valid constraints balanced path.replay,
-    nextPc, carrier.retirement valid constraints balanced path.replay,
-    carrier.other_registers valid constraints balanced path.replay, decoded, host,
-    (fun _ running halted => carrier.final_exit valid constraints balanced path running halted),
-    fun candidate => carrier.checkFinal_iff valid constraints balanced candidate path.replay⟩
+  refine ⟨carrier.events, target, hints, path, ?_, ?_, clock, pc, ?_, ?_, ?_,
+    nextPc, ?_, ?_, decoded, host, ?_, ?_⟩
+  · exact carrier.writesPermitted valid constraints balanced
+  · exact carrier.exhaustive.map ExecutionRow.event
+  · intro loc bound
+    have observed := carrier.final_memory valid constraints balanced target path.replay loc bound
+    generalize LocalCore.memoryFinalFrontier
+      (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = selected at observed ⊢
+    cases selected <;> exact observed
+  · exact carrier.final_memory_domain valid constraints balanced path.replay
+  · exact carrier.runtime valid constraints balanced path.replay
+  · exact carrier.retirement valid constraints balanced path.replay
+  · exact carrier.other_registers valid constraints balanced path.replay
+  · exact fun _ running halted => carrier.final_exit valid constraints balanced path running halted
+  · exact fun candidate => carrier.checkFinal_iff valid constraints balanced candidate path.replay
 
 
 end SP1Clean.Soundness.HostHintReadCPU

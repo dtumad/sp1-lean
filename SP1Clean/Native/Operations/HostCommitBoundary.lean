@@ -54,6 +54,8 @@ def verifier (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) :
 remains the composition boundary for the complete host-boundary circuit. -/
 def verifierProgram (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) :
     Verifier.Program (ZMod p) (ProvableVector Word 8) where
+  Spec _ _ := True
+  soundness := by intros; trivial
   main values := Verifier.ofInteractions ((verifierMain deferred initialValues values).operations 0).interactions
     (by
       intro interaction member env

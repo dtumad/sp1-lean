@@ -22,11 +22,12 @@ def channelName : String := "SP1NativeMemoryInitOrder"
 /-- All 32 source registers authenticate sparse requests through verifier-fixed columns.
 This table is separate from the ordered Memory providers and contributes no Memory records. -/
 def registerMembership (snapshot : MemorySnapshot) : Component (ZMod p) :=
-  snapshot.registerTable.component
+  snapshot.registerTable.component (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot)
 
 /-- The normalized source intervals authenticate every byte of sparse RAM requests. -/
 def ramMembership (snapshot : MemorySnapshot) : Component (ZMod p) :=
   (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").component
+      (InitialMemoryLookup.membership_height_lt_uint64 snapshot.memory "sp1.native.initial_memory")
 
 /-- Both fixed membership ledgers are private to this source snapshot. -/
 def membershipChannels (snapshot : MemorySnapshot) : List (RawChannel (ZMod p)) :=

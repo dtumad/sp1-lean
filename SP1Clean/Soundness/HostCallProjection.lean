@@ -19,7 +19,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit }
+def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }
 
 /-- WRITE's additional register read, using the constraint-determined full-word selector. -/
 def extraRead (env : Environment (ZMod p)) : Readers.RegisterRead.Inputs (ZMod p) :=
@@ -268,9 +268,9 @@ attribute [local circuit_norm]
 /-- Clean's scope checker bounds every original assertion, multiplicity and message by the
 instruction's own width, independent of the wider host wrapper. -/
 theorem original_scope :
-    Extraction.expressionsBadVariable (original (p := p)).width
+    Backends.expressionsBadVariable (original (p := p)).width
       (original (p := p)).operations.constraints = none ∧
-    Extraction.expressionsBadVariable (original (p := p)).width
+    Backends.expressionsBadVariable (original (p := p)).width
       ((original (p := p)).operations.interactions.flatMap fun interaction =>
         interaction.mult :: interaction.msg.toList) = none := by
   have width : (original (p := p)).width = 65 := rfl
@@ -284,7 +284,7 @@ theorem constraints_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod
     (checked : producer.operations.ConstraintsHold (Environment.fromArray row data)) :
     original.operations.ConstraintsHold
       (Environment.fromArray (row.extract 0 (original (p := p)).width) data') := by
-  apply Extraction.constraints_extract row data data' SyscallInstrsChip.lookups_empty ?_
+  apply Backends.constraints_extract row data data' SyscallInstrsChip.lookups_empty ?_
     (constraints_original _ checked)
   exact (original_scope (p := p)).1
 
@@ -294,12 +294,12 @@ theorem byte_guarantees_prefix (row : Array (ZMod p)) (data data' : ProverData (
     original.operations.ChannelGuarantees byteChannel.toRaw
       (Environment.fromArray (row.extract 0 (original (p := p)).width) data') := by
   intro interaction member channel
-  have scope : Extraction.expressionsBadVariable (original (p := p)).width
+  have scope : Backends.expressionsBadVariable (original (p := p)).width
       (interaction.mult :: interaction.msg.toList) = none :=
     List.findSome?_eq_none_iff.mpr fun expression used =>
       List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression
         (List.mem_flatMap.mpr ⟨interaction, member, used⟩)
-  rw [← AbstractInteraction.eval_guarantees, Extraction.interaction_eval_extract row data data' _ scope]
+  rw [← AbstractInteraction.eval_guarantees, Backends.interaction_eval_extract row data data' _ scope]
   have kept := byte_guarantees (Environment.fromArray row data) guarantees interaction member channel
   rcases interaction with ⟨declared, mult, msg, assume⟩
   cases channel
@@ -327,7 +327,7 @@ theorem original_values_prefix (row : Array (ZMod p)) (data data' : ProverData (
   simp only [Operations.interactionValuesWith]
   apply List.map_congr_left
   intro interaction member
-  apply Extraction.interaction_eval_extract
+  apply Backends.interaction_eval_extract
   apply List.findSome?_eq_none_iff.mpr
   intro expression used
   exact List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression

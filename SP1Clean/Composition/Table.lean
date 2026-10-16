@@ -8,9 +8,9 @@ The retained Rust → Lean pipeline supplies migration evidence. `ChipFaithful` 
 Rust assertion list and active interaction multiset to one reconstructed native row. This module
 lifts that relation to physical tables and composes it with the native circuit's semantic proof.
 
-A transported table stores rows only. Constraints, channel guarantees and ledgers take explicit
-evaluation data; integrating the table into an ensemble must justify agreement with that ensemble's
-canonical data. Construction data is not an independently committed table field.
+A transported table stores its evaluation data and proves its physical row-count bound.
+Integrating it into an ensemble installs canonical data derived from the complete inventory;
+data-dependent predicates need separate transport, while literal interaction values do not.
 
 Transport runs Rust → native and asserts no surjectivity onto native rows. The Memory/Program
 orientation is a permutation followed by the declared polarity change. Multiplicity-zero entries
@@ -138,16 +138,19 @@ noncomputable def tableNativeAccesses (table : Table (ZMod p))
 /-- Faithfulness grouping changes only ledger order, including the unexpected-channel tail. -/
 theorem tableNativeAccesses_perm_tableRustOrientedAccesses (table : Table (ZMod p))
     (data : ProverData (ZMod p)) :
-    (tableNativeAccesses table data).Perm (tableRustOrientedAccesses table data) := by
+    (tableNativeAccesses table data).Perm (tableRustOrientedAccesses table) := by
   classical
   unfold tableNativeAccesses tableRustOrientedAccesses Air.Flat.Table.interactions
   simp only [List.map_flatMap]
   apply List.Perm.flatMap (List.Perm.refl table.table)
   intro row _
-  simpa only [Operations.interactionValues, List.map_map, Function.comp_def,
-    interactionToRustOrientedAccess_eval] using
-    nativeAccesses_perm_map_toRustOrientedAccess
-      (Environment.fromArray row data) table.component.operations
+  have shared := congrArg (List.map Interaction.toRustOrientedAccess)
+    (Operations.interactionValues_congr (ops := table.component.operations)
+      (env := Environment.fromArray row data) (env' := table.environment row) rfl)
+  simp only [Operations.interactionValues, List.map_map, Function.comp_def,
+    interactionToRustOrientedAccess_eval] at shared ⊢
+  exact (nativeAccesses_perm_map_toRustOrientedAccess
+    (Environment.fromArray row data) table.component.operations).trans (List.Perm.of_eq shared)
 
 /-- Active filtering distributes without unfolding a component's operation tree. -/
 theorem active_flatMap_tableNativeAccesses (tables : List (Table (ZMod p)))
@@ -177,9 +180,10 @@ theorem active_tablesNativeAccesses (tables : List (Table (ZMod p))) (data : Pro
 theorem tableNativeAccesses_build (component : Component (ZMod p))
     (inputs : List (component.Input (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
-    (fixed : component.fixedRowsMatch (inputs.map (component.buildRow · data hint)))
+    (bounded : inputs.length ≤ UInt64.size)
+    (fixed : component.FixedRowsMatch (inputs.map (component.buildRow · data hint)))
     (evaluationData : ProverData (ZMod p)) :
-    tableNativeAccesses (Table.build component inputs data hint fixed) evaluationData =
+    tableNativeAccesses (Table.build component inputs data hint bounded fixed) evaluationData =
       inputs.flatMap fun input =>
         nativeAccesses
           (Environment.fromArray (component.buildRow input data hint) evaluationData)
@@ -191,16 +195,18 @@ theorem tableNativeAccesses_build_map_singleton
     {Row : Type} (component : Component (ZMod p)) (rows : List Row)
     (decode : Row → component.Input (ZMod p)) (access : Row → LookupAccess)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (fixed : component.fixedRowsMatch ((rows.map decode).map (component.buildRow · data hint)))
+    (bounded : rows.length ≤ UInt64.size)
+    (fixed : component.FixedRowsMatch ((rows.map decode).map (component.buildRow · data hint)))
     (evaluationData : ProverData (ZMod p))
     (rowAccess : ∀ row ∈ rows,
       nativeAccesses
           (Environment.fromArray (component.buildRow (decode row) data hint) evaluationData)
           component.operations = [access row]) :
-    tableNativeAccesses (Table.build component (rows.map decode) data hint fixed) evaluationData =
+    tableNativeAccesses (Table.build component (rows.map decode) data hint
+      (by exact (List.length_map _).le.trans bounded) fixed) evaluationData =
       rows.map access := by
   rw [tableNativeAccesses_build]
-  clear fixed
+  clear fixed bounded
   induction rows with
   | nil => rfl
   | cons row rest ih =>
@@ -222,7 +228,7 @@ private theorem unexpectedInteractions_rowOperations_eq_nil_of_onlyChannel
       channel = Channels.programChannel.toRaw)
     (only : ∀ candidate ∈ circuit.channels, candidate = channel) :
     Faithful.unexpectedInteractions
-        ({ circuit := circuit } : Component (ZMod p)).rowOperations = [] := by
+        ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOperations = [] := by
   unfold Faithful.unexpectedInteractions
   apply List.filter_eq_nil_iff.mpr
   intro interaction interactionMem
@@ -230,7 +236,7 @@ private theorem unexpectedInteractions_rowOperations_eq_nil_of_onlyChannel
   intro unexpected
   have interactionMem' : interaction ∈
       ((circuit.main (varFromOffset Input 0)).operations (size Input)).interactions := by
-    simpa only [Component.rowOperations_mk] using interactionMem
+    simpa only [Component.rowOperations] using interactionMem
   have channelMem : interaction.channel ∈
       ((circuit.main (varFromOffset Input 0)).operations (size Input)).channels :=
     List.mem_map.mpr ⟨interaction, interactionMem', rfl⟩
@@ -249,7 +255,7 @@ private theorem interactionsWith_rowOperations_eq_nil_of_onlyChannel
     (only : ∀ candidate ∈ circuit.channels, candidate = onlyChannel)
     (different : channel ≠ onlyChannel) :
     Operations.interactionsWith channel
-        ({ circuit := circuit } : Component (ZMod p)).rowOperations = [] := by
+        ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOperations = [] := by
   unfold Operations.interactionsWith
   apply List.filter_eq_nil_iff.mpr
   intro interaction interactionMem
@@ -257,7 +263,7 @@ private theorem interactionsWith_rowOperations_eq_nil_of_onlyChannel
   intro channelEq
   have interactionMem' : interaction ∈
       ((circuit.main (varFromOffset Input 0)).operations (size Input)).interactions := by
-    simpa only [Component.rowOperations_mk] using interactionMem
+    simpa only [Component.rowOperations] using interactionMem
   have channelMem : interaction.channel ∈
       ((circuit.main (varFromOffset Input 0)).operations (size Input)).channels :=
     List.mem_map.mpr ⟨interaction, interactionMem', rfl⟩
@@ -276,8 +282,8 @@ theorem nativeAccesses_memoryOnly
       candidate = Channels.memoryChannel.toRaw)
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        ({ circuit := circuit } : Component (ZMod p)).rowOperations =
-      ((({ circuit := circuit } : Component (ZMod p)).rowOperations.interactionsWith
+        ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOperations =
+      ((({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOperations.interactionsWith
         Channels.memoryChannel.toRaw).map (AbstractInteraction.toAccess env)).map
           LookupAccessList.negMult := by
   have stateNil := interactionsWith_rowOperations_eq_nil_of_onlyChannel circuit
@@ -328,31 +334,34 @@ theorem environment_transportRow (codec : ChipRowCodec Input NativeCols circuit)
       (codec.assignment (oracle.deconfigure rustCols) data).environment := rfl
 
 /-- **The transported table**: one native physical row per extracted Rust row, at the extracted
-codec's generation data; evaluation data is supplied separately. -/
+codec's generation data, with the same physical row capacity as Clean. -/
 def transportTable (codec : ChipRowCodec Input NativeCols circuit)
     (oracle : ChipOracle (ZMod p) NativeCols RustCols)
-    (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p)) : Table (ZMod p) where
-  component := { circuit := circuit }
+    (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p)) (bounded : rustRows.length ≤ UInt64.size) : Table (ZMod p) where
+  component := { circuit := circuit, Assumptions := (circuit).Assumptions }
   table := rustRows.map (transportRow codec oracle · data)
+  data
+  length_le := (List.length_map _).le.trans bounded
+  fixed_rows_match := by trivial
   uniform_width := by
     intro row hrow
     obtain ⟨rustCols, -, rfl⟩ := List.mem_map.mp hrow
     exact (codec.assignment (oracle.deconfigure rustCols) data).width_eq
 
 @[simp] theorem transportTable_component (rustRows : List (RustCols (ZMod p)))
-    (data : ProverData (ZMod p)) :
-    (transportTable codec oracle rustRows data).component = { circuit := circuit } := rfl
+    (data : ProverData (ZMod p)) (bounded : rustRows.length ≤ UInt64.size) :
+    (transportTable codec oracle rustRows data bounded).component = { circuit := circuit, Assumptions := (circuit).Assumptions } := rfl
 
 @[simp] theorem transportTable_table (rustRows : List (RustCols (ZMod p)))
-    (data : ProverData (ZMod p)) :
-    (transportTable codec oracle rustRows data).table =
+    (data : ProverData (ZMod p)) (bounded : rustRows.length ≤ UInt64.size) :
+    (transportTable codec oracle rustRows data bounded).table =
       rustRows.map (transportRow codec oracle · data) := rfl
 
 /-- A transported table has exactly as many rows as the extracted table it came from — no padding
 is introduced and none is dropped. -/
 @[simp] theorem transportTable_length (rustRows : List (RustCols (ZMod p)))
-    (data : ProverData (ZMod p)) :
-    (transportTable codec oracle rustRows data).length = rustRows.length :=
+    (data : ProverData (ZMod p)) (bounded : rustRows.length ≤ UInt64.size) :
+    (transportTable codec oracle rustRows data bounded).length = rustRows.length :=
   List.length_map ..
 
 /-! ## The two transported facts -/
@@ -371,8 +380,9 @@ is available from the same anchor and is what a completeness-shaped transport wo
 theorem transportTable_constraints
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols)) :
-    (transportTable codec oracle rustRows data).Constraints data := by
+    (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols))
+    (bounded : rustRows.length ≤ UInt64.size) :
+    (transportTable codec oracle rustRows data bounded).Constraints := by
   intro row hrow
   obtain ⟨rustCols, hmem, rfl⟩ := List.mem_map.mp hrow
   exact (faithful.constraints rustCols data).mp (valid rustCols hmem)
@@ -388,7 +398,7 @@ theorem transportRow_accesses_perm
     List.Perm
       (LookupAccessList.active
         (nativeAccesses (Environment.fromArray (transportRow codec oracle rustCols data) data)
-          ({ circuit := circuit } : Component (ZMod p)).operations))
+          ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations))
       (LookupAccessList.active (oracle.rustAccesses rustCols)) :=
   faithful.interactions rustCols data valid
 
@@ -403,14 +413,16 @@ other.
 theorem transportTable_accesses_perm
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols)) :
+    (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols))
+    (bounded : rustRows.length ≤ UInt64.size) :
     List.Perm
-      ((transportTable codec oracle rustRows data).table.flatMap fun row =>
+      ((transportTable codec oracle rustRows data bounded).table.flatMap fun row =>
         LookupAccessList.active
           (nativeAccesses (Environment.fromArray row data)
-            ({ circuit := circuit } : Component (ZMod p)).operations))
+            ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations))
       (rustRows.flatMap fun rustCols => LookupAccessList.active (oracle.rustAccesses rustCols)) := by
   rw [transportTable_table, List.flatMap_map]
+  clear bounded
   induction rustRows with
   | nil => simp
   | cons rustCols rest ih =>
@@ -424,14 +436,15 @@ statement: callers can concatenate many transported tables without normalizing t
 theorem transportTable_activeAccesses_perm
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p))
-    (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols)) :
+    (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols))
+    (bounded : rustRows.length ≤ UInt64.size) :
     List.Perm
       (LookupAccessList.active
-        (tableNativeAccesses (transportTable codec oracle rustRows data) data))
+        (tableNativeAccesses (transportTable codec oracle rustRows data bounded) data))
       (rustRows.flatMap fun rustCols => LookupAccessList.active (oracle.rustAccesses rustCols)) := by
   rw [active_tableNativeAccesses]
   simpa only [transportTable_component] using
-    transportTable_accesses_perm faithful rustRows data valid
+    transportTable_accesses_perm faithful rustRows data valid bounded
 
 /-- Valid Rust rows satisfy the native semantic contract under the original circuit assumptions
 and channel guarantees. These ordinary components use the circuit's assumptions directly, so
@@ -440,12 +453,13 @@ theorem transportTable_spec
     (faithful : ChipFaithful Input NativeCols RustCols circuit codec oracle)
     (rustRows : List (RustCols (ZMod p))) (data : ProverData (ZMod p))
     (valid : ∀ rustCols ∈ rustRows, List.Forall (· = 0) (oracle.assertZeros rustCols))
-    (assumptions : (transportTable codec oracle rustRows data).Assumptions data)
-    (guarantees : (transportTable codec oracle rustRows data).Guarantees data) :
-    (transportTable codec oracle rustRows data).Spec data :=
+    (bounded : rustRows.length ≤ UInt64.size)
+    (assumptions : (transportTable codec oracle rustRows data bounded).Assumptions)
+    (guarantees : (transportTable codec oracle rustRows data bounded).Guarantees) :
+    (transportTable codec oracle rustRows data bounded).Spec :=
 by
   intro row member
   exact (Component.weakSoundness (assumptions row member)
-    (transportTable_constraints faithful rustRows data valid row member) (guarantees row member)).1
+    (transportTable_constraints faithful rustRows data valid bounded row member) (guarantees row member)).1
 
 end SP1Clean.Composition

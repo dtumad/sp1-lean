@@ -345,8 +345,8 @@ theorem interactionsWith_exit_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
 
 /-- Halt rows use channels for their cross-table checks, with no Clean lookup operations. -/
 theorem lookups_empty :
-    ({ circuit := circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk]
+    ({ circuit := circuit (p := p), Assumptions := (circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations]
   simp [circuit, main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main, circuit_norm]

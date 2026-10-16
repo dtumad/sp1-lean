@@ -58,16 +58,20 @@ private def words (call : HostHintReadChip.Inputs Fp) : List HintReadFixtures.Ro
     let last := decide (index + 1 = wordCount node.bytes)
     (last, HintReadWordChip.populate last ram word.pointer word.index)
 
-private def handlers (calls : List (HostHintReadChip.Inputs Fp)) : Table Fp :=
-  Table.build HostHintReadCoverage.handler calls (fun _ _ => #[]) (ProverHint.empty Fp)
+private def handlers (calls : List (HostHintReadChip.Inputs Fp))
+    (bounded : calls.length ≤ UInt64.size := by native_decide) : Table Fp :=
+  Table.build HostHintReadCoverage.handler calls (fun _ _ => #[]) (ProverHint.empty Fp) bounded
 
-private def consumers (rows : List HintReadFixtures.Row) : List (Table Fp) :=
+private def consumers (rows : List HintReadFixtures.Row)
+    (bounded : rows.length ≤ UInt64.size := by native_decide) : List (Table Fp) :=
   HintReadCoverage.variants.map fun last => Table.build (HintReadCoverage.view last).component
     ((rows.filter (fun row => row.1 == last)).map (·.2)) (fun _ _ => #[]) (ProverHint.empty Fp)
+    (by exact (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded))
 
-private theorem consumers_aligned (rows : List HintReadFixtures.Row) :
+private theorem consumers_aligned (rows : List HintReadFixtures.Row)
+    (bounded : rows.length ≤ UInt64.size := by native_decide) :
     List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants (consumers rows) := by
+      HintReadCoverage.variants (consumers rows bounded) := by
   simp only [consumers, HintReadCoverage.variants, List.map_cons, List.map_nil]
   exact .cons rfl (.cons rfl .nil)
 
@@ -84,8 +88,7 @@ private def queueLedger := ledgerFor ["sp1.native.hint_queue_state"]
 private def callLedger := ledgerFor ["sp1.native.host_call"]
 
 private def physicalInteractions (tables : List (Table Fp)) : List (Interaction Fp) :=
-  let data := deriveProverData tables
-  tables.flatMap (·.interactions data)
+  tables.flatMap (·.interactions)
 
 private def checked (data : ProverData Fp) (table : Table Fp) : Bool × Ledger :=
   let operations := table.component.rowOperations.toFlat
@@ -96,12 +99,16 @@ private def checked (data : ProverData Fp) (table : Table Fp) : Bool × Ledger :
       | .assert expression => env expression == 0
       | .lookup _ => false
       | _ => true
-  (assertions, cursorLedger (table.interactions data))
+  (assertions, cursorLedger (table.interactions))
 
 private def shared (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row) : Bool :=
-  let tables := handlers calls :: consumers rows
+  if callsBound : calls.length ≤ UInt64.size then
+  if rowsBound : rows.length ≤ UInt64.size then
+  let tables := handlers calls callsBound :: consumers rows rowsBound
   let checked := tables.map (checked (deriveProverData tables))
   checked.all (·.1) && HintReadFixtures.balanced (checked.flatMap (·.2))
+  else false
+  else false
 
 private def unique (table : Table Fp) : Bool :=
   decide (((table.table.map (Environment.fromArray · (deriveProverData [table]))).map
@@ -117,12 +124,12 @@ theorem sharedCalls :
       (table.table.map (Environment.fromArray · data)).all (fun env =>
         let call := HostHintReadCoverage.input env
         let key := Soundness.HostHintReadPartition.callClock env
-        let selected := Soundness.HostHintReadPartition.tablesFor key tables data (consumers_aligned rows)
+        let selected := Soundness.HostHintReadPartition.tablesFor key tables (consumers_aligned rows)
         let actual := ((node? (ofList hints).1 (Address.toNat call.node.pointer)).getD default).bytes
         let inventory := (HintReadCoverage.variants.zip selected).flatMap fun (last, table) =>
           table.table.map fun row => HintReadWrites.produced (last, Environment.fromArray row data)
         HintReadFixtures.balanced
-          ((checked data (handlers [call])).2 ++ (selected.map (checked data)).flatMap (·.2)) &&
+          ((checked data (handlers [call] (by exact (show 1 ≤ UInt64.size from by decide)))).2 ++ (selected.map (checked data)).flatMap (·.2)) &&
           inventory.mergeSort (fun a b => a.1 ≤ b.1) == wordWrites (Address.toNat call.span.start) actual) = true := by
   native_decide
 
@@ -132,7 +139,7 @@ theorem missingAndOrphanRows :
     shared (calls.drop 1) rows = false ∧ shared calls (rows.drop 1) = false ∧
       shared calls (rows ++ words (call 3 0 9 65536)) = false ∧
       ((Soundness.HostHintReadPartition.tablesFor (0, 9) (consumers rows)
-        (deriveProverData (consumers rows)) (consumers_aligned rows)).map
+        (consumers_aligned rows)).map
         (fun table => table.table.length)) = [0, 0] := by native_decide
 
 /-- Duplicating complete calls preserves cursor balance but violates the required event uniqueness. -/
@@ -160,11 +167,13 @@ private def assembly :=
 
 /-- Build every physical slot, retaining unused verifier-fixed membership rows at count zero. -/
 private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
-    (inputs : ℕ → List (List Fp)) : EnsembleWitness ensemble :=
+    (inputs : ℕ → List (List Fp))
+    (bounded : ∀ index : Fin ensemble.tables.length, (inputs index).length ≤ UInt64.size) :
+    EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
     (StaticMembership.buildTables ensemble.tables inputs
       []
-      (fun _ _ => #[]) (ProverHint.empty Fp))
+      (fun _ _ => #[]) (ProverHint.empty Fp) bounded)
     (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
     (StaticMembership.buildTables_components ..)
 
@@ -176,11 +185,25 @@ private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : 
     (rows.filter (fun row => row.1 == (index == 84))).map (fun row => (toElements row.2).toList)
   else []
 
+private theorem installedInputs_bounded (calls : List (HostHintReadChip.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (permissions : List (WritePermissionProvider.Inputs Fp))
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧ permissions.length ≤ UInt64.size)
+    (index : ℕ) : (installedInputs calls rows permissions index).length ≤ UInt64.size := by
+  unfold installedInputs
+  split_ifs
+  · simpa only [List.length_map] using bounded.2.2
+  · simpa only [List.length_map] using bounded.1
+  · exact (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded.2.1)
+  · exact Nat.zero_le _
+
 /-- A physical ensemble witness used to test cursor extraction. Other channels are deliberately
 not claimed balanced: source authentication and CPU instruction construction are separate tests. -/
 private def installed (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
-    (permissions : List (WritePermissionProvider.Inputs Fp) := []) : EnsembleWitness assembly :=
+    (permissions : List (WritePermissionProvider.Inputs Fp) := [])
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧ permissions.length ≤ UInt64.size := by native_decide) :
+    EnsembleWitness assembly :=
   buildWitness assembly (installedInputs calls rows permissions)
+    (fun index => installedInputs_bounded calls rows permissions bounded index)
 
 /-- The installed 85-table assembly retains exactly the handler and both physical word tables.
 Its complete cursor balances with reversed multi-call rows; missing handlers, missing words,
@@ -245,6 +268,17 @@ private def sourceInputs (calls : List (HostHintReadChip.Inputs Fp))
   else if index == 86 then records.map (fun row => (toElements row).toList)
   else installedInputs calls rows [] index
 
+private theorem sourceInputs_bounded (calls : List (HostHintReadChip.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧
+      nodes.length ≤ UInt64.size ∧ records.length ≤ UInt64.size)
+    (index : ℕ) : (sourceInputs calls rows nodes records index).length ≤ UInt64.size := by
+  unfold sourceInputs
+  split_ifs
+  · simpa only [List.length_map] using bounded.2.2.1
+  · simpa only [List.length_map] using bounded.2.2.2
+  · exact installedInputs_bounded calls rows [] ⟨bounded.1, bounded.2.1, Nat.zero_le _⟩ index
+
 private def recordSnapshot (actual : List Bytes) : ExecutionSnapshot :=
   { source with host := { source.host with io := { source.host.io with hints := actual } } }
 
@@ -254,9 +288,12 @@ private def sourceAssembly (actual : List Bytes) :=
     (HostHintReadLocal.source_unique_names image (recordSnapshot actual) actual)
 
 private def withSources (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
-    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
+    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧
+      nodes.length ≤ UInt64.size ∧ records.length ≤ UInt64.size := by native_decide) :
     EnsembleWitness (sourceAssembly actual) :=
   buildWitness (sourceAssembly actual) (sourceInputs calls rows nodes records)
+    (fun index => sourceInputs_bounded calls rows nodes records bounded index)
 
 private def sourceRowsChecked (actual : List Bytes) (nodes : List (NodeRecord Fp))
     (records : List (WordRecord Fp)) : Bool :=
@@ -334,9 +371,12 @@ private def queueAssembly (actual : List Bytes) (final : HostHintQueue.State Fp)
 
 private def withQueueBoundary (actual : List Bytes) (final : HostHintQueue.State Fp)
     (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
-    (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) :
+    (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧
+      nodes.length ≤ UInt64.size ∧ records.length ≤ UInt64.size := by native_decide) :
     EnsembleWitness (queueAssembly actual final) :=
   buildWitness (queueAssembly actual final) (sourceInputs calls rows nodes records)
+    (fun index => sourceInputs_bounded calls rows nodes records bounded index)
 
 /-- The actual verifier closes queue balance exactly once. Duplicate handler chains, a forged
 final head, and a reset frontier fail; zero-event identities work. Other AIR channels remain
@@ -388,12 +428,13 @@ private def historyTables (forge : Bool) : List (Table Fp) :=
       else row
     else lengths
   [handlers [call 1 545 553 65536, call 2 273 281 65536, call 3 1 9 65536],
-   Table.build { circuit := HostHintLengthChip.circuit false } lengths.reverse (fun _ _ => #[]) (ProverHint.empty Fp),
-   Table.build { circuit := HostHintLengthChip.circuit true } [lengthCall 0 553 817] (fun _ _ => #[]) (ProverHint.empty Fp)]
+   Table.build { circuit := HostHintLengthChip.circuit false, Assumptions := (HostHintLengthChip.circuit false).Assumptions } lengths.reverse (fun _ _ => #[]) (ProverHint.empty Fp) (by
+     have count : lengths.length = 3 := by cases forge <;> rfl
+     simpa only [List.length_reverse, count] using (show 3 ≤ UInt64.size from by decide)),
+   Table.build { circuit := HostHintLengthChip.circuit true, Assumptions := (HostHintLengthChip.circuit true).Assumptions } [lengthCall 0 553 817] (fun _ _ => #[]) (ProverHint.empty Fp) (by decide)]
 
 private def historyPath (forge : Bool) : List (HostQueueOrder.Row (p := SP1Prime)) :=
-  (TransitionView.readIndexedRows HostQueueOrder.indices (historyTables forge)
-    (deriveProverData (historyTables forge))).mergeSort
+  (TransitionView.readIndexedRows HostQueueOrder.indices (historyTables forge)).mergeSort
     (fun first second => HostQueueOrder.time (HostQueueOrder.edge first).2 ≤
       HostQueueOrder.time (HostQueueOrder.edge second).2)
 
@@ -401,7 +442,7 @@ private def historyPath (forge : Bool) : List (HostQueueOrder.Row (p := SP1Prime
 private def closedQueueLedger (final : HostHintQueue.State Fp) (tables : List (Table Fp)) : Ledger :=
   let data := deriveProverData tables
   queueLedger ((SP1Clean.HostHintQueueBoundary.closed hints final).operations.interactionValues
-    (Environment.fromArray #[] data) ++ tables.flatMap (·.interactions data))
+    (Environment.fromArray #[] data) ++ tables.flatMap (·.interactions))
 
 /-- Replay consumes physically decoded observations/pops across both HINT_LEN variants.
 A stale length forged in both result and metadata passes local assertions and token balance,
@@ -432,14 +473,14 @@ private def cpuTime (index : ℕ) : ℕ := 2 ^ 24 - 263 + 264 * index
 private def cpuQueueTables : List (Table Fp) :=
   [handlers [call 1 (cpuTime 6) (cpuTime 7) 65536,
       call 2 (cpuTime 3) (cpuTime 5) 65536, call 3 (cpuTime 0) (cpuTime 2) 65536],
-   Table.build { circuit := HostHintLengthChip.circuit false }
+   Table.build { circuit := HostHintLengthChip.circuit false, Assumptions := (HostHintLengthChip.circuit false).Assumptions }
      [lengthCall 1 (cpuTime 5) (cpuTime 6), lengthCall 2 (cpuTime 2) (cpuTime 3), lengthCall 3 0 (cpuTime 0)]
-     (fun _ _ => #[]) (ProverHint.empty Fp),
-   Table.build { circuit := HostHintLengthChip.circuit true } [lengthCall 0 (cpuTime 7) (cpuTime 8)]
-     (fun _ _ => #[]) (ProverHint.empty Fp)]
+     (fun _ _ => #[]) (ProverHint.empty Fp) (by decide),
+   Table.build { circuit := HostHintLengthChip.circuit true, Assumptions := (HostHintLengthChip.circuit true).Assumptions } [lengthCall 0 (cpuTime 7) (cpuTime 8)]
+     (fun _ _ => #[]) (ProverHint.empty Fp) (by decide)]
 
 private def cpuQueuePath : List (HostQueueOrder.Row (p := SP1Prime)) :=
-  (TransitionView.readIndexedRows HostQueueOrder.indices cpuQueueTables (deriveProverData cpuQueueTables)).mergeSort
+  (TransitionView.readIndexedRows HostQueueOrder.indices cpuQueueTables).mergeSort
     (fun first second => HostQueueCPUOrder.eventTime first ≤ HostQueueCPUOrder.eventTime second)
 
 private def enterCall (index : ℕ) : HostCallChip.Message Fp :=
@@ -466,16 +507,22 @@ private def cpuCalls : List (HostCallChip.Message Fp) :=
     (fun first second => Semantics.clkNat first.clk_high first.clk_low ≤
       Semantics.clkNat second.clk_high second.clk_low)
 
-private def cpuInstructions (messages : List (HostCallChip.Message Fp)) : Table Fp :=
+private def cpuInstructions (messages : List (HostCallChip.Message Fp))
+    (bounded : messages.length + 2 ≤ UInt64.size := by native_decide) : Table Fp :=
   let padding := queueInstruction (enterCall 1)
   let padding := { padding with instruction := { padding.instruction with is_real := 0 } }
+  have rowsBound : (padding :: (messages.map queueInstruction).reverse ++ [padding]).length ≤ UInt64.size := by
+    simp only [List.length_cons, List.length_nil, List.length_append, List.length_reverse, List.length_map]
+    omega
   Table.build HostCallLedger.producer (padding :: (messages.map queueInstruction).reverse ++ [padding])
-    (fun _ _ => #[]) (ProverHint.empty Fp)
+    (fun _ _ => #[]) (ProverHint.empty Fp) rowsBound
 
 private def cpuHandoff (messages : List (HostCallChip.Message Fp)) : Bool :=
-  let enters := Table.build { circuit := HostEnterChip.circuit } [enterCall 4, enterCall 1]
-    (fun _ _ => #[]) (ProverHint.empty Fp)
-  HintReadFixtures.balanced (callLedger (physicalInteractions (cpuInstructions messages :: enters :: cpuQueueTables)))
+  if bounded : messages.length + 2 ≤ UInt64.size then
+  let enters := Table.build { circuit := HostEnterChip.circuit, Assumptions := (HostEnterChip.circuit).Assumptions } [enterCall 4, enterCall 1]
+    (fun _ _ => #[]) (ProverHint.empty Fp) (by decide)
+  HintReadFixtures.balanced (callLedger (physicalInteractions (cpuInstructions messages bounded :: enters :: cpuQueueTables)))
+  else false
 
 /-- The physical wrapper handoff agrees with queue chronology despite reversed tables, padding,
 two intervening ENTER calls, and a 24-bit clock carry. Equal clocks do not permit changing a
@@ -537,7 +584,7 @@ theorem cpuWordGrouping :
     let table := consumers (([call 3 (cpuTime 0) (cpuTime 2) 65536,
       call 2 (cpuTime 3) (cpuTime 5) 65536, call 1 (cpuTime 6) (cpuTime 7) 65536].flatMap words).reverse)
     let data := deriveProverData table
-    let physical := TransitionView.readIndexedRows HintReadCoverage.variants table data
+    let physical := TransitionView.readIndexedRows HintReadCoverage.variants table
     let groups := rows.map (HostHintReadCPU.wordsAt data physical)
     let duplicates := rows.map (HostHintReadCPU.wordsAt data (physical ++ physical))
     groups.map List.length = [0, 0, 3, 0, 0, 2, 0, 1, 0] ∧

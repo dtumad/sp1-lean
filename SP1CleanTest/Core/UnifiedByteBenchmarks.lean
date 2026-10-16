@@ -17,10 +17,10 @@ open ComponentExport (Fp)
 open UnifiedByteExport (Requests request)
 
 def components : List (Component Fp) :=
-  [{ circuit := AndByte.circuit }, { circuit := OrByte.circuit },
-   { circuit := XorByte.circuit }, { circuit := U8Range.circuit },
-   { circuit := Ltu.circuit }, { circuit := MSB.circuit }] ++
-  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width }
+  [{ circuit := AndByte.circuit, Assumptions := (AndByte.circuit).Assumptions }, { circuit := OrByte.circuit, Assumptions := (OrByte.circuit).Assumptions },
+   { circuit := XorByte.circuit, Assumptions := (XorByte.circuit).Assumptions }, { circuit := U8Range.circuit, Assumptions := (U8Range.circuit).Assumptions },
+   { circuit := Ltu.circuit, Assumptions := (Ltu.circuit).Assumptions }, { circuit := MSB.circuit, Assumptions := (MSB.circuit).Assumptions }] ++
+  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions }
 
 def ensemble (n : ℕ) : Ensemble Fp (Requests n) where
   tables := components
@@ -83,32 +83,41 @@ def inputs (rows : List (ByteRow Fp)) (table : ℕ) : List (Array Fp) :=
     else if opcode = 5 then some #[key[2]!, count]
     else some #[key[2]!, key[3]!, count]
 
-def mode (width : ℕ) (rows : List (Array Fp)) : WitnessGeneration.Mode Fp := .preallocated {
-  rows := rows.length
-  input := .ofFExprs (Vector.ofFn fun column : Fin width =>
-    -- The pinned emitter renders an empty listGetAtIndex as an invalid Rust match.
-    -- No initializer executes for zero rows; use the equivalent standard constant IR.
-    if rows.isEmpty then .const 0
-    else .listGetAtIndex ((rows.map fun row => row[column.val]?.getD 0).map .const))
-  input_valid := by
-    simp only [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs,
-      Witgen.VExpr.validForRow, Vector.toList_ofFn, List.all_nil, Bool.true_and,
-      decide_eq_true_eq, List.all_eq_true, List.forall_mem_ofFn_iff]
-    intro column
-    split
-    · rfl
-    · simp only [Witgen.FExpr.validForRow]
-      exact Witgen.FExprList.validForRow_map_const _ _
-  handlers := []
-}
+def mode (width : ℕ) (rows : List (Array Fp)) : Except String (WitnessGeneration.Mode Fp) := do
+  if bounded : rows.length < UInt64.size then
+    return .preallocated {
+      rows := UInt64.ofNatLT rows.length bounded
+      input := .ofFExprs (Vector.ofFn fun column : Fin width =>
+        if rows.isEmpty then .const 0
+        else .listGet ((rows.map fun row => row[column.val]?.getD 0).map .const) .idx)
+      input_valid := by
+        simp only [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs,
+          Witgen.VExpr.validForRow, Vector.toList_ofFn, List.all_nil, Bool.true_and,
+          decide_eq_true_eq, List.all_eq_true, List.forall_mem_ofFn_iff]
+        intro column
+        split
+        · rfl
+        · simp only [Witgen.FExpr.validForRow, Witgen.U64Expr.validForRow, Bool.and_true]
+          exact Witgen.FExprList.validForRow_map_const _ _
+      handlers := []
+    }
+  else throw "precounted fixture exceeds the physical row index"
 
-def config (rows : List (ByteRow Fp)) : WitnessGeneration.Config Fp unit where
-  modes := components.zipIdx.map fun (component, index) => mode component.rowOffset (inputs rows index)
-  padding := components.map fun component => { input := Array.replicate component.rowOffset 0 }
-  fuel := 128
+def config (rows : List (ByteRow Fp)) : Except String (WitnessGeneration.Config Fp) := do
+  let generations ← components.zipIdx.mapM fun (component, index) => do
+    let mode ← mode component.rowOffset (inputs rows index)
+    return (component.circuit.name, ({
+      mode
+      padding := { input := Array.replicate component.rowOffset 0 }
+    } : WitnessGeneration.Generation Fp))
+  return { components := generations, fuel := 128 }
 
 def generate (rows : List (ByteRow Fp)) : Except String (EnsembleWitness (ensemble rows.length)) :=
-  WitnessGeneration.generate (ensemble rows.length) (config rows) ⟨rows.toArray, by simp⟩ ()
+  match config rows with
+  | .error error => .error error
+  | .ok config =>
+    WitnessGeneration.generate (ComponentExport.fixture (ensemble rows.length)) config
+      ⟨rows.toArray, by simp⟩ () |>.mapError toString
 
 structure Source where
   name : String
@@ -116,13 +125,13 @@ structure Source where
   input : component.Input Fp
 
 def sources : List Source :=
-  let add : Component Fp := { circuit := AddChip.circuit }
+  let add : Component Fp := { circuit := AddChip.circuit, Assumptions := (AddChip.circuit).Assumptions }
   [{ name := "add", component := add,
      input := fromElements (Vector.ofFn fun i =>
        (SP1Clean.TraceGenTests.rTypeEventInputs NonVacuityRealTests.addEvent)[i.val]?.getD 0) },
-   { name := "beq", component := { circuit := BranchChip.circuit },
+   { name := "beq", component := { circuit := BranchChip.circuit, Assumptions := (BranchChip.circuit).Assumptions },
      input := NonVacuityRealTests.branchBeqInputs },
-   { name := "load-byte", component := { circuit := LoadByteChip.circuit },
+   { name := "load-byte", component := { circuit := LoadByteChip.circuit, Assumptions := (LoadByteChip.circuit).Assumptions },
      input := NonVacuityRealTests.loadByteInputs }]
 
 def Source.row (source : Source) : Array Fp :=
@@ -151,10 +160,10 @@ def workloads : Except String (List (String × List (ByteRow Fp))) := do
 
 def rustExports : Except String (List (String × Except String String)) := do
   return (← workloads).flatMap fun (name, rows) =>
-    [(s!"byte_baseline_{name}.rs", Extraction.Rust.ensembleToRust "ByteBaseline"
-        (ensemble rows.length) (config rows)),
-     (s!"byte_candidate_{name}.rs", Extraction.Rust.ensembleToRust "UnifiedByte"
-        (UnifiedByteExport.ensemble rows.length) UnifiedByteExport.config)]
+    [(s!"byte_baseline_{name}.rs", (config rows).bind fun config => Backends.Plonky3.Print.ensembleToRust
+        (ComponentExport.fixture (ensemble rows.length)) config),
+     (s!"byte_candidate_{name}.rs", Backends.Plonky3.Print.ensembleToRust
+        (ComponentExport.fixture (UnifiedByteExport.ensemble rows.length)) UnifiedByteExport.config)]
 
 theorem exports_succeed : (rustExports.map fun entries => entries.all (·.2.isOk)) = .ok true := by
   native_decide

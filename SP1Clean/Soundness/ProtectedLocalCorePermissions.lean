@@ -26,7 +26,7 @@ private theorem old_component_silent (image : ProgramImage) (source : ExecutionS
 /-- The fixed provider is the only possible positive contributor to permission balance. -/
 theorem component_permission_source (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables) :
-    component = ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)) ∨
+    component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨
       WritePermission.Pulls component := by
   change component ∈ tables image source at member
   rcases List.mem_append.mp member with stores | fixed
@@ -88,7 +88,8 @@ theorem row_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     ((WritePermissionProvider.channel.pulledIf gate address).toRaw.eval (Environment.fromArray physical witness.data))
   · apply EnsembleWitness.mem_interactionsWith.mpr
     refine Or.inr ⟨table, tableMem, List.mem_flatMap.mpr ⟨physical, physicalMem, ?_⟩⟩
-    exact List.mem_map_of_mem emitted
+    have shared : table.data = witness.data := witness.same_data table tableMem
+    simpa only [Table.environment, shared, Operations.interactionValuesWith] using List.mem_map_of_mem emitted
   · simp only [Channel.eval_pulledIf, Channel.pulledIfValue, CircuitType.eval_expr, active]
   · simp only [Channel.eval_pulledIf, Channel.pulledIfValue]
 

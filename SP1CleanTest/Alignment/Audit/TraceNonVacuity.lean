@@ -173,7 +173,7 @@ theorem anchorRangeEntriesBuilt_interactionsWith (width : RangeChip.Width)
 
 /-- A table built from no occurrences contributes nothing to any channel. -/
 theorem nilTable (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime))
-    {hint : ProverHint (ZMod SP1Prime)} {fixed : c.fixedRowsMatch []} :
+    {hint : ProverHint (ZMod SP1Prime)} {fixed : c.FixedRowsMatch []} :
     (Table.build c [] anchorData hint fixed).interactionsWith anchorData ch = [] := rfl
 
 /-- The dependent input type of an empty indexed Range table stays folded at the component
@@ -462,14 +462,14 @@ theorem anchorTrace_memoryInitProviderBound :
 
 theorem anchorTrace_memoryInitProviderUnique :
     MemoryInitProviderUnique (p := SP1Prime) anchorTrace.witness := by
-  show (typedTableInteractionsWith (memoryInitProviderTable anchorTrace.witness) anchorTrace.witness.data
+  show (typedTableInteractionsWith (memoryInitProviderTable anchorTrace.witness)
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, anchorTrace_memoryInitProviderTable_nil, List.flatMap_nil]
   exact List.Pairwise.nil
 
 theorem anchorTrace_memoryFinalizeProviderUnique :
     MemoryFinalizeProviderUnique (p := SP1Prime) anchorTrace.witness := by
-  show (typedTableInteractionsWith (memoryFinalizeProviderTable anchorTrace.witness) anchorTrace.witness.data
+  show (typedTableInteractionsWith (memoryFinalizeProviderTable anchorTrace.witness)
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, anchorTrace_memoryFinalizeProviderTable_nil, List.flatMap_nil]
   exact List.Pairwise.nil

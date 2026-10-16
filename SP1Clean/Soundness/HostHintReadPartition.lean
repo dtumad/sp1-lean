@@ -30,11 +30,11 @@ def keepState (key : ZMod p × ZMod p) (state : HintReadWordChip.State (ZMod p))
 def keepWord (key : ZMod p × ZMod p) (last : Bool) (env : Environment (ZMod p)) : Bool :=
   keepState key (HintReadCoverage.rowInput (last, env)).previous
 
-def tablesFor (key : ZMod p × ZMod p) (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+def tablesFor (key : ZMod p × ZMod p) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) : List (Table (ZMod p)) :=
-  TransitionView.selectTables HintReadCoverage.variants tables data (keepWord key)
-    (HintReadCoverage.selection_fixed tables data (keepWord key) aligned)
+  TransitionView.selectTables HintReadCoverage.variants tables (keepWord key)
+    (HintReadCoverage.selection_fixed tables (keepWord key) aligned)
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem handler_selection (key : ZMod p × ZMod p) (input : HostHintReadChip.Inputs (ZMod p))
@@ -56,11 +56,11 @@ private theorem view_edge (last : Bool) (env : Environment (ZMod p)) :
     (HintReadCoverage.view last).edge env =
       ((HintReadCoverage.rowInput (last, env)).previous, (HintReadCoverage.rowInput (last, env)).next) := rfl
 
-private theorem word_filter (key : ZMod p × ZMod p) (last : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
+private theorem word_filter (key : ZMod p × ZMod p) (last : Bool) (table : Table (ZMod p))
     (component : (HintReadCoverage.view last).component = table.component) :
-    (table.filterRows data (keepWord key last) (by rw [← component]; trivial)).interactionsWith
-        data HintReadWordChip.stateChannel.toRaw =
-      (table.interactionsWith data HintReadWordChip.stateChannel.toRaw).filter
+    (table.filterRows (keepWord key last) (by rw [← component]; trivial)).interactionsWith
+        HintReadWordChip.stateChannel.toRaw =
+      (table.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
         (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) := by
   have preserved : ∀ env, keepState key ((HintReadCoverage.view last).edge env).2 =
       keepState key ((HintReadCoverage.view last).edge env).1 := by
@@ -70,44 +70,44 @@ private theorem word_filter (key : ZMod p × ZMod p) (last : Bool) (table : Tabl
       decide (clock (HintReadCoverage.rowInput (last, env)).previous = key)
     exact congrArg (fun value => decide (value = key))
       (word_clock (HintReadCoverage.rowInput (last, env)))
-  have projected := (HintReadCoverage.view last).filterRows_interactions table data component
+  have projected := (HintReadCoverage.view last).filterRows_interactions table component
     (keepState key) (by rw [← component]; trivial) preserved
   simp only [view_edge] at projected
   exact projected
 
 /-- Both physical variants retain exactly the rows at this call clock, on every channel. -/
-theorem rows_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem rows_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) :
-    TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor key tables data aligned) data =
-      (TransitionView.readIndexedRows HintReadCoverage.variants tables data).filter
+    TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor key tables aligned) =
+      (TransitionView.readIndexedRows HintReadCoverage.variants tables).filter
         (fun row => keepWord key row.1 row.2) :=
-  TransitionView.readIndexedRows_selectTables _ _ _ _ _
+  TransitionView.readIndexedRows_selectTables _ _ _ _
 
 /-- Selecting the actual consumer tables is exactly payload selection in their shared cursor ledger. -/
-theorem cursor_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem cursor_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) :
-    (tablesFor key tables data aligned).flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw) =
-      (tables.flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw)).filter
+    (tablesFor key tables aligned).flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw) =
+      (tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)).filter
         (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) := by
   suffices all : ∀ (variants : List Bool) (tables : List (Table (ZMod p)))
       (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
         variants tables)
-      (fixed : ∀ last table, (last, table) ∈ variants.zip tables → table.component.fixedRowsMatch
-        (table.table.filter fun row => keepWord key last (Environment.fromArray row data))),
-      (TransitionView.selectTables variants tables data (keepWord key) fixed).flatMap
-          (·.interactionsWith data HintReadWordChip.stateChannel.toRaw) =
-        (tables.flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw)).filter
+      (fixed : ∀ last table, (last, table) ∈ variants.zip tables → table.component.FixedRowsMatch
+        (table.table.filter fun row => keepWord key last (table.environment row))),
+      (TransitionView.selectTables variants tables (keepWord key) fixed).flatMap
+          (·.interactionsWith HintReadWordChip.stateChannel.toRaw) =
+        (tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)).filter
           (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) by
-    exact all _ tables aligned (HintReadCoverage.selection_fixed tables data (keepWord key) aligned)
+    exact all _ tables aligned (HintReadCoverage.selection_fixed tables (keepWord key) aligned)
   intro variants tables aligned
   induction aligned with
   | nil => intro fixed; rfl
   | @cons last table variants tables same _ ih =>
     intro fixed
     simp only [TransitionView.selectTables, List.flatMap_cons, List.filter_append]
-    rw [word_filter key last table data same, ih]
+    rw [word_filter key last table same, ih]
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 private theorem filter_unique {Row Key : Type*} [DecidableEq Key] (key : Row → Key)
@@ -129,27 +129,27 @@ private theorem filter_unique {Row Key : Type*} [DecidableEq Key] (key : Row →
       simp [different, ih unique member]
 
 private theorem handler_table_filter (key : ZMod p × ZMod p)
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = handler) :
-    (table.filterRows data (fun env => decide (callClock env = key)) (by rw [component]; trivial)).interactionsWith
-      data HintReadWordChip.stateChannel.toRaw =
-    (table.interactionsWith data HintReadWordChip.stateChannel.toRaw).filter
+    (table : Table (ZMod p)) (component : table.component = handler) :
+    (table.filterRows (fun env => decide (callClock env = key)) (by rw [component]; trivial)).interactionsWith
+      HintReadWordChip.stateChannel.toRaw =
+    (table.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
         (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) := by
   apply table.filterRows_interactions
   intro physical _ interaction present
   rw [component, handler_cursor] at present
-  exact handler_selection key (input (Environment.fromArray physical data)) interaction present
+  exact handler_selection key (input (table.environment physical)) interaction present
 
-private theorem handler_filter (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = handler)
-    (env : Environment (ZMod p)) (member : env ∈ table.table.map (fun row => Environment.fromArray row data))
-    (unique : ((table.table.map (fun row => Environment.fromArray row data)).map callClock).Nodup) :
-    (table.interactionsWith data HintReadWordChip.stateChannel.toRaw).filter
+private theorem handler_filter (table : Table (ZMod p)) (component : table.component = handler)
+    (env : Environment (ZMod p)) (member : env ∈ table.table.map (fun row => table.environment row))
+    (unique : ((table.table.map (fun row => table.environment row)).map callClock).Nodup) :
+    (table.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
         (fun interaction => ProvableType.selectMessage (keepState (callClock env)) interaction.msg) =
       handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env := by
-  rw [← handler_table_filter (callClock env) table data component]
-  have selected := filter_unique callClock (table.table.map (fun row => Environment.fromArray row data)) unique env member
-  change (table.table.filter (fun row => decide (callClock (Environment.fromArray row data) = callClock env))).flatMap
+  rw [← handler_table_filter (callClock env) table component]
+  have selected := filter_unique callClock (table.table.map (fun row => table.environment row)) unique env member
+  change (table.table.filter (fun row => decide (callClock (table.environment row) = callClock env))).flatMap
     (fun physical => table.component.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw
-      (Environment.fromArray physical data)) = _
+      (table.environment physical)) = _
   rw [component]
   rw [List.filter_map] at selected
   have projected := congrArg (List.flatMap
@@ -159,56 +159,57 @@ private theorem handler_filter (table : Table (ZMod p)) (data : ProverData (ZMod
 
 /-- A shared physical ledger supplies each unique handler's per-call balance and its count bound. -/
 theorem balanced_for (handlers : Table (ZMod p)) (component : handlers.component = handler)
-    (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+    (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables)
-    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map (fun row => Environment.fromArray row data))
-    (unique : ((handlers.table.map (fun row => Environment.fromArray row data)).map callClock).Nodup)
+    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map (fun row => handlers.environment row))
+    (unique : ((handlers.table.map (fun row => handlers.environment row)).map callClock).Nodup)
     (balanced : BalancedInteractions
-      (handlers.interactionsWith data HintReadWordChip.stateChannel.toRaw ++
-        tables.flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw))) :
+      (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw))) :
     BalancedInteractions
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
-        (tablesFor (callClock env) tables data aligned).flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw)) := by
+        (tablesFor (callClock env) tables aligned).flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)) := by
   have selected := balanced.filter_messages (ProvableType.selectMessage (keepState (callClock env)))
-  rw [List.filter_append, handler_filter handlers data component env member unique,
-    ← cursor_for _ tables data aligned] at selected
+  rw [List.filter_append, handler_filter handlers component env member unique,
+    ← cursor_for _ tables aligned] at selected
   exact selected
 
 /-- Global balance cannot hide consumer rows whose event clock has no handler. -/
 theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.component = handler)
-    (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+    (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants tables) (valid : HintReadCoverage.Steps tables data)
+      HintReadCoverage.variants tables) (valid : HintReadCoverage.Steps tables)
     (balanced : BalancedInteractions
-      (handlers.interactionsWith data HintReadWordChip.stateChannel.toRaw ++
-        tables.flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw)))
+      (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables data) :
-    ∃ env ∈ handlers.table.map (fun row => Environment.fromArray row data),
+    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables) :
+    ∃ env ∈ handlers.table.map (fun row => handlers.environment row),
       callClock env = clock (HintReadCoverage.rowInput row).previous := by
   classical
   by_contra! absent
   let key := clock (HintReadCoverage.rowInput row).previous
   have noHandlers : handlers.table.filter
-      (fun physical => decide (callClock (Environment.fromArray physical data) = key)) = [] := by
+      (fun physical => decide (callClock (handlers.environment physical) = key)) = [] := by
     apply List.filter_eq_nil_iff.mpr
     intro physical present equal
-    exact absent (Environment.fromArray physical data) (List.mem_map.mpr ⟨physical, present, rfl⟩)
+    exact absent (handlers.environment physical) (List.mem_map.mpr ⟨physical, present, rfl⟩)
       (of_decide_eq_true equal)
-  have noEndpoints : (handlers.interactionsWith data HintReadWordChip.stateChannel.toRaw).filter
+  have noEndpoints : (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw).filter
       (fun interaction => ProvableType.selectMessage (keepState key) interaction.msg) = [] := by
-    rw [← handler_table_filter key handlers data component]
+    rw [← handler_table_filter key handlers component]
     simp only [Table.interactionsWith, Table.filterRows]
+    simp only [Table.environment] at noHandlers ⊢
     rw [noHandlers, List.flatMap_nil]
   have selected := balanced.filter_messages (ProvableType.selectMessage (keepState key))
-  rw [List.filter_append, noEndpoints, List.nil_append, ← cursor_for key tables data aligned] at selected
-  have alignment := TransitionView.selectTables_aligned _ _ data
+  rw [List.filter_append, noEndpoints, List.nil_append, ← cursor_for key tables aligned] at selected
+  have alignment := TransitionView.selectTables_aligned _ _
     (fun last => (HintReadCoverage.view last).component) (keepWord key)
-    (HintReadCoverage.selection_fixed tables data (keepWord key) aligned) aligned
-  have specs := valid.select (keepWord key) (HintReadCoverage.selection_fixed tables data (keepWord key) aligned)
-  have empty := HintReadCoverage.rows_nil_of_balanced (tablesFor key tables data aligned) data alignment specs selected
-  have included : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor key tables data aligned) data := by
+    (HintReadCoverage.selection_fixed tables (keepWord key) aligned) aligned
+  have specs := valid.select (keepWord key) (HintReadCoverage.selection_fixed tables (keepWord key) aligned)
+  have empty := HintReadCoverage.rows_nil_of_balanced (tablesFor key tables aligned) alignment specs selected
+  have included : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor key tables aligned) := by
     rw [rows_for]
     exact List.mem_filter.mpr ⟨member, by simp [keepWord, keepState, key]⟩
   rw [empty] at included
@@ -217,47 +218,47 @@ theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.c
 /-- Successful concrete dispatch and complete writes follow from the shared physical cursor ledger.
 Unique handler clocks and authenticated records/permissions remain enclosing-ensemble obligations. -/
 theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.component = handler)
-    (data : ProverData (ZMod p)) (handlerSpecs : handlers.Spec data) (tables : List (Table (ZMod p)))
+    (handlerSpecs : handlers.Spec) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants tables) (wordSpecs : HintReadCoverage.Steps tables data)
-    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map (fun row => Environment.fromArray row data))
-    (unique : ((handlers.table.map (fun row => Environment.fromArray row data)).map callClock).Nodup)
+      HintReadCoverage.variants tables) (wordSpecs : HintReadCoverage.Steps tables)
+    (env : Environment (ZMod p)) (member : env ∈ handlers.table.map (fun row => handlers.environment row))
+    (unique : ((handlers.table.map (fun row => handlers.environment row)).map callClock).Nodup)
     (balanced : BalancedInteractions
-      (handlers.interactionsWith data HintReadWordChip.stateChannel.toRaw ++
-        tables.flatMap (·.interactionsWith data HintReadWordChip.stateChannel.toRaw)))
+      (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
+        tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (host : HostState) (store : Store) (current : (input env).previous.Binds store host.io.hints)
     (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store)
-    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables data,
+    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
       clock (HintReadCoverage.rowInput row).previous = callClock env →
         ((HintReadCoverage.rowInput row).step row.1).word.Binds store)
     (running : host.exitCode = none) (policy : HostPolicy) (context : HostReadContext)
     (permissions : ∀ request, WritePermissionProvider.channel.pulledValue request ∈
-      tables.flatMap (·.interactionsWith data WritePermissionProvider.channel.toRaw) →
+      tables.flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw) →
       policy.memory.permits (Address.toNat request) 1 = true)
     (code : context.register 5 = some (Word.toBitVec64 (input env).call.code))
     (arg1 : context.register 10 = some (Word.toBitVec64 (input env).call.arg1))
     (arg2 : context.register 11 = some (Word.toBitVec64 (input env).call.arg2)) :
     ∃ bytes rest, host.io.hints = bytes :: rest ∧ (input env).next.Binds store rest ∧
       host.run policy context = some (HostHintReadChip.execution (input env) host bytes rest) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor (callClock env) tables data aligned) data).map
+      ((TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor (callClock env) tables aligned)).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
   have valid : handler.Spec env := by
     obtain ⟨physical, present, equal⟩ := List.mem_map.mp member
     rw [← equal, ← component]
     exact handlerSpecs physical present
-  have alignment := TransitionView.selectTables_aligned _ _ data
+  have alignment := TransitionView.selectTables_aligned _ _
     (fun last => (HintReadCoverage.view last).component) (keepWord (callClock env))
-    (HintReadCoverage.selection_fixed tables data (keepWord (callClock env)) aligned) aligned
+    (HintReadCoverage.selection_fixed tables (keepWord (callClock env)) aligned) aligned
   have specs := wordSpecs.select (keepWord (callClock env))
-    (HintReadCoverage.selection_fixed tables data (keepWord (callClock env)) aligned)
-  have selectedPermissions := TransitionView.selectTables_interactions_sublist HintReadCoverage.variants tables data
+    (HintReadCoverage.selection_fixed tables (keepWord (callClock env)) aligned)
+  have selectedPermissions := TransitionView.selectTables_interactions_sublist HintReadCoverage.variants tables
     (fun last => (HintReadCoverage.view last).component) (keepWord (callClock env))
-    (HintReadCoverage.selection_fixed tables data (keepWord (callClock env)) aligned)
+    (HintReadCoverage.selection_fixed tables (keepWord (callClock env)) aligned)
     WritePermissionProvider.channel.toRaw aligned
-  exact HostHintReadWrites.run_of_tables env (tablesFor (callClock env) tables data aligned) data valid alignment specs
-    (balanced_for handlers component tables data aligned env member unique balanced) host store current header ending
+  exact HostHintReadWrites.run_of_tables env (tablesFor (callClock env) tables aligned) valid alignment specs
+    (balanced_for handlers component tables aligned env member unique balanced) host store current header ending
     (fun row present => by
-      have selected := List.mem_filter.mp ((rows_for _ tables data aligned) ▸ present)
+      have selected := List.mem_filter.mp ((rows_for _ tables aligned) ▸ present)
       exact words row selected.1 (of_decide_eq_true selected.2))
     running policy context (fun request present => permissions request (selectedPermissions.subset present))
     code arg1 arg2

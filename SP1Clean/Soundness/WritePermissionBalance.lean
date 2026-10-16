@@ -33,10 +33,10 @@ theorem pulls_of_silent (component : Component (ZMod p))
   contradiction
 
 theorem provider_constraints (image : ProgramImage) (env : Environment (ZMod p))
-    (constraints : ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
     WritePermissionProvider.Permitted image
-      (({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).rowInput env).address :=
-  (({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).weakSoundness_of_no_guarantees
+      (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).rowInput env).address :=
+  (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).weakSoundness_of_no_guarantees
     rfl (by trivial) constraints).1
 
 theorem provider_emission (image : ProgramImage) (input : Var WritePermissionProvider.Inputs (ZMod p))
@@ -57,10 +57,10 @@ theorem provider_emission (image : ProgramImage) (input : Var WritePermissionPro
 
 theorem provider_payload (image : ProgramImage) (env : Environment (ZMod p))
     (interaction : Interaction (ZMod p))
-    (member : interaction ∈ ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).operations.interactionValuesWith
+    (member : interaction ∈ ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
       WritePermissionProvider.channel.toRaw env) :
     interaction.msg = (toElements
-      (({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)).rowInput env).address).toArray := by
+      (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).rowInput env).address).toArray := by
   rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
   change interaction ∈ (((WritePermissionProvider.circuit image).main
     (varFromOffset WritePermissionProvider.Inputs 0)).operations (size WritePermissionProvider.Inputs)
@@ -82,7 +82,7 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
       WritePermissionProvider.channel.toRaw (Environment.fromInput input data),
       interaction.mult = 0 ∨ interaction.mult = -1)
     (sources : ∀ component ∈ assembly.tables,
-      component = ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)) ∨ Pulls component)
+      component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨ Pulls component)
     (address : fields 3 (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith WritePermissionProvider.channel.toRaw)
     (active : interaction.mult = -1) (payload : interaction.msg = (toElements address).toArray) :
@@ -93,15 +93,15 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
   · exact ((verifier witness.publicInput witness.data provider verifierMem).elim nonzero notPull).elim
   · obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp providerMem
     have checked := constraints table tableMem physical physicalMem
+    simp only [Table.environment, witness.same_data table tableMem] at emitted checked
     rcases sources table.component
-      (EnsembleWitness.mem_component_of_mem tableMem) with fixed | pulls
+      (EnsembleWitness.component_mem_tables_of_mem tableMem) with fixed | pulls
     · rw [fixed] at emitted checked
       have permitted := provider_constraints image (Environment.fromArray physical witness.data) checked
       have same := (provider_payload image _ provider emitted).symm.trans (samePayload.trans payload)
       have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp same)
       simp only [ProvableType.fromElements_toElements] at addressEq
-      rw [addressEq] at permitted
-      exact permitted
+      exact Eq.mp (congrArg (WritePermissionProvider.Permitted image) addressEq) permitted
     · exact ((pulls witness.data physical checked provider emitted).elim nonzero notPull).elim
 
 end SP1Clean.Soundness.WritePermission

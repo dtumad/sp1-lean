@@ -178,9 +178,9 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
 
 private theorem suffix_components (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) :
-    (tables image source auxiliary).drop 61 = { circuit := WritePermissionProvider.circuit image } :: auxiliary := by
+    (tables image source auxiliary).drop 61 = { circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } :: auxiliary := by
   have suffix : (ProtectedLocalCore.tables (p := p) image source).drop 61 =
-      [{ circuit := WritePermissionProvider.circuit image }] := by
+      [{ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions }] := by
     rw [ProtectedLocalCore.tables, List.drop_left' (by
       simp only [List.length_set, LocalCore.tables_length])]
   rw [tables, List.drop_append_of_le_length (by
@@ -295,20 +295,32 @@ theorem localWitness_table (index : Fin 61) (unchanged : 58 ≠ index.val) :
       rw [← (localWitness witness).same_length]
       change index.val < (LocalCore.tables (p := p) image source).length
       rw [LocalCore.tables_length]; exact index.isLt) =
-      (witness.tables[index.val]'(by
+      { (witness.tables[index.val]'(by
         rw [← witness.same_length]; change index.val < (tables image source auxiliary).length
         rw [tables_length]; omega)).withComponent
         ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt))
         (by rw [← witness.same_circuits]; exact component_width_eq image source auxiliary index unchanged)
-        (by rw [← witness.same_circuits]; exact (component_layout image source auxiliary index).2) := by
+        (by rw [← witness.same_circuits]; exact (component_layout image source auxiliary index).2) with
+        data := (localWitness witness).data } := by
   rw [localWitness, witness.projectPrefix_getElem (index := ⟨index.val, by
     change index.val < (LocalCore.tables (p := p) image source).length
     rw [LocalCore.tables_length]; exact index.isLt⟩)]
   rw [Table.ext_iff]
-  refine ⟨rfl, ?_⟩
-  apply Table.projectPrefix_rows_of_width_eq
-  rw [← witness.same_circuits]
-  exact component_width_eq image source auxiliary index unchanged
+  refine ⟨rfl, ?_, rfl⟩
+  let original := witness.tables[index.val]'(by
+    rw [← witness.same_length]
+    change index.val < (tables image source auxiliary).length
+    rw [tables_length]; omega)
+  let component := (LocalCore.tables (p := p) image source)[index.val]'(by
+    rw [LocalCore.tables_length]; exact index.isLt)
+  have sameWidth : component.width = original.component.width := by
+    rw [← witness.same_circuits]
+    exact component_width_eq image source auxiliary index unchanged
+  have sameFixed : component.fixedColumns = original.component.fixedColumns := by
+    rw [← witness.same_circuits]
+    exact (component_layout image source auxiliary index).2
+  have rows := original.projectPrefix_rows_of_width_eq component sameWidth.le sameFixed sameWidth
+  exact rows
 
 theorem localWitness_constraints (constraints : witness.Constraints) : (localWitness witness).Constraints := by
   apply witness.projectPrefix_constraints_of (target := LocalCore.ensemble image source)
@@ -357,15 +369,15 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
     (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
   have physical := witness.projectPrefix_tables_interactions (target := LocalCore.ensemble image source)
     projectionLength projectionWidths projectionFixed channel ?_
-  · change (localWitness witness).tables.flatMap (·.interactionsWith (localWitness witness).data channel) =
-      (witness.tables.take (LocalCore.ensemble (p := p) image source).tables.length).flatMap (·.interactionsWith witness.data channel) at physical
-    simp only [EnsembleWitness.interactionsWith, EnsembleWitness.tableContext, TableContext.interactionsWith]
+  · change (localWitness witness).tables.flatMap (·.interactionsWith channel) =
+      (witness.tables.take (LocalCore.ensemble (p := p) image source).tables.length).flatMap (·.interactionsWith channel) at physical
+    simp only [EnsembleWitness.interactionsWith, EnsembleWitness.toTables, Tables.interactionsWith]
     rw [localWitness_verifier_interactions witness channel registered, physical]
     congr 1
     conv_rhs => rw [← List.take_append_drop (LocalCore.ensemble (p := p) image source).tables.length witness.tables]
     rw [List.flatMap_append]
     have empty : (witness.tables.drop (LocalCore.ensemble (p := p) image source).tables.length).flatMap
-        (·.interactionsWith witness.data channel) = [] := by
+        (·.interactionsWith channel) = [] := by
       change (witness.tables.drop (LocalCore.tables image source).length).flatMap _ = []
       rw [LocalCore.tables_length]
       apply List.flatMap_eq_nil_iff.mpr
@@ -457,9 +469,9 @@ private theorem byte_guarantees_setData (ops : Operations (ZMod p)) (row : Array
 
 /-- Transfer Byte guarantees at the projected canonical data; Byte balance need not project. -/
 theorem localWitness_byte_of_guarantees
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (localWitness witness).tables,
-      table.ChannelGuarantees (localWitness witness).data byteChannel.toRaw := by
+      table.ChannelGuarantees byteChannel.toRaw := by
   apply witness.projectPrefix_channelGuarantees_of (target := LocalCore.ensemble image source)
     projectionLength projectionWidths projectionFixed byteChannel.toRaw ?_ byte
   intro index row rowWidth guaranteed
@@ -506,7 +518,7 @@ theorem byte_guarantees (interface : AuxiliaryInterface auxiliary) (constraints 
     (balanced : witness.BalancedChannel byteChannel.toRaw) :
     (ensemble image source auxiliary channels names).VerifierChannelGuarantees
       witness.publicInput witness.data byteChannel.toRaw ∧
-      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw := by
+      ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw := by
   apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints balanced
   · intro input data interaction emitted _
     exact verifier_requirements _ interaction emitted
@@ -516,14 +528,14 @@ theorem byte_guarantees (interface : AuxiliaryInterface auxiliary) (constraints 
 theorem localWitness_byte (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannel byteChannel.toRaw) :
     ∀ table ∈ (localWitness witness).tables,
-      table.ChannelGuarantees (localWitness witness).data byteChannel.toRaw :=
+      table.ChannelGuarantees byteChannel.toRaw :=
   localWitness_byte_of_guarantees witness (byte_guarantees witness interface constraints balanced).2
 
 /-- Chronology uses actual verifier/physical Byte guarantees, source-check balance and State balance. -/
 theorem orderingChannels_of_guarantees (interface : AuxiliaryInterface auxiliary)
     (verifierByte : (ensemble image source auxiliary channels names).VerifierChannelGuarantees
       witness.publicInput witness.data byteChannel.toRaw)
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (sourceChecks : witness.BalancedChannel (sourceChannel (names := names) (channels := channels)))
     (state : witness.BalancedChannel stateChannel.toRaw) : LocalCore.OrderingChannels (localWitness witness) := by
   refine ⟨localWitness_verifier_byte witness verifierByte, localWitness_byte_of_guarantees witness byte, ?_, ?_⟩

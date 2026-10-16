@@ -19,11 +19,11 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 /-- The four store positions in the shared instruction inventory, after the seven boundary rows. -/
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
   let stores := LocalCore.tables image source
-    |>.set 25 { circuit := ProtectedStore.byte }
-    |>.set 26 { circuit := ProtectedStore.half }
-    |>.set 27 { circuit := ProtectedStore.word }
-    |>.set 28 { circuit := ProtectedStore.double }
-  stores ++ [{ circuit := WritePermissionProvider.circuit image }]
+    |>.set 25 { circuit := ProtectedStore.byte, Assumptions := (ProtectedStore.byte).Assumptions }
+    |>.set 26 { circuit := ProtectedStore.half, Assumptions := (ProtectedStore.half).Assumptions }
+    |>.set 27 { circuit := ProtectedStore.word, Assumptions := (ProtectedStore.word).Assumptions }
+    |>.set 28 { circuit := ProtectedStore.double, Assumptions := (ProtectedStore.double).Assumptions }
+  stores ++ [{ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions }]
 
 /-- Permission wrappers keep the original stores' canonical data keys. -/
 theorem tables_names (image : ProgramImage) (source : ExecutionSnapshot) :

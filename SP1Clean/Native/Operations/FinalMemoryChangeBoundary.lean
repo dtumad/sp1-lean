@@ -114,7 +114,7 @@ def closed (source target : MemorySnapshot) : ClosedVerifier (ZMod p) where
 
 /-- The exactly-once fixed demand contributes no additional assertion or lookup premise. -/
 theorem closed_constraints (source target : MemorySnapshot) (data : ProverData (ZMod p)) :
-    (closed source target).singleton.Constraints data := by
+    ((closed source target).singleton data).Constraints := by
   rw [ClosedVerifier.singleton_constraints]
   exact constraints_hold ((source.changes target).map encode) 0
     (Environment.fromInput (Input := unit) () data)

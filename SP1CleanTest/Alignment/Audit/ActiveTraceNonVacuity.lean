@@ -635,13 +635,13 @@ private theorem activeJalBuilt_interactionsWith
   rw [JalChip.traceTable_interactionsWith]
   change (JalChip.traceInputs [activeEvent] 0).flatMap
     (fun input : JalChip.Inputs (ZMod SP1Prime) =>
-      ({ circuit := JalChip.circuit } : Component (ZMod SP1Prime)).operations.interactionValuesWith channel
+      ({ circuit := JalChip.circuit, Assumptions := (JalChip.circuit).Assumptions } : Component (ZMod SP1Prime)).operations.interactionValuesWith channel
         (Environment.fromArray
-          (({ circuit := JalChip.circuit } : Component (ZMod SP1Prime)).buildRow input anchorData anchorHint)
+          (({ circuit := JalChip.circuit, Assumptions := (JalChip.circuit).Assumptions } : Component (ZMod SP1Prime)).buildRow input anchorData anchorHint)
           anchorData)) = _
   simp only [JalChip.traceInputs, List.map_cons, List.map_nil, List.replicate_zero,
     List.append_nil, List.flatMap_cons, List.flatMap_nil]
-  change ({ circuit := JalChip.circuit } : Component (ZMod SP1Prime)).operations.interactionValuesWith
+  change ({ circuit := JalChip.circuit, Assumptions := (JalChip.circuit).Assumptions } : Component (ZMod SP1Prime)).operations.interactionValuesWith
     channel activeJalEnvironment = _
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
   change List.map (AbstractInteraction.eval activeJalEnvironment)

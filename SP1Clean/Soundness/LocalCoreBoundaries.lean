@@ -22,17 +22,21 @@ def sourceWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     EnsembleWitness ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).ensemble
       (afterSourceTables image source) [] (baseEnsemble image source).unique_names) :=
-  EnsembleWitness.ofTables _ witness.tables () witness.tables_map_component
+  { tables := witness.tables
+    publicInput := ()
+    same_length := witness.same_length
+    same_circuits := witness.same_circuits
+    same_data := witness.same_data }
 
 /-- Source records use Byte guarantees and fixed-register membership, independently of Memory balance. -/
 theorem sourceTables_spec_of_channels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
       witness.BalancedChannel channel) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
-      table.Spec witness.data := by
+      table.Spec := by
   intro table member row rowMem
   have componentMem : table.component ∈ (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.map (·.component) := by
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -56,7 +60,7 @@ theorem sourceTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (sourceWitness witness).tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length,
-      table.Spec witness.data :=
+      table.Spec :=
   sourceTables_spec_of_channels witness constraints
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
     (fun channel known => balanced channel (by
@@ -106,9 +110,9 @@ theorem sourceWitness_interactions {image : ProgramImage} {source : ExecutionSna
     (ens := baseEnsemble image source) witness _ different
   apply Eq.trans ?_ projected
   change _ = boundaryVerifier.circuitOperations.interactionValuesWith _
-    (Environment.fromInput witness.publicInput witness.data) ++ witness.tableContext.interactionsWith _
+    (Environment.fromInput witness.publicInput witness.data) ++ witness.toTables.interactionsWith _
   rw [verifier_source_interactions]
-  apply congrArg (fun front => front ++ witness.tableContext.interactionsWith
+  apply congrArg (fun front => front ++ witness.toTables.interactionsWith
     (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
   change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
   simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
@@ -149,7 +153,7 @@ theorem source_records_locations_nodup {image : ProgramImage} {source : Executio
 theorem source_memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (witness.tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length).flatMap
-        (·.interactionsWith witness.data memoryChannel.toRaw) =
+        (·.interactionsWith memoryChannel.toRaw) =
       ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map memoryChannel.pushedValue :=
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).memory_interactions_eq (sourceWitness witness)
     memoryChannel.pushedValue (SnapshotMemoryEnsemble.recordFor_interactions source.sail.memorySnapshot)

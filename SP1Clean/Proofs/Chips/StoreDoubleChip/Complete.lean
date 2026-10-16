@@ -67,7 +67,7 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormedStore) (ha
 /-- The StoreDouble chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
 
 /-- The event rows, before ensemble-level zero padding (see `StoreWordChip/Complete.lean`). -/
 def traceInputs (events : List MemoryEvent) : List (Inputs (ZMod p)) :=
@@ -84,26 +84,29 @@ theorem proverAssumptions_of_mem_traceInputs {events : List MemoryEvent}
 
 /-- **A real trace builds a valid StoreDouble table.** -/
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore ∧ e.Aligned 8) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint).Constraints data :=
-  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
+    (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore ∧ e.Aligned 8)
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees**. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore ∧ e.Aligned 8) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint).Guarantees data :=
-  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
+    (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore ∧ e.Aligned 8)
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint).interactionsWith data channel =
+        hint bounded).interactionsWith channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ _ data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
 
 end SP1Clean.StoreDoubleChip

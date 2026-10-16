@@ -91,7 +91,7 @@ rev = "v4.33.1"
 [[require]]
 name = "Clean"
 git = "https://github.com/dtumad/clean"
-rev = "21f48b01e5d65038edf69e0ceee5e8f6612eec7d"
+rev = "87410707de45df27f7a97c5bf0518e52a94857e2"
 
 # lean-sail runtime: upstream release tag `v5` (`07946313`, the revision the in-tree generated
 # model pairs with — a v4-generated model against v5 fails with `unknown namespace

@@ -95,15 +95,24 @@ Five installed legacy lookup meanings remain: program, syscall code, write permi
 and hint words. Built-in lowering rejects these forms; migrate their consumers before retiring
 chip JSON comparison.
 
-Clean's current scheduler selects handlers by channel and direction and rejects multiple matches.
-SP1's separate Byte providers share a channel, so complete generation needs upstream routing support
-or a consolidated provider. `ByteChip/Unified` is an uninstalled prototype for the latter: one
-proved circuit checks the exact union of SP1's Byte and Range tables, including fixed unused
-columns and widths 0–16. Its `ByteProviderSpec` is stronger than the existing consumer guarantee
-`ByteRowSpec`. Generic one-hot and variable-width range gadgets live in `ToClean`; all witnesses
-use Clean's IR. Closed tests use the unmodified scheduler and compare complete Lean/Rust ledgers.
-The prototype remains separate until measurements and review choose consolidation or upstream
-routing; it does not change the installed inventory or retire migration evidence.
+The Clean patch supports message-filtered demand handlers and checked indexing into preallocated
+providers. Production keeps SP1's specialized Byte providers: the channel payload selects the
+opcode/width handler. Filters must identify one handler; ambiguous or missing matches are errors.
+Indexed routes verify the selected row's actual message before changing its multiplicity.
+Zero contributions do not enter the scheduler's pending-demand worklist; physical rows and their
+zero-count ledger occurrences remain intact. These changes, plus the public-only-channel verifier
+fix, modify existing upstream declarations and therefore live in the dependency patch. Remove each
+patch when upstream provides the corresponding capability.
+
+`ByteChip/Unified` and the preprocessed Byte provider are uninstalled comparison prototypes.
+They test consolidation and authenticated preprocessing against the specialized providers, using
+Clean's existing exporter and backend. The [provider review](https://github.com/dtumad/sp1-lean/pull/153) compares generation,
+proving, verification, trace size and memory across small instruction cases and large workloads.
+It supports retaining specialized providers: unified improves verification and some small cases,
+but costs more on large distinct demand; fixed preprocessing adds substantial proving and
+verification costs. The uninstalled prototypes are pending archival with their reproducible
+measurements. Revisit this choice when upstream demand indexing or preprocessing reuse changes
+those costs. These experiments do not change the installed inventory or retire migration evidence.
 
 The existing test adapter constructs component rows with Clean's
 runtime, then independently checks their external interactions. It is not a production scheduler

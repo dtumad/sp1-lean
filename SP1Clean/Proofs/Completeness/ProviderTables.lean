@@ -70,13 +70,14 @@ def u8RangeAccess (e : TraceGen.ByteEntry) : LookupAccess :=
 /-- **The `U8Range` provider table's ledger is exactly its occurrence list.** -/
 theorem u8Range_traceTable_cleanAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ByteChip.U8Range.component (p := p))
-        (ByteChip.U8Range.traceInputs entries) data hint) data =
+        (ByteChip.U8Range.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map u8RangeAccess := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.U8Range.component (p := p)) entries
-    ByteChip.U8Range.ofEntry u8RangeAccess data hint (by trivial) data (fun e he => ?_)
+    ByteChip.U8Range.ofEntry u8RangeAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [u8Range_buildRow_cleanAccesses]
   have hb := (hwf e he).1
   have hc := (hwf e he).2
@@ -96,13 +97,14 @@ def msbAccess (e : TraceGen.ByteEntry) : LookupAccess :=
 /-- **The `MSB` provider table's ledger is exactly its occurrence list.** -/
 theorem msb_traceTable_cleanAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ByteChip.MSB.component (p := p))
-        (ByteChip.MSB.traceInputs entries) data hint) data =
+        (ByteChip.MSB.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map msbAccess := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.MSB.component (p := p)) entries
-    ByteChip.MSB.ofEntry msbAccess data hint (by trivial) data (fun e he => ?_)
+    ByteChip.MSB.ofEntry msbAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [msb_buildRow_cleanAccesses _ _ _ (val_natCast_lt (hwf e he).1 (by norm_num))]
   simp only [msbAccess, ByteChip.MSB.ofEntry, val_ofNat_small (p := p) (n := 5) (by norm_num), val_ite_bit, val_zero_zmod,
     val_natCast_eq (p := p) (by have := (hwf e he).1; omega : e.b < 2 ^ 24),
@@ -118,13 +120,14 @@ def andAccess (e : TraceGen.ByteEntry) : LookupAccess :=
 /-- **The `AndByte` provider table's ledger is exactly its occurrence list.** -/
 theorem and_traceTable_cleanAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ByteChip.AndByte.component (p := p))
-        (ByteChip.AndByte.traceInputs entries) data hint) data =
+        (ByteChip.AndByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map andAccess := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.AndByte.component (p := p)) entries
-    ByteChip.AndByte.ofEntry andAccess data hint (by trivial) data (fun e he => ?_)
+    ByteChip.AndByte.ofEntry andAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [and_buildRow_cleanAccesses _ _ _ ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [andAccess, ByteChip.AndByte.ofEntry, val_zero_zmod,
     val_natCast_eq (p := p) (by have := (hwf e he).1; omega : e.b < 2 ^ 24),
@@ -141,13 +144,14 @@ def orAccess (e : TraceGen.ByteEntry) : LookupAccess :=
 /-- **The `OrByte` provider table's ledger is exactly its occurrence list.** -/
 theorem or_traceTable_cleanAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ByteChip.OrByte.component (p := p))
-        (ByteChip.OrByte.traceInputs entries) data hint) data =
+        (ByteChip.OrByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map orAccess := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.OrByte.component (p := p)) entries
-    ByteChip.OrByte.ofEntry orAccess data hint (by trivial) data (fun e he => ?_)
+    ByteChip.OrByte.ofEntry orAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [or_buildRow_cleanAccesses _ _ _ ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [orAccess, ByteChip.OrByte.ofEntry, val_one_zmod,
     val_natCast_eq (p := p) (by have := (hwf e he).1; omega : e.b < 2 ^ 24),
@@ -164,13 +168,14 @@ def xorAccess (e : TraceGen.ByteEntry) : LookupAccess :=
 /-- **The `XorByte` provider table's ledger is exactly its occurrence list.** -/
 theorem xor_traceTable_cleanAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ByteChip.XorByte.component (p := p))
-        (ByteChip.XorByte.traceInputs entries) data hint) data =
+        (ByteChip.XorByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map xorAccess := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.XorByte.component (p := p)) entries
-    ByteChip.XorByte.ofEntry xorAccess data hint (by trivial) data (fun e he => ?_)
+    ByteChip.XorByte.ofEntry xorAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [xor_buildRow_cleanAccesses _ _ _ ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [xorAccess, ByteChip.XorByte.ofEntry, val_ofNat_small (p := p) (n := 2) (by norm_num),
     val_natCast_eq (p := p) (by have := (hwf e he).1; omega : e.b < 2 ^ 24),
@@ -187,13 +192,14 @@ def ltuAccess (e : TraceGen.ByteEntry) : LookupAccess :=
 /-- **The `Ltu` provider table's ledger is exactly its occurrence list.** -/
 theorem ltu_traceTable_cleanAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ByteChip.Ltu.component (p := p))
-        (ByteChip.Ltu.traceInputs entries) data hint) data =
+        (ByteChip.Ltu.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map ltuAccess := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.Ltu.component (p := p)) entries
-    ByteChip.Ltu.ofEntry ltuAccess data hint (by trivial) data (fun e he => ?_)
+    ByteChip.Ltu.ofEntry ltuAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [ltu_buildRow_cleanAccesses _ _ _ ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [ltuAccess, ByteChip.Ltu.ofEntry, val_ofNat_small (p := p) (n := 4) (by norm_num), val_ite_bit,
     val_natCast_eq (p := p) (by have := (hwf e he).1; omega : e.b < 2 ^ 24),
@@ -211,14 +217,15 @@ def rangeAccess (width : RangeChip.Width) (e : TraceGen.RangeEntry) : LookupAcce
 theorem range_traceTable_cleanAccesses (width : RangeChip.Width)
     (entries : List TraceGen.RangeEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed width.val)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (RangeChip.componentFor (p := p) width)
-        (RangeChip.traceInputs entries) data hint) data =
+        (RangeChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map (rangeAccess width) := by
   have hwidth : width.val ≤ 16 := Nat.le_of_lt_succ width.isLt
   refine tableCleanAccesses_build_map_singleton (RangeChip.componentFor (p := p) width) entries
-    RangeChip.ofEntry (rangeAccess width) data hint (by trivial) data (fun e he => ?_)
+    RangeChip.ofEntry (rangeAccess width) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [range_buildRow_cleanAccesses]
   have ha : e.a < 2 ^ 24 := by
     have hlt : e.a < 2 ^ width.val := hwf e he
@@ -254,13 +261,14 @@ def programEntryAccess (e : TraceGen.RomEntry) : LookupAccess :=
 /-- **The `Program` provider table's ledger is exactly its committed-entry list.** -/
 theorem program_traceTable_cleanAccesses (entries : List TraceGen.RomEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hfit : ∀ e ∈ entries, RomKeyFits e)
     (hmult : ∀ e ∈ entries, e.MultiplicityFits p) :
     tableCleanAccesses (Table.build (ProgramProviderChip.component (p := p))
-        (ProgramProviderChip.traceInputs entries) data hint) data =
+        (ProgramProviderChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map programEntryAccess := by
   refine tableCleanAccesses_build_map_singleton (ProgramProviderChip.component (p := p)) entries
-    ProgramProviderChip.ofEntry programEntryAccess data hint (by trivial) data (fun e he => ?_)
+    ProgramProviderChip.ofEntry programEntryAccess data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [program_buildRow_cleanAccesses]
   obtain ⟨hop, hopa, hopa0, himmb, himmc⟩ := hfit e he
   simp only [programRowAccess, programEntryAccess, ProgramProviderChip.ofEntry,

@@ -24,7 +24,7 @@ private def target : MemorySnapshot :=
   ⟨source.registers.set 1 123, ⟨[(65536, 9), (65543, 17)]⟩⟩
 
 private def auxiliary : List (Component Fp) :=
-  { circuit := MemoryProviderChip.circuit } :: (sp1ProviderTables (p := SP1Prime)).take 23
+  { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } :: (sp1ProviderTables (p := SP1Prime)).take 23
 
 private theorem names (target : MemorySnapshot) :
     (((FinalMemoryEnsemble.inventory (p := SP1Prime)).views.map TransitionView.component ++
@@ -147,8 +147,10 @@ private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Boo
   let evaluated := initial ++ providers.map (evaluateRow target)
   let consumerLedger := evaluated.flatMap Prod.snd
   let ledger := consumerLedger ++ StaticMembership.providerLedger
-    (FinalRegisterValue.membership target) consumerLedger ++ StaticMembership.providerLedger
+    (FinalRegisterValue.membership target) consumerLedger
+      (FinalRegisterValue.membership_height_lt_uint64 target) ++ StaticMembership.providerLedger
       (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory") consumerLedger
+        (InitialMemoryLookup.membership_height_lt_uint64 target.memory "sp1.native.target_memory")
   evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       ((assembly target).channels.map RawChannel.name).contains name &&

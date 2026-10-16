@@ -497,7 +497,7 @@ theorem syscallInstrsProvider_channels_subset :
 /-- **Every boundary/provider table stays on the core five, except the `SyscallInstrs` table.** -/
 theorem sp1ProviderTables_channels_subset_core : ∀ c ∈ sp1ProviderTables (p := p),
     c.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
-      c = ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) := by
+      c = ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)) := by
   intro c hc
   rw [sp1ProviderTables_explicit, List.mem_append, List.mem_append] at hc
   rcases hc with (hc | hc) | hc
@@ -589,7 +589,7 @@ theorem sp1Ensemble_tables_channels_subset_core_of_ne (i : ℕ)
 theorem sp1Ensemble_tables_channels_subset_core :
     ∀ component ∈ (sp1Ensemble (p := p)).tables,
       component.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
-        component = ({ circuit := SyscallInstrsChip.circuit } : Component (ZMod p)) := by
+        component = ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)) := by
   intro component hc
   rw [sp1Ensemble_tables, List.mem_append] at hc
   rcases hc with hc | hc
@@ -629,8 +629,8 @@ theorem witness_interaction_channel_mem (witness : Air.Flat.EnsembleWitness (sp1
     exact List.mem_map.mpr ⟨abstract, emitted, rfl⟩
   · obtain ⟨table, tableMem, emitted⟩ := List.mem_flatMap.mp physical
     exact sp1Ensemble_tables_channels_subset _
-      (Air.Flat.EnsembleWitness.mem_component_of_mem tableMem)
-      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table witness.data _ emitted)
+      (Air.Flat.EnsembleWitness.component_mem_tables_of_mem tableMem)
+      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table _ emitted)
 
 /-- A witness is silent on non-core channels when its syscall table has no rows.
 
@@ -652,7 +652,7 @@ theorem witness_interactionsWith_eq_nil_of_not_core
     apply sp1Ensemble_verifier_channels_subset_core
     exact same ▸ List.mem_map_of_mem member
   rw [EnsembleWitness.interactionsWith, verifierSilent, List.nil_append,
-    TableContext.interactionsWith, List.flatMap_eq_nil_iff]
+    Tables.interactionsWith, List.flatMap_eq_nil_iff]
   intro table htable
   obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp htable
   have hlen : i < (sp1Ensemble (p := p)).tables.length := by rw [witness.same_length]; exact hi
@@ -760,15 +760,14 @@ every table of this ensemble: an interaction whose kind matches a declared chann
 channel. Both halves are already proved — the table emits only on the ensemble's channels, and those
 seven have seven distinct kinds. -/
 theorem interactions_channel_eq_of_kindOf (table : Table (ZMod p))
-    (data : ProverData (ZMod p))
     (hcomponent : table.component ∈ (sp1Ensemble (p := p)).tables)
     (channel : RawChannel (ZMod p)) (hchannel : channel ∈ (sp1Ensemble (p := p)).channels) :
-    ∀ i ∈ table.interactions data, kindOf i.channel.name = kindOf channel.name →
+    ∀ i ∈ table.interactions, kindOf i.channel.name = kindOf channel.name →
       i.channel = channel := by
   intro i hi hkind
   exact channel_eq_of_kindOf_eq
     (sp1Ensemble_tables_channels_subset _ hcomponent
-      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table data i hi))
+      (Air.Flat.Table.channel_mem_channels_of_mem_interactions table i hi))
     hchannel hkind
 
 /-! ## Exit-channel silence of the non-halt tables

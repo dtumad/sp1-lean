@@ -23,7 +23,7 @@ theorem component_permission_source (image : ProgramImage) (source : ExecutionSn
     (auxiliary : List (Component (ZMod p)))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (component : Component (ZMod p)) (member : component ∈ tables image source auxiliary) :
-    component = ({ circuit := WritePermissionProvider.circuit image } : Component (ZMod p)) ∨ WritePermission.Pulls component := by
+    component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨ WritePermission.Pulls component := by
   rcases List.mem_append.mp member with core | extra
   · rcases List.mem_or_eq_of_mem_set core with original | rfl
     · exact ProtectedLocalCore.component_permission_source image source component original
@@ -86,7 +86,8 @@ theorem row_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
   apply permission_pull_permitted witness pulls constraints balanced
   have member := EnsembleWitness.mem_interactionsWith.mpr
     (Or.inr ⟨table, tableMem, List.mem_flatMap.mpr ⟨physical, physicalMem, List.mem_map_of_mem emitted⟩⟩)
-  simpa only [Channel.eval_pulledIf, Channel.pulledIfValue, Channel.pulledValue,
+  have shared : table.data = witness.data := witness.same_data table tableMem
+  simpa only [Table.environment, shared, Channel.eval_pulledIf, Channel.pulledIfValue, Channel.pulledValue,
     CircuitType.eval_expr, active] using member
 
 end SP1Clean.Soundness.HostLocalCore

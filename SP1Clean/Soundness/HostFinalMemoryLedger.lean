@@ -57,9 +57,21 @@ private theorem private_not_local (channel : RawChannel (ZMod p))
       StaticTable.ofRows, Channel.toRaw] at names
 
 private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
-  [{ circuit := ProtectedStore.byte }, { circuit := ProtectedStore.half }, { circuit := ProtectedStore.word }, { circuit := ProtectedStore.double },
-   { circuit := WritePermissionProvider.circuit image }, HostCallLedger.producer,
-   HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
+  [{ circuit := ProtectedStore.byte
+     Assumptions := ProtectedStore.byte.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := ProtectedStore.half
+     Assumptions := ProtectedStore.half.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := ProtectedStore.word
+     Assumptions := ProtectedStore.word.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := ProtectedStore.double
+     Assumptions := ProtectedStore.double.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := WritePermissionProvider.circuit image
+     Assumptions := (WritePermissionProvider.circuit image).Assumptions },
+   HostCallLedger.producer, HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
 
 private theorem additions_private (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p) target)
@@ -171,8 +183,8 @@ theorem base_verifier_private (channel : RawChannel (ZMod p))
       apply HostHintQueueBoundary.boundary_silent <;>
       simp [FinalMemoryValue.channel, FinalMemoryChange.channel, FinalRegisterValue.membership, StaticTable.channel, InitialMemoryLookup.membership, HostHintQueue.stateChannel,
         HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
-  have empty := (HostHintQueueBoundary.boundary source final bankFinal).singleton.interactionsWith_nil_of_channel_not_mem
-    (data := env.data) boundaryQuiet
+  have empty := ((HostHintQueueBoundary.boundary source final bankFinal).singleton env.data).interactionsWith_nil_of_channel_not_mem
+    boundaryQuiet
   rw [ClosedVerifier.singleton_interactions] at empty
   rw [quiet, empty, List.append_nil]
 

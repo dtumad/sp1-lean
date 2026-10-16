@@ -186,8 +186,8 @@ def jalChipRowCodec :
     rowOutput_eq := by
       change ProvableType.eval _ ((JalChip.main _).output _) = _
       rw [JalChip.elaborated.output_eq]
-      rw [Air.Flat.Component.rowInputVar_mk,
-        Air.Flat.Component.rowOffset_mk]
+      rw [Air.Flat.Component.rowInputVar,
+        Air.Flat.Component.rowOffset]
       exact (eval_jalChipDirectOutput (p := p) (jalChipInput cols)
         (jalChipLocals cols) data).trans
           (jalChipColumnsOfInput_roundtrip cols) }
@@ -775,7 +775,7 @@ theorem jalChipConstraintsConstructive
     let assignment := jalChipRowCodec.assignment
       (jalChipOracle.deconfigure rustCols) data
     List.Forall (· = 0) (jalChipOracle.assertZeros rustCols) ↔
-      ({ circuit := JalChip.circuit (p := p) } :
+      ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
         Air.Flat.Component (ZMod p)).operations.ConstraintsHold
           assignment.environment := by
   dsimp only
@@ -783,30 +783,30 @@ theorem jalChipConstraintsConstructive
   let assignment := jalChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput JalChip.main assignment.environment
-        ({ circuit := JalChip.circuit (p := p) } :
+        ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        ({ circuit := JalChip.circuit (p := p) } :
+        ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [JalChip.circuit_main_eq] at h
     exact h
   have hfaithful := jalChipConstraintsFaithful
     (p := p) assignment.environment
-    ({ circuit := JalChip.circuit (p := p) } :
+    ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    ({ circuit := JalChip.circuit (p := p) } :
+    ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   have hassertions :
       List.Forall (· = 0) (jalChipOracle.assertZeros rustCols) ↔
         List.Forall (· = 0)
           (nativeAssertZeros assignment.environment
-            ({ circuit := JalChip.circuit (p := p) } :
+            ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
               Air.Flat.Component (ZMod p)).rowOperations) := by
     simpa only [cols,
       ChipOracle.nativeAssertZeros_deconfigure,
-      Air.Flat.Component.rowOperations_mk,
-      Air.Flat.Component.rowInputVar_mk,
-      Air.Flat.Component.rowOffset_mk,
+      Air.Flat.Component.rowOperations,
+      Air.Flat.Component.rowInputVar,
+      Air.Flat.Component.rowOffset,
       JalChip.circuit_main_eq] using hfaithful
   exact hassertions.trans
     (constraintsHold_iff_nativeAssertZeros
@@ -1112,7 +1112,7 @@ theorem jalChipInteractionsConstructive
       (jalChipOracle.deconfigure rustCols) data
     List.Perm
       (nativeAccesses assignment.environment
-        ({ circuit := JalChip.circuit (p := p) } :
+        ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).operations)
       (jalChipOracle.rustAccesses rustCols) := by
   dsimp only
@@ -1120,26 +1120,26 @@ theorem jalChipInteractionsConstructive
   let assignment := jalChipRowCodec.assignment cols data
   have hbind :
       BindsChipOutput JalChip.main assignment.environment
-        ({ circuit := JalChip.circuit (p := p) } :
+        ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowInputVar
-        ({ circuit := JalChip.circuit (p := p) } :
+        ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
           Air.Flat.Component (ZMod p)).rowOffset cols := by
     have h := NativeRowAssignment.bindsOutput assignment
     rw [JalChip.circuit_main_eq] at h
     exact h
   have hfaithful := jalChipInteractionsFaithful
     (p := p) assignment.environment
-    ({ circuit := JalChip.circuit (p := p) } :
+    ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowInputVar
-    ({ circuit := JalChip.circuit (p := p) } :
+    ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).rowOffset cols hbind
   rw [nativeAccesses_component_eq_rowOperations
     (JalChip.circuit (p := p))
     assignment.environment]
   simpa only [cols, ChipOracle.accesses_deconfigure,
-    Air.Flat.Component.rowOperations_mk,
-    Air.Flat.Component.rowInputVar_mk,
-    Air.Flat.Component.rowOffset_mk,
+    Air.Flat.Component.rowOperations,
+    Air.Flat.Component.rowInputVar,
+    Air.Flat.Component.rowOffset,
     JalChip.circuit_main_eq] using hfaithful
 
 theorem jalChip_faithful :

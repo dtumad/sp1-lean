@@ -118,13 +118,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem pull_mem
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data)
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness))
     (channel : RawChannel (ZMod p)) (interaction : Interaction (ZMod p))
     (present : interaction ∈ (view row.1).component.operations.interactionValuesWith channel row.2) :
     interaction ∈ witness.interactionsWith channel := by
-  have inside : interaction ∈ (queueTables witness).flatMap (·.interactionsWith witness.data channel) := by
+  have inside : interaction ∈ (queueTables witness).flatMap (·.interactionsWith channel) := by
     rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component)
-      _ witness.data _ (queueTables_aligned witness)]
+      _ _ (queueTables_aligned witness)]
     exact List.mem_flatMap.mpr ⟨row, member, present⟩
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp inside
   exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, queueTables_mem witness table tableMem, present⟩)
@@ -133,7 +133,7 @@ private theorem pull_mem
 theorem records_of_witness
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store) (balanced : RecordChannels witness)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data) :
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
     Records store row := by
   rcases row with ⟨index, env⟩
   cases index with

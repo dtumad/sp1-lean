@@ -4,9 +4,9 @@ public import Clean.Air.FlatComponent
 
 /-! # Decoding a verifier-fixed input prefix
 
-Clean exposes fixed-row equality on physical arrays. Typed provider proofs additionally need
-the decoded prefix of a paired circuit input. This lemma transports that equality without
-assuming anything about the prover-owned suffix or the semantic data environment.
+Clean's typed fixed-input contract exposes a prefix of the flattened input. A paired circuit
+needs the corresponding first typed value. This lemma transports that equality without any
+condition on the prover-owned suffix or data. Remove it when Clean supplies this decoding rule.
 -/
 
 @[expose] public section
@@ -16,22 +16,17 @@ namespace Air.Flat
 variable {F : Type} [FiniteField F]
 variable {Prefix Suffix : TypeMap} [ProvableType Prefix] [ProvableType Suffix]
 
-/-- A verifier-fixed physical prefix determines the first typed input of a paired circuit. -/
-theorem FixedRowAt.input_prefix {fixed : FixedColumns F} {i : ℕ} {row : Array F}
-    (data : ProverData F) (width : fixed.width = size Prefix)
-    (fixedRow : FixedRowAt (some fixed) i row) :
-    (valueFromOffset (ProvablePair Prefix Suffix) 0 (Environment.fromArray row data)).1 =
-      fromElements (inputRow Prefix (fixed.row i)) := by
-  change fromElements _ = fromElements _
-  congr 1
-  apply Vector.ext
-  intro column bound
-  have rowWidth : size Prefix ≤ row.size := by
-    have sizes := congrArg Array.size fixedRow.2
-    simp [FixedColumns.row, width] at sizes
-    omega
-  have cells := congrArg (fun array : Array F => array[column]?.getD 0) fixedRow.2
-  simp only [Vector.getElem_cast, Vector.getElem_take, Vector.getElem_mapRange]
-  simpa [inputRow, Array.getElem?_extract, width, bound, Nat.lt_of_lt_of_le bound rowWidth] using cells
+/-- The first typed input of a pair is exactly its verifier-fixed prefix. -/
+theorem FixedInputAt.input_prefix {fixed : FixedColumns F} {i : UInt64}
+    {input : ProvablePair Prefix Suffix F} (width : fixed.width = size Prefix)
+    (fixedInput : FixedInputAt (some fixed) i input) :
+    (toElements input.1).toArray = fixed.row i := by
+  have fixedCells := (fixedInput fixed (by simp)).2
+  change (toElements input.1 ++ toElements input.2).toList.take fixed.width =
+    (fixed.row i).toList at fixedCells
+  rw [Vector.toList_append] at fixedCells
+  have same : (toElements input.1).toList = (fixed.row i).toList := by
+    simpa [width] using fixedCells
+  exact congrArg List.toArray same
 
 end Air.Flat

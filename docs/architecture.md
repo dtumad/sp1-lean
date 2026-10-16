@@ -117,6 +117,11 @@ layout. Honest construction retains operand, reader, clock and target bounds; it
 decision's binary and semantic properties. All 25 instruction chips now use empty prover hints.
 Providers may still require external witness data under their own contracts.
 
+The instruction-event registry lives with semantic trace contracts, below physical assembly.
+Chronological compiler inventories likewise derive refresh and Memory boundary records before
+building tables. Capacity proofs use the canonical access plan and existing semantic shard limit;
+provider recounting and fixed-table padding remain separate obligations.
+
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
 one complete finite state with projections, and one typed physical inventory. Retain distinctions
@@ -140,6 +145,12 @@ gaps, eligibility and padding; only counts are prover-owned. Source RAM reads au
 bytes before emitting one Memory occurrence. Target reads retain the complete final receipt.
 Global balance and fixed prefixes establish membership without caller-supplied provider validity.
 Projected ledgers retain every fixed row, including unused intervals and zero-count padding.
+
+Each Clean table stores its evaluation data and a proof that its physical row count fits the
+upstream `UInt64` index space. Ensemble construction makes every table's stored data agree with
+the canonical data derived from the complete inventory. Generation inputs remain separate.
+Generic constructors must account for capacity, including fixed-table padding; they may not
+silently truncate, deduplicate or drop rows to fit.
 
 A projected witness derives canonical data from its retained physical rows. Prove row-layout,
 lookup and channel-guarantee transport at the actual two data environments; dropping tables or

@@ -153,7 +153,7 @@ theorem u8Range_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.U8Range.component (p := p))
-        (ByteChip.U8Range.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.U8Range.traceInputs entries) data hint (by trivial)) =
       entries.map fun e => actualProviderAccess (p := p) (u8RangeAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.U8Range.component (p := p)) entries
     ByteChip.U8Range.ofEntry _ data hint (by trivial) data (fun e he => ?_)
@@ -170,7 +170,7 @@ theorem msb_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.MSB.component (p := p))
-        (ByteChip.MSB.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.MSB.traceInputs entries) data hint (by trivial)) =
       entries.map fun e => actualProviderAccess (p := p) (msbAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.MSB.component (p := p)) entries
     ByteChip.MSB.ofEntry _ data hint (by trivial) data (fun e he => ?_)
@@ -183,7 +183,7 @@ theorem and_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.AndByte.component (p := p))
-        (ByteChip.AndByte.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.AndByte.traceInputs entries) data hint (by trivial)) =
       entries.map fun e => actualProviderAccess (p := p) (andAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.AndByte.component (p := p)) entries
     ByteChip.AndByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
@@ -198,7 +198,7 @@ theorem or_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.OrByte.component (p := p))
-        (ByteChip.OrByte.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.OrByte.traceInputs entries) data hint (by trivial)) =
       entries.map fun e => actualProviderAccess (p := p) (orAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.OrByte.component (p := p)) entries
     ByteChip.OrByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
@@ -213,7 +213,7 @@ theorem xor_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.XorByte.component (p := p))
-        (ByteChip.XorByte.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.XorByte.traceInputs entries) data hint (by trivial)) =
       entries.map fun e => actualProviderAccess (p := p) (xorAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.XorByte.component (p := p)) entries
     ByteChip.XorByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
@@ -228,7 +228,7 @@ theorem ltu_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.Ltu.component (p := p))
-        (ByteChip.Ltu.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.Ltu.traceInputs entries) data hint (by trivial)) =
       entries.map fun e => actualProviderAccess (p := p) (ltuAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.Ltu.component (p := p)) entries
     ByteChip.Ltu.ofEntry _ data hint (by trivial) data (fun e he => ?_)
@@ -244,7 +244,7 @@ theorem range_traceTable_actualAccesses (width : RangeChip.Width)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hwf : ∀ e ∈ entries, e.WellFormed width.val) :
     tableCleanAccesses (Table.build (RangeChip.componentFor (p := p) width)
-        (RangeChip.traceInputs entries) data hint (by trivial)) data =
+        (RangeChip.traceInputs entries) data hint (by trivial)) =
       entries.map fun e =>
         actualProviderAccess (p := p) (rangeAccess width e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (RangeChip.componentFor (p := p) width) entries
@@ -262,7 +262,7 @@ theorem program_traceTable_actualAccesses (entries : List TraceGen.RomEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (hfit : ∀ e ∈ entries, RomKeyFits e) :
     tableCleanAccesses (Table.build (ProgramProviderChip.component (p := p))
-        (ProgramProviderChip.traceInputs entries) data hint (by trivial)) data =
+        (ProgramProviderChip.traceInputs entries) data hint (by trivial)) =
       entries.map fun e =>
         actualProviderAccess (p := p) (programEntryAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ProgramProviderChip.component (p := p)) entries
@@ -318,7 +318,7 @@ def actualProviderLedger : LookupAccessList :=
 `preprocessedProviderLedger_eq`, this needs no multiplicity-capacity premise. -/
 theorem preprocessedProviderActualLedger_eq (hwf : trace.WellFormed)
     (hromKeys : ∀ e ∈ trace.providerOccurrences .program, RomKeyFits e) :
-    tablesCleanAccesses trace.preprocessedProviderTables trace.data = trace.actualProviderLedger := by
+    tablesCleanAccesses trace.preprocessedProviderTables = trace.actualProviderLedger := by
   rw [tablesCleanAccesses_setData _ trace.data trace.generationData,
     preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,

@@ -212,7 +212,7 @@ variable {witness : CoreAIR.Witness (CoreAIR.Current.Row p)}
 theorem transportMemoryInitTable_constraints
     (contract : MemoryBoundaryProviderContract witness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportMemoryInitTable witness data hint).Constraints data := by
+    (transportMemoryInitTable witness data hint).Constraints := by
   apply Table.build_constraints _ _ _ _ (by trivial) MemoryProviderChip.computableWitnesses
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
@@ -223,7 +223,7 @@ omit [Fact (2 ^ 24 < p)] in
 theorem transportMemoryFinalizeTable_constraints
     (contract : MemoryBoundaryProviderContract witness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (transportMemoryFinalizeTable witness data hint).Constraints data := by
+    (transportMemoryFinalizeTable witness data hint).Constraints := by
   apply Table.build_constraints _ _ _ _ (by trivial) MemoryFinalizeChip.computableWitnesses
   intro input hinput
   obtain ⟨row, hrow, rfl⟩ := List.mem_map.mp hinput
@@ -249,7 +249,7 @@ theorem extractedMemoryBoundaryTables_components
 theorem extractedMemoryBoundaryTables_constraints
     (contract : MemoryBoundaryProviderContract witness)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ∀ table ∈ extractedMemoryBoundaryTables witness data hint, table.Constraints data := by
+    ∀ table ∈ extractedMemoryBoundaryTables witness data hint, table.Constraints := by
   intro table hmem
   simp only [extractedMemoryBoundaryTables, List.mem_cons, List.not_mem_nil, or_false] at hmem
   rcases hmem with rfl | rfl
@@ -488,7 +488,7 @@ private theorem memoryFinalize_toAccess_eq_inputAccess
 private theorem memoryProvider_nativeAccesses_symbolic
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations =
+        ({ circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } : Component (ZMod p)).operations =
       [LookupAccessList.negMult
         (AbstractInteraction.toAccess env
           (pushedIf (channel := Channels.memoryChannel)
@@ -505,7 +505,7 @@ private theorem memoryProvider_nativeAccesses_symbolic
     unfold MemoryProviderChip.circuit at channelMem'
     simpa [circuit_norm] using channelMem'
   rw [nativeAccesses_memoryOnly MemoryProviderChip.circuit only]
-  rw [Component.rowOperations_mk]
+  rw [Component.rowOperations]
   rw [show (MemoryProviderChip.circuit (p := p)).main =
       MemoryProviderChip.main from rfl]
   rw [memoryInitProvider_memoryInteractions]
@@ -515,7 +515,7 @@ omit [Fact (2 ^ 24 < p)] in
 private theorem memoryFinalize_nativeAccesses_symbolic
     (env : Environment (ZMod p)) :
     Faithful.nativeAccesses env
-        ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations =
+        ({ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions } : Component (ZMod p)).operations =
       [LookupAccessList.negMult
         (AbstractInteraction.toAccess env
           (pulledIf (channel := Channels.memoryChannel)
@@ -532,7 +532,7 @@ private theorem memoryFinalize_nativeAccesses_symbolic
     unfold MemoryFinalizeChip.circuit at channelMem'
     simpa [circuit_norm] using channelMem'
   rw [nativeAccesses_memoryOnly MemoryFinalizeChip.circuit only]
-  rw [Component.rowOperations_mk]
+  rw [Component.rowOperations]
   rw [show (MemoryFinalizeChip.circuit (p := p)).main =
       MemoryFinalizeChip.main from rfl]
   rw [memoryFinalizeProvider_memoryInteractions]
@@ -563,13 +563,13 @@ private theorem memoryGlobalInitRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          (({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).buildRow
+          (({ circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } : Component (ZMod p)).buildRow
             (memoryGlobalInitInput row) data hint) data)
-        ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p)).operations =
+        ({ circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } : Component (ZMod p)).operations =
       [projectedMemoryGlobalInitAccess row] := by
   rw [memoryProvider_nativeAccesses_symbolic,
     memoryProvider_toAccess_eq_inputAccess]
-  let component := ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p))
+  let component := ({ circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } : Component (ZMod p))
   let env := Environment.fromArray
     (component.buildRow (memoryGlobalInitInput row) data hint) data
   have inputEq : Eval.eval env
@@ -584,13 +584,13 @@ private theorem memoryGlobalFinalizeRow_nativeAccesses
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     Faithful.nativeAccesses
         (Environment.fromArray
-          (({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).buildRow
+          (({ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions } : Component (ZMod p)).buildRow
             (memoryGlobalFinalizeInput row) data hint) data)
-        ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p)).operations =
+        ({ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions } : Component (ZMod p)).operations =
       [projectedMemoryGlobalFinalizeAccess row] := by
   rw [memoryFinalize_nativeAccesses_symbolic,
     memoryFinalize_toAccess_eq_inputAccess]
-  let component := ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p))
+  let component := ({ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions } : Component (ZMod p))
   let env := Environment.fromArray
     (component.buildRow (memoryGlobalFinalizeInput row) data hint) data
   have inputEq : Eval.eval env
@@ -607,7 +607,7 @@ private theorem transportMemoryInitTable_accesses
       (activeMemoryGlobalInitRows witness).map projectedMemoryGlobalInitAccess := by
   simpa only [transportMemoryInitTable, MemoryProviderChip.component] using
     tableNativeAccesses_build_map_singleton
-      ({ circuit := MemoryProviderChip.circuit } : Component (ZMod p))
+      ({ circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } : Component (ZMod p))
       (activeMemoryGlobalInitRows witness) memoryGlobalInitInput projectedMemoryGlobalInitAccess
       data hint (by trivial) data (fun row _ => memoryGlobalInitRow_nativeAccesses row data hint)
 
@@ -618,7 +618,7 @@ private theorem transportMemoryFinalizeTable_accesses
       (activeMemoryGlobalFinalizeRows witness).map projectedMemoryGlobalFinalizeAccess := by
   simpa only [transportMemoryFinalizeTable, MemoryFinalizeChip.component] using
     tableNativeAccesses_build_map_singleton
-      ({ circuit := MemoryFinalizeChip.circuit } : Component (ZMod p))
+      ({ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions } : Component (ZMod p))
       (activeMemoryGlobalFinalizeRows witness) memoryGlobalFinalizeInput
       projectedMemoryGlobalFinalizeAccess data hint (by trivial) data
       (fun row _ => memoryGlobalFinalizeRow_nativeAccesses row data hint)

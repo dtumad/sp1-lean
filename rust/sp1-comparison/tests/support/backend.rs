@@ -1,6 +1,6 @@
 //! Shared backend configuration and literal witness comparisons for export fixtures.
 
-use clean_backend::{witness_generation::Program, StarkConfig};
+use clean_backend::{witness_generation::Program, GeneratedAirSpec, StarkConfig};
 use p3_challenger::DuplexChallenger;
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
@@ -115,4 +115,14 @@ pub fn physical_reference<P: Program<F>>(
         })
         .collect::<Vec<_>>();
     serde_json::json!({"tables": rows, "interactions": interactions})
+}
+
+/// Enumerate the emitter's fixed-row API for comparison with independent source rows.
+pub fn fixed_trace<P: GeneratedAirSpec>(component: usize) -> p3_matrix::dense::RowMajorMatrix<F> {
+    let width = P::FIXED_WIDTHS[component];
+    assert_ne!(width, 0);
+    let values = (0..P::FIXED_HEIGHTS[component] as u64)
+        .flat_map(|row| P::fixed_row::<F>(component, row))
+        .collect();
+    p3_matrix::dense::RowMajorMatrix::new(values, width)
 }

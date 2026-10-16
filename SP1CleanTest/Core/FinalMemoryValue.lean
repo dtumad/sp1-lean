@@ -62,6 +62,7 @@ private def evaluate {Input Output : TypeMap} [ProvableType Input] [ProvableType
   let membership := StaticMembership.check (FinalRegisterValue.membership snapshot)
     (interactions.map fun interaction =>
       (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+    (FinalRegisterValue.membership_height_lt_uint64 snapshot)
   (localConstraints snapshot env operations && bytes && membership,
     (interactions.filter fun interaction =>
       interaction.channel.name == "SP1FinalRegisterValue" || interaction.channel.name == "SP1FinalRamValue" ||

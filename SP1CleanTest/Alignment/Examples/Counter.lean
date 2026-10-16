@@ -57,20 +57,20 @@ def results : List (String × Bool × Bool) :=
    ("empty-15-to-15", true, compiledAccepted 15 15 0),
    ("maximum-0-to-15", true, compiledAccepted 0 15 15),
    ("shuffled-physical-rows", true,
-     validates (witnessOfRows (2, 5) [(4, 5), (2, 3), (3, 4)])),
-   ("missing-transition", false, validates (witnessOfRows (2, 5) [(2, 3), (4, 5)])),
+     validates (witnessOfRows (2, 5) [(4, 5), (2, 3), (3, 4)] (by decide))),
+   ("missing-transition", false, validates (witnessOfRows (2, 5) [(2, 3), (4, 5)] (by decide))),
    ("duplicate-transition", false,
-     validates (witnessOfRows (2, 5) [(2, 3), (3, 4), (3, 4), (4, 5)])),
+     validates (witnessOfRows (2, 5) [(2, 3), (3, 4), (3, 4), (4, 5)] (by decide))),
    ("wrong-public-endpoint", false,
-     validates (witnessOfRows (2, 6) [(2, 3), (3, 4), (4, 5)])),
+     validates (witnessOfRows (2, 6) [(2, 3), (3, 4), (4, 5)] (by decide))),
    ("wrong-event-count", false, (compile (2, 5) (List.replicate 2 Event.increment)).isSome),
    ("endpoint-16", false, (compile (15, 16) [Event.increment]).isSome),
-   ("raw-empty-endpoint-16", false, validates (witnessOfRows (16, 16) [])),
-   ("raw-empty-endpoint-96", false, validates (witnessOfRows (96, 96) [])),
+   ("raw-empty-endpoint-16", false, validates (witnessOfRows (16, 16) [] (by decide))),
+   ("raw-empty-endpoint-96", false, validates (witnessOfRows (96, 96) [] (by decide))),
    ("decreasing-boundary", false, (compile (5, 2) []).isSome),
    ("empty-unequal-boundaries", false, (compile (2, 3) []).isSome),
    ("modular-wrap-row", false,
-     rowChecks { circuit := transition } (witnessOfRows (0, 0) []).data #[96, 0])]
+     rowChecks { circuit := transition, Assumptions := (transition).Assumptions } (witnessOfRows (0, 0) [] (by decide)).data #[96, 0])]
 
 /-- Both successful compilation and physical mutations have the stated executable outcomes. -/
 theorem casesMatch : results.all (fun (_, expected, actual) => expected == actual) = true := by
@@ -83,14 +83,14 @@ theorem exactCounts :
 
 /-- Only transition rows determine named prover data; the verifier adds no physical table. -/
 theorem physicalData :
-    let witness := witnessOfRows (2, 5) [(2, 3), (3, 4), (4, 5)]
+    let witness := witnessOfRows (2, 5) [(2, 3), (3, 4), (4, 5)] (by decide)
     witness.tables.length = 1 ∧ witness.data "CounterTransition" 2 =
       #[#v[2, 3], #v[3, 4], #v[4, 5]] := by native_decide
 
 /-- The wrap row satisfies the field equation but fails the actual row's fixed lookup. -/
 theorem wrapNeedsLookup :
     (0 : F) = (96 : F) + 1 ∧
-      rowChecks { circuit := transition } (witnessOfRows (0, 0) []).data #[96, 0] = false := by
+      rowChecks { circuit := transition, Assumptions := (transition).Assumptions } (witnessOfRows (0, 0) [] (by decide)).data #[96, 0] = false := by
   native_decide
 
 /-- Print actual compiled rows and the complete positive/negative regression results. -/

@@ -54,7 +54,7 @@ theorem deriveProverData_append_of_not_mem (left right : List (Table F)) (name :
 /-- Every arity of a named data entry is determined by its actual physical table. -/
 theorem EnsembleWitness.data_of_mem_table {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness ens) {table : Table F} (member : table ∈ witness.tables) (arity : ℕ) :
-    witness.data table.component.circuit.name arity = table.component.proverRows table.table arity := by
+    witness.data table.component.circuit.name arity = table.proverRows arity := by
   apply deriveProverData_eq_of_mem witness.tables _ member arity
   have unique := ens.unique_names
   rw [← witness.tables_map_component, List.map_map] at unique
@@ -68,29 +68,66 @@ theorem EnsembleWitness.data_eq_of_common_table {ens : Ensemble F PublicIO}
     first.data table.component.circuit.name arity = second.data table.component.circuit.name arity := by
   rw [first.data_of_mem_table firstMember, second.data_of_mem_table secondMember]
 
-/-- Assemble the public input and physical tables in the ensemble's declared order. -/
-def EnsembleWitness.ofTables (ens : Ensemble F PublicIO) (tables : List (Table F))
-    (publicInput : PublicIO F) (hmap : tables.map (·.component) = ens.tables) :
+/-- Change only ensemble metadata while retaining already-canonical tables and public input. -/
+def EnsembleWitness.withEnsemble {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
+    (target : Ensemble F PublicIO) (same : target.tables = ens.tables) : EnsembleWitness target where
+  tables := witness.tables
+  publicInput := witness.publicInput
+  same_length := same.symm ▸ witness.same_length
+  same_circuits := by
+    intro index bound
+    simpa only [same] using witness.same_circuits index (by simpa only [same] using bound)
+  same_data := witness.same_data
+
+/-- Assemble an inventory whose stored environments are already canonical. -/
+def EnsembleWitness.ofCanonicalTables (ens : Ensemble F PublicIO) (tables : List (Table F))
+    (publicInput : PublicIO F) (hmap : tables.map (·.component) = ens.tables)
+    (canonical : ∀ table ∈ tables, table.data = deriveProverData tables) :
     EnsembleWitness ens where
-  tables := tables
-  publicInput := publicInput
+  tables
+  publicInput
   same_length := by rw [← hmap, List.length_map]
   same_circuits := by
     intro i hi
     have hi' : i < (tables.map (·.component)).length := by rw [hmap]; exact hi
     rw [← List.getElem_of_eq hmap hi', List.getElem_map]
+  same_data := canonical
 
-/-- Construction preserves every physical table and its position. -/
+/-- Assemble the public input and physical tables in the ensemble's declared order. -/
+def EnsembleWitness.ofTables (ens : Ensemble F PublicIO) (tables : List (Table F))
+    (publicInput : PublicIO F) (hmap : tables.map (·.component) = ens.tables) :
+    EnsembleWitness ens where
+  tables := withDerivedData tables
+  publicInput := publicInput
+  same_length := by simp only [withDerivedData, List.length_map]; rw [← hmap, List.length_map]
+  same_circuits := by
+    intro i hi
+    have same : (withDerivedData tables).map (·.component) = ens.tables :=
+      (withDerivedData_map_component tables).trans hmap
+    have hi' : i < ((withDerivedData tables).map (·.component)).length := by rw [same]; exact hi
+    rw [← List.getElem_of_eq same hi', List.getElem_map]
+  same_data := withDerivedData_data tables
+
+/-- Construction installs the canonical environment without changing rows or their positions. -/
 @[simp] theorem EnsembleWitness.ofTables_tables (ens : Ensemble F PublicIO)
     (tables : List (Table F)) (publicInput : PublicIO F)
     (hmap : tables.map (·.component) = ens.tables) :
-    (EnsembleWitness.ofTables ens tables publicInput hmap).tables = tables := rfl
+    (EnsembleWitness.ofTables ens tables publicInput hmap).tables = withDerivedData tables := rfl
+
+/-- Canonicalizing the data keeps every physical row in its original position. -/
+@[simp] theorem EnsembleWitness.ofTables_rows (ens : Ensemble F PublicIO)
+    (tables : List (Table F)) (publicInput : PublicIO F)
+    (hmap : tables.map (·.component) = ens.tables) :
+    (EnsembleWitness.ofTables ens tables publicInput hmap).tables.map (·.table) =
+      tables.map (·.table) := by
+  simp [ofTables, withDerivedData]
 
 /-- The environment is derived from the supplied committed rows. -/
 @[simp] theorem EnsembleWitness.ofTables_data (ens : Ensemble F PublicIO)
     (tables : List (Table F)) (publicInput : PublicIO F)
     (hmap : tables.map (·.component) = ens.tables) :
-    (EnsembleWitness.ofTables ens tables publicInput hmap).data = deriveProverData tables := rfl
+    (EnsembleWitness.ofTables ens tables publicInput hmap).data = deriveProverData tables :=
+  deriveProverData_map_data tables _
 
 /-- Construction preserves the public input. -/
 @[simp] theorem EnsembleWitness.ofTables_publicInput (ens : Ensemble F PublicIO)
@@ -103,8 +140,8 @@ open Classical in
 theorem EnsembleWitness.interactionsWith_eq_filter {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness ens) (channel : RawChannel F) :
     witness.interactionsWith channel = witness.interactions.filter (·.channel = channel) := by
-  simp only [interactionsWith, verifierInteractionsWith, tableContext,
-    TableContext.interactionsWith, Operations.interactionValuesWith_eq_filter,
+  simp only [interactionsWith, verifierInteractionsWith, toTables,
+    Tables.interactionsWith, Operations.interactionValuesWith_eq_filter,
     Table.interactionsWith_eq_filter, interactions, List.filter_append, List.filter_flatMap]
 
 end Air.Flat

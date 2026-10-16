@@ -22,13 +22,13 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 /-- The unchanged physical Memory ledger after the two three-table inventories. -/
 noncomputable def memoryInterior {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) : List (TypedInteraction (memoryChannel (p := p))) :=
-  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · witness.data memoryChannel)
+  (witness.tables.drop 6).flatMap (typedTableInteractionsWith · memoryChannel)
 
 /-- The interior adapter preserves every raw interaction, including disabled interactions. -/
 theorem memoryInterior_raw {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     (memoryInterior witness).map TypedInteraction.raw =
-      (witness.tables.drop 6).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) := by
+      (witness.tables.drop 6).flatMap (·.interactionsWith memoryChannel.toRaw) := by
   simp only [memoryInterior, List.map_flatMap, typedTableInteractionsWith_raw]
 
 private theorem verifier_memory_silent (image : ProgramImage) (env : Environment (ZMod p)) :
@@ -63,11 +63,11 @@ theorem memory_interactions {image : ProgramImage}
   rw [← initial_memory_interactions witness, ← final_memory_interactions witness]
   change (ensemble image).verifierOperations.interactionValuesWith memoryChannel.toRaw
     (Environment.fromInput witness.publicInput witness.data) ++
-    witness.tables.flatMap (·.interactionsWith witness.data memoryChannel.toRaw) = _
+    witness.tables.flatMap (·.interactionsWith memoryChannel.toRaw) = _
   rw [verifier_memory_silent, List.nil_append]
-  have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith witness.data memoryChannel.toRaw))
+  have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
     (List.take_append_drop 3 witness.tables)
-  have splitTail := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith witness.data memoryChannel.toRaw))
+  have splitTail := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
     (List.take_append_drop 3 (witness.tables.drop 3))
   simp only [List.flatMap_append, List.drop_drop] at split splitTail
   rw [← split, ← splitTail, List.append_assoc]
@@ -86,11 +86,11 @@ theorem memoryInterior_signedBinary {image : ProgramImage}
   rw [List.map_drop, witness.tables_map_component] at componentMem
   change table.component ∈ afterFinalTables image ++ [ramMembership image] at componentMem
   rcases List.mem_append.mp componentMem with componentMem | fixed
-  · exact interior_memoryBinary image table.component componentMem witness.data physical
+  · exact interior_memoryBinary image table.component componentMem table.data physical
       (constraints table (List.mem_of_mem_drop tableMem)
         physical physicalMem) interaction.raw emitted
 
-  · have silent : table.interactionsWith witness.data memoryChannel.toRaw = [] := by
+  · have silent : table.interactionsWith memoryChannel.toRaw = [] := by
       apply table.interactionsWith_nil_of_channel_not_mem
       rw [List.mem_singleton.mp fixed]
       change memoryChannel.toRaw ∉ [(InitialMemoryLookup.membership image.initialMemory (2 ^ 48)

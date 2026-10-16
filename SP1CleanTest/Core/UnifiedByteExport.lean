@@ -5,7 +5,7 @@ import ToClean.Circuit.VerifierInteractions
 
 /-! # Closed export fixture for the consolidated byte provider
 
-The public boundary carries individual byte requests. Clean's unmodified demand scheduler
+The public boundary carries individual byte requests. Clean's demand scheduler
 aggregates equal messages and pads the provider. Raw acceptance checks every generated row
 and every ledger occurrence, including repeated requests and zero-count padding.
 -/
@@ -18,9 +18,11 @@ open ComponentExport (Fp)
 
 abbrev Requests (n : ℕ) := ProvableVector ByteRow n
 
-def component : Component Fp := { circuit := Unified.circuit }
+def component : Component Fp := { circuit := Unified.circuit, Assumptions := (Unified.circuit).Assumptions }
 
 def verifier (n : ℕ) : Verifier.Program Fp (Requests n) where
+  Spec _ _ := True
+  soundness := by intros; trivial
   main requests := Verifier.ofInteractions
     (requests.toList.map fun request =>
       ((Channels.byteChannel (p := SP1Prime)).pulled request).toRaw)
@@ -35,14 +37,16 @@ def ensemble (n : ℕ) : Ensemble Fp (Requests n) where
   channels := [Channels.byteChannel.toRaw]
   verifier := verifier n
 
-def config : WitnessGeneration.Config Fp unit where
-  modes := [.demand {
-    channel := (Channels.byteChannel (p := SP1Prime)).name
-    direction := .pull
-    aggregation := .byMessage
-    input := ⟨[.message 0, .message 1, .message 2, .message 3, .multiplicity]⟩
-  }]
-  padding := [{ input := #[0, 0, 0, 0, 0] }]
+def config : WitnessGeneration.Config Fp where
+  components := [(component.circuit.name, {
+    mode := .demand {
+      channel := (Channels.byteChannel (p := SP1Prime)).toRaw
+      direction := .pull
+      aggregation := .byMessage
+      input := ⟨[.message 0, .message 1, .message 2, .message 3, .multiplicity]⟩
+    }
+    padding := { input := #[0, 0, 0, 0, 0] }
+  })]
   fuel := 128
 
 def description (n : ℕ) : Air.Flat.EnsembleCheck (ensemble n) where
@@ -66,7 +70,7 @@ def description (n : ℕ) : Air.Flat.EnsembleCheck (ensemble n) where
     simp [ensemble, circuit_norm]
 
 def generate (rows : List (ByteRow Fp)) : Except String (EnsembleWitness (ensemble rows.length)) :=
-  WitnessGeneration.generate (ensemble rows.length) config ⟨rows.toArray, by simp⟩ ()
+  WitnessGeneration.generate (ComponentExport.fixture (ensemble rows.length)) config ⟨rows.toArray, by simp⟩ () |>.mapError toString
 
 def request (opcode a b c : ℕ) : ByteRow Fp := ⟨opcode, a, b, c⟩
 
@@ -87,9 +91,9 @@ def cases : List (String × List (ByteRow Fp) × Bool) :=
 def exportSizes : List ℕ := [0, 1, 7, 9, 17, 64, 65]
 
 def rustExports : List (String × Except String String) :=
-  [("unified_byte_row.rs", ComponentExport.exportRust "UnifiedByteRow" Unified.circuit)] ++
+  [("unified_byte_row.rs", ComponentExport.exportRust Unified.circuit)] ++
   exportSizes.map fun n =>
-    (s!"unified_byte_{n}.rs", Extraction.Rust.ensembleToRust "UnifiedByte" (ensemble n) config)
+    (s!"unified_byte_{n}.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture (ensemble n)) config)
 
 theorem cases_correct : cases.all (fun (_, input, expected) =>
     (match generate input with

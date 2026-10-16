@@ -124,13 +124,13 @@ theorem sp1_finishedChannel_guarantees (witness : EnsembleWitness (sp1Ensemble (
     ((sp1Ensemble (p := p)).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
       (sp1Ensemble (p := p)).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw) ∧
     ∀ table ∈ witness.tables,
-      table.ChannelGuarantees witness.data byteChannel.toRaw ∧
-      table.ChannelGuarantees witness.data programChannel.toRaw := by
+      table.ChannelGuarantees byteChannel.toRaw ∧
+      table.ChannelGuarantees programChannel.toRaw := by
   have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
       (member : channel ∈ (sp1Ensemble (p := p)).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw]) :
       (sp1Ensemble (p := p)).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
-        ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
+        ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
     apply witness.channelGuarantees_of_component_requirements channel hC (hB channel member) ?_
       (fun component componentMem env constraints =>
         sp1_component_finished_requirements component componentMem channel outside env constraints)

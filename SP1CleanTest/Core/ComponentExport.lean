@@ -1,4 +1,4 @@
-import Clean.Air.Extraction.Rust
+import Clean.Backends.Plonky3.Print
 import SP1Clean.Model.Channels
 import SP1Clean.Model.SP1Field
 
@@ -21,24 +21,40 @@ def ensemble (component : Component Fp) : Ensemble Fp unit where
   channels := [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
     Channels.memoryChannel.toRaw, Channels.programChannel.toRaw]
 
-/-- A single independent component input, supplied as prover construction data. -/
-def config (Inputs : Type → Type) [ProvableType Inputs] : WitnessGeneration.Config Fp Inputs where
-  modes := [.preallocated {
-    rows := 1
-    input := {
-      width := size Inputs
-      steps := []
-      output := .mapRange (size Inputs) (.proverInputGet .idx)
+/-- The exporter requires a formal ensemble. Comparison fixtures deliberately make no public
+semantic claim: their production circuits retain their proofs, and tests check the emitted rows.
+A named hint table exposes the private input through Clean's built-in input representation. -/
+def fixture {PublicIO : TypeMap} [ProvableType PublicIO]
+    (ensemble : Ensemble Fp PublicIO) (Input : TypeMap := unit) [ProvableType Input] :
+    FormalEnsemble Fp PublicIO where
+  ensemble
+  Spec _ := True
+  soundness := fun _ _ _ => True.intro
+  ProverInput := Input
+  hintTables := [{ key := "input", width := size Input, offset := 0, rows := 1 }]
+
+/-- A single independent component input, supplied through the fixture's named private hint. -/
+def config (component : Component Fp)
+    (padding : Array Fp := Array.replicate (size component.Input) 0) : WitnessGeneration.Config Fp where
+  components := [(component.circuit.name, {
+    mode := .preallocated {
+      rows := 1
+      input := .ofFExprs (Vector.ofFn fun column : Fin (size component.Input) =>
+        .hintGet "input" (size component.Input) (.const 0) column)
+      input_valid := by simp [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs,
+        Witgen.VExpr.validForRow, Witgen.FExpr.validForRow,
+        Witgen.U64Expr.validForRow, Witgen.RowProgram.Source.allowsHints]
+      handlers := []
     }
-    input_valid := by rfl
-    handlers := []
-  }]
-  padding := [{ input := Array.replicate (size Inputs) 0 }]
+    padding := { input := padding }
+  })]
   fuel := 1
 
-/-- Export a production circuit with ordinary inputs and zero padding through Clean. -/
+/-- Export a production circuit through Clean, with explicit padding where zeros are unsuitable. -/
 def exportRust {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
-    (name : String) (circuit : GeneralFormalCircuit Fp Input Output) : Except String String :=
-  Extraction.Rust.ensembleToRust name (ensemble { circuit }) (config Input)
+    (circuit : GeneralFormalCircuit Fp Input Output)
+    (padding : Array Fp := Array.replicate (size Input) 0) : Except String String :=
+  let component : Component Fp := { circuit, Assumptions := circuit.Assumptions }
+  Backends.Plonky3.Print.ensembleToRust (fixture (ensemble component) Input) (config component padding)
 
 end SP1CleanTest.Core.ComponentExport

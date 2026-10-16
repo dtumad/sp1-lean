@@ -116,6 +116,7 @@ import SP1Clean.FormalModel.TraceGen.ClockBridge
 import SP1Clean.FormalModel.TraceGen.Events
 import SP1Clean.FormalModel.TraceGen.GenState
 import SP1Clean.FormalModel.TraceGen.Inputs
+import SP1Clean.FormalModel.TraceGen.InstructionRegistry
 import SP1Clean.FormalModel.TraceGen.Memory
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.FormalModel.TraceGen.SailAlu
@@ -569,6 +570,7 @@ import SP1Clean.Proofs.Chips.SubwChip.Formal
 import SP1Clean.Proofs.Chips.SubwChip.Witgen
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Ledger
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
 import SP1Clean.Proofs.Chips.UTypeChip.Complete
 import SP1Clean.Proofs.Chips.UTypeChip.Formal

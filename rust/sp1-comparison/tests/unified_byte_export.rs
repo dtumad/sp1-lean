@@ -7,12 +7,14 @@ mod backend;
 #[path = "support/export.rs"]
 mod export_support;
 
-use backend::{assert_backend_rejection, benchmark_config, config, physical_reference};
+use backend::{
+    assert_backend_rejection, benchmark_config, config, fixed_trace, physical_reference,
+};
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::{
     prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, GeneratedEnsemble,
 };
-use export_support::{NativeEvaluation, RowWitness, Sp1Evaluation};
+use export_support::{RowWitness, Sp1Evaluation};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use serde_json::{json, Value};
@@ -48,8 +50,7 @@ generated!(add, "add_instruction.rs");
 generated!(beq, "branch_instruction.rs");
 generated!(load, "load_byte_instruction.rs");
 
-type Row = row::UnifiedByteRow;
-type RowAir = row::UnifiedByteRowAirSpec;
+type Row = row::Ensemble;
 
 fn reference() -> Value {
     serde_json::from_str(include_str!(concat!(
@@ -69,7 +70,7 @@ fn fields(value: &Value) -> Vec<F> {
 }
 
 fn valid<S: GeneratedAirSpec>(component: usize, row: &[F]) -> bool {
-    S::constraints::<NativeEvaluation>(component, &[], row)
+    S::constraints::<F>(component, row)
         .iter()
         .all(|v| *v == F::ZERO)
 }
@@ -94,9 +95,9 @@ fn compare_sp1(expected: &Sp1Evaluation) {
         assert_eq!(message.len(), 4);
         let input = [message[0], message[1], message[2], message[3], *count];
         let row = complete(&input);
-        assert!(valid::<RowAir>(0, &row), "released member {input:?}");
+        assert!(valid::<Row>(0, &row), "released member {input:?}");
         assert_eq!(row.len(), 68);
-        let ledger = Row::interactions(0, &row);
+        let ledger = <Row as Program<F>>::interactions(0, &row);
         assert_eq!(ledger.len(), 1, "zero-count occurrences are retained");
         assert!(!ledger[0].assume_guarantees);
         assert_eq!(ledger[0].multiplicity.as_canonical_u64(), *count);
@@ -191,9 +192,9 @@ fn malformed_rows_and_every_witness_column_are_rejected_even_at_zero_count() {
         for count in [0, 1, 2, F::ORDER_U64 - 1] {
             input[4] = count;
             let row = complete(&input);
-            assert!(valid::<RowAir>(0, &row));
+            assert!(valid::<Row>(0, &row));
             assert_eq!(
-                RowAir::constraints::<NativeEvaluation>(0, &[], &row).len(),
+                <Row as GeneratedAirSpec>::constraints::<F>(0, &row).len(),
                 108
             );
             for column in 0..row.len() {
@@ -201,7 +202,7 @@ fn malformed_rows_and_every_witness_column_are_rejected_even_at_zero_count() {
                     let mut changed = row.clone();
                     changed[column] += F::from_u64(delta);
                     assert_eq!(
-                        valid::<RowAir>(0, &changed),
+                        valid::<Row>(0, &changed),
                         column == 4,
                         "input {input:?}, column {column}, delta {delta}"
                     );
@@ -210,7 +211,7 @@ fn malformed_rows_and_every_witness_column_are_rejected_even_at_zero_count() {
             for selectors in [[F::ZERO; 7], [F::ONE; 7], [F::from_u64(2); 7]] {
                 let mut changed = row.clone();
                 changed[5..12].copy_from_slice(&selectors);
-                assert!(!valid::<RowAir>(0, &changed));
+                assert!(!valid::<Row>(0, &changed));
             }
         }
     }
@@ -233,7 +234,7 @@ fn malformed_rows_and_every_witness_column_are_rejected_even_at_zero_count() {
     ];
     for key in bad {
         for count in [0, 1, 2, F::ORDER_U64 - 1] {
-            assert!(!valid::<RowAir>(
+            assert!(!valid::<Row>(
                 0,
                 &complete(&[key[0], key[1], key[2], key[3], count])
             ));
@@ -245,7 +246,7 @@ fn malformed_rows_and_every_witness_column_are_rejected_even_at_zero_count() {
     ));
 }
 
-fn check_closed<P: Program<F>, S: GeneratedAirSpec>(case: &Value) {
+fn check_closed<P: Program<F> + GeneratedAirSpec>(case: &Value) {
     let public = fields(&case["publicInput"]);
     let expected = case["accepted"].as_bool().unwrap();
     match generate::<F, P>(&public, &[]) {
@@ -255,7 +256,7 @@ fn check_closed<P: Program<F>, S: GeneratedAirSpec>(case: &Value) {
                 .tables
                 .iter()
                 .enumerate()
-                .all(|(i, rows)| rows.iter().all(|row| valid::<S>(i, row)));
+                .all(|(i, rows)| rows.iter().all(|row| valid::<P>(i, row)));
             assert_eq!(valid, expected, "{}", case["name"]);
             assert_eq!(
                 physical_reference::<P>(&public, &witness.tables),
@@ -272,7 +273,7 @@ fn check_closed<P: Program<F>, S: GeneratedAirSpec>(case: &Value) {
                         assert!(row.iter().take(5).all(|v| *v == F::ZERO));
                     }
                 }
-                let statement = GeneratedEnsemble::<F, S>::new(&[witness.tables[0].len()]).unwrap();
+                let statement = GeneratedEnsemble::<F, P>::new(&[witness.tables[0].len()]).unwrap();
                 assert_eq!(
                     statement.interaction_count(),
                     (requests.len() + witness.tables[0].len()) as u128
@@ -286,13 +287,13 @@ fn check_closed<P: Program<F>, S: GeneratedAirSpec>(case: &Value) {
 fn closed_rows_and_complete_ledgers_match_lean() {
     for case in reference()["cases"].as_array().unwrap() {
         match case["publicInput"].as_array().unwrap().len() / 4 {
-            0 => check_closed::<empty::UnifiedByte, empty::UnifiedByteAirSpec>(case),
-            1 => check_closed::<single::UnifiedByte, single::UnifiedByteAirSpec>(case),
-            7 => check_closed::<mixed::UnifiedByte, mixed::UnifiedByteAirSpec>(case),
-            9 => check_closed::<repeated::UnifiedByte, repeated::UnifiedByteAirSpec>(case),
-            17 => check_closed::<widths::UnifiedByte, widths::UnifiedByteAirSpec>(case),
-            64 => check_closed::<batch64::UnifiedByte, batch64::UnifiedByteAirSpec>(case),
-            65 => check_closed::<batch65::UnifiedByte, batch65::UnifiedByteAirSpec>(case),
+            0 => check_closed::<empty::Ensemble>(case),
+            1 => check_closed::<single::Ensemble>(case),
+            7 => check_closed::<mixed::Ensemble>(case),
+            9 => check_closed::<repeated::Ensemble>(case),
+            17 => check_closed::<widths::Ensemble>(case),
+            64 => check_closed::<batch64::Ensemble>(case),
+            65 => check_closed::<batch65::Ensemble>(case),
             size => panic!("unhandled request count {size}"),
         }
     }
@@ -303,7 +304,7 @@ fn backend_binds_public_requests_counts_selectors_and_padding() {
     let reference = reference();
     let public = fields(&reference["cases"][1]["publicInput"]);
     let witness = mixed::generate(&public, &[]).unwrap();
-    let statement = mixed::UnifiedByteStatement::<F>::new(&[8]).unwrap();
+    let statement = mixed::Statement::<F>::new(&[8]).unwrap();
     assert_eq!(statement.interaction_count(), 15);
     let traces = witness.into_traces().unwrap();
     let config = config();
@@ -323,11 +324,11 @@ fn backend_binds_public_requests_counts_selectors_and_padding() {
         });
     }
     assert!(matches!(
-        mixed::UnifiedByteStatement::<F>::new(&[3]),
+        mixed::Statement::<F>::new(&[3]),
         Err(EnsembleShapeError::TraceHeight { .. })
     ));
     assert!(matches!(
-        mixed::UnifiedByteStatement::<F>::new(&[1usize << 31]),
+        mixed::Statement::<F>::new(&[1usize << 31]),
         Err(EnsembleShapeError::InteractionCountBound { .. })
     ));
     assert!(matches!(
@@ -343,14 +344,14 @@ fn backend_binds_public_requests_counts_selectors_and_padding() {
         "open provider bus cannot balance"
     );
     let padded = empty::generate::<F>(&[], &[]).unwrap();
-    let statement = empty::UnifiedByteStatement::<F>::new(&[1]).unwrap();
+    let statement = empty::Statement::<F>::new(&[1]).unwrap();
     assert_eq!(statement.interaction_count(), 1);
     let (proof, _) =
         prove_ensemble(&config, &statement, padded.into_traces().unwrap(), &[]).unwrap();
     verify_ensemble(&config, &statement, &proof, &[]).unwrap();
 }
 
-fn check_source<P: Program<F>, S: GeneratedAirSpec>(source: &Value, benchmark: &Value) {
+fn check_source<P: Program<F> + GeneratedAirSpec>(source: &Value, benchmark: &Value) {
     let input = fields(&source["input"]);
     let row = generate::<F, RowWitness<P>>(&[], &input)
         .unwrap()
@@ -359,9 +360,9 @@ fn check_source<P: Program<F>, S: GeneratedAirSpec>(source: &Value, benchmark: &
         .unwrap()
         .pop()
         .unwrap();
-    assert!(valid::<S>(0, &row));
+    assert!(valid::<P>(0, &row));
     assert_eq!(row, fields(&source["row"]));
-    let ledger = P::interactions(0, &row);
+    let ledger = <P as Program<F>>::interactions(0, &row);
     let actual: Vec<_> = ledger
         .iter()
         .map(|entry| {
@@ -401,26 +402,15 @@ fn real_instruction_workloads_match_the_exported_rust_rows() {
             .find(|b| b["name"] == source["name"])
             .unwrap();
         match source["name"].as_str().unwrap() {
-            "add" => {
-                check_source::<add::AddInstruction, add::AddInstructionAirSpec>(source, benchmark)
-            }
-            "beq" => check_source::<beq::BranchInstruction, beq::BranchInstructionAirSpec>(
-                source, benchmark,
-            ),
-            "load-byte" => check_source::<
-                load::LoadByteInstruction,
-                load::LoadByteInstructionAirSpec,
-            >(source, benchmark),
+            "add" => check_source::<add::Ensemble>(source, benchmark),
+            "beq" => check_source::<beq::Ensemble>(source, benchmark),
+            "load-byte" => check_source::<load::Ensemble>(source, benchmark),
             name => panic!("unknown source {name}"),
         }
     }
 }
 
-fn measure<P: Program<F>, S: GeneratedAirSpec>(
-    case: &Value,
-    layout: &str,
-    benchmark: bool,
-) -> Value {
+fn measure<P: Program<F> + GeneratedAirSpec>(case: &Value, layout: &str, benchmark: bool) -> Value {
     let public = fields(&case["publicInput"]);
     let start = Instant::now();
     let witness = generate::<F, P>(&public, &[]).unwrap();
@@ -437,12 +427,12 @@ fn measure<P: Program<F>, S: GeneratedAirSpec>(
         .tables
         .iter()
         .enumerate()
-        .all(|(i, rows)| rows.iter().all(|row| valid::<S>(i, row))));
+        .all(|(i, rows)| rows.iter().all(|row| valid::<P>(i, row))));
     let heights = witness.tables.iter().map(Vec::len).collect::<Vec<_>>();
-    let statement = GeneratedEnsemble::<F, S>::new(&heights).unwrap();
-    let cells: usize = heights.iter().zip(S::WIDTHS).map(|(h, w)| h * w).sum();
+    let statement = GeneratedEnsemble::<F, P>::new(&heights).unwrap();
+    let cells: usize = heights.iter().zip(P::WIDTHS).map(|(h, w)| h * w).sum();
     let mut result = json!({"name": case["name"], "layout": layout, "heights": heights,
-        "widths": S::WIDTHS, "paddedCells": cells, "occurrences": statement.interaction_count(),
+        "widths": P::WIDTHS, "paddedCells": cells, "occurrences": statement.interaction_count(),
         "generationNs": generation.as_nanos() as u64});
     if benchmark {
         let config = benchmark_config();
@@ -466,19 +456,9 @@ macro_rules! comparison {
             generated!(candidate, concat!("byte_candidate_", $name, ".rs"));
             pub fn run(case: &super::Value, layout: &str, benchmark: bool) -> super::Value {
                 match layout {
-                    "baseline" => {
-                        super::measure::<baseline::ByteRouted, baseline::ByteRoutedAirSpec>(
-                            case, layout, benchmark,
-                        )
-                    }
-                    "candidate" => super::measure::<
-                        candidate::UnifiedByte,
-                        candidate::UnifiedByteAirSpec,
-                    >(case, layout, benchmark),
-                    "fixed" => super::measure::<
-                        fixed::PreprocessedByte,
-                        fixed::PreprocessedByteAirSpec,
-                    >(case, layout, benchmark),
+                    "baseline" => super::measure::<baseline::Ensemble>(case, layout, benchmark),
+                    "candidate" => super::measure::<candidate::Ensemble>(case, layout, benchmark),
+                    "fixed" => super::measure::<fixed::Ensemble>(case, layout, benchmark),
                     _ => unreachable!(),
                 }
             }
@@ -533,8 +513,8 @@ fn provider_layout_measurements() {
 
 #[test]
 fn fixed_columns_and_interactions_match_all_released_physical_rows() {
-    type P = fixed_single::PreprocessedByte;
-    type S = fixed_single::PreprocessedByteAirSpec;
+    type P = fixed_single::Ensemble;
+    type S = fixed_single::Ensemble;
     let byte = ByteChip::<SP1Field>::default();
     let range = RangeChip::<SP1Field>::default();
     let program = Sp1Program::default();
@@ -543,7 +523,7 @@ fn fixed_columns_and_interactions_match_all_released_physical_rows() {
         range.generate_preprocessed_trace(&program).unwrap(),
     ];
     for (component, source) in expected.iter().enumerate() {
-        let fixed = S::fixed_trace::<F>(component).unwrap();
+        let fixed = fixed_trace::<S>(component);
         assert_eq!(fixed.width, source.width());
         assert_eq!(fixed.values.len(), source.values.len());
         for (a, b) in fixed.values.iter().zip(&source.values) {
@@ -560,7 +540,7 @@ fn fixed_columns_and_interactions_match_all_released_physical_rows() {
                 }
                 let mut native = fixed.values[i * fixed.width..(i + 1) * fixed.width].to_vec();
                 native.extend(vec![F::from_u64(count); count_width]);
-                let actual = P::interactions(component, &native);
+                let actual = <P as Program<F>>::interactions(component, &native);
                 assert_eq!(actual.len(), evaluated.ledger.len());
                 for (entry, (channel, mult, message)) in actual.iter().zip(&evaluated.ledger) {
                     assert_eq!(entry.channel, channel);
@@ -643,7 +623,7 @@ fn fixed_generation_matches_source_counts_and_rejects_malformed_keys() {
     )))
     .unwrap();
     let public = fields(&lean["publicInput"]);
-    let witness = generate::<F, fixed_repeated::PreprocessedByte>(&public, &[]).unwrap();
+    let witness = generate::<F, fixed_repeated::Ensemble>(&public, &[]).unwrap();
     let rows = witness
         .tables
         .iter()
@@ -665,7 +645,7 @@ fn fixed_generation_matches_source_counts_and_rejects_malformed_keys() {
         if public.len() != 4 {
             continue;
         }
-        let generated = generate::<F, fixed_single::PreprocessedByte>(&public, &[]);
+        let generated = generate::<F, fixed_single::Ensemble>(&public, &[]);
         if case["accepted"] == false {
             assert!(generated.is_err(), "{}", case["name"]);
         } else {
@@ -673,7 +653,7 @@ fn fixed_generation_matches_source_counts_and_rejects_malformed_keys() {
         }
     }
     let public = fields(&reference()["cases"][2]["publicInput"]);
-    let witness = generate::<F, fixed_repeated::PreprocessedByte>(&public, &[]).unwrap();
+    let witness = generate::<F, fixed_repeated::Ensemble>(&public, &[]).unwrap();
     assert_fixed_counts(&witness.tables, &public);
     assert_eq!(witness.tables[1][0][2], F::ZERO);
     assert_eq!(witness.tables[1][1][2], F::from_u64(4));
@@ -681,8 +661,8 @@ fn fixed_generation_matches_source_counts_and_rejects_malformed_keys() {
 
 #[test]
 fn fixed_backend_binds_counts_public_requests_and_fixed_heights() {
-    type P = fixed_mixed::PreprocessedByte;
-    type S = fixed_mixed::PreprocessedByteAirSpec;
+    type P = fixed_mixed::Ensemble;
+    type S = fixed_mixed::Ensemble;
     let public = fields(&reference()["cases"][1]["publicInput"]);
     let witness = generate::<F, P>(&public, &[]).unwrap();
     assert_fixed_counts(&witness.tables, &public);
@@ -717,12 +697,10 @@ fn fixed_backend_binds_counts_public_requests_and_fixed_heights() {
     verify_ensemble(&config, &statement, &proof, &public).unwrap();
     // Duplicate physical keys may redistribute counts in adversarial valid AIR rows.
     let zero = vec![F::from_u64(6), F::ZERO, F::ZERO, F::ZERO];
-    let mut witness = generate::<F, fixed_single::PreprocessedByte>(&zero, &[]).unwrap();
+    let mut witness = generate::<F, fixed_single::Ensemble>(&zero, &[]).unwrap();
     witness.tables[1][0][2] = F::ONE;
     witness.tables[1][1][2] = F::ZERO;
-    let statement =
-        GeneratedEnsemble::<F, fixed_single::PreprocessedByteAirSpec>::new(&[65536, 131072])
-            .unwrap();
+    let statement = GeneratedEnsemble::<F, fixed_single::Ensemble>::new(&[65536, 131072]).unwrap();
     let (proof, _) =
         prove_ensemble(&config, &statement, witness.into_traces().unwrap(), &zero).unwrap();
     verify_ensemble(&config, &statement, &proof, &zero).unwrap();
@@ -748,7 +726,7 @@ fn large_workload(n: usize, hot: bool) -> Vec<F> {
         .collect()
 }
 
-fn measure_large<P: Program<F>, S: GeneratedAirSpec>(n: usize, hot: bool, layout: &str) -> Value {
+fn measure_large<P: Program<F> + GeneratedAirSpec>(n: usize, hot: bool, layout: &str) -> Value {
     let input = large_workload(n, hot);
     let start = Instant::now();
     let witness = generate::<F, P>(&[], &input).unwrap();
@@ -757,7 +735,7 @@ fn measure_large<P: Program<F>, S: GeneratedAirSpec>(n: usize, hot: bool, layout
     let mut balance = std::collections::BTreeMap::<Vec<u64>, F>::new();
     for (component, table) in witness.tables.iter().enumerate() {
         for row in table {
-            for interaction in P::interactions(component, row) {
+            for interaction in <P as Program<F>>::interactions(component, row) {
                 *balance
                     .entry(
                         interaction
@@ -775,8 +753,8 @@ fn measure_large<P: Program<F>, S: GeneratedAirSpec>(n: usize, hot: bool, layout
         assert_fixed_counts(&witness.tables[1..], &input);
     }
     let heights = witness.tables.iter().map(Vec::len).collect::<Vec<_>>();
-    let statement = GeneratedEnsemble::<F, S>::new(&heights).unwrap();
-    let cells: usize = heights.iter().zip(S::WIDTHS).map(|(h, w)| h * w).sum();
+    let statement = GeneratedEnsemble::<F, P>::new(&heights).unwrap();
+    let cells: usize = heights.iter().zip(P::WIDTHS).map(|(h, w)| h * w).sum();
     let config = benchmark_config();
     let traces = witness.into_traces().unwrap();
     let start = Instant::now();
@@ -787,7 +765,7 @@ fn measure_large<P: Program<F>, S: GeneratedAirSpec>(n: usize, hot: bool, layout
     json!({"name": format!("{}-{n}", if hot {"hot"} else {"mixed-distinct"}),
         "layout": layout, "generationNs": generation.as_nanos() as u64,
         "proveNs": prove.as_nanos() as u64, "verifyNs": start.elapsed().as_nanos() as u64,
-        "paddedCells": cells, "heights": heights, "widths": S::WIDTHS,
+        "paddedCells": cells, "heights": heights, "widths": P::WIDTHS,
         "occurrences": statement.interaction_count(),
         "proofJsonBytes": serde_json::to_vec(&proof).unwrap().len()})
 }
@@ -809,18 +787,9 @@ macro_rules! large_comparison {
             );
             pub fn run(hot: bool, layout: &str) -> super::Value {
                 match layout {
-                    "baseline" => super::measure_large::<
-                        baseline::ByteRouted,
-                        baseline::ByteRoutedAirSpec,
-                    >($size, hot, layout),
-                    "candidate" => super::measure_large::<
-                        candidate::UnifiedByte,
-                        candidate::UnifiedByteAirSpec,
-                    >($size, hot, layout),
-                    "fixed" => super::measure_large::<
-                        fixed::PreprocessedByte,
-                        fixed::PreprocessedByteAirSpec,
-                    >($size, hot, layout),
+                    "baseline" => super::measure_large::<baseline::Ensemble>($size, hot, layout),
+                    "candidate" => super::measure_large::<candidate::Ensemble>($size, hot, layout),
+                    "fixed" => super::measure_large::<fixed::Ensemble>($size, hot, layout),
                     _ => unreachable!(),
                 }
             }

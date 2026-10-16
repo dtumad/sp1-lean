@@ -44,7 +44,7 @@ def transportStateBumpRow
 
 /-- The exact `MemoryBump` rows, installed as the native `MemoryBumpChip` table. -/
 def transportMemoryBumpTable (rows : List (CoreAIR.Current.Row p .memoryBump)) : Table (ZMod p) where
-  component := { circuit := MemoryBumpChip.circuit }
+  component := { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }
   table := rows.map transportMemoryBumpRow
   uniform_width := by
     intro nativeRow hrow
@@ -53,7 +53,7 @@ def transportMemoryBumpTable (rows : List (CoreAIR.Current.Row p .memoryBump)) :
 
 /-- The exact `StateBump` rows, installed as the native `StateBumpChip` table. -/
 def transportStateBumpTable (rows : List (CoreAIR.Current.Row p .stateBump)) : Table (ZMod p) where
-  component := { circuit := StateBumpChip.circuit }
+  component := { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }
   table := rows.map transportStateBumpRow
   uniform_width := by
     intro nativeRow hrow
@@ -62,11 +62,11 @@ def transportStateBumpTable (rows : List (CoreAIR.Current.Row p .stateBump)) : T
 
 @[simp] theorem transportMemoryBumpTable_component
     (rows : List (CoreAIR.Current.Row p .memoryBump)) :
-    (transportMemoryBumpTable rows).component = { circuit := MemoryBumpChip.circuit } := rfl
+    (transportMemoryBumpTable rows).component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions } := rfl
 
 @[simp] theorem transportStateBumpTable_component
     (rows : List (CoreAIR.Current.Row p .stateBump)) :
-    (transportStateBumpTable rows).component = { circuit := StateBumpChip.circuit } := rfl
+    (transportStateBumpTable rows).component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions } := rfl
 
 @[simp] theorem transportMemoryBumpTable_length
     (rows : List (CoreAIR.Current.Row p .memoryBump)) :
@@ -84,10 +84,10 @@ theorem transportMemoryBumpTable_constraints
     (rows : List (CoreAIR.Current.Row p .memoryBump)) (data : ProverData (ZMod p))
     (valid : ∀ row ∈ rows,
       List.Forall (· = 0) (CoreAIR.Current.assertions publicValues .memoryBump row)) :
-    (transportMemoryBumpTable rows).Constraints data := by
+    (transportMemoryBumpTable rows).Constraints := by
   intro nativeRow hrow
   obtain ⟨row, hmem, rfl⟩ := List.mem_map.mp hrow
-  change ({ circuit := MemoryBumpChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold
+  change ({ circuit := MemoryBumpChip.circuit (p := p), Assumptions := (MemoryBumpChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
     (Faithful.memoryBumpEnvironment row.main data)
   apply (Faithful.memoryBumpChipConstraintsConstructive
     row.preprocessed publicValues.toBaseVector row.main data).mp
@@ -99,10 +99,10 @@ theorem transportStateBumpTable_constraints
     (rows : List (CoreAIR.Current.Row p .stateBump)) (data : ProverData (ZMod p))
     (valid : ∀ row ∈ rows,
       List.Forall (· = 0) (CoreAIR.Current.assertions publicValues .stateBump row)) :
-    (transportStateBumpTable rows).Constraints data := by
+    (transportStateBumpTable rows).Constraints := by
   intro nativeRow hrow
   obtain ⟨row, hmem, rfl⟩ := List.mem_map.mp hrow
-  change ({ circuit := StateBumpChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold
+  change ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
     (Faithful.stateBumpEnvironment row.main data)
   apply (Faithful.stateBumpChipConstraintsConstructive
     row.preprocessed publicValues.toBaseVector row.main data).mp
@@ -124,7 +124,7 @@ theorem transportMemoryBumpTable_accesses
     simp only [tableNativeAccesses, transportMemoryBumpTable, List.map_cons, List.flatMap_cons]
     change
       Faithful.nativeAccesses (Faithful.memoryBumpEnvironment row.main data)
-          ({ circuit := MemoryBumpChip.circuit (p := p) } : Component (ZMod p)).operations ++
+          ({ circuit := MemoryBumpChip.circuit (p := p), Assumptions := (MemoryBumpChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations ++
         tableNativeAccesses (transportMemoryBumpTable rest) data =
       (CoreAIR.Current.interactions publicValues .memoryBump row).map
           Extracted.Interaction.toAccess ++
@@ -149,7 +149,7 @@ theorem transportStateBumpTable_accesses
     simp only [tableNativeAccesses, transportStateBumpTable, List.map_cons, List.flatMap_cons]
     change
       Faithful.nativeAccesses (Faithful.stateBumpEnvironment row.main data)
-          ({ circuit := StateBumpChip.circuit (p := p) } : Component (ZMod p)).operations ++
+          ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations ++
         tableNativeAccesses (transportStateBumpTable rest) data =
       (CoreAIR.Current.interactions publicValues .stateBump row).map
           Extracted.Interaction.toAccess ++
@@ -200,8 +200,8 @@ def extractedBumpTables (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
 theorem extractedBumpTables_components
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p)) (data : ProverData (ZMod p)) :
     (extractedBumpTables witness data).map (·.component) =
-      [{ circuit := MemoryBumpChip.circuit }, { circuit := StateBumpChip.circuit },
-       { circuit := HaltChip.circuit }, { circuit := SyscallInstrsChip.circuit }] := rfl
+      [{ circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }, { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions },
+       { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }, { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }] := rfl
 
 /-- **Closed exact-system transport.** A valid exact execution-cluster witness supplies all native
 constraints for both bump tables; there is no additional semantic or preprocessing premise. -/
@@ -211,7 +211,7 @@ theorem extractedBumpTables_constraints {Digest : Type}
     (witness : CoreAIR.Witness (CoreAIR.Current.Row p))
     (data : ProverData (ZMod p))
     (valid : CoreAIR.Current.Relation binds .execution statement witness) :
-    ∀ table ∈ extractedBumpTables witness data, table.Constraints data := by
+    ∀ table ∈ extractedBumpTables witness data, table.Constraints := by
   have rowValid : ∀ table row, row ∈ witness.trace.rows table →
       List.Forall (· = 0) (CoreAIR.Current.assertions statement.publicValues table row) :=
     fun _ _ rowMem => (CoreAIR.Current.system binds).localValid_of_relationFor valid rowMem
