@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "clean_backend"
 version = "0.1.0"
-source = "git+https://github.com/dtumad/clean?rev=87410707de45df27f7a97c5bf0518e52a94857e2#87410707de45df27f7a97c5bf0518e52a94857e2"
+source = "git+https://github.com/dtumad/clean?rev=8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc#8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 dependencies = [
  "p3-air 0.4.2",
  "p3-batch-stark",
@@ -1399,7 +1399,7 @@ dependencies = [
 [[package]]
 name = "p3-batch-stark"
 version = "0.4.2"
-source = "git+https://github.com/dtumad/clean?rev=87410707de45df27f7a97c5bf0518e52a94857e2#87410707de45df27f7a97c5bf0518e52a94857e2"
+source = "git+https://github.com/dtumad/clean?rev=8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc#8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 dependencies = [
  "hashbrown 0.16.1",
  "itertools 0.14.0",

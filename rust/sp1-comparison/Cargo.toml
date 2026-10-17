@@ -22,7 +22,7 @@ sp1-hypercube = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e
 sp1-primitives = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 
 # The backend and emitter use the same published Clean revision as lake-manifest.json.
-clean_backend = { git = "https://github.com/dtumad/clean", rev = "87410707de45df27f7a97c5bf0518e52a94857e2", optional = true }
+clean_backend = { git = "https://github.com/dtumad/clean", rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc", optional = true }
 p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
 p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
 p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
@@ -88,4 +88,8 @@ required-features = ["clean-export"]
 
 [[test]]
 name = "hint_source_export"
+required-features = ["clean-export"]
+
+[[test]]
+name = "installed_assembly_export"
 required-features = ["clean-export"]

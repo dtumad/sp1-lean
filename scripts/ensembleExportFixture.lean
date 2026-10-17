@@ -10,6 +10,7 @@ import SP1CleanTest.Core.PreprocessedByteExport
 import SP1CleanTest.Core.ProgramExport
 import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.WritePermissionExport
+import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -36,6 +37,38 @@ private def expressionDegree : Expression (ZMod SP1Clean.SP1Prime) → ℕ
   | .const _ => 0
   | .add left right => max (expressionDegree left) (expressionDegree right)
   | .mul left right => expressionDegree left + expressionDegree right
+
+private def installedReference : IO Json := do
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput
+  let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
+  let some branchHint := SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables[18]?
+    | throw (IO.userError "installed assembly has no branch input")
+  let changed := Vector.ofFn fun index : Fin input.size =>
+    input[index] + if index.val == branchHint.offset then 1 else 0
+  let header := SP1Clean.Audit.BranchEnsemble.header
+  let cases ← [
+      ("active-branch", header, base, true),
+      ("wrong-final-pc", { header with final_pc0 := header.final_pc0 + 4 }, base, false),
+      ("changed-branch-input", header, changed, false)].mapM
+      fun (name, publicInput, privateInput, expected) => do
+    let fields := [("name", toJson name), ("accepted", toJson expected),
+      ("publicInput", toJson ((toElements publicInput).toArray.map (·.val))),
+      ("privateInput", toJson (privateInput.toArray.map (·.val)))]
+    match SP1CleanTest.Alignment.InstalledAssemblyExport.generate publicInput privateInput with
+    | .error message =>
+      if expected then throw (IO.userError s!"installed assembly {name}: {message}")
+      pure (Json.mkObj (fields ++ [("error", toJson message)]))
+    | .ok witness =>
+      unless (SP1Clean.Audit.BranchEnsemble.description SP1Clean.Audit.BranchEnsemble.target).checkWitness
+          SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected installed assembly acceptance: {name}")
+      pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+  let inventory := SP1CleanTest.Alignment.InstalledAssemblyExport.installed.tables.map fun component =>
+    Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
+      ("fixedWidth", toJson (component.fixedColumns.map (·.width) |>.getD 0)),
+      ("fixedHeight", toJson (component.fixedColumns.map (·.height.toNat) |>.getD 0))]
+  return Json.mkObj [("cases", toJson cases), ("inventory", toJson inventory),
+    ("compilerBranchRow", toJson (SP1Clean.Audit.BranchCompilerRoundTrip.row.map (·.val)))]
 
 private def programReference (image : SP1Clean.Model.Core.ProgramImage) {n : ℕ}
     (requests : SP1CleanTest.Core.ProgramExport.Requests n (ZMod SP1Clean.SP1Prime)) : IO Json := do
@@ -165,6 +198,11 @@ private def exportEnsembleFixture : IO Unit := do
   let out := System.FilePath.mk
     ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/ensemble-export/manual")
   IO.FS.createDirAll out
+  let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  IO.FS.writeFile (out / "installed_assembly.rs") installed
+  IO.FS.writeFile (out / "installed_assembly.reference.json") ((← installedReference).compress ++ "\n")
   let exported ← match rust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)

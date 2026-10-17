@@ -115,6 +115,7 @@ impl<P: Program<NativeField>> Program<NativeField> for RowWitness<P> {
     const PUBLIC_INPUTS: usize = <P as Program<NativeField>>::PUBLIC_INPUTS;
     const PROVER_INPUTS: usize = <P as Program<NativeField>>::PROVER_INPUTS;
     const FIXED_WIDTHS: &'static [usize] = <P as Program<NativeField>>::FIXED_WIDTHS;
+    const ROW_WIDTHS: &'static [usize] = <P as Program<NativeField>>::ROW_WIDTHS;
     const COMPONENT_NAMES: &'static [&'static str] = <P as Program<NativeField>>::COMPONENT_NAMES;
     fn modes() -> Vec<Mode<NativeField>> {
         P::modes()

@@ -84,14 +84,14 @@ git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.33.1"
 
 # Clean's built-in Rust export (upstream PR #446), ported to the installed module/toolchain
-# line, plus the canonical backend fix for public-only channels. These change existing
+# line, plus canonical routing, empty-table support and the public-only-channel fix. These change existing
 # Component/Ensemble/Verifier declarations and cannot be supplied by an additive layer.
 # Additive adapters remain in ToClean. Return to upstream when it contains these changes
 # on a compatible toolchain; see docs/agents/clean-upstream.md and export campaign #28.
 [[require]]
 name = "Clean"
 git = "https://github.com/dtumad/clean"
-rev = "87410707de45df27f7a97c5bf0518e52a94857e2"
+rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 
 # lean-sail runtime: upstream release tag `v5` (`07946313`, the revision the in-tree generated
 # model pairs with — a v4-generated model against v5 fails with `unknown namespace

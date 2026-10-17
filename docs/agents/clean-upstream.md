@@ -40,5 +40,18 @@ Representation changes to canonical Component/Ensemble/Witgen objects may need a
 new adapters and supporting lemmas belong in ToClean. Scheduler support is not scheduler
 completeness or final-data agreement. Preserve those proof obligations explicitly.
 
+The current fork also preserves empty dynamic tables when the generation minimum is zero.
+This changes the canonical scheduler and Rust statement/prover APIs: indexed empty tables
+remain in the witness inventory, fixed heights stay mandatory, and only nonempty AIRs enter
+Plonky3. It cannot be supplied by an additive adapter without replacing the scheduler. Remove
+the patch when compatible upstream APIs provide these semantics; active-table padding and
+general generation completeness remain separate obligations.
+
 See [export](../export.md) and #28/#29 for the live migration. Upstream submissions are separate
 from maintaining reproducible reviewed code in this fork; issue/PR history owns submission status.
+
+Clean #398's conditional push/pull support is already inherited from upstream main; it is not
+a remaining fork patch. Switching back to a pinned main commit also requires #446's ensemble
+export/scheduler APIs and the routing, public-only-channel and empty-table fixes described
+above. The vendored Plonky3 batch-STARK code belongs to #446's public-lookup integration,
+separately from #398; replace it only when the upstream backend supplies that interface.

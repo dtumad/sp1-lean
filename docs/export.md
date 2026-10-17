@@ -20,6 +20,11 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
+- The complete installed 94-table assembly exports through the same path. An active-branch
+  fixture supplies compiler-derived instruction and boundary inputs through Clean hint tables;
+  its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
+  including empty table positions, and exercises proof acceptance and endpoint/row mutations.
+  This is one complete-assembly case, not general execution-generation completeness.
 - All 25 supported instruction families export through the same built-in path. Rust compares
   generated witnesses, local constraint satisfaction and complete
   interaction multisets with SP1 v6.9.0's supervisor AIR, including padding and column mutations.
@@ -43,13 +48,13 @@ interpreter or scheduler.
   Byte/word reads and source/target row programs export through Clean. Independent Rust checks
   cover sparse gaps, first-entry precedence, address bounds, generated rows and complete ledgers.
   Closed interval-provider ensembles test fixed endpoints/bytes, counts, padding and public binding.
-  Full ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
+  General ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
 - Native write permissions authenticate writable intervals through a separate verifier-fixed
   provider. Requests carry only an address; the circuit selects interval witnesses internally
   using the same Clean IR selector as memory reads. The closed two-request export uses Clean's
   ordinary demand scheduler without private inputs. Rust checks literal ROM-byte exclusion,
-  full rows/ledgers, public binding and interval/count mutations. General padding and complete
-  installed-assembly generation remain open. This is not SP1 runtime `mprotect`.
+  full rows/ledgers, public binding and interval/count mutations. Padding active permission
+  tables at arbitrary request counts remains open. This is not SP1 runtime `mprotect`.
 - Immutable hint nodes and words publish directly on their existing semantic channels from
   verifier-fixed payloads and eligibility tags. Rust reconstructs node/tail identities, lengths
   and little-endian words from literal byte buffers, including empty and aligned padding. Closed
@@ -57,7 +62,7 @@ interpreter or scheduler.
   Native resource limits preserve the full word inventory; oversized inputs fail closed without
   truncation. This source-queue contract is separate from complete host execution.
 - Static membership retains original row order and uses a fixed eligibility tag to select the
-  first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty tables
+  first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty inventories
   have one inactive row; other heights round up to a power of two. Capacity proofs must account
   for this expansion. Clean's scheduler, lowering and emitter handle the resulting tables.
 - Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
@@ -103,9 +108,10 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 94-component host assembly is lookup-free. Whole-assembly routing, witness
-construction and Rust comparison remain open; retiring chip JSON comparison also requires
-replacing its remaining live consumers and migration coverage.
+The installed 94-component host assembly is lookup-free. Its branch export checks complete
+assembly construction and Rust agreement for one compiler-derived execution. Broader execution
+and host-call cases, general padding, data agreement and completeness remain open. Retiring chip
+JSON comparison also requires replacing its remaining live consumers and migration coverage.
 
 The native eight-call syscall profile uses degree-three arithmetic assertions and six shared
 products. Its full-register contract remains independent of channel balance. Clean exports the
@@ -121,6 +127,12 @@ Zero contributions do not enter the scheduler's pending-demand worklist; physica
 zero-count ledger occurrences remain intact. These changes, plus the public-only-channel verifier
 fix, modify existing upstream declarations and therefore live in the dependency patch. Remove each
 patch when upstream provides the corresponding capability.
+
+The same dependency patch lets `minimumRows := 0` preserve empty mutable tables. The Rust
+backend keeps all indexed heights and widths, proving only nonempty tables; verifier-fixed
+tables cannot be omitted. Verifier interactions and the complete occurrence bound still apply.
+At least one table must be nonempty for the batch PCS. This removes spurious padding demands
+from unused chips, but active tables still need valid padding to power-of-two heights.
 
 `ByteChip/Unified` and the preprocessed Byte provider are uninstalled comparison prototypes.
 They test consolidation and authenticated preprocessing against the specialized providers, using

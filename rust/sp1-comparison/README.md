@@ -91,8 +91,8 @@ that output and exercises these boundaries:
   unused intervals, address bounds and empty ROM; backend tests reject forged endpoints, counts,
   public values and witness cells. Clean's ordinary demand scheduler receives each public address;
   the production circuit generates interval witnesses using the shared memory selector. No private
-  inputs or fixture-specific interval programs are needed. General padding and complete installed
-  assembly generation remain open. This is native ROM protection, not released SP1 runtime
+  inputs or fixture-specific interval programs are needed. Padding active permission tables at
+  arbitrary request counts remains open. This is native ROM protection, not released SP1 runtime
   `mprotect` semantics.
 
 - Immutable hint sources use verifier-fixed node/word payloads on their existing channels.
@@ -102,9 +102,16 @@ that output and exercises these boundaries:
   and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
   are native source-queue tests; complete SP1 host execution remains outside their scope.
 
-The installed 94-component assembly is lookup-free. The experimental Clean pin adds message
+The installed 94-component assembly is lookup-free. Its complete active-branch fixture exports
+all components, reads compiler-derived consumer inputs through Clean's private hint tables, and
+generates providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
+retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
+endpoints and committed branch rows. This does not yet cover general execution or host-call
+generation.
+
+The experimental Clean pin adds message
 predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
-whole-assembly generation still needs its own routing, data and completeness contracts.
+general whole-assembly generation still needs its own routing, padding, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;
 they do not establish complete ensemble balance.
 
