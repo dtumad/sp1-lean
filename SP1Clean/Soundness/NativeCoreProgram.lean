@@ -62,7 +62,7 @@ private theorem boundary_programPulls (image : ProgramImage) (component : Compon
 /-- The computed ROM is the only possible non-pull Program contributor in this assembly. -/
 theorem component_program_source (image : ProgramImage) (component : Component (ZMod p))
     (member : component ∈ (ensemble image).tables) :
-    component = ({ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions } : Component (ZMod p)) ∨ ProgramPulls component := by
+    component = (FixedProgramProvider.Preprocessed.component image) ∨ ProgramPulls component := by
   change component ∈ tables image at member
   have split : tables (p := p) image =
       ((InitialMemoryEnsemble.views image).map (·.component) ++

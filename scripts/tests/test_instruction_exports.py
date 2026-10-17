@@ -116,6 +116,8 @@ class ReleaseCoverageTests(unittest.TestCase):
 
     def test_legacy_lookup_cannot_claim_builtin_export(self):
         self.record["groups"]["program"]["export"] = "component"
+        program = next(table for table in self.record["native"] if table["group"] == "program")
+        program["lookups"].append("unsupported.legacy.lookup")
         self.assertTrue(any("legacy lookup" in error for error in self.check()))
 
     def test_public_width_drift_fails(self):

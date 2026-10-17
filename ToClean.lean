@@ -12,6 +12,7 @@ public import ToClean.Air.ExpressionScope
 public import ToClean.Air.TableSlot
 public import ToClean.Air.FixedPrefix
 public import ToClean.Air.FixedRows
+public import ToClean.Air.MessageIndex
 public import ToClean.Air.StaticProvider
 public import ToClean.Circuit.WitnessCombinator
 public import ToClean.Circuit.WitgenBridge

@@ -125,6 +125,14 @@ runtime, then independently checks their external interactions. It is not a prod
 or evidence of full-ensemble balance. Rust tests establish neither cryptographic security nor a
 formal lowering theorem.
 
+The installed Program provider has sixteen verifier-fixed instruction fields and one prover-owned
+count. It retains the complete decoded ROM, including unused entries, and pads with copies of the
+first instruction. Empty inventories have an inert zero-count row. Physical table invariants and
+Program balance authenticate counted fetches. Rust tests compare contiguous preprocessing and AIR
+with SP1; separate tests cover the native model's sparse, unordered addresses. The additive
+`ToClean.Air.MessageIndex` helper expresses first-match routing in Clean's existing witness IR;
+its scheduler rechecks the complete payload. A scalable sparse index remains an upstream optimization.
+
 The reviewed upgrade target is [SP1 v6.9.0](https://github.com/succinctlabs/sp1/releases/tag/v6.9.0).
 The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,
 independently of extraction. Cargo and the reviewed coverage record must agree with the release

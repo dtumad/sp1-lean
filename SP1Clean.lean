@@ -9,7 +9,7 @@ import SP1Clean.Alignment.Chips.AluX0Chip.Bridge
 import SP1Clean.Alignment.Chips.BitwiseChip.Bridge
 import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
 import SP1Clean.Alignment.Chips.BranchChip.Bridge
-import SP1Clean.Alignment.Chips.DecodedProgramProvider.Bridge
+import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
 import SP1Clean.Alignment.Chips.DivRemChip.Bridge
 import SP1Clean.Alignment.Chips.DivRemChip.Contracts
 import SP1Clean.Alignment.Chips.JalChip.Bridge

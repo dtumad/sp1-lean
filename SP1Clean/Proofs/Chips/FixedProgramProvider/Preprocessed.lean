@@ -2,6 +2,7 @@ import SP1Clean.Model.Core.ProgramTable
 import SP1Clean.Model.Channels
 import ToClean.Air.FixedPrefix
 import ToClean.Air.FixedRows
+import ToClean.Air.ChannelClosure
 import Mathlib.Data.Nat.Log
 
 /-! # Verifier-fixed Program instructions with prover-owned counts
@@ -13,8 +14,8 @@ repeats the first instruction, as in SP1. Clean's backend requires a power-of-tw
 
 The physical constructor checks its capacity explicitly. An oversized invalid image supplies
 no instructions; the existing loader validity predicate proves that this case is unreachable
-for every admitted image. This component replaces the migration-era static lookup provider;
-its installation and whole-machine consumers are migrated separately.
+for every admitted image. The native and local assemblies install this component directly; counted fetches are
+authenticated through its fixed prefix and the complete Program channel balance.
 -/
 
 namespace SP1Clean.FixedProgramProvider.Preprocessed
@@ -114,20 +115,21 @@ theorem message_mem (image : ProgramImage) (index : ℕ) (nonempty : rows (p := 
 
 /-- Public columns use Clean's row program and lowering without a separate extraction path. -/
 def fixedColumns (image : ProgramImage) : FixedColumns (ZMod p) :=
+  let rom := (rows (p := p) image).toArray
+  let padding := rom[0]?.getD (fromElements (Vector.replicate (size ProgramMsg) 0))
   FixedColumns.ofRows (Vector.ofFn fun index : Fin (height (p := p) image) =>
-    toElements (message image index.val)) (height_lt_uint64 image)
+    toElements (rom[index.val]?.getD padding)) (height_lt_uint64 image)
 
 /-- Lean and exported fixed-column evaluation recover the same typed instruction. -/
 theorem fixedColumns_row (image : ProgramImage) (index : Fin (height (p := p) image)) :
     (fixedColumns (p := p) image).row (UInt64.ofNat index.val) =
       (toElements (message image index.val)).toArray := by
-  simp [fixedColumns, FixedColumns.ofRows_row]
+  simp [fixedColumns, FixedColumns.ofRows_row, message, List.head?_eq_getElem?]
 
 /-- Emit the fixed instruction at its chosen count. Only an empty inventory needs an arithmetic
 constraint: its inert row cannot satisfy a Program demand. -/
-def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Input unit :=
+private def implementation (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Input unit :=
   if rows (p := p) image = [] then {
-    name := "sp1.native.program.fixed"
     main input := do
       assertZero input.2
       programChannel.emit input.2 input.1
@@ -143,7 +145,6 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Input unit :=
       subst input
       exact h_assumptions
   } else {
-    name := "sp1.native.program.fixed"
     main input := programChannel.emit input.2 input.1
     Assumptions input _ := ProgramMsg.RowSpec input.1 ∧ input.1 ∈ image.programRows
     Spec input _ _ := input.2 ≠ 0 → input.1 ∈ image.programRows
@@ -154,6 +155,10 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Input unit :=
       exact ⟨fun _ => h_assumptions.2, fun _ _ => h_assumptions.1⟩
     completeness := by circuit_proof_start [programChannel]
   }
+
+/-- One named ROM interface, with its row program selected by the fixed inventory. -/
+def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Input unit :=
+  { implementation image with name := "sp1.native.program.fixed" }
 
 /-- Fixed preprocessing establishes the circuit's assumptions, with no residual validity
 condition on the enclosing ensemble or on the prover's count. -/
@@ -170,7 +175,7 @@ def component [Fact (2 ^ 17 < p)] (image : ProgramImage) : Component (ZMod p) wh
     rw [rowEq] at fixedCells
     have decoded := congrArg (fromElements (M := ProgramMsg)) (Vector.toArray_inj.mp fixedCells)
     simp only [ProvableType.fromElements_toElements] at decoded
-    dsimp only [circuit]
+    dsimp only [circuit, implementation]
     split
     · trivial
     rename_i nonempty
@@ -179,5 +184,112 @@ def component [Fact (2 ^ 17 < p)] (image : ProgramImage) : Component (ZMod p) wh
     have member := message_mem image index.toNat nonempty
     exact ⟨image.programRows_rowSpec _ member, member⟩
   fixed_width_le_input := by change 16 ≤ 17; decide
+
+/-- Empty and nonempty images keep one stable component identity. -/
+@[simp, circuit_norm] theorem circuit_name (image : ProgramImage) :
+    (circuit (p := p) image).name = "sp1.native.program.fixed" := rfl
+
+/-- Program preprocessing requires no incoming channel guarantees. -/
+@[simp, circuit_norm] theorem circuit_guarantees (image : ProgramImage) :
+    (circuit (p := p) image).channelsWithGuarantees = [] := by
+  change (implementation (p := p) image).channelsWithGuarantees = []
+  unfold implementation
+  split <;> rfl
+
+/-- Program is the provider's only outgoing requirement channel. -/
+@[simp, circuit_norm] theorem circuit_requirements (image : ProgramImage) :
+    (circuit (p := p) image).channelsWithRequirements = [programChannel.toRaw] := by
+  change (implementation (p := p) image).channelsWithRequirements = [programChannel.toRaw]
+  unfold implementation
+  split <;> rfl
+
+/-- The declared channel inventory is independent of empty-table padding. -/
+@[simp, circuit_norm] theorem circuit_channels (image : ProgramImage) :
+    (circuit (p := p) image).channels = [programChannel.toRaw] := by
+  change (implementation (p := p) image).channels = [programChannel.toRaw]
+  unfold implementation
+  split <;> rfl
+
+/-- The ROM predicate is enforced by the fixed prefix, without legacy static lookups. -/
+@[simp] theorem component_lookups [Fact (2 ^ 17 < p)] (image : ProgramImage) :
+    (component (p := p) image).operations.lookups = [] := by
+  by_cases empty : rows (p := p) image = []
+  all_goals simp [component, circuit, implementation, empty, Component.lookups_eq,
+    Component.rowOperations, circuit_norm]
+
+/-- Both layouts retain the complete payload and count as one literal Program occurrence. -/
+theorem main_interactions (image : ProgramImage)
+    (input : Var Input (ZMod p)) (offset : ℕ) :
+    (((circuit image).main input).operations offset).interactions =
+      [(programChannel.pushedIf input.2 input.1).toRaw] := by
+  by_cases empty : rows (p := p) image = []
+  all_goals simp [circuit, implementation, empty, circuit_norm]
+
+/-- Filtering for Program retains the provider's sole occurrence. -/
+theorem main_program_interactions (image : ProgramImage)
+    (input : Var Input (ZMod p)) (offset : ℕ) :
+    (((circuit image).main input).operations offset).interactionsWith programChannel.toRaw =
+      [(programChannel.pushedIf input.2 input.1).toRaw] := by
+  by_cases empty : rows (p := p) image = []
+  all_goals simp [circuit, implementation, empty, circuit_norm]
+
+/-- Only counted messages claim instruction membership; inert empty padding has no authority. -/
+@[simp] theorem circuit_spec (image : ProgramImage) (input : Input (ZMod p))
+    (output : Unit) (data : ProverData (ZMod p)) :
+    (circuit image).Spec input output data ↔ (input.2 ≠ 0 → input.1 ∈ image.programRows) := by
+  change (implementation image).Spec input output data ↔ _
+  unfold implementation
+  split <;> rfl
+
+/-- Physical table invariants discharge the circuit assumptions; callers supply no ROM validity
+condition on prover-owned rows. Canonical data consistency comes from the ensemble witness. -/
+theorem table_spec_and_requirements [Fact (2 ^ 17 < p)] (image : ProgramImage)
+    (table : Table (ZMod p)) (same : table.component = component image)
+    (consistent : table.DataConsistency) (constraints : table.Constraints) :
+    table.Spec ∧ table.Requirements := by
+  have assumptions : table.Assumptions := by
+    intro row _
+    change table.component.Assumptions _ _
+    rw [same]
+    trivial
+  have noGuarantees : table.component.circuit.channelsWithGuarantees = [] := by
+    rw [same]
+    exact circuit_guarantees image
+  have sound (row : Array (ZMod p)) (member : row ∈ table.table) :=
+    table.component.weakSoundness_of_no_guarantees noGuarantees
+      (table.circuitAssumptions_of_dataConsistency consistent assumptions row member)
+      (constraints row member)
+  exact ⟨fun row member => (sound row member).1, fun row member => (sound row member).2⟩
+
+/-- A physical occurrence identifies both its complete instruction and its chosen count. -/
+theorem program_interaction [Fact (2 ^ 17 < p)] (image : ProgramImage)
+    (env : Environment (ZMod p)) (interaction : Interaction (ZMod p))
+    (member : interaction ∈ (component image).operations.interactionValuesWith
+      programChannel.toRaw env) :
+    interaction.msg = (toElements (valueFromOffset Input 0 env).1).toArray ∧
+      interaction.mult = (valueFromOffset Input 0 env).2 := by
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
+  change interaction ∈ ((((circuit image).main (varFromOffset Input 0)).operations
+    (size Input)).interactionsWith programChannel.toRaw).map _ at member
+  rw [main_program_interactions] at member
+  obtain rfl := List.mem_singleton.mp member
+  have evaluated := Channel.eval_pushedIf (channel := programChannel (p := p))
+    (enabled := (varFromOffset Input 0).2) (msg := (varFromOffset Input 0).1) (env := env)
+  have inputEq := eval_varFromOffset_valueFromOffset (F := ZMod p) Input 0 env
+  simp only [CircuitType.eval_provablePair_dispatch] at inputEq
+  constructor
+  · exact (congrArg Interaction.msg evaluated).trans
+      (congrArg (fun input : Input (ZMod p) => (toElements input.1).toArray) inputEq)
+  · exact (congrArg Interaction.mult evaluated).trans (congrArg Prod.snd inputEq)
+
+/-- Other channels have no provider obligations, even before fixed-prefix authentication. -/
+theorem requirements_of_other_channel [Fact (2 ^ 17 < p)] (image : ProgramImage)
+    (channel : RawChannel (ZMod p)) (different : channel ≠ programChannel.toRaw)
+    (env : Environment (ZMod p))
+    (constraints : (component image).operations.ConstraintsHold env) :
+    (component image).operations.ChannelRequirements channel env := by
+  apply Operations.requirements_of_not_mem _ _ _
+    ((component image).inChannelsOrRequirements_of_constraints env constraints)
+  simpa only [component, circuit_requirements, List.mem_singleton] using different
 
 end SP1Clean.FixedProgramProvider.Preprocessed

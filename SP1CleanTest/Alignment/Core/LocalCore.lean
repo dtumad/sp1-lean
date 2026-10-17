@@ -52,12 +52,13 @@ private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1P
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map (fun row => evaluateRow image source row guarded)
   let consumers := evaluated.flatMap Prod.snd
-  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
+  let program := programEvaluation image consumers
+  let ledger := consumers ++ program.2 ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
     (SnapshotRegisterProvider.membership_height_lt_uint64 source.sail.memorySnapshot) ++
     StaticMembership.providerLedger
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
         (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory")
-  evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
+  evaluated.all Prod.fst && program.1 && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       (assembly.channels.map RawChannel.name).contains name &&
         ((ledger.filter (fun entry => entry.1 == name && entry.2.1 == message)).map
@@ -117,10 +118,10 @@ theorem rejectsBrokenInventory :
 theorem rejectsWrongFinalValue :
     check image source publicInput (baseRows.set 5 (3, finalRecord 0 1 13 124)) = false := by native_decide
 
-/-- Fetch authentication rejects a missing ROM producer and an altered fixed lookup key. -/
+/-- Fetch authentication rejects an unavailable ROM and prover-supplied fixed-column rows. -/
 theorem rejectsUnauthenticatedFetch :
-    [check image source publicInput (baseRows.filter (fun row => row.1 != 6)),
-     check image source publicInput (baseRows.set 10 (6, programRow.2.set 0 4))] =
+    [check { image with rom := [] } source publicInput baseRows,
+     check image source publicInput (baseRows ++ [(6, List.replicate 17 0)])] =
       [false, false] := by native_decide
 
 private def twoImage : ProgramImage := ⟨[(65536, 0x003100b3), (65540, 0x003100b3)], 65536, []⟩
@@ -140,8 +141,6 @@ private def twoPublic : SP1PublicIO Fp :=
 private def twoRows : List Row :=
   [sourceRegister 0 1, sourceRegister 2 2, sourceRegister 3 3, terminal 2 4,
     (3, finalRecord 0 1 21 123), (3, finalRecord 2 2 20 100), (3, finalRecord 3 3 19 23), terminal 5 4,
-    programRow, (6, ((DecodedProgramProvider.populate? (p := SP1Prime) twoImage (65540, 0x003100b3) 1).map
-      (fun input => (toElements input).toList)).getD []),
     secondAdd, paddingAdd, (7, Audit.OneAddNativePremises.inputs),
     (57, List.replicate (size HaltChip.Inputs) 0)]
 
@@ -178,8 +177,6 @@ private def aliasRows : List Row :=
   [(0, (toElements (OrderedSnapshotProvider.populate
     (SnapshotRegisterProvider.populate aliasSource.sail.memorySnapshot 1#5) 0 1)).toList), terminal 2 2,
     (3, finalRecord 0 1 13 200), terminal 5 2,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) aliasImage (65536, 0x001080b3) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (7, TraceGenTests.rTypeEventInputs aliasEvent), (57, List.replicate (size HaltChip.Inputs) 0)]
 
 /-- ADD x1,x1,x1 uses one source/final location and three consecutive touches within the row.
@@ -187,9 +184,9 @@ Skipping either intermediate prior record breaks the complete physical Memory le
 theorem acceptsSameRegisterTouches :
     check aliasImage aliasSource publicInput aliasRows = true ∧
       check aliasImage aliasSource publicInput
-        (aliasRows.set 5 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsA := 0 })) = false ∧
+        (aliasRows.set 4 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsA := 0 })) = false ∧
       check aliasImage aliasSource publicInput
-        (aliasRows.set 5 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsB := 0 })) = false := by
+        (aliasRows.set 4 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsB := 0 })) = false := by
   native_decide
 
 private def clockEvent (clock : ℕ) : TraceGenTests.AluEventRec :=
@@ -206,7 +203,7 @@ private def clockPublic (clock : ℕ) : SP1PublicIO Fp :=
 private def clockRows (clock : ℕ) : List Row :=
   [sourceRegister 0 1, sourceRegister 2 2, sourceRegister 3 3, terminal 2 4,
     (3, finalRecord 0 1 (clock + 4) 123), (3, finalRecord 2 2 (clock + 3) 100),
-    (3, finalRecord 3 3 (clock + 2) 23), terminal 5 4, programRow,
+    (3, finalRecord 3 3 (clock + 2) 23), terminal 5 4,
     (7, TraceGenTests.rTypeEventInputs (clockEvent clock)), (57, List.replicate (size HaltChip.Inputs) 0)]
 
 private def clockCarry : Row := (56, (toElements ({
@@ -269,8 +266,6 @@ private def syscallRows (result : ℕ) : List Row :=
       previous index)).toList)
   [sourceRow 0 5, sourceRow 6 10, sourceRow 11 11, terminal 2 12,
     (3, finalRecord 0 5 13 result), (3, finalRecord 6 10 12 7), (3, finalRecord 11 11 11 9), terminal 5 12,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) syscallImage (65536, 0x00000073) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (57, List.replicate (size HaltChip.Inputs) 0), (58, (toElements (syscallInput result)).toList)]
 
 private def syscallPublic : SP1PublicIO Fp := { publicInput with final_clk_0_16 := 273 }
@@ -313,8 +308,6 @@ private def commitRows : List Row :=
   [sourceRow 0 5, sourceRow 6 10, sourceRow 11 11, terminal 2 12,
     (3, finalRecord 0 5 13 16), (3, finalRecord 6 10 12 0),
     (3, finalRecord 11 11 11 65537), terminal 5 12,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) syscallImage (65536, 0x00000073) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (57, List.replicate (size HaltChip.Inputs) 0),
     (58, (toElements commitInstruction).toList), (65, (toElements commitHandler).toList),
     (87, (toElements (commitHandler.next 0)).toList),
@@ -341,7 +334,8 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
   let consumers := evaluated.flatMap Prod.snd
-  let ledger := consumers ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
+  let program := programEvaluation syscallImage consumers
+  let ledger := consumers ++ program.2 ++ StaticMembership.providerLedger source.sail.memorySnapshot.registerTable consumers
     (SnapshotRegisterProvider.membership_height_lt_uint64 source.sail.memorySnapshot) ++
     StaticMembership.providerLedger
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
@@ -349,7 +343,7 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
   let balanced (entry : String × List Fp × Fp) :=
     ((ledger.filter (fun other => other.1 == entry.1 && other.2.1 == entry.2.1)).map
       (fun other => other.2.2)).sum == 0
-  (evaluated.all Prod.fst && decide (ledger.length < SP1Prime) &&
+  (evaluated.all Prod.fst && program.1 && decide (ledger.length < SP1Prime) &&
     ledger.all (fun entry => (assembly.channels.map RawChannel.name).contains entry.1 &&
       (entry.1 == "SP1Memory" || balanced entry)),
     ledger.all (fun entry => entry.1 != "SP1Memory" || balanced entry))
@@ -419,7 +413,7 @@ private def epochRows (epoch : ℕ) : List Row :=
     (55, (toElements input).toList)
   let input := { syscallInput 3 with state.clk_high := (epoch : Fp) }
   ((((syscallRows 3).set 4 (3, finalRecord 0 5 13 3 epoch)).set 5 (3, finalRecord 6 10 12 7 epoch)).set
-    6 (3, finalRecord 11 11 11 9 epoch)).set 10 (58, (toElements input).toList) ++
+    6 (3, finalRecord 11 11 11 9 epoch)).set 9 (58, (toElements input).toList) ++
       [refresh 5 240, refresh 10 7, refresh 11 9]
 
 /-- One refresh per touched register reaches the incoming epoch, even at the largest 24-bit
@@ -461,8 +455,6 @@ private def haltRows (exit : ℕ) : List Row :=
       previous index)).toList)
   [sourceRow 0 5, sourceRow 6 10, sourceRow 11 11, terminal 2 12,
     (3, finalRecord 0 5 13 0), (3, finalRecord 6 10 12 exit), (3, finalRecord 11 11 11 9), terminal 5 12,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) syscallImage (65536, 0x00000073) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (57, (toElements (haltInput exit)).toList)]
 
 /-- The complete local AIR accepts HALT at a non-boot source with the largest legacy exit code. -/
@@ -590,8 +582,6 @@ private def storeRomRows : List Row :=
     terminal 2 65537,
     (3, finalRecord 0 1 13 0), (3, finalRecord 2 2 12 65536),
     (4, finalRecord 3 65536 10 0x00110000), terminal 5 65537,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) storeRomImage (65536, 0x00110023) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (25, (toElements storeRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
 /-- The unguarded local AIR permits SB to overwrite its own instruction byte. Source ROM
@@ -625,8 +615,6 @@ private def sameValueRomRows : List Row :=
     terminal 2 65537,
     (3, finalRecord 0 1 13 0x23), (3, finalRecord 2 2 12 65536),
     (4, finalRecord 3 65536 10 0x00110023), terminal 5 65537,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) storeRomImage (65536, 0x00110023) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (25, (toElements sameValueRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
 /-- An SB that leaves its entire RAM cell unchanged still needs code-write permission.
@@ -661,8 +649,6 @@ private def besideRomRows : List Row :=
     terminal 2 65537,
     (3, finalRecord 0 1 13 127), (3, finalRecord 2 2 12 65540),
     (4, finalRecord 3 65536 10 0x7f00110023), terminal 5 65537,
-    (6, ((DecodedProgramProvider.populate? (p := SP1Prime) storeRomImage (65536, 0x00110023) 1).map
-      (fun input => (toElements input).toList)).getD []),
     (25, (toElements besideRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
 /-- The strengthened full AIR rejects the reproduced store into its own code byte, including

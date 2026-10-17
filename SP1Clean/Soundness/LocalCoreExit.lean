@@ -50,7 +50,11 @@ private theorem prefix_silent (witness : EnsembleWitness (ensemble (p := p) imag
     (witness.tables.take 57).flatMap (·.interactionsWith exitChannel.toRaw) = [] := by
   have checked : ((NativeCore.afterInitialTables (p := p) image).take 54).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
-        (exitChannel (p := p)).toRaw.name) = true := rfl
+        (exitChannel (p := p)).toRaw.name) = true := by
+    change (!((FixedProgramProvider.Preprocessed.circuit (p := p) image).channels.map
+      RawChannel.name).contains (exitChannel (p := p)).toRaw.name && true) = true
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
+    rfl
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply Table.interactionsWith_nil_of_channel_not_mem

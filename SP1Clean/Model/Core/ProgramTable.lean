@@ -1,7 +1,6 @@
 import SP1Clean.Model.Core.InstructionDecode
 import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.BusMessages
-import ToClean.Circuit.StaticTable
 import Mathlib.Tactic.IntervalCases
 
 /-! # Fixed Program rows computed from the finite image
@@ -227,23 +226,6 @@ theorem programRows_length (image : ProgramImage) (valid : image.Decodable) :
     obtain ⟨msg, decoded⟩ := Option.isSome_iff_exists.mp (all entry (by simp))
     simp only [List.filterMap_cons, decoded, List.length_cons]
     exact congrArg (· + 1) (ih (fun entry member => all entry (by simp [member])))
-
-/-- A fixed lookup whose rows are computed entirely from the program image. -/
-@[irreducible] def programTable (image : ProgramImage) : StaticTable (ZMod p) ProgramMsg :=
-  StaticTable.ofRows "sp1.native.program" image.programRows
-
-omit [Fact (2 ^ 17 < p)] in
-/-- The lookup predicate is exact computed membership, including opcode and every operand limb. -/
-theorem programTable_spec (image : ProgramImage) (msg : ProgramMsg (ZMod p)) :
-    image.programTable.Spec msg ↔
-      ∃ entry ∈ image.rom, ProgramTable.message? entry = some msg := by
-  simpa only [programTable, StaticTable.ofRows] using image.mem_programRows msg
-
-/-- Complete-message lookup membership supplies the Program channel's structural guarantees. -/
-theorem programTable_rowSpec (image : ProgramImage) (msg : ProgramMsg (ZMod p))
-    (member : image.programTable.Spec msg) : ProgramMsg.RowSpec msg := by
-  obtain ⟨_, _, decoded⟩ := (image.programTable_spec msg).mp member
-  exact ProgramTable.message_rowSpec decoded
 
 end ProgramImage
 end SP1Clean.Model.Core

@@ -17,7 +17,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 /-- Components following the final inventory in the physical native assembly. -/
 def afterFinalTables (image : ProgramImage) : List (Component (ZMod p)) :=
-  [{ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions }] ++ sp1Tables ++
+  [FixedProgramProvider.Preprocessed.component image] ++ sp1Tables ++
     (sp1ProviderTables.take 23 ++ sp1ProviderTables.drop 26)
 
 theorem afterInitialTables_eq (image : ProgramImage) :
@@ -101,7 +101,9 @@ theorem afterFinalTables_silent (image : ProgramImage) :
     fun used => finalChannel_not_old (sp1Ensemble_tables_channels_subset component member used)
   simp only [afterFinalTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with (rfl | member) | member
-  · change (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw ∉ [programChannel.toRaw]
+  · change (OrderedBoundary.channel (p := p) OrderedFinalProvider.channelName).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, programChannel, Channel.toRaw]
   · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by

@@ -2,7 +2,7 @@ import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Alignment.Chips.DecodedProgramProvider.Bridge
+import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
 import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
 import ToClean.Air.VerifierChannel
 import ToClean.Circuit.SubcircuitProjection
@@ -56,7 +56,7 @@ def verifier (image : ProgramImage) : GeneralFormalCircuit (ZMod p) SP1PublicIO 
 /-- The remaining core components, after the initialization inventory. -/
 def afterInitialTables (image : ProgramImage) : List (Component (ZMod p)) :=
   FinalMemoryEnsemble.inventory.views.map (·.component) ++
-    [{ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions }] ++ sp1Tables ++
+    [FixedProgramProvider.Preprocessed.component image] ++ sp1Tables ++
     (sp1ProviderTables.take 23 ++ sp1ProviderTables.drop 26)
 
 /-- Fixed intervals authenticate boot RAM requests through the same channel as local snapshots. -/
@@ -281,7 +281,9 @@ theorem afterInitialTables_finished_requirements (image : ProgramImage)
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
-    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
+    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env)
+    (romRequirements : component = FixedProgramProvider.Preprocessed.component image →
+      component.operations.ChannelRequirements channel env) :
     component.operations.ChannelRequirements channel env := by
   have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
       component.operations.ChannelRequirements channel env :=
@@ -296,9 +298,7 @@ theorem afterInitialTables_finished_requirements (image : ProgramImage)
   rcases member with ((member | rfl) | member) | member
   · exact absent (fun required => outside (List.mem_cons_of_mem _
       (boundary_requirements image component (List.mem_append_right _ member) required)))
-  · have required := (Component.weakSoundness_of_no_guarantees
-      ({ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions } : Component (ZMod p)) rfl (by trivial) constraints).2
-    exact fun interaction emitted _ => required interaction emitted
+  · exact romRequirements rfl
   · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
       rcases member with member | member
@@ -315,7 +315,9 @@ private theorem component_finished_requirements (image : ProgramImage)
       (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
       (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw])
-    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
+    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env)
+    (romRequirements : component = FixedProgramProvider.Preprocessed.component image →
+      component.operations.ChannelRequirements channel env) :
     component.operations.ChannelRequirements channel env := by
   have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
       component.operations.ChannelRequirements channel env :=
@@ -330,7 +332,7 @@ private theorem component_finished_requirements (image : ProgramImage)
         tauto)))
   · exact afterInitialTables_finished_requirements image component member channel (fun inside => outside (by
       simp only [List.mem_cons, List.not_mem_nil, or_false] at inside ⊢
-      tauto)) env constraints
+      tauto)) env constraints romRequirements
 
   · obtain rfl := List.mem_singleton.mp fixed
     apply absent
@@ -358,12 +360,18 @@ theorem finishedChannel_guarantees (image : ProgramImage)
         (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]) :
       (ensemble image).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
         ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
-    apply witness.channelGuarantees_of_component_requirements channel constraints
+    apply witness.channelGuarantees_of_requirements channel
       (balanced channel (List.mem_append_left _ member))
-    · intro input data interaction emitted _
+    · intro interaction emitted _
       exact verifierProgram_requirements image _ _ interaction emitted
-    · exact fun component mem env holds =>
-        component_finished_requirements image component mem channel outside env holds
+    · intro table tableMem row rowMem
+      apply component_finished_requirements image table.component
+        (EnsembleWitness.component_mem_tables_of_mem tableMem) channel outside
+        _ (constraints table tableMem row rowMem)
+      intro fixed interaction emitted _
+      exact (FixedProgramProvider.Preprocessed.table_spec_and_requirements image table fixed
+        (witness.dataConsistency_of_mem table tableMem) (constraints table tableMem)).2
+          row rowMem interaction emitted
   have byte := closed byteChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, OrderedInitialProvider.channelName,
       OrderedFinalProvider.channelName, byteChannel])
@@ -395,11 +403,15 @@ theorem ram_guarantees_of_balance (image : ProgramImage)
         OrderedBoundary.channel, OrderedInitialProvider.channelName,
         OrderedFinalProvider.channelName, Channel.toRaw] at used
     · intro row rowMember
-      apply afterInitialTables_finished_requirements image table.component native _ ?_
-        _ (constraints table member row rowMember)
-      simp [StaticTable.channel, InitialMemoryLookup.membership,
-        stateChannel, memoryChannel, OrderedBoundary.channel,
-        OrderedInitialProvider.channelName, OrderedFinalProvider.channelName, Channel.toRaw]
+      refine afterInitialTables_finished_requirements image table.component native _ ?_
+        _ (constraints table member row rowMember) ?_
+      · simp [StaticTable.channel, InitialMemoryLookup.membership,
+          stateChannel, memoryChannel, OrderedBoundary.channel,
+          OrderedInitialProvider.channelName, OrderedFinalProvider.channelName, Channel.toRaw]
+      · intro fixed interaction emitted _
+        exact (FixedProgramProvider.Preprocessed.table_spec_and_requirements image table fixed
+          (witness.dataConsistency_of_mem table member) (constraints table member)).2
+            row rowMember interaction emitted
     · have assumptions : table.Assumptions := by
         intro row _
         rw [fixed]

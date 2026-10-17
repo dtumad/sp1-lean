@@ -76,16 +76,16 @@ that output and exercises these boundaries:
   aliases and nonboolean activity, and mutates every product on active and padded rows. This
   checks the stricter native code profile; host effects remain separate obligations.
 
-- The fixed Program replacement retains sixteen verifier-owned instruction fields and one count.
+- The installed fixed Program provider retains sixteen verifier-owned instruction fields and one count.
   Tests compare SP1's preprocessing, count generator and AIR, including unused instructions,
   first-row padding and zero counts. Backend checks bind every instruction field and reject
   changed counts, while allowing count redistribution among duplicate padding keys. The empty
-  native inventory has one inert row. Installation in the full native assembly remains pending;
-  the sparse native ROM contract is broader than the contiguous SP1 fixture. Clean requires
+  native inventory has one inert row. Separate native tests cover unordered sparse addresses
+  across all PC limbs using a first-match index in Clean's witness IR and its checked routing. The sparse native ROM contract
+  is broader than the contiguous SP1 fixture. Clean requires
   power-of-two heights, so larger source comparisons must request a matching fixed SP1 shape.
 
-Four legacy lookup meanings still block full export: program, write permission, hint nodes and
-hint words. The experimental Clean pin adds message predicates and indexed
+Three legacy lookup meanings still block full export: write permission, hint nodes and hint words. The experimental Clean pin adds message predicates and indexed
 preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
 whole-assembly generation still needs its own routing, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;

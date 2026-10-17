@@ -129,7 +129,9 @@ theorem interior_memoryBinary (image : ProgramImage) (component : Component (ZMo
   simp only [afterFinalTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with (rfl | member) | member
   · apply memoryBinary_of_silent
-    change memoryChannel.toRaw ∉ [programChannel.toRaw]
+    change (memoryChannel (p := p)).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [memoryChannel_eq_programChannel_false]
   · exact instruction_memoryBinary component member
   · exact remainingProvider_memoryBinary component (List.mem_append.mpr member)

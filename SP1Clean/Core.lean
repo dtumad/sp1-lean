@@ -411,7 +411,6 @@ import SP1Clean.Proofs.Chips.ByteChip.Preprocessed
 import SP1Clean.Proofs.Chips.ByteChip.Unified
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Proofs.Chips.DecodedProgramProvider
 import SP1Clean.Proofs.Chips.DivRemChip.Assembly
 import SP1Clean.Proofs.Chips.DivRemChip.Cases
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
@@ -447,7 +446,6 @@ import SP1Clean.Proofs.Chips.DivRemChip.Soundness
 import SP1Clean.Proofs.Chips.DivRemChip.Witgen
 import SP1Clean.Proofs.Chips.FinalRamProvider
 import SP1Clean.Proofs.Chips.FinalRegisterProvider
-import SP1Clean.Proofs.Chips.FixedProgramProvider
 import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Witgen

@@ -132,8 +132,11 @@ private def exportEnsembleFixture : IO Unit := do
     SP1CleanTest.Core.ProgramExport.requests
   let programUnused ← programReference SP1CleanTest.Core.ProgramExport.image #v[]
   let programEmpty ← programReference SP1CleanTest.Core.ProgramExport.emptyImage #v[]
+  let programSparse ← programReference SP1CleanTest.Core.ProgramExport.sparseImage
+    SP1CleanTest.Core.ProgramExport.sparseRequests
   IO.FS.writeFile (out / "program_fixed.reference.json")
-    ((Json.mkObj [("active", programActive), ("unused", programUnused), ("empty", programEmpty)]).compress ++ "\n")
+    ((Json.mkObj [("active", programActive), ("unused", programUnused), ("empty", programEmpty),
+      ("sparse", programSparse)]).compress ++ "\n")
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [

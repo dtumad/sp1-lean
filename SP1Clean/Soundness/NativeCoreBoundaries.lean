@@ -140,7 +140,9 @@ theorem afterInitialTables_silent (image : ProgramImage) :
           (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
       simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
         byteChannel, Channel.toRaw]
-  · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ [programChannel.toRaw]
+  · change (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel, Channel.toRaw]
   · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
@@ -281,21 +283,27 @@ def programTable {image : ProgramImage} (witness : EnsembleWitness (ensemble (p 
 
 theorem programTable_component {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (programTable witness).component = ({ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions } : Component (ZMod p)) :=
+    (programTable witness).component = (FixedProgramProvider.Preprocessed.component image) :=
   (witness.same_circuits 6 (by change 6 < (tables image).length; rw [tables_length]; decide)).symm
 
-/-- Every physical Program row is authenticated against this image's ROM and official Sail,
-including zero-multiplicity rows. No provider-validity premise is supplied. -/
+/-- Every counted Program row is authenticated against this image's ROM and official Sail.
+The fixed prefix and canonical data supply all provider assumptions. -/
 theorem program_row_committed {image : ProgramImage} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
-    (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
+    (row : Array (ZMod p)) (member : row ∈ (programTable witness).table)
+    (active : (valueFromOffset FixedProgramProvider.Preprocessed.Input 0
+      (Environment.fromArray row witness.data)).2 ≠ 0) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image, Assumptions := (DecodedProgramProvider.circuit image).Assumptions } : Component (ZMod p)).rowInput
-        (Environment.fromArray row witness.data)).toMessage) := by
-  have checked := constraints (programTable witness) (List.getElem_mem (programIndex_bound witness)) row member
-  rw [programTable_component witness] at checked
-  simp only [Table.environment, witness.same_data (programTable witness) (List.getElem_mem (programIndex_bound witness))] at checked
-  exact DecodedProgramProvider.constraints_committed valid _ checked
+      (rowOfMsg (valueFromOffset FixedProgramProvider.Preprocessed.Input 0
+        (Environment.fromArray row witness.data)).1) := by
+  have tableMem := List.getElem_mem (programIndex_bound witness)
+  have shared : (programTable witness).data = witness.data :=
+    witness.same_data (programTable witness) tableMem
+  simpa only [Table.environment, shared] using
+    FixedProgramProvider.Preprocessed.table_committed valid (programTable witness)
+      (programTable_component witness) (witness.dataConsistency_of_mem _ tableMem)
+      (constraints _ tableMem) row member
+      (by simpa only [Table.environment, shared] using active)
 
 /-- The authenticated initial inventory is exactly the physical Memory push list.
 Together with authentication and uniqueness, this is the initialization interface for grounding. -/

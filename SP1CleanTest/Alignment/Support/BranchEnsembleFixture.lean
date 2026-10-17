@@ -109,19 +109,13 @@ def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0
   Seed.ofCells table (toElements (OrderedBoundaryEnd.populate (word previous)
     (OrderedMemoryEnsemble.endKey (p := SP1Prime)))).toList
-/-- Program provider inputs are the exact demanded instruction messages. -/
-def programSeeds : List Seed :=
-  (branchLedger.filter fun entry => entry.1 == "SP1Program" && entry.2.2 != 0).map fun entry =>
-    let message : Channels.ProgramMsg Fp :=
-      fromElements (Vector.ofFn fun index => entry.2.1[index.val]?.getD 0)
-    Seed.ofCells 6 (toElements (DecodedProgramProvider.inputOfMessage message (-entry.2.2))).toList
 /-- Unchanged host-bank endpoints, physically present even though this step makes no host call. -/
 def hostTerminals : List Seed :=
   [87, 88].map fun index =>
     Seed.ofCells index (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList
 /-- All non-Byte rows use the compiler and its demanded authentication inventory. -/
 def consumerSeeds : List Seed :=
-  [branchSeed] ++ sourceSeeds ++ finalSeeds ++ validatorSeeds ++ programSeeds ++
+  [branchSeed] ++ sourceSeeds ++ finalSeeds ++ validatorSeeds ++
     [terminal 2 (orderedMemory false), terminal 5 (orderedMemory true)] ++ hostTerminals ++
     [Seed.ofCells 57 (List.replicate (size HaltChip.Inputs) 0)]
 /-- Every seed must name an installed table and provide exactly its declared input width. -/
@@ -163,7 +157,7 @@ def builtTables (target : MemorySnapshot) (seeds : List Seed)
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
     (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
-    "sp1.native.initial_memory", "sp1.native.target_memory"]
+    "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
   SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
     (fun index => by

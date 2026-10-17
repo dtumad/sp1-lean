@@ -40,6 +40,7 @@ macro_rules! generated {
 generated!(active, "program_fixed.rs");
 generated!(unused, "program_unused.rs");
 generated!(empty, "program_empty.rs");
+generated!(sparse, "program_sparse.rs");
 
 fn source_program() -> Sp1Program {
     let instructions = vec![
@@ -257,4 +258,60 @@ fn empty_padding_cannot_supply_an_instruction() {
         let (proof, _) = prove_ensemble(&config, &statement, traces, &[]).unwrap();
         verify_ensemble(&config, &statement, &proof, &[]).is_err()
     });
+}
+
+#[test]
+fn sparse_rom_routes_full_addresses_in_source_order() {
+    // SP1 supplies the instruction payloads; the native sparse-address extension is checked
+    // separately from SP1's contiguous Program layout.
+    let source: slop_matrix::dense::RowMajorMatrix<SP1Field> = ProgramChip::new()
+        .generate_preprocessed_trace(&source_program())
+        .unwrap();
+    let addresses = [0x2_0004_0004_u64, 0x1_0004, 0x1_0000_000c];
+    let expected: Vec<Vec<F>> = addresses
+        .into_iter()
+        .enumerate()
+        .map(|(index, address)| {
+            let mut row: Vec<F> = source.values[index * 16..(index + 1) * 16]
+                .iter()
+                .map(|value| F::from_u64(value.as_canonical_u64()))
+                .collect();
+            for (limb, cell) in row[..3].iter_mut().enumerate() {
+                *cell = F::from_u64((address >> (16 * limb)) & 0xffff);
+            }
+            row
+        })
+        .collect();
+    let fixed = fixed_trace::<sparse::Ensemble>(0);
+    assert_eq!((fixed.height(), fixed.width()), (32, 16));
+    for (index, row) in fixed.values.chunks(16).enumerate() {
+        assert_eq!(row, expected[if index < 3 { index } else { 0 }]);
+    }
+    let public: Vec<F> = [2, 0, 2, 1]
+        .into_iter()
+        .flat_map(|index| expected[index].iter().copied())
+        .collect();
+    let witness = sparse::generate::<F>(&public, &[]).unwrap();
+    assert_eq!(
+        witness.tables[0]
+            .iter()
+            .map(|row| row[16].as_canonical_u64())
+            .collect::<Vec<_>>(),
+        [vec![1, 1, 2], vec![0; 29]].concat()
+    );
+    assert_eq!(
+        physical_reference::<sparse::Ensemble>(&public, &witness.tables),
+        reference()["sparse"]["witness"]
+    );
+    let statement = sparse::Statement::<F>::new(&[32]).unwrap();
+    let config = config();
+    let (proof, _) =
+        prove_ensemble(&config, &statement, witness.into_traces().unwrap(), &public).unwrap();
+    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    for limb in 0..3 {
+        let mut forged = public.clone();
+        forged[limb] += F::ONE;
+        assert!(sparse::generate(&forged, &[]).is_err());
+        assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+    }
 }

@@ -108,7 +108,9 @@ theorem memoryInterior_split {image : ProgramImage}
   have programSilent : typedTableInteractionsWith (programTable witness) memoryChannel = [] := by
     apply typedTableInteractions_nil
     rw [programTable_component]
-    change memoryChannel.toRaw ∉ [programChannel.toRaw]
+    change (memoryChannel (p := p)).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [memoryChannel_eq_programChannel_false]
   have stateSilent : typedTableInteractionsWith (systemTable witness 1) memoryChannel = [] := by
     apply typedTableInteractions_nil

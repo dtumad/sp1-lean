@@ -88,12 +88,14 @@
     },
     "program": {
       "lean": [
-        "SP1Clean/Proofs/Chips/DecodedProgramProvider.lean"
+        "SP1Clean/Proofs/Chips/FixedProgramProvider/Preprocessed.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "The installed decoded ROM still uses a legacy lookup. Its fixed-column replacement has independent released Program preprocessing, AIR, count-generation and backend tests in tests/program_export.rs; installation and complete assembly export remain open."
+      "export": "component",
+      "comparisonKind": "sp1-component",
+      "comparison": [
+        "rust/sp1-comparison/tests/program_export.rs"
+      ],
+      "limit": "Installed verifier-fixed Program provider. Independent released preprocessing, AIR and count-generation comparison covers a contiguous ROM; separate native backend tests cover sparse unordered addresses, unused rows, padding and empty inventory. Complete assembly export and user-mode execution remain open."
     },
     "host": {
       "lean": [
@@ -280,7 +282,7 @@
     {"name": "sp1.native.memory.final.registers.SP1NativeMemoryFinalOrder", "width": 158, "inputWidth": 25, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.memory.final.ram.SP1NativeMemoryFinalOrder", "width": 221, "inputWidth": 25, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.SP1NativeMemoryFinalOrder.terminal", "width": 140, "inputWidth": 12, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.program.fixed", "width": 70, "inputWidth": 17, "fixedWidth": 0, "group": "program", "lookups": ["sp1.native.program"]},
+    {"name": "sp1.native.program.fixed", "width": 17, "inputWidth": 17, "fixedWidth": 16, "group": "program", "lookups": []},
     {"name": "sp1.native.add", "width": 33, "inputWidth": 29, "fixedWidth": 0, "group": "instructions", "lookups": []},
     {"name": "sp1.native.addi", "width": 30, "inputWidth": 26, "fixedWidth": 0, "group": "instructions", "lookups": []},
     {"name": "sp1.native.addw", "width": 36, "inputWidth": 33, "fixedWidth": 0, "group": "instructions", "lookups": []},

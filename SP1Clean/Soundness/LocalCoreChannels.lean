@@ -69,7 +69,8 @@ theorem component_channels_subset (image : ProgramImage) (source : ExecutionSnap
       simp only [baseEnsemble, sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
       tauto
     · intro channel used
-      change channel ∈ [programChannel.toRaw] at used
+      change channel ∈ (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels at used
+      rw [FixedProgramProvider.Preprocessed.circuit_channels] at used
       rw [List.mem_singleton] at used
       subst channel
       simp [baseEnsemble, sp1Ensemble_channels]

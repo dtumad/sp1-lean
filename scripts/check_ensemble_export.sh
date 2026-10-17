@@ -38,7 +38,7 @@ if revision != clean["rev"] or dirty:
     raise SystemExit("Clean checkout differs from the pinned emitter/backend")
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
-files = ["program_fixed.rs", "program_unused.rs", "program_empty.rs", "program_fixed.reference.json",
+files = ["program_fixed.rs", "program_unused.rs", "program_empty.rs", "program_sparse.rs", "program_fixed.reference.json",
          "syscall_code_guard.rs", "syscall_code_guard.reference.json", "fixed_membership.rs", "fixed_membership.reference.json", "snapshot_registers.rs",
          "snapshot_registers_empty.rs", "snapshot_registers.reference.json", "target_registers.rs",
          "target_registers_empty.rs", "target_registers.reference.json",
@@ -99,7 +99,7 @@ import subprocess
 import sys
 assert len(sys.argv) == 3
 # Require every binary's exact success count in both configurations.
-for path, counts in zip(sys.argv[1:], [[3, 3, 4, 4, 11, 17, 25], [3, 3, 4, 4, 11, 17, 25]]):
+for path, counts in zip(sys.argv[1:], [[3, 3, 4, 5, 11, 17, 25], [3, 3, 4, 5, 11, 17, 25]]):
     log = Path(path).read_text()
     actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
     if sorted(actual) != counts or "warning:" in log:

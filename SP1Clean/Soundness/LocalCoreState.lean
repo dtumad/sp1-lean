@@ -80,7 +80,9 @@ theorem state_interiors {image : ProgramImage} {source : ExecutionSnapshot}
   have programSilent : typedTableInteractionsWith (programTable witness) stateChannel = [] := by
     apply typedTableInteractions_nil
     rw [programTable_component]
-    change (stateChannel (p := p)).toRaw ∉ [programChannel.toRaw]
+    change (stateChannel (p := p)).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [stateChannel_eq_programChannel_false]
   have refreshSilent : typedTableInteractionsWith (systemTable witness 0) stateChannel = [] := by
     apply typedTableInteractions_nil
