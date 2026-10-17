@@ -448,6 +448,7 @@ import SP1Clean.Proofs.Chips.DivRemChip.Witgen
 import SP1Clean.Proofs.Chips.FinalRamProvider
 import SP1Clean.Proofs.Chips.FinalRegisterProvider
 import SP1Clean.Proofs.Chips.FixedProgramProvider
+import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Witgen
 import SP1Clean.Proofs.Chips.HintReadWordChip.Formal

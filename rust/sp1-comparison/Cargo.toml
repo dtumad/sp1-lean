@@ -77,3 +77,7 @@ required-features = ["instruction-export"]
 [[test]]
 name = "syscall_code_export"
 required-features = ["instruction-export"]
+
+[[test]]
+name = "program_export"
+required-features = ["instruction-export"]

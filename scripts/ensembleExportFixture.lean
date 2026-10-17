@@ -7,6 +7,7 @@ import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
 import SP1CleanTest.Core.UnifiedByteBenchmarks
 import SP1CleanTest.Core.PreprocessedByteExport
+import SP1CleanTest.Core.ProgramExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -33,6 +34,16 @@ private def expressionDegree : Expression (ZMod SP1Clean.SP1Prime) → ℕ
   | .const _ => 0
   | .add left right => max (expressionDegree left) (expressionDegree right)
   | .mul left right => expressionDegree left + expressionDegree right
+
+private def programReference (image : SP1Clean.Model.Core.ProgramImage) {n : ℕ}
+    (requests : SP1CleanTest.Core.ProgramExport.Requests n (ZMod SP1Clean.SP1Prime)) : IO Json := do
+  match SP1CleanTest.Core.ProgramExport.generate image requests with
+  | .error message => throw (IO.userError message)
+  | .ok witness =>
+    unless (SP1CleanTest.Core.ProgramExport.description image n).checkWitness SP1Clean.SP1Prime witness do
+      throw (IO.userError "fixed Program witness failed raw acceptance")
+    return Json.mkObj [("publicInput", toJson ((toElements requests).toList.map (·.val))),
+      ("witness", physicalReference witness)]
 
 private def componentMetrics (component : Air.Flat.Component (ZMod SP1Clean.SP1Prime)) : Json :=
   let constraints := component.rowOperations.constraints
@@ -107,6 +118,7 @@ private def exportEnsembleFixture : IO Unit := do
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.SyscallCodeExport.rustExports ++
+      SP1CleanTest.Core.ProgramExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++
@@ -116,6 +128,12 @@ private def exportEnsembleFixture : IO Unit := do
       | .ok value => pure value
       | .error message => throw (IO.userError message)
     IO.FS.writeFile (out / name) source
+  let programActive ← programReference SP1CleanTest.Core.ProgramExport.image
+    SP1CleanTest.Core.ProgramExport.requests
+  let programUnused ← programReference SP1CleanTest.Core.ProgramExport.image #v[]
+  let programEmpty ← programReference SP1CleanTest.Core.ProgramExport.emptyImage #v[]
+  IO.FS.writeFile (out / "program_fixed.reference.json")
+    ((Json.mkObj [("active", programActive), ("unused", programUnused), ("empty", programEmpty)]).compress ++ "\n")
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [

@@ -93,7 +93,7 @@
       "export": "none",
       "comparisonKind": "none",
       "comparison": [],
-      "limit": "Decoded native ROM authenticates semantic instructions; legacy lookup blocks built-in export. Released Program preprocessing comparison remains open."
+      "limit": "The installed decoded ROM still uses a legacy lookup. Its fixed-column replacement has independent released Program preprocessing, AIR, count-generation and backend tests in tests/program_export.rs; installation and complete assembly export remain open."
     },
     "host": {
       "lean": [

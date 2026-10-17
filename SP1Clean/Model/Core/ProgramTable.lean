@@ -199,6 +199,13 @@ theorem mem_programRows (image : ProgramImage) (msg : ProgramMsg (ZMod p)) :
     msg ∈ image.programRows ↔ ∃ entry ∈ image.rom, ProgramTable.message? entry = some msg :=
   List.mem_filterMap
 
+omit [Fact (2 ^ 17 < p)] in
+/-- Decoding cannot increase the inventory; checked addresses bound it even when some words
+are unsupported. No separate decodability or physical-capacity premise is needed. -/
+theorem programRows_length_le (image : ProgramImage) (valid : image.Valid) :
+    (image.programRows (p := p)).length ≤ 2 ^ 48 :=
+  (List.length_filterMap_le _ _).trans (image.rom_length_le valid)
+
 /-- Fixed messages have structural range guarantees without caller-supplied row facts. -/
 theorem programRows_rowSpec (image : ProgramImage) (msg : ProgramMsg (ZMod p))
     (member : msg ∈ image.programRows) : ProgramMsg.RowSpec msg := by

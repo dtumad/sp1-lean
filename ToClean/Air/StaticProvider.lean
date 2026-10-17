@@ -1,6 +1,7 @@
 module
 
 public import ToClean.Air.FixedPrefix
+public import ToClean.Air.FixedRows
 public import Clean.Circuit.WitnessIRSugar
 public import Clean.Utils.Tactics
 public import Clean.Utils.Tactics.ProvableStructDeriving
@@ -124,18 +125,9 @@ theorem spec_iff_fixedEntry (table : StaticTable F Row) (row : Row F) :
     simpa only [equal] using valid.2
 
 /-- Enumerate the typed table through Clean's index-aware fixed-column IR. -/
-def fixedColumns (table : StaticTable F Row) (bounded : table.height < UInt64.size) : FixedColumns F where
-  height := UInt64.ofNatLT table.height bounded
-  program := .ofFExprs (Vector.ofFn fun column : Fin (size (Entry Row)) =>
-    .listGet ((Vector.ofFn fun index : Fin table.height =>
-      (toElements (table.fixedEntry index.val))[column.val]).toList.map .const) .idx)
-  valid := by
-    simp only [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs,
-      Witgen.VExpr.validForRow, Vector.toList_ofFn, List.all_nil, Bool.true_and,
-      decide_eq_true_eq, List.all_eq_true, List.forall_mem_ofFn_iff]
-    intro column
-    simp only [Witgen.FExpr.validForRow, Witgen.U64Expr.validForRow, Bool.and_true]
-    exact Witgen.FExprList.validForRow_map_const _ _
+def fixedColumns (table : StaticTable F Row) (bounded : table.height < UInt64.size) : FixedColumns F :=
+  FixedColumns.ofRows (Vector.ofFn fun index : Fin table.height =>
+    toElements (table.fixedEntry index.val)) bounded
 
 /-- Fixed columns are exactly the message prefix; multiplicities remain committed columns. -/
 @[simp] theorem fixedColumns_width (table : StaticTable F Row) (bounded : table.height < UInt64.size) :
@@ -149,12 +141,7 @@ def fixedColumns (table : StaticTable F Row) (bounded : table.height < UInt64.si
 theorem fixedColumns_row (table : StaticTable F Row) (bounded : table.height < UInt64.size)
     (index : Fin table.height) :
     (table.fixedColumns bounded).row (UInt64.ofNat index.val) = (toElements (table.fixedEntry index.val)).toArray := by
-  apply Array.ext
-  · simp [FixedColumns.row, fixedColumns, Witgen.RowProgram.ofFExprs]
-  · intro column left right
-    simp [FixedColumns.row, fixedColumns, Witgen.RowProgram.eval, Witgen.RowProgram.ofFExprs,
-      Witgen.VExpr.eval, Witgen.FExpr.eval, Witgen.U64Expr.eval, Witgen.evalList_map_vector_const,
-      Nat.mod_eq_of_lt (index.isLt.trans bounded), index.isLt]
+  simp [fixedColumns, FixedColumns.ofRows_row]
 
 /-- A membership provider emits the authenticated message at its supplied multiplicity.
 The fixed prefix authenticates eligibility; inactive rows must have zero multiplicity. -/

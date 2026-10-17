@@ -12,6 +12,7 @@ namespace SP1CleanTest.Core.ComponentExport
 
 open Air.Flat SP1Clean
 
+/-- The released SP1 field shared by native export fixtures and Rust comparisons. -/
 abbrev Fp := ZMod SP1Prime
 
 /-- A production component with its original constraints and channel interactions. -/

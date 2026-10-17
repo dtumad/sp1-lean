@@ -10,7 +10,7 @@ scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
   SP1CleanTest.Core.InstructionExport SP1CleanTest.Core.ByteProviderExport SP1CleanTest.Core.SyscallCodeExport \
   SP1CleanTest.Core.SnapshotRegisterExport SP1CleanTest.Core.StaticProviderExport SP1CleanTest.Core.RamExport \
-  SP1CleanTest.Core.PreprocessedByteExport \
+  SP1CleanTest.Core.PreprocessedByteExport SP1CleanTest.Core.ProgramExport \
   2>&1 | tee "$scratch/build.log"
 python3 - "$scratch" <<'PY'
 import hashlib
@@ -38,7 +38,8 @@ if revision != clean["rev"] or dirty:
     raise SystemExit("Clean checkout differs from the pinned emitter/backend")
 command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
            "scripts/ensembleExportFixture.lean"]
-files = ["syscall_code_guard.rs", "syscall_code_guard.reference.json", "fixed_membership.rs", "fixed_membership.reference.json", "snapshot_registers.rs",
+files = ["program_fixed.rs", "program_unused.rs", "program_empty.rs", "program_fixed.reference.json",
+         "syscall_code_guard.rs", "syscall_code_guard.reference.json", "fixed_membership.rs", "fixed_membership.reference.json", "snapshot_registers.rs",
          "snapshot_registers_empty.rs", "snapshot_registers.reference.json", "target_registers.rs",
          "target_registers_empty.rs", "target_registers.reference.json",
          "static_membership.reference.json", "ram_membership.reference.json", "ram_rows.reference.json",
@@ -85,12 +86,12 @@ CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export --test clean_export \
     --test instruction_export --test byte_provider_export --test ram_export \
-    --test unified_byte_export --test syscall_code_export 2>&1 | tee "$scratch/rust.log"
+    --test unified_byte_export --test syscall_code_export --test program_export 2>&1 | tee "$scratch/rust.log"
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export,mprotect \
     --test clean_export --test instruction_export --test byte_provider_export --test ram_export \
-    --test unified_byte_export --test syscall_code_export 2>&1 | tee "$scratch/rust-mprotect.log"
+    --test unified_byte_export --test syscall_code_export --test program_export 2>&1 | tee "$scratch/rust-mprotect.log"
 python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
 import re
@@ -98,7 +99,7 @@ import subprocess
 import sys
 assert len(sys.argv) == 3
 # Require every binary's exact success count in both configurations.
-for path, counts in zip(sys.argv[1:], [[3, 3, 4, 11, 17, 25], [3, 3, 4, 11, 17, 25]]):
+for path, counts in zip(sys.argv[1:], [[3, 3, 4, 4, 11, 17, 25], [3, 3, 4, 4, 11, 17, 25]]):
     log = Path(path).read_text()
     actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
     if sorted(actual) != counts or "warning:" in log:
