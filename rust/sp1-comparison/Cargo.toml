@@ -13,6 +13,7 @@ opt-level = 1
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+enum-map = { version = "2.7.3", optional = true }
 slop-air = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 slop-matrix = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 sp1-core-executor = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
@@ -37,7 +38,7 @@ rand = { version = "0.10", optional = true }
 
 [features]
 default = ["inventory"]
-inventory = ["dep:slop-air", "dep:slop-algebra", "dep:sp1-core-machine",
+inventory = ["dep:enum-map", "dep:slop-air", "dep:slop-algebra", "dep:sp1-core-machine",
     "dep:sp1-hypercube", "dep:sp1-primitives", "dep:sp1-core-executor"]
 mprotect = ["inventory", "sp1-core-machine/mprotect"]
 instruction-export = ["clean-export", "inventory", "dep:slop-matrix", "dep:sp1-core-executor"]

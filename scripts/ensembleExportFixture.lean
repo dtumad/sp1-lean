@@ -198,6 +198,9 @@ private def exportEnsembleFixture : IO Unit := do
   let out := System.FilePath.mk
     ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/ensemble-export/manual")
   IO.FS.createDirAll out
+  let opcodes := SP1Clean.Soundness.Opcode.all.map fun opcode => Json.mkObj [
+    ("constructor", toJson (reprStr opcode)), ("discriminant", toJson opcode.toNat)]
+  IO.FS.writeFile (out / "opcodes.reference.json") ((toJson opcodes).compress ++ "\n")
   let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)

@@ -29,7 +29,10 @@ actual installed 94-component assembly; the full audit runs this check. The Carg
 independently authenticate the snapshots against released Rust source. No generated Lean registry
 serves as the Rust reference.
 
-The inventory checks establish layout drift only. Fresh Clean Rust is compiled against the backend
+The inventory checks establish layout drift only. The instruction export suite also compares the
+complete native opcode alphabet with every constructor and discriminant of the released Rust enum,
+including unsupported instructions. This replaces the legacy Rust-to-Lean opcode-table parser.
+Fresh Clean Rust is compiled against the backend
 pinned to the same revision as the Lean emitter and compared with SP1:
 
 ```sh

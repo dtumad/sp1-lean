@@ -21,7 +21,7 @@
 #
 # All fail closed: a module matching no stratum prefix is an error, so a new top-level directory
 # cannot silently escape the map.
-# Native circuits additionally have no transitive dependency on legacy Rust extraction.
+# Native core contracts and circuits have no transitive dependency on legacy Rust extraction.
 #
 # Exceptions live in scripts/layering_allowlist.txt with a stated reason. That is a prohibition with
 # a bar, not a ratchet — see AGENTS.md on scripts/option_escapes_allowlist.txt.
@@ -150,8 +150,10 @@ for path in files:
     if pillar != "-" and ns_root in PILLARS and ns_root != pillar and path not in allowed_ns:
         nsbad.append((path, ns_root, pillar))
 
-native_roots = [p for p in files if p.startswith(("SP1Clean/Native/", "SP1Clean/Circuits/"))]
-pending = [(p, [p]) for p in native_roots]
+core_roots = [p for p in files if p not in ROOT_INDEX
+              and p.startswith("SP1Clean/") and not p.startswith("SP1Clean/Extracted/")
+              and classify(p)[0] is not None and classify(p)[0] <= CORE_MAX_STRATUM]
+pending = [(p, [p]) for p in core_roots]
 seen = set()
 for path, trail in pending:
     if path in seen:
@@ -159,7 +161,7 @@ for path, trail in pending:
     seen.add(path)
     if path.startswith("SP1Clean/Extracted/"):
         fail = 1
-        print("FAIL: native circuits depend on legacy extraction: " + " -> ".join(trail))
+        print("FAIL: native core depends on legacy extraction: " + " -> ".join(trail))
         continue
     pending.extend((dep, trail + [dep]) for dep in imports_by_file.get(path, []))
 
@@ -185,7 +187,7 @@ if nsbad:
     print("  (one of the two is wrong — usually the path; the namespace is the author's intent)")
 
 # 3. the core index: exactly the hand-written modules of strata 0..CORE_MAX_STRATUM under
-#    SP1Clean/, generated `Extracted/` modules excluded (they enter the core build as imports).
+#    SP1Clean/, with legacy `Extracted/` modules excluded.
 #    The index is what `lake build SP1Core` builds, so a stale entry silently moves a module in or
 #    out of PR CI.
 expected_core = set()

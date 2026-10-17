@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.FormalModel.CoreAIRRelation
+import SP1Clean.Model.Machine.Syscall
 
-/-! # Commit-row contracts for the Core AIR
+/-! # Commit-event contracts for shard and whole-execution semantics
 
 The syscall AIR constrains every COMMIT row that exists, but intentionally does not prove the converse
 `commit_syscall = 1 → a COMMIT row exists`.  Row existence is a program-level property of SP1's
@@ -13,7 +13,9 @@ therefore separates two predicates:
 * `CompleteCommitCoverage`: all eight public COMMIT indices occur in a whole-execution transcript,
   supplied by an explicit standard-wrapper contract.
 
-No rolling-flag transition is used as provenance. -/
+These predicates depend only on public values and semantic syscall events. They do not depend
+on a circuit implementation, extracted AIR profile or witness decoder. No rolling-flag transition
+is used as provenance. -/
 
 namespace SP1Clean.CoreAIR
 

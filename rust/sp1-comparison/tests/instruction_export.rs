@@ -5,6 +5,7 @@ extern crate alloc;
 
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
+use enum_map::Enum;
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as NativeField;
 use slop_air::{Air, BaseAir};
@@ -57,6 +58,26 @@ use sp1_core_machine::{
 use sp1_hypercube::air::{MachineAir, SP1_PROOF_NUM_PV_ELTS};
 use sp1_primitives::SP1Field;
 use std::mem::offset_of;
+
+#[test]
+fn complete_native_opcode_alphabet_matches_released_sp1() {
+    let native: Vec<serde_json::Value> = serde_json::from_str(include_str!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/opcodes.reference.json"
+    )))
+    .unwrap();
+    // Enum supplies every Rust constructor independently of Lean's alphabet or chip registry.
+    let released = (0..Opcode::LENGTH)
+        .map(Opcode::from_usize)
+        .map(|opcode| {
+            serde_json::json!({
+                "constructor": format!("SP1Clean.Soundness.Opcode.{opcode:?}"),
+                "discriminant": opcode as u8,
+            })
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(native, released);
+}
 
 // Clean emits shared helpers that some individual components do not use.
 macro_rules! generated_instruction {

@@ -391,7 +391,7 @@ _DERIVE_STRUCT_RE = re.compile(
 
 
 def native_structs(directory: Path = None) -> Dict[str, Tuple[str, str]]:
-    """Read shared native column declarations; the extractor never writes their definitions."""
+    """Read the shared Types namespace reused by Rust oracles, not chip-local circuit columns."""
     result = {}
     directory = directory or Path(__file__).resolve().parent / "SP1Clean/Circuits/Types"
     for path in sorted(directory.glob("*.lean")):
@@ -399,6 +399,8 @@ def native_structs(directory: Path = None) -> Dict[str, Tuple[str, str]]:
         # not consumed by this small parser: unsupported syntax must fail the layout comparison.
         source = re.sub(r"^[ \t]*/--(?:(?!/-|-/).)*-/[ \t]*(?:\n|$)", "",
                         path.read_text(), flags=re.M | re.S)
+        if not re.search(r"^namespace SP1Clean\.Circuits\.Types\s*$", source, re.M):
+            continue
         declarations = list(_DERIVE_STRUCT_RE.finditer(source))
         unsupported = set(_STRUCT_RE.findall(source)) - {match[1] for match in declarations}
         if unsupported:
@@ -889,75 +891,6 @@ def render_provenance() -> str:
     )
 
 
-# ── Opcode-table pass ───────────────────────────────────────────────────────────────────────
-# The instruction-alphabet anchor: SP1's `Opcode` enum (variant name → `#[repr(u8)]`
-# discriminant) is the value every chip commits on the Program bus, and
-# `SP1Clean/Model/Opcode.lean` hand-mirrors it. Extracting the table makes that mirror
-# machine-checked (`opcodeTable_matchesExtracted`, `SP1Clean/FormalModel/OpcodeTable.lean`)
-# instead of hand-verified. Like the manifest writers this is a text-level parse, not a compiler
-# run — and it reads the file at `SP1_SEMANTIC_COMMIT` via `git show`, so it is independent of the
-# checkout's working state and reproducible at the pin.
-
-_OPCODE_VARIANT_RE = re.compile(r"^\s{4}([A-Z][A-Za-z0-9_]*)\s*=\s*(\d+),\s*$")
-
-
-def read_opcode_table(sp1_dir: str) -> List[Tuple[str, int]]:
-    """Parse the `pub enum Opcode` block of `crates/core/executor/src/opcode.rs` at the pinned
-    semantic revision into ordered `(variant name, discriminant)` pairs. Fails loudly on any
-    shape drift (missing enum, missing `#[repr(u8)]`, no variants, or non-consecutive
-    discriminants)."""
-    source = _git_output(
-        sp1_dir, ["show", f"{SP1_SEMANTIC_COMMIT}:crates/core/executor/src/opcode.rs"])
-    marker = "pub enum Opcode {"
-    start = source.find(marker)
-    if start == -1:
-        raise SystemExit("opcode.rs: `pub enum Opcode {` not found — update the opcode parser")
-    if not source[:start].rstrip().endswith("#[repr(u8)]"):
-        raise SystemExit("opcode.rs: `#[repr(u8)]` no longer directly precedes `pub enum Opcode` "
-                         "— the discriminant table would not be the committed u8 value")
-    end = source.find("\n}", start)
-    if end == -1:
-        raise SystemExit("opcode.rs: unterminated `pub enum Opcode` block")
-    entries = [
-        (match.group(1), int(match.group(2)))
-        for line in source[start + len(marker):end].splitlines()
-        if (match := _OPCODE_VARIANT_RE.match(line))
-    ]
-    if not entries:
-        raise SystemExit("opcode.rs: no `NAME = N,` variants parsed — update the opcode parser")
-    if [value for _, value in entries] != list(range(len(entries))):
-        raise SystemExit(f"opcode.rs: discriminants are not consecutive from 0: {entries}")
-    return entries
-
-
-def render_opcode_table(entries: Sequence[Tuple[str, int]]) -> str:
-    """Render the extracted `Opcode` discriminant table as `Extracted/OpcodeTable.lean`."""
-    rows = "\n".join(f'  ⟨"{name}", {value}⟩,' for name, value in entries)
-    return (
-        "import SP1Clean.Extracted.Provenance\n\n"
-        "/-! # AUTO-GENERATED SP1 `Opcode` discriminant table — do not edit by hand.\n\n"
-        "Parsed by `update_extracted.py` out of `crates/core/executor/src/opcode.rs` at the pinned\n"
-        "semantic revision (`checkedInProvenance.semanticRevision`, read via `git show`): the\n"
-        "variant name → `#[repr(u8)]` discriminant table, i.e. the opcode value each chip commits\n"
-        "on the Program bus. The hand-maintained mirror (`SP1Clean/Model/Opcode.lean`) is\n"
-        "cross-checked against this table by `opcodeTable_matchesExtracted`\n"
-        "(`SP1Clean/FormalModel/OpcodeTable.lean`). -/\n\n"
-        + LINTERS_OFF + "\n\n"
-        + "namespace SP1Clean.Extracted\n\n"
-        + "/-- One SP1 `Opcode` enum row: variant name and `#[repr(u8)]` discriminant. -/\n"
-        + "structure OpcodeRow where\n"
-        + "  name : String\n"
-        + "  discriminant : Nat\n"
-        + "deriving DecidableEq, Repr\n\n"
-        + f"/-- The exact `Opcode` table at `checkedInProvenance.semanticRevision`: "
-        + f"{len(entries)} variants,\ndiscriminants `0..{len(entries) - 1}` in declaration "
-        + "order. -/\n"
-        + "def currentOpcodeTable : List OpcodeRow := [\n"
-        + rows + "\n]\n\n"
-        + "end SP1Clean.Extracted\n"
-    )
-
-
 def _manifest_cluster(manifest: dict, expected_names: Sequence[str], label: str) -> List[dict]:
     """Select one exact machine cluster and reject malformed/ambiguous manifest data."""
     clusters = manifest.get("clusters")
@@ -1191,14 +1124,6 @@ def main() -> None:
     except Exception as error:  # noqa: BLE001
         raise SystemExit(f"Required Core AIR profile extraction failed: {error}") from error
 
-    # The opcode discriminant table is likewise unconditional: it is cheap (a `git show` + text
-    # parse, no cargo run) and pins the instruction alphabet the Model-layer mirror is checked
-    # against.
-    try:
-        opcode_output = render_opcode_table(read_opcode_table(sp1_dir))
-    except Exception as error:  # noqa: BLE001
-        raise SystemExit(f"Required opcode-table extraction failed: {error}") from error
-
     extract_public_values = True
 
     # `EXTRACT_ONLY=Name1,Name2,…` restricts this run to a subset of OPERATIONS/CHIPS/
@@ -1301,8 +1226,9 @@ def main() -> None:
     # 2. Emit pass: re-run with the derived reuse, then render + write (successful targets only).
     _write(os.path.join(EXTRACTED_DIR, "Provenance.lean"), render_provenance())
     _write(os.path.join(EXTRACTED_DIR, "CoreAIRManifest.lean"), profile_output)
-    _write(os.path.join(EXTRACTED_DIR, "OpcodeTable.lean"), opcode_output)
-    written = 3
+    written = 2
+    # The native opcode alphabet is now compared directly with released SP1 in Rust.
+    Path(EXTRACTED_DIR, "OpcodeTable.lean").unlink(missing_ok=True)
     # The native library now owns these columns; retire the old generated carrier.
     Path(EXTRACTED_DIR, "MemoryAccess.lean").unlink(missing_ok=True)
     for op in [o for o in OPERATIONS if o in emitted and o not in CHIP_ONLY_HELPERS]:

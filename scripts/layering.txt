@@ -46,6 +46,9 @@
 
 # 7 — per-chip and list-level Rust faithfulness.
 7   Faithful      SP1Clean/Faithful/
+# These profiles describe retained reverse-extraction evidence, not native semantic contracts.
+7   FormalModel   SP1Clean/FormalModel/CoreProfile.lean
+7   FormalModel   SP1Clean/FormalModel/CoreAIRRelation.lean
 
 # 8 — the machine: registry, ensemble, grounding, soundness capstone.
 #

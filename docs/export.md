@@ -25,6 +25,9 @@ interpreter or scheduler.
   its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
   including empty table positions, and exercises proof acceptance and endpoint/row mutations.
   This is one complete-assembly case, not general execution-generation completeness.
+- The complete native opcode alphabet, including unsupported instructions, is compared with every
+  constructor and discriminant of the released Rust enum. Lean's derived constructor names and
+  native discriminants export as metadata; no Rust source parser or generated Lean enum is needed.
 - All 25 supported instruction families export through the same built-in path. Rust compares
   generated witnesses, local constraint satisfaction and complete
   interaction multisets with SP1 v6.9.0's supervisor AIR, including padding and column mutations.

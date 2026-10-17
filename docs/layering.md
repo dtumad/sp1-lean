@@ -11,8 +11,9 @@ release audit. Responsibilities and the migration direction are in [architecture
 2. Pillar namespaces agree with their mapped responsibility, subject to the named exceptions.
 3. `SP1Clean/Core.lean` indexes all handwritten modules in strata 0–6. The separate root-index
    check verifies complete library coverage and rejects dangling or duplicate imports.
-4. Native circuits under `Native/` and `Circuits/` have no transitive import of `Extracted/`.
-   Shared column types are native-owned; Rust comparison code sits above them.
+4. Every native core module in strata 0–6 has no transitive import of `Extracted/`.
+   Semantic commit contracts and shared column types are native-owned; legacy AIR profiles and
+   Rust comparison evidence sit above them.
 
 Exceptions live in [layering_allowlist.txt](../scripts/layering_allowlist.txt), with reasons.
 A recurring exception usually calls for a more precise stratum or an ownership move. Existing
@@ -29,7 +30,7 @@ exceptions are migration work, not a requirement to preserve the current API or 
 | 4 | Semantic contracts and row views |
 | 5 | Readers, operation gadgets and their proofs |
 | 6 | Instruction chips, local proofs and event-to-row builders |
-| 7 | Rust faithfulness |
+| 7 | Rust faithfulness and retained exact-AIR profiles |
 | 8 | Registration, machine grounding and soundness |
 | 9 | Physical table construction and completeness assembly |
 | 10 | Completeness capstones |

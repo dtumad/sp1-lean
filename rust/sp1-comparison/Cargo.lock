@@ -2810,6 +2810,7 @@ name = "sp1-clean-comparison"
 version = "0.1.0"
 dependencies = [
  "clean_backend",
+ "enum-map",
  "p3-air 0.4.2",
  "p3-challenger 0.4.2",
  "p3-commit 0.4.2",

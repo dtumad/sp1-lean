@@ -11,6 +11,7 @@ from update_extracted import native_structs, validate_native_layouts
 
 class NativeLayoutTests(unittest.TestCase):
     native = {"Row": ("SP1Clean.Circuits.Types.Row", "  value : F\n  limbs : (Vector F 4)\n")}
+    namespace = "namespace SP1Clean.Circuits.Types\n"
 
     def body(self, fields="  value : F\n  limbs : (Vector F 4)\n"):
         return "structure Row (F : Type) where\n" + fields + "deriving ProvableStruct\n"
@@ -41,17 +42,35 @@ class NativeLayoutTests(unittest.TestCase):
     def test_unsupported_native_declaration_is_not_silently_skipped(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "Row.lean").write_text(self.body())
-            (root / "Other.lean").write_text("structure Other (enabled : Bool) (F : Type) where\n  value : F\n")
+            (root / "Row.lean").write_text(self.namespace + self.body())
+            (root / "Other.lean").write_text(self.namespace +
+                "structure Other (enabled : Bool) (F : Type) where\n  value : F\n")
             with self.assertRaisesRegex(ValueError, "unsupported native column"):
                 native_structs(root)
 
     def test_field_documentation_does_not_change_layout(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "Row.lean").write_text(self.body().replace(
+            (root / "Row.lean").write_text(self.namespace + self.body().replace(
                 "  value :", "  /-- The scalar value. -/\n  value :"))
             validate_native_layouts({"Chip": self.body()}, native_structs(root), complete=True)
+
+    def test_chip_local_columns_are_not_shared_oracle_layouts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Row.lean").write_text(self.namespace + self.body())
+            for chip in ["FirstChip", "SecondChip"]:
+                (root / (chip + ".lean")).write_text("namespace SP1Clean." + chip + "\n" +
+                    self.body().replace("Row", "Columns"))
+            self.assertEqual(native_structs(root), self.native)
+
+    def test_duplicate_shared_columns_still_reject(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ["First", "Second"]:
+                (root / (name + ".lean")).write_text(self.namespace + self.body())
+            with self.assertRaisesRegex(ValueError, "duplicate native column"):
+                native_structs(root)
 
 
 if __name__ == "__main__":

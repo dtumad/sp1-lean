@@ -176,7 +176,9 @@ the abstraction.
 
 Native readers and operations own their shared column types under `Circuits/Types`. These modules
 and the word foundation use Lean module mode. The import gate rejects any transitive dependency
-from native circuits back into `Extracted`. Legacy Rust oracles reuse the native types only after
+from the native core, including semantic contracts, back into `Extracted`. Commit-event contracts
+live in `FormalModel/Contracts/Commit`; retained exact-AIR profiles sit above the core. Legacy Rust
+oracles reuse the native types only after
 the generator checks their field layouts against independent Rust reflection output; the
 assertion and interaction definitions remain generated migration evidence.
 

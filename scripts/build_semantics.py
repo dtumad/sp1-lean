@@ -52,7 +52,6 @@ LAYERS = [
     ("SP1Clean/Soundness/SyscallRowSemantics.lean", "L4"),
     ("SP1Clean/FormalModel/CoreAIRRelation.lean", "L4"),
     ("SP1Clean/FormalModel/CoreProfile.lean", "L4"),
-    ("SP1Clean/FormalModel/OpcodeTable.lean", "L4"),
     # L1 ISA semantics: the Sail model, its wrappers, the execution model, decode, bridges.
     ("LeanRV64D/", "G"),
     ("LeanRV64D.lean", "G"),

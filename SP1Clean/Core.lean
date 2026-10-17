@@ -47,7 +47,7 @@ import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.OrdinaryObservation
-import SP1Clean.FormalModel.Contracts.CoreAIR
+import SP1Clean.FormalModel.Contracts.Commit
 import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.Semantics.Specs.Chips.Mul
 import SP1Clean.Semantics.Specs.Mul
@@ -95,12 +95,9 @@ import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.FormalModel.Contracts.SystemChips
 import SP1Clean.FormalModel.Contracts.WritePermission
-import SP1Clean.FormalModel.CoreAIRRelation
-import SP1Clean.FormalModel.CoreProfile
 import SP1Clean.FormalModel.CoreShard
 import SP1Clean.FormalModel.EventExecution
 import SP1Clean.FormalModel.Execution
-import SP1Clean.FormalModel.OpcodeTable
 import SP1Clean.FormalModel.Relations
 import SP1Clean.FormalModel.Shard
 import SP1Clean.FormalModel.ShardMachine

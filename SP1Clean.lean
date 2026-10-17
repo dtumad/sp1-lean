@@ -94,7 +94,6 @@ import SP1Clean.Extracted.JTypeReader
 import SP1Clean.Extracted.LtOperationSigned
 import SP1Clean.Extracted.LtOperationUnsigned
 import SP1Clean.Extracted.MulOperation
-import SP1Clean.Extracted.OpcodeTable
 import SP1Clean.Extracted.Provenance
 import SP1Clean.Extracted.RTypeReader
 import SP1Clean.Extracted.SystemOracle.Byte
@@ -159,6 +158,8 @@ import SP1Clean.Faithful.U16CompareOperation
 import SP1Clean.Faithful.U16MSBOperation
 import SP1Clean.Faithful.U16toU8OperationSafe
 import SP1Clean.Faithful.UTypeChip
+import SP1Clean.FormalModel.CoreAIRRelation
+import SP1Clean.FormalModel.CoreProfile
 import SP1Clean.Proofs.Completeness.AluGeneration
 import SP1Clean.Proofs.Completeness.Assembly
 import SP1Clean.Proofs.Completeness.CanonicalClosure

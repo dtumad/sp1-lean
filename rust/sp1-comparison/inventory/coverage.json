@@ -55,20 +55,24 @@
       "lean": [
         "SP1Clean/Proofs/Chips/ByteChip/RangeChip.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Native bit-length range providers; built-in export and independent Rust comparison remain open."
+      "export": "component",
+      "comparisonKind": "native-backend",
+      "comparison": [
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "All native bit-length providers export in the complete assembly. The branch fixture generates Range13/14/16 rows and compares the complete native ledger; the other range tables stay empty. Independent released Range AIR comparison remains open."
     },
     "bump": {
       "lean": [
         "SP1Clean/Proofs/Chips/MemoryBumpChip/Formal.lean",
         "SP1Clean/Proofs/Chips/StateBumpChip/Formal.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Native bump proofs and legacy faithfulness exist; released Rust comparisons remain open."
+      "export": "component",
+      "comparisonKind": "native-backend",
+      "comparison": [
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "Both bump components export in the complete assembly, but the branch fixture leaves them empty. Active-row and released Rust AIR comparisons remain open; legacy faithfulness is retained until replacement coverage exists."
     },
     "memory": {
       "lean": [
@@ -78,13 +82,14 @@
         "SP1Clean/Native/Operations/InitialMemoryLookup.lean",
         "SP1Clean/Native/Operations/FinalRamValue.lean"
       ],
-      "export": "subcomponent",
+      "export": "component",
       "comparisonKind": "native-backend",
       "comparison": [
         "rust/sp1-comparison/tests/clean_export.rs",
-        "rust/sp1-comparison/tests/ram_export.rs"
+        "rust/sp1-comparison/tests/ram_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Source/target register and RAM membership and RAM byte/word rows are tested. Ordered wrappers, terminals and complete assembly remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
+      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. The complete branch fixture compares source/target register boundaries, fixed inventories and all table positions; ordered RAM and active memory execution coverage remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
     },
     "program": {
       "lean": [
@@ -93,9 +98,10 @@
       "export": "component",
       "comparisonKind": "sp1-component",
       "comparison": [
-        "rust/sp1-comparison/tests/program_export.rs"
+        "rust/sp1-comparison/tests/program_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Installed verifier-fixed Program provider. Independent released preprocessing, AIR and count-generation comparison covers a contiguous ROM; separate native backend tests cover sparse unordered addresses, unused rows, padding and empty inventory. Complete assembly export and user-mode execution remain open."
+      "limit": "Installed verifier-fixed Program provider. Independent released preprocessing, AIR and count-generation comparison covers a contiguous ROM; native tests cover sparse unordered addresses, unused rows, padding and empty inventory. The complete branch fixture exercises installed fetch generation. User-mode execution remains open."
     },
     "host": {
       "lean": [
@@ -105,19 +111,26 @@
         "SP1Clean/Soundness/HostCallReceivers.lean",
         "SP1Clean/Soundness/HostHintRecordSources.lean"
       ],
-      "export": "subcomponent",
+      "export": "component",
       "comparisonKind": "native-backend",
-      "comparison": ["rust/sp1-comparison/tests/syscall_code_export.rs", "rust/sp1-comparison/tests/write_permission_export.rs", "rust/sp1-comparison/tests/hint_source_export.rs"],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. Complete host export and effects comparison remain open."
+      "comparison": [
+        "rust/sp1-comparison/tests/syscall_code_export.rs",
+        "rust/sp1-comparison/tests/write_permission_export.rs",
+        "rust/sp1-comparison/tests/hint_source_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. All installed host components export in the complete branch assembly, whose call tables remain empty. Active whole-host generation and effects comparison remain open."
     },
     "halt": {
       "lean": [
         "SP1Clean/Proofs/Chips/HaltChip/Formal.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Native execution boundary; export and Rust public-boundary comparison remain open."
+      "export": "component",
+      "comparisonKind": "native-backend",
+      "comparison": [
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "The complete branch fixture exports Halt and checks its nonhalting padding row and public exit contribution. Active HALT execution and independent Rust public-boundary comparisons remain open."
     },
     "unmodeled": {
       "lean": [],
@@ -144,12 +157,13 @@
       "lean": [
         "SP1Clean/Soundness/HostSailBoundary.lean"
       ],
-      "export": "subcomponent",
+      "export": "component",
       "comparisonKind": "native-backend",
       "comparison": [
-        "rust/sp1-comparison/tests/clean_export.rs"
+        "rust/sp1-comparison/tests/clean_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Independent backend fixtures bind their public values. Complete native/Sail public verifier export remains open; no cryptographic SP1 verifier soundness claim."
+      "limit": "The complete native public verifier exports with the 94-table branch assembly; Rust compares its complete interaction ledger and tests public-endpoint binding. Broader memory/host boundary cases remain open; no cryptographic SP1 verifier soundness claim."
     }
   },
   "released": {

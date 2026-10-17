@@ -36,7 +36,6 @@ Never relabel old generated files with a new semantic revision.
 | `SP1Clean/Extracted/ChipOracle/` | Complete instruction rows and AIR lists from Rust `Air::eval`; consumed by whole-chip `ChipFaithful` proofs |
 | `SP1Clean/Extracted/SystemOracle/` | Flat non-instruction rows and the machine public-value block |
 | `SP1Clean/Extracted/CoreAIRManifest.lean` | Actual `RiscvAir::machine()` cluster names and widths, checked by `FormalModel.CoreProfile` |
-| `SP1Clean/Extracted/OpcodeTable.lean` | Executor opcode names/discriminants read at the semantic revision, checked against the Lean alphabet |
 | `SP1Clean/Extracted/Provenance.lean` | Semantic and extractor revisions verified before generation |
 | `export/sp1dump/` | Deterministic events and full padded SP1 `generate_trace` matrices; written separately by `scripts/update_sp1_dumps.sh` |
 | `.lake/witgen-export/run.*/` | Fresh native witness programs, symbolic row maps and checked fixtures; written by `scripts/witgenExport.lean`, validated by `scripts/check_witgen_export.py` |
