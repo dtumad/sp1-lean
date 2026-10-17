@@ -41,6 +41,11 @@ interpreter or scheduler.
   Rust compares all byte pairs and four field multiplicities against SP1's actual preprocessed
   table and AIR, retaining every message occurrence. Native polynomial membership and SP1's
   authenticated preprocessing have different row layouts.
+- All 17 installed Range providers compare with every released preprocessed row and AIR at four
+  multiplicities, retaining duplicate zero-width rows. Both bump components compare with SP1's
+  live trace generators, local constraints and complete ledgers, including timestamp/PC carries,
+  padding and mutations of every column. Bump rows are supplied as inputs; this does not establish
+  native execution-to-row generation or whole-ensemble balance.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and

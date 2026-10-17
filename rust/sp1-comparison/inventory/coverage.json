@@ -56,11 +56,11 @@
         "SP1Clean/Proofs/Chips/ByteChip/RangeChip.lean"
       ],
       "export": "component",
-      "comparisonKind": "native-backend",
+      "comparisonKind": "sp1-component",
       "comparison": [
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/byte_provider_export.rs"
       ],
-      "limit": "All native bit-length providers export in the complete assembly. The branch fixture generates Range13/14/16 rows and compares the complete native ledger; the other range tables stay empty. Independent released Range AIR comparison remains open."
+      "limit": "All 17 installed bit-length providers compare every released Range preprocessed row and AIR at four multiplicities, preserving duplicate and zero-count occurrences. Native polynomial membership has a different physical layout; external Byte balance is separate."
     },
     "bump": {
       "lean": [
@@ -68,11 +68,11 @@
         "SP1Clean/Proofs/Chips/StateBumpChip/Formal.lean"
       ],
       "export": "component",
-      "comparisonKind": "native-backend",
+      "comparisonKind": "sp1-component",
       "comparison": [
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/system_export.rs"
       ],
-      "limit": "Both bump components export in the complete assembly, but the branch fixture leaves them empty. Active-row and released Rust AIR comparisons remain open; legacy faithfulness is retained until replacement coverage exists."
+      "limit": "Both bump components compare released active and padding rows, local constraint satisfaction and complete open-bus ledgers, with mutations of every column. All cells are inputs; this does not prove native execution-to-row generation or whole-ensemble balance."
     },
     "memory": {
       "lean": [

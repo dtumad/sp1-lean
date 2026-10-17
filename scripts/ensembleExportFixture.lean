@@ -2,6 +2,8 @@ import SP1CleanTest.Core.EnsembleExport
 import SP1CleanTest.Core.SyscallCodeExport
 import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
+import SP1CleanTest.Core.RangeProviderExport
+import SP1CleanTest.Core.SystemExport
 import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
@@ -221,6 +223,8 @@ private def exportEnsembleFixture : IO Unit := do
     | .error message => throw (IO.userError message)
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
+      SP1CleanTest.Core.RangeProviderExport.rustExports ++
+      SP1CleanTest.Core.SystemExport.rustExports ++
       SP1CleanTest.Core.SyscallCodeExport.rustExports ++
       SP1CleanTest.Core.ProgramExport.rustExports ++
       SP1CleanTest.Core.WritePermissionExport.rustExports ++

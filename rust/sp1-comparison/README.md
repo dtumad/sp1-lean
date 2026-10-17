@@ -156,6 +156,14 @@ they do not establish complete ensemble balance.
   SUBW, JAL, JALR, UType, AluX0 and memory components other than LoadByte mutate every row;
   the remaining components use selected boundary rows.
 
+The same harness compares both installed bump tables, including every padding row and mutations
+of every column with three deltas. MemoryBump covers 24 refresh/bump events and eight padding rows,
+read/write origins, register boundaries, 24/32/48-bit timestamp boundaries and unchanged old values.
+StateBump covers seven events and 25 padding rows, clock carries and one/two-limb PC carries.
+Separate padding checks preserve SP1's gated memory comparison and ungated PC-carry equations.
+All bump cells are inputs: these tests compare the supplied rows, local constraints and complete
+open-bus ledger, not a native execution-to-row generator.
+
 All six native byte providers are compared with SP1's actual `ByteChip` preprocessed trace and
 AIR over all 65,536 operand pairs, each at multiplicities `0`, `1`, `2` and `p-1`. The full six-entry
 message multiset is compared without dropping zeros or combining repeated MSB keys. Native rows
@@ -164,6 +172,13 @@ layouts and local constraint lists are intentionally different. Boundary-pair mu
 every native column with three deltas. Out-of-range operands must fail even at zero multiplicity;
 zero padding balances, and unmatched nonzero provider rows fail. These tests also run with
 `mprotect` enabled; they establish no additional mode semantics or ensemble count bounds.
+
+All 17 installed fixed-width Range providers are compared with every row of SP1's 131,072-row
+preprocessed Range table and its AIR at the same four multiplicities. The two `(0, 0)` physical
+occurrences are retained. Boundary values exercise every native column, out-of-range values reject
+even at count zero, and unmatched nonzero counts cannot balance. The released count generator is
+also checked on sparse boundary requests. As with Byte, native bit-decomposition rows and SP1's
+fixed rows have different physical layouts.
 
 The uninstalled unified Byte/Range prototype is compared with every row of SP1's actual Byte
 and Range preprocessing and AIR, at the same four standalone count classes. The Range comparison

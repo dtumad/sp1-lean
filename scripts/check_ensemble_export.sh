@@ -8,6 +8,7 @@ python3 scripts/check_pins.py
 mkdir -p .lake/ensemble-export
 scratch=$(mktemp -d "$PWD/.lake/ensemble-export/run.XXXXXX")
 LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-2} lake build --wfail --iofail SP1CleanTest.Core.EnsembleExport \
+  SP1CleanTest.Core.RangeProviderExport SP1CleanTest.Core.SystemExport \
   SP1CleanTest.Core.InstructionExport SP1CleanTest.Core.ByteProviderExport SP1CleanTest.Core.SyscallCodeExport \
   SP1CleanTest.Core.SnapshotRegisterExport SP1CleanTest.Core.StaticProviderExport SP1CleanTest.Core.RamExport \
   SP1CleanTest.Core.PreprocessedByteExport SP1CleanTest.Core.ProgramExport SP1CleanTest.Core.WritePermissionExport \
@@ -54,6 +55,7 @@ files = ["program_fixed.rs", "program_unused.rs", "program_empty.rs", "program_s
     re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() + "_instruction.rs"
     for _, name, _ in CHIPS
 ] + [name + "_byte_provider.rs" for name in ["and", "or", "xor", "u8_range", "ltu", "msb"]]
+files += [f"range_{n}_provider.rs" for n in range(17)] + ["memory_bump.rs", "state_bump.rs"]
 files += ["unified_byte_row.rs", "unified_byte.reference.json"] + [
     f"unified_byte_{n}.rs" for n in [0, 1, 7, 9, 17, 64, 65]
 ] + [
@@ -91,12 +93,12 @@ PY
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export --test clean_export \
-    --test instruction_export --test byte_provider_export --test ram_export \
+    --test instruction_export --test system_export --test byte_provider_export --test ram_export \
     --test unified_byte_export --test syscall_code_export --test program_export --test write_permission_export --test hint_source_export --test installed_assembly_export 2>&1 | tee "$scratch/rust.log"
 CLEAN_ENSEMBLE_EXPORT_DIR="$scratch" CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} \
   cargo test --locked --release --manifest-path rust/sp1-comparison/Cargo.toml \
     --no-default-features --features instruction-export,mprotect \
-    --test clean_export --test instruction_export --test byte_provider_export --test ram_export \
+    --test clean_export --test instruction_export --test system_export --test byte_provider_export --test ram_export \
     --test unified_byte_export --test syscall_code_export --test program_export --test write_permission_export --test hint_source_export --test installed_assembly_export 2>&1 | tee "$scratch/rust-mprotect.log"
 python3 - "$scratch/rust.log" "$scratch/rust-mprotect.log" <<'PY'
 from pathlib import Path
@@ -105,7 +107,7 @@ import subprocess
 import sys
 assert len(sys.argv) == 3
 # Require every binary's exact success count in both configurations.
-for path, counts in zip(sys.argv[1:], [[3, 3, 3, 3, 4, 5, 5, 11, 17, 26], [3, 3, 3, 3, 4, 5, 5, 11, 17, 26]]):
+for path, counts in zip(sys.argv[1:], [[3, 3, 3, 4, 4, 5, 5, 6, 11, 17, 26], [3, 3, 3, 4, 4, 5, 5, 6, 11, 17, 26]]):
     log = Path(path).read_text()
     actual = [int(count) for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", log)]
     if sorted(actual) != counts or "warning:" in log:
@@ -117,4 +119,4 @@ if len(binaries) != 1:
 subprocess.run([sys.executable, "scripts/measure_byte_providers.py", "--artifacts", str(first.parent),
                 "--binary", binaries[0]], check=True)
 PY
-echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 instruction and byte-provider comparisons"
+echo "PASS: deterministic Clean export, Rust backend regressions and released SP1 instruction, system and Byte/Range provider comparisons"
