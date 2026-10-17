@@ -118,9 +118,9 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
                 case["name"]
             );
             let generated = if empty_rom {
-                empty::generate::<F>(&public, &public)
+                empty::generate::<F>(&public, &[])
             } else {
-                rom::generate::<F>(&public, &public)
+                rom::generate::<F>(&public, &[])
             };
             assert_eq!(
                 generated.is_ok(),
@@ -176,7 +176,7 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
 #[test]
 fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
     let public = inputs(65540, 65540);
-    let witness = rom::generate::<F>(&public, &public).unwrap();
+    let witness = rom::generate::<F>(&public, &[]).unwrap();
     assert_eq!(witness.tables.len(), 2);
     assert_eq!(witness.tables[0].len(), 2);
     assert_eq!(
@@ -197,7 +197,6 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
         let mut forged = public.clone();
         forged[column] += F::ONE;
         assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
-        assert!(rom::generate::<F>(&forged, &public).is_err());
     }
     // Address, all endpoint limbs, and one auxiliary witness are mutable trace cells.
     for column in 0..10 {

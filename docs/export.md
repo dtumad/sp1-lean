@@ -45,10 +45,11 @@ interpreter or scheduler.
   Closed interval-provider ensembles test fixed endpoints/bytes, counts, padding and public binding.
   Full ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
 - Native write permissions authenticate writable intervals through a separate verifier-fixed
-  provider. The closed two-request export uses Clean's preallocated input programs to select
-  intervals from addresses. Rust checks literal ROM-byte exclusion, full rows/ledgers, public
-  binding and interval/count mutations. This is not SP1 runtime `mprotect`; full-machine demand
-  generation remains open because the current demand input template cannot compute intervals.
+  provider. Requests carry only an address; the circuit selects interval witnesses internally
+  using the same Clean IR selector as memory reads. The closed two-request export uses Clean's
+  ordinary demand scheduler without private inputs. Rust checks literal ROM-byte exclusion,
+  full rows/ledgers, public binding and interval/count mutations. General padding and complete
+  installed-assembly generation remain open. This is not SP1 runtime `mprotect`.
 - Immutable hint nodes and words publish directly on their existing semantic channels from
   verifier-fixed payloads and eligibility tags. Rust reconstructs node/tail identities, lengths
   and little-endian words from literal byte buffers, including empty and aligned padding. Closed

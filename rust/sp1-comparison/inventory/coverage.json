@@ -338,7 +338,7 @@
     {"name": "sp1.native.host_call", "width": 85, "inputWidth": 71, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.source_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
     {"name": "sp1.native.initial_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []},
-    {"name": "sp1.native.write_permission", "width": 97, "inputWidth": 9, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.write_permission", "width": 97, "inputWidth": 3, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.write_permission.provider", "width": 8, "inputWidth": 8, "fixedWidth": 7, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read", "width": 368, "inputWidth": 66, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.host_halt", "width": 94, "inputWidth": 30, "fixedWidth": 0, "group": "host", "lookups": []},

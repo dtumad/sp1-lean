@@ -656,7 +656,7 @@ private def besideRomRows : List Row :=
     (25, (toElements besideRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
 /-- The strengthened full AIR rejects the reproduced store into its own code byte, including
-an attempted provider row whose query is ROM but whose interval was selected for writable RAM. -/
+an attempted provider row whose writable query is changed to a protected ROM address. -/
 theorem protectedRejectsStoreIntoRom :
     [check storeRomImage storeRomSource publicInput storeRomRows true,
      check storeRomImage storeRomSource publicInput (storeRomRows ++ [permissionRow 65540]) true,
@@ -731,7 +731,7 @@ theorem permissionAddressWindow :
 #guard_msgs in
 #assert_exportable (ProtectedStore.double (p := SP1Prime))
 
-/-- info: exportable ✓ (88 witness cells) -/
+/-- info: exportable ✓ (94 witness cells) -/
 #guard_msgs in
 #assert_exportable (WritePermissionProvider.circuit (p := SP1Prime) storeRomImage)
 

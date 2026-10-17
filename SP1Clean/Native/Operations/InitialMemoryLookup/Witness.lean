@@ -92,13 +92,14 @@ private theorem containsFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMo
   exact decide_eq_false_iff_not.mpr (by omega)
 
 /-- Select one fixed-row field, defaulting to zero outside every interval. -/
-private def selectFE (address : Word (FExpr (ZMod p)))
+def selectFE (address : Word (FExpr (ZMod p)))
     (field : MemoryInterval → ZMod p) : List MemoryInterval → FExpr (ZMod p)
   | [] => 0
   | interval :: rest => .ite (containsFE address interval) (.const (field interval))
       (selectFE address field rest)
 
-private theorem selectFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMod p)))
+/-- The shared interval selector agrees with finite semantic search for every selected field. -/
+theorem selectFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMod p)))
     (value : Word (ZMod p))
     (evaluates : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = value[i])
     (bounded : Word.isU64 value) (field : MemoryInterval → ZMod p)

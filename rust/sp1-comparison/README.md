@@ -89,10 +89,11 @@ that output and exercises these boundaries:
   provider. Independent Rust expectations derive writable bytes from literal ROM PCs. Closed
   two-request fixtures compare complete Lean/Rust rows and ledgers, including repeated requests,
   unused intervals, address bounds and empty ROM; backend tests reject forged endpoints, counts,
-  public values and witness cells. Clean's preallocated witness IR selects intervals from the
-  private address inputs, which are bound to public requests by the complete ledger. This is
-  native ROM protection, not released SP1 runtime `mprotect` semantics. Address-driven demand
-  generation for the full machine remains open.
+  public values and witness cells. Clean's ordinary demand scheduler receives each public address;
+  the production circuit generates interval witnesses using the shared memory selector. No private
+  inputs or fixture-specific interval programs are needed. General padding and complete installed
+  assembly generation remain open. This is native ROM protection, not released SP1 runtime
+  `mprotect` semantics.
 
 - Immutable hint sources use verifier-fixed node/word payloads on their existing channels.
   Independent Rust inputs reconstruct reverse allocation order, tail links, lengths, little-endian

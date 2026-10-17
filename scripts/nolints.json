@@ -3388,7 +3388,6 @@
  ["docBlame", "SP1Clean.WitnessRelation.FunctionalRefinement.map"],
  ["docBlame", "SP1Clean.WritePermissionProvider.Inputs"],
  ["docBlame", "SP1Clean.WritePermissionProvider.Inputs.address"],
- ["docBlame", "SP1Clean.WritePermissionProvider.Inputs.interval"],
  ["docBlame", "SP1Clean.WritePermissionProvider.Permitted"],
  ["docBlame", "SP1Clean.WritePermissionProvider.ProverAssumptions"],
  ["docBlame", "SP1Clean.WritePermissionProvider.Spec"],

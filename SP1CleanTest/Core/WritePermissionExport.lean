@@ -6,9 +6,9 @@ import ToClean.Gadgets.LookupProjection
 /-! # Closed export of native byte-write permissions
 
 The production request circuit and fixed interval provider use Clean's built-in row programs,
-scheduler and Rust emitter. Two address requests supply the public boundary and private generation
-input. A preallocated row program selects each interval using the existing witness IR; this finite
-fixture does not provide an address-driven demand handler for a complete machine.
+scheduler and Rust emitter. Two public address requests drive ordinary demand rows; the production
+circuit selects and authenticates each interval internally, with no private interval or address
+inputs. General table padding remains a separate installed-assembly obligation.
 The policy is native ROM exclusion, not SP1's runtime mprotect state machine.
 -/
 
@@ -51,57 +51,16 @@ def ensemble (rom : ProgramImage) : Ensemble Fp Requests where
   channels := [WritePermissionProvider.channel.toRaw, rom.writePermissionTable.channel.toRaw]
   verifier := verifier
 
-/-- Read one address limb from the fixture's two private address inputs. -/
-def addressCell (column : UInt64) : Witgen.FExpr Fp :=
-  .listGet (List.ofFn fun index : Fin 6 => .hintGet "input" 6 (.const 0) index)
-    (.add (.mul .idx (.const 3)) (.const column))
-
-/-- Native addresses fit in u64 without arithmetic wrap. Circuit assertions still enforce limbs. -/
-def addressValue : Witgen.U64Expr Fp :=
-  .add (.val (addressCell 0))
-    (.add (.mul (.val (addressCell 1)) (.const 65536))
-      (.mul (.val (addressCell 2)) (.const 4294967296)))
-
-/-- Select an inclusive endpoint limb using only Clean's existing conditionals. A miss supplies
-zero endpoints and remains subject to the circuit's membership and comparison checks. -/
-def intervalCell : List MemoryInterval → Fin 6 → Witgen.FExpr Fp
-  | [], _ => .const 0
-  | interval :: rest, column =>
-      .ite (if interval.lower = 0 then .lt addressValue (.const (UInt64.ofNat interval.upper)) else
-        .and (.not (.lt addressValue (.const (UInt64.ofNat interval.lower))))
-          (.lt addressValue (.const (UInt64.ofNat interval.upper))))
-        (.const (toElements (WritePermissionInterval.encode (p := SP1Prime) interval))[column])
-        (intervalCell rest column)
-
-private theorem addressCell_valid (column : UInt64) :
-    (addressCell column).validForRow .prover = true := by
-  simp [addressCell, Witgen.FExpr.validForRow, Witgen.FExprList.validForRow, Witgen.U64Expr.validForRow,
-    Witgen.RowProgram.Source.allowsHints]
-
-private theorem intervalCell_valid (intervals : List MemoryInterval) (column : Fin 6) :
-    (intervalCell intervals column).validForRow .prover = true := by
-  induction intervals with
-  | nil => rfl
-  | cons interval rest ih =>
-    simp only [intervalCell]
-    split_ifs <;> simp [addressValue, Witgen.FExpr.validForRow, Witgen.BExpr.validForRow,
-      Witgen.U64Expr.validForRow, addressCell_valid, ih]
-
-/-- Preallocate two request rows and the complete fixed inventory. Clean owns count updates. -/
+/-- Route public requests directly; preallocate the complete fixed inventory for count updates. -/
 def config (rom : ProgramImage) : WitnessGeneration.Config Fp where
   components := [((requestComponent rom).circuit.name, {
-    mode := .preallocated {
-      rows := 2
-      input := .ofFExprs #v[addressCell 0, addressCell 1, addressCell 2,
-        intervalCell rom.writableIntervals 0, intervalCell rom.writableIntervals 1,
-        intervalCell rom.writableIntervals 2, intervalCell rom.writableIntervals 3,
-        intervalCell rom.writableIntervals 4, intervalCell rom.writableIntervals 5]
-      input_valid := by
-        simp [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs, Witgen.VExpr.validForRow,
-          addressCell_valid, intervalCell_valid]
-      handlers := []
+    mode := .demand {
+      channel := WritePermissionProvider.channel.toRaw
+      direction := .pull
+      aggregation := .perOccurrence
+      input := ⟨[.message 0, .message 1, .message 2]⟩
     }
-    padding := { input := Array.replicate 9 0 }
+    padding := { input := Array.replicate 3 0 }
   }), ((WritePermissionProvider.membershipComponent (p := SP1Prime) rom).circuit.name, {
     mode := .preallocated {
       rows := UInt64.ofNat (rom.writePermissionTable (p := SP1Prime)).height
@@ -146,15 +105,15 @@ def description (rom : ProgramImage) : EnsembleCheck (ensemble rom) where
 /-- Generate from addresses alone with Clean's shared interpreter and scheduler. -/
 def generate (rom : ProgramImage) (requests : Requests Fp) :
     Except String (EnsembleWitness (ensemble rom)) :=
-  WitnessGeneration.generate (ComponentExport.fixture (ensemble rom) Requests) (config rom)
-    requests requests |>.mapError toString
+  WitnessGeneration.generate (ComponentExport.fixture (ensemble rom)) (config rom)
+    requests () |>.mapError toString
 
 /-- Rust emission includes both production components and the fixture's input programs. -/
 def rustExports : List (String × Except String String) :=
   [("write_permission.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble image) Requests) (config image)),
+      (ComponentExport.fixture (ensemble image)) (config image)),
    ("write_permission_empty.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble emptyImage) Requests) (config emptyImage))]
+      (ComponentExport.fixture (ensemble emptyImage)) (config emptyImage))]
 
 /-- Boundary addresses, repeats, code bytes and noncanonical field limbs. -/
 def cases : List (String × Requests Fp × Bool) :=
@@ -162,7 +121,8 @@ def cases : List (String × Requests Fp × Bool) :=
     fun address => (s!"writable-{address}", #v[Address.ofNat address, Address.ofNat address], true)) ++
   ([65536, 65539, 131072, 131075, 0x200040004, 0x200040007].map
     fun address => (s!"code-{address}", #v[Address.ofNat address, Address.ofNat 65540], false)) ++
-  [("noncanonical-low", #v[#v[65536, 0, 0], Address.ofNat 65540], false),
+  [("mixed-intervals", #v[Address.ofNat 65540, Address.ofNat 131076], true),
+   ("noncanonical-low", #v[#v[65536, 0, 0], Address.ofNat 65540], false),
    ("noncanonical-high", #v[#v[0, 0, 65536], Address.ofNat 65540], false)]
 
 end SP1CleanTest.Core.WritePermissionExport
