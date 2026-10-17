@@ -20,7 +20,7 @@ import SP1CleanTest.Core.StaticMembership
 Build the actual handler and consumer tables for different nodes, lengths, destinations, and
 clocks. Check their computed cells and cursor ledger, then decode each selected physical table
 back to the independent padded-write inventory. Installed permission and record-source tests
-check their actual whole-witness ledgers and fixed lookups. These remain subsystem regressions:
+check their actual whole-witness ledgers and fixed columns. These remain subsystem regressions:
 the other channels and complete mixed execution are not claimed satisfied by these fixtures.
 -/
 
@@ -168,12 +168,13 @@ private def assembly :=
 /-- Build every physical slot, retaining unused verifier-fixed membership rows at count zero. -/
 private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
     (inputs : ℕ → List (List Fp))
-    (bounded : ∀ index : Fin ensemble.tables.length, (inputs index).length ≤ UInt64.size) :
+    (bounded : ∀ index : Fin ensemble.tables.length, (inputs index).length ≤ UInt64.size)
+    (sourceDemand : Ledger := []) :
     EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
     (StaticMembership.buildTables ensemble.tables inputs
       (StaticMembership.demandLedger ensemble.tables inputs ["sp1.native.write_permission"]
-        (fun _ _ => #[]) (ProverHint.empty Fp))
+        (fun _ _ => #[]) (ProverHint.empty Fp) ++ sourceDemand)
       (fun _ _ => #[]) (ProverHint.empty Fp) bounded)
     (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
     (StaticMembership.buildTables_components ..)
@@ -264,23 +265,10 @@ theorem installedPermissions :
       HintReadFixtures.balanced (permissionLedger (installed romCalls romRows forged).interactions) = true ∧
       permissionRowsChecked forged = false := by native_decide
 
-private def sourceInputs (calls : List (HostHintReadChip.Inputs Fp))
-    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
-    (index : ℕ) : List (List Fp) :=
-  if index == 86 then nodes.map (fun row => (toElements row).toList)
-  else if index == 87 then records.map (fun row => (toElements row).toList)
-  else installedInputs calls rows [] index
-
-private theorem sourceInputs_bounded (calls : List (HostHintReadChip.Inputs Fp))
-    (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
-    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧
-      nodes.length ≤ UInt64.size ∧ records.length ≤ UInt64.size)
-    (index : ℕ) : (sourceInputs calls rows nodes records index).length ≤ UInt64.size := by
-  unfold sourceInputs
-  split_ifs
-  · simpa only [List.length_map] using bounded.2.2.1
-  · simpa only [List.length_map] using bounded.2.2.2
-  · exact installedInputs_bounded calls rows [] ⟨bounded.1, bounded.2.1, Nat.zero_le _⟩ index
+/-- Supplied request counts may be corrupted independently of the immutable physical rows. -/
+private def sourceDemand (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp)) : Ledger :=
+  nodes.map (fun row => ("sp1.native.hint_node", (toElements row).toList, -1)) ++
+    records.map (fun row => ("sp1.native.hint_word", (toElements row).toList, -1))
 
 private def recordSnapshot (actual : List Bytes) : ExecutionSnapshot :=
   { source with host := { source.host with io := { source.host.io with hints := actual } } }
@@ -292,24 +280,20 @@ private def sourceAssembly (actual : List Bytes) :=
 
 private def withSources (actual : List Bytes) (calls : List (HostHintReadChip.Inputs Fp))
     (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
-    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧
-      nodes.length ≤ UInt64.size ∧ records.length ≤ UInt64.size := by native_decide) :
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size := by native_decide) :
     EnsembleWitness (sourceAssembly actual) :=
-  buildWitness (sourceAssembly actual) (sourceInputs calls rows nodes records)
-    (fun index => sourceInputs_bounded calls rows nodes records bounded index)
+  buildWitness (sourceAssembly actual) (installedInputs calls rows [])
+    (fun index => installedInputs_bounded calls rows [] ⟨bounded.1, bounded.2, Nat.zero_le _⟩ index)
+    (sourceDemand nodes records)
 
 private def sourceRowsChecked (actual : List Bytes) (nodes : List (NodeRecord Fp))
     (records : List (WordRecord Fp)) : Bool :=
-  nodes.all (fun node => (evaluateProgram
-    (HostHintQueue.sourceMain actual (varFromOffset NodeRecord 0)) (toElements node).toList none
-    [FiniteLookup.ofStatic (sourceTable actual)]).1) &&
-  records.all (fun record => (evaluateProgram
-    (HostHintQueue.sourceWordMain actual (varFromOffset WordRecord 0)) (toElements record).toList none
-    [FiniteLookup.ofStatic (sourceWordTable actual)]).1)
+  nodes.all (fun node => (HintSourceExport.observe (HintSourceExport.nodes actual) node).1) &&
+    records.all (fun record => (HintSourceExport.observe (HintSourceExport.words actual) record).1)
 
 /-- The installed fixed sources authenticate every handler/consumer request, with duplicate demand
-and reversed physical rows. Missing providers fail balance; changing fixed bytes preserves the
-claimed ledger but fails the source lookup. Other channels are outside this regression. -/
+and reversed consumer rows. Missing counts fail balance while retaining the complete fixed
+inventory; changing source bytes also fails record balance. Other channels are outside this regression. -/
 theorem installedRecords :
     let rows := (calls.flatMap words).reverse
     let nodes := calls.map (·.node)
@@ -320,7 +304,7 @@ theorem installedRecords :
       HintReadFixtures.balanced (recordLedger witness.interactions) = true ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records).interactions) = false ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows nodes (records.drop 1)).interactions) = false ∧
-      HintReadFixtures.balanced (recordLedger (withSources changed calls rows nodes records).interactions) = true ∧
+      HintReadFixtures.balanced (recordLedger (withSources changed calls rows nodes records).interactions) = false ∧
       sourceRowsChecked changed nodes records = false := by native_decide
 
 /-- Semantic 64-bit agreement does not establish canonical field limbs. -/
@@ -375,11 +359,11 @@ private def queueAssembly (actual : List Bytes) (final : HostHintQueue.State Fp)
 private def withQueueBoundary (actual : List Bytes) (final : HostHintQueue.State Fp)
     (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
-    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧
-      nodes.length ≤ UInt64.size ∧ records.length ≤ UInt64.size := by native_decide) :
+    (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size := by native_decide) :
     EnsembleWitness (queueAssembly actual final) :=
-  buildWitness (queueAssembly actual final) (sourceInputs calls rows nodes records)
-    (fun index => sourceInputs_bounded calls rows nodes records bounded index)
+  buildWitness (queueAssembly actual final) (installedInputs calls rows [])
+    (fun index => installedInputs_bounded calls rows [] ⟨bounded.1, bounded.2, Nat.zero_le _⟩ index)
+    (sourceDemand nodes records)
 
 /-- The actual verifier closes queue balance exactly once. Duplicate handler chains, a forged
 final head, and a reset frontier fail; zero-event identities work. Other AIR channels remain

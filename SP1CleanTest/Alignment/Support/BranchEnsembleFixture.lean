@@ -157,7 +157,8 @@ def builtTables (target : MemorySnapshot) (seeds : List Seed)
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
     (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
-    "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program", "sp1.native.write_permission"]
+    "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program", "sp1.native.write_permission",
+    "sp1.native.hint_node", "sp1.native.hint_word"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
   SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
     (fun index => by

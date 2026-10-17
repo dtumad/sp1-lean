@@ -8,6 +8,7 @@ import SP1CleanTest.Core.RamExport
 import SP1CleanTest.Core.UnifiedByteBenchmarks
 import SP1CleanTest.Core.PreprocessedByteExport
 import SP1CleanTest.Core.ProgramExport
+import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.WritePermissionExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
@@ -67,6 +68,51 @@ private def permissionReference (rom : SP1Clean.Model.Core.ProgramImage) (empty 
         throw (IO.userError s!"unexpected permission acceptance: {name}")
       pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
   return toJson cases
+
+private def hintCases {Row : TypeMap} [ProvableType Row]
+    (samples : List (Row (ZMod SP1Clean.SP1Prime))) :
+    List (String × List (Row (ZMod SP1Clean.SP1Prime)) × Bool) :=
+  let zero := fromElements (Vector.replicate (size Row) 0)
+  let first := samples.headD zero
+  samples.zipIdx.map (fun (record, index) => (s!"record-{index}", [record, record], true)) ++
+    [("mixed", [first, samples.getLastD zero], true)] ++
+    (List.finRange (size Row)).map (fun (index : Fin (size Row)) =>
+      let changed := fromElements ((toElements first).set index.val ((toElements first)[index] + 1))
+      (s!"forged-{index.val}", [first, changed], false)) ++ [("padding", [zero, zero], false)]
+
+private def hintReference {Row : TypeMap} [ProvableType Row]
+    (source : SP1CleanTest.Core.HintSourceExport.Source Row)
+    (cases : List (String × List (Row (ZMod SP1Clean.SP1Prime)) × Bool)) : IO Json := do
+  let results ← cases.mapM fun (name, requests, expected) => do
+    let fields := [("name", toJson name),
+      ("publicInput", toJson (requests.flatMap fun row => (toElements row).toList.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.HintSourceExport.generate source requests with
+    | .error message =>
+      if expected then throw (IO.userError s!"hint {name}: {message}")
+      pure (Json.mkObj (fields ++ [("error", toJson message)]))
+    | .ok witness =>
+      unless (SP1CleanTest.Core.HintSourceExport.description source requests.length).checkWitness
+          SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected hint acceptance: {name}")
+      pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+  return toJson results
+
+private def hintReferences : IO Json := do
+  let hints := SP1CleanTest.Core.HintSourceExport.hints
+  let nodes := SP1Clean.Model.Core.HintQueue.sourceRows (p := SP1Clean.SP1Prime) hints
+  let words := SP1Clean.Model.Core.HintQueue.sourceWordRows (p := SP1Clean.SP1Prime) hints
+  let nodeCases := hintCases nodes
+  let wordCases := hintCases words
+  return Json.mkObj [
+    ("nodes", ← hintReference (SP1CleanTest.Core.HintSourceExport.nodes hints) nodeCases),
+    ("words", ← hintReference (SP1CleanTest.Core.HintSourceExport.words hints) wordCases),
+    ("nodes_empty", ← hintReference (SP1CleanTest.Core.HintSourceExport.nodes [])
+      (nodeCases.map fun (name, rows, _) => (name, rows, false))),
+    ("words_empty", ← hintReference (SP1CleanTest.Core.HintSourceExport.words [])
+      (wordCases.map fun (name, rows, _) => (name, rows, false))),
+    ("nodes_unused", ← hintReference (SP1CleanTest.Core.HintSourceExport.nodes hints) [("unused", [], true)]),
+    ("words_unused", ← hintReference (SP1CleanTest.Core.HintSourceExport.words hints) [("unused", [], true)])]
 
 private def unifiedByteReference : IO Json := do
   let cases ← SP1CleanTest.Core.UnifiedByteExport.cases.mapM fun (name, rows, expected) => do
@@ -137,6 +183,7 @@ private def exportEnsembleFixture : IO Unit := do
       SP1CleanTest.Core.SyscallCodeExport.rustExports ++
       SP1CleanTest.Core.ProgramExport.rustExports ++
       SP1CleanTest.Core.WritePermissionExport.rustExports ++
+      SP1CleanTest.Core.HintSourceExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++
@@ -155,6 +202,7 @@ private def exportEnsembleFixture : IO Unit := do
   IO.FS.writeFile (out / "program_fixed.reference.json")
     ((Json.mkObj [("active", programActive), ("unused", programUnused), ("empty", programEmpty),
       ("sparse", programSparse)]).compress ++ "\n")
+  IO.FS.writeFile (out / "hint_sources.reference.json") ((← hintReferences).compress ++ "\n")
   let permissions ← permissionReference SP1CleanTest.Core.WritePermissionExport.image false
   let emptyPermissions ← permissionReference SP1CleanTest.Core.WritePermissionExport.emptyImage true
   IO.FS.writeFile (out / "write_permission.reference.json")

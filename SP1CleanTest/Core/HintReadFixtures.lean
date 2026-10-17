@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.HostChecks
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
 import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
@@ -40,8 +41,7 @@ def checked (row : Row) (corrupt : Option ℕ := none) : Bool × Ledger :=
     (toElements row.2).toList corrupt
 
 def source (actual : Bytes) (record : WordRecord Fp) : Bool × Ledger :=
-  evaluateProgram (HostHintQueue.sourceWordMain [actual] (varFromOffset WordRecord 0))
-    (toElements record).toList none [FiniteLookup.ofStatic (sourceWordTable [actual])]
+  HintSourceExport.observe (HintSourceExport.words [actual]) record
 
 def permission (image : ProgramImage) (address : ℕ) : Bool × Ledger :=
   match WritePermissionProvider.populate? (p := SP1Prime) image address with

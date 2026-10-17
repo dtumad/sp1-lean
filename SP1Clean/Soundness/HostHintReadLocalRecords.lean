@@ -337,7 +337,7 @@ theorem word_spec (witness : EnsembleWitness (ensemble image source others resou
 
 /-- Source hint records and the two physical bank terminals. The verifier supplies their endpoints. -/
 def sourceResources (hints : List Bytes) : List (Component (ZMod p)) :=
-  [{ circuit := HostHintQueue.source hints, Assumptions := (HostHintQueue.source hints).Assumptions }, { circuit := HostHintQueue.sourceWord hints, Assumptions := (HostHintQueue.sourceWord hints).Assumptions },
+  [HostHintQueue.source hints, HostHintQueue.sourceWord hints,
     { circuit := HostCommitBoundary.terminal false, Assumptions := (HostCommitBoundary.terminal false).Assumptions }, { circuit := HostCommitBoundary.terminal true, Assumptions := (HostCommitBoundary.terminal true).Assumptions }]
 
 private theorem source_auxiliary_names (hints : List Bytes) :
@@ -392,30 +392,55 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
     rw [List.contains_iff_mem.mpr (same.symm ▸ added)] at absent
     exact Bool.noConfusion absent
 
-/-- The existing handlers plus source providers need no caller-supplied record-source proof. -/
-theorem source_record_sources (hints : List Bytes) (store : Store)
-    (extension : Extends (ofList hints).1 store)
-    (component : Component (ZMod p))
-    (member : component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++ sourceResources hints) :
-    HostHintRecordSources.Authenticates store component := by
-  rcases List.mem_append.mp member with handler | fixed
-  · exact HostHintRecordSources.available_authenticates store component handler
-  · simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at fixed
-    rcases fixed with rfl | rfl | rfl | rfl
-    · exact (HostHintRecordSources.source_node_authenticates hints).extend extension
-    · exact (HostHintRecordSources.source_word_authenticates hints).extend extension
-    all_goals
-      constructor <;> apply Component.Authenticates.of_silent <;>
-        simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel, Channel.toRaw, circuit_norm]
-
-/-- The fixed-source registration authenticates its actual records from the snapshot's hint bytes. -/
+/-- Fixed source records authenticate from actual physical prefixes and canonical prover data.
+No additional source-validity or membership-balance premise is supplied by the caller. -/
 theorem source_record_authentication
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available
       (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
     (store : Store) (extension : Extends (ofList source.host.io.hints).1 store)
-    (constraints : witness.Constraints) : RecordAuthentication witness store :=
-  record_authentication_of_components witness store
-    (source_record_sources source.host.io.hints store extension) constraints
+    (constraints : witness.Constraints) : RecordAuthentication witness store := by
+  intro table member
+  have present := List.mem_of_mem_drop member
+  have checked := constraints table present
+  have consistent := witness.dataConsistency_of_mem table present
+  have fromComponent (authenticated : HostHintRecordSources.Authenticates store table.component) :
+      table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds store) ∧
+      table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds store) :=
+    ⟨Table.Authenticates.of_component table _ _ authenticated.node checked,
+      Table.Authenticates.of_component table _ _ authenticated.word checked⟩
+  have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+  rw [HostLocalCore.auxiliaryTables_components] at component
+  simp only [List.map_cons, List.mem_append, List.mem_cons, wordResources, sourceResources,
+    List.not_mem_nil, or_false] at component
+  rcases component with (handler | other) | ((next | last) | (node | word | terminal | deferred))
+  · apply fromComponent
+    rw [handler]
+    exact HostHintRecordSources.handler_authenticates store
+  · exact fromComponent (HostHintRecordSources.available_authenticates store table.component other)
+  · apply fromComponent
+    rw [next]
+    exact HostHintRecordSources.word_consumer_authenticates store false
+  · apply fromComponent
+    rw [last]
+    exact HostHintRecordSources.word_consumer_authenticates store true
+  · have authenticated := HostHintRecordSources.source_node_authenticates source.host.io.hints table
+      node consistent checked
+    exact ⟨authenticated.1.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩),
+      authenticated.2.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩)⟩
+  · have authenticated := HostHintRecordSources.source_word_authenticates source.host.io.hints table
+      word consistent checked
+    exact ⟨authenticated.1.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩),
+      authenticated.2.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩)⟩
+  · apply fromComponent
+    rw [terminal]
+    constructor <;> apply Component.Authenticates.of_silent <;>
+      simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel,
+        Channel.toRaw, circuit_norm]
+  · apply fromComponent
+    rw [deferred]
+    constructor <;> apply Component.Authenticates.of_silent <;>
+      simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel,
+        Channel.toRaw, circuit_norm]
 
 theorem source_interface (hints : List Bytes) :
     ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) := by

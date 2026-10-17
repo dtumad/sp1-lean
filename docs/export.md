@@ -49,6 +49,12 @@ interpreter or scheduler.
   intervals from addresses. Rust checks literal ROM-byte exclusion, full rows/ledgers, public
   binding and interval/count mutations. This is not SP1 runtime `mprotect`; full-machine demand
   generation remains open because the current demand input template cannot compute intervals.
+- Immutable hint nodes and words publish directly on their existing semantic channels from
+  verifier-fixed payloads and eligibility tags. Rust reconstructs node/tail identities, lengths
+  and little-endian words from literal byte buffers, including empty and aligned padding. Closed
+  fixtures compare generation outcomes and all rows/ledgers, and test public/count/height binding.
+  Native resource limits preserve the full word inventory; oversized inputs fail closed without
+  truncation. This source-queue contract is separate from complete host execution.
 - Static membership retains original row order and uses a fixed eligibility tag to select the
   first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty tables
   have one inactive row; other heights round up to a power of two. Capacity proofs must account
@@ -96,9 +102,9 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-Two installed legacy lookup meanings remain: hint nodes and hint words.
-Built-in lowering rejects these forms; migrate their consumers before retiring
-chip JSON comparison.
+The installed 94-component host assembly is lookup-free. Whole-assembly routing, witness
+construction and Rust comparison remain open; retiring chip JSON comparison also requires
+replacing its remaining live consumers and migration coverage.
 
 The native eight-call syscall profile uses degree-three arithmetic assertions and six shared
 products. Its full-register contract remains independent of channel balance. Clean exports the

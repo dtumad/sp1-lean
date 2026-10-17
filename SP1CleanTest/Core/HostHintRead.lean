@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HintSourceExport
 import Clean.Circuit.WitnessExport
 import SP1CleanTest.Core.HintReadFixtures
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -42,8 +43,7 @@ private def evaluate (row : HostHintReadChip.Inputs Fp) (corrupt : Option ℕ :=
     (toElements row).toList corrupt
 
 private def source (actual : Bytes) (row : NodeRecord Fp) : Bool × Ledger :=
-  evaluateProgram (HostHintQueue.sourceMain [actual] (varFromOffset NodeRecord 0))
-    (toElements row).toList none [FiniteLookup.ofStatic (sourceTable [actual])]
+  HintSourceExport.observe (HintSourceExport.nodes [actual]) row
 
 private def instruction (call : HostCallChip.Message Fp) : Bool × Ledger :=
   let row : SyscallInstrsChip.Inputs Fp :=
@@ -151,10 +151,8 @@ theorem historicalHeads :
         | none => false
         | some executed =>
           let row := HostHintReadChip.populate (p := SP1Prime) store head 1 265 executed
-          let node := evaluateProgram (HostHintQueue.sourceMain hints (varFromOffset NodeRecord 0))
-            (toElements row.node).toList none [FiniteLookup.ofStatic (sourceTable hints)]
-          let word := evaluateProgram (HostHintQueue.sourceWordMain hints (varFromOffset WordRecord 0))
-            (toElements row.endStep.word).toList none [FiniteLookup.ofStatic (sourceWordTable hints)]
+          let node := HintSourceExport.observe (HintSourceExport.nodes hints) row.node
+          let word := HintSourceExport.observe (HintSourceExport.words hints) row.endStep.word
           (evaluate row).1 && node.1 && word.1 &&
             executed == HostHintReadChip.execution row (host (bytes :: rest)) bytes rest &&
             Address.toNat row.next.head == head - 1 && Address.toNat row.next.allocated == 3

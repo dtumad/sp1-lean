@@ -94,8 +94,15 @@ that output and exercises these boundaries:
   native ROM protection, not released SP1 runtime `mprotect` semantics. Address-driven demand
   generation for the full machine remains open.
 
-Two legacy lookup meanings still block full export: hint nodes and hint words. The experimental Clean pin adds message predicates and indexed
-preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
+- Immutable hint sources use verifier-fixed node/word payloads on their existing channels.
+  Independent Rust inputs reconstruct reverse allocation order, tail links, lengths, little-endian
+  words and mandatory final padding. Closed fixtures compare every physical row and ledger
+  occurrence, generation failures and raw acceptance, including repeated requests, unused sources
+  and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
+  are native source-queue tests; complete SP1 host execution remains outside their scope.
+
+The installed 94-component assembly is lookup-free. The experimental Clean pin adds message
+predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
 whole-assembly generation still needs its own routing, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;
 they do not establish complete ensemble balance.

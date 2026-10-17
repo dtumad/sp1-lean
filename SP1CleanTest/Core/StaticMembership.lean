@@ -18,11 +18,14 @@ variable {F : Type} [FiniteField F]
 abbrev Ledger (F : Type) := List (String × List F × F)
 
 /-- Allocate literal fixed-message demand to its first physical occurrence. Later duplicates
-remain present with zero count. This fixture helper does not replace Clean's scheduler. -/
-def literalSuffix (channel : String) (ledger : Ledger F) (fixed : FixedColumns F)
+remain present with zero count. A trailing eligibility column is not part of the payload.
+This fixture helper does not replace Clean's scheduler. -/
+def literalSuffix (channel : String) (width : ℕ) (ledger : Ledger F) (fixed : FixedColumns F)
     (index : ℕ) : Array F :=
-  let message := fixed.row (UInt64.ofNat index)
-  if (List.range index).any (fun earlier => fixed.row (UInt64.ofNat earlier) == message) then #[0]
+  let row := fixed.row (UInt64.ofNat index)
+  let message := row.take width
+  if (row.size == width + 1 && row[width]?.getD 0 == 0) ||
+      (List.range index).any (fun earlier => (fixed.row (UInt64.ofNat earlier)).take width == message) then #[0]
   else #[-((ledger.filter fun entry => entry.1 == channel && entry.2.1 == message.toList).map (·.2.2)).sum]
 
 /-- Assign demand only to verifier-eligible rows. Duplicate and padding rows retain their
@@ -79,7 +82,7 @@ def buildTables (components : List (Component F)) (inputs : ℕ → List (List F
     Table.buildWithFixed component ((inputs index.val).map fun cells =>
       fromElements (Vector.ofFn fun cell => cells[cell.val]?.getD 0))
       (fun fixed index => match component.circuit.channelsWithRequirements with
-        | [channel] => literalSuffix channel.name ledger fixed index
+        | [channel] => literalSuffix channel.name channel.arity ledger fixed index
         | _ => #[]) data hint (by simpa only [List.length_map] using bounded index)
 
 /-- Construction preserves the whole physical inventory and its order. -/

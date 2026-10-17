@@ -96,7 +96,7 @@ def programEvaluation (image : ProgramImage) (ledger : Ledger) : Bool × Ledger 
   let component := FixedProgramProvider.Preprocessed.component (p := SP1Prime) image
   let fixed := FixedProgramProvider.Preprocessed.fixedColumns (p := SP1Prime) image
   let table := Table.buildPreallocated component fixed rfl
-    (SP1CleanTest.StaticMembership.literalSuffix "SP1Program" ledger fixed)
+    (SP1CleanTest.StaticMembership.literalSuffix "SP1Program" (size Channels.ProgramMsg) ledger fixed)
     (fun _ _ => #[]) (ProverHint.empty Fp)
   let valid := table.table.all fun row => component.operations.constraints.all fun expression =>
     expression.eval (table.environment row) == 0

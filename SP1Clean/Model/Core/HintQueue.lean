@@ -117,6 +117,14 @@ theorem prepend_size (store : Store) (head : ℕ) (prepended : List Bytes) :
   | nil => simp [prepend]
   | cons bytes rest ih => simp [prepend, ih, Nat.add_assoc]
 
+/-- Allocation stores every new byte buffer once, in reverse order of the logical queue. -/
+theorem prepend_bytes (store : Store) (head : ℕ) (prepended : List Bytes) :
+    ((prepend store head prepended).1.toList.map Node.bytes) =
+      store.toList.map Node.bytes ++ prepended.reverse := by
+  induction prepended with
+  | nil => simp [prepend]
+  | cons bytes rest ih => simp [prepend, ih, List.append_assoc]
+
 theorem prepend_extends (store : Store) (head : ℕ) (prepended : List Bytes) :
     Extends store (prepend store head prepended).1 := by
   induction prepended with
@@ -154,6 +162,11 @@ theorem ofList_represents (hints : List Bytes) :
 
 theorem ofList_size (hints : List Bytes) : (ofList hints).1.size = hints.length := by
   simpa [ofList] using prepend_size #[] 0 hints
+
+/-- The physical source inventory contains exactly the original hint byte buffers. -/
+theorem ofList_bytes (hints : List Bytes) :
+    (ofList hints).1.toList.map Node.bytes = hints.reverse := by
+  simpa [ofList] using prepend_bytes #[] 0 hints
 
 theorem ofList_wellFormed (hints : List Bytes) : WellFormed (ofList hints).1 :=
   prepend_wellFormed wellFormed_empty (by decide) hints

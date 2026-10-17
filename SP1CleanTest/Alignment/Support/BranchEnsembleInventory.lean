@@ -7,13 +7,8 @@ namespace SP1Clean.Audit.BranchEnsemble
 
 open Circuit Air.Flat SP1Clean.Model.Core
 
-/-- The two remaining legacy fixed meanings retain their original identities. -/
-theorem fixed_names (target : MemorySnapshot) : (fixed target).map (·.table.name) =
-    ["sp1.native.hint_source_nodes",
-      "sp1.native.hint_source_words"] := by
-  simp only [List.map_cons, List.map_nil, fixed, FiniteLookup.ofStatic,
-    HintQueue.sourceTable, HintQueue.sourceWordTable, StaticTable.ofRows,
-    StaticTable.toTable, Table.toRaw]
+/-- The installed assembly no longer requires finite lookup oracles. -/
+theorem fixed_names (target : MemorySnapshot) : (fixed target).map (·.table.name) = [] := rfl
 
 /-- The checker authenticates all physical lookups and the separate verifier's complete channels. -/
 def description (target : MemorySnapshot) : EnsembleCheck ((assembly target).withChannels (channels target)) where

@@ -65,6 +65,14 @@ def Table.Authenticates (table : Table F) (channel : Channel F Record)
       interaction.mult ≠ 0 → interaction.mult ≠ -1 →
         ∃ record, interaction.msg = (toElements record).toArray ∧ property record
 
+/-- Transport physical source authentication through a semantic implication. -/
+theorem Table.Authenticates.mono {table : Table F} {channel : Channel F Record}
+    {property next : Record F → Prop} (authenticated : table.Authenticates channel property)
+    (implies : ∀ record, property record → next record) : table.Authenticates channel next := by
+  intro row member interaction emitted active notPull
+  obtain ⟨record, payload, valid⟩ := authenticated row member interaction emitted active notPull
+  exact ⟨record, payload, implies record valid⟩
+
 /-- Unconditional component-local source proofs authenticate every constrained row of a table. -/
 theorem Table.Authenticates.of_component (table : Table F) (channel : Channel F Record)
     (property : Record F → Prop) (source : table.component.Authenticates channel property)

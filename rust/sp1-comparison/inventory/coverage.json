@@ -107,8 +107,8 @@
       ],
       "export": "subcomponent",
       "comparisonKind": "native-backend",
-      "comparison": ["rust/sp1-comparison/tests/syscall_code_export.rs", "rust/sp1-comparison/tests/write_permission_export.rs"],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Complete host export and effects comparison remain open."
+      "comparison": ["rust/sp1-comparison/tests/syscall_code_export.rs", "rust/sp1-comparison/tests/write_permission_export.rs", "rust/sp1-comparison/tests/hint_source_export.rs"],
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. Complete host export and effects comparison remain open."
     },
     "halt": {
       "lean": [
@@ -363,8 +363,8 @@
     {"name": "sp1.native.hint_len.empty", "width": 162, "inputWidth": 40, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read_word.next", "width": 296, "inputWidth": 31, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read_word.last", "width": 296, "inputWidth": 31, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.hint_node.source", "width": 10, "inputWidth": 10, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.hint_source_nodes"]},
-    {"name": "sp1.native.hint_word.source", "width": 11, "inputWidth": 11, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.hint_source_words"]},
+    {"name": "sp1.native.hint_node.source", "width": 12, "inputWidth": 12, "fixedWidth": 11, "group": "host", "lookups": []},
+    {"name": "sp1.native.hint_word.source", "width": 13, "inputWidth": 13, "fixedWidth": 12, "group": "host", "lookups": []},
     {"name": "sp1.native.commit.terminal", "width": 82, "inputWidth": 34, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.commit_deferred.terminal", "width": 82, "inputWidth": 34, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.memory.check.registers.changes", "width": 10, "inputWidth": 10, "fixedWidth": 0, "group": "memory", "lookups": []},

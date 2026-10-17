@@ -193,6 +193,39 @@ def sourceWordRows (hints : List Bytes) : List (WordRecord (ZMod p)) :=
       nodeWordRows (index.val + 1) (ofList hints).1[index.val].bytes).flatten
   else []
 
+omit [Fact (2 ^ 17 < p)] in
+/-- The complete physical source-word inventory fits the actual hint count and byte payload.
+The mandatory final word costs one row per hint, including empty and aligned buffers. -/
+theorem sourceWordRows_length_le (hints : List Bytes) :
+    (sourceWordRows (p := p) hints).length ≤ hints.length + (hints.map List.length).sum := by
+  unfold sourceWordRows
+  split
+  · simp only [List.length_flatten, List.map_ofFn, Function.comp_def, nodeWordRows_length]
+    have stored : (List.ofFn fun index : Fin (ofList hints).1.size =>
+        (ofList hints).1[index.val]) = (ofList hints).1.toList := by
+      rw [← Array.toList_ofFn, Array.ofFn_getElem]
+    have counts := congrArg (fun nodes : List Node =>
+      (nodes.map fun node => min (wordCount node.bytes) (2 ^ 48)).sum) stored
+    simp only [List.map_ofFn, Function.comp_def] at counts
+    rw [counts]
+    have mappedBytes : ((ofList hints).1.toList.map fun node => min (wordCount node.bytes) (2 ^ 48)) =
+        (hints.reverse.map fun bytes => min (wordCount bytes) (2 ^ 48)) := by
+      rw [← ofList_bytes hints, List.map_map]
+      rfl
+    rw [mappedBytes, List.map_reverse, List.sum_reverse]
+    have bound (buffers : List Bytes) :
+        (buffers.map fun bytes => min (wordCount bytes) (2 ^ 48)).sum ≤
+          buffers.length + (buffers.map List.length).sum := by
+      induction buffers with
+      | nil => simp
+      | cons bytes rest ih =>
+          simp only [List.map_cons, List.sum_cons, List.length_cons]
+          have word : wordCount bytes ≤ bytes.length + 1 := by unfold wordCount; omega
+          have small := (Nat.min_le_left (wordCount bytes) (2 ^ 48)).trans word
+          omega
+    exact bound hints
+  · simp
+
 @[irreducible] def sourceWordTable (hints : List Bytes) : StaticTable (ZMod p) WordRecord :=
   StaticTable.ofRows "sp1.native.hint_source_words" (sourceWordRows hints)
 

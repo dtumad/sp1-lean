@@ -2,30 +2,18 @@ import ToClean.Gadgets.LookupProjection
 import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
 import ToClean.Air.EnsembleCheck
 
-/-! # Complete static lookup meanings of the branch host assembly -/
+/-! # Lookup-free branch host assembly -/
 
 namespace SP1Clean.Audit.BranchEnsemble
 
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
 
-/-- Full finite lookup meanings, including installed tables with no physical rows in this fixture. -/
-def fixed (_target : MemorySnapshot) : List (FiniteLookup Fp) :=
-  [FiniteLookup.ofStatic (HintQueue.sourceTable (p := SP1Prime) []),
-    FiniteLookup.ofStatic (HintQueue.sourceWordTable (p := SP1Prime) [])]
-
-
-/-- Static lookup indices for every installed component, including all currently empty providers. -/
-def componentLookupIndices : List (List (Fin 2)) :=
-  [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [0], [1], [], [], [], [], [], []]
+/-- All installed providers use AIR constraints and channels; no legacy lookup oracle remains. -/
+def fixed (_target : MemorySnapshot) : List (FiniteLookup Fp) := []
 
 /-- Component selection ranges over all 94 installed physical slots. -/
 abbrev componentAt (target : MemorySnapshot) (index : Fin 94) : Component Fp :=
   (assembly target).tables[index.val]'(by change index.val < 94; exact index.isLt)
-
-/-- The lookup rows promised for one installed component. -/
-def fixedFor (target : MemorySnapshot) (index : Fin 94) : List (RawTable Fp) :=
-  (componentLookupIndices[index.val]'(by change index.val < 94; exact index.isLt)).map fun table =>
-    ((fixed target)[table.val]'(by change table.val < 2; exact table.isLt)).table
 
 attribute [local circuit_norm]
   Gadgets.BitwiseByte.circuit
@@ -284,7 +272,8 @@ attribute [local circuit_norm]
 attribute [local circuit_norm] supportedChipFor RangeChip.circuitFor
   ProtectedStore.byte ProtectedStore.half ProtectedStore.word ProtectedStore.double
   DivRemChip.populateRow DivRemChip.constrainRow DivRemChip.assertZeros
-  HostHintQueue.source HostHintQueue.sourceMain HostHintQueue.sourceWord HostHintQueue.sourceWordMain
+  HostHintQueue.source HostHintQueue.sourceWord
+  StaticTable.payloadComponent StaticTable.payloadProvider
   HostCommitBoundary.terminal HostCommitBoundary.terminalMain
 
 -- Normalize proof-bearing wrappers only through their operation projection lemmas.
@@ -293,577 +282,576 @@ attribute [local circuit_norm] List.append_eq Component.rowOperations
   GeneralFormalCircuit.WithHint.toSubcircuit_lookups FormalCircuit.toSubcircuit_lookups
   Operations.lookups_toFlat Operations.lookups Operations.toNested_toFlat FlatOperation.lookups
   Gadgets.ToBits.rangeCheck Gadgets.ToBits.toBits
-  fixedFor componentLookupIndices fixed FiniteLookup.ofStatic
   InitialMemoryLookup.circuitNamed InitialMemoryRead.circuitNamed
   OrderedFinalProvider.registerCircuit OrderedFinalProvider.ramCircuit
 
-/-- Raw lookup identities at physical component 0. -/
+/-- No legacy lookup at physical component 0. -/
 private theorem lookup_slot_0 (target : MemorySnapshot) :
-    (componentAt target 0).rowOperations.lookups.map (·.table) = fixedFor target 0 := by
+    (componentAt target 0).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 1. -/
+/-- No legacy lookup at physical component 1. -/
 private theorem lookup_slot_1 (target : MemorySnapshot) :
-    (componentAt target 1).rowOperations.lookups.map (·.table) = fixedFor target 1 := by
+    (componentAt target 1).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 2. -/
+/-- No legacy lookup at physical component 2. -/
 private theorem lookup_slot_2 (target : MemorySnapshot) :
-    (componentAt target 2).rowOperations.lookups.map (·.table) = fixedFor target 2 := by
+    (componentAt target 2).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 3. -/
+/-- No legacy lookup at physical component 3. -/
 private theorem lookup_slot_3 (target : MemorySnapshot) :
-    (componentAt target 3).rowOperations.lookups.map (·.table) = fixedFor target 3 := by
+    (componentAt target 3).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 4. -/
+/-- No legacy lookup at physical component 4. -/
 private theorem lookup_slot_4 (target : MemorySnapshot) :
-    (componentAt target 4).rowOperations.lookups.map (·.table) = fixedFor target 4 := by
+    (componentAt target 4).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 5. -/
+/-- No legacy lookup at physical component 5. -/
 private theorem lookup_slot_5 (target : MemorySnapshot) :
-    (componentAt target 5).rowOperations.lookups.map (·.table) = fixedFor target 5 := by
+    (componentAt target 5).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 6. -/
+/-- No legacy lookup at physical component 6. -/
 private theorem lookup_slot_6 (target : MemorySnapshot) :
-    (componentAt target 6).rowOperations.lookups.map (·.table) = fixedFor target 6 := by
+    (componentAt target 6).rowOperations.lookups.map (·.table) = [] := by
   change (FixedProgramProvider.Preprocessed.component (p := SP1Prime) image).rowOperations.lookups.map (·.table) = []
   rw [← Component.lookups_eq, FixedProgramProvider.Preprocessed.component_lookups]
   rfl
 
-/-- Raw lookup identities at physical component 7. -/
+/-- No legacy lookup at physical component 7. -/
 private theorem lookup_slot_7 (target : MemorySnapshot) :
-    (componentAt target 7).rowOperations.lookups.map (·.table) = fixedFor target 7 := by
+    (componentAt target 7).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 8. -/
+/-- No legacy lookup at physical component 8. -/
 private theorem lookup_slot_8 (target : MemorySnapshot) :
-    (componentAt target 8).rowOperations.lookups.map (·.table) = fixedFor target 8 := by
+    (componentAt target 8).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 9. -/
+/-- No legacy lookup at physical component 9. -/
 private theorem lookup_slot_9 (target : MemorySnapshot) :
-    (componentAt target 9).rowOperations.lookups.map (·.table) = fixedFor target 9 := by
+    (componentAt target 9).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 10. -/
+/-- No legacy lookup at physical component 10. -/
 private theorem lookup_slot_10 (target : MemorySnapshot) :
-    (componentAt target 10).rowOperations.lookups.map (·.table) = fixedFor target 10 := by
+    (componentAt target 10).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 11. -/
+/-- No legacy lookup at physical component 11. -/
 private theorem lookup_slot_11 (target : MemorySnapshot) :
-    (componentAt target 11).rowOperations.lookups.map (·.table) = fixedFor target 11 := by
+    (componentAt target 11).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 12. -/
+/-- No legacy lookup at physical component 12. -/
 private theorem lookup_slot_12 (target : MemorySnapshot) :
-    (componentAt target 12).rowOperations.lookups.map (·.table) = fixedFor target 12 := by
+    (componentAt target 12).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 13. -/
+/-- No legacy lookup at physical component 13. -/
 private theorem lookup_slot_13 (target : MemorySnapshot) :
-    (componentAt target 13).rowOperations.lookups.map (·.table) = fixedFor target 13 := by
+    (componentAt target 13).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 14. -/
+/-- No legacy lookup at physical component 14. -/
 private theorem lookup_slot_14 (target : MemorySnapshot) :
-    (componentAt target 14).rowOperations.lookups.map (·.table) = fixedFor target 14 := by
+    (componentAt target 14).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 15. -/
+/-- No legacy lookup at physical component 15. -/
 private theorem lookup_slot_15 (target : MemorySnapshot) :
-    (componentAt target 15).rowOperations.lookups.map (·.table) = fixedFor target 15 := by
+    (componentAt target 15).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 16. -/
+/-- No legacy lookup at physical component 16. -/
 private theorem lookup_slot_16 (target : MemorySnapshot) :
-    (componentAt target 16).rowOperations.lookups.map (·.table) = fixedFor target 16 := by
+    (componentAt target 16).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 17. -/
+/-- No legacy lookup at physical component 17. -/
 private theorem lookup_slot_17 (target : MemorySnapshot) :
-    (componentAt target 17).rowOperations.lookups.map (·.table) = fixedFor target 17 := by
+    (componentAt target 17).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 18. -/
+/-- No legacy lookup at physical component 18. -/
 private theorem lookup_slot_18 (target : MemorySnapshot) :
-    (componentAt target 18).rowOperations.lookups.map (·.table) = fixedFor target 18 := by
+    (componentAt target 18).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 19. -/
+/-- No legacy lookup at physical component 19. -/
 private theorem lookup_slot_19 (target : MemorySnapshot) :
-    (componentAt target 19).rowOperations.lookups.map (·.table) = fixedFor target 19 := by
+    (componentAt target 19).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 20. -/
+/-- No legacy lookup at physical component 20. -/
 private theorem lookup_slot_20 (target : MemorySnapshot) :
-    (componentAt target 20).rowOperations.lookups.map (·.table) = fixedFor target 20 := by
+    (componentAt target 20).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 21. -/
+/-- No legacy lookup at physical component 21. -/
 private theorem lookup_slot_21 (target : MemorySnapshot) :
-    (componentAt target 21).rowOperations.lookups.map (·.table) = fixedFor target 21 := by
+    (componentAt target 21).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 22. -/
+/-- No legacy lookup at physical component 22. -/
 private theorem lookup_slot_22 (target : MemorySnapshot) :
-    (componentAt target 22).rowOperations.lookups.map (·.table) = fixedFor target 22 := by
+    (componentAt target 22).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 23. -/
+/-- No legacy lookup at physical component 23. -/
 private theorem lookup_slot_23 (target : MemorySnapshot) :
-    (componentAt target 23).rowOperations.lookups.map (·.table) = fixedFor target 23 := by
+    (componentAt target 23).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 24. -/
+/-- No legacy lookup at physical component 24. -/
 private theorem lookup_slot_24 (target : MemorySnapshot) :
-    (componentAt target 24).rowOperations.lookups.map (·.table) = fixedFor target 24 := by
+    (componentAt target 24).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 25. -/
+/-- No legacy lookup at physical component 25. -/
 private theorem lookup_slot_25 (target : MemorySnapshot) :
-    (componentAt target 25).rowOperations.lookups.map (·.table) = fixedFor target 25 := by
+    (componentAt target 25).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 26. -/
+/-- No legacy lookup at physical component 26. -/
 private theorem lookup_slot_26 (target : MemorySnapshot) :
-    (componentAt target 26).rowOperations.lookups.map (·.table) = fixedFor target 26 := by
+    (componentAt target 26).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 27. -/
+/-- No legacy lookup at physical component 27. -/
 private theorem lookup_slot_27 (target : MemorySnapshot) :
-    (componentAt target 27).rowOperations.lookups.map (·.table) = fixedFor target 27 := by
+    (componentAt target 27).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 28. -/
+/-- No legacy lookup at physical component 28. -/
 private theorem lookup_slot_28 (target : MemorySnapshot) :
-    (componentAt target 28).rowOperations.lookups.map (·.table) = fixedFor target 28 := by
+    (componentAt target 28).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 29. -/
+/-- No legacy lookup at physical component 29. -/
 private theorem lookup_slot_29 (target : MemorySnapshot) :
-    (componentAt target 29).rowOperations.lookups.map (·.table) = fixedFor target 29 := by
+    (componentAt target 29).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 30. -/
+/-- No legacy lookup at physical component 30. -/
 private theorem lookup_slot_30 (target : MemorySnapshot) :
-    (componentAt target 30).rowOperations.lookups.map (·.table) = fixedFor target 30 := by
+    (componentAt target 30).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 31. -/
+/-- No legacy lookup at physical component 31. -/
 private theorem lookup_slot_31 (target : MemorySnapshot) :
-    (componentAt target 31).rowOperations.lookups.map (·.table) = fixedFor target 31 := by
+    (componentAt target 31).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 32. -/
+/-- No legacy lookup at physical component 32. -/
 private theorem lookup_slot_32 (target : MemorySnapshot) :
-    (componentAt target 32).rowOperations.lookups.map (·.table) = fixedFor target 32 := by
+    (componentAt target 32).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 33. -/
+/-- No legacy lookup at physical component 33. -/
 private theorem lookup_slot_33 (target : MemorySnapshot) :
-    (componentAt target 33).rowOperations.lookups.map (·.table) = fixedFor target 33 := by
+    (componentAt target 33).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 34. -/
+/-- No legacy lookup at physical component 34. -/
 private theorem lookup_slot_34 (target : MemorySnapshot) :
-    (componentAt target 34).rowOperations.lookups.map (·.table) = fixedFor target 34 := by
+    (componentAt target 34).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 35. -/
+/-- No legacy lookup at physical component 35. -/
 private theorem lookup_slot_35 (target : MemorySnapshot) :
-    (componentAt target 35).rowOperations.lookups.map (·.table) = fixedFor target 35 := by
+    (componentAt target 35).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 36. -/
+/-- No legacy lookup at physical component 36. -/
 private theorem lookup_slot_36 (target : MemorySnapshot) :
-    (componentAt target 36).rowOperations.lookups.map (·.table) = fixedFor target 36 := by
+    (componentAt target 36).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 37. -/
+/-- No legacy lookup at physical component 37. -/
 private theorem lookup_slot_37 (target : MemorySnapshot) :
-    (componentAt target 37).rowOperations.lookups.map (·.table) = fixedFor target 37 := by
+    (componentAt target 37).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 38. -/
+/-- No legacy lookup at physical component 38. -/
 private theorem lookup_slot_38 (target : MemorySnapshot) :
-    (componentAt target 38).rowOperations.lookups.map (·.table) = fixedFor target 38 := by
+    (componentAt target 38).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 39. -/
+/-- No legacy lookup at physical component 39. -/
 private theorem lookup_slot_39 (target : MemorySnapshot) :
-    (componentAt target 39).rowOperations.lookups.map (·.table) = fixedFor target 39 := by
+    (componentAt target 39).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 40. -/
+/-- No legacy lookup at physical component 40. -/
 private theorem lookup_slot_40 (target : MemorySnapshot) :
-    (componentAt target 40).rowOperations.lookups.map (·.table) = fixedFor target 40 := by
+    (componentAt target 40).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 41. -/
+/-- No legacy lookup at physical component 41. -/
 private theorem lookup_slot_41 (target : MemorySnapshot) :
-    (componentAt target 41).rowOperations.lookups.map (·.table) = fixedFor target 41 := by
+    (componentAt target 41).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 42. -/
+/-- No legacy lookup at physical component 42. -/
 private theorem lookup_slot_42 (target : MemorySnapshot) :
-    (componentAt target 42).rowOperations.lookups.map (·.table) = fixedFor target 42 := by
+    (componentAt target 42).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 43. -/
+/-- No legacy lookup at physical component 43. -/
 private theorem lookup_slot_43 (target : MemorySnapshot) :
-    (componentAt target 43).rowOperations.lookups.map (·.table) = fixedFor target 43 := by
+    (componentAt target 43).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 44. -/
+/-- No legacy lookup at physical component 44. -/
 private theorem lookup_slot_44 (target : MemorySnapshot) :
-    (componentAt target 44).rowOperations.lookups.map (·.table) = fixedFor target 44 := by
+    (componentAt target 44).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 45. -/
+/-- No legacy lookup at physical component 45. -/
 private theorem lookup_slot_45 (target : MemorySnapshot) :
-    (componentAt target 45).rowOperations.lookups.map (·.table) = fixedFor target 45 := by
+    (componentAt target 45).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 46. -/
+/-- No legacy lookup at physical component 46. -/
 private theorem lookup_slot_46 (target : MemorySnapshot) :
-    (componentAt target 46).rowOperations.lookups.map (·.table) = fixedFor target 46 := by
+    (componentAt target 46).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 47. -/
+/-- No legacy lookup at physical component 47. -/
 private theorem lookup_slot_47 (target : MemorySnapshot) :
-    (componentAt target 47).rowOperations.lookups.map (·.table) = fixedFor target 47 := by
+    (componentAt target 47).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 48. -/
+/-- No legacy lookup at physical component 48. -/
 private theorem lookup_slot_48 (target : MemorySnapshot) :
-    (componentAt target 48).rowOperations.lookups.map (·.table) = fixedFor target 48 := by
+    (componentAt target 48).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 49. -/
+/-- No legacy lookup at physical component 49. -/
 private theorem lookup_slot_49 (target : MemorySnapshot) :
-    (componentAt target 49).rowOperations.lookups.map (·.table) = fixedFor target 49 := by
+    (componentAt target 49).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 50. -/
+/-- No legacy lookup at physical component 50. -/
 private theorem lookup_slot_50 (target : MemorySnapshot) :
-    (componentAt target 50).rowOperations.lookups.map (·.table) = fixedFor target 50 := by
+    (componentAt target 50).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 51. -/
+/-- No legacy lookup at physical component 51. -/
 private theorem lookup_slot_51 (target : MemorySnapshot) :
-    (componentAt target 51).rowOperations.lookups.map (·.table) = fixedFor target 51 := by
+    (componentAt target 51).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 52. -/
+/-- No legacy lookup at physical component 52. -/
 private theorem lookup_slot_52 (target : MemorySnapshot) :
-    (componentAt target 52).rowOperations.lookups.map (·.table) = fixedFor target 52 := by
+    (componentAt target 52).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 53. -/
+/-- No legacy lookup at physical component 53. -/
 private theorem lookup_slot_53 (target : MemorySnapshot) :
-    (componentAt target 53).rowOperations.lookups.map (·.table) = fixedFor target 53 := by
+    (componentAt target 53).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 54. -/
+/-- No legacy lookup at physical component 54. -/
 private theorem lookup_slot_54 (target : MemorySnapshot) :
-    (componentAt target 54).rowOperations.lookups.map (·.table) = fixedFor target 54 := by
+    (componentAt target 54).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 55. -/
+/-- No legacy lookup at physical component 55. -/
 private theorem lookup_slot_55 (target : MemorySnapshot) :
-    (componentAt target 55).rowOperations.lookups.map (·.table) = fixedFor target 55 := by
+    (componentAt target 55).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 56. -/
+/-- No legacy lookup at physical component 56. -/
 private theorem lookup_slot_56 (target : MemorySnapshot) :
-    (componentAt target 56).rowOperations.lookups.map (·.table) = fixedFor target 56 := by
+    (componentAt target 56).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 57. -/
+/-- No legacy lookup at physical component 57. -/
 private theorem lookup_slot_57 (target : MemorySnapshot) :
-    (componentAt target 57).rowOperations.lookups.map (·.table) = fixedFor target 57 := by
+    (componentAt target 57).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 58. -/
+/-- No legacy lookup at physical component 58. -/
 private theorem lookup_slot_58 (target : MemorySnapshot) :
-    (componentAt target 58).rowOperations.lookups.map (·.table) = fixedFor target 58 := by
+    (componentAt target 58).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, Circuit.foldlRange.operations_eq, List.ofFn_succ]
 
 /-- The verifier-fixed membership provider has no legacy lookups. -/
 private theorem lookup_slot_59 (target : MemorySnapshot) :
-    (componentAt target 59).rowOperations.lookups.map (·.table) = fixedFor target 59 := by
+    (componentAt target 59).rowOperations.lookups.map (·.table) = [] := by
   rfl
 
-/-- Raw lookup identities at physical component 61. -/
+/-- No legacy lookup at physical component 61. -/
 private theorem lookup_slot_61 (target : MemorySnapshot) :
-    (componentAt target 61).rowOperations.lookups.map (·.table) = fixedFor target 61 := by
+    (componentAt target 61).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- The fixed writable-interval provider has no legacy lookup. -/
 private theorem lookup_slot_62 (target : MemorySnapshot) :
-    (componentAt target 62).rowOperations.lookups.map (·.table) = fixedFor target 62 := by
+    (componentAt target 62).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
-/-- Raw lookup identities at physical component 63. -/
+/-- No legacy lookup at physical component 63. -/
 private theorem lookup_slot_63 (target : MemorySnapshot) :
-    (componentAt target 63).rowOperations.lookups.map (·.table) = fixedFor target 63 := by
+    (componentAt target 63).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 64. -/
+/-- No legacy lookup at physical component 64. -/
 private theorem lookup_slot_64 (target : MemorySnapshot) :
-    (componentAt target 64).rowOperations.lookups.map (·.table) = fixedFor target 64 := by
+    (componentAt target 64).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 65. -/
+/-- No legacy lookup at physical component 65. -/
 private theorem lookup_slot_65 (target : MemorySnapshot) :
-    (componentAt target 65).rowOperations.lookups.map (·.table) = fixedFor target 65 := by
+    (componentAt target 65).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 66. -/
+/-- No legacy lookup at physical component 66. -/
 private theorem lookup_slot_66 (target : MemorySnapshot) :
-    (componentAt target 66).rowOperations.lookups.map (·.table) = fixedFor target 66 := by
+    (componentAt target 66).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 67. -/
+/-- No legacy lookup at physical component 67. -/
 private theorem lookup_slot_67 (target : MemorySnapshot) :
-    (componentAt target 67).rowOperations.lookups.map (·.table) = fixedFor target 67 := by
+    (componentAt target 67).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 68. -/
+/-- No legacy lookup at physical component 68. -/
 private theorem lookup_slot_68 (target : MemorySnapshot) :
-    (componentAt target 68).rowOperations.lookups.map (·.table) = fixedFor target 68 := by
+    (componentAt target 68).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 69. -/
+/-- No legacy lookup at physical component 69. -/
 private theorem lookup_slot_69 (target : MemorySnapshot) :
-    (componentAt target 69).rowOperations.lookups.map (·.table) = fixedFor target 69 := by
+    (componentAt target 69).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 70. -/
+/-- No legacy lookup at physical component 70. -/
 private theorem lookup_slot_70 (target : MemorySnapshot) :
-    (componentAt target 70).rowOperations.lookups.map (·.table) = fixedFor target 70 := by
+    (componentAt target 70).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 71. -/
+/-- No legacy lookup at physical component 71. -/
 private theorem lookup_slot_71 (target : MemorySnapshot) :
-    (componentAt target 71).rowOperations.lookups.map (·.table) = fixedFor target 71 := by
+    (componentAt target 71).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 72. -/
+/-- No legacy lookup at physical component 72. -/
 private theorem lookup_slot_72 (target : MemorySnapshot) :
-    (componentAt target 72).rowOperations.lookups.map (·.table) = fixedFor target 72 := by
+    (componentAt target 72).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 73. -/
+/-- No legacy lookup at physical component 73. -/
 private theorem lookup_slot_73 (target : MemorySnapshot) :
-    (componentAt target 73).rowOperations.lookups.map (·.table) = fixedFor target 73 := by
+    (componentAt target 73).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 74. -/
+/-- No legacy lookup at physical component 74. -/
 private theorem lookup_slot_74 (target : MemorySnapshot) :
-    (componentAt target 74).rowOperations.lookups.map (·.table) = fixedFor target 74 := by
+    (componentAt target 74).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 75. -/
+/-- No legacy lookup at physical component 75. -/
 private theorem lookup_slot_75 (target : MemorySnapshot) :
-    (componentAt target 75).rowOperations.lookups.map (·.table) = fixedFor target 75 := by
+    (componentAt target 75).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 76. -/
+/-- No legacy lookup at physical component 76. -/
 private theorem lookup_slot_76 (target : MemorySnapshot) :
-    (componentAt target 76).rowOperations.lookups.map (·.table) = fixedFor target 76 := by
+    (componentAt target 76).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 77. -/
+/-- No legacy lookup at physical component 77. -/
 private theorem lookup_slot_77 (target : MemorySnapshot) :
-    (componentAt target 77).rowOperations.lookups.map (·.table) = fixedFor target 77 := by
+    (componentAt target 77).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 78. -/
+/-- No legacy lookup at physical component 78. -/
 private theorem lookup_slot_78 (target : MemorySnapshot) :
-    (componentAt target 78).rowOperations.lookups.map (·.table) = fixedFor target 78 := by
+    (componentAt target 78).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 79. -/
+/-- No legacy lookup at physical component 79. -/
 private theorem lookup_slot_79 (target : MemorySnapshot) :
-    (componentAt target 79).rowOperations.lookups.map (·.table) = fixedFor target 79 := by
+    (componentAt target 79).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 80. -/
+/-- No legacy lookup at physical component 80. -/
 private theorem lookup_slot_80 (target : MemorySnapshot) :
-    (componentAt target 80).rowOperations.lookups.map (·.table) = fixedFor target 80 := by
+    (componentAt target 80).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 81. -/
+/-- No legacy lookup at physical component 81. -/
 private theorem lookup_slot_81 (target : MemorySnapshot) :
-    (componentAt target 81).rowOperations.lookups.map (·.table) = fixedFor target 81 := by
+    (componentAt target 81).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 82. -/
+/-- No legacy lookup at physical component 82. -/
 private theorem lookup_slot_82 (target : MemorySnapshot) :
-    (componentAt target 82).rowOperations.lookups.map (·.table) = fixedFor target 82 := by
+    (componentAt target 82).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 83. -/
+/-- No legacy lookup at physical component 83. -/
 private theorem lookup_slot_83 (target : MemorySnapshot) :
-    (componentAt target 83).rowOperations.lookups.map (·.table) = fixedFor target 83 := by
+    (componentAt target 83).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 84. -/
+/-- No legacy lookup at physical component 84. -/
 private theorem lookup_slot_84 (target : MemorySnapshot) :
-    (componentAt target 84).rowOperations.lookups.map (·.table) = fixedFor target 84 := by
+    (componentAt target 84).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 85. -/
+/-- No legacy lookup at physical component 85. -/
 private theorem lookup_slot_85 (target : MemorySnapshot) :
-    (componentAt target 85).rowOperations.lookups.map (·.table) = fixedFor target 85 := by
+    (componentAt target 85).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 86. -/
+/-- No legacy lookup at physical component 86. -/
 private theorem lookup_slot_86 (target : MemorySnapshot) :
-    (componentAt target 86).rowOperations.lookups.map (·.table) = fixedFor target 86 := by
+    (componentAt target 86).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 87. -/
+/-- No legacy lookup at physical component 87. -/
 private theorem lookup_slot_87 (target : MemorySnapshot) :
-    (componentAt target 87).rowOperations.lookups.map (·.table) = fixedFor target 87 := by
+    (componentAt target 87).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 88. -/
+/-- No legacy lookup at physical component 88. -/
 private theorem lookup_slot_88 (target : MemorySnapshot) :
-    (componentAt target 88).rowOperations.lookups.map (·.table) = fixedFor target 88 := by
+    (componentAt target 88).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 89. -/
+/-- No legacy lookup at physical component 89. -/
 private theorem lookup_slot_89 (target : MemorySnapshot) :
-    (componentAt target 89).rowOperations.lookups.map (·.table) = fixedFor target 89 := by
+    (componentAt target 89).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 90. -/
+/-- No legacy lookup at physical component 90. -/
 private theorem lookup_slot_90 (target : MemorySnapshot) :
-    (componentAt target 90).rowOperations.lookups.map (·.table) = fixedFor target 90 := by
+    (componentAt target 90).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
-/-- Raw lookup identities at physical component 91. -/
+/-- No legacy lookup at physical component 91. -/
 private theorem lookup_slot_91 (target : MemorySnapshot) :
-    (componentAt target 91).rowOperations.lookups.map (·.table) = fixedFor target 91 := by
+    (componentAt target 91).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- The fixed target provider has no legacy lookup. -/
 private theorem lookup_slot_92 (target : MemorySnapshot) :
-    (componentAt target 92).rowOperations.lookups.map (·.table) = fixedFor target 92 := by
+    (componentAt target 92).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- The fixed RAM provider has no legacy lookup. -/
 private theorem lookup_slot_60 (target : MemorySnapshot) :
-    (componentAt target 60).rowOperations.lookups.map (·.table) = fixedFor target 60 := by
+    (componentAt target 60).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- The fixed RAM provider has no legacy lookup. -/
 private theorem lookup_slot_93 (target : MemorySnapshot) :
-    (componentAt target 93).rowOperations.lookups.map (·.table) = fixedFor target 93 := by
+    (componentAt target 93).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- Each installed component has exactly its listed fixed-table predicates. -/
 theorem lookup_slot (target : MemorySnapshot) (index : Fin 94) :
-    (componentAt target index).rowOperations.lookups.map (·.table) = fixedFor target index := by
+    (componentAt target index).rowOperations.lookups.map (·.table) = [] := by
   fin_cases index
   · exact lookup_slot_0 target
   · exact lookup_slot_1 target
@@ -960,34 +948,20 @@ theorem lookup_slot (target : MemorySnapshot) (index : Fin 94) :
   · exact lookup_slot_92 target
   · exact lookup_slot_93 target
 
-/-- Actual lookup predicates, not just names, agree with the finite realization inventory. -/
-theorem component_lookups (target : MemorySnapshot) :
-    (assembly target).tables.map (fun component => component.rowOperations.lookups.map (·.table)) =
-      componentLookupIndices.map (fun indices => indices.map fun index =>
-        ((fixed target)[index.val]'(by change index.val < 2; exact index.isLt)).table) := by
-  apply List.ext_getElem
-  · simp only [List.length_map]
-    rfl
-  intro index bound otherBound
-  simp only [List.getElem_map]
-  have indexBound := otherBound
-  change index < 94 at indexBound
-  exact lookup_slot target ⟨index, indexBound⟩
+/-- Every installed component is lookup-free, including currently unused physical slots. -/
+theorem component_lookups (target : MemorySnapshot) (component : Component Fp)
+    (member : component ∈ (assembly target).tables) : component.operations.lookups = [] := by
+  obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
+  rw [Component.lookups_eq]
+  exact List.map_eq_nil_iff.mp (lookup_slot target ⟨index, bound⟩)
 
-/-- Every installed static lookup has an authenticated finite realization by table identity. -/
+/-- The empty lookup inventory covers every installed operation. -/
 theorem lookups_complete (target : MemorySnapshot) (component : Component Fp)
     (member : component ∈ (assembly target).tables) (lookup : Lookup Fp)
     (used : lookup ∈ component.operations.lookups) :
     ∃ fixedTable ∈ fixed target, fixedTable.table = lookup.table := by
-  rw [Component.lookups_eq] at used
-  have present := List.mem_map_of_mem
-    (f := fun component : Component Fp => component.rowOperations.lookups.map (·.table)) member
-  rw [component_lookups] at present
-  obtain ⟨indices, _, equal⟩ := List.mem_map.mp present
-  have lookupPresent := List.mem_map_of_mem (f := fun lookup : Lookup Fp => lookup.table) used
-  rw [← equal] at lookupPresent
-  obtain ⟨index, _, tableEqual⟩ := List.mem_map.mp lookupPresent
-  exact ⟨(fixed target)[index.val], List.getElem_mem _, tableEqual⟩
+  rw [component_lookups target component member] at used
+  exact False.elim (List.not_mem_nil used)
 
 
 end SP1Clean.Audit.BranchEnsemble

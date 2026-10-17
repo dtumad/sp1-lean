@@ -590,7 +590,6 @@ import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
 import SP1Clean.Proofs.Operations.HintNodeWords
 import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Proofs.Operations.HintQueuePrepend
-import SP1Clean.Proofs.Operations.HintQueueWordSource
 import SP1Clean.Proofs.Operations.HintReadSpan
 import SP1Clean.Proofs.Operations.HintReadSpanLedger
 import SP1Clean.Proofs.Operations.HintReadSpanNode
