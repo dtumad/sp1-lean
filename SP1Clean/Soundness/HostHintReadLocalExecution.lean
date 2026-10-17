@@ -185,8 +185,11 @@ no local specifications or per-record binding premises are supplied by the calle
 theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
+    (members : ∀ component ∈ others.map (·.component) ++ resources,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints) (records : RecordChannels witness)
     (permissions : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
@@ -209,7 +212,7 @@ theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image 
   have wordSpecs := word_steps witness interface finalStore authenticated constraints records
   obtain ⟨header, ending, words⟩ := current_records witness interface constraints records ordering calls cursor handlerSpecs wordSpecs
     store finalStore extension authenticated env member host.io.hints current
-  exact run_of_witness witness interface pulls constraints permissions ordering calls cursor handlerSpecs wordSpecs env member
+  exact run_of_witness witness interface pulls members constraints permissions membershipBalance ordering calls cursor handlerSpecs wordSpecs env member
     host store current header ending words running context code arg1 arg2
 
 end SP1Clean.Soundness.HostHintReadLocal

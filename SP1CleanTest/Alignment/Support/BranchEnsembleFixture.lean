@@ -103,7 +103,7 @@ def finalSeeds : List Seed :=
 /-- Every published final receipt is checked against the fixed complete target snapshot. -/
 def validatorSeeds : List Seed :=
   (orderedMemory true).map fun record =>
-    Seed.ofCells 89 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
+    Seed.ofCells 90 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
 /-- Terminate the actual finite ordered register inventory. -/
 def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0
@@ -111,7 +111,7 @@ def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
     (OrderedMemoryEnsemble.endKey (p := SP1Prime)))).toList
 /-- Unchanged host-bank endpoints, physically present even though this step makes no host call. -/
 def hostTerminals : List Seed :=
-  [87, 88].map fun index =>
+  [88, 89].map fun index =>
     Seed.ofCells index (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList
 /-- All non-Byte rows use the compiler and its demanded authentication inventory. -/
 def consumerSeeds : List Seed :=
@@ -157,7 +157,7 @@ def builtTables (target : MemorySnapshot) (seeds : List Seed)
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
     (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
-    "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program"]
+    "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program", "sp1.native.write_permission"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
   SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
     (fun index => by
@@ -172,10 +172,10 @@ theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed)
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
-/-- Building rows never changes the complete 93-table host inventory. -/
+/-- Building rows never changes the complete 94-table host inventory. -/
 theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
-    (builtTables target seeds bounded).length = 93 := by
+    (builtTables target seeds bounded).length = 94 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   rfl
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/

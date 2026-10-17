@@ -161,6 +161,25 @@ theorem source_permission_pulls (source : ExecutionSnapshot) :
     rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
     contradiction
 
+/-- Installed host resources cannot supply writable-interval membership. -/
+theorem source_membership_silent (image : ProgramImage) (source : ExecutionSnapshot) :
+    ∀ component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++
+      sourceResources source.host.io.hints,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements := by
+  have checked : ((HostCallReceivers.available (p := p)).map
+      (fun receiver : HostLocalHandoff.Receiver (p := p) => receiver.component) ++
+      sourceResources source.host.io.hints).all (fun component =>
+        !(component.circuit.channelsWithRequirements.map RawChannel.name).contains
+          (image.writePermissionTable (p := p)).name) = true := by
+    unfold ProgramImage.writePermissionTable
+    rfl
+  intro component member used
+  have valid := List.all_eq_true.mp checked component member
+  change (!(component.circuit.channelsWithRequirements.map RawChannel.name).contains
+    image.writePermissionTable.channel.toRaw.name) = true at valid
+  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at valid
+  contradiction
+
 private theorem read_member
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (env : Environment (ZMod p))
@@ -297,7 +316,8 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
   rw [read_edge] at binding
   have execution := run_of_authenticated_witness
     (HostHintQueueBoundary.projected witness) interface (source_permission_pulls source)
-    checks records permissions ordering calls cursor _
+    (source_membership_silent image source) checks records permissions
+    (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) ordering calls cursor _
     (HostHintQueueBoundary.source_authentication witness constraints) env retainedMember
     current.host store extension binding running (.ofSail current.sail) registers.1 registers.2.1 registers.2.2
   obtain ⟨bytes, remaining, hints, next, executed, writes⟩ := execution

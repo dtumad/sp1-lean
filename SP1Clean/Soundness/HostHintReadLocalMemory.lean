@@ -111,8 +111,8 @@ theorem word_memory_sublist {image : ProgramImage} {source : ExecutionSnapshot}
        memoryChannel.pushedValue (HintReadCoverage.rowInput row).ram.pushed])).Sublist
       ((HostLocalCore.memoryInterior witness).map TypedInteraction.raw) := by
   rw [HostLocalCore.memoryInterior_raw, ← HintReadWriteLedger.memory_ledger _ (wordTables_aligned witness)]
-  have suffix : (witness.tables.drop 62).Sublist (witness.tables.drop 6) := by
-    simpa only [List.drop_drop] using List.drop_sublist 56 (witness.tables.drop 6)
+  have suffix : (witness.tables.drop 63).Sublist (witness.tables.drop 6) := by
+    simpa only [List.drop_drop] using List.drop_sublist 57 (witness.tables.drop 6)
   have physical : (wordTables witness).Sublist (witness.tables.drop 6) :=
     ((List.take_sublist 2 _).trans (List.drop_sublist _ _)).trans suffix
   exact physical.flatMap _

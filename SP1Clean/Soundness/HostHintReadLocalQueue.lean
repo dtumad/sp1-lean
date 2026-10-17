@@ -125,11 +125,12 @@ theorem queue_interactions
       (queueTables witness).flatMap (·.interactionsWith stateChannel.toRaw) ++
         (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) := by
   rw [HostLocalCore.interactions_split_new witness _ (by
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
-          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))) queue_fresh
-    (by simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw])]
+          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩))))))) queue_fresh
+    (by simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw])
+    (by simp [stateChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])]
   have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith stateChannel.toRaw = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [HostLocalCore.hostCallTable_component]

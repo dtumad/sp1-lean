@@ -1,10 +1,12 @@
 import SP1Clean.FormalModel.Contracts.WritePermission
 import SP1Clean.Native.Operations.AddressOrder
+import ToClean.Air.StaticProvider
 
 /-! # A native permission provider for ordinary and host memory writes
 
 The provider authenticates an inclusive writable interval, checks the query's limbs, compares both
-endpoints, and supplies one byte permission. Its only interaction is on the permission channel.
+endpoints, and supplies one byte permission. Fixed interval membership comes from a separate
+verifier-fixed provider through Clean's existing channel interface.
 The deterministic constructor succeeds exactly for writable native addresses; all remaining local
 cells come from Clean's exportable zero-test and bit-decomposition witness programs.
 -/
@@ -14,6 +16,28 @@ namespace SP1Clean.WritePermissionProvider
 open Circuit SP1Clean.Model.Core
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
+
+omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+/-- The complete permission inventory and its padding fit Clean's physical row index. The bound
+comes from the finite address space, independently of how the ROM stores repeated entries. -/
+theorem membership_height_lt_uint64 (image : ProgramImage) :
+    (image.writePermissionTable (p := p)).height < UInt64.size := by
+  have intervals := image.protectionMask.intervals_length_le (2 ^ 48)
+  have support := image.protectionMask.supportBelow_card_le_limit (2 ^ 48)
+  have filtered := List.length_filter_le
+    (fun interval : MemoryInterval => decide (interval.value = 0 ∧ interval.lower < interval.upper))
+    (image.protectionMask.intervals (2 ^ 48))
+  have padded := (image.writePermissionTable (p := p)).height_lt_double
+  have length : (image.writePermissionTable (p := p)).length = image.writableIntervals.length := by
+    simp only [ProgramImage.writePermissionTable, StaticTable.ofRows, List.length_map]
+  rw [length] at padded
+  change image.writableIntervals.length ≤ _ at filtered
+  norm_num [UInt64.size] at *
+  omega
+
+/-- Fixed writable intervals authenticate endpoint membership; only their counts are prover-owned. -/
+def membershipComponent (image : ProgramImage) : Air.Flat.Component (ZMod p) :=
+  image.writePermissionTable.component (membership_height_lt_uint64 image)
 
 def ProverAssumptions (image : ProgramImage) (input : Inputs (ZMod p)) : Prop :=
   image.writePermissionTable.Spec input.interval ∧ Address.Bounded input.address ∧
@@ -56,7 +80,7 @@ theorem populate?_isSome_iff (image : ProgramImage) (address : ℕ) :
   simpa only [populate?, Option.isSome_map] using image.writableIntervalAt?_isSome_iff address
 
 def main (image : ProgramImage) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
-  lookup image.writePermissionTable.toTable input.interval
+  image.writePermissionTable.channel.pull ⟨input.interval, 1⟩
   assertion (Gadgets.ToBits.rangeCheck 16 (by have := Fact.out (p := 2 ^ 17 < p); omega)) input.address[0]
   assertion (Gadgets.ToBits.rangeCheck 16 (by have := Fact.out (p := 2 ^ 17 < p); omega)) input.address[1]
   assertion (Gadgets.ToBits.rangeCheck 16 (by have := Fact.out (p := 2 ^ 17 < p); omega)) input.address[2]
@@ -75,7 +99,7 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit w
   Spec input _ _ := Spec image input
   ProverAssumptions input _ _ := ProverAssumptions image input
   soundness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck, AddressOrder.circuit]
+    circuit_proof_start [Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
     rcases h_input with ⟨rfl, rfl, rfl⟩
     obtain ⟨member, low, middle, high, lower, upper⟩ := h_holds
     have bounded : Address.Bounded (input_var_address.map (Expression.eval env)) := by
@@ -89,7 +113,8 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit w
       ⟨bounded, ranges.2.2 _ (lower ⟨ranges.1, bounded⟩) (upper ⟨bounded, ranges.2.1⟩)⟩
     exact ⟨permitted, fun _ _ => True.intro⟩
   completeness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck, AddressOrder.circuit, ProverAssumptions]
+    circuit_proof_start [Gadgets.ToBits.rangeCheck, AddressOrder.circuit, ProverAssumptions,
+      StaticTable.channel]
     rcases h_input with ⟨rfl, rfl, rfl⟩
     obtain ⟨member, bounded, lower, upper⟩ := h_assumptions
     have ranges := image.writePermissionTable_sound _ member

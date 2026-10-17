@@ -44,6 +44,11 @@ interpreter or scheduler.
   cover sparse gaps, first-entry precedence, address bounds, generated rows and complete ledgers.
   Closed interval-provider ensembles test fixed endpoints/bytes, counts, padding and public binding.
   Full ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
+- Native write permissions authenticate writable intervals through a separate verifier-fixed
+  provider. The closed two-request export uses Clean's preallocated input programs to select
+  intervals from addresses. Rust checks literal ROM-byte exclusion, full rows/ledgers, public
+  binding and interval/count mutations. This is not SP1 runtime `mprotect`; full-machine demand
+  generation remains open because the current demand input template cannot compute intervals.
 - Static membership retains original row order and uses a fixed eligibility tag to select the
   first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty tables
   have one inactive row; other heights round up to a power of two. Capacity proofs must account
@@ -91,8 +96,8 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-Four installed legacy lookup meanings remain: program, write permission, hint nodes and hint
-words. Built-in lowering rejects these forms; migrate their consumers before retiring
+Two installed legacy lookup meanings remain: hint nodes and hint words.
+Built-in lowering rejects these forms; migrate their consumers before retiring
 chip JSON comparison.
 
 The native eight-call syscall profile uses degree-three arithmetic assertions and six shared

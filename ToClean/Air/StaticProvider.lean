@@ -2,6 +2,7 @@ module
 
 public import ToClean.Air.FixedPrefix
 public import ToClean.Air.FixedRows
+public import ToClean.Air.ChannelClosure
 public import Clean.Circuit.WitnessIRSugar
 public import Clean.Utils.Tactics
 public import Clean.Utils.Tactics.ProvableStructDeriving
@@ -200,5 +201,35 @@ def component (table : StaticTable F Row) (bounded : table.height < UInt64.size)
   fixed_width_le_input := by
     change size (Entry Row) ≤ size (Entry Row) + 1
     omega
+
+/-- Authenticate every membership pull from the actual fixed provider and the complete balanced
+ledger. Other components may consume this channel, but cannot declare it as an outgoing requirement.
+The fixed provider's semantic assumptions follow from its physical prefix and canonical data. -/
+theorem guarantees_of_balance (table : StaticTable F Row) (bounded : table.height < UInt64.size)
+    {Public : TypeMap} [ProvableType Public] {ensemble : Ensemble F Public}
+    (witness : EnsembleWitness ensemble) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannel table.channel.toRaw)
+    (verifier : ensemble.VerifierChannelRequirements witness.publicInput witness.data table.channel.toRaw)
+    (sources : ∀ component ∈ ensemble.tables, component = table.component bounded ∨
+      table.channel.toRaw ∉ component.circuit.channelsWithRequirements) :
+    ensemble.VerifierChannelGuarantees witness.publicInput witness.data table.channel.toRaw ∧
+      ∀ physical ∈ witness.tables, physical.ChannelGuarantees table.channel.toRaw := by
+  apply witness.channelGuarantees_of_requirements table.channel.toRaw balanced verifier
+  intro physical member
+  rcases sources physical.component (EnsembleWitness.component_mem_tables_of_mem member) with fixed | silent
+  · have assumptions : physical.Assumptions := by
+      intro row _
+      change physical.component.Assumptions _ _
+      rw [fixed]
+      trivial
+    intro row rowMember interaction emitted _
+    exact (physical.component.weakSoundness_of_no_guarantees (by rw [fixed]; rfl)
+      (physical.circuitAssumptions_of_dataConsistency (witness.dataConsistency_of_mem physical member)
+        assumptions row rowMember)
+      (constraints physical member row rowMember)).2 interaction emitted
+  · intro row rowMember
+    exact Operations.requirements_of_not_mem _ _ _
+      (physical.component.inChannelsOrRequirements_of_constraints _
+        (constraints physical member row rowMember)) _ silent
 
 end StaticTable

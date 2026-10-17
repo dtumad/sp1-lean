@@ -37,8 +37,8 @@ theorem auxiliary_channel_registered (image : ProgramImage) (source : ExecutionS
     (member : component ∈ (receiver :: others).map (·.component) ++ (wordResources ++ resources))
     (channel : RawChannel (ZMod p)) (used : channel ∈ component.circuit.channels) :
     channel ∈ (ensemble image source others resources channels names).channels := by
-  exact List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
-    (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr ⟨component, member, used⟩))))))
+  exact List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
+    (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr ⟨component, member, used⟩)))))))
 
 /-- Static interfaces of the extension, independent of any witness or execution. -/
 structure ExtensionInterface (others : List (HostLocalHandoff.Receiver (p := p)))
@@ -188,7 +188,8 @@ theorem cursor_interactions (witness : EnsembleWitness (ensemble image source ot
   rw [HostLocalCore.interactions_split_new witness _ (by simp [HostLocalCore.baseEnsemble]) cursor_fresh (by
     intro same
     have names := congrArg RawChannel.name same
-    simp [HintReadWordChip.stateChannel, WritePermissionProvider.channel, Channel.toRaw] at names)]
+    simp [HintReadWordChip.stateChannel, WritePermissionProvider.channel, Channel.toRaw] at names)
+    (by simp [HintReadWordChip.stateChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])]
   have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith HintReadWordChip.stateChannel.toRaw = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rw [HostLocalCore.hostCallTable_component]

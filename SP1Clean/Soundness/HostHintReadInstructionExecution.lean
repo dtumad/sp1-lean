@@ -133,7 +133,9 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have permissions := HostHintQueueBoundary.projected_permission_balancedChannel witness balanced
   have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.projected witness)
-    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source)) checks permissions active.1 active.2
+    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source))
+    (auxiliary_membership_silent (HostQueueCurrent.source_membership_silent image source)) checks permissions
+    (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) active.1 active.2
   rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
   apply contracts.engineFactsLocalG_of_rowEffect witness.data row rfl checked.1 active.2 _ checked.2
     (carrier.trajectory valid) source.sail.realize carrier.timeline
@@ -184,8 +186,10 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
   have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.projected witness)
     (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source))
+    (auxiliary_membership_silent (HostQueueCurrent.source_membership_silent image source))
     (HostHintQueueBoundary.projected_constraints witness constraints)
-    (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced) active.1 active.2
+    (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced)
+    (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) active.1 active.2
   rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
   have guard := contracts.routingLocal witness.data row rfl checked.1.constraints active.2 _ checked.2
   have migrated : (row.toChipRow witness.data).kind.advance.isSome = true := contracts.migrated

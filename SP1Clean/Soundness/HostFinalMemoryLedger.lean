@@ -71,6 +71,7 @@ private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
    { circuit := WritePermissionProvider.circuit image
      Assumptions := (WritePermissionProvider.circuit image).Assumptions },
+   WritePermissionProvider.membershipComponent image,
    HostCallLedger.producer, HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
 
 private theorem additions_private (channel : RawChannel (ZMod p))
@@ -81,7 +82,10 @@ private theorem additions_private (channel : RawChannel (ZMod p))
   have quiet : (fixedAdditions (p := p) image).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true := by
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-    rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;> rfl
+    rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;>
+      unfold fixedAdditions WritePermissionProvider.membershipComponent
+        WritePermissionProvider.circuit WritePermissionProvider.elaborated
+        WritePermissionProvider.main ProgramImage.writePermissionTable <;> rfl
   simpa using List.all_eq_true.mp quiet component member
 
 /-- Receipt freshness follows from the existing core inventory and the installed resource interface. -/
@@ -104,8 +108,9 @@ theorem beforeChecks_private (interface : PrivateInterface target others resourc
             · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
           · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
         · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
-      · obtain rfl := List.mem_singleton.mp permission
-        exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
+      · simp only [List.mem_cons, List.not_mem_nil, or_false] at permission
+        rcases permission with rfl | rfl <;>
+          exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
     · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
   · change component ∈ (HostHintReadHandoff.receiver :: others).map (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
         (HostHintReadHandoff.wordResources ++ resources) at auxiliary

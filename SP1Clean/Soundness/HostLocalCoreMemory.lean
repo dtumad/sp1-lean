@@ -174,13 +174,27 @@ private theorem interior_component_binary
       subst index
       change NativeCore.MemoryBinary ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p))
       apply NativeCore.memoryBinary_of_silent
-      change memoryChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
-      simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
-    · have extra : 62 ≤ 6 + index := by omega
-      simp only [tables] at bound ⊢
-      rw [List.getElem_append_right (by
-        simp only [List.length_set, ProtectedLocalCore.tables_length]; exact extra)]
-      exact binary _ (List.getElem_mem _)
+      change memoryChannel.toRaw ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
+      simp [memoryChannel, WritePermissionProvider.channel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
+    · by_cases fixed : 6 + index = 62
+      · have equal : index = 56 := by omega
+        subst index
+        simp only [tables]
+        rw [List.getElem_append_left (by
+          simp only [List.length_set, ProtectedLocalCore.tables_length]; decide),
+          List.getElem_set_ne (by decide)]
+        simp only [ProtectedLocalCore.tables]
+        rw [List.getElem_append_right (by simp only [List.length_set, LocalCore.tables_length]; decide)]
+        simp only [List.length_set, LocalCore.tables_length]
+        change NativeCore.MemoryBinary (WritePermissionProvider.membershipComponent image)
+        apply NativeCore.memoryBinary_of_silent
+        change memoryChannel.toRaw ∉ [image.writePermissionTable.channel.toRaw]
+        simp [memoryChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
+      · have extra : 63 ≤ 6 + index := by omega
+        simp only [tables] at bound ⊢
+        rw [List.getElem_append_right (by
+          simp only [List.length_set, ProtectedLocalCore.tables_length]; exact extra)]
+        exact binary _ (List.getElem_mem _)
 
 /-- Constraints force unit signed Memory multiplicities in the retained core, including WRITE's
 x12 pair. Appended components supply only their static multiplicity property. -/

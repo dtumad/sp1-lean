@@ -24,8 +24,8 @@ theorem activeSeeds_bounded : activeSeeds.length ≤ UInt64.size := by native_de
 /-- The actual witness on `HostFinalMemory.ensemble`, retaining its complete original registry. -/
 def activeWitness : EnsembleWitness (assembly target) := witness target header activeSeeds activeSeeds_bounded
 
-/-- All 93 tables remain installed, including empty instruction and host components. -/
-theorem activeWitness_length : activeWitness.tables.length = 93 := by
+/-- All 94 tables remain installed, including empty instruction and host components. -/
+theorem activeWitness_length : activeWitness.tables.length = 94 := by
   simpa only [activeWitness, witness, EnsembleWitness.ofTables_tables,
     withDerivedData, List.length_map] using builtTables_length target activeSeeds activeSeeds_bounded
 
@@ -95,7 +95,7 @@ def results : List (String × Bool × Bool) :=
   [("active-branch", true, check target header consumerSeeds),
     ("wrong-public-next-pc", false, check target { header with final_pc0 := 4096 } consumerSeeds),
     ("missing-authentication-row", false,
-      check target header (consumerSeeds.eraseP fun seed => seed.table == 89)),
+      check target header (consumerSeeds.eraseP fun seed => seed.table == 90)),
     ("duplicate-authentication-row", false, check target header (consumerSeeds ++ validatorSeeds.take 1)),
     ("changed-untouched-register", false,
       check { target with registers := target.registers.set 31 1 } header consumerSeeds),

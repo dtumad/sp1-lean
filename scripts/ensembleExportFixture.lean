@@ -8,6 +8,7 @@ import SP1CleanTest.Core.RamExport
 import SP1CleanTest.Core.UnifiedByteBenchmarks
 import SP1CleanTest.Core.PreprocessedByteExport
 import SP1CleanTest.Core.ProgramExport
+import SP1CleanTest.Core.WritePermissionExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -50,6 +51,22 @@ private def componentMetrics (component : Air.Flat.Component (ZMod SP1Clean.SP1P
   Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
     ("constraints", toJson constraints.length),
     ("degreeBound", toJson ((constraints.map expressionDegree).foldl max 0))]
+
+private def permissionReference (rom : SP1Clean.Model.Core.ProgramImage) (empty : Bool) : IO Json := do
+  let cases ← SP1CleanTest.Core.WritePermissionExport.cases.mapM fun (name, requests, expected) => do
+    let expected := if empty then requests.toList.all (fun address =>
+      address.toList.all (fun limb => limb.val < 65536)) else expected
+    let fields := [("name", toJson name), ("publicInput", toJson ((toElements requests).toList.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.WritePermissionExport.generate rom requests with
+    | .error message =>
+      if expected then throw (IO.userError s!"permission {name}: {message}")
+      pure (Json.mkObj (fields ++ [("error", toJson message)]))
+    | .ok witness =>
+      unless (SP1CleanTest.Core.WritePermissionExport.description rom).checkWitness SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected permission acceptance: {name}")
+      pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+  return toJson cases
 
 private def unifiedByteReference : IO Json := do
   let cases ← SP1CleanTest.Core.UnifiedByteExport.cases.mapM fun (name, rows, expected) => do
@@ -119,6 +136,7 @@ private def exportEnsembleFixture : IO Unit := do
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.SyscallCodeExport.rustExports ++
       SP1CleanTest.Core.ProgramExport.rustExports ++
+      SP1CleanTest.Core.WritePermissionExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++
@@ -137,6 +155,10 @@ private def exportEnsembleFixture : IO Unit := do
   IO.FS.writeFile (out / "program_fixed.reference.json")
     ((Json.mkObj [("active", programActive), ("unused", programUnused), ("empty", programEmpty),
       ("sparse", programSparse)]).compress ++ "\n")
+  let permissions ← permissionReference SP1CleanTest.Core.WritePermissionExport.image false
+  let emptyPermissions ← permissionReference SP1CleanTest.Core.WritePermissionExport.emptyImage true
+  IO.FS.writeFile (out / "write_permission.reference.json")
+    ((Json.mkObj [("rom", permissions), ("empty", emptyPermissions)]).compress ++ "\n")
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [

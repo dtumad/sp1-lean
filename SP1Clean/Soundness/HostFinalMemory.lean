@@ -75,7 +75,7 @@ theorem base_tables_length (image : ProgramImage) (source : ExecutionSnapshot) (
     (channels : List (RawChannel (ZMod p)))
     (names : UniqueNames image source target others resources) :
     (base image source target final bankFinal others resources channels names).tables.length =
-      69 + others.length + resources.length := by
+      70 + others.length + resources.length := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
     ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
     HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, List.length_set]
@@ -172,7 +172,7 @@ def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)
 /-- The prefix contains exactly the original core, receiver registry and resource block. -/
 theorem prefix_length (image : ProgramImage) (source : ExecutionSnapshot)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) :
-    (beforeChecks image source others resources).length = 65 + others.length + resources.length := by
+    (beforeChecks image source others resources).length = 66 + others.length + resources.length := by
   rw [beforeChecks, HostLocalCore.tables_length]
   simp only [List.length_append, List.length_map, List.length_cons, List.length_nil,
     HostHintReadHandoff.wordResources]

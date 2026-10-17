@@ -61,15 +61,50 @@ theorem auxiliary_permission_pulls
   · exact word_permission_pulls true
   · exact pulls component (List.mem_append_right _ extra)
 
+/-- The installed handler and word rows consume their private protocols without providing
+writable-interval membership. Remaining components expose the same static interface. -/
+theorem auxiliary_membership_silent
+    (members : ∀ component ∈ others.map (·.component) ++ resources,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements) :
+    ∀ component ∈ (receiver :: others).map (·.component) ++ (wordResources ++ resources),
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements := by
+  have checked : (receiver.component :: wordResources (p := p)).all (fun component =>
+      !(component.circuit.channelsWithRequirements.map RawChannel.name).contains
+        (image.writePermissionTable (p := p)).name) = true := by
+    unfold ProgramImage.writePermissionTable
+    rfl
+  have fixed (component : Component (ZMod p))
+      (member : component ∈ receiver.component :: wordResources (p := p)) :
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements := by
+    intro used
+    have valid := List.all_eq_true.mp checked component member
+    change (!(component.circuit.channelsWithRequirements.map RawChannel.name).contains
+      image.writePermissionTable.channel.toRaw.name) = true at valid
+    rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at valid
+    contradiction
+  intro component member
+  simp only [List.map_cons, List.mem_append, List.mem_cons, wordResources, receiver,
+    List.not_mem_nil, or_false] at member
+  rcases member with (rfl | other) | ((rfl | rfl) | extra)
+  · exact fixed _ (by simp [receiver])
+  · exact members component (List.mem_append_left _ other)
+  · exact fixed _ (by simp [wordResources])
+  · exact fixed _ (by simp [wordResources])
+  · exact members component (List.mem_append_right _ extra)
+
 /-- Every actual word-byte pull is authenticated by the installed fixed image provider. -/
 theorem word_permission_permitted (witness : EnsembleWitness (ensemble image source others resources channels names))
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
+    (members : ∀ component ∈ others.map (·.component) ++ resources,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     (address : fields 3 (ZMod p))
     (member : WritePermissionProvider.channel.pulledValue address ∈
       (wordTables witness).flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw)) :
     WritePermissionProvider.Permitted image address := by
-  apply HostLocalCore.permission_pull_permitted witness (auxiliary_permission_pulls pulls) constraints balanced address
+  apply HostLocalCore.permission_pull_permitted witness (auxiliary_permission_pulls pulls) (auxiliary_membership_silent members)
+    constraints balanced membershipBalance address
   obtain ⟨table, tableMem, member⟩ := List.mem_flatMap.mp member
   exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, wordTables_mem witness table tableMem, member⟩)
 
@@ -143,7 +178,10 @@ private theorem byte_permitted (readOnly : ℕ → Bool) (address : ℕ)
 theorem word_permission_policy (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
+    (members : ∀ component ∈ others.map (·.component) ++ resources,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints) (permissions : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
@@ -153,7 +191,7 @@ theorem word_permission_policy (witness : EnsembleWitness (ensemble image source
     (member : WritePermissionProvider.channel.pulledValue address ∈
       (wordTables witness).flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw)) :
     (HostMemoryPolicy.mk image.readOnly NativeLayout.guestMemory).permits (Address.toNat address) 1 = true := by
-  have permitted := word_permission_permitted witness pulls constraints permissions address member
+  have permitted := word_permission_permitted witness pulls members constraints permissions membershipBalance address member
   exact byte_permitted image.readOnly (Address.toNat address)
     (permission_request_lower (wordTables witness) (wordTables_aligned witness) wordSpecs
       (row_address_lower witness interface constraints ordering calls cursor handlerSpecs wordSpecs) address member)
@@ -165,8 +203,11 @@ specifications, current queue and immutable record authentication, and current r
 theorem run_of_witness (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
+    (members : ∀ component ∈ others.map (·.component) ++ resources,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints)
     (permissions : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
@@ -199,7 +240,7 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
     (by simpa only [Table.environment, shared] using unique)
     (cursor_balanced_of_balancedChannel witness interface cursor)
     host store current header ending words running ⟨{ readOnly := image.readOnly }, p⟩ context
-    (word_permission_policy witness interface pulls constraints permissions ordering calls cursor handlerSpecs wordSpecs) code arg1 arg2
+    (word_permission_policy witness interface pulls members constraints permissions membershipBalance ordering calls cursor handlerSpecs wordSpecs) code arg1 arg2
 
 
 end SP1Clean.Soundness.HostHintReadLocal

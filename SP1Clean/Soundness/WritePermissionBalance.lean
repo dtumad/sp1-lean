@@ -4,7 +4,7 @@ import ToClean.Circuit.InteractionRecovery
 
 /-! # Byte permission authentication from a structural ledger
 
-A fixed provider proves writability from its raw assertions and lookup. Count-bounded balance
+A permission row proves writability from its assertions and authenticated fixed-interval membership. Count-bounded balance
 then authenticates every unit pull, provided the public verifier and every other component emit only
 zero or unit-negative permission interactions. This separates the generic matching argument from the concrete assembly's
 exhaustive source classification and from the store's byte-footprint proof.
@@ -33,11 +33,19 @@ theorem pulls_of_silent (component : Component (ZMod p))
   contradiction
 
 theorem provider_constraints (image : ProgramImage) (env : Environment (ZMod p))
-    (constraints : ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
+    (membership : ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+      image.writePermissionTable.channel.toRaw env) :
     WritePermissionProvider.Permitted image
       (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).rowInput env).address :=
-  (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).weakSoundness_of_no_guarantees
-    rfl (by trivial) constraints).1
+    by
+  let component : Component (ZMod p) :=
+    { circuit := WritePermissionProvider.circuit image,
+      Assumptions := (WritePermissionProvider.circuit image).Assumptions }
+  apply (component.weakSoundness (by trivial) constraints ?_).1
+  apply (Operations.guarantees_iff component.operations
+    [image.writePermissionTable.channel.toRaw] env (component.inChannelsOrGuarantees env)).mpr
+  simpa only [List.mem_singleton, forall_eq] using membership
 
 theorem provider_emission (image : ProgramImage) (input : Var WritePermissionProvider.Inputs (ZMod p))
     (offset : ℕ) :
@@ -54,6 +62,8 @@ theorem provider_emission (image : ProgramImage) (input : Var WritePermissionPro
       (by change _ ∉ []; simp) (by change _ ∉ []; simp)
   simp only [WritePermissionProvider.circuit, WritePermissionProvider.main, circuit_norm]
   simp only [range, order, List.nil_append]
+  simp [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows,
+    WritePermissionProvider.channel, Channel.toRaw]
 
 theorem provider_payload (image : ProgramImage) (env : Environment (ZMod p))
     (interaction : Interaction (ZMod p))
@@ -83,6 +93,8 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
       interaction.mult = 0 ∨ interaction.mult = -1)
     (sources : ∀ component ∈ assembly.tables,
       component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨ Pulls component)
+    (membership : ∀ table ∈ witness.tables,
+      table.ChannelGuarantees image.writePermissionTable.channel.toRaw)
     (address : fields 3 (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith WritePermissionProvider.channel.toRaw)
     (active : interaction.mult = -1) (payload : interaction.msg = (toElements address).toArray) :
@@ -97,7 +109,11 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
     rcases sources table.component
       (EnsembleWitness.component_mem_tables_of_mem tableMem) with fixed | pulls
     · rw [fixed] at emitted checked
-      have permitted := provider_constraints image (Environment.fromArray physical witness.data) checked
+      have authenticated := membership table tableMem physical physicalMem
+      simp only [Table.environment, witness.same_data table tableMem] at authenticated
+      rw [fixed] at authenticated
+      have permitted := provider_constraints image (Environment.fromArray physical witness.data)
+        checked authenticated
       have same := (provider_payload image _ provider emitted).symm.trans (samePayload.trans payload)
       have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp same)
       simp only [ProvableType.fromElements_toElements] at addressEq

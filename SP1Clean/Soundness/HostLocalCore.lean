@@ -39,6 +39,7 @@ def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot)
   tables := tables image source auxiliary
   unique_names := names
   channels := HostCallChip.channel.toRaw :: WritePermissionProvider.channel.toRaw ::
+    image.writePermissionTable.channel.toRaw ::
     (LocalCore.baseEnsemble image source).channels ++ channels
   verifier := LocalCore.boundaryVerifier
 
@@ -49,7 +50,7 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot)
   (LocalSourceBoundary.checker image source).install (baseEnsemble image source auxiliary channels names)
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) (auxiliary : List (Component (ZMod p))) :
-    (tables image source auxiliary).length = 62 + auxiliary.length := by
+    (tables image source auxiliary).length = 63 + auxiliary.length := by
   simp only [tables, List.length_append, List.length_set, ProtectedLocalCore.tables_length]
 
 theorem core_component (image : ProgramImage) (source : ExecutionSnapshot)
@@ -143,7 +144,7 @@ private theorem protected_byte_requirements (image : ProgramImage) (source : Exe
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements byteChannel.toRaw env := by
   obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
-  have limit : index < 62 := by simpa only [ProtectedLocalCore.tables_length] using bound
+  have limit : index < 63 := by simpa only [ProtectedLocalCore.tables_length] using bound
   by_cases core : index < 61
   · have projection := ProtectedLocalCore.component_projection (p := p) image source ⟨index, core⟩
     have original := LocalCore.component_byte_requirements image source
@@ -153,12 +154,13 @@ private theorem protected_byte_requirements (image : ProgramImage) (source : Exe
     apply Operations.channelRequirements_of_interactionsWith_subset _ _ _ ?_ env original
     rw [projection.2.2 byteChannel.toRaw (by simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw])]
     exact List.Subset.refl _
-  · have last : index = 61 := by omega
-    subst index
-    apply Operations.requirements_of_not_mem _ _ _
-      (((ProtectedLocalCore.tables image source)[61]).inChannelsOrRequirements_of_constraints env constraints)
-    change byteChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
-    simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw]
+  · apply Operations.requirements_of_not_mem _ _ _
+      (((ProtectedLocalCore.tables image source)[index]).inChannelsOrRequirements_of_constraints env constraints)
+    rcases (show index = 61 ∨ index = 62 by omega) with rfl | rfl
+    · change byteChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
+      simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw]
+    · change byteChannel.toRaw ∉ [image.writePermissionTable.channel.toRaw]
+      simp [byteChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
 
 /-- Every physical Byte provider proves its own local requirement. -/
 theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSnapshot)
@@ -178,9 +180,11 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
 
 private theorem suffix_components (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) :
-    (tables image source auxiliary).drop 61 = { circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } :: auxiliary := by
+    (tables image source auxiliary).drop 61 = { circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } ::
+      WritePermissionProvider.membershipComponent image :: auxiliary := by
   have suffix : (ProtectedLocalCore.tables (p := p) image source).drop 61 =
-      [{ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions }] := by
+      [{ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions },
+        WritePermissionProvider.membershipComponent image] := by
     rw [ProtectedLocalCore.tables, List.drop_left' (by
       simp only [List.length_set, LocalCore.tables_length])]
   rw [tables, List.drop_append_of_le_length (by
@@ -342,7 +346,7 @@ theorem localWitness_constraints (constraints : witness.Constraints) : (localWit
 private theorem base_channel_registered (channel : RawChannel (ZMod p))
     (member : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∈ (baseEnsemble image source auxiliary channels names).channels :=
-  List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ member))
+  List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ member)))
 
 /-- Registered base channels retain their actual public-verifier ledger after physical projection. -/
 theorem localWitness_verifier_interactions (channel : RawChannel (ZMod p))
@@ -367,6 +371,8 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
     (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw)
     (silent : ∀ component ∈ auxiliary, channel ∉ component.circuit.channels) :
     (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
+  have notMembership := ProtectedLocalCore.old_channel_ne_membership channel
+    (List.mem_append_left _ registered)
   have physical := witness.projectPrefix_tables_interactions (target := LocalCore.ensemble image source)
     projectionLength projectionWidths projectionFixed channel ?_
   · change (localWitness witness).tables.flatMap (·.interactionsWith channel) =
@@ -389,9 +395,14 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
       apply table.interactionsWith_nil_of_channel_not_mem
       rcases List.mem_cons.mp mapped with same | extra
       · rw [same]
-        change channel ∉ [WritePermissionProvider.channel.toRaw]
-        simpa only [List.mem_singleton] using notPermission
-      · exact silent table.component extra
+        change channel ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
+        simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+        exact ⟨notMembership, notPermission⟩
+      · rcases List.mem_cons.mp extra with same | extra
+        · rw [same]
+          change channel ∉ [image.writePermissionTable.channel.toRaw]
+          simpa only [List.mem_singleton] using notMembership
+        · exact silent table.component extra
     rw [empty, List.append_nil]
   · intro index row rowWidth
     have bound : index.val < 61 := by

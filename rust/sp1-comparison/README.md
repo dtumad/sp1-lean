@@ -25,7 +25,7 @@ the latter do not claim agreement with a released layout sharing that group.
 
 `scripts/check_release_surface.py` checks this record against both Rust inventory snapshots and
 the target revision in provenance. After the full test build, its `--native` option also reads the
-actual installed 93-component assembly; the full audit runs this check. The Cargo inventory tests
+actual installed 94-component assembly; the full audit runs this check. The Cargo inventory tests
 independently authenticate the snapshots against released Rust source. No generated Lean registry
 serves as the Rust reference.
 
@@ -85,7 +85,16 @@ that output and exercises these boundaries:
   is broader than the contiguous SP1 fixture. Clean requires
   power-of-two heights, so larger source comparisons must request a matching fixed SP1 shape.
 
-Three legacy lookup meanings still block full export: write permission, hint nodes and hint words. The experimental Clean pin adds message predicates and indexed
+- Native write permissions use their production request circuit and a verifier-fixed interval
+  provider. Independent Rust expectations derive writable bytes from literal ROM PCs. Closed
+  two-request fixtures compare complete Lean/Rust rows and ledgers, including repeated requests,
+  unused intervals, address bounds and empty ROM; backend tests reject forged endpoints, counts,
+  public values and witness cells. Clean's preallocated witness IR selects intervals from the
+  private address inputs, which are bound to public requests by the complete ledger. This is
+  native ROM protection, not released SP1 runtime `mprotect` semantics. Address-driven demand
+  generation for the full machine remains open.
+
+Two legacy lookup meanings still block full export: hint nodes and hint words. The experimental Clean pin adds message predicates and indexed
 preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
 whole-assembly generation still needs its own routing, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;

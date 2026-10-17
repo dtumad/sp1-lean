@@ -3,6 +3,7 @@ import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
 import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
 import SP1Clean.Native.Operations.HintQueueWordSource
 import SP1Clean.Native.Operations.WritePermission
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Shared executable fixtures for hint transfers
 
@@ -46,8 +47,12 @@ def permission (image : ProgramImage) (address : ℕ) : Bool × Ledger :=
   match WritePermissionProvider.populate? (p := SP1Prime) image address with
   | none => (false, [])
   | some input =>
-    evaluateProgram (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
-      (toElements input).toList none [FiniteLookup.ofStatic image.writePermissionTable]
+    let request := evaluateProgram
+      (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
+      (toElements input).toList
+    let membership := StaticMembership.providerLedger image.writePermissionTable request.2
+      (WritePermissionProvider.membership_height_lt_uint64 image)
+    (request.1, request.2 ++ membership)
 
 def balanced (ledger : Ledger) : Bool :=
   let selected := ledger.filter (fun item => item.1 != "SP1Byte")

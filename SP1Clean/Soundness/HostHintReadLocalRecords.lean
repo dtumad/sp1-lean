@@ -138,13 +138,14 @@ theorem node_authenticated (witness : EnsembleWitness (ensemble image source oth
     (member : nodeChannel.pulledValue record ∈ witness.interactionsWith nodeChannel.toRaw) :
     record.Valid ∧ record.Binds store := by
   apply HostLocalCore.authenticated_auxiliary_pull witness nodeChannel ?_ node_fresh
-    (by simp [nodeChannel, WritePermissionProvider.channel, Channel.toRaw]) wrapper_node_silent
+    (by simp [nodeChannel, WritePermissionProvider.channel, Channel.toRaw])
+    (by simp [nodeChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]) wrapper_node_silent
     (fun record => record.Valid ∧ record.Binds store)
     (fun table member => (authenticated table member).1) balanced record member
-  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
-          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))
+          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩))))))
 
 theorem word_authenticated (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
@@ -152,13 +153,14 @@ theorem word_authenticated (witness : EnsembleWitness (ensemble image source oth
     (member : wordChannel.pulledValue record ∈ witness.interactionsWith wordChannel.toRaw) :
     record.Valid ∧ record.Binds store := by
   apply HostLocalCore.authenticated_auxiliary_pull witness wordChannel ?_ word_fresh
-    (by simp [wordChannel, WritePermissionProvider.channel, Channel.toRaw]) wrapper_word_silent
+    (by simp [wordChannel, WritePermissionProvider.channel, Channel.toRaw])
+    (by simp [wordChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]) wrapper_word_silent
     (fun record => record.Valid ∧ record.Binds store)
     (fun table member => (authenticated table member).2) balanced record member
-  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
-          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))
+          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩))))))
 
 theorem node_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)

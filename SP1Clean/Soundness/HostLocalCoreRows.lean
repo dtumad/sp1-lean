@@ -42,9 +42,9 @@ private theorem local_length (witness : EnsembleWitness (ensemble image source a
   exact LocalCore.tables_length image source
 
 private theorem extended_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    62 ≤ witness.tables.length := by
+    63 ≤ witness.tables.length := by
   rw [← witness.same_length]
-  change 62 ≤ (tables image source auxiliary).length
+  change 63 ≤ (tables image source auxiliary).length
   rw [tables_length]
   omega
 
@@ -143,8 +143,25 @@ private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image
   rw [typedTableInteractionsWith_raw]
   apply Table.interactionsWith_nil_of_channel_not_mem
   rw [component]
-  change memoryChannel.toRaw ∉ [WritePermissionProvider.channel.toRaw]
-  simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
+  change memoryChannel.toRaw ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
+  simp [memoryChannel, WritePermissionProvider.channel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
+
+private theorem permission_membership_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+    typedTableInteractionsWith (witness.tables[62]'(by have := extended_length witness; omega)) memoryChannel = [] := by
+  have component : (witness.tables[62]'(by have := extended_length witness; omega)).component =
+      WritePermissionProvider.membershipComponent image := by
+    rw [← witness.same_circuits]
+    change (tables image source auxiliary)[62]'(by rw [tables_length]; omega) = _
+    simp only [tables]
+    rw [List.getElem_append_left (by simp only [List.length_set, ProtectedLocalCore.tables_length]; decide),
+      List.getElem_set_ne (by decide)]
+    rfl
+  apply (List.map_eq_nil_iff (f := TypedInteraction.raw)).mp
+  rw [typedTableInteractionsWith_raw]
+  apply Table.interactionsWith_nil_of_channel_not_mem
+  rw [component]
+  change memoryChannel.toRaw ∉ [image.writePermissionTable.channel.toRaw]
+  simp [memoryChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
 
 /-- The complete interior is the original instruction/refresh ledger plus all actual host
 accesses. The permutation preserves complete typed interactions, including disabled pairs. -/
@@ -155,8 +172,10 @@ theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source au
   have fullSplit : witness.tables.drop 58 = hostCallTable witness ::
       witness.tables[59]'(by have := extended_length witness; omega) ::
       witness.tables[60]'(by have := extended_length witness; omega) ::
-      witness.tables[61]'(by have := extended_length witness; omega) :: witness.tables.drop 62 := by
+      witness.tables[61]'(by have := extended_length witness; omega) ::
+      witness.tables[62]'(by have := extended_length witness; omega) :: witness.tables.drop 63 := by
     rw [List.drop_eq_getElem_cons (by have := extended_length witness; omega),
+      List.drop_eq_getElem_cons (by have := extended_length witness; omega),
       List.drop_eq_getElem_cons (by have := extended_length witness; omega),
       List.drop_eq_getElem_cons (by have := extended_length witness; omega),
       List.drop_eq_getElem_cons (by have := extended_length witness; omega)]
@@ -184,14 +203,14 @@ theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source au
     rw [← table_memory_original witness ⟨60, by decide⟩ (by decide)]
     exact originalRamSilent
   rw [memoryInterior, NativeCore.flatMap_split witness.tables _ 6 52, fullSplit,
-    List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, fixedSilent, ramSilent,
-    permission_memory_nil, List.nil_append, List.nil_append, List.nil_append]
+    List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, fixedSilent, ramSilent,
+    permission_memory_nil, permission_membership_memory_nil, List.nil_append, List.nil_append, List.nil_append, List.nil_append]
   rw [LocalCore.memoryInterior, NativeCore.flatMap_split (localWitness witness).tables _ 6 52,
     originalSplit, List.flatMap_cons, List.flatMap_cons, List.flatMap_cons, List.flatMap_nil,
     originalFixedSilent, originalRamSilent, List.nil_append, List.nil_append, List.append_nil, before_wrapper]
   simpa only [List.append_assoc, auxiliaryMemory, auxiliaryTables] using
     ((wrapper_memory_perm witness constraints).append_right
-      ((witness.tables.drop 62).flatMap (typedTableInteractionsWith · memoryChannel))).append_left
+      ((witness.tables.drop 63).flatMap (typedTableInteractionsWith · memoryChannel))).append_left
         (((witness.tables.drop 6).take 52).flatMap (typedTableInteractionsWith · memoryChannel))
 
 end SP1Clean.Soundness.HostLocalCore

@@ -57,7 +57,9 @@ private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1P
     (SnapshotRegisterProvider.membership_height_lt_uint64 source.sail.memorySnapshot) ++
     StaticMembership.providerLedger
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
-        (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory")
+        (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory") ++
+    (if guarded then StaticMembership.providerLedger image.writePermissionTable consumers
+      (WritePermissionProvider.membership_height_lt_uint64 image) else [])
   evaluated.all Prod.fst && program.1 && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>
       (assembly.channels.map RawChannel.name).contains name &&
@@ -309,9 +311,9 @@ private def commitRows : List Row :=
     (3, finalRecord 0 5 13 16), (3, finalRecord 6 10 12 0),
     (3, finalRecord 11 11 11 65537), terminal 5 12,
     (57, List.replicate (size HaltChip.Inputs) 0),
-    (58, (toElements commitInstruction).toList), (65, (toElements commitHandler).toList),
-    (87, (toElements (commitHandler.next 0)).toList),
-    (88, (toElements (HostCommitBoundary.start
+    (58, (toElements commitInstruction).toList), (66, (toElements commitHandler).toList),
+    (88, (toElements (commitHandler.next 0)).toList),
+    (89, (toElements (HostCommitBoundary.start
       (HostCommitEnsemble.sourceValues true commitSource.host))).toList)]
 
 /-- Separate Memory balance only to identify the cause of a negative fixture. Full acceptance
@@ -339,7 +341,9 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
     (SnapshotRegisterProvider.membership_height_lt_uint64 source.sail.memorySnapshot) ++
     StaticMembership.providerLedger
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
-        (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory")
+        (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory") ++
+    StaticMembership.providerLedger syscallImage.writePermissionTable consumers
+      (WritePermissionProvider.membership_height_lt_uint64 syscallImage)
   let balanced (entry : String × List Fp × Fp) :=
     ((ledger.filter (fun other => other.1 == entry.1 && other.2.1 == entry.2.1)).map
       (fun other => other.2.2)).sum == 0
@@ -373,9 +377,9 @@ theorem untouchedCommitMemory :
 theorem rejectsCommitBoundaries :
     [checkCommit commitSource.host commitRows,
      checkCommit { commitTarget with deferred := commitTarget.deferred.set 0 0 } commitRows,
-     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 87)),
      checkCommit commitTarget (commitRows.filter (fun row => row.1 != 88)),
-     checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 87))] =
+     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 89)),
+     checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 88))] =
       [false, false, false, false, false] := by native_decide
 
 /-- The installed interaction-only public verifier contains no native witness closure. -/
@@ -482,8 +486,8 @@ theorem rejectsForgedHalt :
       [false, false, false] := by native_decide
 
 private def unchangedBanks (host : HostState) : List Row :=
-  [(87, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
-   (88, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues true host))).toList)]
+  [(88, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
+   (89, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues true host))).toList)]
 
 private def haltInstruction (exit : ℕ) : HostCallChip.Inputs Fp :=
   ⟨{ syscallInput 0 with
@@ -501,7 +505,7 @@ private def installedHaltRows (exit : ℕ) (legacy : Bool) : List Row :=
   (if legacy then haltRows exit else
     (haltRows exit).filter (fun row => row.1 != 57) ++
       [(58, (toElements (haltInstruction exit)).toList),
-       (63, (toElements (HostHaltChip.populate ((haltInstruction exit).message 0))).toList)]) ++
+       (64, (toElements (HostHaltChip.populate ((haltInstruction exit).message 0))).toList)]) ++
     unchangedBanks (haltSource exit).host
 
 private def checkInstalledHalt (exit publicExit : ℕ) (rows : List Row) : Bool :=
@@ -524,7 +528,7 @@ theorem rejectsInstalledExitForgery :
     [checkInstalledHalt 65536 65535 (installedHaltRows 65536 false),
      checkInstalledHalt 0 1 (installedHaltRows 0 false),
      checkInstalledHalt 0 0 (installedHaltRows 0 false ++
-       (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 63)),
+       (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 64)),
      checkInstalledHalt 0 0 (installedHaltRows 0 false ++
        [(57, List.replicate (size HaltChip.Inputs) 0)])] =
       [false, false, false, false] := by native_decide
@@ -677,9 +681,12 @@ private def receiptPermission (source : ExecutionSnapshot) (input : StoreByteChi
   let produced := receiptStore source input
   let providers := permissions.map fun row =>
     evaluate storeRomImage source { circuit := WritePermissionProvider.circuit storeRomImage, Assumptions := (WritePermissionProvider.circuit storeRomImage).Assumptions } row
-  let ledger := ((produced :: providers).flatMap (·.2)).filter
+  let complete := (produced :: providers).flatMap (·.2)
+  let ledger := complete.filter
     (fun entry => entry.1 == (WritePermissionProvider.channel (p := SP1Prime)).name)
-  produced.1 && providers.all (·.1) && ledger.all (fun key =>
+  produced.1 && providers.all (·.1) &&
+    StaticMembership.check storeRomImage.writePermissionTable complete
+      (WritePermissionProvider.membership_height_lt_uint64 storeRomImage) && ledger.all (fun key =>
     ((ledger.filter (fun item => item.2.1 == key.2.1)).map (·.2.2)).sum == 0)
 
 /-- Publishing a receipt retains byte-precise permission enforcement. Even an unchanged code

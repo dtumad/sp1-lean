@@ -173,6 +173,18 @@ theorem projected_permission_balancedChannel
       (by simp [WritePermissionProvider.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [WritePermissionProvider.channel, HostExitBoundary.channel, Channel.toRaw])
 
+/-- Queue, bank and terminal endpoints retain the fixed writable-interval ledger unchanged. -/
+theorem projected_permission_membership_balancedChannel
+    (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names))
+    (balanced : witness.BalancedChannels) :
+    (projected witness).BalancedChannel image.writePermissionTable.channel.toRaw := by
+  apply projected_balancedChannel witness balanced
+  · simp [HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
+      PublicVerifier.install, HostLocalCore.baseEnsemble]
+  · apply boundary_silent
+    all_goals simp [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows,
+      stateChannel, HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
+
 private theorem boundary_core_silent (channel : RawChannel (ZMod p))
     (registered : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     channel ∉ (boundary source final bankFinal).circuit.channels := by
@@ -194,7 +206,7 @@ theorem projected_core_balancedChannel
     (projected witness).BalancedChannel channel := by
   apply projected_balancedChannel witness balanced channel
   · exact List.mem_append_left _ (List.mem_cons_of_mem _
-      (List.mem_cons_of_mem _ (List.mem_append_left _ registered)))
+      (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ registered))))
   · exact boundary_core_silent channel registered
 
 /-- Authentication uses only the byte, node and word ledgers, all untouched by the boundary. -/
@@ -275,10 +287,10 @@ variable {availableNames : ((HostLocalCore.tables image source
 
 theorem extraTables_eq
     (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available resources channels availableNames)) :
-    extraTables (projected witness) = witness.tables.drop 85 := by
-  change (((projected witness).tables.drop 62).drop 21).drop 2 = _
+    extraTables (projected witness) = witness.tables.drop 86 := by
+  change (((projected witness).tables.drop 63).drop 21).drop 2 = _
   rw [List.drop_drop, List.drop_drop]
-  exact projected_drop witness 85 (by decide)
+  exact projected_drop witness 86 (by decide)
 
 /-- The complete queue ledger includes the verifier's endpoints and each physical handler row. -/
 theorem queue_balanced

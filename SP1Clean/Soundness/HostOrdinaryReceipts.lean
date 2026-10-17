@@ -39,7 +39,7 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
 
 private theorem base_length :
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length =
-      69 + others.length + resources.length := by
+      70 + others.length + resources.length := by
   simp only [HostSailBoundary.ensemble, PublicVerifier.install, HostFinalMemory.ensemble,
     ClosedVerifier.install, HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set, HostFinalMemory.base_tables_length]

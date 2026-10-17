@@ -95,7 +95,10 @@ private theorem instruction_write_authorized (index : Fin 25)
 theorem instructionRows_write_authorized
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
+    (members : ∀ component ∈ auxiliary,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     {decoded : DecodedInstructionRow p}
     (member : decoded ∈ LocalCore.instructionRows (localWitness witness))
     (active : (decoded.toChipRow (localWitness witness).data).is_real = 1) :
@@ -120,17 +123,20 @@ theorem instructionRows_write_authorized
   rw [descriptor] at active ⊢
   exact instruction_write_authorized index table.component component
     (Environment.fromArray decoded.physical witness.data)
-    (row_pull_permitted witness pulls constraints balanced table tableMem decoded.physical physicalMem) active
+    (row_pull_permitted witness pulls members constraints balanced membershipBalance table tableMem decoded.physical physicalMem) active
 
 /-- ROM exclusion is a consequence of the full bounded byte authorization. -/
 theorem instructionRows_write_permitted
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
+    (members : ∀ component ∈ auxiliary,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     {decoded : DecodedInstructionRow p}
     (member : decoded ∈ LocalCore.instructionRows (localWitness witness))
     (active : (decoded.toChipRow (localWitness witness).data).is_real = 1) :
     Target.RowWritePermitted image (decoded.toChipRow (localWitness witness).data).view := by
-  exact (instructionRows_write_authorized witness pulls constraints balanced member active).permitted
+  exact (instructionRows_write_authorized witness pulls members constraints balanced membershipBalance member active).permitted
 
 end SP1Clean.Soundness.HostLocalCore

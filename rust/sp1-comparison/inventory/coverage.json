@@ -101,13 +101,14 @@
       "lean": [
         "SP1Clean/Proofs/Chips/HostCallChip/Formal.lean",
         "SP1Clean/Native/Operations/SyscallCodeGuard.lean",
+        "SP1Clean/Native/Operations/WritePermission.lean",
         "SP1Clean/Soundness/HostCallReceivers.lean",
         "SP1Clean/Soundness/HostHintRecordSources.lean"
       ],
       "export": "subcomponent",
       "comparisonKind": "native-backend",
-      "comparison": ["rust/sp1-comparison/tests/syscall_code_export.rs"],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12; Full-word code guard exports through Clean and is checked against SP1 enum values, Lean rows and raw AIR; complete host export and effects comparison remain open."
+      "comparison": ["rust/sp1-comparison/tests/syscall_code_export.rs", "rust/sp1-comparison/tests/write_permission_export.rs"],
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Complete host export and effects comparison remain open."
     },
     "halt": {
       "lean": [
@@ -337,7 +338,8 @@
     {"name": "sp1.native.host_call", "width": 85, "inputWidth": 71, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.source_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
     {"name": "sp1.native.initial_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []},
-    {"name": "sp1.native.write_permission", "width": 97, "inputWidth": 9, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.write_permission"]},
+    {"name": "sp1.native.write_permission", "width": 97, "inputWidth": 9, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.write_permission.provider", "width": 8, "inputWidth": 8, "fixedWidth": 7, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read", "width": 368, "inputWidth": 66, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.host_halt", "width": 94, "inputWidth": 30, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.enter", "width": 22, "inputWidth": 22, "fixedWidth": 0, "group": "host", "lookups": []},

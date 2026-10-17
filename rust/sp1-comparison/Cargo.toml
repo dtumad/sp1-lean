@@ -81,3 +81,7 @@ required-features = ["instruction-export"]
 [[test]]
 name = "program_export"
 required-features = ["instruction-export"]
+
+[[test]]
+name = "write_permission_export"
+required-features = ["clean-export"]

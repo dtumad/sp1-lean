@@ -7,12 +7,11 @@ namespace SP1Clean.Audit.BranchEnsemble
 
 open Circuit Air.Flat SP1Clean.Model.Core
 
-/-- The three remaining legacy fixed meanings retain their original identities. -/
+/-- The two remaining legacy fixed meanings retain their original identities. -/
 theorem fixed_names (target : MemorySnapshot) : (fixed target).map (·.table.name) =
-    ["sp1.native.write_permission", "sp1.native.hint_source_nodes",
+    ["sp1.native.hint_source_nodes",
       "sp1.native.hint_source_words"] := by
   simp only [List.map_cons, List.map_nil, fixed, FiniteLookup.ofStatic,
-    ProgramImage.writePermissionTable,
     HintQueue.sourceTable, HintQueue.sourceWordTable, StaticTable.ofRows,
     StaticTable.toTable, Table.toRaw]
 

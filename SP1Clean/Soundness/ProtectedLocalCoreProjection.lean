@@ -4,8 +4,8 @@ import ToClean.Air.ComponentReplacement
 
 /-! # The protected local AIR retains the original execution witness
 
-The first 61 physical tables are reinterpreted by their original components; the fixed permission
-provider is omitted. Assertions, lookups, public input, and every original channel's complete
+The first 61 physical tables are reinterpreted by their original components; the permission request
+and fixed membership tables are omitted. Assertions, lookups, public input, and every original channel's complete
 interaction list are preserved. Fixed lookup predicates survive changes to canonical data.
 Thus all previously proved local ordering and grounding results apply to this projection without
 additional validity or balance premises.
@@ -164,7 +164,8 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
 
 private theorem provider_suffix_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw) :
+    (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw)
+    (notMembership : channel ≠ image.writePermissionTable.channel.toRaw) :
     (witness.tables.drop 61).flatMap (·.interactionsWith channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
@@ -174,16 +175,21 @@ private theorem provider_suffix_silent {image : ProgramImage} {source : Executio
   rw [tables, List.drop_left'] at mapped
   swap
   · simp only [List.length_set, LocalCore.tables_length]
-  obtain same := List.mem_singleton.mp mapped
   apply table.interactionsWith_nil_of_channel_not_mem
-  rw [same]
-  change channel ∉ [WritePermissionProvider.channel.toRaw]
-  simpa only [List.mem_singleton] using different
+  rcases List.mem_cons.mp mapped with same | same
+  · rw [same]
+    change channel ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
+    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+    exact ⟨notMembership, different⟩
+  · rw [List.mem_singleton.mp same]
+    change channel ∉ [image.writePermissionTable.channel.toRaw]
+    simpa only [List.mem_singleton] using notMembership
 
 /-- Retaining the old components also retains each complete pre-existing channel ledger. -/
 theorem localWitness_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw) :
+    (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw)
+    (notMembership : channel ≠ image.writePermissionTable.channel.toRaw) :
     (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
   apply witness.projectPrefix_interactions (target := LocalCore.ensemble image source)
     (projectionLength image source) _ _ rfl channel ?_ ?_
@@ -197,7 +203,7 @@ theorem localWitness_interactions {image : ProgramImage} {source : ExecutionSnap
     exact List.map_congr_left fun interaction _ => AbstractInteraction.eval_congr rfl
   · change (witness.tables.drop (LocalCore.tables image source).length).flatMap _ = []
     rw [LocalCore.tables_length]
-    exact provider_suffix_silent witness channel different
+    exact provider_suffix_silent witness channel different notMembership
 
 theorem old_channel_ne_permission {image : ProgramImage} {source : ExecutionSnapshot}
     (channel : RawChannel (ZMod p)) (member : channel ∈ (LocalCore.ensemble image source).channels) :
@@ -220,14 +226,38 @@ theorem old_channel_ne_permission {image : ProgramImage} {source : ExecutionSnap
     rw [String.toList_append] at names
     simp [LocalSourceBoundary.checker, WritePermissionProvider.channel] at names
 
+/-- The interval-membership channel is fresh for every registered local-core channel. -/
+theorem old_channel_ne_membership {image : ProgramImage} {source : ExecutionSnapshot}
+    (channel : RawChannel (ZMod p)) (member : channel ∈ (LocalCore.ensemble image source).channels) :
+    channel ≠ image.writePermissionTable.channel.toRaw := by
+  change channel ∈ (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at member
+  rcases List.mem_append.mp member with member | member
+  · intro same
+    have names := List.mem_map_of_mem (f := RawChannel.name) member
+    rw [same] at names
+    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
+      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
+      stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
+      publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership,
+      MemorySnapshot.registerTable, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw] at names
+  · obtain rfl := List.mem_singleton.mp member
+    intro same
+    have names := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList.take 5) same
+    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
+      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at names
+    rw [String.toList_append] at names
+    simp [LocalSourceBoundary.checker, StaticTable.channel, ProgramImage.writePermissionTable,
+      StaticTable.ofRows] at names
+
 /-- The protected ensemble supplies all balance premises of the original local grounding. -/
 theorem localWitness_balanced {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (balanced : witness.BalancedChannels) : (localWitness witness).BalancedChannels := by
   intro channel member
   change BalancedInteractions ((localWitness witness).interactionsWith channel)
-  rw [localWitness_interactions witness channel (old_channel_ne_permission channel member)]
-  exact balanced channel (List.mem_cons_of_mem _ member)
+  rw [localWitness_interactions witness channel (old_channel_ne_permission channel member)
+    (old_channel_ne_membership channel member)]
+  exact balanced channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ member))
 
 /-- The protected AIR refines the original local AIR at the same public boundary. -/
 theorem statement_implies_local (image : ProgramImage) (source : ExecutionSnapshot)

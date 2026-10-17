@@ -76,16 +76,15 @@ def baseRows : List Row :=
 def withoutRam : List Row :=
   baseRows.filter (fun row => !([1, 2, 4, 5].contains row.1)) ++ [terminal 2 4, terminal 5 4]
 
-def evaluate (image : ProgramImage) (_source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
+def evaluate (_image : ProgramImage) (_source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
     (extraLookups : List (FiniteLookup Fp) := []) : Bool × Ledger :=
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let fixed := [FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime))] ++ extraLookups
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => fixed.any fun table => lookup.table.name == table.table.name &&
+    | .lookup lookup => extraLookups.any fun table => lookup.table.name == table.table.name &&
         table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
     | .witness .. | .interact .. => true
   (valid, (FlatOperation.interactions operations).map fun interaction =>

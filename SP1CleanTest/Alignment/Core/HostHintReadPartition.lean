@@ -172,7 +172,8 @@ private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
     EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
     (StaticMembership.buildTables ensemble.tables inputs
-      []
+      (StaticMembership.demandLedger ensemble.tables inputs ["sp1.native.write_permission"]
+        (fun _ _ => #[]) (ProverHint.empty Fp))
       (fun _ _ => #[]) (ProverHint.empty Fp) bounded)
     (valueFromOffset SP1PublicIO 0 (Environment.fromArray #[] (fun _ _ => #[])))
     (StaticMembership.buildTables_components ..)
@@ -180,9 +181,9 @@ private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
 private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
     (permissions : List (WritePermissionProvider.Inputs Fp)) (index : ℕ) : List (List Fp) :=
   if index == 61 then permissions.map (fun row => (toElements row).toList)
-  else if index == 62 then calls.map (fun row => (toElements row).toList)
-  else if index == 83 || index == 84 then
-    (rows.filter (fun row => row.1 == (index == 84))).map (fun row => (toElements row.2).toList)
+  else if index == 63 then calls.map (fun row => (toElements row).toList)
+  else if index == 84 || index == 85 then
+    (rows.filter (fun row => row.1 == (index == 85))).map (fun row => (toElements row.2).toList)
   else []
 
 private theorem installedInputs_bounded (calls : List (HostHintReadChip.Inputs Fp))
@@ -205,7 +206,7 @@ private def installed (calls : List (HostHintReadChip.Inputs Fp)) (rows : List H
   buildWitness assembly (installedInputs calls rows permissions)
     (fun index => installedInputs_bounded calls rows permissions bounded index)
 
-/-- The installed 85-table assembly retains exactly the handler and both physical word tables.
+/-- The installed 86-table assembly retains exactly the handler and both physical word tables.
 Its complete cursor balances with reversed multi-call rows; missing handlers, missing words,
 and orphan consumers fail at the same whole-witness channel boundary. The named prover data
 contains the actual handler inputs in physical order. -/
@@ -215,7 +216,7 @@ theorem installedCursor :
     let handler := HostHintReadLocal.handlerTable witness
     let tables := HostHintReadLocal.wordTables witness
     let cursor := cursorLedger witness.interactions
-    witness.tables.length = 85 ∧ handler.table = (handlers calls).table ∧
+    witness.tables.length = 86 ∧ handler.table = (handlers calls).table ∧
       witness.data "sp1.native.hint_read" (size HostHintReadChip.Inputs) =
         (calls.map toElements).toArray ∧
       tables.map (·.table) = (consumers rows).map (·.table) ∧
@@ -237,13 +238,15 @@ private def permissionRows (rows : List HintReadFixtures.Row) (forge := false) :
         (fun input => { input with address := Address.ofNat address }) else none
 
 private def permissionRowsChecked (rows : List (WritePermissionProvider.Inputs Fp)) : Bool :=
-  rows.all fun input =>
-    (HostChecks.evaluateProgram (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
-      (toElements input).toList none [FiniteLookup.ofStatic image.writePermissionTable]).1
+  let requests := rows.map fun input =>
+    HostChecks.evaluateProgram (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
+      (toElements input).toList
+  requests.all (·.1) && StaticMembership.check image.writePermissionTable (requests.flatMap (·.2))
+    (WritePermissionProvider.membership_height_lt_uint64 image)
 
 /-- Installed permissions cover the padding and final native RAM cell. Dropping a permission fails
 balance. Padding into ROM keeps cursor balance but lacks permissions; forged provider rows restore
-that balance only by violating the fixed provider's actual assertions/lookup. -/
+that balance only by violating the permission assertions or fixed interval membership. -/
 theorem installedPermissions :
     let permittedCalls := [call 2 1 265 131056, call 1 265 (2 ^ 24 + 1) (2 ^ 48 - 8)]
     let rows := permittedCalls.flatMap words
@@ -264,8 +267,8 @@ theorem installedPermissions :
 private def sourceInputs (calls : List (HostHintReadChip.Inputs Fp))
     (rows : List HintReadFixtures.Row) (nodes : List (NodeRecord Fp)) (records : List (WordRecord Fp))
     (index : ℕ) : List (List Fp) :=
-  if index == 85 then nodes.map (fun row => (toElements row).toList)
-  else if index == 86 then records.map (fun row => (toElements row).toList)
+  if index == 86 then nodes.map (fun row => (toElements row).toList)
+  else if index == 87 then records.map (fun row => (toElements row).toList)
   else installedInputs calls rows [] index
 
 private theorem sourceInputs_bounded (calls : List (HostHintReadChip.Inputs Fp))
@@ -313,7 +316,7 @@ theorem installedRecords :
     let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
     let witness := withSources hints calls rows nodes records
     let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
-    witness.tables.length = 89 ∧ sourceRowsChecked hints nodes records = true ∧
+    witness.tables.length = 90 ∧ sourceRowsChecked hints nodes records = true ∧
       HintReadFixtures.balanced (recordLedger witness.interactions) = true ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records).interactions) = false ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows nodes (records.drop 1)).interactions) = false ∧
@@ -390,7 +393,7 @@ theorem installedQueueEndpoints :
     let projected := Soundness.HostHintQueueBoundary.projected witness
     let endpoints := queueLedger ((queueAssembly hints final).verifierOperations.interactionValues
       (Environment.fromInput witness.publicInput witness.data))
-    witness.tables.length = 89 ∧ projected.tables.length = 89 ∧
+    witness.tables.length = 90 ∧ projected.tables.length = 90 ∧
       witness.tables.map (·.table) = projected.tables.map (·.table) ∧
       endpoints = [queueEndpoint (SP1Clean.HostHintQueueBoundary.initial hints) 1,
         queueEndpoint final (-1)] ∧
