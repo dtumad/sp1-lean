@@ -209,34 +209,10 @@ even at count zero, and unmatched nonzero counts cannot balance. The released co
 also checked on sparse boundary requests. As with Byte, native bit-decomposition rows and SP1's
 fixed rows have different physical layouts.
 
-The uninstalled unified Byte/Range prototype is compared with every row of SP1's actual Byte
-and Range preprocessing and AIR, at the same four standalone count classes. The Range comparison
-retains both copies of its zero-width row. Closed tests use Clean's ordinary scheduler, check full
-Lean/Rust rows and ledgers, and exercise repeated requests, all widths, 64/65 distinct requests,
-malformed inputs, selectors, counts, padding and public binding. The installed providers remain
-the baseline; no full-machine or additional mode coverage follows from this prototype.
-
-A second uninstalled provider experiment matches SP1's physical preprocessing: 65,536 Byte
-rows (seven fixed columns and six counts) and 131,072 Range rows (two fixed columns and one
-count). Kernel proofs establish membership and canonical index coverage. Rust compares every
-fixed cell and interaction with released preprocessing/AIR, compares honest counts with SP1's
-trace generators, and checks complete generated rows against Lean. Duplicate keys remain valid
-at every physical occurrence; canonical indexing is an honest-generation choice.
-
-The cost fixture compares the 23 specialized providers with message routing, the unified provider,
-and these two fixed tables. It retains the nine small workloads and adds mixed distinct and
-repeated-key workloads at 1,024, 16,384 and 65,536 requests. Large cases use the same runtime
-request table in all layouts; public binding is tested separately by the small fixtures. All
-layouts use Clean's generator and Plonky3's benchmark FRI parameters, with two threads, one
-warmup and three samples. Prove/verify times include preprocessing on every call: the backend
-currently has no reusable-preprocessing API. Reports also record committed cells, occurrences,
-source bytes, JSON proof bytes and per-process peak RSS. JSON size is not a wire-format size,
-and this profile makes no whole-system security claim.
-
-Run `python3 scripts/measure_byte_providers.py --artifacts <export-dir>
---binary <unified_byte_export-test-binary>` to repeat measurements after fresh export.
-Artifacts stay under the ignored `.lake/ensemble-export` tree. Installation and upstream
-adoption require review of the complete costs and proof obligations.
+The [archived provider experiments](https://github.com/dtumad/sp1-lean/pull/153) compare unified
+and verifier-fixed alternatives with the installed specialized providers. Their source and timing
+transcripts remain in the linked checkpoints; the routine checks cover the installed library.
+Proving and verification currently rebuild preprocessing, so those measurements include setup.
 
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to

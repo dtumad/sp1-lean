@@ -16,6 +16,7 @@ namespace SP1CleanTest.Core.HostChecks
 open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
 
 private abbrev Fp := ZMod SP1Prime
+/-- Active interactions retained for fixture balance and endpoint checks. -/
 abbrev Ledger := List (String × List Fp × Fp)
 
 private instance byteDecidable (op : ByteOpcode) (a b c : Fp) : Decidable (op.constrain a b c) := by
@@ -28,6 +29,8 @@ private def byteValid (values : List Fp) : Bool :=
       opcode == (op.idx : Fp) && decide (op.constrain a b c)
   | _ => false
 
+/-- Execute Clean's witness program, check its local constraints and fixture channel meanings,
+and retain active interactions. An optional offset corrupts one generated witness cell. -/
 def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
     (corrupt : Option ℕ := none) (lookups : List (FiniteLookup Fp) := [])
     (programAddress : ℕ := 2 ^ 16) : Bool × Ledger :=

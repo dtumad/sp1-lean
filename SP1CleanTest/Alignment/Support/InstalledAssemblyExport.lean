@@ -1,5 +1,5 @@
 import SP1CleanTest.Alignment.Support.BranchEnsembleInventory
-import SP1CleanTest.Core.PreprocessedByteExport
+import SP1CleanTest.Alignment.Support.ProviderGeneration
 import SP1CleanTest.Core.ProgramExport
 import SP1CleanTest.Core.WritePermissionExport
 
@@ -44,7 +44,7 @@ def fixture : FormalEnsemble Fp SP1PublicIO :=
 
 /-- Existing byte, ROM and permission routes plus immutable-table count handlers. -/
 def config : Except String (WitnessGeneration.Config Fp) := do
-  let overrides := PreprocessedByteExport.baselineConfig.components ++
+  let overrides := ProviderGeneration.byteConfig.components ++
     (ProgramExport.config image).components ++ (WritePermissionExport.config image).components
   let components ← installed.tables.zipIdx.mapM fun (component, index) => do
     let inputs := rows index

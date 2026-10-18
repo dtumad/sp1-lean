@@ -27,7 +27,6 @@ BUILD_TARGETS = [
     "SP1CleanTest.Core.SnapshotRegisterExport",
     "SP1CleanTest.Core.StaticProviderExport",
     "SP1CleanTest.Core.RamExport",
-    "SP1CleanTest.Core.PreprocessedByteExport",
     "SP1CleanTest.Core.ProgramExport",
     "SP1CleanTest.Core.WritePermissionExport",
     "SP1CleanTest.Core.HintSourceExport",
@@ -36,7 +35,7 @@ BUILD_TARGETS = [
 RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "system_export": 4,
     "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
-    "ram_export": 4, "unified_byte_export": 11, "syscall_code_export": 3,
+    "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
     "installed_assembly_export": 3,
 }
@@ -65,21 +64,10 @@ def artifact_names():
     files += [f"host_{bank}_{slot}.rs" for bank in ["commit", "deferred"] for slot in range(8)]
     files += ["host_hint_length_empty.rs", "host_hint_length.rs", "host_hint_read.rs",
               "host_hints.reference.json"]
-    files += ["unified_byte_row.rs", "unified_byte.reference.json"] + [
-        f"unified_byte_{n}.rs" for n in [0, 1, 7, 9, 17, 64, 65]
-    ] + [
-        f"byte_{layout}_{name}.rs" for layout in ["baseline", "candidate", "routed", "fixed"]
-        for name in ["empty", "and-only", "range-heavy", "mixed", "distinct-64", "distinct-65",
-                     "add", "beq", "load-byte"]
-    ]
     files += ["hint_sources.reference.json"] + [
         f"hint_{kind}{suffix}.rs" for kind in ["nodes", "words"] for suffix in ["", "_unused", "_empty"]
     ]
-    files += ["preprocessed_byte.reference.json"]
     files += ["installed_assembly.rs", "installed_assembly.reference.json", "opcodes.reference.json"]
-    files += [f"preprocessed_byte_{n}.rs" for n in [0, 1, 7, 9, 17, 64, 65]]
-    files += [f"byte_large_{layout}_{n}.rs" for layout in ["routed", "candidate", "fixed"]
-              for n in [1024, 16384, 65536]]
     return files
 
 
@@ -230,18 +218,12 @@ def main():
               f"{len(staging['removed'])} removed, {staging['unchanged']} unchanged", flush=True)
         env["CLEAN_ENSEMBLE_EXPORT_DIR"] = str(inputs)
         tests = [argument for name in RUST_TESTS for argument in ["--test", name]]
-        standard = None
         for features, name in [("instruction-export", "rust"),
                                ("instruction-export,mprotect", "rust-mprotect")]:
             log = run_logged(["cargo", "test", "--locked", "--release", "--manifest-path",
                               "rust/sp1-comparison/Cargo.toml", "--no-default-features",
                               "--features", features, *tests], out / f"{name}.log", env)
-            binaries = check_rust_log(log)
-            if name == "rust":
-                standard = binaries
-        subprocess.run([sys.executable, "scripts/measure_byte_providers.py",
-                        "--artifacts", str(out), "--binary", standard["unified_byte_export"]],
-                       env=env, check=True)
+            check_rust_log(log)
         print("PASS: deterministic Clean export, Rust backend regressions and released SP1 "
               "instruction, system and Byte/Range provider comparisons")
 

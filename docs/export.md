@@ -160,15 +160,13 @@ tables cannot be omitted. Verifier interactions and the complete occurrence boun
 At least one table must be nonempty for the batch PCS. This removes spurious padding demands
 from unused chips, but active tables still need valid padding to power-of-two heights.
 
-`ByteChip/Unified` and the preprocessed Byte provider are uninstalled comparison prototypes.
-They test consolidation and authenticated preprocessing against the specialized providers, using
-Clean's existing exporter and backend. The [provider review](https://github.com/dtumad/sp1-lean/pull/153) compares generation,
-proving, verification, trace size and memory across small instruction cases and large workloads.
-It supports retaining specialized providers: unified improves verification and some small cases,
-but costs more on large distinct demand; fixed preprocessing adds substantial proving and
-verification costs. The uninstalled prototypes are pending archival with their reproducible
-measurements. Revisit this choice when upstream demand indexing or preprocessing reuse changes
-those costs. These experiments do not change the installed inventory or retire migration evidence.
+Production retains the specialized Byte/Range providers. The archived
+[provider review](https://github.com/dtumad/sp1-lean/pull/153) compares generation, proving,
+verification, trace size and memory across small instruction cases and large workloads.
+The unified alternative cost more on large distinct demand; fully preprocessed tables added
+substantial proving and verification costs. Source and measurements remain in the linked checkpoints. Routine validation
+covers the installed providers. Revisit this choice when upstream demand indexing or reusable
+preprocessing changes those costs.
 
 The existing test adapter constructs component rows with Clean's
 runtime, then independently checks their external interactions. It is not a production scheduler

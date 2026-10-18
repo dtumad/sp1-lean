@@ -54,7 +54,9 @@ def header : SP1PublicIO Fp where
 def data : ProverData Fp := BranchCompilerRoundTrip.data
 /-- An input seed retains the actual component position and input cells. -/
 structure Seed where
+  /-- Position in the complete installed assembly. -/
   table : ℕ
+  /-- Input cells for the selected component's native row constructor. -/
   cells : List Fp
 /-- A provider seed needs no external hint. -/
 def Seed.ofCells (table : ℕ) (cells : List Fp) : Seed := ⟨table, cells⟩

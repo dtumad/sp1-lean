@@ -17,15 +17,21 @@ namespace SP1CleanTest.Core.HintReadFixtures
 
 open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
 
+/-- Field used by the native SP1 circuits. -/
 abbrev Fp := ZMod SP1Prime
+/-- Final-word selector paired with the word-transfer constructor input. -/
 abbrev Row := Bool × HintReadWordChip.Inputs Fp
 
+/-- Single-ECALL program image used to authenticate the fixture's write permissions. -/
 def image : ProgramImage := ⟨[(131072, 0x00000073)], 131072, []⟩
 
+/-- Deterministic byte payload with distinct values across adjacent word boundaries. -/
 def bytes (length : ℕ) : Bytes := (List.range length).map fun i => BitVec.ofNat 8 (19 * i + 3)
 
+/-- Initial RAM contents, chosen to expose missing writes and incorrect zero padding. -/
 def oldWord : Word Fp := Soundness.Target.bitVecToWord (BitVec.allOnes 64)
 
+/-- Construct the indexed hint word and its actual RAM update at the destination address. -/
 def row (address : ℕ) (actual : Bytes) (index : ℕ) : Row :=
   let key := Address.ofNat (p := SP1Prime) (address + 8 * index)
   let word := WordRecord.encode (p := SP1Prime) 1 actual index
@@ -33,16 +39,20 @@ def row (address : ℕ) (actual : Bytes) (index : ℕ) : Row :=
   let last := decide (index + 1 = wordCount actual)
   (last, HintReadWordChip.populate last ram word.pointer word.index)
 
+/-- All word transfers required by the payload, including its partial final word. -/
 def rows (address : ℕ) (actual : Bytes) : List Row :=
   (List.range (wordCount actual)).map (row address actual)
 
+/-- Execute one word transfer, optionally corrupting a generated witness cell. -/
 def checked (row : Row) (corrupt : Option ℕ := none) : Bool × Ledger :=
   evaluateProgram (HintReadWordChip.main row.1 (varFromOffset HintReadWordChip.Inputs 0))
     (toElements row.2).toList corrupt
 
+/-- Observe the requested word against the verifier-fixed payload inventory. -/
 def source (actual : Bytes) (record : WordRecord Fp) : Bool × Ledger :=
   HintSourceExport.observe (HintSourceExport.words [actual]) record
 
+/-- Check a writable byte address and include its physical fixed-membership provider ledger. -/
 def permission (image : ProgramImage) (address : ℕ) : Bool × Ledger :=
   match WritePermissionProvider.populate? (p := SP1Prime) image address with
   | none => (false, [])
@@ -54,11 +64,13 @@ def permission (image : ProgramImage) (address : ℕ) : Bool × Ledger :=
       (WritePermissionProvider.membership_height_lt_uint64 image)
     (request.1, request.2 ++ membership)
 
+/-- Require integer-bounded field balance for every non-Byte channel and message. -/
 def balanced (ledger : Ledger) : Bool :=
   let selected := ledger.filter (fun item => item.1 != "SP1Byte")
   selected.length < SP1Prime && selected.all fun key =>
     ((selected.filter (fun item => item.1 == key.1 && item.2.1 == key.2.1)).map (·.2.2)).sum == 0
 
+/-- Independent cursor and Memory endpoints from the semantic byte write, with padded tail. -/
 def boundaries (address : ℕ) (actual : Bytes) : Ledger :=
   let count := wordCount actual
   let memory := (ByteMemory.mk []).writeBytes address (List.replicate (8 * count) 255)
@@ -73,6 +85,8 @@ def boundaries (address : ℕ) (actual : Bytes) : Ledger :=
       Channels.memoryChannel.pull (const ⟨0, 2, key[0], key[1], key[2],
         Soundness.Target.bitVecToWord (after.readWord (address + 8 * index))⟩)) []).2
 
+/-- Check all supplied transfer rows against source membership, byte permissions and semantic
+endpoints. Omitting one requested permission exercises the unbalanced-demand rejection. -/
 def check (image : ProgramImage) (address : ℕ) (actual : Bytes) (rows : List Row)
     (missingPermission : Option ℕ := none) : Bool :=
   let consumers := rows.map checked

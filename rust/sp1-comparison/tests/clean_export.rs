@@ -584,6 +584,17 @@ fn snapshot_register_proofs_bind_each_public_index_and_limb() {
 
 #[test]
 fn snapshot_register_air_rejects_shapes_sparse_row_and_count_mutations() {
+    // Keep the prototype's shape/count regression on an installed boundary. This check
+    // counts physical occurrences before any witness values or multiplicities are supplied.
+    assert!(registers::Statement::<F>::new(&[1usize << 29, 32]).is_ok());
+    assert!(matches!(
+        registers::Statement::<F>::new(&[1usize << 30, 32]),
+        Err(EnsembleShapeError::InteractionCountBound { .. })
+    ));
+    assert!(matches!(
+        registers::Statement::<F>::new(&[3, 32]),
+        Err(EnsembleShapeError::TraceHeight { .. })
+    ));
     for heights in [vec![], vec![32], vec![2, 32, 32], vec![2, 16], vec![2, 64]] {
         assert!(registers::Statement::<F>::new(&heights).is_err());
     }

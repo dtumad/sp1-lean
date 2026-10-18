@@ -258,7 +258,7 @@ jobs:
       - name: Built-in ensemble export and Rust backend comparison
         id: ensemble
         run: /usr/bin/time -v python3 scripts/check_ensemble_export.py
-      - name: Upload ensemble export and provider measurements
+      - name: Upload ensemble export artifacts
         if: always() && steps.ensemble.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:

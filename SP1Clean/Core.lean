@@ -404,8 +404,6 @@ import SP1Clean.Proofs.Chips.BranchChip.Witgen
 import SP1Clean.Proofs.Chips.ByteChip.ByteChip
 import SP1Clean.Proofs.Chips.ByteChip.Provider
 import SP1Clean.Proofs.Chips.ByteChip.RangeChip
-import SP1Clean.Proofs.Chips.ByteChip.Preprocessed
-import SP1Clean.Proofs.Chips.ByteChip.Unified
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
 import SP1Clean.Proofs.Chips.DivRemChip.Assembly

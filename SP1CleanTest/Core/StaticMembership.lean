@@ -15,6 +15,7 @@ open Circuit Air.Flat
 
 variable {F : Type} [FiniteField F]
 
+/-- Channel names, message cells and signed multiplicities in physical occurrence order. -/
 abbrev Ledger (F : Type) := List (String × List F × F)
 
 /-- Allocate literal fixed-message demand to its first physical occurrence. Later duplicates
