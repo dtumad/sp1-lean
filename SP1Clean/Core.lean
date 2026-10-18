@@ -607,7 +607,6 @@ import SP1Clean.Soundness.RowView
 
 Root of the `SP1Core` library: every hand-written module of strata 0–6 of `scripts/layering.txt`
 (`Math`, `Model`, `FormalModel`, `Circuits/Types`, `Native`, `Proofs/Operations`, `Proofs/CircuitProofStart`,
-`Proofs/Chips`, `Soundness/RowView`). The generated `Extracted/` modules are not indexed; the ones
-the core needs are built as imports. `lake build SP1Core` builds this module's import closure, and
+`Proofs/Chips`, `Soundness/RowView`). `lake build SP1Core` builds this module's import closure, and
 `scripts/check_layering.sh` fails if this list and the stratum map disagree. Wire every new core
 module here and into `SP1Clean.lean`. -/

@@ -431,7 +431,7 @@ is gated by **`is_real - imm_c`** — an immediate does no register read — and
 `op_c[0]`).  The op_a write push carries the byte-packed result word `[r0+r1·256, …, r6+r7·256]` from
 the witnessed result bytes (cells `offset+8..15` — after the two 4-byte
 `U16toU8` low-byte blocks).  Keeping this list beside `circuit` makes Clean's exposure interface the
-single structural source consumed by both faithfulness and semantic grounding. -/
+single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

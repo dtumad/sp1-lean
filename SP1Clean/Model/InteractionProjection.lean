@@ -100,11 +100,8 @@ lemma signedVal_neg_is_real (hp : 2 < p) {is_real : ZMod p} (h : is_real = 0 ∨
     push_cast; ring
 
 omit [NeZero p] in
-/-- **`signedVal` is odd** for an odd prime `p`: `signedVal (-x) = -signedVal x` for *every* `x`
-(no binarity needed). The centered representative of `-x` is the negation of that of `x`, because
-`2 * x.val = p` is impossible for odd `p`. This is the general sign-symmetry behind the W11 program-bus
-LogUp polarity flip (the faithfulness anchors carry `is_real`/`is_trusted` as free field elements, so the
-binary `signedVal_neg_is_real` does not apply). -/
+/-- The centered representative is odd over an odd prime field, for arbitrary elements:
+`2 * x.val = p` is impossible. No Boolean-selector hypothesis is required. -/
 lemma signedVal_neg [Fact p.Prime] (hp : 2 < p) (x : ZMod p) :
     signedVal (-x) = -signedVal x := by
   have hpp : p.Prime := Fact.out
@@ -153,12 +150,11 @@ noncomputable def AbstractInteraction.toAccess (env : Environment (ZMod p))
     (i.msg.map (Expression.eval env)).toList.map ZMod.val,
     signedVal (Expression.eval env i.mult))
 
-/-- Project one evaluated Clean interaction into the Rust-facing orientation used by whole-chip
-faithfulness. Native Memory and Program channels are dualized because SP1's extracted AIR sends
+/-- Project one evaluated Clean interaction into the Rust-facing orientation used by Rust comparisons. Native Memory and Program channels are dualized because SP1's released AIR sends
 where the proof-oriented Clean circuits pull; State, Byte, and unexpected channels retain their
 literal Clean sign.
 
-The channel test is structural rather than name-based, matching `Faithful.nativeAccesses` exactly.
+The channel test is structural rather than name-based.
 In particular, a malformed fifth channel which merely reuses `"SP1Memory"` is retained as an
 unexpected interaction instead of being silently dualized. -/
 noncomputable def Interaction.toRustOrientedAccess (i : Interaction (ZMod p)) : LookupAccess :=
@@ -480,10 +476,8 @@ private lemma syscallMsg_toList {T : Type} (msg : SyscallMsg T) :
   rfl
 
 omit [NeZero p] in
-/-- **Kernel of the syscall hand-off.** SP1's own syscall bus, at the native push: bus `.Syscall`,
-table `"SP1Syscall"`, the nine `SyscallMsg` fields val-projected, and the plain signed
-multiplicity. The extracted `.raw .syscall` send projects to the same key
-(`Extracted.Interaction.toAccess`), which is what lets a whole-chip anchor compare the two. -/
+/-- Project a native Syscall push with the nine message fields, signed multiplicity and
+structural Syscall kind. The Rust comparison uses the same released message key. -/
 lemma toAccess_pushIf_syscall (env : Environment (ZMod p)) (mult : Expression (ZMod p))
     (msg : SyscallMsg (Expression (ZMod p))) :
     AbstractInteraction.toAccess env (pushedIf (channel := syscallChannel) mult msg).toRaw =

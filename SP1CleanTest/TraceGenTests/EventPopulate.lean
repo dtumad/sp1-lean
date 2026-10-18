@@ -2,13 +2,10 @@ import SP1CleanTest.TraceGenTests.Conformance
 
 /-! # Event → input-column mirrors for the trace-generation conformance layer.
 
-Whole rows are derived from the chip circuits (`TraceGenerator.lean`) and checked against SP1's
-real prover by the dump-anchored pipeline (`export/sp1dump/` + the `--testdata` generation-time
-gate in `scripts/witgenExport.lean`), not by a per-chip `native_decide` anchor; the *only*
-hand-written remainder of SP1's `generate_trace` is the event → input-column extraction,
-mirrored here. These are direct ℕ-arithmetic transcriptions of
-SP1's adapter populate functions (read-only references, paths relative to the sibling `sp1`
-checkout):
+Whole rows are derived from chip circuits. These test helpers mirror the event-to-input
+arithmetic used by native non-vacuity fixtures. Independent released-SP1 comparison lives in
+`rust/sp1-comparison/tests/instruction_export.rs`; these helpers are not its source oracle.
+Reference paths below are relative to the pinned released SP1 checkout:
 
 - `cpuStatePopulate` ← `CPUState::populate` (`crates/core/machine/src/adapter/state.rs`):
   clk split as `clk >> 24` / `(clk >> 16) & 0xFF` / `clk & 0xFFFF`, pc as three u16 limbs;
@@ -17,8 +14,7 @@ checkout):
   as four u16 limbs, then `prev_low := if same 24-bit-high window then prev & 0xFFFFFF else 0` and
   `diff_low_limb := (curr & 0xFFFFFF) - prev_low - 1` truncated to u16. (`diff_high_limb` is only a
   range-check event, not a column.) The subtraction is exact for any record with increasing
-  timestamps in the same high window — which the dumper's battery guarantees; a violation would
-  surface as an anchor mismatch, not silent wrap;
+  timestamps in the same high window; fixtures must establish those input bounds;
 - `rTypeReaderPopulate` ← `RTypeReader::populate` (`crates/core/machine/src/adapter/register/
   r_type.rs`): register indices, the three access blocks, and the `op_a_0` flag. Per
   `MemoryRecordEnum::previous_record`, a **Write** slot's `prev_value` is the overwritten value
@@ -32,14 +28,14 @@ checkout):
   register rows it populates the access block from the read record.
 
 Flattening order matches the `ProvableStruct` derivations field-for-field (`FormalModel/Contracts/Chips.lean`
-`Inputs` = `is_real ++ state ++ adapter`; `Extracted/CPUState.lean`; `Extracted/RTypeReader.lean`;
-`Extracted/ALUTypeReader.lean`), which in turn mirror SP1's `repr(C)` column structs. Everything is
+`Inputs` = `is_real ++ state ++ adapter`; `Circuits/Types/CPUState.lean`; `Circuits/Types/RTypeReader.lean`;
+`Circuits/Types/ALUTypeReader.lean`), which in turn mirror SP1's `repr(C)` column structs. Everything is
 computable and axiom-clean. -/
 
 namespace SP1Clean.TraceGenTests
 
 /-- One ALU row's worth of executor data for an `RTypeReader` chip: the `AluEvent` fields plus the
-`RTypeRecord` register access records exactly as the dumper constructs them (`op_a` a Write,
+`RTypeRecord` register access records with the native fixture access directions (`op_a` a Write,
 `op_b`/`op_c` Reads). All values are canonical ℕ. -/
 structure AluEventRec where
   clk : ℕ

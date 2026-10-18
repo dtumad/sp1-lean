@@ -55,13 +55,6 @@ if not ok:
     print("FAIL: a .lake package checkout disagrees with lake-manifest.json")
     sys.exit(1)
 EOF
-# Optional context: the SP1 semantic checkout, when present as a sibling (informational only —
-# the audited semantic revision itself is pinned in SP1Clean/FormalModel/CoreProfile.lean).
-SP1_DIR="${SP1_DIR:-../sp1}"
-if git -C "$SP1_DIR" rev-parse HEAD >/dev/null 2>&1; then
-  echo "sp1 (informational): $(git -C "$SP1_DIR" rev-parse HEAD) ($(git -C "$SP1_DIR" describe --tags 2>/dev/null), branch $(git -C "$SP1_DIR" branch --show-current))"
-fi
-
 echo
 echo "== A1 recorded-pin cross-checks (gate) =="
 if scripts/check_pins.py; then
@@ -173,15 +166,6 @@ if scripts/check_no_witness_native.sh --enforce | tail -1; then
 else
   echo "FAIL: witness-generation escape hatch reintroduced"
   fail=1
-fi
-
-echo
-echo "== A2 independent SP1 witness inputs (gate) =="
-# The full CI phase separately generates native artifacts and runs their Rust comparison.
-if python3 scripts/check_witgen_export.py --source-only; then
-  :
-else
-  echo "FAIL: independent SP1 witness inputs are invalid (see above)"; fail=1
 fi
 
 echo

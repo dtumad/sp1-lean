@@ -297,7 +297,7 @@ theorem completeness :
 read-prior pull, op_b pull + read-back push) and `RegisterWrite`'s op_a write push carrying the
 sign/zero-extended word `#v[selected_word[0], selected_word[1], 65535·msb, 65535·msb]`.  Keeping
 this list beside `circuit` makes Clean's exposure interface the single structural source consumed by
-both faithfulness and semantic grounding. -/
+semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf (input.is_lw + input.is_lwu)

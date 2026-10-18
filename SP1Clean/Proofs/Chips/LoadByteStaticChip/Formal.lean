@@ -3,9 +3,8 @@ import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 
 /-! # Semantic preservation at the alternative LoadByte consumer
 
-The alternative uses the existing LoadByte input, row, assumptions and semantic specification.
-The proof consumes its two actual fixed lookups. The original circuit and its whole-chip
-Rust-faithfulness theorem remain unchanged.
+The alternative uses the existing input, row, assumptions and semantic specification.
+The proof consumes its two fixed lookups and preserves the original circuit's contract.
 -/
 
 namespace SP1Clean.LoadByteStaticChip

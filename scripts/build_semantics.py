@@ -4,7 +4,7 @@
 Reads the import graph of the five source trees (`SP1Clean/`, `ToClean/`, `ToMathlib/`,
 `ToPolyFun/`, `SP1CleanTest/`) plus the generated `LeanRV64D/` model, classifies every module by
 stratum (`scripts/layering.txt`, longest prefix — the same rule as `scripts/check_layering.sh`) and
-by semantic layer (L1 ISA semantics, L2 native gadgets/chips, L3 native machine, L4 SP1 alignment,
+by semantic layer (L1 ISA semantics, L2 native gadgets/chips, L3 native machine,
 L5 tests, G generated model), joins per-module seconds from a Lake build log (`Built <module> (<t>)`
 lines) and optionally the per-module category split of a `scripts/profile_compile.sh` sweep, and
 computes the transitive import closure of each headline declaration's module.
@@ -44,14 +44,6 @@ BUILT_RE = re.compile(r"Built (\S+) \((\d+(?:\.\d+)?)(ms|s)\)")
 
 # ---- semantic layers (path prefix -> layer; first match wins, most specific first) --------------
 LAYERS = [
-    # L4 SP1 alignment: the Rust extraction, faithfulness, and the exact-upstream relation.
-    ("SP1Clean/Extracted/", "L4"),
-    ("SP1Clean/Faithful/", "L4"),
-    ("SP1Clean/Composition/", "L4"),
-    ("SP1Clean/Soundness/CoreAIR", "L4"),
-    ("SP1Clean/Soundness/SyscallRowSemantics.lean", "L4"),
-    ("SP1Clean/FormalModel/CoreAIRRelation.lean", "L4"),
-    ("SP1Clean/FormalModel/CoreProfile.lean", "L4"),
     # L1 ISA semantics: the Sail model, its wrappers, the execution model, decode, bridges.
     ("LeanRV64D/", "G"),
     ("LeanRV64D.lean", "G"),
@@ -98,12 +90,6 @@ HEADLINES = [
     ("SP1Clean.Soundness.NativeCompleteness", "supported_core_native_complete (+ totality-conditional)", "closed/conditional"),
     ("SP1Clean.Proofs.Completeness.NativeTraceCompiler", "nativeTrace / NativeShardTraceTotal", "closed/open"),
     ("SP1Clean.Soundness.HostHintReadFinalSnapshot", "HostHintReadCPU.source_execution_with_memory (frontier)", "closed, not capstone"),
-    ("SP1Clean.Faithful.SupportedMachine", "supportedChipFaithfulness (25 ChipFaithful anchors)", "closed"),
-    ("SP1Clean.Soundness.CoreAIR", "sp1_air_sound_of_obligations (exact upstream)", "conditional"),
-    ("SP1Clean.Soundness.CoreAIRSyscallFree", "CoreAIR syscall-free obligations", "partial"),
-    ("SP1Clean.Composition.CoreArtifact", "exactNativeArtifact_* (exact -> native transport)", "conditional"),
-    ("SP1Clean.Composition.Balance", "naturalLedger balance bridge", "closed"),
-    ("SP1Clean.Composition.CoreSystemSemantics", "SyscallCore/MemoryLocal typed views", "closed"),
 ]
 
 
@@ -503,9 +489,7 @@ def main():
         if not mm:
             continue
         chip = mm.group(1)
-        if ".Extracted.ChipOracle." in mod: kind = "ChipOracle (L4)"
-        elif ".Faithful." in mod: kind = "Faithful (L4)"
-        elif ".Alignment." in mod: kind = "Bridge (L1)" if mod.endswith(".Bridge") else "Contracts (L3)"
+        if ".Alignment." in mod: kind = "Bridge (L1)" if mod.endswith(".Bridge") else "Contracts (L3)"
         elif ".Native.Chips." in mod: kind = "Native.Defs (L2)"
         elif ".Proofs.Chips." in mod: kind = "Proofs." + mod.split(chip + ".")[-1].split(".")[0] + " (L2)"
         elif mod.startswith("SP1CleanTest"): kind = "Test (L5)"

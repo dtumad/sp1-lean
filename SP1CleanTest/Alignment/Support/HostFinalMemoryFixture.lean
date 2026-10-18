@@ -31,20 +31,31 @@ def word (value : ℕ) : Word Fp := Target.bitVecToWord (BitVec.ofNat 64 value)
 def record (address clock value : ℕ) : Channels.MemoryMsg Fp :=
   ⟨0, clock, (word address)[0], (word address)[1], (word address)[2], word value⟩
 
+/-- Source resources follow the actual core and receiver inventory. -/
+private def resourceStart : ℕ :=
+  (Soundness.HostFinalMemory.beforeChecks (p := SP1Prime) image source
+    HostCallReceivers.available []).length
+
+/-- Target checks follow the complete source-resource block. -/
+private def checkStart : ℕ :=
+  (Soundness.HostFinalMemory.beforeChecks (p := SP1Prime) image source
+    HostCallReceivers.available (HostHintReadLocal.sourceResources [])).length
+
 def registerCheck (index clock value : ℕ) (selected : Fp) : Row :=
-  (89, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
+  (checkStart, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
 
 def ramCheck (clock : ℕ) : Row :=
-  (90, (toElements (⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
+  (checkStart + 1, (toElements (⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
 
 def terminals : List Row :=
-  [87, 88].map fun index => (index, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)
+  [2, 3].map fun offset =>
+    (resourceStart + offset, (toElements (HostCommitBoundary.initial (p := SP1Prime))).toList)
 
 def rows : List Row :=
   coreRows ++ terminals ++ [registerCheck 1 13 123 1, registerCheck 2 12 100 0,
     registerCheck 3 11 23 0, ramCheck 0]
 
-/-- Retain all 93 physical tables, including every fixed membership row, in their declared order. -/
+/-- Retain every physical table and fixed membership row in the declared assembly order. -/
 def builtTables (target : MemorySnapshot) (rows : List Row)
     (bounded : rows.length ≤ UInt64.size) : List (Table Fp) :=
   let components := (assembly target).tables
@@ -100,15 +111,15 @@ def identityRows : List Row :=
 /-- Named actual outcomes. These are fixture checks, not proof certificates. -/
 def results : List (String × Bool × Bool) :=
   [("active-add", true, check target header rows),
-   ("missing-ram-validator", false, check target header (rows.filter (fun row => row.1 != 90))),
+   ("missing-ram-validator", false, check target header (rows.filter (fun row => row.1 != checkStart + 1))),
    ("duplicate-ram-validator", false, check target header (rows ++ [ramCheck 0])),
    ("wrong-final-record-clock", false,
-     check target header (rows.map fun row => if row.1 == 90 then ramCheck 1 else row)),
+     check target header (rows.map fun row => if row.1 == checkStart + 1 then ramCheck 1 else row)),
    ("missing-unchanged-register-validators", false,
      check target header (coreRows ++ terminals ++ [registerCheck 1 13 123 1, ramCheck 0])),
    ("changed-untouched-x31", false, check { target with registers := target.registers.set 31 1 } header rows),
    ("changed-untouched-ram", false, check { target with memory := target.memory.write 65544 1 } header rows),
-   ("missing-bank-terminal", false, check target header (rows.filter (fun row => row.1 != 87))),
+   ("missing-bank-terminal", false, check target header (rows.filter (fun row => row.1 != resourceStart + 2))),
    ("empty-identity", true, check source.sail.memorySnapshot identityHeader identityRows)]
 
 end SP1CleanTest.Alignment.Core.HostFinalMemory.Fixture

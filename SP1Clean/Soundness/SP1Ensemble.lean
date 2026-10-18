@@ -301,15 +301,9 @@ def providerTableFor : ProviderTableId → Component (ZMod p)
   | .halt => { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }
   | .syscallInstrs => { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }
 
-/-- The 30 in-circuit boundary/provider tables: six `ByteChip` opcode tables, the complete
-17-member fixed-width Range family, the program-ROM provider, the two memory boundary tables
-(init-push + finalize-pull), the two SP1 system tables MemoryBump (position 51: the
-register-record timestamp refreshes) and StateBump (position 52: the clock/pc re-limbing rows that
-allow clock and pc limb normalization), the Halt table (position 53: the halting shard's ECALL
-witness row), and the `SyscallInstrs` table (position 54: SP1's whole syscall chip).
-MemoryBump, StateBump, and SyscallInstrs have whole-table faithfulness anchors. Every pusher proves
-its pushes' channel `Guarantees` in-circuit, which is what
-grounds the chips' byte/program/memory pulls at the capstone. -/
+/-- The 30 boundary/provider tables: six Byte, 17 fixed-width Range, Program ROM, Memory
+init/finalize, MemoryBump, StateBump, Halt and SyscallInstrs. Pushers prove their guarantees
+in-circuit; balance supplies the consumers' Byte, Program and Memory requirements. -/
 def sp1ProviderTables : List (Component (ZMod p)) :=
   ProviderTableId.all.map (providerTableFor (p := p))
 

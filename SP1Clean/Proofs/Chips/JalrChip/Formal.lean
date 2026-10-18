@@ -497,7 +497,7 @@ is the immediate).  The op_a read-prior pull and the op_b (rs1) pull + read-back
 the composed `ITypeReader`; the op_a write push from the composed `RegisterWrite`, carrying the
 witnessed link address `op_a_value` (cells `offset+4..7`, after the jump target `add_value`).
 Keeping this list beside `circuit` makes Clean's exposure interface the single structural source
-consumed by both faithfulness and semantic grounding. -/
+consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

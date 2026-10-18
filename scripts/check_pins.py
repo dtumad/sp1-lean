@@ -113,10 +113,8 @@ def check(root: Path) -> list[str]:
     provenance = json.loads((root / "scripts/provenance.json").read_text())
     sail, sp1 = provenance["sail"], provenance["sp1"]
     errors.extend(sp1_pin_errors(cargo, locked, sp1))
-    legacy = sp1["legacy"]
     for name, revision in [(key, sail[key]) for key in
-                           ("compilerRevision", "modelRevision", "baseSnapshot")] + [
-                               (key, legacy[key]) for key in ("semanticRevision", "extractorRevision")]:
+                           ("compilerRevision", "modelRevision", "baseSnapshot")]:
         require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)), f"{name}: expected full commit")
     model_hash, model_files = tree_hash(root)
     require((model_hash, model_files) == (sail["generatedTreeSha256"], sail["generatedFiles"]),
@@ -124,14 +122,6 @@ def check(root: Path) -> list[str]:
     config_hash = hashlib.sha256(
         (root / "scripts/sail-config/sp1_rv64d_cfg.json").read_bytes()).hexdigest()
     require(config_hash == sail["configSha256"], "Sail platform config differs from provenance")
-    profile = (root / "SP1Clean/FormalModel/CoreProfile.lean").read_text()
-    semantic = re.search(r'def sp1SemanticRevision : String := "([0-9a-f]{40})"', profile)
-    require(semantic is not None and semantic[1] == legacy["semanticRevision"],
-            "legacy Lean semantic revision differs from extraction provenance")
-    dumps = json.loads((root / "export/sp1dump/index.json").read_text())
-    require(dumps.get("sp1Commit") == legacy["extractorRevision"],
-            "SP1 dumps differ from the extractor revision")
-
     libraries = {library["name"]: library for library in config["lean_lib"]}
     options = {name: library.get("leanOptions", {}) for name, library in libraries.items()}
     require(options.get("SP1CoreTest") == options.get("SP1CleanTest"),

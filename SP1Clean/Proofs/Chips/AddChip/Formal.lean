@@ -92,7 +92,7 @@ theorem completeness :
   rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- Add's exact Memory-channel interaction list.  Keeping this list beside `circuit` makes Clean's
-exposure interface the single structural source consumed by both faithfulness and semantic grounding. -/
+exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

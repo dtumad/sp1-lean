@@ -157,8 +157,7 @@ composed `MemoryAccess` RAM pull/push pair at the computed 48-bit address (`var 
 are the `AddressOperation` sub-circuit's witnessed address limbs), then the I-type register entries
 (op_a read-prior pull, op_b pull + read-back push) and `RegisterWrite`'s op_a write push.  LD writes
 the full read value `memory_access.prev_value` (no extension).  Keeping this list beside `circuit`
-makes Clean's exposure interface the single structural source consumed by both faithfulness and
-semantic grounding. -/
+makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

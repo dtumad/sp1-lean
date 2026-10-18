@@ -15,19 +15,16 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Utils.Tactics.ProvableStructDeriving
 
-/-! # The `ShiftRight` chip row as a `GeneralFormalCircuit`
+/-! # The ShiftRight chip row as a GeneralFormalCircuit
 
-`SRL`/`SRA`/`SRLW`/`SRAW`: as with `ShiftLeftChip`, no operation-level extraction — the inverted-`v`
-power encodings, the `b_msb`/`srw_msb` sign-extension MSB gadgets, the `lower/higher_limb` bit-split,
-the `limb_result` reassembly, and the four-variant output placement are inlined into
-the generated ShiftRight oracle (`Extracted/ChipOracle/ShiftRight.lean`).
+SRL/SRA/SRLW/SRAW share power encodings, sign-extension gadgets, limb decomposition and output
+placement. `AssertSpec` and `InteractSpec` describe this implementation evidence; the public RV64
+contract lives in `Semantics/Specs/Chips/ShiftRight.lean`.
 
-`AssertSpec` / `InteractSpec` capture the structural meaning of SP1's two extracted constraint lists;
-the semantic flag-gated RV64 `srl`/`sra`/`srlw`/`sraw` `Spec` is in `Semantics/Specs/Chips/ShiftRight.lean`.
-`Faithful/ShiftRightChip.lean` anchors both structural specs.
-
-`main` composes the readers + three `U16MSBOperation` gadgets + the witnessed column block + the
-`is_real` gate. Soundness and completeness are proven (honest `Populate` witness closures). -/
+The circuit composes native readers and MSB gadgets with Clean-generated witnesses. Its bundled
+proofs retain selector, padding and bounded-input obligations. Released Rust comparisons exercise
+the actual SP1 row layout, assertions and interaction ledger.
+-/
 
 namespace SP1Clean.ShiftRightChip
 

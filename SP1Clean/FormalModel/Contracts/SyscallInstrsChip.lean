@@ -7,31 +7,17 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # System-table chip contract: the `SyscallInstrs` row
 
-The `Inputs` row struct of SP1's ECALL table (`../sp1 crates/core/machine/src/syscall/instructions`),
-the native replacement for today's single-arm `HaltChip`.
+The native 65-cell carrier follows SP1's supervisor ECALL instruction layout. It is distinct
+from the SyscallCore handler table on the other side of the syscall bus. CoreSyscall and HostCall
+compose the native code-profile and host-effect contracts around this dispatcher.
 
-**The name carries `Instrs` because SP1's does, and the distinction matters.** Upstream has *two*
-syscall types: `SyscallInstrsChip` (`syscall/instructions/mod.rs`), whose `MachineAir::name` is
-`"SyscallInstrs"` and which is the ECALL *instruction* row modelled here; and `SyscallChip`
-(`syscall/chip.rs`), whose name is `"SyscallCore"`/`"SyscallPrecompile"` and which is the handler
-table on the far side of the syscall bus. The latter is exactly what the supported profile
-excludes, and leaving `Channels.syscallChannel` unprovisioned is what forces a shard to use only
-the codes this row handles inline. Dropping `Instrs` here would name this row after the table it
-deliberately does *not* model.
+The full row carries HALT, constrained replay and commitment selectors as well as generic syscall
+traffic. Public-value access uses addressed native messages; inactive selector freedom and
+SP1's weighted public selection require separate comparison. Full-register code restrictions do
+not follow merely from the dispatch byte.
 
-**Why the whole table rather than one arm.** `ChipFaithful` equates two *complete* assertion systems
-and interaction multisets, so an anchor between one arm and SP1's multi-arm dispatcher is not a
-statable theorem. Modelling the full row is also *cheaper* than the alternative: SP1's syscall id is
-little-endian `| ID | Table | unused | unused |`, and byte 1 — "the handler of this system call has
-its own table" (`crates/core/executor/src/syscall_code.rs`) — is exactly the multiplicity of the
-row's send on `Channels.syscallChannel`. Declaring that channel with no provider makes balance force
-the byte to zero, so "the supported profile runs no precompiles" becomes a theorem instead of an
-assumption, and the excluded `SyscallCore` table need not be modelled at all.
-
-**Field order is load-bearing.** The fields below are laid out in the flat upstream column order of
-`Extracted.SyscallInstrsCols` (65 cells, `CoreProfile.Table.width .syscallInstrs`), so the
-faithfulness codec is a near-identity re-grouping rather than a permutation. `inputs_size` pins the
-count; if a field is added, moved, or resized, that theorem is what fails.
+`inputs_size` fixes the column count. The Rust syscall suite compares the actual released
+supervisor columns, constraints and ledgers; this is not a formal lowering proof.
 
 Column map, with the upstream indices each field occupies:
 

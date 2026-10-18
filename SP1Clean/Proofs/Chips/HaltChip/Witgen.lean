@@ -5,8 +5,7 @@ import ToClean.Air.TableBuild
 /-! # Halt table: component, padding row, and honest witness generation
 
 The build-side substrate shared by the deterministic completeness compiler
-(`Proofs/Completeness/Providers.lean`) and the exact-artifact transport
-(`Composition/SystemTables.lean`): the flat-AIR component, the all-zero padding row with its `Spec`
+(`Proofs/Completeness/Providers.lean`): the flat-AIR component, the all-zero padding row with its `Spec`
 proof, and the vacuous `ComputableWitnesses` (the halt table declares no cells — its composed
 readers are zero-witness input-takers).
 

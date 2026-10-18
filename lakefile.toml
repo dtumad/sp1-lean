@@ -39,7 +39,7 @@ testDriver = "SP1CoreTest"
 # Linters: Mathlib's standard syntactic set, on for the whole package.
 #  * `weak.` = ignore where the option is unregistered, i.e. in modules that never import Mathlib
 #    (the generated Sail model). No file-layout constraint follows from a weak option.
-#  * Generated modules (`SP1Clean/Extracted/`, the `*Vectors` test batteries) carry
+#  * Generated `*Vectors` test batteries carry
 #    `set_option linter.all false`. Lean resolves an unset linter option as
 #    explicit value ⊳ `linter.all` ⊳ linter-set membership ⊳ default, so the set is off inside them
 #    without any per-library flags. An explicit `set_option linter.X` in a file still wins.
@@ -156,7 +156,7 @@ requiresModuleSystem = true
 # not usable: its CLINT and signature windows lie inside the address range SP1's chips bound
 # accesses to, which makes the memory-bridge lemmas false as stated, not merely unproved. The
 # settings mirror the generator's own lakefile; the generated files carry their own option
-# escapes and are outside every hand-written-source guard, like `SP1Clean/Extracted/`. It imports
+# escapes and are outside the hand-written-source guards. It imports
 # only `Sail`, so the package's weak linter options are unregistered here and ignored. The backend
 # emits auto-bound implicits (`k_n`, …), so the package's `autoImplicit = false` is overridden here.
 [[lean_lib]]
@@ -187,8 +187,7 @@ moreLeancArgs = ["-fbracket-depth=500"]
 
 # The core: the root index `SP1Clean/Core.lean` imports every hand-written module of strata 0–6 of
 # `scripts/layering.txt`; `scripts/check_layering.sh` fails if the index and the stratum map
-# disagree. Generated `Extracted/` modules are not indexed; the ones the core needs are built as
-# imports. `lake build SP1Core` = the PR-CI build. Declared before the umbrella, which therefore
+# disagree. `lake build SP1Core` is the core build. Declared before the umbrella, which therefore
 # owns every `SP1Clean.*` module including this index — the configuration is the same either way.
 [[lean_lib]]
 name = "SP1Core"
@@ -197,7 +196,7 @@ roots = ["SP1Clean.Core"]
 # `SP1Clean/` migration.
 allowNonModules = true
 
-# Umbrella: `SP1Clean.lean` imports `SP1Clean.Core` plus strata 7–11 and every generated module;
+# Umbrella: `SP1Clean.lean` imports `SP1Clean.Core` plus the machine/alignment strata;
 # `lake build SP1Clean` is the full CI build.
 [[lean_lib]]
 name = "SP1Clean"

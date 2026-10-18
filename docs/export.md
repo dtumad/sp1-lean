@@ -91,8 +91,6 @@ interpreter or scheduler.
   first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty inventories
   have one inactive row; other heights round up to a power of two. Capacity proofs must account
   for this expansion. Clean's scheduler, lowering and emitter handle the resulting tables.
-- Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
-  migration evidence while provider coverage and live consumers move to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,
   IsZeroWord and WordRangeCheck through Clean's Circom/WASM/R1CS backend. Their positive,
   alternate-valid and rejecting cases test a separate backend boundary.
@@ -100,7 +98,6 @@ interpreter or scheduler.
 Reproduce current export checks after the full build:
 
 ```sh
-python3 scripts/check_witgen_export.py
 python3 scripts/check_ensemble_export.py
 scripts/check_backend_gadgets.sh
 ```
@@ -108,15 +105,9 @@ scripts/check_backend_gadgets.sh
 The R1CS path rejects lookups/interactions. A fixed lookup alone does not make a circuit R1CS
 exportable. See [examples](examples.md) for the verified LoadByte replacement's narrower claim.
 
-The transitional [JSON format](witgen-wire-format.md) has three artifacts per chip: witness
-programs/constraints/interactions, a symbolic native-to-Rust row map, and a field/input/hint
-manifest. The fixture exporter reconstructs actual SP1 trace rows before writing test data;
-the [Rust interpreter](../rust/README.md) independently re-executes the serialized programs.
-Native outputs live under `.lake/witgen-export/`; the driver checks two fresh exports for
-byte agreement and runs locked Rust tests. Committed `export/sp1dump/` files remain independent
-source inputs. `scripts/run_sp1_conformance.py` stages the pinned SP1 checker with fresh artifacts
-under `.lake`, without modifying the extraction checkout. That opt-in check remains useful
-migration evidence; it is not the intended long-term interpreter or dependency arrangement.
+Rust comparisons use released SP1 code directly. The former reverse extractor, custom JSON
+wire format, interpreter and committed dumps are retired. Native semantic proofs and reusable
+mathematics remain; historical exact-AIR evidence is available in Git history.
 
 ## Rust migration
 
@@ -136,8 +127,8 @@ The fixed-membership fixtures establish native backend boundaries. Component com
 external buses open and check that an isolated active component cannot claim balanced execution.
 The installed 94-component host assembly is lookup-free. Its branch export checks complete
 assembly construction and Rust agreement for one compiler-derived execution. Broader execution
-and host-call cases, general padding, data agreement and completeness remain open. Retiring chip
-JSON comparison also requires replacing its remaining live consumers and migration coverage.
+and host-call cases, general padding, data agreement and completeness remain open. The retired
+instruction-only pipeline did not supply that missing whole-assembly coverage.
 
 The native eight-call syscall profile uses degree-three arithmetic assertions and six shared
 products. Its full-register contract remains independent of channel balance. Clean exports the
@@ -184,9 +175,8 @@ its scheduler rechecks the complete payload. A scalable sparse index remains an 
 The reviewed upgrade target is [SP1 v6.9.0](https://github.com/succinctlabs/sp1/releases/tag/v6.9.0).
 The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,
 independently of extraction. Cargo and the reviewed coverage record must agree with the release
-revision in provenance.json. The nested legacy provenance authenticates old generated evidence
-only until its remaining consumers and comparison coverage are replaced; it is deleted with that
-pipeline, rather than retained as another supported version.
+revision in provenance.json. This is the only supported SP1 pin; old generated evidence is
+historical rather than a second dependency.
 Review loader byte preservation, host output behavior, instruction execution, verifier behavior
 and table layouts separately; an unchanged instruction AIR does not imply unchanged system semantics.
 
@@ -204,7 +194,7 @@ The migration must cover:
 3. Valid and malformed native/SP1 witnesses, tables, interactions, public values, padding and
    count bounds, with deterministic generation and locked Cargo checks in CI.
 4. Explicit failures for unsupported layouts, native-only witness programs and legacy lookup forms.
-5. Native-owned carrier types and migration of every old export/extraction consumer before deletion.
+5. Native-owned carrier types and semantic proofs, with independent Rust comparison adapters.
 
 Clean's witness scheduler is not a proof of totality, final-data agreement or completeness.
 Retain constructor correctness and distinguish computable code from noncomputable semantic replay.
@@ -219,15 +209,14 @@ components; Cargo separately checks the Rust snapshots against source. Native RO
 requires a restricted comparison domain, recorded with each group's limits.
 
 Rust's mode-associated columns include zero-width supervisor fields and populated user/mprotect
-fields. The legacy IntoShape extraction skips mode-dependent fields and explicitly rejects
-mprotect. That gap is not proof coverage.
+fields. Both configurations have independently checked inventories, but compiling the same
+supervisor tests under both features does not establish user/mprotect execution coverage.
 
 Represent statically optional columns as a configuration-indexed fixed-width/zero-width carrier.
 ProvableType requires an exact vector isomorphism: ordinary runtime Option is not automatically
 such a carrier. Runtime optional values need an explicit tag/payload validity contract or an
 appropriate CircuitType. Solving representation does not prove mprotect semantics.
 
-After coverage and consumers migrate, delete reverse extraction, faithfulness-only proofs, dumps,
-the bespoke interpreter and duplicate export scripts. Preserve native semantic proofs and reusable
-mathematics. Rust comparison, formally verified lowering and cryptographic soundness remain
-distinct assurance claims.
+Rust comparison, formally verified lowering and cryptographic soundness remain distinct
+assurance claims. Retiring the old pipeline does not close the outstanding native assembly or
+capstone obligations.

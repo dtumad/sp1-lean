@@ -609,9 +609,8 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
       (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw :=
   main_interactionsWith_memory input offset
 
-/-- The completed DivRem circuit's State projection is exactly the canonical CPU-state edge.
-Published alongside the Program and Memory projections so whole-chip faithfulness clients need not
-unfold the 210-cell witness program or the five-subcircuit constraint suffix. -/
+/-- The completed DivRem circuit's State projection is the canonical CPU-state edge.
+Consumers can use it without unfolding the 210-cell witness program or five-subcircuit suffix. -/
 theorem interactionsWith_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith stateChannel.toRaw =
       (Readers.CPUState.stateInteractions

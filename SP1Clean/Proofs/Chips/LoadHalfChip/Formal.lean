@@ -290,8 +290,7 @@ theorem completeness :
 `AddressOperation` sub-circuit's witnessed address limbs), then the I-type register entries (op_a
 read-prior pull, op_b pull + read-back push) and `RegisterWrite`'s op_a write push carrying the
 sign/zero-extended half `#v[selected_half, 65535·msb, 65535·msb, 65535·msb]`.  Keeping this list
-beside `circuit` makes Clean's exposure interface the single structural source consumed by both
-faithfulness and semantic grounding. -/
+beside `circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf (input.is_lh + input.is_lhu)

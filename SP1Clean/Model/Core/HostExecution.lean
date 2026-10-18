@@ -9,7 +9,7 @@ from the addressed buffer. HINT_LEN is computed from the queue, and HINT_READ re
 padded write interval. Memory updates and architectural PC/x5 updates are applied by the machine
 adapter, which must authenticate these observations and effects in the AIR.
 
-The sources are SP1 v6.4.0 (`f66b4bff51d0ccff51d152e0f7f66b2ffedf3529`):
+The source references use the released SP1 revision in `scripts/provenance.json`:
 `crates/core/executor/src/minimal/{ecall,write,hint}.rs`,
 `crates/core/executor/src/vm/syscall/{commit,deferred,halt}.rs`, and
 `crates/primitives/src/consts.rs`. The descriptor macro adds ten to its literal values.

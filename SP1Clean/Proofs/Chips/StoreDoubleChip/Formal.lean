@@ -131,7 +131,7 @@ entries (op_a = rs2 pull + read-back at `clk + 4`, op_b = rs1 pull + read-back a
 genuine reads, no `RegisterWrite`).  The RAM push is a **genuine write**: SD writes the rs2 word
 `adapter.op_a_memory.prev_value` verbatim (no `store_value` column, no read-modify-write).  Keeping
 this list beside `circuit` makes Clean's exposure interface the single structural source consumed by
-both faithfulness and semantic grounding. -/
+semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

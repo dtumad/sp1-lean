@@ -17,12 +17,9 @@ component.operations.interactions.map (AbstractInteraction.toAccess env) = [acce
 
 ## Clean orientation, deliberately
 
-The exact→native transport proves the same facts through `Faithful.nativeAccesses`, which splits by
-channel and **dualizes Memory and Program** (`negMult`) to match the Rust AIR's send/receive
-convention. None of that is wanted here: the completeness side compares against Clean's own ledger,
-so the dualization would be a round trip that cancels itself, and routing through it would drag a
-`Faithful` dependency into the completeness layer for nothing. Stating these over
-`Operations.interactions` directly is both shorter and closer to what the caller needs.
+The completeness argument uses literal Clean interaction signs and occurrence order.
+Rust comparisons separately dualize Memory and Program to match SP1's send/receive convention;
+that orientation change is unnecessary for native provider closure.
 
 ## The route
 

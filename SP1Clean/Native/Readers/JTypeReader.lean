@@ -14,7 +14,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 The register adapter for **J-type** instructions (JAL, AUIPC): a destination write `op_a` (= rd) plus
 **two immediates** `op_b_imm`/`op_c_imm` (no register reads). SP1's `JTypeReader::eval`
-(`crates/core/machine/src/adapter/register/j_type.rs`, mirrored in `Extracted/JTypeReader.lean`) emits
+(`crates/core/machine/src/adapter/register/j_type.rs`) emits
 per row:
 
 - the **program** send (instruction fetch), gated by `is_trusted`, carrying `op_b_imm`/`op_c_imm` with

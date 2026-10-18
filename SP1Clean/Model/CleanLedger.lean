@@ -3,13 +3,13 @@ import ToClean.Air.TableBuild
 
 /-! # Literal Clean access ledgers
 
-Project each evaluated Clean interaction into the library's access vocabulary, preserving every
-physical occurrence. Each table stores its evaluation data; ensemble assembly supplies the data
-derived from the final committed rows. Changing that data preserves the literal ledger without
-asserting agreement of data-dependent semantic predicates.
+Project evaluated Clean interactions into the access vocabulary, preserving every physical
+occurrence. Each table stores its evaluation data; assembly supplies data derived from final
+committed rows. Changing that data preserves the literal ledger without asserting agreement
+of data-dependent semantic predicates.
 
-The Rust-facing projection additionally dualizes Memory and Program signs. Its agreement with
-the Rust → Lean migration oracle is proved in the alignment layers, not assumed here.
+Rust adapters additionally dualize Memory and Program signs. This module describes the native
+ledger and does not prove equivalence to released Rust.
 -/
 
 set_option autoImplicit false
@@ -21,18 +21,14 @@ open Air.Flat (Component Table)
 
 variable {p : ℕ} [Fact p.Prime]
 
-/-- The literal Clean interaction ledger of one table.  Unlike `tableNativeAccesses`, this does
-not dualize the Memory or Program signs to match the extracted Rust oracle: it is exactly
-`Table.interactions`, evaluated by Clean, followed by the common integer projection.  Native
-provider recounting and native channel balance must use this definition. -/
+/-- Literal Clean interactions followed by the common integer projection. This retains Clean's
+Memory and Program signs; `tableNativeAccesses` supplies the Rust-facing orientation instead.
+Native provider recounting and channel balance use this literal ledger. -/
 def tableCleanAccesses (table : Table (ZMod p)) : LookupAccessList :=
   (table.interactions).map Interaction.toAccess
 
-/-- The same literal evaluated Clean interactions in the Rust-facing orientation used by
-whole-chip faithfulness: Memory and Program are dualized, while State, Byte, and unexpected
-channels retain their Clean signs. `Composition.tableNativeAccesses` groups these interactions by
-channel; `tableNativeAccesses_perm_tableRustOrientedAccesses` proves that grouping changes only
-their order. -/
+/-- Literal evaluated interactions in Rust-facing orientation: Memory and Program are
+dualized; State, Byte and unexpected channels retain their Clean signs and occurrence order. -/
 noncomputable def tableRustOrientedAccesses (table : Table (ZMod p)) : LookupAccessList :=
   (table.interactions).map Interaction.toRustOrientedAccess
 
@@ -63,10 +59,8 @@ def tablesCleanAccesses (tables : List (Table (ZMod p))) : LookupAccessList :=
       tablesCleanAccesses left ++ tablesCleanAccesses right := by
   simp only [tablesCleanAccesses, List.flatMap_append]
 
-/-- Evaluating an abstract interaction and then applying the literal Clean projection is the same
-as applying the expression-level projection in its environment.  This is intentionally about
-Clean's orientation; it performs none of the Memory/Program dualization used by the Rust-facing
-faithfulness vocabulary. -/
+/-- Evaluating an interaction commutes with the literal Clean projection, without the
+Memory/Program dualization used by Rust adapters. -/
 theorem interactionToAccess_eval (env : Environment (ZMod p))
     (interaction : AbstractInteraction (ZMod p)) :
     Interaction.toAccess (interaction.eval env) =

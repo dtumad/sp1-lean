@@ -7,10 +7,10 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Local subtraction gadget circuit
 
-This is a proof-oriented Clean gadget, not an extraction of SP1 Rust's `SubOperation`. It checks the
-base-2^16 two's-complement carry chain and range-checks the four result limbs. Faithfulness is
-established only after the gadget is assembled into a chip and reconfigured to that chip's extracted
-Rust row. -/
+The native gadget checks a base-2^16 two's-complement carry chain and range-checks four result
+limbs. Its bundled contract specifies word subtraction. Rust comparisons test assembled
+instruction rows with adapters for their physical layouts.
+-/
 
 namespace SP1Clean.SubOperation
 

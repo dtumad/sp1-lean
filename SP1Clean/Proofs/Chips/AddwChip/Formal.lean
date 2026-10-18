@@ -138,8 +138,7 @@ Unlike the R-type six-pack, the op_c register pull/read-back pair is gated by **
 (an immediate does no register read) and addressed by the low limb `op_c[0]` (the ALU adapter's `op_c`
 is a full `Word`).  The op_a write push carries the **sign-extended** W result
 `[v0, v1, msb·65535, msb·65535]` (witness cells `offset..offset+2`).  Keeping this list beside
-`circuit` makes Clean's exposure interface the single structural source consumed by both faithfulness
-and semantic grounding. -/
+`circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

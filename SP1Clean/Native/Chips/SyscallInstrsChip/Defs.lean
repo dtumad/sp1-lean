@@ -12,9 +12,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `SyscallInstrs` row as a native circuit
 
-SP1's ECALL table (contract: `FormalModel/Contracts/SyscallInstrsChip.lean`), written against the
-complete extracted assertion and interaction lists of `Extracted/SystemOracle/SyscallInstrs.lean`
-rather than against one arm of it.
+SP1's ECALL table (contract: `FormalModel/Contracts/SyscallInstrsChip.lean`), modelling the complete dispatcher row and its interactions.
 
 **Shape.** A `Readers.CPUState` block at the syscall edge (`clk_inc = 264`, to the row's own
 `next_pc`), three `Readers.RegisterAccessCols` timestamp sub-assertions at access clocks

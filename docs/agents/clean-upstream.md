@@ -34,7 +34,7 @@ remains in its linked history rather than adding that broad fork pin.
 
 Clean #445/#446 supply direct generated Rust AIR/witness programs, fixed columns and runtime
 prover inputs. The selected version must be reconciled with this repository's toolchain and module
-system. Prefer those APIs over extending the legacy JSON emitter/interpreter.
+system. Use those APIs for AIR and witness export; the bespoke JSON interpreter is retired.
 
 Representation changes to canonical Component/Ensemble/Witgen objects may need an upstream patch;
 new adapters and supporting lemmas belong in ToClean. Scheduler support is not scheduler

@@ -262,8 +262,7 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 only register traffic is the rd slot).  The op_a read-prior pull descends from the composed
 `JTypeReader`; the op_a write push from the composed `RegisterWrite`, carrying the witnessed
 LUI/AUIPC result `add_value` (cells `offset+3..6`, after the three addend limbs).  Keeping this list
-beside `circuit` makes Clean's exposure interface the single structural source consumed by both
-faithfulness and semantic grounding. -/
+beside `circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

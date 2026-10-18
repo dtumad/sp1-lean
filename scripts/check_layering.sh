@@ -187,7 +187,7 @@ if nsbad:
     print("  (one of the two is wrong — usually the path; the namespace is the author's intent)")
 
 # 3. the core index: exactly the hand-written modules of strata 0..CORE_MAX_STRATUM under
-#    SP1Clean/, with legacy `Extracted/` modules excluded.
+#    SP1Clean/. The retired extraction namespace remains forbidden above.
 #    The index is what `lake build SP1Core` builds, so a stale entry silently moves a module in or
 #    out of PR CI.
 expected_core = set()

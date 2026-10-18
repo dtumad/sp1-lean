@@ -122,8 +122,7 @@ theorem completeness :
 
 /-- Subw's exact Memory-channel interaction list.  The op_a write push carries the **sign-extended** W
 result `[v0, v1, msb·65535, msb·65535]` (witness cells `offset..offset+2`).  Keeping this list beside
-`circuit` makes Clean's exposure interface the single structural source consumed by both faithfulness
-and semantic grounding. -/
+`circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

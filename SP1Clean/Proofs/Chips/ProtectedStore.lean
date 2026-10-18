@@ -9,10 +9,10 @@ import ToClean.Circuit.SubcircuitProjection
 
 /-! # Native store rows with byte-permission requests
 
-Each wrapper composes the original whole chip and requests permission for its actual byte
-footprint. The output, witness cells, arithmetic constraints, and existing channels are retained.
-Permission is derived globally from the fixed provider and balance; the instruction contract has
-no extra semantic assumption. The Rust-faithfulness anchors continue to describe the original chips.
+Each wrapper composes the original chip and requests permission for its actual byte footprint.
+Output, witnesses, arithmetic and existing channels are retained. Permission follows from the
+fixed provider and balance. Rust instruction comparisons cover the underlying chip; separate
+permission-provider comparisons test the added native boundary.
 -/
 
 namespace SP1Clean.ProtectedStore

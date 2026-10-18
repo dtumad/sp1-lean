@@ -44,8 +44,7 @@ provable_struct_eval_lemmas Inputs
 /-- The committed ALU opcode fed to the reader's Program bus (a single dynamic column). -/
 @[reducible] def opcodeVal (input : Inputs (ZMod p)) : ZMod p := input.opcode
 
-/-- Native AluX0-chip row (Rust field order). All four blocks reuse the project substrate;
-`Faithful.aluX0ChipReconfigure` is the sole bridge to Rust's separately generated whole-chip row. -/
+/-- Native AluX0-chip row in Rust field order, using shared native column blocks. -/
 structure Columns (F : Type) where
   state : Circuits.Types.CPUState F
   adapter : Circuits.Types.ALUTypeReader F

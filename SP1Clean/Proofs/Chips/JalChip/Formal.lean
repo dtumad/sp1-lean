@@ -279,11 +279,9 @@ def exposedStateInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
        input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 8,
        var ⟨offset⟩, var ⟨offset + 1⟩, var ⟨offset + 2⟩⟩ ]
 
-/-- Exact Byte-channel list emitted by JAL.  This is the native composition
-order: CPU clock checks, jump-add limbs, link-add limbs, destination-register
-timestamp checks, then the jump-target alignment check.  The pinned Rust AIR
-emits the same multiset in a different order; whole-chip faithfulness compares
-them with `List.Perm`. -/
+/-- Exact JAL Byte-channel list: CPU clock checks, jump-add limbs, link-add limbs,
+register timestamp checks, then jump alignment. Rust comparisons account for the different
+ordering of released rows while retaining the complete multiset. -/
 def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (byteChannel (p := p))) :=
   let clkLow := input.state.clk_0_16 + input.state.clk_16_24 * 65536
@@ -327,7 +325,7 @@ only register traffic is the rd slot).  The op_a read-prior pull descends from t
 `JTypeReader`; the op_a write push from the composed `RegisterWrite`, carrying the witnessed link
 address `op_a_value` (cells `offset+4..7`, the four cells after the jump target `add_value`).
 Keeping this list beside `circuit` makes Clean's exposure interface the single structural source
-consumed by both faithfulness and semantic grounding. -/
+consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

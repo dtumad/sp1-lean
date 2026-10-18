@@ -10,8 +10,8 @@ The structural borrow-bool + limb-range form `RawSpec`, and the two native borro
 SP1 implements `a - b` as `a + (2^64 - b)`, using `2^16 - 1 - b[i]` as the added limb with the carry
 **initialized to 1** (`sp1/crates/core/machine/src/operations/sub.rs`). The borrow carry is
 `c_i = (a[i] + 65535 - b[i] - value[i] + c_{i-1}) * 65536⁻¹` (with `c_{-1} = 1`), matching SP1's Rust
-shape used by this local gadget. Whole-chip faithfulness, not an operation theorem, relates the
-assembled circuit to Rust.
+shape used by this local gadget. Released-Rust comparisons test assembled instruction
+rows separately from these arithmetic proofs.
 
 The arithmetic routes the 16-bit complement `bbar := 65535 - b[i]` (a genuine 16-bit value, via
 `val_compl_65535`) through `limb_lift`; the BitVec subtraction goal is converted to addition up front with

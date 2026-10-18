@@ -301,10 +301,8 @@ def exposedStateInteractions (input : Var Inputs (ZMod p)) :
        input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 8,
        input.state.pc[0] + 4, input.state.pc[1], input.state.pc[2]⟩ ]
 
-/-- Exact Byte-channel list emitted by Lt: two CPU clock checks, the two signed-MSB checks,
-the selected-limb comparison, and the ALU reader's six register-timestamp checks. The native
-composition emits the CPU rows first; whole-chip faithfulness proves the permutation to Rust's
-operation-first order. -/
+/-- Exact Lt Byte-channel list: CPU clock checks, signed-MSB checks, selected-limb comparison
+and six register-timestamp checks. Rust comparisons account for released rows' operation-first order. -/
 def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (byteChannel (p := p))) :=
   let clkLow := input.state.clk_0_16 + input.state.clk_16_24 * 65536
@@ -360,8 +358,7 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 gated by **`is_real - imm_c`** — an immediate does no register read — and addressed by the low limb
 `op_c[0]`).  The op_a write push carries the compare-bit word `[bit, 0, 0, 0]` (the witnessed
 `LtOperationSigned` block's cell 0, at `offset`).  Keeping this list
-beside `circuit` makes Clean's exposure interface the single structural source consumed by both
-faithfulness and semantic grounding. -/
+beside `circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

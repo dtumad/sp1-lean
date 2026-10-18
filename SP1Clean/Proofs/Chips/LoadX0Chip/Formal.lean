@@ -232,7 +232,7 @@ then `ITypeReaderImmutable`'s two register **read** pairs — op_a (`x0`, read-b
 (rs1, read-back at clk+3).  No `RegisterWrite`: the loaded value is discarded (`rd = x0`), so every
 register push is a read-back of the pulled `prev_value`.  The gate is the umbrella seven-flag
 selector sum.  Keeping this list beside `circuit` makes Clean's exposure interface the single
-structural source consumed by both faithfulness and semantic grounding. -/
+structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf (input.is_lb + input.is_lbu + input.is_lh + input.is_lhu

@@ -8,9 +8,9 @@ import Clean.Utils.Tactics.CircuitProofStart
 
 /-! # Field zero-test gadget
 
-Native witness generation, arithmetic lemmas and the bundled `FormalAssertion` live together.
-The semantic contract is in `Semantics/Specs/IsZero`. `AssertSpec` is the structural relation
-used by the transitional Rust-faithfulness proofs; it is distinct from the public semantic `Spec`.
+Witness generation, arithmetic lemmas and the bundled `FormalAssertion` live together.
+`Semantics/Specs/IsZero` owns the semantic contract. `AssertSpec` records intermediate
+algebraic evidence used to prove that contract.
 -/
 
 @[expose] public section

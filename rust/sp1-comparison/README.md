@@ -1,7 +1,7 @@
 # Released SP1 comparison
 
-This crate reads the installed AIR inventory directly from SP1 v6.9.0. Its Git dependency
-and Cargo lockfile are independent of the legacy Rust-to-Lean extraction checkout.
+This crate reads the installed AIR inventory directly from pinned SP1 v6.9.0 Rust sources.
+Those sources provide the independent reference for generated native artifacts.
 
 ```sh
 cargo test --locked --manifest-path rust/sp1-comparison/Cargo.toml
@@ -225,8 +225,8 @@ reverses Byte, Memory and Program signs to match Clean's provider-to-consumer gu
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables
 the backend fixture alone; `instruction-export` also enables the live SP1 instruction and byte-provider comparisons.
 
-The native semantic restrictions are independent of extraction. Existing reverse-extraction
-evidence retains its original provenance until replacement coverage allows the pipeline's deletion.
+The native semantic restrictions are independent of extraction. The reverse-extraction pipeline
+is retired; its evidence and original provenance remain in Git history.
 Neither inventory coverage nor a statically optional carrier establishes mprotect correctness.
 
 Track remaining provider, ensemble and mode coverage in [#28](https://github.com/dtumad/sp1-lean/issues/28)

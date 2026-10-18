@@ -4,17 +4,15 @@ public import SP1Clean.Circuits.Types.U16toU8Operation
 
 /-! # Native bitwise gadget columns
 
-Byte-result columns and their word-level operand decompositions share the same physical layout
-across contracts, circuits and transitional Rust faithfulness.
+Byte-result columns and operand decompositions share one layout across native contracts,
+circuit definitions and proofs.
 -/
 
 @[expose] public section
 
 namespace SP1Clean.BitwiseOperation
 
-/-- Proof-oriented local columns for the bytewise bitwise gadget: the eight witnessed result bytes.
-The assembled chip faithfulness map is the only place that relates this shape to SP1 Rust's
-helper-operation columns. -/
+/-- Local columns for the bytewise bitwise gadget: eight witnessed result bytes. -/
 structure Columns (F : Type) where
   /-- Eight little-endian result bytes. -/
   result : Vector F 8
@@ -25,10 +23,8 @@ end SP1Clean.BitwiseOperation
 
 namespace SP1Clean.BitwiseU16Operation
 
-/-- Proof-oriented local columns for the composed u16 bitwise gadget: the two low-byte decomposition
-blocks (the shared `Circuits.Types.U16toU8Operation` struct, kept because the decomposition is the shared
-native column type) plus the native `BitwiseOperation.Columns` result block. The assembled chip
-faithfulness map is the only place that relates this shape to SP1 Rust's helper-operation columns. -/
+/-- Local columns for the u16 bitwise gadget: two low-byte decomposition blocks and the
+native bytewise result block. -/
 structure Columns (F : Type) where
   /-- Low bytes of the first operand's four limbs. -/
   b_low_bytes : Circuits.Types.U16toU8Operation F

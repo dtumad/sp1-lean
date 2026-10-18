@@ -162,8 +162,7 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) :
 here — the result is discarded), op_b read-prior pull + read-back push at `clk + 3`, and the
 (`is_real - imm_c`)-gated op_c pull/push pair at `clk + 2`, addressed by the low limb `op_c[0]` (an
 immediate does no register read).  No `RegisterWrite` push and no witness cells.  Keeping this list
-beside `circuit` makes Clean's exposure interface the single structural source consumed by both
-faithfulness and semantic grounding. -/
+beside `circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (_offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real

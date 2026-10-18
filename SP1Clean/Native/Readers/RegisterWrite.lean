@@ -6,21 +6,15 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Utils.Tactics.ProvableStructDeriving
 
-/-! # Native `RegisterWrite` primitive — the `rd` write Memory-bus push as a Clean `FormalAssertion`
+/-! # Native register-write assertion
 
-The op_a (`rd`) **write** half of SP1's register adapter, factored out of the readers (W11 memory flip).
-After the flip, a memory `pushIf` **owes** `MemoryMsg.isU64` of the pushed value; for the op_a write that
-value is the ALU result, whose `isU64` the composing chip derives from its operation (the operand `isU64`
-flows in from the *read* pulls, the result `isU64` from the operation's result range-check). Keeping the write
-in the readers would force the reader to *assume* `isU64 wv`, which the chip could only discharge circularly
-(operand `isU64` ⇐ reader `Spec` ⇐ `isU64 wv` ⇐ result `isU64` ⇐ operand `isU64`). Pulling the write out
-breaks that cycle: the readers become pure reads, and each write-chip composes this `RegisterWrite` *after*
-its operation, feeding `isU64 value`.
+The chip obtains operand bounds from readers, proves result bounds through its operation, then
+supplies those bounds to this write assertion. Separating the write avoids a circular reader
+assumption about a result that has not yet been computed.
 
-SP1-faithful: this emits exactly the op_a write interaction the reader used to
-(`⟨clk_high, clk_low, op_a, 0, 0, value⟩`, `+is_real`), so a chip's *combined* Memory-bus faithfulness anchor
-is unchanged — the interaction merely moves from the reader sub-assertion to this one. The chip passes the
-write access clock (`recombined_clk + 4`) as `clk_low`. -/
+The Memory message is `⟨clk_high, clk_low, op_a, 0, 0, value⟩` with multiplicity `is_real`.
+The chip passes its write-access clock (`recombined_clk + 4`) as `clk_low`.
+-/
 
 namespace SP1Clean.Readers.RegisterWrite
 
