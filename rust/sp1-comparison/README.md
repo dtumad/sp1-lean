@@ -134,12 +134,14 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
   are native source-queue tests; complete SP1 host execution remains outside their scope.
 
-The installed 94-component assembly is lookup-free. Its complete active-branch fixture exports
-all components, reads compiler-derived consumer inputs through Clean's private hint tables, and
+The installed 94-component assembly is lookup-free. Its active-branch and empty-segment fixtures export
+all components, read consumer inputs through Clean's private hint tables, and
 generates providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
 retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
-endpoints and committed branch rows. This does not yet cover general execution or host-call
-generation.
+endpoints and committed branch rows. Empty segments retain the complete fixed providers and all
+ordered, bank and Exit terminals; backend tests reject removing each terminal even when the new
+statement declares the smaller table shape. This does not yet cover general execution, stopped
+sources or host-call generation.
 
 The experimental Clean pin adds message
 predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
@@ -184,6 +186,17 @@ they do not establish complete ensemble balance.
   Every family includes padding and three mutation deltas per tested column. ADDI, ADDW, SUB,
   SUBW, JAL, JALR, UType, AluX0 and memory components other than LoadByte mutate every row;
   the remaining components use selected boundary rows.
+
+`symbolic_add_export` strengthens ADD's row comparison to an exact algebraic check. Upstream
+symbolic expressions bound total degree by three. Both actual AIR evaluators run on the complete
+6,545-point interpolation grid after each independently enforces `op_a_0 = 0`; their constraint
+systems match up to nonzero scaling, duplicate equations and zero equations. All 21 affine
+interaction occurrences match on zero and every unit vector, including arbitrary inactive-row
+values. The supervisor profile fixes the untrusted-program flag to zero; the `mprotect` AIR's
+rejection of flag one is checked, and unexpected symbolic public dependencies fail. Fault controls
+remove the zero equation, exclude inactive rows, reverse a multiplicity, exceed the degree budget
+and introduce a public interaction. This uses no expression interpreter or new extraction IR, but
+trusts the Rust checker and adapters; it does not prove lowering or complete execution.
 
 The same harness compares both installed bump tables, including every padding row and mutations
 of every column with three deltas. MemoryBump covers 24 refresh/bump events and eight padding rows,

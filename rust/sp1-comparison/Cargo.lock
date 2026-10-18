@@ -2827,6 +2827,7 @@ dependencies = [
  "slop-air",
  "slop-algebra",
  "slop-matrix",
+ "slop-uni-stark",
  "sp1-core-executor",
  "sp1-core-machine",
  "sp1-hypercube",

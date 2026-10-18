@@ -33,11 +33,11 @@ BUILD_TARGETS = [
     "SP1CleanTest.Alignment.Support.InstalledAssemblyExport"
 ]
 RUST_TESTS = {
-    "clean_export": 17, "instruction_export": 26, "system_export": 4,
+    "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
     "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
-    "installed_assembly_export": 3,
+    "installed_assembly_export": 5,
 }
 
 
@@ -67,7 +67,8 @@ def artifact_names():
     files += ["hint_sources.reference.json"] + [
         f"hint_{kind}{suffix}.rs" for kind in ["nodes", "words"] for suffix in ["", "_unused", "_empty"]
     ]
-    files += ["installed_assembly.rs", "installed_assembly.reference.json", "opcodes.reference.json"]
+    files += ["installed_assembly.rs", "installed_assembly.reference.json",
+              "installed_empty.rs", "installed_empty.reference.json", "opcodes.reference.json"]
     return files
 
 

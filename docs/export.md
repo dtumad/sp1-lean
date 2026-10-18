@@ -20,11 +20,12 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- The complete installed 94-table assembly exports through the same path. An active-branch
-  fixture supplies compiler-derived instruction and boundary inputs through Clean hint tables;
+- The complete installed 94-table assembly exports through the same path. Active-branch and
+  empty-local-segment fixtures supply instruction and boundary inputs through Clean hint tables;
   its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
   including empty table positions, and exercises proof acceptance and endpoint/row mutations.
-  This is one complete-assembly case, not general execution-generation completeness.
+  The empty segment retains its ordered, bank and Exit terminals; removing any one is rejected
+  by the backend. These finite cases do not prove general execution-generation completeness.
 - The complete native opcode alphabet, including unsupported instructions, is compared with every
   constructor and discriminant of the released Rust enum. Lean's derived constructor names and
   native discriminants export as metadata; no Rust source parser or generated Lean enum is needed.
@@ -36,6 +37,11 @@ interpreter or scheduler.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
   mprotect semantics remain outside their scope. Exact cases and counts live in the
   [coverage table](../rust/sp1-comparison/README.md).
+- ADD also has an exact algebraic comparison over arbitrary supervisor rows with untrusted
+  programs disabled: upstream symbolic degree
+  bounds justify a complete interpolation grid, and affine interaction occurrences match
+  individually before permutation. Both AIRs must independently enforce the zero-register
+  equation used in normalization. This is a trusted Rust check, not a kernel-checked theorem.
 - All six native byte providers export without legacy lookups. AND/OR/XOR share a bundled
   bit-decomposition gadget in `ToClean`; the other providers use the same upstream bit primitives.
   Rust compares all byte pairs and four field multiplicities against SP1's actual preprocessed
@@ -125,8 +131,8 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 94-component host assembly is lookup-free. Its branch export checks complete
-assembly construction and Rust agreement for one compiler-derived execution. Broader execution
+The installed 94-component host assembly is lookup-free. Its branch and empty-segment exports
+check complete assembly construction and Rust agreement for those cases. Broader execution
 and host-call cases, general padding, data agreement and completeness remain open. The retired
 instruction-only pipeline did not supply that missing whole-assembly coverage.
 

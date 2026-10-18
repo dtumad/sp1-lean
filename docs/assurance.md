@@ -65,6 +65,20 @@ regenerated twice; Rust compares actual released columns, AIR, interactions and 
 The old extractor's faithfulness proofs are historical evidence, not current released-SP1 proofs.
 Removing them does not turn the replacement tests into a formal code-generation theorem.
 
+The retired faithfulness theorems quantified over all rows in their stated domains, relative to
+the extracted Lean oracle; the reverse extractor's agreement with Rust was a separate trust
+boundary. Current comparisons exercise the released Rust implementation and the forward export
+path directly, principally through finite inputs and mutations. Native semantic proofs remain kernel checked;
+library-wide universal equivalence with released SP1 AIR is not a current claim. Regressions that record known
+differences are coverage of an open gap, not evidence that the gap has been closed.
+
+ADD additionally has an exact algebraic guard: upstream symbolic degree bounds and a complete
+interpolation grid check row-constraint equivalence, with full affine interaction comparison.
+Its supervisor profile fixes the untrusted-program mode flag to zero; unexpected public-input
+dependencies fail. It includes arbitrary inactive rows and only substitutes a zero column after both AIRs
+independently enforce it. This decision procedure trusts the Rust checker, evaluators, degree
+bounds and layout/channel adapters; it is not a Lean-kernel or code-generation proof.
+
 Real-row non-vacuity, accepted and adversarial assemblies, released-SP1 Rust comparison and
 independent WASM/R1CS witnesses supply distinct tests. The shared example runner rejects malformed
 or incomplete JSON, mismatched expectations and Lean diagnostics even after a zero exit.

@@ -16,6 +16,7 @@ serde_json = "1"
 enum-map = { version = "2.7.3", optional = true }
 slop-air = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 slop-matrix = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
+slop-uni-stark = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 sp1-core-executor = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 slop-algebra = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
 sp1-core-machine = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
@@ -41,7 +42,7 @@ default = ["inventory"]
 inventory = ["dep:enum-map", "dep:slop-air", "dep:slop-algebra", "dep:sp1-core-machine",
     "dep:sp1-hypercube", "dep:sp1-primitives", "dep:sp1-core-executor"]
 mprotect = ["inventory", "sp1-core-machine/mprotect"]
-instruction-export = ["clean-export", "inventory", "dep:slop-matrix", "dep:sp1-core-executor"]
+instruction-export = ["clean-export", "inventory", "dep:slop-matrix", "dep:slop-uni-stark", "dep:sp1-core-executor"]
 clean-export = ["dep:clean_backend", "dep:p3-air", "dep:p3-field", "dep:p3-matrix",
     "dep:p3-koala-bear", "dep:p3-challenger", "dep:p3-commit", "dep:p3-dft", "dep:p3-fri",
     "dep:p3-merkle-tree", "dep:p3-symmetric", "dep:rand"]
@@ -61,6 +62,10 @@ required-features = ["clean-export"]
 
 [[test]]
 name = "instruction_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "symbolic_add_export"
 required-features = ["instruction-export"]
 
 [[test]]
