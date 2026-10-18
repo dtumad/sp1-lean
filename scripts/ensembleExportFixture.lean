@@ -13,6 +13,7 @@ import SP1CleanTest.Core.ProgramExport
 import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.WritePermissionExport
 import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
+import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -40,34 +41,36 @@ private def expressionDegree : Expression (ZMod SP1Clean.SP1Prime) → ℕ
   | .add left right => max (expressionDegree left) (expressionDegree right)
   | .mul left right => expressionDegree left + expressionDegree right
 
-private def installedCase (consumers : List SP1Clean.Audit.BranchEnsemble.Seed)
+private def installedCase (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed)
     (name : String) (publicInput : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime))
-    (privateInput : fields (SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput consumers).size
+    (privateInput : fields (SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers).size
       (ZMod SP1Clean.SP1Prime)) (expected : Bool) : IO Json := do
   let fields := [("name", toJson name), ("accepted", toJson expected),
     ("publicInput", toJson ((toElements publicInput).toArray.map (·.val))),
     ("privateInput", toJson (privateInput.toArray.map (·.val)))]
-  match SP1CleanTest.Alignment.InstalledAssemblyExport.generate consumers publicInput privateInput with
+  match SP1CleanTest.Alignment.InstalledAssemblyExport.generate context consumers publicInput privateInput with
   | .error message =>
     if expected then throw (IO.userError s!"installed assembly {name}: {message}")
     pure (Json.mkObj (fields ++ [("error", toJson message)]))
   | .ok witness =>
-    unless (SP1Clean.Audit.BranchEnsemble.description SP1Clean.Audit.BranchEnsemble.target).checkWitness
+    unless (SP1CleanTest.Alignment.InstalledAssembly.description context).checkWitness
         SP1Clean.SP1Prime witness == expected do
       throw (IO.userError s!"unexpected installed assembly acceptance: {name}")
     pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
 
-private def installedInventory : Json :=
-  toJson (SP1CleanTest.Alignment.InstalledAssemblyExport.installed.tables.map fun component =>
+private def installedInventory (context : SP1CleanTest.Alignment.InstalledAssembly.Context) : Json :=
+  toJson ((SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).tables.map fun component =>
     Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
       ("fixedWidth", toJson (component.fixedColumns.map (·.width) |>.getD 0)),
       ("fixedHeight", toJson (component.fixedColumns.map (·.height.toNat) |>.getD 0))])
 
 private def installedReference : IO Json := do
+  let context := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
   let consumers := SP1Clean.Audit.BranchEnsemble.consumerSeeds
-  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput consumers
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
   let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
-  let some branchHint := (SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables consumers)[18]?
+  let some branchHint := (SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers)[18]?
     | throw (IO.userError "installed assembly has no branch input")
   let changed := Vector.ofFn fun index : Fin input.size =>
     input[index] + if index.val == branchHint.offset then 1 else 0
@@ -77,20 +80,21 @@ private def installedReference : IO Json := do
       ("wrong-final-pc", { header with final_pc0 := header.final_pc0 + 4 }, base, false),
       ("changed-branch-input", header, changed, false)].mapM
       fun (name, publicInput, privateInput, expected) =>
-        installedCase consumers name publicInput privateInput expected
-  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory),
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context),
     ("compilerBranchRow", toJson (SP1Clean.Audit.BranchCompilerRoundTrip.row.map (·.val)))]
 
 private def installedEmptyReference : IO Json := do
-  let consumers := SP1CleanTest.Alignment.InstalledAssemblyExport.emptyConsumers
-  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput consumers
+  let context := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
+  let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
   let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
-  let some terminal := (SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables consumers).find?
+  let some terminal := (SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers).find?
       (fun hint => hint.key == (SP1Clean.HostCommitBoundary.terminal (p := SP1Clean.SP1Prime) false).name)
     | throw (IO.userError "installed assembly has no commitment terminal")
   let changed := Vector.ofFn fun index : Fin input.size =>
     input[index] + if index.val == terminal.offset then 1 else 0
-  let header := SP1CleanTest.Alignment.InstalledAssemblyExport.emptyHeader
+  let header := SP1Clean.Audit.BranchEnsemble.identityHeader
   let cases ← [
       ("empty-local", header, base, true),
       ("wrong-initial-clock", { header with init_clk_0_16 := header.init_clk_0_16 + 1 }, base, false),
@@ -99,8 +103,8 @@ private def installedEmptyReference : IO Json := do
       ("nonzero-exit", { header with exit_code := 1 }, base, false),
       ("changed-bank-terminal", header, changed, false)].mapM
       fun (name, publicInput, privateInput, expected) =>
-        installedCase consumers name publicInput privateInput expected
-  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory)]
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
 
 private def programReference (image : SP1Clean.Model.Core.ProgramImage) {n : ℕ}
     (requests : SP1CleanTest.Core.ProgramExport.Requests n (ZMod SP1Clean.SP1Prime)) : IO Json := do
@@ -186,10 +190,11 @@ private def exportEnsembleFixture : IO Unit := do
   let opcodes := SP1Clean.Soundness.Opcode.all.map fun opcode => Json.mkObj [
     ("constructor", toJson (reprStr opcode)), ("discriminant", toJson opcode.toNat)]
   IO.FS.writeFile (out / "opcodes.reference.json") ((toJson opcodes).compress ++ "\n")
+  let context := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
   for (name, consumers) in [
       ("installed_assembly", SP1Clean.Audit.BranchEnsemble.consumerSeeds),
-      ("installed_empty", SP1CleanTest.Alignment.InstalledAssemblyExport.emptyConsumers)] do
-    let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust consumers with
+      ("installed_empty", SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context)] do
+    let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust context consumers with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
     IO.FS.writeFile (out / (name ++ ".rs")) installed

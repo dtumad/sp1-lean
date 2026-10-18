@@ -1,4 +1,4 @@
-import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
+import SP1CleanTest.Alignment.Support.InstalledAssembly
 
 /-! # Generation inputs cannot supply uncommitted program metadata
 
@@ -10,14 +10,14 @@ Program-binding consumers must use an authenticated boundary.
 
 namespace SP1CleanTest.CanonicalAssembly
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Audit.BranchEnsemble Air.Flat
+open SP1Clean SP1Clean.Model.Core SP1CleanTest.Alignment.InstalledAssembly Air.Flat
 
 /-- No witness of this physical inventory contains the legacy initial-PC data entry. -/
-theorem uncommittedInitialPcAbsent {target : MemorySnapshot}
-    (witness : EnsembleWitness (assembly target)) :
+theorem uncommittedInitialPcAbsent {context : Context}
+    (witness : EnsembleWitness (assembly context)) :
     witness.data "sp1.pc_start" 3 = #[] := by
   have absent : "sp1.pc_start" ∉
-      ((assembly target).tables.map fun component => component.circuit.name) := by
+      ((assembly context).tables.map fun component => component.circuit.name) := by
     dsimp only [assembly]
     erw [Soundness.HostFinalMemory.tables_eq]
     simp only [List.map_set, Soundness.HostFinalMemory.beforeChecks,
@@ -36,8 +36,8 @@ theorem uncommittedInitialPcAbsent {target : MemorySnapshot}
   exact deriveProverData_append_of_not_mem [] witness.tables "sp1.pc_start" noTable 3
 
 /-- A nonempty generation-time entry cannot become committed data without a physical table. -/
-theorem seedCannotChooseCommittedData {target : MemorySnapshot}
-    (witness : EnsembleWitness (assembly target))
+theorem seedCannotChooseCommittedData {context : Context}
+    (witness : EnsembleWitness (assembly context))
     (generationData : ProverData Fp) (nonempty : generationData "sp1.pc_start" 3 ≠ #[]) :
     witness.data ≠ generationData := by
   intro same

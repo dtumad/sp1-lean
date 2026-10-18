@@ -5,6 +5,7 @@ import Lean.Data.Json
 witness and its mutations. The imported theorem supplies official Sail execution; this driver
 does not execute the noncomputable full Sail state. -/
 
+open SP1CleanTest.Alignment.InstalledAssembly (assembly channels)
 open Lean Circuit Air.Flat SP1Clean
 open SP1Clean.Audit.BranchEnsemble
 
@@ -35,7 +36,7 @@ private def runBranchEnsembleExample : IO Unit := do
   let event := SP1Clean.Audit.BranchCompilerRoundTrip.event
   let tableStats := activeWitness.tables.zipIdx.map fun (table, position) => rowStats position table
   let physicalLedger := activeWitness.tables.flatMap (·.interactions)
-  let verifierLedger := (assembly target).verifierOperations.interactionValues
+  let verifierLedger := (assembly (context target)).verifierOperations.interactionValues
     (Environment.fromInput header activeWitness.data)
   let report := Json.mkObj [
     ("revision", toJson revision.get!), ("dirty", toJson (status == some "dirty")),
@@ -51,8 +52,8 @@ private def runBranchEnsembleExample : IO Unit := do
     ("physicalInteractions", toJson physicalLedger.length),
     ("verifierInteractions", toJson verifierLedger.length),
     ("interactions", toJson activeWitness.interactions.length),
-    ("registeredChannelOccurrences", toJson (assembly target).channels.length),
-    ("uniqueChannels", toJson (channels target).length),
+    ("registeredChannelOccurrences", toJson (assembly (context target)).channels.length),
+    ("uniqueChannels", toJson (channels (context target)).length),
     ("tables", toJson tableStats),
     ("cases", toJson (cases.map fun (name, expected, actual) => Json.mkObj [
       ("id", toJson name), ("expected", toJson expected), ("actual", toJson actual)]))]

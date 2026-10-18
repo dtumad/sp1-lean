@@ -30,7 +30,8 @@ BUILD_TARGETS = [
     "SP1CleanTest.Core.ProgramExport",
     "SP1CleanTest.Core.WritePermissionExport",
     "SP1CleanTest.Core.HintSourceExport",
-    "SP1CleanTest.Alignment.Support.InstalledAssemblyExport"
+    "SP1CleanTest.Alignment.Support.InstalledAssemblyExport",
+    "SP1CleanTest.Alignment.Support.BranchEnsembleFixture"
 ]
 RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
