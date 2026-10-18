@@ -52,7 +52,15 @@ interpreter or scheduler.
   named SP1 fields; `mprotect`'s additional supervisor trap cell must be zero before projection.
   A regression records unresolved padding drift: an inactive commit with an empty bitmap selects
   zero upstream but native addressed queries select previous-digest cells. Arbitrary-row public
-  equivalence and active host-handler effects remain open under #29.
+  equivalence remains open under #29.
+- HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals export
+  with Lean row/ledger references. Rust executes real programs through SP1's executor and shard
+  builder, then checks native effects, complete receipts and released Byte-table membership.
+  Native commitment receipts describe each update to a mutable bank; SP1's syscall AIR binds
+  each update to the shard's final public digest. Repeated differing writes execute with the
+  same final bank but fail that upstream AIR condition. Both behaviors are tested explicitly;
+  handler-effect agreement does not establish whole-shard AIR equivalence. HINT_LEN/HINT_READ
+  handler effects and complete active-host assembly generation remain open.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and

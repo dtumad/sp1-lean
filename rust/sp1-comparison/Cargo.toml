@@ -72,6 +72,10 @@ name = "syscall_export"
 required-features = ["instruction-export"]
 
 [[test]]
+name = "host_control_export"
+required-features = ["instruction-export"]
+
+[[test]]
 name = "byte_provider_export"
 required-features = ["instruction-export"]
 

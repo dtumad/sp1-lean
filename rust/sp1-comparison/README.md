@@ -88,8 +88,18 @@ that output and exercises these boundaries:
   Both configurations check supervisor mode; the optional syscall trap cell is explicitly zero.
   One regression preserves an unresolved difference: with an inactive commit and empty bitmap,
   SP1 selects zero while native public addresses refer to previous-digest cells. Passing tests
-  therefore do not establish arbitrary-row public equivalence. Host-handler effects and complete
-  active-host assembly generation remain separate work.
+  therefore do not establish arbitrary-row public equivalence. Host-handler effect coverage is
+  described below; complete active-host assembly generation remains open.
+
+- HALT, constrained-replay ENTER, sixteen commitment handlers and two bank terminals compare
+  their generated rows and complete ledgers with Lean references. Released SP1 execution and
+  shard construction supply the control results, commit events and final banks. The comparison
+  covers every slot and value boundary, repeated writes, literal per-call receipts, invalid
+  clocks/arguments and source-backed Byte/Range membership. The unadapted components must reject
+  open buses; their ungated rows are not inactive padding. Native receipts authenticate mutable
+  bank history. A separate regression demonstrates that SP1's shard AIR rejects earlier differing
+  writes to a slot even though its executor produces the same final bank. HINT_LEN/HINT_READ
+  effects and complete active-host assembly generation remain open.
 
 - The installed fixed Program provider retains sixteen verifier-owned instruction fields and one count.
   Tests compare SP1's preprocessing, count generator and AIR, including unused instructions,

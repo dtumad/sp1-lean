@@ -6,6 +6,9 @@ extern crate alloc;
 #[path = "support/export.rs"]
 mod export_support;
 
+#[path = "support/execution.rs"]
+mod execution;
+
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
 use export_support::{Ledger, RowWitness, Sp1Evaluation};
@@ -644,4 +647,48 @@ fn generated_padding_and_private_inputs_do_not_claim_closed_execution() {
         generate::<F, RowWitness<Host>>(&[], &input),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
+}
+
+#[test]
+fn repeated_commits_use_the_released_shard_public_values() {
+    // The executor permits overwrites, but the shard AIR compares both events against the final
+    // bank. Do not confuse execution effects, per-row bindings and a valid whole-shard trace.
+    for code in [SyscallCode::COMMIT, SyscallCode::COMMIT_DEFERRED_PROOFS] {
+        for slot in 0..8 {
+            for final_value in [65537, 131075] {
+                let mut instructions = vec![];
+                execution::syscall(&mut instructions, code, slot, 65537);
+                execution::syscall(&mut instructions, code, slot, final_value);
+                execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
+                let program = sp1_core_executor::Program::new(instructions, 65536, 65536);
+                let (executor, records) = execution::run(program, &[]);
+                assert_eq!(executor.exit_code(), 0);
+                assert_eq!(records.len(), 1);
+                let record = &records[0];
+                assert_eq!(record.syscall_events.len(), 3);
+                let public = &record.public_values;
+                let bank = if code == SyscallCode::COMMIT {
+                    &public.committed_value_digest
+                } else {
+                    &public.deferred_proofs_digest
+                };
+                for (index, value) in bank.iter().enumerate() {
+                    assert_eq!(
+                        *value,
+                        if index == slot as usize {
+                            final_value as u32
+                        } else {
+                            0
+                        }
+                    );
+                }
+                let trace = SyscallInstrsChip::<SupervisorMode>::default()
+                    .generate_trace(record, &mut ExecutionRecord::default());
+                for (index, row) in trace.values.chunks(trace.width()).enumerate() {
+                    let accepted = compare(row, public, "released repeated-commit shard");
+                    assert_eq!(accepted, index != 0 || final_value == 65537);
+                }
+            }
+        }
+    }
 }
