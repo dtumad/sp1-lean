@@ -4,6 +4,7 @@ import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
 import SP1CleanTest.Core.RangeProviderExport
 import SP1CleanTest.Core.SystemExport
+import SP1CleanTest.Core.SyscallExport
 import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
@@ -225,6 +226,7 @@ private def exportEnsembleFixture : IO Unit := do
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
       SP1CleanTest.Core.RangeProviderExport.rustExports ++
       SP1CleanTest.Core.SystemExport.rustExports ++
+      SP1CleanTest.Core.SyscallExport.rustExports ++
       SP1CleanTest.Core.SyscallCodeExport.rustExports ++
       SP1CleanTest.Core.ProgramExport.rustExports ++
       SP1CleanTest.Core.WritePermissionExport.rustExports ++

@@ -75,6 +75,7 @@ impl Sp1Evaluation {
             InteractionKind::Byte => ("SP1Byte", true),
             InteractionKind::Memory => ("SP1Memory", true),
             InteractionKind::Program => ("SP1Program", true),
+            InteractionKind::Syscall => ("SP1Syscall", false),
             other => panic!("unmapped SP1 instruction interaction: {other:?}"),
         };
         let mult = if receiving ^ reverse {

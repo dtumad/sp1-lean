@@ -79,6 +79,18 @@ that output and exercises these boundaries:
   aliases and nonboolean activity, and mutates every product on active and padded rows. This
   checks the stricter native code profile; host effects remain separate obligations.
 
+- The syscall instruction, guarded instruction and installed host-call wrapper use the same
+  exporter/runtime. Eighty-five released events and eleven padding rows cover all eight native
+  codes, every commit slot, canonical field-sized exits, full-word arguments and clock/PC carries;
+  18,720 column mutations compare constraints, public bindings and every shared interaction.
+  Public-value mutations bind the exit, flags and selected digest cells. Composed tests reject
+  upper-word aliases and precompile dispatch, check WRITE's x12 read and retain inactive messages.
+  Both configurations check supervisor mode; the optional syscall trap cell is explicitly zero.
+  One regression preserves an unresolved difference: with an inactive commit and empty bitmap,
+  SP1 selects zero while native public addresses refer to previous-digest cells. Passing tests
+  therefore do not establish arbitrary-row public equivalence. Host-handler effects and complete
+  active-host assembly generation remain separate work.
+
 - The installed fixed Program provider retains sixteen verifier-owned instruction fields and one count.
   Tests compare SP1's preprocessing, count generator and AIR, including unused instructions,
   first-row padding and zero counts. Backend checks bind every instruction field and reject

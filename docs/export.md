@@ -46,6 +46,13 @@ interpreter or scheduler.
   live trace generators, local constraints and complete ledgers, including timestamp/PC carries,
   padding and mutations of every column. Bump rows are supplied as inputs; this does not establish
   native execution-to-row generation or whole-ensemble balance.
+- The syscall instruction, full-code guard and installed host-call wrapper export through Clean.
+  Rust compares released supervisor rows, shared buses and public-value bindings, including all
+  eight native codes, every commit slot and WRITE's extra register read. The public adapter uses
+  named SP1 fields; `mprotect`'s additional supervisor trap cell must be zero before projection.
+  A regression records unresolved padding drift: an inactive commit with an empty bitmap selects
+  zero upstream but native addressed queries select previous-digest cells. Arbitrary-row public
+  equivalence and active host-handler effects remain open under #29.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and
