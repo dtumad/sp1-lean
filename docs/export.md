@@ -59,8 +59,11 @@ interpreter or scheduler.
   Native commitment receipts describe each update to a mutable bank; SP1's syscall AIR binds
   each update to the shard's final public digest. Repeated differing writes execute with the
   same final bank but fail that upstream AIR condition. Both behaviors are tested explicitly;
-  handler-effect agreement does not establish whole-shard AIR equivalence. HINT_LEN/HINT_READ
-  handler effects and complete active-host assembly generation remain open.
+  handler-effect agreement does not establish whole-shard AIR equivalence.
+- Empty/nonempty HINT_LEN and HINT_READ handlers compare queue updates and word endpoints with
+  released execution, including repeated observations, empty hints, mandatory final padding and
+  limb carries. Complete active-host assembly must still authenticate all physical Memory writes
+  and close the node, word and cursor ledgers.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and
@@ -98,7 +101,7 @@ Reproduce current export checks after the full build:
 
 ```sh
 python3 scripts/check_witgen_export.py
-scripts/check_ensemble_export.sh
+python3 scripts/check_ensemble_export.py
 scripts/check_backend_gadgets.sh
 ```
 

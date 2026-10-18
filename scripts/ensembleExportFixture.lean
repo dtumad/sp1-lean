@@ -244,6 +244,10 @@ private def exportEnsembleFixture : IO Unit := do
     IO.FS.writeFile (out / name) source
   IO.FS.writeFile (out / "host_control.reference.json")
     (SP1CleanTest.Core.HostControlExport.reference.compress ++ "\n")
+  let hints ← match SP1CleanTest.Core.HostControlExport.hintReference with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  IO.FS.writeFile (out / "host_hints.reference.json") (hints.compress ++ "\n")
   let programActive ← programReference SP1CleanTest.Core.ProgramExport.image
     SP1CleanTest.Core.ProgramExport.requests
   let programUnused ← programReference SP1CleanTest.Core.ProgramExport.image #v[]

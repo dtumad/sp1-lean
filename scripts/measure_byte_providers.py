@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Measure the existing Rust comparison test with isolated per-layout peak RSS.
 
-Build unified_byte_export with check_ensemble_export.sh first. Each subprocess performs
+Build unified_byte_export with check_ensemble_export.py first. Each subprocess performs
 one warmup and three sequential samples using the Plonky3 benchmark FRI configuration.
 All output, including generated sources, belongs in the ignored export directory.
 """

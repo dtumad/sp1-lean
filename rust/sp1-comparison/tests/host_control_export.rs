@@ -53,6 +53,9 @@ exported!(deferred_6, "host_deferred_6.rs");
 exported!(deferred_7, "host_deferred_7.rs");
 exported!(commit_terminal, "host_commit_terminal.rs");
 exported!(deferred_terminal, "host_deferred_terminal.rs");
+exported!(hint_length_empty, "host_hint_length_empty.rs");
+exported!(hint_length, "host_hint_length.rs");
+exported!(hint_read, "host_hint_read.rs");
 
 struct Handler {
     input_width: usize,
@@ -506,4 +509,376 @@ fn malformed_calls_bounds_and_terminal_clocks_are_rejected() {
             assert!(!handler.valid(&handler.build(&wrong_slot)));
         }
     }
+}
+
+const HINT_LENGTHS: [usize; 9] = [0, 1, 7, 8, 9, 16, 17, 65535, 65536];
+
+fn hint_handlers() -> [Handler; 3] {
+    [
+        handler::<hint_length_empty::Ensemble>(),
+        handler::<hint_length::Ensemble>(),
+        handler::<hint_read::Ensemble>(),
+    ]
+}
+
+fn address(value: u64) -> Vec<F> {
+    word(value)[..3].to_vec()
+}
+
+fn hint_address(length: usize) -> u64 {
+    if length % 2 == 0 {
+        131072
+    } else {
+        131064
+    }
+}
+
+fn hint_bytes(length: usize) -> Vec<u8> {
+    (0..length).map(|index| (19 * index + 3) as u8).collect()
+}
+
+fn padded_words(bytes: &[u8]) -> Vec<u64> {
+    let mut padded = bytes.to_vec();
+    padded.resize(8 * (bytes.len() / 8 + 1), 0);
+    padded
+        .chunks_exact(8)
+        .map(|chunk| u64::from_le_bytes(chunk.try_into().unwrap()))
+        .collect()
+}
+
+fn queue_state(clk: u64, head: u64, allocated: u64) -> Vec<F> {
+    [clock(clk), address(head), address(allocated)].concat()
+}
+
+fn node(pointer: u64, tail: u64, length: u64) -> Vec<F> {
+    [address(pointer), address(tail), word(length)].concat()
+}
+
+fn length_input(message: &[F], previous: &[F], record: &[F]) -> Vec<F> {
+    [message, previous, record].concat()
+}
+
+fn read_input(
+    message: &[F],
+    previous: &[F],
+    record: &[F],
+    start: u64,
+    length: u64,
+    last: u64,
+) -> Vec<F> {
+    let mut input = length_input(message, previous, record);
+    input.extend(address(start));
+    input.extend(
+        word(start)[..3]
+            .iter()
+            .map(|x| F::from_u64(x.as_canonical_u64() / 8)),
+    );
+    input.extend(word(length));
+    input.extend(
+        word(length)[..3]
+            .iter()
+            .map(|x| F::from_u64(x.as_canonical_u64() / 8)),
+    );
+    input.extend(address(start + 8 * (length / 8)));
+    input.extend(address(length / 8 + 1));
+    input.extend(address(length / 8));
+    input.extend(word(last));
+    input
+}
+
+#[test]
+fn hint_handlers_match_lean_constructor_rows_and_complete_ledgers() {
+    let references: Vec<Reference> = serde_json::from_str(include_str!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/host_hints.reference.json"
+    )))
+    .unwrap();
+    assert_eq!(references.len(), 1 + 2 * HINT_LENGTHS.len());
+    let handlers = hint_handlers();
+    for (index, reference) in references.into_iter().enumerate() {
+        let (handler_index, input) = if index == 0 {
+            (
+                0,
+                length_input(
+                    &call(SyscallCode::HINT_LEN as u64, u64::MAX, 17, u64::MAX, 265),
+                    &queue_state(1, 0, 0),
+                    &vec![F::ZERO; 10],
+                ),
+            )
+        } else {
+            let length = HINT_LENGTHS[(index - 1) / 2];
+            let previous = queue_state(1, 2, 2);
+            let record = node(2, 1, length as u64);
+            if index % 2 == 1 {
+                (
+                    1,
+                    length_input(
+                        &call(
+                            SyscallCode::HINT_LEN as u64,
+                            u64::MAX,
+                            17,
+                            length as u64,
+                            265,
+                        ),
+                        &previous,
+                        &record,
+                    ),
+                )
+            } else {
+                let start = hint_address(length);
+                let words = padded_words(&hint_bytes(length));
+                (
+                    2,
+                    read_input(
+                        &call(
+                            SyscallCode::HINT_READ as u64,
+                            start,
+                            length as u64,
+                            SyscallCode::HINT_READ as u64,
+                            265,
+                        ),
+                        &previous,
+                        &record,
+                        start,
+                        length as u64,
+                        *words.last().unwrap(),
+                    ),
+                )
+            }
+        };
+        let handler = &handlers[handler_index];
+        assert_eq!(values(&input), reference.input, "{}", reference.name);
+        let row = handler.build(&input);
+        assert!(handler.valid(&row));
+        assert_eq!(values(&row), reference.row);
+        same_ledger((handler.ledger)(&row), reference.ledger);
+        assert!((handler.rejects_open)(&input));
+        assert!(!handler.valid(&handler.build(&vec![F::ZERO; handler.input_width])));
+    }
+}
+
+#[test]
+fn hint_queue_effects_match_released_execution_and_final_padded_words() {
+    let handlers = hint_handlers();
+    for length in std::iter::once(None).chain(HINT_LENGTHS.map(Some)) {
+        let hints = length
+            .map(|length| vec![hint_bytes(length), vec![99]])
+            .unwrap_or_default();
+        let mut instructions = vec![];
+        for _ in 0..2 {
+            execution::syscall(&mut instructions, SyscallCode::HINT_LEN, u64::MAX, 17);
+        }
+        if let Some(length) = length {
+            execution::syscall(
+                &mut instructions,
+                SyscallCode::HINT_READ,
+                hint_address(length),
+                length as u64,
+            );
+            execution::syscall(&mut instructions, SyscallCode::HINT_LEN, u64::MAX, 17);
+            execution::syscall(&mut instructions, SyscallCode::HINT_READ, 262144, 1);
+            execution::syscall(&mut instructions, SyscallCode::HINT_LEN, u64::MAX, 17);
+        }
+        execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
+        let mut program = Sp1Program::new(instructions, 65536, 65536);
+        let starts = length
+            .map(|length| vec![hint_address(length), 262144])
+            .unwrap_or_default();
+        for (bytes, start) in hints.iter().zip(&starts) {
+            for index in 0..=padded_words(bytes).len() {
+                std::sync::Arc::make_mut(&mut program.memory_image)
+                    .insert(start + 8 * index as u64, u64::MAX);
+            }
+        }
+        let (executor, records) = execution::run(program, &hints);
+        assert_eq!(records.len(), 1);
+        assert_eq!(
+            records[0].syscall_events.len(),
+            if length.is_some() { 7 } else { 3 }
+        );
+        let allocated = hints.len() as u64;
+        let mut head = allocated;
+        let mut previous = queue_state(0, head, allocated);
+        let mut remaining = std::collections::VecDeque::from(hints.clone());
+        for (event, access) in &records[0].syscall_events[..records[0].syscall_events.len() - 1] {
+            let result = match access.a {
+                MemoryRecordEnum::Write(write) => write.value,
+                _ => panic!("missing hint syscall result"),
+            };
+            let message = call(
+                event.syscall_code as u64,
+                event.arg1,
+                event.arg2,
+                result,
+                event.clk,
+            );
+            let record = remaining
+                .front()
+                .map(|bytes| node(head, head - 1, bytes.len() as u64))
+                .unwrap_or_else(|| vec![F::ZERO; 10]);
+            let mut expected = vec![
+                entry("sp1.native.host_call", -F::ONE, &message),
+                entry("sp1.native.hint_queue_state", -F::ONE, &previous),
+            ];
+            let (handler_index, input) = if event.syscall_code == SyscallCode::HINT_LEN {
+                assert_eq!(
+                    result,
+                    remaining
+                        .front()
+                        .map(|bytes| bytes.len() as u64)
+                        .unwrap_or(u64::MAX)
+                );
+                if head != 0 {
+                    expected.push(entry("sp1.native.hint_node", -F::ONE, &record));
+                }
+                (
+                    usize::from(head != 0),
+                    length_input(&message, &previous, &record),
+                )
+            } else {
+                assert_eq!(event.syscall_code, SyscallCode::HINT_READ);
+                assert_eq!(result, SyscallCode::HINT_READ as u64);
+                let bytes = remaining.pop_front().unwrap();
+                assert_eq!(event.arg2, bytes.len() as u64);
+                let words = padded_words(&bytes);
+                for (index, word) in words.iter().enumerate() {
+                    assert_eq!(
+                        executor
+                            .get_memory_value(event.arg1 + 8 * index as u64)
+                            .value,
+                        *word
+                    );
+                }
+                assert_eq!(
+                    executor
+                        .get_memory_value(event.arg1 + 8 * words.len() as u64)
+                        .value,
+                    u64::MAX
+                );
+                let last_index = words.len() as u64 - 1;
+                let last_address = event.arg1 + 8 * last_index;
+                let last_value = executor.get_memory_value(last_address).value;
+                let input = read_input(
+                    &message, &previous, &record, event.arg1, event.arg2, last_value,
+                );
+                expected.push(entry("sp1.native.hint_node", -F::ONE, &record));
+                expected.push(entry(
+                    "sp1.native.hint_word",
+                    -F::ONE,
+                    &[
+                        address(head),
+                        address(last_index),
+                        word(last_value),
+                        vec![F::ONE],
+                    ]
+                    .concat(),
+                ));
+                expected.push(entry(
+                    "sp1.native.hint_read_state",
+                    F::ONE,
+                    &[
+                        clock(event.clk),
+                        address(head),
+                        address(0),
+                        address(event.arg1),
+                    ]
+                    .concat(),
+                ));
+                expected.push(entry(
+                    "sp1.native.hint_read_state",
+                    -F::ONE,
+                    &[
+                        clock(event.clk),
+                        address(head),
+                        address(words.len() as u64),
+                        address(last_address),
+                    ]
+                    .concat(),
+                ));
+                head -= 1;
+                (2, input)
+            };
+            let next = queue_state(event.clk, head, allocated);
+            expected.push(entry("sp1.native.hint_queue_state", F::ONE, &next));
+            let handler = &handlers[handler_index];
+            let row = handler.build(&input);
+            assert!(handler.valid(&row));
+            same_ledger(nonbyte((handler.ledger)(&row)), expected);
+            previous = next;
+        }
+        assert!(remaining.is_empty());
+        assert_eq!(head, 0);
+    }
+}
+
+#[test]
+fn malformed_hint_calls_clocks_and_spans_are_rejected() {
+    let handlers = hint_handlers();
+    let message = call(
+        SyscallCode::HINT_READ as u64,
+        131072,
+        9,
+        SyscallCode::HINT_READ as u64,
+        265,
+    );
+    let previous = queue_state(1, 2, 2);
+    let record = node(2, 1, 9);
+    let input = read_input(&message, &previous, &record, 131072, 9, 155);
+    let length = length_input(
+        &call(SyscallCode::HINT_LEN as u64, u64::MAX, 17, 9, 265),
+        &previous,
+        &record,
+    );
+    let empty = length_input(
+        &call(SyscallCode::HINT_LEN as u64, 0, 0, u64::MAX, 265),
+        &queue_state(1, 0, 2),
+        &vec![F::ZERO; 10],
+    );
+    for (handler, input) in handlers.iter().zip([empty, length, input.clone()]) {
+        assert!(handler.valid(&handler.build(&input)));
+        for column in [2, 4, 14, 18] {
+            let mut changed = input.clone();
+            changed[column] += F::ONE;
+            assert!(!handler.valid(&handler.build(&changed)));
+        }
+        let mut equal_clock = input.clone();
+        equal_clock[22..24].copy_from_slice(&input[..2]);
+        assert!(!handler.valid(&handler.build(&equal_clock)));
+        let mut wrong_head = input.clone();
+        wrong_head[24] += F::ONE;
+        assert!(!handler.valid(&handler.build(&wrong_head)));
+    }
+    for column in [6, 10, 40, 43, 46, 50, 53, 56, 59] {
+        let mut changed = input.clone();
+        changed[column] += F::ONE;
+        assert!(
+            !handlers[2].valid(&handlers[2].build(&changed)),
+            "column {column}"
+        );
+    }
+    for (start, length) in [
+        (65528, 9),
+        (131073, 9),
+        ((1 << 48) - 8, 8),
+        (131072, 1 << 48),
+    ] {
+        let message = call(
+            SyscallCode::HINT_READ as u64,
+            start,
+            length,
+            SyscallCode::HINT_READ as u64,
+            265,
+        );
+        let changed = read_input(&message, &previous, &node(2, 1, length), start, length, 0);
+        assert!(!handlers[2].valid(&handlers[2].build(&changed)));
+    }
+    // The handler requests an authenticated final word. Its local assertions alone do not bind
+    // that word to source bytes; preserve this boundary instead of treating an open bus as proof.
+    let mut changed = input.clone();
+    changed[62] += F::ONE;
+    assert_ne!(
+        nonbyte((handlers[2].ledger)(&handlers[2].build(&changed))),
+        nonbyte((handlers[2].ledger)(&handlers[2].build(&input)))
+    );
+    assert!((handlers[2].rejects_open)(&changed));
 }

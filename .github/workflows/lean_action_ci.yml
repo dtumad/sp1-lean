@@ -257,13 +257,16 @@ jobs:
           key: clean-export
       - name: Built-in ensemble export and Rust backend comparison
         id: ensemble
-        run: /usr/bin/time -v bash scripts/check_ensemble_export.sh
+        run: /usr/bin/time -v python3 scripts/check_ensemble_export.py
       - name: Upload ensemble export and provider measurements
         if: always() && steps.ensemble.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: ensemble-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .lake/ensemble-export/
+          path: |
+            .lake/ensemble-export/
+            !.lake/ensemble-export/compile-inputs/
+            !.lake/ensemble-export/inputs.lock
           if-no-files-found: error
           retention-days: 14
       # Native witness artifacts are generated under .lake, checked against independent SP1

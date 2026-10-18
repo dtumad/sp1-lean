@@ -2,10 +2,12 @@ import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Native.Operations.HostCommitBoundary
 import ToClean.Air.TableBuild
 
-/-! # Built-in exports of native control and commitment handlers
+/-! # Built-in exports of native control, commitment and hint handlers
 
 These are the installed production components, with their complete declared channels. Rust
 compares active effects against released execution and retains the separate per-call receipt
@@ -28,7 +30,7 @@ private def exportCircuit {Input : TypeMap} [ProvableType Input]
 private def commitName (deferred : Bool) (slot : Fin 8) : String :=
   s!"host_{if deferred then "deferred" else "commit"}_{slot.val}"
 
-/-- HALT, ENTER, sixteen routed bank updates and the two bank terminals. -/
+/-- HALT, ENTER, sixteen bank updates, two terminals and three hint handlers. -/
 def rustExports : List (String × Except String String) :=
   [("host_halt.rs", exportCircuit HostHaltChip.circuit),
    ("host_enter.rs", exportCircuit HostEnterChip.circuit)] ++
@@ -36,7 +38,10 @@ def rustExports : List (String × Except String String) :=
     (List.finRange 8).map fun slot =>
       (s!"{commitName deferred slot}.rs", exportCircuit (HostCommitChip.circuit deferred slot))) ++
   [("host_commit_terminal.rs", exportCircuit (HostCommitBoundary.terminal false)),
-   ("host_deferred_terminal.rs", exportCircuit (HostCommitBoundary.terminal true))]
+   ("host_deferred_terminal.rs", exportCircuit (HostCommitBoundary.terminal true)),
+   ("host_hint_length_empty.rs", exportCircuit (HostHintLengthChip.circuit true)),
+   ("host_hint_length.rs", exportCircuit (HostHintLengthChip.circuit false)),
+   ("host_hint_read.rs", exportCircuit HostHintReadChip.circuit)]
 
 private def word (value : ℕ) : Word Fp := Soundness.Target.bitVecToWord (BitVec.ofNat 64 value)
 
@@ -70,5 +75,37 @@ def reference : Lean.Json := Lean.toJson (
       (HostCommitChip.populate deferred (call code slot.val 131075 code) previous)) ++
   [rowReference "host_commit_terminal" (HostCommitBoundary.terminal false) previous,
    rowReference "host_deferred_terminal" (HostCommitBoundary.terminal true) previous])
+
+private def hintExecution (hints : List Model.Core.Bytes) (kind : Model.Core.SyscallKind)
+    (arg1 arg2 : ℕ) : Except String Model.Core.HostExecution :=
+  let host : Model.Core.HostState := { io := { hints } }
+  let context : Model.Core.HostReadContext := {
+    register := fun index =>
+      if index = 5 then some kind.code
+      else if index = 10 then some (BitVec.ofNat 64 arg1)
+      else if index = 11 then some (BitVec.ofNat 64 arg2)
+      else none
+    byte := fun _ => none }
+  match host.run ⟨{ readOnly := fun _ => false }, SP1Prime⟩ context with
+  | some executed => .ok executed
+  | none => .error "native hint reference execution failed"
+
+/-- Constructor rows from native execution include empty queues, empty hints and limb carries. -/
+def hintReference : Except String Lean.Json := do
+  let empty ← hintExecution [] .hintLength (2 ^ 64 - 1) 17
+  let initial := rowReference "host_hint_length_empty" (HostHintLengthChip.circuit true)
+    (HostHintLengthChip.populate #[] 0 1 265 empty)
+  let cases ← [0, 1, 7, 8, 9, 16, 17, 65535, 65536].mapM fun length => do
+    let bytes : Model.Core.Bytes := (List.range length).map fun index => BitVec.ofNat 8 (19 * index + 3)
+    let hints := [bytes, [BitVec.ofNat 8 99]]
+    let store := Model.Core.HintQueue.ofList hints
+    let address := if length % 2 = 0 then 131072 else 131064
+    let observe ← hintExecution hints .hintLength (2 ^ 64 - 1) 17
+    let read ← hintExecution hints .hintRead address length
+    pure [rowReference "host_hint_length" (HostHintLengthChip.circuit false)
+        (HostHintLengthChip.populate store.1 store.2 1 265 observe),
+      rowReference "host_hint_read" HostHintReadChip.circuit
+        (HostHintReadChip.populate store.1 store.2 1 265 read)]
+  return Lean.toJson (initial :: cases.flatten)
 
 end SP1CleanTest.Core.HostControlExport

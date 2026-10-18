@@ -36,14 +36,16 @@ Fresh Clean Rust is compiled against the backend
 pinned to the same revision as the Lean emitter and compared with SP1:
 
 ```sh
-bash scripts/check_ensemble_export.sh
+python3 scripts/check_ensemble_export.py
 ```
 
 The comparison crate uses release optimization level 1 to bound generated-code compiler memory;
 dependency crates retain their normal release settings. CI logs the export step's time and peak memory.
 
-The runner checks two byte-identical generations under `.lake/ensemble-export/`. Cargo compiles
-that output and exercises these boundaries:
+The runner checks two byte-identical generations under `.lake/ensemble-export/`, then refreshes
+the owned `compile-inputs/` directory without rewriting unchanged files. Cargo can reuse those
+inputs across runs; fresh artifacts and provenance stay in separate run directories. Concurrent
+runners are rejected before either can change the shared inputs. Comparisons cover these boundaries:
 
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
@@ -98,8 +100,13 @@ that output and exercises these boundaries:
   clocks/arguments and source-backed Byte/Range membership. The unadapted components must reject
   open buses; their ungated rows are not inactive padding. Native receipts authenticate mutable
   bank history. A separate regression demonstrates that SP1's shard AIR rejects earlier differing
-  writes to a slot even though its executor produces the same final bank. HINT_LEN/HINT_READ
-  effects and complete active-host assembly generation remain open.
+  writes to a slot even though its executor produces the same final bank.
+
+- Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows and ledgers with native
+  constructor references. Released execution supplies repeated length observations, queue pops,
+  return values and padded memory writes across byte, word and limb boundaries. Tests match the
+  resulting node, final-word and cursor receipts and reject malformed calls/clocks/spans. These
+  handler checks leave full physical Memory coverage and complete active-host assembly open.
 
 - The installed fixed Program provider retains sixteen verifier-owned instruction fields and one count.
   Tests compare SP1's preprocessing, count generator and AIR, including unused instructions,

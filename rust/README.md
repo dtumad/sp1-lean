@@ -8,7 +8,7 @@ coverage; see [export and integration](../docs/export.md).
 Run the fresh comparisons:
 
 ```sh
-scripts/check_ensemble_export.sh
+python3 scripts/check_ensemble_export.py
 python3 scripts/check_witgen_export.py
 ```
 

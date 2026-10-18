@@ -291,7 +291,7 @@ its acceptance trusts the instance's provenance, serialization, and Rust impleme
 The legacy ensemble serializer has been removed. The committed `export/ensemble/` files remain
 historical inputs to the JSON interpreter's parser and acceptance regressions.
 `scripts/ensembleExportFixture.lean` now uses Clean's built-in Rust emitter and writes only ignored
-build artifacts. `bash scripts/check_ensemble_export.sh` compiles that fresh Rust, compares its
+build artifacts. `python3 scripts/check_ensemble_export.py` compiles that fresh Rust, compares its
 witnesses with Lean and exercises Clean's proof backend; see [export](export.md).
 
 ## SP1-specific facts a consumer may rely on
