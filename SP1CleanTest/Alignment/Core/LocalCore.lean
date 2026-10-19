@@ -662,7 +662,8 @@ theorem protectedRejectsStoreIntoRom :
      check storeRomImage storeRomSource publicInput (storeRomRows ++ [permissionRow 65540]) true,
      check storeRomImage storeRomSource publicInput (storeRomRows ++ [(61,
        ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage 65540).map
-         (fun input => (toElements { input with address := Address.ofNat 65536 }).toList)).getD [])]) true] =
+         (fun input => (toElements (M := WritePermissionProvider.RowInput)
+           ({ input.1 with address := Address.ofNat 65536 }, input.2)).toList)).getD [])]) true] =
       [false, false, false] := by native_decide
 
 /-- Byte-precise protection permits changing writable data in the other half of the same RAM
@@ -680,7 +681,7 @@ private def receiptPermission (source : ExecutionSnapshot) (input : StoreByteChi
     (permissions : List (List Fp)) : Bool :=
   let produced := receiptStore source input
   let providers := permissions.map fun row =>
-    evaluate storeRomImage source { circuit := WritePermissionProvider.circuit storeRomImage, Assumptions := (WritePermissionProvider.circuit storeRomImage).Assumptions } row
+    evaluate storeRomImage source (WritePermissionProvider.component storeRomImage) row
   let complete := (produced :: providers).flatMap (·.2)
   let ledger := complete.filter
     (fun entry => entry.1 == (WritePermissionProvider.channel (p := SP1Prime)).name)

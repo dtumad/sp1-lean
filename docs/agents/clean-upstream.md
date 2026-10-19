@@ -18,6 +18,7 @@ duplicate implementations or compatibility wrappers after consumers migrate.
 | EnsembleCheck / FiniteLookup | Authenticated finite lookup inventory and executable raw-witness acceptance |
 | Realizes / CompleteEnsemble / EnsembleCompiler | Machine interpretation and constructive equivalence interfaces |
 | Receipt / PublicVerifier / projection helpers | Preserve original circuit/ledger behavior across actual composed consumers |
+| Guarded | Boolean activity for bundled circuits, preserving witness programs and all physical interaction occurrences; remove when Clean supplies this interface |
 | OneHot / VariableRange / ExpressionSum | Decode a bounded index and prove a runtime unsigned-width bound using ordinary Clean witnesses and constraints |
 
 These are reusable additions, not alternate SP1 semantics. Their concrete consumers determine

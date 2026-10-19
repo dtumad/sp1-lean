@@ -123,12 +123,14 @@ runners are rejected before either can change the shared inputs. Comparisons cov
 
 - Native write permissions use their production request circuit and a verifier-fixed interval
   provider. Independent Rust expectations derive writable bytes from literal ROM PCs. Closed
-  two-request fixtures compare complete Lean/Rust rows and ledgers, including repeated requests,
+  three-request fixtures pad to four rows and compare complete Lean/Rust rows and ledgers, including repeated requests,
   unused intervals, address bounds and empty ROM; backend tests reject forged endpoints, counts,
   public values and witness cells. Clean's ordinary demand scheduler receives each public address;
   the production circuit generates interval witnesses using the shared memory selector. No private
-  inputs or fixture-specific interval programs are needed. Padding active permission tables at
-  arbitrary request counts remains open. This is native ROM protection, not released SP1 runtime
+  inputs or fixture-specific interval programs are needed. Boolean activity gates assertions and
+  multiplicities while preserving both physical interaction occurrences on padding rows. Backend
+  checks reject invalid activity, missing active requests and activated padding, and accept arbitrary
+  child cells on disabled rows. General host-assembly generation remains open. This is native ROM protection, not released SP1 runtime
   `mprotect` semantics.
 
 - Immutable hint sources use verifier-fixed node/word payloads on their existing channels.

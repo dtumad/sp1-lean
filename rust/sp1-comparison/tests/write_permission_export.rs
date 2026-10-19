@@ -43,7 +43,7 @@ fn limbs(address: u64) -> Vec<F> {
 }
 
 fn inputs(first: u64, second: u64) -> Vec<F> {
-    [limbs(first), limbs(second)].concat()
+    [limbs(first), limbs(second), limbs(second)].concat()
 }
 
 fn reference() -> Value {
@@ -131,6 +131,14 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
             match generated {
                 Err(_) => assert!(!expected, "{}", case["name"]),
                 Ok(witness) => {
+                    assert_eq!(witness.tables[0].len(), 4);
+                    assert_eq!(
+                        witness.tables[0]
+                            .iter()
+                            .map(|row| row[3])
+                            .collect::<Vec<_>>(),
+                        vec![F::ONE, F::ONE, F::ONE, F::ZERO]
+                    );
                     let actual = if empty_rom {
                         physical_reference::<empty::Ensemble>(&public, &witness.tables)
                     } else {
@@ -178,13 +186,13 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
     let public = inputs(65540, 65540);
     let witness = rom::generate::<F>(&public, &[]).unwrap();
     assert_eq!(witness.tables.len(), 2);
-    assert_eq!(witness.tables[0].len(), 2);
+    assert_eq!(witness.tables[0].len(), 4);
     assert_eq!(
         witness.tables[1]
             .iter()
             .map(|row| row[7].as_canonical_u64())
             .sum::<u64>(),
-        2
+        3
     );
     assert!(witness.tables[1].iter().any(|row| row[7] == F::ZERO));
     let traces = witness.into_traces().unwrap();
@@ -193,13 +201,13 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
     let config = config();
     let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
     verify_ensemble(&config, &statement, &proof, &public).unwrap();
-    for column in 0..6 {
+    for column in 0..public.len() {
         let mut forged = public.clone();
         forged[column] += F::ONE;
         assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
     }
-    // Address, all endpoint limbs, and one auxiliary witness are mutable trace cells.
-    for column in 0..10 {
+    // Address, activity, all endpoint limbs, and one auxiliary witness are mutable trace cells.
+    for column in 0..11 {
         let mut forged = traces.clone();
         forged[0].values[column] += F::ONE;
         assert_backend_rejection(|| {
@@ -215,6 +223,26 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
             verify_ensemble(&config, &statement, &proof, &public).is_err()
         });
     }
+    // A missing active request or an activated padding row must fail the closed ledger.
+    let width = traces[0].width();
+    for (row, enabled) in [(0, F::ZERO), (3, F::ONE), (3, F::TWO)] {
+        let mut forged = traces.clone();
+        forged[0].values[row * width + 3] = enabled;
+        assert_backend_rejection(|| {
+            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
+            verify_ensemble(&config, &statement, &proof, &public).is_err()
+        });
+    }
+    // Disabled rows impose no address or child-witness obligations, even on noncanonical cells.
+    // Their two physical interactions remain present, with zero multiplicity.
+    let mut padding = traces.clone();
+    for column in 0..width {
+        if column != 3 {
+            padding[0].values[3 * width + column] = F::from_u64(70000 + column as u64);
+        }
+    }
+    let (padding_proof, _) = prove_ensemble(&config, &statement, padding, &public).unwrap();
+    verify_ensemble(&config, &statement, &padding_proof, &public).unwrap();
     assert_eq!(rom::Ensemble::FIXED_WIDTHS, &[0, 7]);
-    assert!(rom::Statement::<F>::new(&[2, heights[1] * 2]).is_err());
+    assert!(rom::Statement::<F>::new(&[heights[0], heights[1] * 2]).is_err());
 }

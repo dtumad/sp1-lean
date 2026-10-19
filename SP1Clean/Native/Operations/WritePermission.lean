@@ -2,6 +2,7 @@ import SP1Clean.FormalModel.Contracts.WritePermission
 import SP1Clean.Native.Operations.AddressOrder
 import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
 import ToClean.Air.StaticProvider
+import ToClean.Circuit.Guarded
 
 /-! # A native permission provider for ordinary and host memory writes
 
@@ -40,24 +41,27 @@ theorem membership_height_lt_uint64 (image : ProgramImage) :
 def membershipComponent (image : ProgramImage) : Air.Flat.Component (ZMod p) :=
   image.writePermissionTable.component (membership_height_lt_uint64 image)
 
-/-- Permission requests carry only the semantic byte address. -/
-def ProverAssumptions (image : ProgramImage) (input : Inputs (ZMod p)) : Prop :=
-  Spec image input
+/-- The semantic address followed by one Boolean activity cell. -/
+abbrev RowInput := ProvablePair Inputs field
+
+/-- An active request is writable; padding has no semantic address obligation. -/
+def ProverAssumptions (image : ProgramImage) (input : RowInput (ZMod p)) : Prop :=
+  IsBool input.2 ∧ (input.2 = 1 → Spec image input.1)
 
 /-- Encode a writable address; interval and comparison cells are generated internally. -/
-def populate? (image : ProgramImage) (address : ℕ) : Option (Inputs (ZMod p)) :=
-  (image.writableIntervalAt? address).map fun _ => ⟨Address.ofNat address⟩
+def populate? (image : ProgramImage) (address : ℕ) : Option (RowInput (ZMod p)) :=
+  (image.writableIntervalAt? address).map fun _ => (⟨Address.ofNat address⟩, 1)
 
-theorem populate?_sound (image : ProgramImage) (address : ℕ) (input : Inputs (ZMod p))
+theorem populate?_sound (image : ProgramImage) (address : ℕ) (input : RowInput (ZMod p))
     (found : populate? image address = some input) :
-    ProverAssumptions image input ∧ Address.toNat input.address = address := by
+    ProverAssumptions image input ∧ Address.toNat input.1.address = address := by
   obtain ⟨interval, selected, rfl⟩ := Option.map_eq_some_iff.mp found
   obtain ⟨member, contains⟩ := image.writableIntervalAt?_sound address interval selected
   have permitted := (image.writableIntervals_sound interval member).2.2 address contains
   have encoded := Address.toNat_ofNat (p := p) address permitted.1
-  exact ⟨⟨Address.bounded_ofNat _, by rw [encoded]; exact permitted⟩, encoded⟩
+  exact ⟨⟨Or.inr rfl, fun _ => ⟨Address.bounded_ofNat _, by rw [encoded]; exact permitted⟩⟩, encoded⟩
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem populate?_isSome_iff (image : ProgramImage) (address : ℕ) :
     (populate? (p := p) image address).isSome = true ↔
       address < 2 ^ 48 ∧ image.readOnly address = false := by
@@ -99,7 +103,8 @@ theorem intervalFE_eval (ctx : Witgen.Ctx (ZMod p)) (image : ProgramImage)
   congr 1 <;> ext i hi <;>
     simpa only [Vector.getElem_ofFn, Function.comp_apply, WritePermissionInterval.encode] using fieldEval _
 
-def main (image : ProgramImage) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
+/-- Select and authenticate the interval for one active byte request. -/
+def activeMain (image : ProgramImage) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   let interval ← witness (var := Var WritePermissionInterval)
     (intervalFE image (input.address.map Witgen.FExpr.expr))
   image.writePermissionTable.channel.pull ⟨interval, 1⟩
@@ -110,18 +115,20 @@ def main (image : ProgramImage) (input : Var Inputs (ZMod p)) : Circuit (ZMod p)
   assertion AddressOrder.circuit ⟨input.address, interval.upper⟩
   channel.push input.address
 
-instance elaborated (image : ProgramImage) :
-    ElaboratedCircuit (ZMod p) Inputs unit (main image) := by elaborate_circuit
+/-- The active child's ordinary Clean witness layout. -/
+instance activeElaborated (image : ProgramImage) :
+    ElaboratedCircuit (ZMod p) Inputs unit (activeMain image) := by elaborate_circuit
 
-def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit where
+/-- The unconditional semantic permission proof composed by the row activity wrapper. -/
+def activeCircuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.write_permission"
-  main := main image
-  elaborated := elaborated image
+  main := activeMain image
+  elaborated := activeElaborated image
   channelsWithRequirements := [channel.toRaw]
   Spec input _ _ := Spec image input
-  ProverAssumptions input _ _ := ProverAssumptions image input
+  ProverAssumptions input _ _ := Spec image input
   soundness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
+    circuit_proof_start [activeMain, Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
     subst input_address
     obtain ⟨member, low, middle, high, lower, upper⟩ := h_holds
     have bounded : Address.Bounded (input_var_address.map (Expression.eval env)) := by
@@ -135,8 +142,7 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit w
       ⟨bounded, ranges.2.2 _ (lower ⟨ranges.1, bounded⟩) (upper ⟨bounded, ranges.2.1⟩)⟩
     exact ⟨permitted, fun _ _ => True.intro⟩
   completeness := by
-    circuit_proof_start [Gadgets.ToBits.rangeCheck, AddressOrder.circuit, ProverAssumptions,
-      StaticTable.channel]
+    circuit_proof_start [activeMain, Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
     have inputEval (i : ℕ) (hi : i < 3) :
         (input_var_address.map Witgen.FExpr.expr)[i].eval { env := env } = input_address[i] := by
       simpa only [Vector.getElem_map, Witgen.FExpr.eval] using
@@ -171,5 +177,59 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs unit w
     exact ⟨member, by simpa using h_assumptions.1 0, by simpa using h_assumptions.1 1,
       by simpa using h_assumptions.1 2, ⟨⟨ranges.1, h_assumptions.1⟩, lower⟩,
       ⟨h_assumptions.1, ranges.2.1⟩, upper⟩
+
+/-- The active child pulls its selected interval and supplies the requested permission. -/
+theorem activeMain_interactions (image : ProgramImage) (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((activeMain image input).operations offset).interactions =
+      [(image.writePermissionTable.channel.pulled
+        ⟨varFromOffset WritePermissionInterval offset, 1⟩).toRaw,
+       (channel.pushed input.address).toRaw] := by
+  simp [activeMain, circuit_norm, AddressOrder.circuit, AddressOrder.main,
+    Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.ToBits.main,
+    Gadgets.IsZeroField.circuit, Gadgets.Equality.main, Operations.interactions,
+    FormalAssertion.toSubcircuit_interactions, FormalCircuit.toSubcircuit_interactions,
+    GeneralFormalCircuit.toSubcircuit_interactions]
+
+/-- The address circuit uses only typed zero-neutral channels and no legacy lookups. -/
+theorem guard_supported (image : ProgramImage) : Circuit.Guarded.Supported (activeCircuit (p := p) image) where
+  noLookups := by
+    intro input offset
+    simp [activeCircuit, activeMain, circuit_norm, AddressOrder.circuit, AddressOrder.main,
+      Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.ToBits.main,
+      Gadgets.IsZeroField.circuit, Gadgets.Equality.main, Operations.lookups]
+  neutral := by
+    intro input offset interaction member
+    rw [GeneralFormalCircuit.toSubcircuit_interactions] at member
+    change interaction ∈ ((activeMain image input).operations offset).interactions at member
+    rw [activeMain_interactions] at member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · exact inferInstanceAs image.writePermissionTable.channel.toRaw.ZeroNeutral
+    · exact inferInstanceAs (channel (p := p)).toRaw.ZeroNeutral
+  declared := by
+    intro input offset interaction member carries
+    rw [GeneralFormalCircuit.toSubcircuit_interactions] at member
+    change interaction ∈ ((activeMain image input).operations offset).interactions at member
+    rw [activeMain_interactions] at member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · simp [activeCircuit, activeElaborated, circuit_norm]
+    · contradiction
+
+/-- A production permission row is active or honest padding, using the same bundled child. -/
+def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) RowInput unit :=
+  Circuit.Guarded.circuit (activeCircuit image) (guard_supported image)
+
+/-- The installed permission component, with its bundled assumption transport shared by consumers. -/
+def component (image : ProgramImage) : Air.Flat.Component (ZMod p) where
+  circuit := circuit image
+  Assumptions := (circuit image).Assumptions
+  circuit_assumptions_of_assumptions := fun _ _ _ _ _ assumed => assumed
+
+/-- Permission padding has no legacy lookup operation. -/
+@[circuit_norm] theorem circuit_lookups (image : ProgramImage)
+    (input : Var RowInput (ZMod p)) (offset : ℕ) :
+    ((circuit image).main input |>.operations offset).lookups = [] :=
+  Circuit.Guarded.main_lookups (activeCircuit image) (guard_supported image) input offset
 
 end SP1Clean.WritePermissionProvider

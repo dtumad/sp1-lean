@@ -69,8 +69,7 @@ private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
    { circuit := ProtectedStore.double
      Assumptions := ProtectedStore.double.Assumptions
      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
-   { circuit := WritePermissionProvider.circuit image
-     Assumptions := (WritePermissionProvider.circuit image).Assumptions },
+   WritePermissionProvider.component image,
    WritePermissionProvider.membershipComponent image,
    HostCallLedger.producer, HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
 
@@ -83,9 +82,9 @@ private theorem additions_private (channel : RawChannel (ZMod p))
       (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true := by
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
     rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;>
-      unfold fixedAdditions WritePermissionProvider.membershipComponent
-        WritePermissionProvider.circuit WritePermissionProvider.elaborated
-        WritePermissionProvider.main ProgramImage.writePermissionTable <;> rfl
+      unfold fixedAdditions WritePermissionProvider.component WritePermissionProvider.membershipComponent
+        WritePermissionProvider.circuit WritePermissionProvider.activeCircuit
+        WritePermissionProvider.activeElaborated WritePermissionProvider.activeMain ProgramImage.writePermissionTable <;> rfl
   simpa using List.all_eq_true.mp quiet component member
 
 /-- Receipt freshness follows from the existing core inventory and the installed resource interface. -/

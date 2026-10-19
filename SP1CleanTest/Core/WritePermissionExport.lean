@@ -6,9 +6,9 @@ import ToClean.Gadgets.LookupProjection
 /-! # Closed export of native byte-write permissions
 
 The production request circuit and fixed interval provider use Clean's built-in row programs,
-scheduler and Rust emitter. Two public address requests drive ordinary demand rows; the production
+scheduler and Rust emitter. Three public address requests drive ordinary demand rows; the production
 circuit selects and authenticates each interval internally, with no private interval or address
-inputs. General table padding remains a separate installed-assembly obligation.
+inputs. The fourth row is disabled padding, retaining both zero-multiplicity channel occurrences.
 The policy is native ROM exclusion, not SP1's runtime mprotect state machine.
 -/
 
@@ -17,8 +17,8 @@ namespace SP1CleanTest.Core.WritePermissionExport
 open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
 open ComponentExport (Fp)
 
-/-- Two byte addresses, with every native address limb retained. -/
-abbrev Requests := ProvableVector (fields 3) 2
+/-- Three byte addresses, with every native address limb retained. -/
+abbrev Requests := ProvableVector (fields 3) 3
 
 /-- Unsorted, repeated ROM entries exercise adjacent bytes, gaps and high address limbs. -/
 def image : ProgramImage :=
@@ -30,8 +30,7 @@ def emptyImage : ProgramImage := ⟨[], 0, []⟩
 
 /-- Keep the production permission request and all its assertions. -/
 def requestComponent (rom : ProgramImage) : Component Fp :=
-  { circuit := WritePermissionProvider.circuit rom
-    Assumptions := (WritePermissionProvider.circuit rom).Assumptions }
+  WritePermissionProvider.component rom
 
 /-- Public requests each consume one permission, including repeated addresses. -/
 def verifier : Verifier.Program Fp Requests where
@@ -40,12 +39,14 @@ def verifier : Verifier.Program Fp Requests where
   main requests := do
     Verifier.pull WritePermissionProvider.channel requests[0]
     Verifier.pull WritePermissionProvider.channel requests[1]
+    Verifier.pull WritePermissionProvider.channel requests[2]
 
 /-- Both permission protocols are closed by production components. -/
 def ensemble (rom : ProgramImage) : Ensemble Fp Requests where
   tables := [requestComponent rom, WritePermissionProvider.membershipComponent rom]
   unique_names := by
-    simp [requestComponent, WritePermissionProvider.circuit,
+    simp [requestComponent, WritePermissionProvider.component, WritePermissionProvider.circuit,
+      Circuit.Guarded.circuit, WritePermissionProvider.activeCircuit,
       WritePermissionProvider.membershipComponent, StaticTable.component, StaticTable.provider,
       ProgramImage.writePermissionTable, StaticTable.ofRows]
   channels := [WritePermissionProvider.channel.toRaw, rom.writePermissionTable.channel.toRaw]
@@ -58,9 +59,9 @@ def config (rom : ProgramImage) : WitnessGeneration.Config Fp where
       channel := WritePermissionProvider.channel.toRaw
       direction := .pull
       aggregation := .perOccurrence
-      input := ⟨[.message 0, .message 1, .message 2]⟩
+      input := ⟨[.message 0, .message 1, .message 2, .const 1]⟩
     }
-    padding := { input := Array.replicate 3 0 }
+    padding := { input := Array.replicate 4 0 }
   }), ((WritePermissionProvider.membershipComponent (p := SP1Prime) rom).circuit.name, {
     mode := .preallocated {
       rows := UInt64.ofNat (rom.writePermissionTable (p := SP1Prime)).height
@@ -77,12 +78,9 @@ def description (rom : ProgramImage) : EnsembleCheck (ensemble rom) where
   lookups := []
   lookups_unique := by simp
   lookups_complete := by
-    simp [ensemble, requestComponent, WritePermissionProvider.membershipComponent,
-      Component.lookups_eq, Component.rowOperations, StaticTable.component, StaticTable.provider,
-      WritePermissionProvider.circuit, WritePermissionProvider.main,
-      FormalAssertion.toSubcircuit_toFlat, AddressOrder.circuit, AddressOrder.main,
-      Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.IsZeroField.circuit,
-      Gadgets.Equality.main, circuit_norm]
+    simp [ensemble, requestComponent, WritePermissionProvider.component,
+      WritePermissionProvider.membershipComponent, Component.lookups_eq, Component.rowOperations,
+      StaticTable.component, StaticTable.provider, circuit_norm]
   channels_unique := by
     simp [ensemble, WritePermissionProvider.channel, Channel.toRaw, StaticTable.channel,
       ProgramImage.writePermissionTable, StaticTable.ofRows]
@@ -118,11 +116,11 @@ def rustExports : List (String × Except String String) :=
 /-- Boundary addresses, repeats, code bytes and noncanonical field limbs. -/
 def cases : List (String × Requests Fp × Bool) :=
   ([0, 65535, 65540, 131071, 131076, 0x200040003, 0x200040008, 2 ^ 48 - 1].map
-    fun address => (s!"writable-{address}", #v[Address.ofNat address, Address.ofNat address], true)) ++
+    fun address => (s!"writable-{address}", #v[Address.ofNat address, Address.ofNat address, Address.ofNat address], true)) ++
   ([65536, 65539, 131072, 131075, 0x200040004, 0x200040007].map
-    fun address => (s!"code-{address}", #v[Address.ofNat address, Address.ofNat 65540], false)) ++
-  [("mixed-intervals", #v[Address.ofNat 65540, Address.ofNat 131076], true),
-   ("noncanonical-low", #v[#v[65536, 0, 0], Address.ofNat 65540], false),
-   ("noncanonical-high", #v[#v[0, 0, 65536], Address.ofNat 65540], false)]
+    fun address => (s!"code-{address}", #v[Address.ofNat address, Address.ofNat 65540, Address.ofNat 65540], false)) ++
+  [("mixed-intervals", #v[Address.ofNat 65540, Address.ofNat 131076, Address.ofNat 65540], true),
+   ("noncanonical-low", #v[#v[65536, 0, 0], Address.ofNat 65540, Address.ofNat 65540], false),
+   ("noncanonical-high", #v[#v[0, 0, 65536], Address.ofNat 65540, Address.ofNat 65540], false)]
 
 end SP1CleanTest.Core.WritePermissionExport

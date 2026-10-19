@@ -70,7 +70,7 @@ private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image so
   · have positions : index.val = 61 ∨ index.val = 62 := by omega
     rcases positions with last | last
     · have component : (witness.tables[index.val]'(by have := prefix_length witness; omega)).component =
-          { circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } := by
+          WritePermissionProvider.component image := by
         rw [← witness.same_circuits]
         change (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) = _
         simp only [tables]

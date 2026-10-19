@@ -23,7 +23,7 @@ def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component
     |>.set 26 { circuit := ProtectedStore.half, Assumptions := (ProtectedStore.half).Assumptions }
     |>.set 27 { circuit := ProtectedStore.word, Assumptions := (ProtectedStore.word).Assumptions }
     |>.set 28 { circuit := ProtectedStore.double, Assumptions := (ProtectedStore.double).Assumptions }
-  stores ++ [{ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions },
+  stores ++ [WritePermissionProvider.component image,
     WritePermissionProvider.membershipComponent image]
 
 /-- Permission wrappers keep the original stores' canonical data keys. -/

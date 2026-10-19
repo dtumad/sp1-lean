@@ -266,7 +266,7 @@ attribute [local circuit_norm]
   SP1Clean.WordRangeCheck.circuit
   SP1Clean.WordRangeCheck.main
   SP1Clean.WritePermissionProvider.circuit
-  SP1Clean.WritePermissionProvider.main
+  Circuit.Guarded.circuit
 
 
 attribute [local circuit_norm] supportedChipFor RangeChip.circuitFor

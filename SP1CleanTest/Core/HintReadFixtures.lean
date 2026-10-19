@@ -58,7 +58,7 @@ def permission (image : ProgramImage) (address : ℕ) : Bool × Ledger :=
   | none => (false, [])
   | some input =>
     let request := evaluateProgram
-      (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
+      ((WritePermissionProvider.circuit image).main (varFromOffset WritePermissionProvider.RowInput 0))
       (toElements input).toList
     let membership := StaticMembership.providerLedger image.writePermissionTable request.2
       (WritePermissionProvider.membership_height_lt_uint64 image)

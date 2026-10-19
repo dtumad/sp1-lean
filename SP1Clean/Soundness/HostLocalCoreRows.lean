@@ -132,7 +132,7 @@ private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image s
 private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     typedTableInteractionsWith (witness.tables[61]'(by have := extended_length witness; omega)) memoryChannel = [] := by
   have component : (witness.tables[61]'(by have := extended_length witness; omega)).component =
-      { circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } := by
+      WritePermissionProvider.component image := by
     rw [← witness.same_circuits]
     change (tables image source auxiliary)[61]'(by rw [tables_length]; omega) = _
     simp only [tables]

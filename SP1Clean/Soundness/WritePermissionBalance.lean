@@ -33,23 +33,23 @@ theorem pulls_of_silent (component : Component (ZMod p))
   contradiction
 
 theorem provider_constraints (image : ProgramImage) (env : Environment (ZMod p))
-    (constraints : ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
-    (membership : ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+    (constraints : (WritePermissionProvider.component image : Component (ZMod p)).operations.ConstraintsHold env)
+    (membership : (WritePermissionProvider.component image : Component (ZMod p)).operations.ChannelGuarantees
       image.writePermissionTable.channel.toRaw env) :
-    WritePermissionProvider.Permitted image
-      (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).rowInput env).address :=
+    IsBool ((WritePermissionProvider.component image : Component (ZMod p)).rowInput env).2 ∧
+      (((WritePermissionProvider.component image : Component (ZMod p)).rowInput env).2 = 1 → WritePermissionProvider.Permitted image
+        ((WritePermissionProvider.component image : Component (ZMod p)).rowInput env).1.address) :=
     by
   let component : Component (ZMod p) :=
-    { circuit := WritePermissionProvider.circuit image,
-      Assumptions := (WritePermissionProvider.circuit image).Assumptions }
-  apply (component.weakSoundness (by trivial) constraints ?_).1
+    WritePermissionProvider.component image
+  apply (component.weakSoundness (by intro _; trivial) constraints ?_).1
   apply (Operations.guarantees_iff component.operations
     [image.writePermissionTable.channel.toRaw] env (component.inChannelsOrGuarantees env)).mpr
   simpa only [List.mem_singleton, forall_eq] using membership
 
-theorem provider_emission (image : ProgramImage) (input : Var WritePermissionProvider.Inputs (ZMod p))
+theorem active_provider_emission (image : ProgramImage) (input : Var WritePermissionProvider.Inputs (ZMod p))
     (offset : ℕ) :
-    ((WritePermissionProvider.circuit image).main input |>.operations offset).interactionsWith
+    ((WritePermissionProvider.activeCircuit image).main input |>.operations offset).interactionsWith
       WritePermissionProvider.channel.toRaw = [(WritePermissionProvider.channel.pushed input.address).toRaw] := by
   have range (offset : ℕ) (value : Expression (ZMod p)) :=
     InteractionRecovery.filter_interactions_formalAssertion_eq_nil
@@ -60,27 +60,46 @@ theorem provider_emission (image : ProgramImage) (input : Var WritePermissionPro
     InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddressOrder.circuit
       WritePermissionProvider.channel.toRaw (n := offset) value
       (by change _ ∉ []; simp) (by change _ ∉ []; simp)
-  simp only [WritePermissionProvider.circuit, WritePermissionProvider.main, circuit_norm]
+  simp only [WritePermissionProvider.activeCircuit, WritePermissionProvider.activeMain, circuit_norm]
   simp only [range, order, List.nil_append]
   simp [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows,
     WritePermissionProvider.channel, Channel.toRaw]
 
+/-- Permission padding retains the physical occurrence with its activity multiplier. -/
+theorem provider_emission (image : ProgramImage) (input : Var WritePermissionProvider.RowInput (ZMod p))
+    (offset : ℕ) :
+    ((WritePermissionProvider.circuit image).main input |>.operations offset).interactionsWith
+      WritePermissionProvider.channel.toRaw =
+        [AbstractInteraction.guard input.2 (WritePermissionProvider.channel.pushed input.1.address).toRaw] := by
+  change ((Guarded.main (WritePermissionProvider.activeCircuit image)
+    (WritePermissionProvider.guard_supported image) input).operations offset).interactionsWith _ = _
+  rw [Guarded.main_interactionsWith, active_provider_emission]
+  rfl
+
+/-- A permission occurrence carries the actual row activity and semantic address. -/
 theorem provider_payload (image : ProgramImage) (env : Environment (ZMod p))
     (interaction : Interaction (ZMod p))
-    (member : interaction ∈ ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    (member : interaction ∈ (WritePermissionProvider.component image : Component (ZMod p)).operations.interactionValuesWith
       WritePermissionProvider.channel.toRaw env) :
-    interaction.msg = (toElements
-      (({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)).rowInput env).address).toArray := by
+    interaction.mult = ((WritePermissionProvider.component image : Component (ZMod p)).rowInput env).2 ∧
+      interaction.msg = (toElements ((WritePermissionProvider.component image : Component (ZMod p)).rowInput env).1.address).toArray := by
+  change interaction.mult = (valueFromOffset WritePermissionProvider.RowInput 0 env).2 ∧
+    interaction.msg = (toElements (valueFromOffset WritePermissionProvider.RowInput 0 env).1.address).toArray
   rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
   change interaction ∈ (((WritePermissionProvider.circuit image).main
-    (varFromOffset WritePermissionProvider.Inputs 0)).operations (size WritePermissionProvider.Inputs)
+    (varFromOffset WritePermissionProvider.RowInput 0)).operations (size WritePermissionProvider.RowInput)
     |>.interactionsWith WritePermissionProvider.channel.toRaw).map _ at member
   rw [provider_emission] at member
   obtain rfl := List.mem_singleton.mp member
-  simp only [Channel.eval_pushed, Channel.pushedValue]
-  have input := eval_varFromOffset_valueFromOffset WritePermissionProvider.Inputs 0 env
-  have address := congrArg WritePermissionProvider.Inputs.address input
-  simpa only [Component.rowInput, circuit_norm] using congrArg (fun value => (toElements value).toArray) address
+  simp only [AbstractInteraction.eval_guard, Channel.eval_pushed]
+  constructor
+  · change env.get 3 * 1 = env.get 3
+    exact mul_one _
+  · apply congrArg Vector.toArray
+    ext i hi
+    change i < 3 at hi
+    interval_cases i <;>
+      simp [valueFromOffset, circuit_norm, explicit_provable_type]
 
 /-- A matched provider proves the requested byte writable in the fixed image. -/
 theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
@@ -92,7 +111,7 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
       WritePermissionProvider.channel.toRaw (Environment.fromInput input data),
       interaction.mult = 0 ∨ interaction.mult = -1)
     (sources : ∀ component ∈ assembly.tables,
-      component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨ Pulls component)
+      component = (WritePermissionProvider.component image : Component (ZMod p)) ∨ Pulls component)
     (membership : ∀ table ∈ witness.tables,
       table.ChannelGuarantees image.writePermissionTable.channel.toRaw)
     (address : fields 3 (ZMod p)) (interaction : Interaction (ZMod p))
@@ -112,9 +131,12 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
       have authenticated := membership table tableMem physical physicalMem
       simp only [Table.environment, witness.same_data table tableMem] at authenticated
       rw [fixed] at authenticated
-      have permitted := provider_constraints image (Environment.fromArray physical witness.data)
+      have valid := provider_constraints image (Environment.fromArray physical witness.data)
         checked authenticated
-      have same := (provider_payload image _ provider emitted).symm.trans (samePayload.trans payload)
+      obtain ⟨multiplicity, message⟩ := provider_payload image _ provider emitted
+      have enabled := valid.1.resolve_left (fun disabled => nonzero (multiplicity.trans disabled))
+      have permitted := valid.2 enabled
+      have same := message.symm.trans (samePayload.trans payload)
       have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp same)
       simp only [ProvableType.fromElements_toElements] at addressEq
       exact Eq.mp (congrArg (WritePermissionProvider.Permitted image) addressEq) permitted

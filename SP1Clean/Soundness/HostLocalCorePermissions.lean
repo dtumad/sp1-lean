@@ -23,7 +23,7 @@ theorem component_permission_source (image : ProgramImage) (source : ExecutionSn
     (auxiliary : List (Component (ZMod p)))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (component : Component (ZMod p)) (member : component ∈ tables image source auxiliary) :
-    component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨ WritePermission.Pulls component := by
+    component = (WritePermissionProvider.component image : Component (ZMod p)) ∨ WritePermission.Pulls component := by
   rcases List.mem_append.mp member with core | extra
   · rcases List.mem_or_eq_of_mem_set core with original | rfl
     · exact ProtectedLocalCore.component_permission_source image source component original

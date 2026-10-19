@@ -26,7 +26,7 @@ private theorem old_component_silent (image : ProgramImage) (source : ExecutionS
 /-- The fixed provider is the only possible positive contributor to permission balance. -/
 theorem component_permission_source (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables) :
-    component = ({ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } : Component (ZMod p)) ∨
+    component = (WritePermissionProvider.component image : Component (ZMod p)) ∨
       WritePermission.Pulls component := by
   change component ∈ tables image source at member
   rcases List.mem_append.mp member with stores | fixed

@@ -180,10 +180,10 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
 
 private theorem suffix_components (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) :
-    (tables image source auxiliary).drop 61 = { circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions } ::
+    (tables image source auxiliary).drop 61 = WritePermissionProvider.component image ::
       WritePermissionProvider.membershipComponent image :: auxiliary := by
   have suffix : (ProtectedLocalCore.tables (p := p) image source).drop 61 =
-      [{ circuit := WritePermissionProvider.circuit image, Assumptions := (WritePermissionProvider.circuit image).Assumptions },
+      [WritePermissionProvider.component image,
         WritePermissionProvider.membershipComponent image] := by
     rw [ProtectedLocalCore.tables, List.drop_left' (by
       simp only [List.length_set, LocalCore.tables_length])]

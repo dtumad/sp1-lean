@@ -88,10 +88,13 @@ interpreter or scheduler.
   General ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
 - Native write permissions authenticate writable intervals through a separate verifier-fixed
   provider. Requests carry only an address; the circuit selects interval witnesses internally
-  using the same Clean IR selector as memory reads. The closed two-request export uses Clean's
+  using the same Clean IR selector as memory reads. Boolean row activity disables assertions
+  and channel multiplicities for padding while preserving witness programs and physical occurrences.
+  The closed three-request export pads to four rows through Clean's
   ordinary demand scheduler without private inputs. Rust checks literal ROM-byte exclusion,
-  full rows/ledgers, public binding and interval/count mutations. Padding active permission
-  tables at arbitrary request counts remains open. This is not SP1 runtime `mprotect`.
+  full rows/ledgers, public binding, interval/count mutations and invalid activity. Disabled
+  rows admit arbitrary child cells; disabling a real request or activating padding fails balance.
+  Complete active-host assembly remains separate. This is not SP1 runtime `mprotect`.
 - Immutable hint nodes and words publish directly on their existing semantic channels from
   verifier-fixed payloads and eligibility tags. Rust reconstructs node/tail identities, lengths
   and little-endian words from literal byte buffers, including empty and aligned padding. Closed

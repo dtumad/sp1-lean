@@ -196,7 +196,7 @@ private def buildWitness (ensemble : Ensemble Fp SP1PublicIO)
     (StaticMembership.buildTables_components ..)
 
 private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
-    (permissions : List (WritePermissionProvider.Inputs Fp)) (index : ℕ) : List (List Fp) :=
+    (permissions : List (WritePermissionProvider.RowInput Fp)) (index : ℕ) : List (List Fp) :=
   if index == 61 then permissions.map (fun row => (toElements row).toList)
   else if index == 63 then calls.map (fun row => (toElements row).toList)
   else if index == 84 || index == 85 then
@@ -204,7 +204,7 @@ private def installedInputs (calls : List (HostHintReadChip.Inputs Fp)) (rows : 
   else []
 
 private theorem installedInputs_bounded (calls : List (HostHintReadChip.Inputs Fp))
-    (rows : List HintReadFixtures.Row) (permissions : List (WritePermissionProvider.Inputs Fp))
+    (rows : List HintReadFixtures.Row) (permissions : List (WritePermissionProvider.RowInput Fp))
     (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧ permissions.length ≤ UInt64.size)
     (index : ℕ) : (installedInputs calls rows permissions index).length ≤ UInt64.size := by
   unfold installedInputs
@@ -217,7 +217,7 @@ private theorem installedInputs_bounded (calls : List (HostHintReadChip.Inputs F
 /-- A physical ensemble witness used to test cursor extraction. Other channels are deliberately
 not claimed balanced: source authentication and CPU instruction construction are separate tests. -/
 private def installed (calls : List (HostHintReadChip.Inputs Fp)) (rows : List HintReadFixtures.Row)
-    (permissions : List (WritePermissionProvider.Inputs Fp) := [])
+    (permissions : List (WritePermissionProvider.RowInput Fp) := [])
     (bounded : calls.length ≤ UInt64.size ∧ rows.length ≤ UInt64.size ∧ permissions.length ≤ UInt64.size) :
     EnsembleWitness assembly :=
   buildWitness assembly (installedInputs calls rows permissions)
@@ -253,17 +253,17 @@ theorem installedCursor :
   native_decide
 
 private def permissionRows (rows : List HintReadFixtures.Row) (forge := false) :
-    List (WritePermissionProvider.Inputs Fp) :=
+    List (WritePermissionProvider.RowInput Fp) :=
   rows.flatMap fun row => (List.range 8).filterMap fun index =>
     let address := Address.toNat row.2.address + index
     match WritePermissionProvider.populate? (p := SP1Prime) image address with
     | some input => some input
     | none => if forge then (WritePermissionProvider.populate? (p := SP1Prime) image (address - 8)).map
-        (fun input => { input with address := Address.ofNat address }) else none
+        (fun input => ({ input.1 with address := Address.ofNat address }, input.2)) else none
 
-private def permissionRowsChecked (rows : List (WritePermissionProvider.Inputs Fp)) : Bool :=
+private def permissionRowsChecked (rows : List (WritePermissionProvider.RowInput Fp)) : Bool :=
   let requests := rows.map fun input =>
-    HostChecks.evaluateProgram (WritePermissionProvider.main image (varFromOffset WritePermissionProvider.Inputs 0))
+    HostChecks.evaluateProgram ((WritePermissionProvider.circuit image).main (varFromOffset WritePermissionProvider.RowInput 0))
       (toElements input).toList
   requests.all (·.1) && StaticMembership.check image.writePermissionTable (requests.flatMap (·.2))
     (WritePermissionProvider.membership_height_lt_uint64 image)
