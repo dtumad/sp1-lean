@@ -60,9 +60,10 @@ interpreter or scheduler.
   Rust compares released supervisor rows, shared buses and public-value bindings, including all
   eight native codes, every commit slot and WRITE's extra register read. The public adapter uses
   named SP1 fields; `mprotect`'s additional supervisor trap cell must be zero before projection.
-  A regression records unresolved padding drift: an inactive commit with an empty bitmap selects
-  zero upstream but native addressed queries select previous-digest cells. Arbitrary-row public
-  equivalence remains open under #29.
+  Public queries retain all eight field coefficients from the selector bitmap. Inactive-row
+  comparisons cover empty, unit, multi-hot, non-Boolean and cancelling weights, together with
+  public-cell and cached-result mutations. These finite tests do not prove arbitrary-row or
+  whole-shard public equivalence.
 - HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals export
   with Lean row/ledger references. Rust executes real programs through SP1's executor and shard
   builder, then checks native effects, complete receipts and released Byte-table membership.

@@ -25,9 +25,9 @@ direct chip-level `public_values` access, which Clean's flat AIR reserves to the
 they are factored through channels instead (upstream Clean's `Air/Vm.lean` requires the same shape
 of its own verifier). `docs/assurance.md` discloses that as a native-only bus.
 
-The last two are **declared but not yet ensemble members**. `kindOf` classifies both, so adding
-either to `sp1Ensemble` no longer risks folding it into State balance — but it does now owe
-`Soundness.EnsembleChannels.channel_eq_of_kindOf_eq` a case, which is where the obligation belongs. -/
+The installed assembly classifies every channel independently through `kindOf`. Native host
+handlers consume host-call messages and supply commitment receipts; these boundaries remain
+distinct from SP1's direct public-value assertions. -/
 
 @[expose] public section
 
@@ -142,12 +142,13 @@ def syscallChannel : Channel (ZMod p) SyscallMsg where
 /-- The public-values channel — the second native-only bus, and the general form of what
 `exitChannel` does for one cell. A chip-level assertion about `public_values` cannot be a row
 constraint in Clean's flat AIR (a `Table` carries no `PublicIO`, and `Ensemble.tables` cannot
-depend on one), so each such assertion is factored into one addressed-cell message; upstream
+depend on one), so each such assertion is factored into a weighted public-value query; upstream
 Clean's `Air/Vm.lean` `VmTables` requires the same shape of its verifier.
 
-Declared with no provider for now, so balance forces the commit selectors to zero. `Guarantees :=
-True` for the same reason as `exitChannel`: the binding is established by balance against the
-verifier (or, once COMMIT is modelled, against a `PublicValues` provider), not row-locally. -/
+The instruction-only ensemble has no provider. The installed host assembly supplies per-call
+commitment receipts, preserving mutable bank history. These are distinct from binding every
+call to SP1's final shard digest. `Guarantees := True`: the channel meaning must be established
+by balance against the actual installed providers or verifier, not row-locally. -/
 def publicValuesChannel : Channel (ZMod p) PublicValueMsg where
   name := "SP1PublicValues"
   Guarantees _ _ := True

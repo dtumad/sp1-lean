@@ -255,17 +255,17 @@ fn reduce(word: &[S; 4]) -> S {
     })
 }
 
-/// These addresses are the native bus schema, not offsets into the released public struct.
-/// Preserve all eight physical public/exit occurrences, including zero multiplicities.
+/// Named native field families, independent of the released Rust public struct layout.
+/// Retain every coefficient and all eight public/exit occurrences, including zero multiplicities.
 fn public_ledger(cols: &Columns) -> Ledger {
     let commit = cols.is_commit.result;
     let deferred = cols.is_commit_deferred_proofs.result;
-    let selected = |base: u32, stride: u32| {
-        cols.index_bitmap
-            .iter()
-            .enumerate()
-            .map(|(i, bit)| *bit * S::from_canonical_u32(base + stride * i as u32))
-            .sum::<S>()
+    let unit = core::array::from_fn(|index| S::from_bool(index == 0));
+    let query = |base: u32, stride: u32, coefficients: &[S; 8], value: S| {
+        let mut message = vec![S::from_canonical_u32(base), S::from_canonical_u32(stride)];
+        message.extend(coefficients.iter().copied());
+        message.push(value);
+        message
     };
     let entry = |name: &str, mult: S, values: Vec<S>| {
         (
@@ -279,31 +279,25 @@ fn public_ledger(cols: &Columns) -> Ledger {
     };
     let mut result = vec![
         entry("SP1Exit", cols.is_halt, vec![reduce(&cols.adapter.b().0)]),
-        entry(
-            "SP1PublicValues",
-            -commit,
-            vec![S::from_canonical_u32(145), S::one()],
-        ),
-        entry(
-            "SP1PublicValues",
-            -deferred,
-            vec![S::from_canonical_u32(147), S::one()],
-        ),
+        entry("SP1PublicValues", -commit, query(145, 0, &unit, S::one())),
+        entry("SP1PublicValues", -deferred, query(147, 0, &unit, S::one())),
     ];
     for i in 0..4 {
         result.push(entry(
             "SP1PublicValues",
             -commit,
-            vec![
-                selected(32, 4) + S::from_canonical_usize(i),
+            query(
+                32 + i as u32,
+                4,
+                &cols.index_bitmap,
                 cols.expected_public_values_digest[i],
-            ],
+            ),
         ));
     }
     result.push(entry(
         "SP1PublicValues",
         -cols.is_real * deferred,
-        vec![selected(72, 1), reduce(&cols.adapter.c().0)],
+        query(72, 1, &cols.index_bitmap, reduce(&cols.adapter.c().0)),
     ));
     result
 }
@@ -313,33 +307,34 @@ fn bindings_hold(entries: &Ledger, public: &Public) -> bool {
         if *mult == 0 {
             return true;
         }
-        let expected = match channel.as_str() {
+        match channel.as_str() {
             "SP1Exit" => {
                 assert_eq!(message.len(), 1);
-                return message[0] == public.exit_code as u64;
+                message[0] == public.exit_code as u64
             }
             "SP1PublicValues" => {
-                assert_eq!(message.len(), 2);
-                match message[0] {
-                    0..=31 => Some(
-                        public.prev_committed_value_digest[message[0] as usize / 4].to_le_bytes()
-                            [message[0] as usize % 4] as u64,
-                    ),
-                    32..=63 => Some(
-                        public.committed_value_digest[(message[0] - 32) as usize / 4].to_le_bytes()
-                            [(message[0] - 32) as usize % 4] as u64,
-                    ),
-                    72..=79 => {
-                        Some(public.deferred_proofs_digest[(message[0] - 72) as usize] as u64)
-                    }
-                    145 => Some(public.commit_syscall as u64),
-                    147 => Some(public.commit_deferred_syscall as u64),
-                    _ => None,
-                }
+                assert_eq!(message.len(), 11);
+                // Map the explicit family to named released fields, never to assumed offsets.
+                let values: [S; 8] = match (message[0], message[1]) {
+                    (base @ 32..=35, 4) => core::array::from_fn(|slot| {
+                        S::from_canonical_u8(
+                            public.committed_value_digest[slot].to_le_bytes()[(base - 32) as usize],
+                        )
+                    }),
+                    (72, 1) => public.deferred_proofs_digest.map(S::from_canonical_u32),
+                    (145, 0) => [S::from_canonical_u32(public.commit_syscall); 8],
+                    (147, 0) => [S::from_canonical_u32(public.commit_deferred_syscall); 8],
+                    _ => return false,
+                };
+                let expected = values
+                    .iter()
+                    .zip(&message[2..10])
+                    .map(|(value, coefficient)| *value * S::from_canonical_u64(*coefficient))
+                    .sum::<S>();
+                expected.as_canonical_u64() == message[10]
             }
             _ => panic!("not a public binding: {channel}"),
-        };
-        expected == Some(message[1])
+        }
     })
 }
 
@@ -469,32 +464,80 @@ fn public_exit_flags_digest_bytes_and_deferred_slots_are_bound() {
 }
 
 #[test]
-fn inactive_commit_exposes_the_remaining_public_addressing_drift() {
-    let mut row = vec![S::zero(); 65];
-    let cols: &mut Columns = row.as_mut_slice().borrow_mut();
-    cols.is_commit.result = S::one();
+fn inactive_commit_preserves_arbitrary_weighted_public_selection() {
     let public = Public {
         prev_committed_value_digest: [0x1234_5678; 8],
+        committed_value_digest: core::array::from_fn(|slot| {
+            u32::from_le_bytes([
+                1 + slot as u8,
+                17 + slot as u8,
+                33 + slot as u8,
+                65 + slot as u8,
+            ])
+        }),
         commit_syscall: 1,
         ..Default::default()
     };
-    // #29: the native empty bitmap addresses slots 0..3, whereas SP1's weighted selection
-    // produces zero. This is a recorded mismatch, not conformance or an excluded test case.
-    // Resolve the public interface before claiming arbitrary-row equivalence.
-    let mut expected = evaluation(&row, &public);
-    SyscallInstrsChip::<SupervisorMode>::default().eval(&mut expected);
-    assert!(expected.constraints.iter().all(|x| *x == S::zero()));
-    assert!(valid::<Base>(&native(&row)));
-    let cols: &Columns = row.as_slice().borrow();
-    assert!(!bindings_hold(&public_ledger(cols), &public));
-    assert!(compare(
-        &row,
-        &Public {
-            prev_committed_value_digest: [0; 8],
-            ..public
-        },
-        "zero previous digest masks the padding mismatch"
-    ));
+    let minus_one = F::ORDER_U64 - 1;
+    let mut bitmaps = vec![
+        [0; 8],
+        [1; 8],
+        [1, 1, 0, 0, 0, 0, 0, 0],
+        [2, 0, 0, 0, 0, 0, 0, 0],
+        [minus_one, 0, 0, 0, 0, 0, 0, 0],
+        [2, minus_one, 0, 0, 0, 0, 0, 0],
+        [1, minus_one, 0, 0, 0, 0, 0, 0],
+        [0, 3, 0, 5, 0, minus_one, 0, 7],
+    ];
+    bitmaps.extend((0..8).map(|slot| core::array::from_fn(|index| u64::from(index == slot))));
+    assert_eq!(bitmaps.len(), 16);
+    for bitmap in bitmaps {
+        let mut row = vec![S::zero(); 65];
+        let cols: &mut Columns = row.as_mut_slice().borrow_mut();
+        cols.is_commit.result = S::one();
+        cols.index_bitmap = bitmap.map(S::from_canonical_u64);
+        cols.expected_public_values_digest = core::array::from_fn(|byte| {
+            cols.index_bitmap
+                .iter()
+                .zip(public.committed_value_digest)
+                .map(|(coefficient, word)| {
+                    *coefficient * S::from_canonical_u8(word.to_le_bytes()[byte])
+                })
+                .sum::<S>()
+        });
+        assert_eq!(cols.is_real, S::zero());
+        // These are open-bus row/public checks. Byte-provider acceptance remains separate;
+        // arbitrary field weights can produce non-byte values, whose emitted range queries match.
+        assert!(compare(&row, &public, "inactive weighted commit"));
+        let mut previous = public;
+        previous.prev_committed_value_digest = [0; 8];
+        assert!(compare(&row, &previous, "previous digest is not selected"));
+        let mut missing_flag = public;
+        missing_flag.commit_syscall = 0;
+        assert!(!compare(
+            &row,
+            &missing_flag,
+            "inactive commit still requires its flag"
+        ));
+        for slot in 0..8 {
+            for byte in 0..4 {
+                let mut changed = public;
+                changed.committed_value_digest[slot] ^= 1 << (8 * byte);
+                assert_eq!(
+                    compare(&row, &changed, "weighted public-cell mutation"),
+                    bitmap[slot] == 0
+                );
+            }
+        }
+        for byte in 0..4 {
+            for delta in [1, minus_one] {
+                let mut changed = row.clone();
+                let cols: &mut Columns = changed.as_mut_slice().borrow_mut();
+                cols.expected_public_values_digest[byte] += S::from_canonical_u64(delta);
+                assert!(!compare(&changed, &public, "wrong cached weighted result"));
+            }
+        }
+    }
 }
 
 #[test]

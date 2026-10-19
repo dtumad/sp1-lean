@@ -10,7 +10,7 @@ namespace SP1Clean.SyscallInstrsChip.Ledger
 
 open Circuit
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel exitChannel
-  syscallChannel publicValuesChannel MemoryMsg ProgramMsg)
+  syscallChannel publicValuesChannel MemoryMsg ProgramMsg PublicValueMsg)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -110,25 +110,25 @@ theorem syscallInstrsInteractionBlocks (r : Var SyscallInstrsChip.Inputs (ZMod p
       [({ mult := r.is_halt, msg := exitMsg r,
           assumeGuarantees := false } :
          ChannelInteraction (exitChannel (p := p))).toRaw,
-       ({ mult := -r.is_commit.result, msg := ⟨natConst 145, 1⟩,
+       ({ mult := -r.is_commit.result, msg := (PublicValueMsg.scalar (natConst 145) 1),
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
-       ({ mult := -r.is_commit_deferred.result, msg := ⟨natConst 147, 1⟩,
+       ({ mult := -r.is_commit_deferred.result, msg := (PublicValueMsg.scalar (natConst 147) 1),
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
-       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 0, r.digest_word[0]⟩,
+       ({ mult := -r.is_commit.result, msg := ⟨natConst 32, natConst 4, r.digest_index_bits, r.digest_word[0]⟩,
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
-       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 1, r.digest_word[1]⟩,
+       ({ mult := -r.is_commit.result, msg := ⟨natConst 33, natConst 4, r.digest_index_bits, r.digest_word[1]⟩,
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
-       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 2, r.digest_word[2]⟩,
+       ({ mult := -r.is_commit.result, msg := ⟨natConst 34, natConst 4, r.digest_index_bits, r.digest_word[2]⟩,
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
-       ({ mult := -r.is_commit.result, msg := ⟨selectedIndex r 32 4 + 3, r.digest_word[3]⟩,
+       ({ mult := -r.is_commit.result, msg := ⟨natConst 35, natConst 4, r.digest_index_bits, r.digest_word[3]⟩,
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
-       ({ mult := -(r.is_real * r.is_commit_deferred.result), msg := ⟨selectedIndex r 72 1, reduceWord r.op_c_memory.prev_value⟩,
+       ({ mult := -(r.is_real * r.is_commit_deferred.result), msg := ⟨natConst 72, natConst 1, r.digest_index_bits, reduceWord r.op_c_memory.prev_value⟩,
           assumeGuarantees := true } :
          ChannelInteraction (publicValuesChannel (p := p))).toRaw,
        ({ mult := tableByteVar r, msg := syscallMsg r,

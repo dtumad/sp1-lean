@@ -36,14 +36,13 @@ private theorem bytes_empty (target : RawChannel (ZMod p)) (different : target �
 def publicInteractions (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p)) :
     List (AbstractInteraction (ZMod p)) :=
   if deferred then
-    [(publicValuesChannel.pushed ⟨147, 1⟩).toRaw,
-     (publicValuesChannel.pushed ⟨Expression.const ((72 + slot.val : ℕ) : ZMod p),
-       input.call.arg2[0] + input.call.arg2[1] * 65536⟩).toRaw]
+    [(publicValuesChannel.pushed (PublicValueMsg.scalar 147 1)).toRaw,
+     (publicValuesChannel.pushed (PublicValueMsg.atSlot 72 1 slot (input.call.arg2[0] + input.call.arg2[1] * 65536))).toRaw]
   else
-    (publicValuesChannel.pushed ⟨145, 1⟩).toRaw :: List.ofFn (fun i : Fin 4 =>
+    (publicValuesChannel.pushed (PublicValueMsg.scalar 145 1)).toRaw :: List.ofFn (fun i : Fin 4 =>
       (publicValuesChannel.pushed
-        ⟨Expression.const ((32 + 4 * slot.val + i.val : ℕ) : ZMod p),
-         (input.digest (Expression.const (256 : ZMod p)⁻¹))[i]⟩).toRaw)
+        (PublicValueMsg.atSlot (Expression.const ((32 + i.val : ℕ) : ZMod p)) 4 slot
+          (input.digest (Expression.const (256 : ZMod p)⁻¹))[i])).toRaw)
 
 private theorem main_nonbyte (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p))
     (offset : ℕ) (target : RawChannel (ZMod p)) (different : target ≠ byteChannel.toRaw) :

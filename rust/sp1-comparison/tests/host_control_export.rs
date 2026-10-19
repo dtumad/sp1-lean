@@ -103,6 +103,15 @@ fn handler<P: Program<F> + GeneratedAirSpec>() -> Handler {
     }
 }
 
+// Independent encoding of one slot in the native weighted public-query schema.
+fn public_query(base: u64, stride: u64, slot: usize, value: u64) -> Vec<F> {
+    assert!(slot < 8);
+    let mut result = fields(&[base, stride]);
+    result.extend((0..8).map(|index| F::from_u64(u64::from(index == slot))));
+    result.push(F::from_u64(value));
+    result
+}
+
 fn handlers() -> Vec<Handler> {
     vec![
         handler::<halt::Ensemble>(),
@@ -369,20 +378,20 @@ fn all_commit_slots_preserve_released_executor_effects_and_literal_receipts() {
                     expected.push(entry(
                         "SP1PublicValues",
                         F::ONE,
-                        &fields(&[if deferred { 147 } else { 145 }, 1]),
+                        &public_query(if deferred { 147 } else { 145 }, 0, 0, 1),
                     ));
                     if deferred {
                         expected.push(entry(
                             "SP1PublicValues",
                             F::ONE,
-                            &fields(&[72 + slot as u64, event.arg2]),
+                            &public_query(72, 1, slot, event.arg2),
                         ));
                     } else {
                         for (byte, value) in (event.arg2 as u32).to_le_bytes().iter().enumerate() {
                             expected.push(entry(
                                 "SP1PublicValues",
                                 F::ONE,
-                                &fields(&[32 + 4 * slot as u64 + byte as u64, u64::from(*value)]),
+                                &public_query(32 + byte as u64, 4, slot, u64::from(*value)),
                             ));
                         }
                     }

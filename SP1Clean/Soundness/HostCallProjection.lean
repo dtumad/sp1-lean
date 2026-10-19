@@ -275,7 +275,19 @@ theorem original_scope :
         interaction.mult :: interaction.msg.toList) = none := by
   have width : (original (p := p)).width = 65 := rfl
   rw [width]
-  constructor <;> simp only [circuit_norm] <;> cbv
+  constructor
+  · simp only [circuit_norm]
+    cbv
+  · simp only [circuit_norm]
+    -- Check each expression separately so a larger message does not deepen one reduction.
+    simp only [Backends.expressionsBadVariable, List.findSome?_eq_none_iff,
+      List.forall_mem_flatMap, FlatOperation.interactions, List.forall_mem_append,
+      List.forall_mem_cons]
+    repeat' apply And.intro
+    all_goals solve
+      | exact List.forall_mem_nil _
+      | (apply List.findSome?_eq_none_iff.mp; cbv)
+      | cbv
 
 end Scope
 

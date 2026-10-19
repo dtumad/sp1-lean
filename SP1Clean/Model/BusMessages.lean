@@ -318,22 +318,36 @@ structure ExitMsg (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas ExitMsg
 
-/-- The public-values message — one addressed cell of the committed public-values vector.
+/-- A public-value query computes `Σ coefficients[i] * public[base + stride * i]`.
 
-The second instance of the `ExitMsg` situation, and deliberately uniform where SP1 is not: SP1's
-syscall chip reads `public_values` at three differently-shaped places (the 8×4-cell
-`committed_value_digest`, the 8-cell `deferred_proofs_digest`, and two scalar commit flags), all by
-direct chip-level access that Clean's flat AIR reserves to the verifier. A single `⟨index, value⟩`
-cell covers all three without a variant type, and every message is built from columns the row
-already has — so a chip carrying these keeps its upstream column count.
+The address family identifies named public fields; it is not the released Rust struct layout.
+Keeping all eight field coefficients preserves SP1's weighted selection even when inactive rows
+have an empty or non-Boolean bitmap. Commit bytes use bases 32..35 and stride 4; deferred words
+use base 72 and stride 1. Scalar flags use stride zero and a unit coefficient.
 
-The installed public interface supplies these named cells. Agreement with SP1's direct weighted
-public-value selection must be checked separately on inactive rows; an addressed cell does not
-by itself establish equivalence over arbitrary inactive selector bitmaps. -/
+Every field is built from existing row expressions, so this changes the interaction payload
+without adding witness columns. Public binding and native per-call receipts remain distinct
+contracts; the message representation alone does not connect the final host bank to a shard digest. -/
 structure PublicValueMsg (F : Type) where
-  index : F
+  /-- First named public field in the query's address family. -/
+  base : F
+  /-- Address step between successive family members. -/
+  stride : F
+  /-- Field weights applied to the eight family members. -/
+  coefficients : Vector F 8
+  /-- Claimed weighted sum of the selected public fields. -/
   value : F
 deriving ProvableStruct
 provable_struct_eval_lemmas PublicValueMsg
+
+/-- A scalar public field as a weighted query with one unit coefficient. -/
+@[circuit_norm] def PublicValueMsg.scalar {F : Type} [Zero F] [One F]
+    (index value : F) : PublicValueMsg F :=
+  ⟨index, 0, #v[1, 0, 0, 0, 0, 0, 0, 0], value⟩
+
+/-- One named bank slot, in the same query representation as an instruction's bitmap. -/
+@[circuit_norm] def PublicValueMsg.atSlot {F : Type} [Zero F] [One F]
+    (base stride : F) (slot : Fin 8) (value : F) : PublicValueMsg F :=
+  ⟨base, stride, Vector.ofFn (fun index => if index = slot then 1 else 0), value⟩
 
 end SP1Clean.Channels

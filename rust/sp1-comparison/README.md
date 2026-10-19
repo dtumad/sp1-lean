@@ -91,9 +91,10 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   Public-value mutations bind the exit, flags and selected digest cells. Composed tests reject
   upper-word aliases and precompile dispatch, check WRITE's x12 read and retain inactive messages.
   Both configurations check supervisor mode; the optional syscall trap cell is explicitly zero.
-  One regression preserves an unresolved difference: with an inactive commit and empty bitmap,
-  SP1 selects zero while native public addresses refer to previous-digest cells. Passing tests
-  therefore do not establish arbitrary-row public equivalence. Host-handler effect coverage is
+  Weighted public queries preserve the complete bitmap, including on inactive rows. Sixteen
+  inactive cases cover empty, unit, multi-hot, non-Boolean and cancelling weights, with public
+  and cached-result mutations. The previous empty-bitmap drift is a passing regression; these
+  finite comparisons do not establish arbitrary-row public equivalence. Host-handler effect coverage is
   described below; complete active-host assembly generation remains open.
 
 - HALT, constrained-replay ENTER, sixteen commitment handlers and two bank terminals compare
