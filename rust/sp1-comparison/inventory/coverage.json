@@ -90,7 +90,7 @@
         "rust/sp1-comparison/tests/ram_export.rs",
         "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch and empty-segment fixtures compare source/target register boundaries, fixed inventories and all table positions; the empty case rejects removal of either ordered boundary terminal. Ordered RAM and active memory execution coverage remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
+      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch, empty and stopped fixtures compare source/target register boundaries, fixed inventories and all table positions; empty and stopped cases reject removal of either ordered boundary terminal. Ordered RAM and active memory execution coverage remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
     },
     "program": {
       "lean": [
@@ -122,7 +122,7 @@
         "rust/sp1-comparison/tests/hint_source_export.rs",
         "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. The syscall instruction and installed host-call wrapper compare released supervisor rows, public bindings, shared ledgers and WRITE's register read. A regression preserves unresolved inactive-commit/empty-bitmap public-addressing drift; arbitrary-row public equivalence is not established. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. All installed host components export in the complete branch and empty-segment assemblies, whose call tables remain empty; the empty case requires both bank terminals. HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals compare generated rows/ledgers and released executor effects. Native per-call receipts preserve mutable bank history; a released-shard regression shows that earlier differing writes fail SP1 public-digest AIR despite the same final bank. Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows/ledgers, queue transitions and padded-write endpoints with released execution, including empty hints and limb carries. Full physical Memory coverage and complete active-host generation remain open."
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. The syscall instruction and installed host-call wrapper compare released supervisor rows, public bindings, shared ledgers and WRITE's register read. A regression preserves unresolved inactive-commit/empty-bitmap public-addressing drift; arbitrary-row public equivalence is not established. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. All installed host components export in complete branch, empty and stopped assemblies, whose call tables remain empty. Empty and stopped cases require both bank terminals; stopped cases include nonzero banks and reject changed optional exit status, fabricated HALT and resumed execution. HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals compare generated rows/ledgers and released executor effects. Native per-call receipts preserve mutable bank history; a released-shard regression shows that earlier differing writes fail SP1 public-digest AIR despite the same final bank. Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows/ledgers, queue transitions and padded-write endpoints with released execution, including empty hints and limb carries. Full physical Memory coverage and complete active-host generation remain open."
     },
     "halt": {
       "lean": [
@@ -133,7 +133,7 @@
       "comparison": [
         "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Complete branch and empty-segment fixtures export Halt and check its nonhalting padding row and public exit contribution. The empty segment rejects nonzero public exit and removal of its Exit terminal. Active HALT execution and independent Rust public-boundary comparisons remain open."
+      "limit": "Complete branch, empty and stopped fixtures export Halt and check its nonhalting padding row and public exit contribution. Empty and stopped segments reject nonzero public exit and removal of the Exit terminal. Stopped optional status is distinct from public exit: zero and wide codes preserve their full zero-multiplicity verifier payloads. Complete active HALT execution remains open."
     },
     "unmodeled": {
       "lean": [],
@@ -166,7 +166,7 @@
         "rust/sp1-comparison/tests/clean_export.rs",
         "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "The complete native public verifier exports with the 94-table branch and empty-segment assemblies; Rust compares complete interaction ledgers and tests public-endpoint binding and required terminals. Stopped, memory and active-host boundary cases remain open; no cryptographic SP1 verifier soundness claim."
+      "limit": "The complete native public verifier exports with 94-table branch, empty and stopped assemblies. Rust compares every verifier occurrence, including failed generation cases, and attempts fresh proofs with altered public endpoints, missing terminals, resumed execution and invalid optional exits. Host banks are fixed instance parameters; changed public digest bytes remain accepted in stopped segments, so these cases do not establish digest-to-bank binding. Active memory and host boundary cases remain open; no cryptographic SP1 verifier soundness claim."
     }
   },
   "released": {

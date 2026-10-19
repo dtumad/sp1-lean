@@ -31,14 +31,14 @@ BUILD_TARGETS = [
     "SP1CleanTest.Core.WritePermissionExport",
     "SP1CleanTest.Core.HintSourceExport",
     "SP1CleanTest.Alignment.Support.InstalledAssemblyExport",
-    "SP1CleanTest.Alignment.Support.BranchEnsembleFixture"
+    "SP1CleanTest.Alignment.Support.StoppedAssemblyFixture"
 ]
 RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
     "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
-    "installed_assembly_export": 5,
+    "installed_assembly_export": 10,
 }
 
 
@@ -70,6 +70,10 @@ def artifact_names():
     ]
     files += ["installed_assembly.rs", "installed_assembly.reference.json",
               "installed_empty.rs", "installed_empty.reference.json", "opcodes.reference.json"]
+    files += [name + suffix
+              for name in ["installed_stopped_zero", "installed_stopped_wide",
+                           "installed_stopped_changed", "installed_fabricated_halt"]
+              for suffix in [".rs", ".reference.json"]]
     return files
 
 
@@ -200,6 +204,33 @@ def generate(out, env):
     return hashes
 
 
+def compare_rust(out, env):
+    """Keep the large assembly's compiler cost separate from component optimization."""
+    assembly = {"installed_assembly_export": RUST_TESTS["installed_assembly_export"]}
+    components = {name: count for name, count in RUST_TESTS.items() if name not in assembly}
+    groups = [
+        ("components", components, []),
+        ("assembly", assembly, [
+            "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
+            "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
+        ]),
+    ]
+    for features, name in [("instruction-export", "rust"),
+                           ("instruction-export,mprotect", "rust-mprotect")]:
+        logs = []
+        for group, expected, options in groups:
+            tests = [argument for test in expected for argument in ["--test", test]]
+            log = run_logged(["cargo", "test", "--locked", "--release", "--manifest-path",
+                              "rust/sp1-comparison/Cargo.toml", "--no-default-features",
+                              "--features", features, *options, *tests],
+                             out / f"{name}-{group}.log", env)
+            check_rust_log(log, expected)
+            logs.append(log)
+        combined = "\n".join(logs)
+        check_rust_log(combined)
+        (out / f"{name}.log").write_text(combined)
+
+
 def main():
     os.chdir(ROOT)
     root = ROOT / ".lake/ensemble-export"
@@ -219,13 +250,7 @@ def main():
         print(f"Cargo inputs: {len(staging['changed'])} changed, "
               f"{len(staging['removed'])} removed, {staging['unchanged']} unchanged", flush=True)
         env["CLEAN_ENSEMBLE_EXPORT_DIR"] = str(inputs)
-        tests = [argument for name in RUST_TESTS for argument in ["--test", name]]
-        for features, name in [("instruction-export", "rust"),
-                               ("instruction-export,mprotect", "rust-mprotect")]:
-            log = run_logged(["cargo", "test", "--locked", "--release", "--manifest-path",
-                              "rust/sp1-comparison/Cargo.toml", "--no-default-features",
-                              "--features", features, *tests], out / f"{name}.log", env)
-            check_rust_log(log)
+        compare_rust(out, env)
         print("PASS: deterministic Clean export, Rust backend regressions and released SP1 "
               "instruction, system and Byte/Range provider comparisons")
 

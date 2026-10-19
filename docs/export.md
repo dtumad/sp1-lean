@@ -20,12 +20,16 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- The complete installed 94-table assembly exports through the same path. Active-branch and
-  empty-local-segment fixtures supply instruction and boundary inputs through Clean hint tables;
+- The complete installed 94-table assembly exports through the same path. Active-branch,
+  empty-local-segment and stopped-source fixtures supply inputs through Clean hint tables;
   its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
   including empty table positions, and exercises proof acceptance and endpoint/row mutations.
-  The empty segment retains its ordered, bank and Exit terminals; removing any one is rejected
-  by the backend. These finite cases do not prove general execution-generation completeness.
+  Empty and stopped segments retain their ordered, bank and Exit terminals. Fresh proof attempts
+  test missing terminals, altered public endpoints, resumed execution and forged optional exits.
+  Stopped cases include a nonzero exit code and banks; zero-multiplicity verifier messages keep
+  their complete payloads. Host banks are fixed instance parameters: a stopped segment can
+  accept a changed public digest carrier, so these cases do not establish digest-to-bank binding.
+  These finite cases do not prove general generation completeness.
 - The complete native opcode alphabet, including unsupported instructions, is compared with every
   constructor and discriminant of the released Rust enum. Lean's derived constructor names and
   native discriminants export as metadata; no Rust source parser or generated Lean enum is needed.
@@ -131,7 +135,7 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 94-component host assembly is lookup-free. Its branch and empty-segment exports
+The installed 94-component host assembly is lookup-free. Its branch, empty and stopped exports
 check complete assembly construction and Rust agreement for those cases. Broader execution
 and host-call cases, general padding, data agreement and completeness remain open. The retired
 instruction-only pipeline did not supply that missing whole-assembly coverage.

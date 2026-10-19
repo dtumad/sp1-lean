@@ -39,8 +39,11 @@ pinned to the same revision as the Lean emitter and compared with SP1:
 python3 scripts/check_ensemble_export.py
 ```
 
-The comparison crate uses release optimization level 1 to bound generated-code compiler memory;
-dependency crates retain their normal release settings. CI logs the export step's time and peak memory.
+Component comparisons use release optimization level 1. The runner compiles the large installed
+assembly fixture separately at level 0, with release debug assertions still disabled; this avoids
+expensive optimization of repeated complete-assembly instances. Both feature configurations run
+every test, and dependency crates retain their normal release settings. CI logs the export step's
+time and peak memory. These fixture settings do not measure optimized application performance.
 
 The runner checks two byte-identical generations under `.lake/ensemble-export/`, then refreshes
 the owned `compile-inputs/` directory without rewriting unchanged files. Cargo can reuse those
@@ -134,14 +137,19 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
   are native source-queue tests; complete SP1 host execution remains outside their scope.
 
-The installed 94-component assembly is lookup-free. Its active-branch and empty-segment fixtures export
+The installed 94-component assembly is lookup-free. Its active-branch, empty and stopped fixtures export
 all components, read consumer inputs through Clean's private hint tables, and
-generates providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
+generate providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
 retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
 endpoints and committed branch rows. Empty segments retain the complete fixed providers and all
 ordered, bank and Exit terminals; backend tests reject removing each terminal even when the new
-statement declares the smaller table shape. This does not yet cover general execution, stopped
-sources or host-call generation.
+statement declares the smaller table shape. Stopped sources cover zero and wide optional exit
+codes, nonzero commitment banks, and complete verifier occurrences even when generation fails.
+Fresh proof attempts reject altered public endpoints, resumption with an otherwise valid branch,
+changed stopped codes and fabricated HALT receipts. A changed digest carrier remains accepted
+in the stopped case: host-bank endpoints are fixed instance parameters, and this public field
+is unused. These are native boundary tests, without digest-to-bank binding; general execution
+and active host-call generation remain open.
 
 The experimental Clean pin adds message
 predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
