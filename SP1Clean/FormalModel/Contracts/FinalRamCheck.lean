@@ -16,6 +16,9 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
+/-- The complete physical row adds Boolean activity to the semantic check input. -/
+abbrev RowInput := ProvablePair Inputs field
+
 /-- The entire target RAM word agrees, with a Boolean coverage contribution. -/
 def Spec {p : ℕ} [Fact p.Prime] (target : MemorySnapshot) (input : Inputs (ZMod p)) : Prop :=
   FinalRamValue.Spec target input.record ∧

@@ -308,18 +308,52 @@ namespace Circuit.Guarded
 variable {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
 
 /-- Structural capabilities of the bundled child; none are assumptions on a physical witness. -/
-structure Supported (provider : GeneralFormalCircuit F Input Output) : Prop where
+class Supported (provider : GeneralFormalCircuit F Input Output) : Prop where
   /-- Legacy lookup operations have no activity multiplier and must be absent. -/
   noLookups : ∀ input offset,
     FlatOperation.lookups (provider.toSubcircuit offset input).ops.toFlat = []
-  /-- Disabled occurrences have no channel obligations, for every message and data context. -/
-  neutral : ∀ input offset interaction,
-    interaction ∈ FlatOperation.interactions (provider.toSubcircuit offset input).ops.toFlat →
-      interaction.channel.ZeroNeutral
+  /-- Every declared channel permits disabled occurrences, including unused interface entries. -/
+  channelsNeutral : ∀ channel ∈ provider.channels, channel.ZeroNeutral
   /-- The child declares every occurrence that can assume a channel guarantee. -/
   declared : ∀ input offset interaction,
     interaction ∈ FlatOperation.interactions (provider.toSubcircuit offset input).ops.toFlat →
       interaction.assumeGuarantees = true → interaction.channel ∈ provider.channelsWithGuarantees
+
+/-- Recover compatibility for actual occurrences from the child's declared channel interface. -/
+theorem Supported.neutral {provider : GeneralFormalCircuit F Input Output}
+    (supported : Supported provider) (input : Var Input F) (offset : ℕ)
+    (interaction : AbstractInteraction F)
+    (member : interaction ∈ FlatOperation.interactions
+      (provider.toSubcircuit offset input).ops.toFlat) : interaction.channel.ZeroNeutral := by
+  apply supported.channelsNeutral interaction.channel
+  apply provider.base.channels_subset input offset
+  rw [GeneralFormalCircuit.toSubcircuit_interactions] at member
+  exact List.mem_map_of_mem (f := AbstractInteraction.channel) member
+
+/-- A requirement-only channel can be guarded when none of its occurrences assumes guarantees.
+Channels already in the guarantee interface need no such restriction. -/
+theorem Supported.of_emitted_requirements (provider : GeneralFormalCircuit F Input Output)
+    (noLookups : ∀ input offset, ((provider.main input).operations offset).lookups = [])
+    (neutral : ∀ channel ∈ provider.channels, channel.ZeroNeutral)
+    (emitted : ∀ input offset channel, channel ∈ provider.channelsWithRequirements →
+      channel ∉ provider.channelsWithGuarantees →
+      ∀ interaction ∈ ((provider.main input).operations offset).interactionsWith channel,
+        interaction.assumeGuarantees = false) : Supported provider where
+  noLookups := by
+    intro input offset
+    rw [GeneralFormalCircuit.toSubcircuit_toFlat, Operations.lookups_toFlat]
+    exact noLookups input offset
+  channelsNeutral := neutral
+  declared := by
+    intro input offset interaction member carries
+    rw [GeneralFormalCircuit.toSubcircuit_interactions] at member
+    by_contra outside
+    have registered := provider.base.channels_subset input offset
+      (List.mem_map_of_mem (f := AbstractInteraction.channel) member)
+    have required := (List.mem_append.mp registered).resolve_left outside
+    have inactive := emitted input offset interaction.channel required outside interaction
+      (List.mem_filter.mpr ⟨member, by simp⟩)
+    simp_all
 
 /-- Append an activity field to the child's input and call its guarded bundled subcircuit. -/
 def main (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
@@ -386,6 +420,22 @@ theorem main_toFlat (provider : GeneralFormalCircuit F Input Output) (supported 
     NestedOperations.toFlat, List.flatMap_map, Function.comp_def, ← List.map_eq_flatMap,
     GeneralFormalCircuit.toSubcircuit_toFlat]
 
+/-- The final field of a guarded input evaluates to the decoded row activity. -/
+theorem eval_activity (env : Environment F) (input : Var (ProvablePair Input field) F) :
+    env input.2 = (Eval.eval env input).2 := by
+  simp only [circuit_norm]
+
+/-- Raw assertion validity already forces Boolean activity, without any channel assumptions. -/
+theorem activity_of_constraints
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
+    (input : Var (ProvablePair Input field) F) (offset : ℕ) (env : Environment F)
+    (valid : ((main provider supported input).operations offset).ConstraintsHold env) :
+    IsBool (env input.2) := by
+  have flat := Circuit.constraintsHold_toFlat_iff.mpr valid
+  rw [main_toFlat] at flat
+  apply IsBool.iff_mul_sub_one.mpr
+  simpa [eval_sub, Expression.eval] using flat.1
+
 /-- The complete interaction list retains its order and every zero-multiplicity occurrence. -/
 @[circuit_norm] theorem main_interactions
     (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
@@ -408,6 +458,17 @@ theorem main_toFlat (provider : GeneralFormalCircuit F Input Output) (supported 
   simp only [Operations.interactionsWith, main_interactions, List.filter_map,
     Function.comp_def, AbstractInteraction.guard]
   congr 1
+
+/-- Evaluation scales only multiplicities and retains the complete child ledger. -/
+theorem main_interactionValuesWith
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
+    (input : Var (ProvablePair Input field) F) (offset : ℕ) (channel : RawChannel F)
+    (env : Environment F) :
+    ((main provider supported input).operations offset).interactionValuesWith channel env =
+      (((provider.main input.1).operations offset).interactionValuesWith channel env).map
+        (fun interaction => { interaction with mult := env input.2 * interaction.mult }) := by
+  simp only [Operations.interactionValuesWith, main_interactionsWith, List.map_map]
+  rfl
 
 /-- Guarded rows contain no legacy lookups. -/
 @[circuit_norm] theorem main_lookups

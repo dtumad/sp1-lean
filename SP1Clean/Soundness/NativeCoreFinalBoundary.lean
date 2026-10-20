@@ -224,12 +224,39 @@ theorem final_records_locations_nodup {image : ProgramImage}
 theorem final_memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
-      (FinalMemoryEnsemble.records (finalWitness witness)).map (memoryChannel.emittedValue (-1)) :=
+      (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map
+        (fun row => memoryChannel.emittedValue (-row.1) row.2) :=
 by
   have ledger := FinalMemoryEnsemble.memory_interactions_eq (finalWitness witness)
   change ((withDerivedData (witness.tables.drop 3)).take 3).flatMap
     (·.interactionsWith memoryChannel.toRaw) = _ at ledger
   simpa only [withDerivedData, ← List.map_take, List.flatMap_map, Function.comp_def,
     Table.interactionsWith_setData] using ledger
+
+/-- Final activity follows from raw constraints, including after canonical-data projection. -/
+theorem final_physicalRecords_binary {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints) :
+    ∀ row ∈ FinalMemoryEnsemble.physicalRecords (finalWitness witness), row.1 = 0 ∨ row.1 = 1 := by
+  apply FinalMemoryEnsemble.inventory.physicalRecords_binary_of_constraints
+  intro table member
+  have componentMem : table.component ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) := by
+    have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+    rw [List.map_take, (finalWitness witness).tables_map_component] at mapped
+    simpa only [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
+      OrderedBoundaryEnsemble.ensemble, List.take_left', List.length_map] using mapped
+  obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
+  change table ∈ (withDerivedData (witness.tables.drop 3)).take
+    (FinalMemoryEnsemble.inventory (p := p)).views.length at member
+  rw [withDerivedData, ← List.map_take] at member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  intro row rowMem
+  change original.component.operations.ConstraintsHold
+    (Environment.fromArray row (deriveProverData (witness.tables.drop 3)))
+  apply Component.constraintsHold_setData original.component ?_
+    (constraints original (List.mem_of_mem_drop (List.mem_of_mem_take originalMember)) row rowMem)
+  change view.component = original.component at same
+  rw [← same]
+  obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+  exact FinalMemoryEnsemble.view_lookups id
 
 end SP1Clean.Soundness.NativeCore

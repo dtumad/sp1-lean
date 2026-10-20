@@ -147,7 +147,8 @@ private theorem check_channels (channel : RawChannel (ZMod p))
     channel ∈ (FinalMemoryChecks.checkTables (p := p) target).flatMap (·.circuit.channels) := by
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
   rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;>
-    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit,
+    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit, Guarded.circuit,
+      FinalRegisterCheck.activeCircuit, FinalRamCheck.activeCircuit,
       StaticTable.component, StaticTable.provider, circuit_norm]
 
 /-- Queue, bank and CPU verifier boundaries emit nothing on the Memory receipt protocols.

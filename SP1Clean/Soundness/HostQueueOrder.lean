@@ -56,6 +56,7 @@ def lengthView (empty : Bool) : TransitionView (stateChannel (p := p)) where
       (size HostHintLengthChip.Inputs)).interactionValuesWith stateChannel.toRaw env = _
     rw [HostHintLengthChip.state_values, (eval_length_queue _ _).1, (eval_length_queue _ _).2,
       eval_varFromOffset_valueFromOffset]
+    rfl
 
 /-- The current queue-changing/observing registry; allocating WRITE/hook handlers remain open. -/
 abbrev Index := Option Bool
@@ -65,6 +66,10 @@ def indices : List Index := [none, some false, some true]
 def view : Index → TransitionView (stateChannel (p := p))
   | none => readView
   | some empty => lengthView empty
+
+private theorem view_activity (index : Index) :
+    (view (p := p) index).activity = .const 1 := by
+  cases index <;> rfl
 
 abbrev Row := Index × Environment (ZMod p)
 
@@ -102,7 +107,9 @@ theorem interactions (tables : List (Table (ZMod p)))
   rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component) tables _ aligned]
   apply List.flatMap_congr
   intro row _
-  exact (view row.1).interactions row.2
+  have effect := (view row.1).interactions row.2
+  rw [view_activity] at effect
+  exact effect
 
 /-- Actual token balance orders all queue rows, retaining head and allocation-frontier continuity.
 The enclosing verifier must supply and bind both endpoint messages. -/

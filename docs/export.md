@@ -21,8 +21,8 @@ interpreter or scheduler.
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
 - The complete installed 94-table assembly exports through the same path. Active-branch,
-  empty-local-segment and stopped-source fixtures supply inputs through Clean hint tables;
-  its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
+  empty-local-segment, stopped-source and sixteen-byte HINT_READ fixtures supply inputs through
+  Clean hint tables; its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
   including empty table positions, and exercises proof acceptance and endpoint/row mutations.
   Empty and stopped segments retain their ordered, bank and Exit terminals. Fresh proof attempts
   test missing terminals, altered public endpoints, resumed execution and forged optional exits.
@@ -73,8 +73,11 @@ interpreter or scheduler.
   handler-effect agreement does not establish whole-shard AIR equivalence.
 - Empty/nonempty HINT_LEN and HINT_READ handlers compare queue updates and word endpoints with
   released execution, including repeated observations, empty hints, mandatory final padding and
-  limb carries. Complete active-host assembly must still authenticate all physical Memory writes
-  and close the node, word and cursor ledgers.
+  limb carries. A complete sixteen-byte HINT_READ assembly also closes physical Memory, hint and
+  cursor ledgers and compares final register/RAM values with released execution. Three active
+  rows in each ordered boundary and target-check table pad to four. Rust tests accept arbitrary
+  disabled cells and reject non-Boolean activity, missing real checks and activated padding.
+  Arbitrary hint lengths still need word-transfer padding; broader active-host coverage remains open.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and
@@ -94,7 +97,7 @@ interpreter or scheduler.
   ordinary demand scheduler without private inputs. Rust checks literal ROM-byte exclusion,
   full rows/ledgers, public binding, interval/count mutations and invalid activity. Disabled
   rows admit arbitrary child cells; disabling a real request or activating padding fails balance.
-  Complete active-host assembly remains separate. This is not SP1 runtime `mprotect`.
+  Permission tests alone do not establish complete host execution. This is not SP1 runtime `mprotect`.
 - Immutable hint nodes and words publish directly on their existing semantic channels from
   verifier-fixed payloads and eligibility tags. Rust reconstructs node/tail identities, lengths
   and little-endian words from literal byte buffers, including empty and aligned padding. Closed
@@ -139,8 +142,8 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 94-component host assembly is lookup-free. Its branch, empty and stopped exports
-check complete assembly construction and Rust agreement for those cases. Broader execution
+The installed 94-component host assembly is lookup-free. Its branch, empty, stopped and sixteen-byte
+HINT_READ exports check complete assembly construction and Rust agreement for those cases. Broader execution
 and host-call cases, general padding, data agreement and completeness remain open. The retired
 instruction-only pipeline did not supply that missing whole-assembly coverage.
 

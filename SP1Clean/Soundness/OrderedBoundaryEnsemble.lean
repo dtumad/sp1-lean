@@ -6,9 +6,9 @@ import ToClean.Air.TableBuild
 /-! # Ordered inventories from the actual Clean ensemble ledger
 
 The verifier fixes both endpoints. Every row of a registered transition component contributes
-its proved unit pair; auxiliary components must omit the private control channel. Consequently
-Clean channel balance, including its own count bound, gives endpoint balance of every physical
-transition row. Local strict-order specifications then exclude duplicate keys and cycles.
+its proved gated pair, including disabled occurrences; auxiliary components omit the private
+control channel. Clean channel balance retains the full physical count bound and gives endpoint
+balance of active rows. Local strict-order specifications then exclude duplicate keys and cycles.
 
 This is the shared initialization/finalization inventory construction. Local specifications
 are supplied by the enclosing ensemble's table-soundness phase; no provider uniqueness or
@@ -45,8 +45,13 @@ abbrev Witness := EnsembleWitness (ensemble name initial final views auxiliary c
 variable (witness : Witness (name := name) (initial := initial) (final := final)
   (views := views) (auxiliary := auxiliary) (channels := channels) (names := names))
 
-def rows :=
+/-- Every physical row, including disabled padding and its original data context. -/
+def physicalRows :=
   TransitionView.readRows views (witness.tables.take views.length)
+
+/-- Active semantic transitions selected from the complete physical inventory. -/
+def rows :=
+  TransitionView.readActiveRows views (witness.tables.take views.length)
 
 theorem tables_aligned :
     List.Forall₂ (fun view table => view.component = table.component)
@@ -81,8 +86,8 @@ theorem interactions_eq
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels) :
     witness.interactionsWith (OrderedBoundary.channel name).toRaw =
-      (OrderedBoundary.channel name).transitionLedger initial final (rows witness)
-        (fun row => row.1.edge row.2) := by
+      (OrderedBoundary.channel name).gatedTransitionLedger initial final (physicalRows witness)
+        (fun row => row.2 row.1.activity) (fun row => row.1.edge row.2) := by
   have verifier : witness.verifierInteractionsWith (OrderedBoundary.channel name).toRaw =
       [(OrderedBoundary.channel name).pushedValue initial,
        (OrderedBoundary.channel name).pulledValue final] := by
@@ -101,66 +106,74 @@ theorem interactions_eq
 theorem endpointBalanced
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
+    (valid : ∀ table ∈ witness.tables.take views.length, table.Spec)
     (balanced : BalancedInteractions (witness.interactionsWith (OrderedBoundary.channel name).toRaw)) :
     EndpointBalanced (↑(rows witness) : Multiset (PhysicalRow (p := p) name))
       (fun row => row.1.edge row.2) initial final := by
   classical
   rw [interactions_eq witness privateChannel] at balanced
-  have perm := ((OrderedBoundary.channel name).transitionLedger_balanced_iff
-    initial final (rows witness) (fun row => row.1.edge row.2)).mp balanced
+  have binary := TransitionView.readRows_activity_binary views _ (tables_aligned witness) valid
+  have perm := ((OrderedBoundary.channel name).gatedTransitionLedger_balanced_iff
+    initial final (physicalRows witness) (fun row => row.2 row.1.activity)
+      (fun row => row.1.edge row.2) binary).mp balanced
   exact Quot.sound perm.2
 
-/-- Every physical boundary row occurs on one exhaustive strict trail. No caller supplies its
+/-- Every active boundary row occurs on one exhaustive strict trail. No caller supplies its
 order, coverage, or distinctness. -/
 theorem exhaustiveTrail
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
+    (valid : ∀ table ∈ witness.tables.take views.length, table.Spec)
     (balanced : BalancedInteractions (witness.interactionsWith (OrderedBoundary.channel name).toRaw))
     (strict : ∀ row ∈ rows witness, Word.toNat (row.1.edge row.2).1 < Word.toNat (row.1.edge row.2).2) :
     ExhaustiveTrail (↑(rows witness) : Multiset (PhysicalRow (p := p) name))
       (fun row => row.1.edge row.2) initial final := by
   classical
   exact exists_exhaustiveTrail_of_endpointBalanced _ _ Word.toNat initial final
-    (endpointBalanced witness privateChannel balanced) strict
+    (endpointBalanced witness privateChannel valid balanced) strict
 
 /-- The row environments used by the control ledger inherit their actual table specifications. -/
-theorem rows_spec  (valid : witness.Spec) :
-    ∀ row ∈ rows witness, row.1.component.Spec row.2 :=
-  TransitionView.readRows_spec views _ (tables_aligned witness)
-    (fun table member => valid.2 table (List.mem_of_mem_take member))
+theorem rows_spec (valid : witness.Spec) :
+    ∀ row ∈ rows witness, row.1.component.Spec row.2 := by
+  intro row member
+  exact TransitionView.readRows_spec views _ (tables_aligned witness)
+    (fun table member => valid.2 table (List.mem_of_mem_take member)) row
+    (TransitionView.mem_readActiveRows.mp member).1
 
-/-- Lift a registry's local strict-order contracts to all physical transition rows. -/
+/-- Lift a registry's local strict-order contracts to active transition rows. -/
 theorem rows_strict
-    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env →
+    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env → env view.activity = 1 →
       Word.toNat (view.edge env).1 < Word.toNat (view.edge env).2)
     (valid : witness.Spec) : ∀ row ∈ rows witness,
       Word.toNat (row.1.edge row.2).1 < Word.toNat (row.1.edge row.2).2 := by
   intro row member
-  exact strict row.1 (TransitionView.readRows_view_mem _ _ row member) row.2
-    (rows_spec witness valid row member)
+  have active := TransitionView.mem_readActiveRows.mp member
+  exact strict row.1 (TransitionView.readRows_view_mem _ _ row active.1) row.2
+    (rows_spec witness valid row member) active.2
 
 /-- Only the inventory's own table specifications and private-channel balance are needed.
 Auxiliary components may still be undergoing their separate execution-grounding proof. -/
 theorem keys_nodup_of_tables
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
-    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env →
+    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env → env view.activity = 1 →
       Word.toNat (view.edge env).1 < Word.toNat (view.edge env).2)
     (valid : ∀ table ∈ witness.tables.take views.length, table.Spec)
     (balanced : witness.BalancedChannel (OrderedBoundary.channel name).toRaw) :
     ((rows witness).map fun row => Word.toNat (row.1.edge row.2).2).Nodup := by
   classical
   exact rankedKeys_nodup_list (rows witness) (fun row => row.1.edge row.2) Word.toNat initial final
-    (endpointBalanced witness privateChannel balanced) (by
+    (endpointBalanced witness privateChannel valid balanced) (by
       intro row member
-      exact strict row.1 (TransitionView.readRows_view_mem _ _ row member) row.2
-        (TransitionView.readRows_spec views _ (tables_aligned witness) valid row member))
+      have active := TransitionView.mem_readActiveRows.mp member
+      exact strict row.1 (TransitionView.readRows_view_mem _ _ row active.1) row.2
+        (TransitionView.readRows_spec views _ (tables_aligned witness) valid row active.1) active.2)
 
 /-- Strict local specifications and actual global balance force distinct destination ranks. -/
 theorem keys_nodup_of_specs
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
-    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env →
+    (strict : ∀ view ∈ views, ∀ env, view.component.Spec env → env view.activity = 1 →
       Word.toNat (view.edge env).1 < Word.toNat (view.edge env).2)
     (valid : witness.Spec) (balanced : witness.BalancedChannels) :
     ((rows witness).map fun row => Word.toNat (row.1.edge row.2).2).Nodup :=

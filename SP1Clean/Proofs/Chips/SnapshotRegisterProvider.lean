@@ -1,3 +1,4 @@
+import ToClean.Circuit.Guarded
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.StaticProvider
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
@@ -104,5 +105,26 @@ omit [Fact (2 ^ 17 < p)] in
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main snapshot input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, circuit_norm]
+
+/-- Every physical interaction supports Boolean row activity without a legacy lookup. -/
+instance guardSupported (snapshot : MemorySnapshot) : Guarded.Supported (circuit snapshot (p := p)) :=
+  Guarded.Supported.of_emitted_requirements _
+    (fun input offset => List.map_eq_nil_iff.mp (main_lookupNames snapshot input offset))
+    (by
+      intro selected member
+      change selected ∈ [snapshot.registerTable.channel.toRaw, memoryChannel.toRaw] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl <;> infer_instance)
+    (by
+      intro input offset selected member _ interaction occurs
+      have same : selected = memoryChannel.toRaw := by
+        simpa only [circuit, List.mem_singleton] using member
+      subst selected
+      change interaction ∈ ((main snapshot input).operations offset).interactionsWith
+        memoryChannel.toRaw at occurs
+      rw [main_memory_interactions] at occurs
+      have same := List.mem_singleton.mp occurs
+      subst interaction
+      rfl)
 
 end SP1Clean.SnapshotRegisterProvider

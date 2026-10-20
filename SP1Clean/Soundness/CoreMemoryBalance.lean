@@ -4,7 +4,7 @@ import SP1Clean.Soundness.MemoryFrontier
 /-! # Shared Memory balance rules for the native core
 
 Component-local multiplicity proofs cover the common instruction/provider suffix used by both
-boot and local assemblies. Unit boundary emissions reduce count-bounded Clean balance to an exact
+boot and local assemblies. Boolean boundary activities reduce count-bounded Clean balance to an exact
 record permutation and per-location optional-frontier equation. No execution or value-currency
 premise enters these algebraic rules.
 -/
@@ -145,47 +145,84 @@ private theorem memory_unitSigns :
   · rw [signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
     norm_num
 
-private theorem initial_activeMessages (records : List (MemoryMsg (ZMod p))) :
-    producedMessages (records.map (TypedInteraction.pushedIfValue memoryChannel 1)) = records ∧
-    consumedMessages (records.map (TypedInteraction.pushedIfValue memoryChannel 1)) = [] := by
-  simp [producedMessages, consumedMessages, List.filter_map, Function.comp_def, memory_unitSigns.1]
+omit [Fact (2 ^ 24 < p)] in
+private theorem memory_zeroSign : signedVal (0 : ZMod p) = 0 := by
+  simp [signedVal]
 
-private theorem final_activeMessages (records : List (MemoryMsg (ZMod p))) :
-    producedMessages (records.map (TypedInteraction.pushedIfValue memoryChannel (-1))) = [] ∧
-    consumedMessages (records.map (TypedInteraction.pushedIfValue memoryChannel (-1))) = records := by
-  simp [producedMessages, consumedMessages, List.filter_map, Function.comp_def, memory_unitSigns.2]
+private theorem initial_activeMessages (records : List (ZMod p × MemoryMsg (ZMod p)))
+    (binary : ∀ row ∈ records, row.1 = 0 ∨ row.1 = 1) :
+    producedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2)) =
+      (records.filter fun row => decide (row.1 = 1)).map Prod.snd ∧
+    consumedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2)) = [] := by
+  induction records with
+  | nil => simp [producedMessages, consumedMessages]
+  | cons row rows ih =>
+    have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
+    rcases binary row (List.mem_cons_self ..) with inactive | active
+    · simpa [producedMessages, consumedMessages,
+        inactive, memory_zeroSign] using tail
+    · simpa [producedMessages, consumedMessages,
+        active, memory_unitSigns.1] using tail
 
-/-- Unit boundary records preserve signed binarity of the complete interior ledger. -/
-theorem memoryBoundary_signedBinary (initial final : List (MemoryMsg (ZMod p)))
+private theorem final_activeMessages (records : List (ZMod p × MemoryMsg (ZMod p)))
+    (binary : ∀ row ∈ records, row.1 = 0 ∨ row.1 = 1) :
+    producedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2)) = [] ∧
+    consumedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2)) =
+      (records.filter fun row => decide (row.1 = 1)).map Prod.snd := by
+  induction records with
+  | nil => simp [producedMessages, consumedMessages]
+  | cons row rows ih =>
+    have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
+    rcases binary row (List.mem_cons_self ..) with inactive | active
+    · simpa [producedMessages, consumedMessages,
+        inactive, memory_zeroSign] using tail
+    · simpa [producedMessages, consumedMessages,
+        active, memory_unitSigns.2] using tail
+
+/-- Boolean boundary activities preserve signed binarity of the complete physical ledger. -/
+theorem memoryBoundary_signedBinary (initial final : List (ZMod p × MemoryMsg (ZMod p)))
     (interior : List (TypedInteraction (memoryChannel (p := p))))
+    (initialBinary : ∀ row ∈ initial, row.1 = 0 ∨ row.1 = 1)
+    (finalBinary : ∀ row ∈ final, row.1 = 0 ∨ row.1 = 1)
     (binary : ∀ interaction ∈ interior,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1) :
-    ∀ interaction ∈ initial.map (TypedInteraction.pushedIfValue memoryChannel 1) ++
-      final.map (TypedInteraction.pushedIfValue memoryChannel (-1)) ++ interior,
+    ∀ interaction ∈ initial.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
+      final.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++ interior,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
   intro interaction member
   rcases List.mem_append.mp member with boundary | inside
   · rcases List.mem_append.mp boundary with initial | final
-    · obtain ⟨message, _, rfl⟩ := List.mem_map.mp initial
-      exact Or.inr (Or.inr memory_unitSigns.1)
-    · obtain ⟨message, _, rfl⟩ := List.mem_map.mp final
-      exact Or.inl memory_unitSigns.2
+    · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp initial
+      rcases initialBinary row rowMem with inactive | active
+      · simp [inactive, memory_zeroSign]
+      · simp [active, memory_unitSigns.1]
+    · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp final
+      rcases finalBinary row rowMem with inactive | active
+      · simp [inactive, memory_zeroSign]
+      · simp [active, memory_unitSigns.2]
   · exact binary interaction inside
 
-/-- Complete-message balance becomes source-plus-pushes permuted with final-plus-pulls. -/
-theorem memoryBoundary_records_perm (initial final : List (MemoryMsg (ZMod p)))
+/-- Full physical balance gives an active-record permutation without discarding its count bound. -/
+theorem memoryBoundary_records_perm (initial final : List (ZMod p × MemoryMsg (ZMod p)))
     (interior : List (TypedInteraction (memoryChannel (p := p))))
+    (initialBinary : ∀ row ∈ initial, row.1 = 0 ∨ row.1 = 1)
+    (finalBinary : ∀ row ∈ final, row.1 = 0 ∨ row.1 = 1)
     (binary : ∀ interaction ∈ interior,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1)
-    (balanced : BalancedInteractions ((initial.map (TypedInteraction.pushedIfValue memoryChannel 1) ++
-      final.map (TypedInteraction.pushedIfValue memoryChannel (-1)) ++ interior).map TypedInteraction.raw)) :
-    (initial ++ producedMessages interior).Perm (final ++ consumedMessages interior) := by
+    (balanced : BalancedInteractions
+      ((initial.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
+        final.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++ interior).map
+          TypedInteraction.raw)) :
+    (((initial.filter fun row => decide (row.1 = 1)).map Prod.snd) ++ producedMessages interior).Perm
+      (((final.filter fun row => decide (row.1 = 1)).map Prod.snd) ++ consumedMessages interior) := by
   classical
   have paired := producedMessages_perm_consumedMessages _ balanced
-    (memoryBoundary_signedBinary initial final interior binary)
+    (memoryBoundary_signedBinary initial final interior initialBinary finalBinary binary)
   simpa only [producedMessages_append, consumedMessages_append,
-    (initial_activeMessages _).1, (initial_activeMessages _).2,
-    (final_activeMessages _).1, (final_activeMessages _).2, List.append_nil, List.nil_append] using paired
+    (initial_activeMessages _ initialBinary).1, (initial_activeMessages _ initialBinary).2,
+    (final_activeMessages _ finalBinary).1, (final_activeMessages _ finalBinary).2,
+    List.append_nil, List.nil_append] using paired
+
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem optMS_records_frontier (records : List (MemoryMsg (ZMod p)))

@@ -47,6 +47,7 @@ def view (deferred : Bool) (slot : Fin 8) : TransitionView (stateChannel (p := p
     rw [main_state_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed,
       eval_previous, eval_next, eval_varFromOffset_valueFromOffset]
+    rfl
 
 abbrev Row := Fin 8 × Environment (ZMod p)
 

@@ -31,14 +31,15 @@ BUILD_TARGETS = [
     "SP1CleanTest.Core.WritePermissionExport",
     "SP1CleanTest.Core.HintSourceExport",
     "SP1CleanTest.Alignment.Support.InstalledAssemblyExport",
-    "SP1CleanTest.Alignment.Support.StoppedAssemblyFixture"
+    "SP1CleanTest.Alignment.Support.StoppedAssemblyFixture",
+    "SP1CleanTest.Alignment.Support.HintReadAssemblyFixture"
 ]
 RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
     "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
-    "installed_assembly_export": 10,
+    "installed_assembly_export": 13,
 }
 
 
@@ -69,7 +70,8 @@ def artifact_names():
         f"hint_{kind}{suffix}.rs" for kind in ["nodes", "words"] for suffix in ["", "_unused", "_empty"]
     ]
     files += ["installed_assembly.rs", "installed_assembly.reference.json",
-              "installed_empty.rs", "installed_empty.reference.json", "opcodes.reference.json"]
+              "installed_empty.rs", "installed_empty.reference.json", "opcodes.reference.json",
+              "installed_hint_read.rs", "installed_hint_read.reference.json"]
     files += [name + suffix
               for name in ["installed_stopped_zero", "installed_stopped_wide",
                            "installed_stopped_changed", "installed_fabricated_halt"]

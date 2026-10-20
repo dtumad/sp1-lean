@@ -16,19 +16,6 @@ open Circuit Air.Flat SP1Clean.Model.Core
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-attribute [local circuit_norm]
-  SnapshotMemoryEnsemble.registerView SnapshotMemoryEnsemble.ramView
-  SnapshotMemoryEnsemble.terminalView
-  FinalMemoryEnsemble.inventory FinalMemoryEnsemble.viewFor
-  FinalMemoryEnsemble.registerView FinalMemoryEnsemble.ramView
-  OrderedMemoryEnsemble.Inventory.views OrderedMemoryEnsemble.providerView
-  OrderedMemoryEnsemble.terminalView OrderedMemoryProvider.circuit OrderedBoundaryEnd.circuit
-  SnapshotRegisterProvider.circuit SnapshotRamProvider.circuit
-  FinalRegisterProvider.circuit FinalRamProvider.circuit
-  ByteChip.U8Range.circuit ByteChip.MSB.circuit ByteChip.AndByte.circuit
-  ByteChip.OrByte.circuit ByteChip.XorByte.circuit ByteChip.Ltu.circuit
-  RangeChip.circuitFor RangeChip.circuit
-
 private theorem final_lookups (component : Component (ZMod p))
     (member : component ∈ FinalMemoryEnsemble.inventory.views.map (·.component)) :
     component.operations.lookups = [] := by
@@ -36,27 +23,29 @@ private theorem final_lookups (component : Component (ZMod p))
     (FinalMemoryEnsemble.ramView (p := p)).component,
     (OrderedMemoryEnsemble.terminalView OrderedFinalProvider.channelName (by decide)).component] at member
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl <;>
-    simp [Component.lookups_eq, Component.rowOperations, circuit_norm]
+  rcases member with rfl | rfl | rfl
+  · exact FinalMemoryEnsemble.view_lookups .registers
+  · exact FinalMemoryEnsemble.view_lookups .ram
+  · exact FinalMemoryEnsemble.view_lookups .terminal
 
 private theorem source_constraints_setData (source : ExecutionSnapshot) (component : Component (ZMod p))
     (member : component ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component))
     {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
     (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
     component.operations.ConstraintsHold (Environment.fromArray row data') := by
+  apply component.constraintsHold_setData ?_ checked
   simp only [SnapshotMemoryEnsemble.views_eq, List.map_cons, List.map_nil,
     List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl
-  all_goals
-    apply Operations.constraintsHold_congr (env := Environment.fromArray row data)
-      (env' := Environment.fromArray row data') rfl ?_ checked
-    intro lookup used
-    simp [Component.lookups_eq, Component.rowOperations, circuit_norm,
-      SnapshotRegisterProvider.main, SnapshotRamProvider.main,
-      InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
-      InitialMemoryRead.main, InitialMemoryLookup.circuitNamed, InitialMemoryLookup.main_lookups,
-      AddOperation.circuit, AddOperation.main,
-      AddressOperation.circuit] at used
+  · simp only [SnapshotMemoryEnsemble.registerView, OrderedMemoryEnsemble.providerView,
+      Component.lookups_eq, Component.rowOperations, OrderedMemoryProvider.circuit, Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  · simp only [SnapshotMemoryEnsemble.ramView, OrderedMemoryEnsemble.providerView,
+      Component.lookups_eq, Component.rowOperations, OrderedMemoryProvider.circuit, Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  · simp [SnapshotMemoryEnsemble.terminalView, OrderedMemoryEnsemble.terminalView,
+      Component.lookups_eq, Component.rowOperations, OrderedBoundaryEnd.circuit, circuit_norm]
+
 /-- Fixed source/ROM lookups and native providers depend on physical cells, not generation data.
 This transports local constraints across canonical projections without asserting data equality. -/
 theorem component_constraints_setData (image : ProgramImage) (source : ExecutionSnapshot)

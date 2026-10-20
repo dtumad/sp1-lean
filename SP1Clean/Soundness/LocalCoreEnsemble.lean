@@ -171,7 +171,7 @@ private theorem source_requirements (source : ExecutionSnapshot) (component : Co
   rcases member with rfl | rfl | rfl <;>
     simp [SnapshotMemoryEnsemble.registerView, SnapshotMemoryEnsemble.ramView,
       SnapshotMemoryEnsemble.terminalView, OrderedMemoryEnsemble.providerView,
-      OrderedMemoryEnsemble.terminalView, OrderedMemoryProvider.circuit,
+      OrderedMemoryEnsemble.terminalView, OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit,
       OrderedBoundaryEnd.circuit, SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit]
 
 private theorem component_finished_requirements (image : ProgramImage) (source : ExecutionSnapshot)

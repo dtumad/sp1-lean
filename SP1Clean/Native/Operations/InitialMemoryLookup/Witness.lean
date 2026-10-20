@@ -5,7 +5,8 @@ import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 The fixed interval selector and unsigned-comparison columns use Clean's field-sorted witness
 expressions. Four-limb comparisons retain the exclusive endpoint `2^48` and avoid truncating a
-field value to a machine integer. Evaluation is related to the existing semantic interval search.
+field value to a machine integer. A built-in vector loop emits the interval's nine fields from
+one search expression. Evaluation is related to the existing semantic interval search.
 -/
 
 namespace SP1Clean.InitialMemoryLookup
@@ -118,115 +119,78 @@ theorem selectFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMod p)))
       · simp [selectFE, FExpr.eval, condition, inside]
       · simp [selectFE, FExpr.eval, condition, inside, tail]
 
-/-- The selected interval, encoded directly as typed Clean witness expressions. -/
-def intervalFE (memory : ByteMemory) (limit : ℕ) (address : Word (FExpr (ZMod p))) :
-    MemoryIntervalRow (FExpr (ZMod p)) :=
-  ⟨Vector.ofFn fun i => selectFE address (fun interval => (interval.encode (p := p)).lower[i])
-      (memory.intervals limit),
-    Vector.ofFn fun i => selectFE address (fun interval => (interval.encode (p := p)).upper[i])
-      (memory.intervals limit),
-    selectFE address (fun interval => (interval.encode (p := p)).value) (memory.intervals limit)⟩
+/-- Select an encoded interval column using the surrounding vector loop's index. -/
+private def selectColumnFE (address : Word (FExpr (ZMod p))) :
+    List MemoryInterval → FExpr (ZMod p)
+  | [] => 0
+  | interval :: rest => .ite (containsFE address interval)
+      (.listGet ((toElements (interval.encode (p := p))).toList.map FExpr.const) .idx)
+      (selectColumnFE address rest)
 
-/-- Typed witness evaluation selects exactly the semantic interval row. -/
-theorem intervalFE_eval (ctx : Ctx (ZMod p)) (memory : ByteMemory) (limit : ℕ)
-    (limitBound : limit < 2 ^ 64) (address : Word (FExpr (ZMod p))) (value : Word (ZMod p))
-    (evaluates : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = value[i])
+omit [Fact (2 ^ 17 < p)] in
+private theorem evalList_const (ctx : Ctx (ZMod p)) (values : List (ZMod p))
+    (index : ℕ) (bound : index < values.length) :
+    FExpr.evalList ctx index (values.map FExpr.const) = values[index] := by
+  induction values generalizing index with
+  | nil => simp at bound
+  | cons value rest ih =>
+      cases index with
+      | zero => rfl
+      | succ index =>
+          exact ih index (by simpa only [List.length_cons, Nat.succ_lt_succ_iff] using bound)
+
+omit [Fact (2 ^ 17 < p)] in
+private theorem selectColumnFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMod p)))
+    (rows : List MemoryInterval) (bound : ctx.idx < size MemoryIntervalRow) :
+    (selectColumnFE address rows).eval ctx =
+      (selectFE address (fun interval => (toElements (interval.encode (p := p)))[ctx.idx]) rows).eval ctx := by
+  have small : ctx.idx < 2 ^ 64 := by change ctx.idx < 9 at bound; omega
+  induction rows with
+  | nil => rfl
+  | cons interval rest ih =>
+      simp only [selectColumnFE, selectFE, FExpr.eval, U64Expr.eval,
+        UInt64.toNat_ofNat', Nat.mod_eq_of_lt small, ih]
+      split
+      · exact (evalList_const ctx (toElements (interval.encode (p := p))).toList ctx.idx
+          (by simpa only [Vector.length_toList] using bound)).trans (Vector.getElem_toList _)
+      · rfl
+
+/-- One compact loop emits the nine interval cells without duplicating its search tree. -/
+def intervalIR (memory : ByteMemory) (limit : ℕ) (address : Var Word (ZMod p)) :
+    WitgenIR (ZMod p) (size MemoryIntervalRow) :=
+  .ir [] (.mapRange (size MemoryIntervalRow)
+    (selectColumnFE (address.map FExpr.expr) (memory.intervals limit)))
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Each loop cell performs the original first-match search, even for malformed addresses. -/
+theorem intervalIR_eval_cell (env : ProverEnvironment (ZMod p)) (memory : ByteMemory)
+    (limit : ℕ) (address : Var Word (ZMod p)) (index : Fin (size MemoryIntervalRow)) :
+    (intervalIR memory limit address |>.eval env)[index.val] =
+      (selectFE (address.map FExpr.expr)
+        (fun interval => (toElements (interval.encode (p := p)))[index.val])
+        (memory.intervals limit)).eval { env, idx := index.val } := by
+  simp only [intervalIR, WitgenIR.eval, Witgen.evalSteps, VExpr.getElem_eval_mapRange]
+  exact selectColumnFE_eval _ _ _ index.isLt
+
+/-- The compact witness program selects exactly the semantic interval row. -/
+theorem intervalIR_eval (env : ProverEnvironment (ZMod p)) (memory : ByteMemory) (limit : ℕ)
+    (limitBound : limit < 2 ^ 64) (address : Var Word (ZMod p)) (value : Word (ZMod p))
+    (evaluates : ∀ (i : ℕ) (_ : i < 4), address[i].eval env.toEnvironment = value[i])
     (bounded : Word.isU64 value) (interval : MemoryInterval)
     (found : memory.intervalAt? limit (Word.toNat value) = some interval) :
-    Witgen.eval ctx (intervalFE memory limit address) = interval.encode := by
+    (intervalIR memory limit address).eval env = toElements (interval.encode (p := p)) := by
   have bounds (row : MemoryInterval) (member : row ∈ memory.intervals limit) :
       row.lower < 2 ^ 64 ∧ row.upper < 2 ^ 64 := by
     have endpoints := memory.intervals_bounds limit row member
     exact ⟨lt_of_le_of_lt (endpoints.1.trans endpoints.2) limitBound,
       lt_of_le_of_lt endpoints.2 limitBound⟩
-  have fieldEval (field : MemoryInterval → ZMod p) :
-      (selectFE address field (memory.intervals limit)).eval ctx = field interval := by
-    rw [selectFE_eval ctx address value evaluates bounded field _ bounds]
-    change ((memory.intervalAt? limit (Word.toNat value)).map field).getD 0 = _
+  ext index bound
+  rw [intervalIR_eval_cell env memory limit address ⟨index, bound⟩]
+  rw [selectFE_eval { env, idx := index } _ value ?_ bounded _ _ bounds]
+  · change ((memory.intervalAt? limit (Word.toNat value)).map _).getD 0 = _
     rw [found]
     rfl
-  rw [Witgen.StructEval.eval_eq_eval]
-  simp only [intervalFE, circuit_norm, ProvableStruct.toComponents,
-    ProvableStruct.fromComponents, Witgen.eval_fields', Vector.map_ofFn]
-  congr 1
-  · ext i hi
-    simpa only [Vector.getElem_ofFn, Function.comp_apply, MemoryInterval.encode] using
-      fieldEval (fun row => (row.encode (p := p)).lower[i])
-  · ext i hi
-    simpa only [Vector.getElem_ofFn, Function.comp_apply, MemoryInterval.encode] using
-      fieldEval (fun row => (row.encode (p := p)).upper[i])
-  · exact fieldEval (fun row => (row.encode (p := p)).value)
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Comparison cells depend only on the evaluated operands, not other prover state. -/
-theorem comparisonFE_congr (ctx ctx' : Ctx (ZMod p))
-    (left right left' right' : Word (FExpr (ZMod p)))
-    (ha : ∀ (i : ℕ) (_ : i < 4), left[i].eval ctx = left'[i].eval ctx')
-    (hb : ∀ (i : ℕ) (_ : i < 4), right[i].eval ctx = right'[i].eval ctx') :
-    Witgen.eval ctx (comparisonFE left right) = Witgen.eval ctx' (comparisonFE left' right') := by
-  rw [comparisonFE_eval ctx left right (left.map (FExpr.eval ctx)) (right.map (FExpr.eval ctx))
-    (by intro i hi; simp only [Vector.getElem_map])
-    (by intro i hi; simp only [Vector.getElem_map])]
-  symm
-  apply comparisonFE_eval
   · intro i hi
-    simpa only [Vector.getElem_map] using (ha i hi).symm
-  · intro i hi
-    simpa only [Vector.getElem_map] using (hb i hi).symm
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem lessThanFE_congr (ctx ctx' : Ctx (ZMod p))
-    (left right left' right' : Word (FExpr (ZMod p)))
-    (ha : ∀ (i : ℕ) (_ : i < 4), left[i].eval ctx = left'[i].eval ctx')
-    (hb : ∀ (i : ℕ) (_ : i < 4), right[i].eval ctx = right'[i].eval ctx') :
-    (lessThanFE left right).eval ctx = (lessThanFE left' right').eval ctx' := by
-  have scan := (LtOperationUnsigned.scanF_congr ctx ctx' left right ha hb).1
-  simp only [lessThanFE, BExpr.eval, scan 0, scan 1]
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem containsFE_congr (ctx ctx' : Ctx (ZMod p))
-    (address address' : Word (FExpr (ZMod p)))
-    (same : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = address'[i].eval ctx')
-    (interval : MemoryInterval) :
-    (containsFE address interval).eval ctx = (containsFE address' interval).eval ctx' := by
-  have constant (word : Word (ZMod p)) (i : ℕ) (hi : i < 4) :
-      (word.map FExpr.const)[i].eval ctx = (word.map FExpr.const)[i].eval ctx' := by
-    simp only [Vector.getElem_map, FExpr.eval]
-  have low := lessThanFE_congr ctx ctx' address _ address' _ same
-    (constant (interval.encode (p := p)).lower)
-  have high := lessThanFE_congr ctx ctx' address _ address' _ same
-    (constant (interval.encode (p := p)).upper)
-  change (!(lessThanFE address _).eval ctx && (lessThanFE address _).eval ctx) = _
-  rw [low, high]
-  rfl
-
-omit [Fact (2 ^ 17 < p)] in
-private theorem selectFE_congr (ctx ctx' : Ctx (ZMod p))
-    (address address' : Word (FExpr (ZMod p)))
-    (same : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = address'[i].eval ctx')
-    (field : MemoryInterval → ZMod p) (rows : List MemoryInterval) :
-    (selectFE address field rows).eval ctx = (selectFE address' field rows).eval ctx' := by
-  induction rows with
-  | nil => rfl
-  | cons interval rest ih =>
-      simp only [selectFE, FExpr.eval, containsFE_congr ctx ctx' address address' same interval, ih]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Interval witnesses read only the supplied address, including under changes to prover data. -/
-theorem intervalFE_congr (ctx ctx' : Ctx (ZMod p)) (memory : ByteMemory) (limit : ℕ)
-    (address address' : Word (FExpr (ZMod p)))
-    (same : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = address'[i].eval ctx') :
-    Witgen.eval ctx (intervalFE memory limit address) =
-      Witgen.eval ctx' (intervalFE memory limit address') := by
-  simp only [intervalFE, Witgen.StructEval.eval_eq_eval, circuit_norm, ProvableStruct.toComponents,
-    ProvableStruct.fromComponents, Witgen.eval_fields', Vector.map_ofFn]
-  refine ⟨?_, ?_, ?_⟩
-  · ext i hi
-    simp only [Vector.getElem_ofFn, Function.comp_apply]
-    exact selectFE_congr ctx ctx' address address' same _ _
-  · ext i hi
-    simp only [Vector.getElem_ofFn, Function.comp_apply]
-    exact selectFE_congr ctx ctx' address address' same _ _
-  · exact selectFE_congr ctx ctx' address address' same _ _
+    simpa only [Vector.getElem_map, FExpr.eval] using evaluates i hi
 
 end SP1Clean.InitialMemoryLookup

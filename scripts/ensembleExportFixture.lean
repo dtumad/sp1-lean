@@ -14,6 +14,7 @@ import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.WritePermissionExport
 import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
 import SP1CleanTest.Alignment.Support.StoppedAssemblyFixture
+import SP1CleanTest.Alignment.Support.HintReadAssemblyFixture
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -109,6 +110,28 @@ private def installedIdentityReference (context : SP1CleanTest.Alignment.Install
       ("wrong-final-pc", { header with final_pc0 := header.final_pc0 + 4 }, base, false),
       ("nonzero-exit", { header with exit_code := 1 }, base, false),
       ("changed-bank-terminal", header, changed, false)].mapM
+      fun (name, publicInput, privateInput, expected) =>
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
+
+private def installedHintReadReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed) : IO Json := do
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+  let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
+  let hints := SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers
+  let some registers := hints[90]?
+    | throw (IO.userError "HINT_READ assembly has no register target checker")
+  let some ram := hints[91]?
+    | throw (IO.userError "HINT_READ assembly has no RAM target checker")
+  let replace (column : ℕ) (value : ZMod SP1Clean.SP1Prime) := Vector.ofFn fun index : Fin input.size =>
+    if index.val == column then value else input[index]
+  let header := SP1CleanTest.Alignment.HintReadAssembly.header
+  let cases ← [
+      ("active-hint-read-16", header, base, true),
+      ("wrong-final-clock", { header with final_clk_0_16 := header.final_clk_0_16 + 1 }, base, false),
+      ("disabled-real-register-check", header, replace (registers.offset + registers.width - 1) 0, false),
+      ("nonboolean-register-activity", header, replace (registers.offset + registers.width - 1) 2, false),
+      ("wrong-target-ram-value", header, replace (ram.offset + 5) 0, false)].mapM
       fun (name, publicInput, privateInput, expected) =>
         installedCase context consumers name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
@@ -288,6 +311,15 @@ private def exportEnsembleFixture : IO Unit := do
     ((← installedChangedReference).compress ++ "\n")
   IO.FS.writeFile (out / "installed_fabricated_halt.reference.json")
     ((← installedFabricatedReference).compress ++ "\n")
+  let (hintContext, hintConsumers) ← match SP1CleanTest.Alignment.HintReadAssembly.prepare 16 with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  let hintExport ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust hintContext hintConsumers with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  IO.FS.writeFile (out / "installed_hint_read.rs") hintExport
+  IO.FS.writeFile (out / "installed_hint_read.reference.json")
+    ((← installedHintReadReference hintContext hintConsumers).compress ++ "\n")
   let exported ← match rust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)

@@ -147,6 +147,10 @@ gaps, eligibility and padding; only counts are prover-owned. Source RAM reads au
 bytes before emitting one Memory occurrence. Target reads retain the complete final receipt.
 Global balance and fixed prefixes establish membership without caller-supplied provider validity.
 Projected ledgers retain every fixed row, including unused intervals and zero-count padding.
+Ordered source/final rows and target checks carry a separate Boolean activity column. Raw
+constraints establish its binarity; balance matches only active records while keeping the full
+weighted physical ledger and occurrence bound. Target-change selection remains separate from
+row activity, so an unchanged live target still consumes its final receipt.
 
 Each Clean table stores its evaluation data and a proof that its physical row count fits the
 upstream `UInt64` index space. Ensemble construction makes every table's stored data agree with

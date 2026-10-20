@@ -30,7 +30,7 @@ theorem endKey_toNat : Word.toNat (endKey (p := p)) = 2 ^ 48 + 1 :=
   OrderedMemoryEnsemble.endKey_toNat
 
 def providerView {Payload : TypeMap} [ProvableType Payload] (image : ProgramImage)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (binds : ∀ input output data, provider.Spec input output data → MemoryBoundary.InitialSpec image output)
     (privateChannel : (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ provider.channels) :
     TransitionView (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName) :=
@@ -61,7 +61,7 @@ theorem views_unique_names (image : ProgramImage) :
     ((views (p := p) image).map (·.component.circuit.name)).Nodup := by
   simp [views, registerView, ramView, terminalView, providerView,
     OrderedMemoryEnsemble.providerView, OrderedMemoryEnsemble.terminalView,
-    OrderedMemoryProvider.circuit, OrderedBoundaryEnd.circuit,
+    OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit, OrderedBoundaryEnd.circuit,
     InitialRegisterProvider.circuit, InitialRamProvider.circuit, OrderedInitialProvider.channelName]
   decide
 
@@ -87,23 +87,25 @@ def ensemble (image : ProgramImage) (auxiliary : List (Component (ZMod p)))
     (views image) auxiliary channels names
 
 private theorem providerView_strict {Payload : TypeMap} [ProvableType Payload] (image : ProgramImage)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (binds : ∀ input output data, provider.Spec input output data → MemoryBoundary.InitialSpec image output)
     (privateChannel : (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ provider.channels)
     (env : Environment (ZMod p))
-    (valid : (providerView image provider binds privateChannel).component.Spec env) :
+    (valid : (providerView image provider binds privateChannel).component.Spec env)
+    (active : env (providerView image provider binds privateChannel).activity = 1) :
     Word.toNat ((providerView image provider binds privateChannel).edge env).1 <
       Word.toNat ((providerView image provider binds privateChannel).edge env).2 :=
-  valid.2.1.2.2
+  (valid.2 (OrderedMemoryEnsemble.active_input (Payload := Payload) active)).2.1.2.2
 
 theorem views_strict (image : ProgramImage)
     (view : TransitionView (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName))
-    (member : view ∈ views image) (env : Environment (ZMod p)) (valid : view.component.Spec env) :
+    (member : view ∈ views image) (env : Environment (ZMod p)) (valid : view.component.Spec env)
+    (active : env view.activity = 1) :
     Word.toNat (view.edge env).1 < Word.toNat (view.edge env).2 := by
   simp only [views, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl
-  · exact providerView_strict image _ _ _ env valid
-  · exact providerView_strict image _ _ _ env valid
+  · exact providerView_strict image _ _ _ env valid active
+  · exact providerView_strict image _ _ _ env valid active
   · exact valid.2
 
 /-- The initialization inventory has no repeated current key, even across register and RAM
@@ -129,17 +131,22 @@ def recordFor (image : ProgramImage) (id : TableId) (env : Environment (ZMod p))
   | .terminal => none
 
 theorem recordFor_spec (image : ProgramImage) (id : TableId) (env : Environment (ZMod p))
-    (valid : (viewFor image id).component.Spec env) (record : MemoryMsg (ZMod p))
+    (valid : (viewFor image id).component.Spec env)
+    (active : env (viewFor image id).activity = 1) (record : MemoryMsg (ZMod p))
     (found : recordFor image id env = some record) :
     MemoryBoundary.InitialSpec image record ∧
       Word.toNat ((viewFor image id).edge env).2 = (MemoryMsg.locOf record).busAddress + 1 := by
   cases id with
   | registers =>
     obtain rfl := Option.some.inj found
-    exact ⟨valid.1, valid.2.2⟩
+    dsimp only [viewFor, registerView, ramView, providerView, OrderedMemoryEnsemble.providerView] at active
+    have child := valid.2 (OrderedMemoryEnsemble.active_input (Payload := field) active)
+    exact ⟨child.1, child.2.2⟩
   | ram =>
     obtain rfl := Option.some.inj found
-    exact ⟨valid.1, valid.2.2⟩
+    dsimp only [viewFor, registerView, ramView, providerView, OrderedMemoryEnsemble.providerView] at active
+    have child := valid.2 (OrderedMemoryEnsemble.active_input (Payload := Word) active)
+    exact ⟨child.1, child.2.2⟩
   | terminal => contradiction
 
 /-- Initialization instantiates the common inventory theorem with boot-value authentication. -/
@@ -150,10 +157,14 @@ def inventory (image : ProgramImage) :
   viewFor := viewFor image
   recordFor := recordFor image
   strict := by
-    intro id env valid
+    intro id env valid active
     cases id with
-    | registers => exact valid.2.1.2.2
-    | ram => exact valid.2.1.2.2
+    | registers =>
+      dsimp only [viewFor, registerView, ramView, providerView, OrderedMemoryEnsemble.providerView] at active
+      exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := field) active)).2.1.2.2
+    | ram =>
+      dsimp only [viewFor, registerView, ramView, providerView, OrderedMemoryEnsemble.providerView] at active
+      exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := Word) active)).2.1.2.2
     | terminal => exact valid.2
   recordFor_spec := recordFor_spec image
 
@@ -162,7 +173,12 @@ variable {channels : List (RawChannel (ZMod p))}
 variable {names : (((views (p := p) image).map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
 
 def indexedRows (witness : EnsembleWitness (ensemble image auxiliary channels names)) :=
-  TransitionView.readIndexedRows tableIds (witness.tables.take (views (p := p) image).length)
+  TransitionView.readIndexedActiveRows tableIds (viewFor image)
+    (witness.tables.take (views (p := p) image).length)
+
+/-- The original physical record occurrences, including inactive rows. -/
+def physicalRecords (witness : EnsembleWitness (ensemble image auxiliary channels names)) :=
+  (inventory image).physicalRecords witness
 
 def records (witness : EnsembleWitness (ensemble image auxiliary channels names)) : List (MemoryMsg (ZMod p)) :=
   (indexedRows witness).filterMap fun row => recordFor image row.1 row.2
@@ -189,33 +205,40 @@ theorem records_locations_nodup (witness : EnsembleWitness (ensemble image auxil
 /-- The finite record decoder agrees exactly with each table's physical Memory interactions. -/
 theorem recordFor_interactions (image : ProgramImage) (id : TableId) (env : Environment (ZMod p)) :
     (viewFor image id).component.operations.interactionValuesWith memoryChannel.toRaw env =
-      ((recordFor image id env).toList).map memoryChannel.pushedValue := by
+      ((recordFor image id env).toList).map
+        (memoryChannel.pushedIfValue (env (viewFor image id).activity)) := by
   cases id with
   | registers =>
     simp only [viewFor, registerView, providerView, OrderedMemoryEnsemble.providerView,
         Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-        OrderedMemoryProvider.circuit]
+        OrderedMemoryProvider.circuit, Guarded.circuit]
+    rw [Guarded.main_interactionsWith]
+    simp only [OrderedMemoryProvider.activeCircuit]
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [InitialRegisterProvider.circuit]
     rw [InitialRegisterProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pushed]
+    simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_pushed,
+      Channel.pushedValue, mul_one]
     rfl
   | ram =>
     simp only [viewFor, ramView, providerView, OrderedMemoryEnsemble.providerView,
         Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-        OrderedMemoryProvider.circuit]
+        OrderedMemoryProvider.circuit, Guarded.circuit]
+    rw [Guarded.main_interactionsWith]
+    simp only [OrderedMemoryProvider.activeCircuit]
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [InitialRamProvider.circuit]
     rw [InitialRamProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pushed]
+    simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_pushed,
+      Channel.pushedValue, mul_one]
     rfl
   | terminal =>
     exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
-/-- The physical boundary tables emit precisely the decoded records, with unit multiplicity. -/
+/-- The physical boundary ledger retains every record and its actual activity. -/
 theorem memory_interactions_eq (witness : EnsembleWitness (ensemble image auxiliary channels names)) :
     (witness.tables.take (inventory (p := p) image).views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
-      (records witness).map memoryChannel.pushedValue := by
-  exact (inventory image).memory_interactions_eq witness memoryChannel.pushedValue (recordFor_interactions image)
+      (physicalRecords witness).map (fun row => memoryChannel.pushedIfValue row.1 row.2) := by
+  exact (inventory image).memory_interactions_eq witness memoryChannel.pushedIfValue (recordFor_interactions image)
 
 end SP1Clean.Soundness.InitialMemoryEnsemble

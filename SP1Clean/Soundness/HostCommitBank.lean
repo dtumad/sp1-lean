@@ -42,10 +42,15 @@ def terminalView (deferred : Bool) : TransitionView (stateChannel (p := p) defer
       (stateChannel deferred).toRaw env = _
     rw [HostCommitBoundary.terminal_values]
     simp only [eval_values, eval_varFromOffset_valueFromOffset]
+    rfl
 
 def view (deferred : Bool) : Index → TransitionView (stateChannel (p := p) deferred)
   | some slot => HostCommitHistory.view deferred slot
   | none => terminalView deferred
+
+private theorem view_activity (deferred : Bool) (index : Index) :
+    (view (p := p) deferred index).activity = .const 1 := by
+  cases index <;> rfl
 
 def views (deferred : Bool) := indices.map (view (p := p) deferred)
 def components (deferred : Bool) := (views (p := p) deferred).map (·.component)
@@ -284,7 +289,7 @@ theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
   have localSpecs := rows_spec_of_byte deferred tables aligned constraints byte
   have projected := TransitionView.readRows_interactions (views deferred) tables alignment
   rw [views, TransitionView.readRows_eq_indexed] at projected
-  simp only [List.flatMap_map] at projected
+  simp only [List.flatMap_map, view_activity] at projected
   rw [projected] at balanced
   change BalancedInteractions ((stateChannel deferred).transitionLedger (HostCommitBoundary.start initialValues)
     (HostCommitBoundary.final values) (TransitionView.readIndexedRows indices tables) (edge deferred)) at balanced

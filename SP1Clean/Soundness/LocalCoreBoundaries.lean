@@ -154,9 +154,18 @@ theorem source_memory_interactions {image : ProgramImage} {source : ExecutionSna
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (witness.tables.take (SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).views.length).flatMap
         (·.interactionsWith memoryChannel.toRaw) =
-      ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map memoryChannel.pushedValue :=
+      ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords (sourceWitness witness)).map
+        (fun row => memoryChannel.pushedIfValue row.1 row.2) :=
   (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).memory_interactions_eq (sourceWitness witness)
-    memoryChannel.pushedValue (SnapshotMemoryEnsemble.recordFor_interactions source.sail.memorySnapshot)
+    memoryChannel.pushedIfValue (SnapshotMemoryEnsemble.recordFor_interactions source.sail.memorySnapshot)
+
+/-- Source activity is Boolean from the original raw table constraints. -/
+theorem source_physicalRecords_binary {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints) :
+    ∀ row ∈ (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords
+      (sourceWitness witness), row.1 = 0 ∨ row.1 = 1 :=
+  (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords_binary_of_constraints
+    (sourceWitness witness) (fun table member => constraints table (List.mem_of_mem_take member))
 
 /-- Public endpoints are canonical, the incoming token matches the full source, and its finite
 program, platform, initialization, ROM, and range checks pass without caller-supplied truth. -/

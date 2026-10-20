@@ -42,10 +42,10 @@ private def checkStart : ℕ :=
     HostCallReceivers.available (HostHintReadLocal.sourceResources [])).length
 
 def registerCheck (index clock value : ℕ) (selected : Fp) : Row :=
-  (checkStart, (toElements (⟨record index clock value, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
+  (checkStart, (toElements (M := FinalRegisterCheck.RowInput) ((⟨record index clock value, selected⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList)
 
 def ramCheck (clock : ℕ) : Row :=
-  (checkStart + 1, (toElements (⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩ : FinalRamCheck.Inputs Fp)).toList)
+  (checkStart + 1, (toElements (M := FinalRamCheck.RowInput) ((⟨record 65536 clock (target.memory.readWord 65536).toNat, 0⟩, 1) : FinalRamCheck.RowInput Fp)).toList)
 
 def terminals : List Row :=
   [2, 3].map fun offset =>

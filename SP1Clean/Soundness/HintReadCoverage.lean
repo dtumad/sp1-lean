@@ -44,6 +44,7 @@ def view (last : Bool) : TransitionView (stateChannel (p := p)) where
     rw [main_state_interactions]
     simp only [List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed,
       eval_previous, eval_next, eval_varFromOffset_valueFromOffset]
+    rfl
 
 def variants : List Bool := [false, true]
 

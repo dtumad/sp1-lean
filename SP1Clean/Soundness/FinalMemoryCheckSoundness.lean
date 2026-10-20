@@ -3,7 +3,7 @@ import SP1Clean.Soundness.FinalMemoryCheckLedger
 /-! # Complete outgoing Memory comparison from raw boundary acceptance
 
 The installed witness supplies all facts: fixed membership authenticates target registers,
-Byte closure authenticates target RAM reads and finalizer addresses, complete-record receipt balance matches every final row, and the verifier's change
+Byte closure authenticates target RAM reads and finalizer addresses, complete-record receipt balance matches every active final record, and the verifier's change
 ledger covers the complete complement. The result is the existing finite `checkFinal` relation.
 Connecting this boundary subsystem to mixed execution grounding remains an assembly transport,
 not a new semantics or an additional caller certificate.
@@ -59,7 +59,7 @@ theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble sou
   have finalized := FinalMemoryReceipts.ram_records_spec (receiptWitness witness)
     (receiptWitness_constraints witness checked) bytes
   intro input present
-  exact finalized _ ((ram_receipts_perm_of_balancedChannel witness interface balanced).mem_iff.mp
+  exact finalized _ ((ram_receipts_perm_of_balancedChannel witness interface checked balanced).mem_iff.mp
     (List.mem_map_of_mem (f := fun input : FinalRamCheck.Inputs (ZMod p) => input.record) present))
 
 /-- Target comparison uses Byte guarantees, fixed target membership and complete receipt balances.
@@ -74,9 +74,10 @@ theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source targe
       ((records witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
   have members channel known := membership_guarantees witness interface checked channel known (membership channel known)
   apply FinalMemoryChangeCoverage.checkFinal_of_balanced source target (records witness) (validationRows witness)
-    (receipts_perm_of_channels witness interface receipts) ?_ ?_ ?_
+    (receipts_perm_of_channels witness interface checked receipts) (validationRows_binary witness checked) ?_ ?_ ?_
     (changes_balanced_of_balancedChannel witness interface changes)
   · intro row member
+    rw [activeValidationRows] at member
     rcases List.mem_append.mp member with register | ram
     · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
       exact (registerInputs_spec_of_channels witness checked byte members input present).1.2.2.2.2.symm
@@ -84,12 +85,14 @@ theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source targe
       exact ((ramInputs_spec_of_channels witness checked byte members input present).1.final_snapshot target _
         (ramInputs_finalSpec_of_channels witness interface checked byte (receipts true) input present)).symm
   · intro row member
+    rw [activeValidationRows] at member
     rcases List.mem_append.mp member with register | ram
     · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
       exact (registerInputs_spec_of_channels witness checked byte members input present).2
     · obtain ⟨input, present, rfl⟩ := List.mem_map.mp ram
       exact (ramInputs_spec_of_channels witness checked byte members input present).2
   · intro row member
+    rw [activeValidationRows] at member
     rcases List.mem_append.mp member with register | ram
     · obtain ⟨input, present, rfl⟩ := List.mem_map.mp register
       exact register_key _ (registerInputs_spec_of_channels witness checked byte members input present).1

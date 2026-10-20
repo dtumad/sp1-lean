@@ -22,26 +22,32 @@ type Pcs = TwoAdicFriPcs<F, Radix2DitParallel<F>, Mmcs, ChallengeMmcs>;
 pub type Config = StarkConfig<Pcs, Challenge, Challenger>;
 
 pub fn config() -> Config {
-    configured(false)
+    config_with_log_blowup(2)
+}
+
+/// Choose an LDE large enough for the tested AIR's quotient degree.
+pub fn config_with_log_blowup(log_blowup: usize) -> Config {
+    configured(false, log_blowup)
 }
 
 #[allow(dead_code)]
 pub fn benchmark_config() -> Config {
-    configured(true)
+    configured(true, 1)
 }
 
-fn configured(benchmark: bool) -> Config {
+fn configured(benchmark: bool, log_blowup: usize) -> Config {
     let mut rng = SmallRng::seed_from_u64(7);
     let permutation = Perm::new_from_rng_128(&mut rng);
     let mmcs = Mmcs::new(
         Hash::new(permutation.clone()),
         Compress::new(permutation.clone()),
     );
-    let fri = if benchmark {
+    let mut fri = if benchmark {
         create_benchmark_fri_params(ChallengeMmcs::new(mmcs.clone()))
     } else {
         create_test_fri_params(ChallengeMmcs::new(mmcs.clone()), 0)
     };
+    fri.log_blowup = log_blowup;
     let pcs = Pcs::new(Radix2DitParallel::default(), mmcs, fri);
     Config::new(pcs, Challenger::new(permutation))
 }

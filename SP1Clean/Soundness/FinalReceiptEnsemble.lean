@@ -6,7 +6,7 @@ import ToClean.Circuit.InteractionRecovery
 /-! # Publishing the physical final inventory
 
 A typed slot identifies the original finalizer before installing its receipt. The wrapper retains
-its name, complete rows, input layout and constraints, and adds one unit receipt per physical row.
+its name, complete rows, input layout and constraints, and adds one activity-weighted receipt per physical row.
 Projection therefore preserves canonical data and every old channel when the receipt is fresh.
 
 This is an installation adapter, not an endpoint theorem. The enclosing assembly must install
@@ -22,13 +22,13 @@ variable {p : ℕ} [Fact p.Prime]
 
 /-- Publish one full record at an existing finalizer's registered physical position. -/
 def install (ens : Ensemble (ZMod p) PublicIO) (ram : Bool)
-    (provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg)
     (source : TableSlot ens.tables { circuit := provider, Assumptions := (provider).Assumptions }) : Ensemble (ZMod p) PublicIO :=
   { ens.replaceComponent source { circuit := FinalMemoryReceipt.circuit ram provider, Assumptions := provider.Assumptions } rfl with
     channels := ens.channels ++ [(FinalMemoryValue.channel ram).toRaw] }
 
 variable {ens : Ensemble (ZMod p) PublicIO} {ram : Bool}
-  {provider : GeneralFormalCircuit (ZMod p) Input MemoryMsg}
+  {provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg}
   {source : TableSlot ens.tables { circuit := provider, Assumptions := (provider).Assumptions }}
 
 /-- The receipt-bearing component occupies exactly the original slot. -/
@@ -195,6 +195,17 @@ theorem project_interactions (channel : RawChannel (ZMod p))
   · rfl
   · simpa only [List.length_map] using bound witness
 
+/-- Receipt publication retains the provider's guarantees on every original channel. -/
+theorem row_channelGuarantees (channel : RawChannel (ZMod p))
+    (different : channel ≠ (FinalMemoryValue.channel ram).toRaw) (env : Environment (ZMod p))
+    (guarantees : ({ circuit := FinalMemoryReceipt.circuit ram provider, Assumptions := provider.Assumptions } :
+      Component (ZMod p)).operations.ChannelGuarantees channel env) :
+    ({ circuit := provider, Assumptions := provider.Assumptions } :
+      Component (ZMod p)).operations.ChannelGuarantees channel env := by
+  apply Operations.channelGuarantees_of_interactionsWith_subset _ _ _ ?_ env guarantees
+  rw [FinalMemoryReceipt.interactions ram provider channel different]
+  exact List.Subset.refl _
+
 /-- Original guarantees survive projection at its identical canonical data. -/
 theorem project_channelGuarantees (channel : RawChannel (ZMod p))
     (different : channel ≠ (FinalMemoryValue.channel ram).toRaw)
@@ -219,27 +230,50 @@ theorem project_balanced (fresh : (FinalMemoryValue.channel ram).toRaw ∉ ens.c
   rw [project_interactions witness channel (by rintro rfl; exact fresh member)]
   exact balanced channel (List.mem_append_left _ member)
 
-/-- The inventory is decoded from the original provider output on the literal physical rows. -/
-def records  : List (MemoryMsg (ZMod p)) :=
-  (table witness).table.map fun row => ({ circuit := provider, Assumptions := (provider).Assumptions } : Component (ZMod p)).rowOutput
-    (Environment.fromArray row witness.data)
+/-- The physical activity expression is the final input field of the provider. -/
+def activity : Expression (ZMod p) := (varFromOffset (ProvablePair Input field) 0).2
 
-/-- If the original provider is silent on the receipt channel, every finalizer row publishes
-exactly one of its complete original records. -/
+omit [Fact p.Prime] in
+/-- Read the last input column without expanding the provider's complete variable vector. -/
+theorem activity_eq : activity (p := p) (Input := Input) = .var ⟨size Input⟩ := by
+  simp only [activity, varFromOffset_pair, ProvableType.varFromOffset_field, Nat.zero_add]
+
+/-- Complete physical records retain their multiplicities, including disabled occurrences. -/
+def physicalRecords : List (ZMod p × MemoryMsg (ZMod p)) :=
+  (table witness).table.map fun row =>
+    let env := Environment.fromArray row witness.data
+    (env (activity (Input := Input)),
+      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).rowOutput env)
+
+/-- Semantic records select active rows while retaining the original output and data context. -/
+def records : List (MemoryMsg (ZMod p)) :=
+  ((table witness).table.filter fun row =>
+    decide (Environment.fromArray row witness.data (activity (Input := Input)) = 1)).map fun row =>
+      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).rowOutput
+        (Environment.fromArray row witness.data)
+
+/-- Active record decoding is the Boolean-one projection of the complete physical inventory. -/
+theorem records_eq_active_physical : records witness =
+    ((physicalRecords witness).filter fun row => decide (row.1 = 1)).map Prod.snd := by
+  simp only [records, physicalRecords, List.filter_map, List.map_map, Function.comp_def]
+
+/-- A fresh receipt channel retains one weighted occurrence for every physical finalizer row. -/
 theorem table_receipts
     (silent : (FinalMemoryValue.channel ram).toRaw ∉ provider.channels) :
     (table witness).interactionsWith (FinalMemoryValue.channel ram).toRaw =
-      (records witness).map (FinalMemoryValue.channel ram).pushedValue := by
+      (physicalRecords witness).map fun row =>
+        (FinalMemoryValue.channel ram).pushedIfValue row.1 row.2 := by
   have row (env : Environment (ZMod p)) :
       ({ circuit := FinalMemoryReceipt.circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.interactionValuesWith
         (FinalMemoryValue.channel ram).toRaw env =
-      [(FinalMemoryValue.channel ram).pushedValue (({ circuit := provider, Assumptions := (provider).Assumptions } : Component (ZMod p)).rowOutput env)] := by
+      [(FinalMemoryValue.channel ram).pushedIfValue (env (activity (Input := Input)))
+        (({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).rowOutput env)] := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
     rw [FinalMemoryReceipt.receipt_interactions]
     rw [InteractionRecovery.interactionsWith_main_eq_nil provider.base _ _ _ silent]
-    simp only [List.nil_append, List.map_cons, List.map_nil, Channel.eval_pushed]
-    rfl
-  simp only [Table.interactionsWith, table_component, row, records, List.map_map,
+    simp only [List.nil_append, List.map_cons, List.map_nil, Channel.eval_pushedIf]
+    simp only [activity, Component.rowOutput, circuit_norm]
+  simp only [Table.interactionsWith, table_component, row, physicalRecords, List.map_map,
     Table.environment, witness.same_data (table witness) (slot.table_mem witness)]
   exact List.map_eq_flatMap.symm
 

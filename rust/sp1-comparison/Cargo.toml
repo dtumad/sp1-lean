@@ -106,4 +106,4 @@ required-features = ["clean-export"]
 
 [[test]]
 name = "installed_assembly_export"
-required-features = ["clean-export"]
+required-features = ["instruction-export"]

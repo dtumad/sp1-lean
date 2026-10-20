@@ -71,19 +71,19 @@ theorem memoryInterior_raw (witness : EnsembleWitness (ensemble image source aux
 /-- Exact full-ledger decomposition into the unchanged boundaries and the extended interior. -/
 theorem memory_interactions (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     typedEnsembleInteractionsWith witness memoryChannel =
-      ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
+      ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords
         (LocalCore.sourceWitness (localWitness witness))).map
-          (TypedInteraction.pushedIfValue memoryChannel 1) ++
-      (FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness))).map
-        (TypedInteraction.pushedIfValue memoryChannel (-1)) ++ memoryInterior witness := by
+          (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
+      (FinalMemoryEnsemble.physicalRecords (LocalCore.finalWitness (localWitness witness))).map
+        (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++ memoryInterior witness := by
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedEnsembleInteractionsWith_raw, List.map_append, List.map_append, memoryInterior_raw]
   simp only [List.map_map]
   change witness.interactionsWith memoryChannel.toRaw =
-    ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
-      (LocalCore.sourceWitness (localWitness witness))).map memoryChannel.pushedValue ++
-    (FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness))).map
-      (memoryChannel.emittedValue (-1)) ++ _
+    ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords
+      (LocalCore.sourceWitness (localWitness witness))).map (fun row => memoryChannel.pushedIfValue row.1 row.2) ++
+    (FinalMemoryEnsemble.physicalRecords (LocalCore.finalWitness (localWitness witness))).map
+      (fun row => memoryChannel.emittedValue (-row.1) row.2) ++ _
   rw [← LocalCore.source_memory_interactions, ← LocalCore.final_memory_interactions]
   change witness.interactionsWith memoryChannel.toRaw =
     ((localWitness witness).tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) ++
@@ -223,7 +223,15 @@ theorem memory_records_perm (witness : EnsembleWitness (ensemble image source au
       (LocalCore.sourceWitness (localWitness witness)) ++ producedMessages (memoryInterior witness)).Perm
     (FinalMemoryEnsemble.records (LocalCore.finalWitness (localWitness witness)) ++
       consumedMessages (memoryInterior witness)) := by
-  apply NativeCore.memoryBoundary_records_perm _ _ _ (memoryInterior_signedBinary witness constraints binary)
+  unfold FinalMemoryEnsemble.records
+  rw [(SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_eq_active_physical
+      (LocalCore.sourceWitness (localWitness witness)),
+    FinalMemoryEnsemble.inventory.records_eq_active_physical (LocalCore.finalWitness (localWitness witness))]
+  have checked := localWitness_constraints witness constraints
+  apply NativeCore.memoryBoundary_records_perm _ _ _
+    (LocalCore.source_physicalRecords_binary (localWitness witness) checked)
+    (LocalCore.final_physicalRecords_binary (localWitness witness) checked)
+    (memoryInterior_signedBinary witness constraints binary)
   rw [← memory_interactions, typedEnsembleInteractionsWith_raw]
   exact balanced
 

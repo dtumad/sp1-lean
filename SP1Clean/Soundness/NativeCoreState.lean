@@ -24,7 +24,7 @@ noncomputable def stateBumps {image : ProgramImage}
 private theorem providerView_state_silent {Payload : TypeMap} [ProvableType Payload]
     (name : String) (distinct : name ≠ "SP1Byte") (notState : name ≠ "SP1State")
     (recordSpec : MemoryMsg (ZMod p) → Prop)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
     (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record)
     (privateChannel : (OrderedBoundary.channel name).toRaw ∉ provider.channels)

@@ -26,7 +26,12 @@ private theorem initialView_spec (image : ProgramImage)
     view.component.Spec env := by
   have assumptions : view.component.CircuitAssumptions env := by
     simp only [InitialMemoryEnsemble.views, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl <;> trivial
+    rcases member with rfl | rfl | rfl
+    · intro _
+      trivial
+    · intro _
+      trivial
+    · trivial
   have channels : view.component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw] := by
@@ -310,7 +315,15 @@ Together with authentication and uniqueness, this is the initialization interfac
 theorem initial_memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     (witness.tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
-      (InitialMemoryEnsemble.records (initialWitness witness)).map memoryChannel.pushedValue :=
+      (InitialMemoryEnsemble.physicalRecords (initialWitness witness)).map
+        (fun row => memoryChannel.pushedIfValue row.1 row.2) :=
   InitialMemoryEnsemble.memory_interactions_eq (initialWitness witness)
+
+/-- Boot activity is Boolean from the original raw table constraints. -/
+theorem initial_physicalRecords_binary {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints) :
+    ∀ row ∈ InitialMemoryEnsemble.physicalRecords (initialWitness witness), row.1 = 0 ∨ row.1 = 1 :=
+  (InitialMemoryEnsemble.inventory image).physicalRecords_binary_of_constraints
+    (initialWitness witness) (fun table member => constraints table (List.mem_of_mem_take member))
 
 end SP1Clean.Soundness.NativeCore

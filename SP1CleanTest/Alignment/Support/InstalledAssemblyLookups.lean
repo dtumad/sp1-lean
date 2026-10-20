@@ -288,14 +288,24 @@ attribute [local circuit_norm] List.append_eq Component.rowOperations
 /-- No legacy lookup at physical component 0. -/
 private theorem lookup_slot_0 (context : Context) :
     (componentAt context 0).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change (SnapshotMemoryEnsemble.registerView (p := SP1Prime) context.source.sail.memorySnapshot).component.rowOperations.lookups.map (·.table) = []
+  have empty : (SnapshotMemoryEnsemble.registerView (p := SP1Prime) context.source.sail.memorySnapshot).component.operations.lookups = [] := by
+    simp only [SnapshotMemoryEnsemble.registerView, OrderedMemoryEnsemble.providerView,
+      Component.lookups_eq, Component.rowOperations, OrderedMemoryProvider.circuit, Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  rw [← Component.lookups_eq, empty]
+  rfl
 
 /-- No legacy lookup at physical component 1. -/
 private theorem lookup_slot_1 (context : Context) :
     (componentAt context 1).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change (SnapshotMemoryEnsemble.ramView (p := SP1Prime) context.source.sail.memorySnapshot).component.rowOperations.lookups.map (·.table) = []
+  have empty : (SnapshotMemoryEnsemble.ramView (p := SP1Prime) context.source.sail.memorySnapshot).component.operations.lookups = [] := by
+    simp only [SnapshotMemoryEnsemble.ramView, OrderedMemoryEnsemble.providerView,
+      Component.lookups_eq, Component.rowOperations, OrderedMemoryProvider.circuit, Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  rw [← Component.lookups_eq, empty]
+  rfl
 
 /-- No legacy lookup at physical component 2. -/
 private theorem lookup_slot_2 (context : Context) :
@@ -306,14 +316,26 @@ private theorem lookup_slot_2 (context : Context) :
 /-- No legacy lookup at physical component 3. -/
 private theorem lookup_slot_3 (context : Context) :
     (componentAt context 3).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change ({
+      circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit
+      Assumptions := OrderedFinalProvider.registerCircuit.Assumptions
+      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component Fp).rowOperations.lookups.map (·.table) = []
+  rw [← Component.lookups_eq, FinalMemoryReceipt.lookups]
+  change (FinalMemoryEnsemble.viewFor (p := SP1Prime) .registers).component.operations.lookups.map (·.table) = []
+  rw [FinalMemoryEnsemble.view_lookups]
+  rfl
 
 /-- No legacy lookup at physical component 4. -/
 private theorem lookup_slot_4 (context : Context) :
     (componentAt context 4).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change ({
+      circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit
+      Assumptions := OrderedFinalProvider.ramCircuit.Assumptions
+      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component Fp).rowOperations.lookups.map (·.table) = []
+  rw [← Component.lookups_eq, FinalMemoryReceipt.lookups]
+  change (FinalMemoryEnsemble.viewFor (p := SP1Prime) .ram).component.operations.lookups.map (·.table) = []
+  rw [FinalMemoryEnsemble.view_lookups]
+  rfl
 
 /-- No legacy lookup at physical component 5. -/
 private theorem lookup_slot_5 (context : Context) :
@@ -823,14 +845,24 @@ private theorem lookup_slot_89 (context : Context) :
 /-- No legacy lookup at physical component 90. -/
 private theorem lookup_slot_90 (context : Context) :
     (componentAt context 90).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change ({
+      circuit := FinalRegisterCheck.circuit context.target
+      Assumptions := (FinalRegisterCheck.circuit context.target).Assumptions
+      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component Fp).rowOperations.lookups.map (·.table) = []
+  simp only [Component.rowOperations, FinalRegisterCheck.circuit, Guarded.circuit]
+  rw [Guarded.main_lookups]
+  rfl
 
 /-- No legacy lookup at physical component 91. -/
 private theorem lookup_slot_91 (context : Context) :
     (componentAt context 91).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change ({
+      circuit := FinalRamCheck.circuit context.target
+      Assumptions := (FinalRamCheck.circuit context.target).Assumptions
+      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component Fp).rowOperations.lookups.map (·.table) = []
+  simp only [Component.rowOperations, FinalRamCheck.circuit, Guarded.circuit]
+  rw [Guarded.main_lookups]
+  rfl
 
 /-- The fixed target provider has no legacy lookup. -/
 private theorem lookup_slot_92 (context : Context) :

@@ -93,10 +93,10 @@ private def memory (record : Channels.MemoryMsg Fp) : Row :=
     record.addr2, record.value, 1⟩ : MemoryProviderChip.Inputs Fp)).toList)
 
 private def registerCheck (record : Channels.MemoryMsg Fp) (selected : Fp) : Row :=
-  (3, (toElements (⟨record, selected⟩ : FinalRegisterCheck.Inputs Fp)).toList)
+  (3, (toElements (M := FinalRegisterCheck.RowInput) ((⟨record, selected⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList)
 
 private def ramCheck (record : Channels.MemoryMsg Fp) (selected : Fp) : Row :=
-  (4, (toElements (⟨record, selected⟩ : FinalRamCheck.Inputs Fp)).toList)
+  (4, (toElements (M := FinalRamCheck.RowInput) ((⟨record, selected⟩, 1) : FinalRamCheck.RowInput Fp)).toList)
 
 private def terminal (previous : ℕ) : Row :=
   (2, (toElements (OrderedBoundaryEnd.populate (word previous)

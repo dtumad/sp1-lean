@@ -269,7 +269,8 @@ private theorem boundary_requirements (image : ProgramImage) (component : Compon
       InitialMemoryEnsemble.providerView, InitialMemoryEnsemble.terminalView,
       FinalMemoryEnsemble.viewFor, FinalMemoryEnsemble.registerView, FinalMemoryEnsemble.ramView,
       OrderedMemoryEnsemble.providerView, OrderedMemoryEnsemble.terminalView,
-      OrderedMemoryProvider.circuit, OrderedBoundaryEnd.circuit,
+      OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit,
+      OrderedBoundaryEnd.circuit,
       InitialRegisterProvider.circuit, InitialRamProvider.circuit,
       FinalRegisterProvider.circuit, FinalRamProvider.circuit]
 

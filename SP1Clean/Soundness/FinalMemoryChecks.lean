@@ -31,7 +31,7 @@ def membershipChannels (target : MemorySnapshot) : List (RawChannel (ZMod p)) :=
 
 /-- Value/selection subcircuits and both fixed membership providers, in their registered physical order. -/
 def checkTables (target : MemorySnapshot) : List (Component (ZMod p)) :=
-  [{ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions },
+  [{ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
    (FinalRegisterValue.membership target).component
       (FinalRegisterValue.membership_height_lt_uint64 target), (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").component
       (InitialMemoryLookup.membership_height_lt_uint64 target.memory "sp1.native.target_memory")]
@@ -76,7 +76,7 @@ theorem tables_eq (source target : MemorySnapshot) (auxiliary : List (Component 
       [{ circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions },
        { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions },
        (FinalMemoryEnsemble.viewFor .terminal).component,
-       { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions },
+       { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
        (FinalRegisterValue.membership target).component
       (FinalRegisterValue.membership_height_lt_uint64 target), (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").component
       (InitialMemoryLookup.membership_height_lt_uint64 target.memory "sp1.native.target_memory")] ++ auxiliary := rfl
@@ -94,25 +94,22 @@ theorem component_constraints_setData (component : Component (ZMod p))
     {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
     (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
     component.operations.ConstraintsHold (Environment.fromArray row data') := by
+  apply component.constraintsHold_setData ?_ checked
   rw [tables_eq] at member
   simp only [List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals
-    apply Operations.constraintsHold_congr (env := Environment.fromArray row data)
-      (env' := Environment.fromArray row data') rfl ?_ checked
-    intro lookup used
-    try rw [FinalMemoryReceipt.lookups] at used
-    simp [Component.lookups_eq, Component.rowOperations, circuit_norm,
-      OrderedFinalProvider.registerCircuit, OrderedFinalProvider.ramCircuit,
-      OrderedMemoryProvider.circuit, FinalRegisterProvider.circuit, FinalRamProvider.circuit,
-      FinalMemoryEnsemble.viewFor, OrderedMemoryEnsemble.terminalView, OrderedBoundaryEnd.circuit,
-      FinalRegisterCheck.circuit, FinalRegisterCheck.main, FinalRegisterValue.circuit, FinalRegisterValue.main,
-      FinalRamCheck.circuit, FinalRamCheck.main, FinalRamValue.circuit, FinalRamValue.main,
-      FinalMemoryChange.circuit, FinalMemoryChange.main, assertBool,
-      InitialMemoryRead.circuitNamed, InitialMemoryRead.main,
-      InitialMemoryLookup.circuitNamed, InitialMemoryLookup.main_lookups,
-      AddOperation.circuit, AddOperation.main, Gadgets.Equality.main,
-      StaticTable.component, StaticTable.provider] at used
+  · rw [FinalMemoryReceipt.lookups]
+    exact FinalMemoryEnsemble.view_lookups .registers
+  · rw [FinalMemoryReceipt.lookups]
+    exact FinalMemoryEnsemble.view_lookups .ram
+  · exact FinalMemoryEnsemble.view_lookups .terminal
+  · simp only [Component.lookups_eq, Component.rowOperations, FinalRegisterCheck.circuit, Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  · simp only [Component.lookups_eq, Component.rowOperations, FinalRamCheck.circuit, Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  all_goals simp [StaticTable.component, StaticTable.provider, Component.lookups_eq,
+    Component.rowOperations, circuit_norm]
+
 /-- Receipt-bearing register finalizer at its preserved position. -/
 def registerFinalSlot : TableSlot (ensemble source target auxiliary channels names).tables
     { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions } where
@@ -133,13 +130,13 @@ def terminalSlot : TableSlot (ensemble source target auxiliary channels names).t
 
 /-- The target-register consumer is selected from the original physical inventory. -/
 def registerSlot : TableSlot (ensemble source target auxiliary channels names).tables
-    { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions } where
+    { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } where
   index := ⟨3, by rw [tables_eq]; simp⟩
   component_eq := rfl
 
 /-- The target-RAM consumer is selected from the original physical inventory. -/
 def ramSlot : TableSlot (ensemble source target auxiliary channels names).tables
-    { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions } where
+    { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } where
   index := ⟨4, by rw [tables_eq]; simp⟩
   component_eq := rfl
 
@@ -270,7 +267,7 @@ private theorem byte_requirements (interface : Interface target auxiliary)
     [{ circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions },
      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions },
      (FinalMemoryEnsemble.viewFor .terminal).component,
-     { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions },
+     { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
      (FinalRegisterValue.membership target).component
       (FinalRegisterValue.membership_height_lt_uint64 target), (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").component
       (InitialMemoryLookup.membership_height_lt_uint64 target.memory "sp1.native.target_memory")]
@@ -325,19 +322,73 @@ theorem byte_guarantees (witness : EnsembleWitness (ensemble source target auxil
     FinalMemoryEnsemble.ensemble,
     OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble]
 
-/-- Decode only the inputs of the actual registered register-check rows. -/
-def registerInputs (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
-    List (FinalRegisterCheck.Inputs (ZMod p)) :=
+/-- Decode every physical register-check input, including inactive padding rows. -/
+def registerPhysicalInputs (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+    List (FinalRegisterCheck.RowInput (ZMod p)) :=
   (registerSlot.table witness).table.map fun row =>
-    ({ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions } : Component (ZMod p)).rowInput
+    ({
+      circuit := FinalRegisterCheck.circuit target
+      Assumptions := (FinalRegisterCheck.circuit target).Assumptions
+      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod p)).rowInput
       (Environment.fromArray row witness.data)
 
-/-- Decode only the inputs of the actual registered RAM-check rows. -/
+/-- Semantic register inputs select active rows without changing the physical table or its ledger. -/
+def registerInputs (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+    List (FinalRegisterCheck.Inputs (ZMod p)) :=
+  ((registerPhysicalInputs witness).filter fun input => decide (input.2 = 1)).map Prod.fst
+
+/-- Raw assertions constrain every physical register-check activity, before channel authentication. -/
+theorem registerPhysicalInputs_binary (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+    (checked : witness.Constraints) :
+    ∀ input ∈ registerPhysicalInputs witness, input.2 = 0 ∨ input.2 = 1 := by
+  intro input member
+  obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
+  have valid := (registerSlot.table_constraints witness checked) row present
+  rw [registerSlot.table_component witness, Component.constraintsHold_iff] at valid
+  simp only [Table.environment, witness.same_data (registerSlot.table witness) (registerSlot.table_mem witness)] at valid
+  have binary := Guarded.activity_of_constraints (FinalRegisterCheck.activeCircuit target)
+    (FinalRegisterCheck.guardSupported target) (varFromOffset FinalRegisterCheck.RowInput 0)
+    (size FinalRegisterCheck.RowInput) (Environment.fromArray row witness.data) valid
+  simpa only [Component.rowInput, Guarded.eval_activity, eval_varFromOffset_valueFromOffset, IsBool] using binary
+
+/-- Decode every physical ram-check input, including inactive padding rows. -/
+def ramPhysicalInputs (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+    List (FinalRamCheck.RowInput (ZMod p)) :=
+  (ramSlot.table witness).table.map fun row =>
+    ({
+      circuit := FinalRamCheck.circuit target
+      Assumptions := (FinalRamCheck.circuit target).Assumptions
+      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod p)).rowInput
+      (Environment.fromArray row witness.data)
+
+/-- Semantic ram inputs select active rows without changing the physical table or its ledger. -/
 def ramInputs (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
     List (FinalRamCheck.Inputs (ZMod p)) :=
-  (ramSlot.table witness).table.map fun row =>
-    ({ circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray row witness.data)
+  ((ramPhysicalInputs witness).filter fun input => decide (input.2 = 1)).map Prod.fst
+
+/-- Raw assertions constrain every physical ram-check activity, before channel authentication. -/
+theorem ramPhysicalInputs_binary (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+    (checked : witness.Constraints) :
+    ∀ input ∈ ramPhysicalInputs witness, input.2 = 0 ∨ input.2 = 1 := by
+  intro input member
+  obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
+  have valid := (ramSlot.table_constraints witness checked) row present
+  rw [ramSlot.table_component witness, Component.constraintsHold_iff] at valid
+  simp only [Table.environment, witness.same_data (ramSlot.table witness) (ramSlot.table_mem witness)] at valid
+  have binary := Guarded.activity_of_constraints (FinalRamCheck.activeCircuit target)
+    (FinalRamCheck.guardSupported target) (varFromOffset FinalRamCheck.RowInput 0)
+    (size FinalRamCheck.RowInput) (Environment.fromArray row witness.data) valid
+  simpa only [Component.rowInput, Guarded.eval_activity, eval_varFromOffset_valueFromOffset, IsBool] using binary
+
+private theorem register_final_requirements :
+    (FinalMemoryReceipt.circuit (p := p) false OrderedFinalProvider.registerCircuit).channelsWithRequirements =
+      [memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+        (FinalMemoryValue.channel false).toRaw] := rfl
+
+private theorem ram_final_requirements :
+    (FinalMemoryReceipt.circuit (p := p) true OrderedFinalProvider.ramCircuit).channelsWithRequirements =
+      [memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
+        (FinalMemoryValue.channel true).toRaw] := rfl
 
 /-- Close target membership from the installed fixed rows and this actual channel balance. -/
 theorem membership_guarantees (witness : EnsembleWitness (ensemble source target auxiliary channels names))
@@ -375,7 +426,7 @@ theorem membership_guarantees (witness : EnsembleWitness (ensemble source target
       [{ circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions },
        { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions },
        (FinalMemoryEnsemble.viewFor .terminal).component,
-       { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions }]
+       { circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }]
     have location : table.component ∈ consumers ∨
         table.component ∈ [(FinalRegisterValue.membership target).component
       (FinalRegisterValue.membership_height_lt_uint64 target), (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").component
@@ -394,11 +445,8 @@ theorem membership_guarantees (witness : EnsembleWitness (ensemble source target
         simp only [consumers, List.mem_cons, List.not_mem_nil, or_false] at consumer
         rcases consumer with same | same | same | same | same
         all_goals rw [same]
-        all_goals simp [FinalMemoryReceipt.circuit, OrderedFinalProvider.registerCircuit,
-          OrderedFinalProvider.ramCircuit, FinalMemoryEnsemble.viewFor,
-          OrderedMemoryEnsemble.terminalView, OrderedMemoryProvider.circuit,
-          OrderedBoundaryEnd.circuit, FinalRegisterCheck.circuit, FinalRamCheck.circuit,
-          FinalRegisterProvider.circuit, FinalRamProvider.circuit,
+        all_goals simp [register_final_requirements, ram_final_requirements, FinalMemoryEnsemble.viewFor, OrderedMemoryEnsemble.terminalView,
+          OrderedBoundaryEnd.circuit, FinalRegisterCheck.circuit, Guarded.circuit, FinalRegisterCheck.activeCircuit, FinalRamCheck.circuit, Guarded.circuit, FinalRamCheck.activeCircuit,
           StaticTable.channel, FinalRegisterValue.membership, InitialMemoryLookup.membership,
           FinalMemoryValue.channel, FinalMemoryChange.channel, OrderedBoundary.channel,
           OrderedFinalProvider.channelName, memoryChannel, circuit_norm]
@@ -421,7 +469,7 @@ theorem membership_guarantees (witness : EnsembleWitness (ensemble source target
         (List.mem_append_right _ used)
 
 private theorem check_spec (component : Component (ZMod p)) (member : component ∈
-      [{ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions }])
+      [{ circuit := FinalRegisterCheck.circuit target, Assumptions := (FinalRegisterCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }, { circuit := FinalRamCheck.circuit target, Assumptions := (FinalRamCheck.circuit target).Assumptions, circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }])
     (env : Environment (ZMod p)) (checked : component.operations.ConstraintsHold env)
     (bytes : component.operations.ChannelGuarantees byteChannel.toRaw env)
     (membership : ∀ channel ∈ membershipChannels target,
@@ -429,15 +477,15 @@ private theorem check_spec (component : Component (ZMod p)) (member : component 
     component.Spec env := by
   have assumptions : component.CircuitAssumptions env := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl <;> trivial
+    rcases member with rfl | rfl <;> intro _ <;> trivial
   have used : component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (FinalMemoryValue.channel false).toRaw,
         (FinalMemoryValue.channel true).toRaw, FinalMemoryChange.channel.toRaw,
         (FinalRegisterValue.membership target).channel.toRaw, (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw] := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
-    · simp only [FinalRegisterCheck.circuit, FinalRegisterValue.circuit, circuit_norm]
-    · simp only [FinalRamCheck.circuit, FinalRamValue.circuit, circuit_norm]
+    · simp only [FinalRegisterCheck.circuit, Guarded.circuit, FinalRegisterCheck.activeCircuit, FinalRegisterValue.circuit, circuit_norm]
+    · simp only [FinalRamCheck.circuit, Guarded.circuit, FinalRamCheck.activeCircuit, FinalRamValue.circuit, circuit_norm]
       simp only [List.subset_def, List.mem_append, List.mem_cons, List.not_mem_nil, or_false,
         List.mem_flatten, List.mem_ofFn]
       aesop
@@ -465,7 +513,10 @@ theorem registerInputs_spec_of_channels (witness : EnsembleWitness (ensemble sou
       table.ChannelGuarantees channel) :
     ∀ input ∈ registerInputs witness, FinalRegisterCheck.Spec target input := by
   intro input member
-  obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
+  obtain ⟨input, selected, rfl⟩ := List.mem_map.mp member
+  have physical := (List.mem_filter.mp selected).1
+  have active := of_decide_eq_true (List.mem_filter.mp selected).2
+  obtain ⟨row, present, rfl⟩ := List.mem_map.mp physical
   have constraints := (registerSlot.table_constraints witness checked) row present
   have bytes := (registerSlot.table_channelGuarantees witness byteChannel.toRaw
     byte) row present
@@ -473,7 +524,9 @@ theorem registerInputs_spec_of_channels (witness : EnsembleWitness (ensemble sou
     (membership channel known)) row present
   simp only [registerSlot.table_component witness] at members
   rw [registerSlot.table_component witness] at constraints bytes
-  exact check_spec (target := target) _ (by simp) _ constraints bytes members
+  have valid := check_spec (target := target) _ (by simp) _ constraints bytes members
+  simp only [Table.environment, witness.same_data (registerSlot.table witness) (registerSlot.table_mem witness)] at valid
+  exact valid.2 active
 
 /-- Authenticate target RAM reads with inherited Byte guarantees, retaining their physical rows. -/
 theorem ramInputs_spec_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names))
@@ -483,7 +536,10 @@ theorem ramInputs_spec_of_channels (witness : EnsembleWitness (ensemble source t
       table.ChannelGuarantees channel) :
     ∀ input ∈ ramInputs witness, FinalRamCheck.Spec target input := by
   intro input member
-  obtain ⟨row, present, rfl⟩ := List.mem_map.mp member
+  obtain ⟨input, selected, rfl⟩ := List.mem_map.mp member
+  have physical := (List.mem_filter.mp selected).1
+  have active := of_decide_eq_true (List.mem_filter.mp selected).2
+  obtain ⟨row, present, rfl⟩ := List.mem_map.mp physical
   have constraints := (ramSlot.table_constraints witness checked) row present
   have bytes := (ramSlot.table_channelGuarantees witness byteChannel.toRaw
     byte) row present
@@ -491,7 +547,9 @@ theorem ramInputs_spec_of_channels (witness : EnsembleWitness (ensemble source t
     (membership channel known)) row present
   simp only [ramSlot.table_component witness] at members
   rw [ramSlot.table_component witness] at constraints bytes
-  exact check_spec (target := target) _ (by simp) _ constraints bytes members
+  have valid := check_spec (target := target) _ (by simp) _ constraints bytes members
+  simp only [Table.environment, witness.same_data (ramSlot.table witness) (ramSlot.table_mem witness)] at valid
+  exact valid.2 active
 
 /-- Raw constraints and the complete Byte closure prove all registered target-check contracts. -/
 theorem registerInputs_spec (witness : EnsembleWitness (ensemble source target auxiliary channels names))

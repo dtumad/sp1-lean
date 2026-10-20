@@ -101,7 +101,7 @@ def finalSeeds : List Seed :=
 /-- Every published final receipt is checked against the fixed complete target snapshot. -/
 def validatorSeeds : List Seed :=
   (orderedMemory true).map fun record =>
-    Seed.ofCells 90 (toElements (⟨record, 0⟩ : FinalRegisterCheck.Inputs Fp)).toList
+    Seed.ofCells 90 (toElements (M := FinalRegisterCheck.RowInput) ((⟨record, 0⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList
 /-- Terminate the actual finite ordered register inventory. -/
 def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0

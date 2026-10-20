@@ -95,7 +95,7 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   inactive cases cover empty, unit, multi-hot, non-Boolean and cancelling weights, with public
   and cached-result mutations. The previous empty-bitmap drift is a passing regression; these
   finite comparisons do not establish arbitrary-row public equivalence. Host-handler effect coverage is
-  described below; complete active-host assembly generation remains open.
+  described below; general active-host assembly generation remains open.
 
 - HALT, constrained-replay ENTER, sixteen commitment handlers and two bank terminals compare
   their generated rows and complete ledgers with Lean references. Released SP1 execution and
@@ -110,7 +110,7 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   constructor references. Released execution supplies repeated length observations, queue pops,
   return values and padded memory writes across byte, word and limb boundaries. Tests match the
   resulting node, final-word and cursor receipts and reject malformed calls/clocks/spans. These
-  handler checks leave full physical Memory coverage and complete active-host assembly open.
+  handler checks alone do not establish physical Memory coverage or whole-assembly acceptance.
 
 - The installed fixed Program provider retains sixteen verifier-owned instruction fields and one count.
   Tests compare SP1's preprocessing, count generator and AIR, including unused instructions,
@@ -140,9 +140,9 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
   are native source-queue tests; complete SP1 host execution remains outside their scope.
 
-The installed 94-component assembly is lookup-free. Its active-branch, empty and stopped fixtures export
-all components, read consumer inputs through Clean's private hint tables, and
-generate providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
+The installed 94-component assembly is lookup-free. Its active-branch, empty, stopped and sixteen-byte
+HINT_READ fixtures export all components, read consumer inputs through Clean's private hint tables,
+and generate providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
 retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
 endpoints and committed branch rows. Empty segments retain the complete fixed providers and all
 ordered, bank and Exit terminals; backend tests reject removing each terminal even when the new
@@ -151,8 +151,12 @@ codes, nonzero commitment banks, and complete verifier occurrences even when gen
 Fresh proof attempts reject altered public endpoints, resumption with an otherwise valid branch,
 changed stopped codes and fabricated HALT receipts. A changed digest carrier remains accepted
 in the stopped case: host-bank endpoints are fixed instance parameters, and this public field
-is unused. These are native boundary tests, without digest-to-bank binding; general execution
-and active host-call generation remain open.
+is unused. The HINT_READ fixture closes physical Memory, hint and cursor ledgers and compares
+final register/RAM values with released execution, including the mandatory final zero word. Its
+three active source/final register and RAM rows and target checks pad to four; Rust tests
+accept arbitrary disabled cells and reject malformed activity, erased checks and activated padding.
+These finite cases do not establish digest-to-bank binding or general execution. Arbitrary hint
+lengths still need word-transfer padding; broader active-host coverage remains open.
 
 The experimental Clean pin adds message
 predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;

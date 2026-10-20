@@ -16,6 +16,9 @@ structure Inputs (Payload : TypeMap) (F : Type) where
   link : OrderedBoundary.Inputs F
 deriving ProvableStruct
 
+/-- Physical ordered rows append their Boolean activity after the payload and control columns. -/
+abbrev RowInput (Payload : TypeMap) := ProvablePair (Inputs Payload) field
+
 variable {p : ℕ} [Fact p.Prime]
 
 def Spec (recordSpec : MemoryMsg (ZMod p) → Prop) (link : OrderedBoundary.Inputs (ZMod p))

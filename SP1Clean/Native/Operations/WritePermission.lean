@@ -197,15 +197,11 @@ theorem guard_supported (image : ProgramImage) : Circuit.Guarded.Supported (acti
     simp [activeCircuit, activeMain, circuit_norm, AddressOrder.circuit, AddressOrder.main,
       Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, Gadgets.ToBits.main,
       Gadgets.IsZeroField.circuit, Gadgets.Equality.main, Operations.lookups]
-  neutral := by
-    intro input offset interaction member
-    rw [GeneralFormalCircuit.toSubcircuit_interactions] at member
-    change interaction ∈ ((activeMain image input).operations offset).interactions at member
-    rw [activeMain_interactions] at member
+  channelsNeutral := by
+    intro selected member
+    change selected ∈ [image.writePermissionTable.channel.toRaw, (channel (p := p)).toRaw] at member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl
-    · exact inferInstanceAs image.writePermissionTable.channel.toRaw.ZeroNeutral
-    · exact inferInstanceAs (channel (p := p)).toRaw.ZeroNeutral
+    rcases member with rfl | rfl <;> infer_instance
   declared := by
     intro input offset interaction member carries
     rw [GeneralFormalCircuit.toSubcircuit_interactions] at member

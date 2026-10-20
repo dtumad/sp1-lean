@@ -50,17 +50,17 @@ remaining interactions. The typed `pushedIfValue (-1)` is the finalizer's negati
 theorem memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     typedEnsembleInteractionsWith witness memoryChannel =
-      ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map
-        (TypedInteraction.pushedIfValue memoryChannel 1) ++
-      (FinalMemoryEnsemble.records (finalWitness witness)).map
-        (TypedInteraction.pushedIfValue memoryChannel (-1)) ++
+      ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords (sourceWitness witness)).map
+        (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
+      (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map
+        (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++
       memoryInterior witness := by
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedEnsembleInteractionsWith_raw, List.map_append, List.map_append, memoryInterior_raw]
   simp only [List.map_map]
   change witness.interactionsWith memoryChannel.toRaw =
-    ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness)).map memoryChannel.pushedValue ++
-    (FinalMemoryEnsemble.records (finalWitness witness)).map (memoryChannel.emittedValue (-1)) ++ _
+    ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).physicalRecords (sourceWitness witness)).map (fun row => memoryChannel.pushedIfValue row.1 row.2) ++
+    (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map (fun row => memoryChannel.emittedValue (-row.1) row.2) ++ _
   rw [← source_memory_interactions witness, ← final_memory_interactions witness]
   change (ensemble image source).verifierOperations.interactionValuesWith memoryChannel.toRaw
     (Environment.fromInput witness.publicInput witness.data) ++
@@ -118,7 +118,9 @@ theorem memory_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
     ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
   rw [memory_interactions]
-  exact NativeCore.memoryBoundary_signedBinary _ _ _ (memoryInterior_signedBinary witness constraints)
+  exact NativeCore.memoryBoundary_signedBinary _ _ _
+    (source_physicalRecords_binary witness constraints) (final_physicalRecords_binary witness constraints)
+    (memoryInterior_signedBinary witness constraints)
 
 /-- Initial records and all interior pushes are a permutation of final records and all interior
 pulls, as complete typed messages. Values, locations, and timestamps are preserved together. -/
@@ -127,7 +129,12 @@ theorem memory_records_perm {image : ProgramImage} {source : ExecutionSnapshot}
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records (sourceWitness witness) ++ producedMessages (memoryInterior witness)).Perm
       (FinalMemoryEnsemble.records (finalWitness witness) ++ consumedMessages (memoryInterior witness)) := by
-  apply NativeCore.memoryBoundary_records_perm _ _ _ (memoryInterior_signedBinary witness constraints)
+  unfold FinalMemoryEnsemble.records
+  rw [(SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records_eq_active_physical (sourceWitness witness),
+    FinalMemoryEnsemble.inventory.records_eq_active_physical (finalWitness witness)]
+  apply NativeCore.memoryBoundary_records_perm _ _ _
+    (source_physicalRecords_binary witness constraints) (final_physicalRecords_binary witness constraints)
+    (memoryInterior_signedBinary witness constraints)
   rw [← memory_interactions, typedEnsembleInteractionsWith_raw]
   exact balanced _ (by simp [ensemble, baseEnsemble, PublicVerifier.install, sp1Ensemble_channels])
 

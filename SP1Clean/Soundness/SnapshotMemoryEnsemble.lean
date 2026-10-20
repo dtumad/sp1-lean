@@ -77,18 +77,24 @@ def inventory (snapshot : MemorySnapshot) :
   viewFor := viewFor snapshot
   recordFor := recordFor snapshot
   strict := by
-    intro id env valid
+    intro id env valid active
     cases id
-    · exact valid.2.1.2.2
-    · exact valid.2.1.2.2
+    · dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := SnapshotRegisterProvider.Inputs) active)).2.1.2.2
+    · dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := Word) active)).2.1.2.2
     · exact valid.2
   recordFor_spec := by
-    intro id env valid record found
+    intro id env valid active record found
     cases id
     · obtain rfl := Option.some.inj found
-      exact ⟨valid.1, valid.2.2⟩
+      dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      have child := valid.2 (OrderedMemoryEnsemble.active_input (Payload := SnapshotRegisterProvider.Inputs) active)
+      exact ⟨child.1, child.2.2⟩
     · obtain rfl := Option.some.inj found
-      exact ⟨valid.1, valid.2.2⟩
+      dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      have child := valid.2 (OrderedMemoryEnsemble.active_input (Payload := Word) active)
+      exact ⟨child.1, child.2.2⟩
     · contradiction
 
 theorem views_eq (snapshot : MemorySnapshot) :
@@ -100,7 +106,7 @@ theorem inventory_unique_names (snapshot : MemorySnapshot) :
   rw [views_eq]
   simp [registerView, ramView, terminalView,
     OrderedMemoryEnsemble.providerView, OrderedMemoryEnsemble.terminalView,
-    OrderedMemoryProvider.circuit, OrderedBoundaryEnd.circuit,
+    OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit, OrderedBoundaryEnd.circuit,
     SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit, channelName]
   decide
 
@@ -133,31 +139,35 @@ theorem view_channels_subset (snapshot : MemorySnapshot) (id : TableId) :
       (OrderedBoundary.channel channelName).toRaw] ⊆ _
     simp
 
-/-- Each decoded record is precisely the unit-multiplicity push from its physical provider row. -/
+/-- Each physical record retains its actual activity in the Memory push. -/
 theorem recordFor_interactions (snapshot : MemorySnapshot) (id : TableId) (env : Environment (ZMod p)) :
     (viewFor snapshot id).component.operations.interactionValuesWith memoryChannel.toRaw env =
-      ((recordFor snapshot id env).toList).map memoryChannel.pushedValue := by
+      ((recordFor snapshot id env).toList).map
+        (memoryChannel.pushedIfValue (env (viewFor snapshot id).activity)) := by
   cases id
   · change (registerView snapshot).component.operations.interactionValuesWith memoryChannel.toRaw env = _
-    simp only [recordFor, registerView, OrderedMemoryEnsemble.providerView,
+    simp only [viewFor, recordFor, registerView, OrderedMemoryEnsemble.providerView,
       Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-      OrderedMemoryProvider.circuit]
+      OrderedMemoryProvider.circuit, Guarded.circuit]
+    rw [Guarded.main_interactionsWith]
+    simp only [OrderedMemoryProvider.activeCircuit]
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [SnapshotRegisterProvider.circuit]
     rw [SnapshotRegisterProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Option.toList_some,
-      FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated,
-      SnapshotRegisterProvider.elaborated]
+    simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_pushed,
+      Channel.pushedValue, mul_one, Option.toList_some]
     rfl
   · change (ramView snapshot).component.operations.interactionValuesWith memoryChannel.toRaw env = _
-    simp only [recordFor, ramView,
+    simp only [viewFor, recordFor, ramView,
       OrderedMemoryEnsemble.providerView, Operations.interactionValuesWith,
-      Component.interactionsWith_eq, Component.rowOperations, OrderedMemoryProvider.circuit]
+      Component.interactionsWith_eq, Component.rowOperations, OrderedMemoryProvider.circuit, Guarded.circuit]
+    rw [Guarded.main_interactionsWith]
+    simp only [OrderedMemoryProvider.activeCircuit]
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [SnapshotRamProvider.circuit]
     rw [SnapshotRamProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pushed, Option.toList_some,
-      FormalCircuitBase.output_def, OrderedMemoryProvider.elaborated]
+    simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_pushed,
+      Channel.pushedValue, mul_one, Option.toList_some]
     rfl
   · exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
@@ -172,7 +182,13 @@ theorem view_spec (snapshot : MemorySnapshot) (id : TableId) (env : Environment 
     (ram : (viewFor snapshot id).component.operations.ChannelGuarantees
       (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw env) :
     (viewFor snapshot id).component.Spec env := by
-  have assumptions : (viewFor snapshot id).component.CircuitAssumptions env := by cases id <;> trivial
+  have assumptions : (viewFor snapshot id).component.CircuitAssumptions env := by
+    cases id
+    · intro _
+      trivial
+    · intro _
+      trivial
+    · trivial
   have channels : (viewFor (p := p) snapshot id).component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw,
         snapshot.registerTable.channel.toRaw,

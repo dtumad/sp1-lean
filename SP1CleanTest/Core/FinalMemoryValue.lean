@@ -147,11 +147,10 @@ private def source : MemorySnapshot :=
   { target with registers := target.registers.set 1 17, memory := target.memory.write 65536 10 }
 
 private def registerCheck (value : Channels.MemoryMsg Fp) (selected : Fp) :=
-  evaluate target (FinalRegisterCheck.circuit target) ⟨value, selected⟩
+  evaluate target (FinalRegisterCheck.circuit target) (⟨value, selected⟩, 1)
 
 private def ramCheck (value : Channels.MemoryMsg Fp) (selected : Fp) :=
-  evaluate target (FinalRamCheck.circuit target)
-    ⟨value, selected⟩
+  evaluate target (FinalRamCheck.circuit target) (⟨value, selected⟩, 1)
 
 private def changes (before after : MemorySnapshot) :=
   evaluate after (FinalMemoryChangeBoundary.closed (p := SP1Prime) before after).circuit ()
@@ -181,6 +180,23 @@ theorem selectorDiscipline :
       (registerCheck register 0).2.length = 2 ∧
       (ramCheck ram 0).2.length = 2 := by native_decide
 
+/-- Padding retains zero receipt/change occurrences even with invalid payloads and selectors.
+It cannot consume a real receipt, and non-Boolean physical activity fails raw assertions. -/
+theorem activityDiscipline :
+    let paddedRegister := evaluate target (FinalRegisterCheck.circuit target)
+      (⟨{ register with addr1 := 9, value := word 124 }, 2⟩, 0)
+    let paddedRam := evaluate target (FinalRamCheck.circuit target)
+      (⟨{ ram with addr1 := 9, value := word 10 }, 2⟩, 0)
+    paddedRegister.1 = true ∧ paddedRam.1 = true ∧
+      paddedRegister.2.length = 2 ∧ paddedRam.2.length = 2 ∧
+      paddedRegister.2.all (fun entry => entry.2.2 == 0) = true ∧
+      paddedRam.2.all (fun entry => entry.2.2 == 0) = true ∧
+      balanced [registerReceipt, paddedRegister] = false ∧
+      balanced [ramReceipt, paddedRam] = false ∧
+      (evaluate target (FinalRegisterCheck.circuit target) (⟨register, 0⟩, 2)).1 = false ∧
+      (evaluate target (FinalRamCheck.circuit target) (⟨ram, 0⟩, 2)).1 = false := by
+  native_decide
+
 /-- A register at numeric address zero cannot supply a changed low-RAM key at address zero. -/
 theorem lowRamIsDistinct :
     let value := record 0 0 8
@@ -193,9 +209,9 @@ theorem lowRamIsDistinct :
 /-- Constructors retain complete target receipts and select exactly the computed change keys. -/
 theorem changeConstructors :
     ((FinalRegisterCheck.populate? source target register).map fun input =>
-      input.selected == 1 && (evaluate target (FinalRegisterCheck.circuit target) input).1).getD false = true ∧
+      input.1.selected == 1 && input.2 == 1 && (evaluate target (FinalRegisterCheck.circuit target) input).1).getD false = true ∧
     ((FinalRamCheck.populate? source target ram).map fun input =>
-      input.selected == 1 && (evaluate target (FinalRamCheck.circuit target) input).1).getD false = true := by
+      input.1.selected == 1 && input.2 == 1 && (evaluate target (FinalRamCheck.circuit target) input).1).getD false = true := by
   native_decide
 
 /-- info: exportable ✓ (0 witness cells) -/
