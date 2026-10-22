@@ -46,12 +46,7 @@ omit [Fact (2 ^ 24 < p)] in
 /-- The stable halt position of an assembled witness is its generated Halt table. -/
 theorem SupportedCoreTraceWitness.haltTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    haltTable trace.witness = trace.providerTableFor .halt := by
-  unfold haltTable SupportedCoreTraceWitness.witness
-  simp [SupportedCoreTraceWitness.tables, SupportedCoreTraceWitness.instructionTables,
-    SupportedCoreTraceWitness.providerTables, haltIndex, instructionTableCount,
-    stateSilentProviderTableCount, InstructionChipId.all, ProviderTableId.all,
-    ByteProviderId.all]
+    haltTable trace.witness = { trace.providerTableFor .halt with data := trace.data } := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- HALT decoding reads the input prefix independently of the evaluation data. -/
@@ -77,7 +72,7 @@ theorem SupportedCoreTraceWitness.haltTablePadding
       | nil => rfl
       | cons e _ => exact e.elim
     rw [trace.haltTable_witness]
-    simp only [SupportedCoreTraceWitness.providerTableFor, hocc]
+    simp only [SupportedCoreTraceWitness.providerTableFor, SupportedCoreTraceWitness.providerInputsFor, hocc]
     rfl
   refine ⟨by rw [htab]; rfl, ?_⟩
   intro row rowMem
@@ -299,15 +294,15 @@ theorem memoryLedger_eq (trace : SupportedCoreTraceWitness p) :
       ((decodedInstructionRows (p := p) trace.witness.tables).flatMap fun decoded =>
         (decoded.interactionsWith trace.witness.data (Channels.memoryChannel (p := p))).map
           fun i => Interaction.toAccess i.raw) ++
-      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness) trace.witness.data
+      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness)
             (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness) trace.witness.data
+        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-          (((typedTableInteractionsWith (memoryBumpTable trace.witness) trace.witness.data
+          (((typedTableInteractionsWith (memoryBumpTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-            (((typedTableInteractionsWith (haltTable trace.witness) trace.witness.data
+            (((typedTableInteractionsWith (haltTable trace.witness)
               (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-              ((typedTableInteractionsWith (syscallInstrsTable trace.witness) trace.witness.data
+              ((typedTableInteractionsWith (syscallInstrsTable trace.witness)
                 (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw))))) := by
   rw [memoryLedger_eq_channelLedger, ← typedEnsembleInteractionsWith_raw,
     typedEnsembleMemoryInteractions_eq]

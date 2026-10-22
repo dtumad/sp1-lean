@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Fail closed when the supported 25-chip release surface drifts.
 
-This is a source/inventory gate, not a semantic proof.  Kernel-checked coverage, faithfulness,
-soundness, and real-row satisfiability remain in Lean; this script makes sure every physical chip
-still has every one of those audit entry points and its independently generated SP1 dump.
-Fresh native artifacts have a separate generation gate.
+This is a source/inventory gate, not a semantic proof. Kernel-checked native soundness,
+Sail bridges, completeness and real-row satisfiability remain in Lean. This gate checks their
+entry points and built-in Rust export registrations. Released Rust inventories and execution
+comparisons are independent of the generated native metadata.
 """
 
 from __future__ import annotations
@@ -129,16 +129,18 @@ def instruction_export_errors(lean: str, rust: str) -> list[str]:
              for name in names]
     exported = re.findall(r'\("([^"]+_instruction\.rs)",', lean)
     registrations = re.findall(
-        r'generated_instruction!\(\s*\w+,\s*"([^"]+)",\s*(\w+),\s*(\w+)\s*\);',
+        r'generated_instruction!\(\s*(\w+),\s*"([^"]+)",\s*(\w+)\s*\);',
         rust,
     )
-    expected = [(file, name + "Instruction", name + "InstructionAirSpec")
+    expected = [("generated_" + file.removesuffix("_instruction.rs"), file, name + "Instruction")
                 for file, name in zip(files, names)]
     errors = []
     if exported != files:
         errors.append("built-in instruction exporter inventory/order differs")
     if registrations != expected:
         errors.append("Rust instruction comparison registrations differ")
+    if not re.search(r'use\s+\$module::Ensemble\s+as\s+\$program\s*;', rust):
+        errors.append("Rust instruction comparisons must use each generated ensemble")
     return errors
 
 
@@ -170,7 +172,6 @@ def main() -> None:
     except (OSError, ValueError, KeyError, TypeError) as error:
         fail(f"invalid release coverage: {error}")
     expected_ids = [chip_id for chip_id, _, _ in CHIPS]
-    expected_names = {name for _, name, _ in CHIPS}
 
     identity_source = (ROOT / "SP1Clean/Model/InstructionChipId.lean").read_text()
     enum_match = re.search(
@@ -183,28 +184,6 @@ def main() -> None:
         if actual_ids != expected_ids:
             fail(f"InstructionChipId order is {actual_ids}, expected {expected_ids}")
 
-    oracle_dir = ROOT / "SP1Clean/Extracted/ChipOracle"
-    actual_oracles = {path.stem for path in oracle_dir.glob("*.lean")}
-    if actual_oracles != expected_names:
-        fail(
-            "whole-chip oracle inventory differs: "
-            f"missing={sorted(expected_names - actual_oracles)}, "
-            f"extra={sorted(actual_oracles - expected_names)}"
-        )
-
-    dump_names = {path.name.removesuffix(".dump.json") for path in
-                  (ROOT / "export/sp1dump").glob("*.dump.json")}
-    if dump_names != expected_names:
-        fail(
-            "SP1 dump inventory differs: "
-            f"missing={sorted(expected_names - dump_names)}, extra={sorted(dump_names - expected_names)}"
-        )
-
-    exporter = (ROOT / "scripts/witgenExport.lean").read_text()
-    export_names = re.findall(r'^  entry "([A-Za-z0-9]+)" ', exporter, re.M)
-    if export_names != [name for _, name, _ in CHIPS]:
-        fail(f"witness exporter registry differs: {export_names}")
-
     for error in instruction_export_errors(
         (ROOT / "SP1CleanTest/Core/InstructionExport.lean").read_text(),
         (ROOT / "rust/sp1-comparison/tests/instruction_export.rs").read_text(),
@@ -214,8 +193,6 @@ def main() -> None:
     nonvacuity_source = (ROOT / "SP1CleanTest/Core/NonVacuityReal.lean").read_text()
     for _, name, anchor in CHIPS:
         chip = f"{name}Chip"
-        require(ROOT / f"SP1Clean/Extracted/ChipOracle/{name}.lean", "whole-chip oracle")
-        require(ROOT / f"SP1Clean/Faithful/{chip}.lean", "whole-chip faithfulness anchor")
         require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Formal.lean", "formal chip proof")
         require(ROOT / f"SP1Clean/Alignment/Chips/{chip}/Bridge.lean", "Sail bridge")
         require(ROOT / f"SP1Clean/Proofs/Chips/{chip}/Complete.lean", "trace compiler realization")
@@ -232,8 +209,8 @@ def main() -> None:
 
     print(
         "PASS: 25-chip release surface is complete "
-        "(identity/order, native definitions, formal/bridge/completeness proofs, whole-chip oracles, "
-        "faithfulness anchors, real-row models, dumps, witness exporter and built-in Rust registrations)"
+        "(identity/order, native definitions, formal/bridge/completeness proofs, "
+        "real-row models and built-in Rust registrations)"
     )
 
 

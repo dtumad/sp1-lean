@@ -32,11 +32,9 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native LoadByte-chip row (Rust field order). The reader and memory blocks reuse the project
-substrate (`Circuits.Types.AddressOperation` is still a standalone generated module — the other loads and
-stores compose the same gadget; `Circuits.Types.MemoryAccessCols` lives in the generated `MemoryAccess`
-struct carrier). `Faithful.LoadByteChip.loadByteChipReconfigure` is the sole bridge to Rust's
-separately generated whole-chip row. -/
+/-- Native LoadByte-chip row in Rust field order. Reader, address and memory columns
+reuse the native carriers in `Circuits.Types`; the instruction export suite compares complete
+constructor rows with released SP1. -/
 structure Columns (F : Type) where
   state : Circuits.Types.CPUState F
   adapter : Circuits.Types.ITypeReader F

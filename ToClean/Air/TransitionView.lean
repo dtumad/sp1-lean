@@ -6,7 +6,7 @@ public import ToClean.Air.UnitBalance
 /-! # Reading transitions from physical AIR tables
 
 Clean exposes each component's evaluated interaction list, but has no reusable adapter from a
-heterogeneous list of components emitting unit pairs to one list of transitions. `TransitionView`
+heterogeneous list of components emitting gated pairs to one list of transitions. `TransitionView`
 records the exact per-component equation. `readRows_interactions` lifts it to physical tables
 without assuming a separately assembled ledger, and `readRows_spec` transports their local
 semantic specifications. These are pure additions intended for `Clean/Air/FlatComponent.lean`.
@@ -19,35 +19,58 @@ namespace Air.Flat
 variable {F : Type} [FiniteField F]
 variable {Message : TypeMap} [ProvableType Message]
 
-/-- A view of a component's actual pull/push pair on one channel. -/
+/-- A view of a component's actual gated pull/push pair on one channel. -/
 structure TransitionView (channel : Channel F Message) where
   component : Component F
   edge : Environment F → Message F × Message F
+  /-- The physical row's multiplicity; unguarded components use one. -/
+  activity : Expression F := .const 1
+  /-- Row validity establishes Boolean activity, without a caller-supplied premise. -/
+  activity_binary : ∀ env, component.Spec env → env activity = 0 ∨ env activity = 1 := by
+    intros
+    exact Or.inr rfl
+  /-- The activity constraint can be checked before authenticating any channel guarantees. -/
+  activity_of_constraints : ∀ env, component.operations.ConstraintsHold env →
+      env activity = 0 ∨ env activity = 1 := by
+    intros
+    exact Or.inr rfl
   interactions : ∀ env, component.operations.interactionValuesWith channel.toRaw env =
-    [channel.pulledValue (edge env).1, channel.pushedValue (edge env).2]
+    [channel.pulledIfValue (env activity) (edge env).1,
+      channel.pushedIfValue (env activity) (edge env).2]
 
 namespace TransitionView
 
 variable {channel : Channel F Message}
 
 /-- Preserve a registry's finite component identity while reading physical environments. -/
-def readIndexedRows {Index : Type*} (indices : List Index) (tables : List (Table F)) (data : ProverData F) :
+def readIndexedRows {Index : Type*} (indices : List Index) (tables : List (Table F)) :
     List (Index × Environment F) :=
   (indices.zip tables).flatMap fun (index, table) =>
-    table.table.map fun row => (index, Environment.fromArray row data)
+    table.table.map fun row => (index, table.environment row)
 
 /-- Keep the component identity with each physical row; different row layouts stay separate. -/
-def readRows (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F) :
+def readRows (views : List (TransitionView channel)) (tables : List (Table F)) :
     List (TransitionView channel × Environment F) :=
   (views.zip tables).flatMap fun (view, table) =>
-    table.table.map fun row => (view, Environment.fromArray row data)
+    table.table.map fun row => (view, table.environment row)
+
+/-- Select semantic transitions without modifying the physical tables or their stored data. -/
+def readActiveRows (views : List (TransitionView channel)) (tables : List (Table F)) :
+    List (TransitionView channel × Environment F) :=
+  (readRows views tables).filter fun row => decide (row.2 row.1.activity = 1)
+
+/-- Retain the registry identity of each active semantic transition. -/
+def readIndexedActiveRows {Index : Type*} (indices : List Index)
+    (view : Index → TransitionView channel) (tables : List (Table F)) :
+    List (Index × Environment F) :=
+  (readIndexedRows indices tables).filter fun row => decide (row.2 (view row.1).activity = 1)
 
 /-- Reading physical environments preserves every interaction, on any selected channel. -/
 theorem readIndexedRows_interactions {Index : Type*} (indices : List Index)
-    (component : Index → Component F) (tables : List (Table F)) (data : ProverData F) (selected : RawChannel F)
+    (component : Index → Component F) (tables : List (Table F)) (selected : RawChannel F)
     (aligned : List.Forall₂ (fun index table => component index = table.component) indices tables) :
-    tables.flatMap (·.interactionsWith data selected) =
-      (readIndexedRows indices tables data).flatMap (fun (index, env) =>
+    tables.flatMap (·.interactionsWith selected) =
+      (readIndexedRows indices tables).flatMap (fun (index, env) =>
         (component index).operations.interactionValuesWith selected env) := by
   induction aligned with
   | nil => rfl
@@ -59,10 +82,27 @@ theorem readIndexedRows_interactions {Index : Type*} (indices : List Index)
     unfold Table.interactionsWith
     rw [same]
 
+/-- Every indexed physical environment satisfies the constraints of its aligned component. -/
+theorem readIndexedRows_constraints {Index : Type*} (indices : List Index)
+    (component : Index → Component F) (tables : List (Table F))
+    (aligned : List.Forall₂ (fun index table => component index = table.component) indices tables)
+    (valid : ∀ table ∈ tables, table.Constraints) :
+    ∀ row ∈ readIndexedRows indices tables, (component row.1).operations.ConstraintsHold row.2 := by
+  induction aligned with
+  | nil => simp [readIndexedRows]
+  | @cons index table indices tables same _ ih =>
+    intro row member
+    simp only [readIndexedRows, List.zip_cons_cons, List.flatMap_cons,
+      List.mem_append, List.mem_map] at member
+    rcases member with ⟨physical, physicalMem, rfl⟩ | tailMem
+    · rw [same]
+      exact valid table (List.mem_cons_self ..) physical physicalMem
+    · exact ih (fun other otherMem => valid other (List.mem_cons_of_mem _ otherMem)) row tailMem
+
 theorem readRows_eq_indexed {Index : Type*} (indices : List Index)
-    (view : Index → TransitionView channel) (tables : List (Table F)) (data : ProverData F) :
-    readRows (indices.map view) tables data =
-      (readIndexedRows indices tables data).map (fun (index, env) => (view index, env)) := by
+    (view : Index → TransitionView channel) (tables : List (Table F)) :
+    readRows (indices.map view) tables =
+      (readIndexedRows indices tables).map (fun (index, env) => (view index, env)) := by
   induction indices generalizing tables with
   | nil => simp [readRows, readIndexedRows]
   | cons index indices ih =>
@@ -73,8 +113,8 @@ theorem readRows_eq_indexed {Index : Type*} (indices : List Index)
         List.map_append, List.map_map, Function.comp_def] at ih ⊢
       rw [ih]
 
-theorem readRows_view_mem (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F)
-    (row : TransitionView channel × Environment F) (member : row ∈ readRows views tables data) :
+theorem readRows_view_mem (views : List (TransitionView channel)) (tables : List (Table F))
+    (row : TransitionView channel × Environment F) (member : row ∈ readRows views tables) :
     row.1 ∈ views := by
   obtain ⟨⟨view, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
   obtain ⟨physical, _, rfl⟩ := List.mem_map.mp mapped
@@ -89,11 +129,12 @@ theorem aligned_of_map_eq (views : List (TransitionView channel)) (tables : List
   simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using equal
 
 /-- The decoded transitions retain every physical row's actual interactions. -/
-theorem readRows_interactions (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F)
+theorem readRows_interactions (views : List (TransitionView channel)) (tables : List (Table F))
     (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables) :
-    tables.flatMap (·.interactionsWith data channel.toRaw) =
-      (readRows views tables data).flatMap (fun (view, env) =>
-        [channel.pulledValue (view.edge env).1, channel.pushedValue (view.edge env).2]) := by
+    tables.flatMap (·.interactionsWith channel.toRaw) =
+      (readRows views tables).flatMap (fun (view, env) =>
+        [channel.pulledIfValue (env view.activity) (view.edge env).1,
+          channel.pushedIfValue (env view.activity) (view.edge env).2]) := by
   induction aligned with
   | nil => rfl
   | @cons view table views tables same _ ih =>
@@ -107,10 +148,10 @@ theorem readRows_interactions (views : List (TransitionView channel)) (tables : 
     rw [← same, view.interactions]
 
 /-- A table specification applies to the very environment used to read its transitions. -/
-theorem readRows_spec (views : List (TransitionView channel)) (tables : List (Table F)) (data : ProverData F)
+theorem readRows_spec (views : List (TransitionView channel)) (tables : List (Table F))
     (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables)
-    (valid : ∀ table ∈ tables, table.Spec data) :
-    ∀ row ∈ readRows views tables data, row.1.component.Spec row.2 := by
+    (valid : ∀ table ∈ tables, table.Spec) :
+    ∀ row ∈ readRows views tables, row.1.component.Spec row.2 := by
   induction aligned with
   | nil => simp [readRows]
   | @cons view table views tables same _ ih =>
@@ -122,21 +163,68 @@ theorem readRows_spec (views : List (TransitionView channel)) (tables : List (Ta
     · exact ih (fun table member => valid table (List.mem_cons_of_mem _ member)) row member
 
 theorem readIndexedRows_spec {Index : Type*} (indices : List Index)
-    (view : Index → TransitionView channel) (tables : List (Table F)) (data : ProverData F)
+    (view : Index → TransitionView channel) (tables : List (Table F))
     (aligned : List.Forall₂ (fun view table => view.component = table.component) (indices.map view) tables)
-    (valid : ∀ table ∈ tables, table.Spec data) :
-    ∀ row ∈ readIndexedRows indices tables data, (view row.1).component.Spec row.2 := by
+    (valid : ∀ table ∈ tables, table.Spec) :
+    ∀ row ∈ readIndexedRows indices tables, (view row.1).component.Spec row.2 := by
   intro row member
-  have specs := readRows_spec (indices.map view) tables data aligned valid
+  have specs := readRows_spec (indices.map view) tables aligned valid
   rw [readRows_eq_indexed] at specs
   exact specs (view row.1, row.2) (List.mem_map.mpr ⟨row, member, rfl⟩)
 
 theorem readIndexedRows_keys_nodup {Index Key : Type*} (indices : List Index)
-    (view : Index → TransitionView channel) (tables : List (Table F)) (data : ProverData F) (key : Message F → Key)
+    (view : Index → TransitionView channel) (tables : List (Table F)) (key : Message F → Key)
     (registered : List (TransitionView channel)) (same : registered = indices.map view)
-    (unique : ((readRows registered tables data).map fun row => key (row.1.edge row.2).2).Nodup) :
-    ((readIndexedRows indices tables data).map fun row => key ((view row.1).edge row.2).2).Nodup := by
+    (unique : ((readRows registered tables).map fun row => key (row.1.edge row.2).2).Nodup) :
+    ((readIndexedRows indices tables).map fun row => key ((view row.1).edge row.2).2).Nodup := by
   rw [same, readRows_eq_indexed] at unique
+  simpa only [List.map_map, Function.comp_def] using unique
+
+
+/-- Active rows are a semantic subset of the same physical environments. -/
+theorem mem_readActiveRows {views : List (TransitionView channel)} {tables : List (Table F)}
+    {row : TransitionView channel × Environment F} :
+    row ∈ readActiveRows views tables ↔ row ∈ readRows views tables ∧ row.2 row.1.activity = 1 := by
+  simp [readActiveRows]
+
+/-- An indexed active row keeps its physical membership and exact unit activity. -/
+theorem mem_readIndexedActiveRows {Index : Type*} {indices : List Index}
+    {view : Index → TransitionView channel} {tables : List (Table F)}
+    {row : Index × Environment F} :
+    row ∈ readIndexedActiveRows indices view tables ↔
+      row ∈ readIndexedRows indices tables ∧ row.2 (view row.1).activity = 1 := by
+  simp [readIndexedActiveRows]
+
+/-- Every physical row inherits Boolean activity from its actual component specification. -/
+theorem readRows_activity_binary (views : List (TransitionView channel)) (tables : List (Table F))
+    (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables)
+    (valid : ∀ table ∈ tables, table.Spec) :
+    ∀ row ∈ readRows views tables, row.2 row.1.activity = 0 ∨ row.2 row.1.activity = 1 := by
+  intro row member
+  exact row.1.activity_binary row.2 (readRows_spec views tables aligned valid row member)
+
+theorem readActiveRows_eq_indexed {Index : Type*} (indices : List Index)
+    (view : Index → TransitionView channel) (tables : List (Table F)) :
+    readActiveRows (indices.map view) tables =
+      (readIndexedActiveRows indices view tables).map (fun (index, env) => (view index, env)) := by
+  simp only [readActiveRows, readRows_eq_indexed, readIndexedActiveRows, List.filter_map]
+  rfl
+
+/-- Selection preserves each active row's original component specification. -/
+theorem readIndexedActiveRows_spec {Index : Type*} (indices : List Index)
+    (view : Index → TransitionView channel) (tables : List (Table F))
+    (aligned : List.Forall₂ (fun view table => view.component = table.component) (indices.map view) tables)
+    (valid : ∀ table ∈ tables, table.Spec) :
+    ∀ row ∈ readIndexedActiveRows indices view tables, (view row.1).component.Spec row.2 := by
+  intro row member
+  exact readIndexedRows_spec indices view tables aligned valid row (List.mem_filter.mp member).1
+
+theorem readIndexedActiveRows_keys_nodup {Index Key : Type*} (indices : List Index)
+    (view : Index → TransitionView channel) (tables : List (Table F)) (key : Message F → Key)
+    (registered : List (TransitionView channel)) (same : registered = indices.map view)
+    (unique : ((readActiveRows registered tables).map fun row => key (row.1.edge row.2).2).Nodup) :
+    ((readIndexedActiveRows indices view tables).map fun row => key ((view row.1).edge row.2).2).Nodup := by
+  rw [same, readActiveRows_eq_indexed] at unique
   simpa only [List.map_map, Function.comp_def] using unique
 
 end TransitionView

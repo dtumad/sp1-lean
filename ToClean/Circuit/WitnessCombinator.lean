@@ -3,30 +3,16 @@ module
 public import Clean.Circuit.Basic
 public import Clean.Circuit.Explicit
 
-/-! # `witnessVectorIR` — the vector witness combinator used by every chip row
+/-! # Vector witness programs with a literal cell count
 
-Clean offers two vector-shaped witness entry points, and neither is quite what a chip row wants:
+`witnessVectorIR` accepts a full program, including shared `letU` steps, and emits a literal
+`m`-cell witness operation. Using `witnessIR (fields m)` leaves `size (fields m)` in downstream
+offset arithmetic, which structural simp proofs must unfold.
 
-* `Circuit.witnessVector m out` has exactly the right *shape* — it emits `.witness m …`, so the
-  cell count appears literally in the operation list — but its payload is a bare `VExpr`, with no
-  room for the shared `letU` steps a carry chain needs;
-* `witnessIR (fields m) ir` accepts a full `WitgenIR`, but emits `.witness (size (fields m)) …`.
-  `size (fields m)` is *definitionally* `m` yet not *syntactically* `m`, so it survives into the
-  offset arithmetic of every later operation. Structural proofs that compute a subcircuit's offset
-  by `simp only` (the chip faithfulness anchors, `Soundness/TypedMemorySelectors.lean`, the
-  `exposedChannels_eq` obligations) then stall on `offset + size (fields 2) + size (fields 1)`
-  instead of `offset + 3`.
-
-`witnessVectorIR` is the combination: a full `WitgenIR` payload in the literal-`m` shape. That makes
-the witgen cutover a payload swap for the structural layer — `.witness m (.native f)` becomes
-`.witness m (.ir …)`, and every offset computation downstream is unchanged.
-
-## Upstream
-
-Destined for `Clean/Circuit/Basic.lean`, beside `Circuit.witnessVector`, of which this is the
-`WitgenIR`-taking generalisation. It carries no witness semantics of its own — `witnessVector m out`
-is exactly `witnessVectorIR m (.ir [] out)` — so the merge is additive. Declared here in the
-namespace it would occupy upstream, so acceptance is a deletion plus dropping the import. -/
+This additive API belongs beside `Circuit.witnessVector` in Clean. It introduces no new witness
+semantics: the ordinary vector primitive is the case with no local statements. Remove this
+extension and repoint imports when upstream supplies the corresponding API.
+-/
 
 @[expose] public section
 

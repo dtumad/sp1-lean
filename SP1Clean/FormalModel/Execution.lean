@@ -1,4 +1,4 @@
-import SP1Clean.FormalModel.Contracts.CoreAIR
+import SP1Clean.FormalModel.Contracts.Commit
 import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.FormalModel.CoreShard
 import SP1Clean.FormalModel.Relations

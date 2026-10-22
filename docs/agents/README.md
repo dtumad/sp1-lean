@@ -11,7 +11,6 @@ recipes.
 - [Lean/Sail dependencies](lean-sail-notes.md): pairing and temporary compatibility choices.
 - [Clean extensions](clean-upstream.md): To-Upstream policy and canonical API gaps.
 - [Sail generation](sail-model-provenance.md): owned pipeline and platform configuration.
-- [Legacy Rust extraction](extraction.md): reproduction of migration evidence until retirement.
 
 Current progress belongs to [tracking issues](../roadmap.md). Keep profiles and experimental
 transcripts with their review artifact. The capstone definition manifest is a reviewed semantic

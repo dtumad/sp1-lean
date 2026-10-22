@@ -1,6 +1,6 @@
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Model.Core.SyscallTable
+import SP1Clean.Model.Core.SyscallEncoding
 import ToClean.Air.FiniteLookup
 import SP1CleanTest.Core.StaticMembership
 
@@ -66,36 +66,42 @@ def finalRecord (previous address clock value : ℕ) (epoch : ℕ := 0) : List F
     (⟨epoch, clock, (word address)[0], (word address)[1], (word address)[2], word value⟩ : Channels.MemoryMsg Fp)
     previous address)).toList
 
-def programRow : Row :=
-  (6, ((DecodedProgramProvider.populate? (p := SP1Prime) image (65536, 0x003100b3) 1).map
-    (fun input => (toElements input).toList)).getD [])
-
 def baseRows : List Row :=
   [sourceRegister 0 1, sourceRegister 2 2, sourceRegister 3 3, sourceRam, terminal 2 65537,
     (3, finalRecord 0 1 13 123), (3, finalRecord 2 2 12 100), (3, finalRecord 3 3 11 23),
     (4, finalRecord 4 65536 0 (snapshot.memory.readWord 65536).toNat), terminal 5 65537,
-    programRow, (7, Audit.OneAddNativePremises.inputs),
+    (7, Audit.OneAddNativePremises.inputs),
     (57, List.replicate (size HaltChip.Inputs) 0)]
 
 def withoutRam : List Row :=
   baseRows.filter (fun row => !([1, 2, 4, 5].contains row.1)) ++ [terminal 2 4, terminal 5 4]
 
-def evaluate (image : ProgramImage) (_source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
+def evaluate (_image : ProgramImage) (_source : ExecutionSnapshot) (component : Component Fp) (inputs : List Fp)
     (extraLookups : List (FiniteLookup Fp) := []) : Bool × Ledger :=
   let program := component.circuit.main component.rowInputVar
   let env := (program.proverEnvironment (ProverHint.empty Fp) inputs).toEnvironment
   let operations := (program.operations component.rowOffset).toFlat
-  let fixed := [FiniteLookup.ofStatic (image.programTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (image.writePermissionTable (p := SP1Prime)),
-    FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))] ++ extraLookups
   let valid := inputs.length == component.rowOffset && operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => fixed.any fun table => lookup.table.name == table.table.name &&
+    | .lookup lookup => extraLookups.any fun table => lookup.table.name == table.table.name &&
         table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
     | .witness .. | .interact .. => true
   (valid, (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+
+/-- Evaluate the whole verifier-fixed Program inventory, retaining unused and padding rows.
+Counts come from actual consumer messages; empty-ROM count assertions are checked as well. -/
+def programEvaluation (image : ProgramImage) (ledger : Ledger) : Bool × Ledger :=
+  let component := FixedProgramProvider.Preprocessed.component (p := SP1Prime) image
+  let fixed := FixedProgramProvider.Preprocessed.fixedColumns (p := SP1Prime) image
+  let table := Table.buildPreallocated component fixed rfl
+    (SP1CleanTest.StaticMembership.literalSuffix "SP1Program" (size Channels.ProgramMsg) ledger fixed)
+    (fun _ _ => #[]) (ProverHint.empty Fp)
+  let valid := table.table.all fun row => component.operations.constraints.all fun expression =>
+    expression.eval (table.environment row) == 0
+  (valid, table.interactions.map fun interaction =>
+    (interaction.channel.name, interaction.msg.toList, interaction.mult))
 
 /-- One real provider row for each Byte demand. Provider input shapes are checked at their actual
 table indices; unused families are empty. The fixture needs U8Range, LTU, MSB, and fixed Range. -/

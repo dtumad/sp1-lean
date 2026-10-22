@@ -431,7 +431,7 @@ is gated by **`is_real - imm_c`** — an immediate does no register read — and
 `op_c[0]`).  The op_a write push carries the byte-packed result word `[r0+r1·256, …, r6+r7·256]` from
 the witnessed result bytes (cells `offset+8..15` — after the two 4-byte
 `U16toU8` low-byte blocks).  Keeping this list beside `circuit` makes Clean's exposure interface the
-single structural source consumed by both faithfulness and semantic grounding. -/
+single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -618,9 +618,9 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := BitwiseChip.circuit (p := p) } :
+    ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     BitwiseChip.circuit_main_eq]
   simp [BitwiseChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,

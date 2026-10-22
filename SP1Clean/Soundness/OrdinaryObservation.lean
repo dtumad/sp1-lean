@@ -24,7 +24,7 @@ local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.ins
 
 /-- The actual circuit's pull/push pair supplies the common transition interface. -/
 def view (enabled : Bool) : TransitionView (stateChannel (p := p)) where
-  component := { circuit := circuit enabled }
+  component := { circuit := circuit enabled, Assumptions := (circuit enabled).Assumptions }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)
@@ -44,7 +44,7 @@ def rank (state : State (ZMod p)) : ℕ := Semantics.clkNat state.clkHigh state.
 /-- No projected rows or synthetic receipt ledger is needed to read the unit consumers. -/
 theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    table.interactionsWith data InstructionReceipt.channel.toRaw =
+    table.interactionsWith InstructionReceipt.channel.toRaw =
       (rows table data).map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
   simp only [Table.interactionsWith, registered, view, receipt_values, rows, List.map_map]
   exact List.map_eq_flatMap.symm
@@ -52,21 +52,25 @@ theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverD
 /-- Observation transitions are the literal evaluated table ledger. -/
 theorem state_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    table.interactionsWith data stateChannel.toRaw = (rows table data).flatMap (fun input =>
+    table.interactionsWith stateChannel.toRaw = (rows table data).flatMap (fun input =>
       [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next]) := by
-  simp only [Table.interactionsWith, registered, view, state_values, rows, List.flatMap_map]
+  have cells (physical : Array (ZMod p)) :
+      valueFromOffset Inputs 0 (table.environment physical) =
+        valueFromOffset Inputs 0 (Environment.fromArray physical data) :=
+    ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
+  simp only [Table.interactionsWith, registered, view, state_values, rows, List.flatMap_map, cells]
 
 /-- One receipt occurrence is consumed for each physical row, with no padding discount. -/
 theorem receipt_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    (table.interactionsWith data InstructionReceipt.channel.toRaw).length = table.length := by
+    (table.interactionsWith InstructionReceipt.channel.toRaw).length = table.length := by
   rw [receipt_ledger enabled table data registered]
   simp only [rows, List.length_map]
 
 /-- Every consumer contributes two physical observation-channel occurrences. -/
 theorem state_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
     (registered : table.component = (view enabled).component) :
-    (table.interactionsWith data stateChannel.toRaw).length = 2 * table.length := by
+    (table.interactionsWith stateChannel.toRaw).length = 2 * table.length := by
   rw [state_ledger enabled table data registered, List.length_flatMap]
   simp [rows, Function.comp_def, List.sum_replicate, Nat.mul_comm]
 
@@ -81,8 +85,8 @@ theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod
       ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 0 ∨
         ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1)
     (balanced : BalancedInteractions
-      ((OrdinaryStateReceipt.construct id original source).interactionsWith data InstructionReceipt.channel.toRaw ++
-        consumer.interactionsWith data InstructionReceipt.channel.toRaw)) :
+      ((OrdinaryStateReceipt.construct id original source).interactionsWith InstructionReceipt.channel.toRaw ++
+        consumer.interactionsWith InstructionReceipt.channel.toRaw)) :
     ((original.table.filter (fun physical => decide
       (((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1))).map
         (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))).Perm
@@ -95,7 +99,7 @@ theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod
   simpa only [List.map_map, Function.comp_def] using balanced
 
 private theorem rows_spec (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) (valid : table.Spec data) :
+    (registered : table.component = (view enabled).component) (valid : table.Spec) :
     ∀ input ∈ rows table data, Spec enabled input := by
   intro input member
   change input ∈ table.table.map (fun physical => valueFromOffset Inputs 0 (Environment.fromArray physical data)) at member
@@ -143,11 +147,11 @@ private theorem pc_of_walk (initial final : State (ZMod p)) (path : List (Inputs
 /-- Raw observation balance and local table meaning force one exhaustive ordered history.
 The endpoint parameters are an installation boundary, not capstone caller premises. -/
 theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) (valid : table.Spec data)
+    (registered : table.component = (view enabled).component) (valid : table.Spec)
     (initial final : State (ZMod p))
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        table.interactionsWith data stateChannel.toRaw)) :
+        table.interactionsWith stateChannel.toRaw)) :
     ∃ path : List (Inputs (ZMod p)), path.Perm (rows table data) ∧
       Walk.IsWalk edge initial final path ∧
       (path.map (fun input => rank input.next)).Pairwise (· < ·) ∧

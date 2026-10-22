@@ -5,10 +5,10 @@ import SP1Clean.Proofs.Chips.OrderedFinalProvider
 
 /-! # Native final-memory inventory
 
-Final register and RAM rows share a private control channel with fixed endpoints. Every physical
-provider row pulls one canonical Memory record. The shared inventory proof excludes repeated
-locations across both tables. Connecting this inventory to the timed machine establishes that
-these are the final values; that claim is not a local finalizer assumption.
+Final register and RAM rows share a private control channel with fixed endpoints. Every active
+provider row consumes one canonical Memory record; padding retains zero-multiplicity
+occurrences. The shared inventory proof excludes repeated active locations across both tables. Connecting this
+inventory to the timed machine establishes that these are the final values; that claim is not a local finalizer assumption.
 -/
 
 namespace SP1Clean.Soundness.FinalMemoryEnsemble
@@ -18,6 +18,10 @@ open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 open SP1Clean.OrderedFinalProvider
+
+/-- Both finalizers append activity after the ordered Memory-record input. -/
+def activity : Expression (ZMod p) :=
+  .var ⟨size (OrderedMemoryProvider.Inputs MemoryMsg)⟩
 
 def registerView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
   OrderedMemoryEnsemble.providerView channelName (by decide) MemoryBoundary.FinalSpec
@@ -30,6 +34,16 @@ def ramView : TransitionView (OrderedBoundary.channel (p := p) channelName) :=
     FinalRamProvider.circuit (fun _ _ _ valid => valid.1) (fun _ valid => valid.1) (by
       simp [GeneralFormalCircuit.channels, FinalRamProvider.circuit, circuit_norm,
         OrderedBoundary.channel, channelName, memoryChannel, byteChannel])
+
+/-- The guarded register input ends at the shared activity column. -/
+theorem registerView_activity : (registerView (p := p)).activity = activity := by
+  simp only [registerView, OrderedMemoryEnsemble.providerView, varFromOffset_pair,
+    ProvableType.varFromOffset_field, Nat.zero_add, activity]
+
+/-- The guarded RAM input has the same activity column as the register finalizer. -/
+theorem ramView_activity : (ramView (p := p)).activity = activity := by
+  simp only [ramView, OrderedMemoryEnsemble.providerView, varFromOffset_pair,
+    ProvableType.varFromOffset_field, Nat.zero_add, activity]
 
 inductive TableId where
   | registers | ram | terminal
@@ -57,12 +71,27 @@ theorem view_channels_subset (id : TableId) :
       (OrderedBoundary.channel channelName).toRaw] ⊆ _
     simp
 
+/-- Finalizers have no data-dependent legacy lookups; Byte checks use channels. -/
+theorem view_lookups (id : TableId) :
+    (viewFor (p := p) id).component.operations.lookups = [] := by
+  cases id <;>
+    simp [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView,
+      OrderedMemoryEnsemble.terminalView, Component.lookups_eq, Component.rowOperations,
+      OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit, FinalRegisterProvider.circuit, FinalRamProvider.circuit,
+      OrderedBoundaryEnd.circuit, circuit_norm]
+
 /-- Finalizer semantics require only raw constraints and Byte guarantees, before Memory grounding. -/
 theorem view_spec (id : TableId) (env : Environment (ZMod p))
     (constraints : (viewFor id).component.operations.ConstraintsHold env)
     (byte : (viewFor id).component.operations.ChannelGuarantees byteChannel.toRaw env) :
     (viewFor id).component.Spec env := by
-  have assumptions : (viewFor (p := p) id).component.CircuitAssumptions env := by cases id <;> trivial
+  have assumptions : (viewFor (p := p) id).component.CircuitAssumptions env := by
+    cases id
+    · intro _
+      trivial
+    · intro _
+      trivial
+    · trivial
   have channels : (viewFor (p := p) id).component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel channelName).toRaw] := by
     cases id
@@ -83,8 +112,8 @@ theorem view_spec (id : TableId) (env : Environment (ZMod p))
 
 def recordFor (id : TableId) (env : Environment (ZMod p)) : Option (MemoryMsg (ZMod p)) :=
   match id with
-  | .registers => some (({ circuit := registerCircuit } : Component (ZMod p)).rowOutput env)
-  | .ram => some (({ circuit := ramCircuit } : Component (ZMod p)).rowOutput env)
+  | .registers => some (({ circuit := registerCircuit, Assumptions := (registerCircuit).Assumptions } : Component (ZMod p)).rowOutput env)
+  | .ram => some (({ circuit := ramCircuit, Assumptions := (ramCircuit).Assumptions } : Component (ZMod p)).rowOutput env)
   | .terminal => none
 
 /-- Finalizer contracts read only committed cells. Dropping unrelated tables changes canonical
@@ -109,20 +138,28 @@ def inventory : OrderedMemoryEnsemble.Inventory channelName (MemoryBoundary.Fina
   viewFor := viewFor
   recordFor := recordFor
   strict := by
-    intro id env valid
+    intro id env valid active
     cases id with
-    | registers => exact valid.2.1.2.2
-    | ram => exact valid.2.1.2.2
+    | registers =>
+      dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := MemoryMsg) active)).2.1.2.2
+    | ram =>
+      dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := MemoryMsg) active)).2.1.2.2
     | terminal => exact valid.2
   recordFor_spec := by
-    intro id env valid record found
+    intro id env valid active record found
     cases id with
     | registers =>
       obtain rfl := Option.some.inj found
-      exact ⟨valid.1, valid.2.2⟩
+      dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      have child := valid.2 (OrderedMemoryEnsemble.active_input (Payload := MemoryMsg) active)
+      exact ⟨child.1, child.2.2⟩
     | ram =>
       obtain rfl := Option.some.inj found
-      exact ⟨valid.1.1, valid.2.2⟩
+      dsimp only [viewFor, registerView, ramView, OrderedMemoryEnsemble.providerView] at active
+      have child := valid.2 (OrderedMemoryEnsemble.active_input (Payload := MemoryMsg) active)
+      exact ⟨child.1.1, child.2.2⟩
     | terminal => contradiction
 
 /-- The two finalizers and their ordering terminal have distinct canonical names. -/
@@ -133,7 +170,7 @@ theorem inventory_unique_names :
     (OrderedMemoryEnsemble.terminalView channelName (by decide)).component.circuit.name].Nodup
   simp [registerView, ramView,
     OrderedMemoryEnsemble.providerView, OrderedMemoryEnsemble.terminalView,
-    OrderedMemoryProvider.circuit, OrderedBoundaryEnd.circuit,
+    OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit, OrderedBoundaryEnd.circuit,
     FinalRegisterProvider.circuit, FinalRamProvider.circuit, channelName]
   decide
 
@@ -144,22 +181,27 @@ def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChanne
 variable {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 variable {names : (((inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
 
+/-- The original physical record occurrences, including inactive rows. -/
+def physicalRecords (witness : EnsembleWitness (ensemble auxiliary channels names)) :=
+  inventory.physicalRecords witness
+
 def records (witness : EnsembleWitness (ensemble auxiliary channels names)) := inventory.records witness
 
-/-- The shared decoder reads the original output of each physical register and RAM row;
-the ordering terminal contributes no Memory record. -/
-theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    records witness =
+/-- Both provider tables retain every physical record and its activity; the terminal adds none. -/
+theorem physicalRecords_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+    physicalRecords witness =
       (witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
         OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
         OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
-          (fun row => ({ circuit := registerCircuit } : Component (ZMod p)).rowOutput
-            (Environment.fromArray row witness.data)) ++
+          (fun row => (Environment.fromArray row witness.data activity,
+            ({ circuit := registerCircuit, Assumptions := registerCircuit.Assumptions } : Component (ZMod p)).rowOutput
+              (Environment.fromArray row witness.data))) ++
       (witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
         OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
         OrderedMemoryEnsemble.Inventory.views, inventory])).table.map
-          (fun row => ({ circuit := ramCircuit } : Component (ZMod p)).rowOutput
-            (Environment.fromArray row witness.data)) := by
+          (fun row => (Environment.fromArray row witness.data activity,
+            ({ circuit := ramCircuit, Assumptions := ramCircuit.Assumptions } : Component (ZMod p)).rowOutput
+              (Environment.fromArray row witness.data))) := by
   have length : 3 ≤ witness.tables.length := by
     rw [← witness.same_length]
     simp [ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
@@ -170,12 +212,36 @@ theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names
       List.take_succ_eq_append_getElem (by omega : 0 < witness.tables.length)]
     rfl
   change ((TransitionView.readIndexedRows [TableId.registers, .ram, .terminal]
-    (witness.tables.take 3) witness.data).filterMap fun row => recordFor row.1 row.2) = _
+    (witness.tables.take 3)).filterMap fun row =>
+      (recordFor row.1 row.2).map fun record => (row.2 (viewFor row.1).activity, record)) = _
   rw [front]
   simp only [TransitionView.readIndexedRows, List.zip_cons_cons, List.zip_nil_right,
     List.flatMap_cons, List.flatMap_nil, List.filterMap_append, List.filterMap_map,
-    Function.comp_def, recordFor, List.filterMap_eq_map', List.filterMap_none,
-    List.append_nil]
+    Function.comp_def, recordFor, Option.map_some, Option.map_none,
+    List.filterMap_eq_map', List.filterMap_none, List.append_nil, Table.environment,
+    witness.same_data _ (List.getElem_mem _), viewFor, registerView_activity, ramView_activity]
+  rfl
+
+/-- The shared decoder reads the original output of each physical register and RAM row;
+the ordering terminal contributes no Memory record. -/
+theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+    records witness =
+      ((witness.tables[0]'(by rw [← witness.same_length]; simp [ensemble,
+        OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+        OrderedMemoryEnsemble.Inventory.views, inventory])).table.filter (fun row =>
+          decide (Environment.fromArray row witness.data activity = 1))).map
+          (fun row => ({ circuit := registerCircuit, Assumptions := (registerCircuit).Assumptions } : Component (ZMod p)).rowOutput
+            (Environment.fromArray row witness.data)) ++
+      ((witness.tables[1]'(by rw [← witness.same_length]; simp [ensemble,
+        OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble,
+        OrderedMemoryEnsemble.Inventory.views, inventory])).table.filter (fun row =>
+          decide (Environment.fromArray row witness.data activity = 1))).map
+          (fun row => ({ circuit := ramCircuit, Assumptions := (ramCircuit).Assumptions } : Component (ZMod p)).rowOutput
+            (Environment.fromArray row witness.data)) := by
+  rw [records, inventory.records_eq_active_physical witness]
+  change ((physicalRecords witness).filter fun row => decide (row.1 = 1)).map Prod.snd = _
+  rw [physicalRecords_eq]
+  simp only [List.filter_append, List.filter_map, List.map_append, List.map_map, Function.comp_def]
 
 theorem records_valid (witness : EnsembleWitness (ensemble auxiliary channels names))
     (valid : witness.Spec) : ∀ record ∈ records witness, MemoryBoundary.FinalSpec record :=
@@ -191,38 +257,42 @@ theorem records_locations_nodup (witness : EnsembleWitness (ensemble auxiliary c
 /-- The finite record decoder agrees exactly with each table's physical Memory interactions. -/
 theorem recordFor_interactions (id : TableId) (env : Environment (ZMod p)) :
     (viewFor id).component.operations.interactionValuesWith memoryChannel.toRaw env =
-      ((recordFor id env).toList).map (memoryChannel.emittedValue (-1)) := by
+      ((recordFor id env).toList).map
+        (memoryChannel.emittedValue (-(env (viewFor id).activity))) := by
   cases id with
   | registers =>
     simp only [viewFor, registerView, OrderedMemoryEnsemble.providerView,
         Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-        OrderedMemoryProvider.circuit]
+        OrderedMemoryProvider.circuit, Guarded.circuit]
+    rw [Guarded.main_interactionsWith]
+    simp only [OrderedMemoryProvider.activeCircuit]
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [FinalRegisterProvider.circuit]
     rw [FinalRegisterProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_emitted]
-    simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput, Component.rowInputVar,
-      OrderedFinalProvider.registerCircuit, OrderedMemoryProvider.circuit, FinalRegisterProvider.circuit,
-      OrderedMemoryProvider.elaborated, FinalRegisterProvider.elaborated, circuit_norm]
+    simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_emitted,
+      Channel.emittedValue, Expression.eval, mul_one, mul_neg_one]
+    rfl
   | ram =>
     simp only [viewFor, ramView, OrderedMemoryEnsemble.providerView,
         Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-        OrderedMemoryProvider.circuit]
+        OrderedMemoryProvider.circuit, Guarded.circuit]
+    rw [Guarded.main_interactionsWith]
+    simp only [OrderedMemoryProvider.activeCircuit]
     rw [OrderedMemoryProvider.main_memory_interactions]
     simp only [FinalRamProvider.circuit]
     rw [FinalRamProvider.main_memory_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_emitted]
-    simp only [recordFor, Option.toList_some, List.map_cons, List.map_nil, Component.rowOutput, Component.rowInputVar,
-      OrderedFinalProvider.ramCircuit, OrderedMemoryProvider.circuit, FinalRamProvider.circuit,
-      OrderedMemoryProvider.elaborated, FinalRamProvider.elaborated, circuit_norm]
+    simp only [List.map_cons, List.map_nil, AbstractInteraction.eval_guard, Channel.eval_emitted,
+      Channel.emittedValue, Expression.eval, mul_one, mul_neg_one]
+    rfl
   | terminal =>
     exact OrderedMemoryEnsemble.terminalView_memory_interactions _ (by decide) env
 
-/-- The physical boundary tables emit precisely the decoded records, with unit multiplicity. -/
+/-- The physical boundary ledger retains every record and its actual negative activity. -/
 theorem memory_interactions_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
-      (records witness).map (memoryChannel.emittedValue (-1)) := by
-  exact inventory.memory_interactions_eq witness (memoryChannel.emittedValue (-1)) recordFor_interactions
+    (witness.tables.take (inventory (p := p)).views.length).flatMap (·.interactionsWith memoryChannel.toRaw) =
+      (physicalRecords witness).map (fun row => memoryChannel.emittedValue (-row.1) row.2) := by
+  exact inventory.memory_interactions_eq witness (fun activity => memoryChannel.emittedValue (-activity))
+    recordFor_interactions
 
 /-- The decoder depends only on the two finalizer row arrays.
 Different physical proof views may retain different suffixes or verifier interfaces. -/
@@ -249,6 +319,7 @@ theorem records_congr_rows {otherAuxiliary : List (Component (ZMod p))}
       List.getElem?_eq_getElem (by omega : index.val < second.tables.length),
       Option.map_some, Option.some.injEq] using same
   simp only [records_eq, arrays ⟨0, by decide⟩, arrays ⟨1, by decide⟩]
+  dsimp only [activity, Expression.eval, Environment.fromArray]
   congr 1 <;> apply List.map_congr_left <;> intro row _ <;>
     exact Component.rowOutput_congr _ rfl
 

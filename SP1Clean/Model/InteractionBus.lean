@@ -28,8 +28,7 @@ the rest honestly rather than aliasing them onto one that is modelled.
 
 Four kinds are SP1's own and carry an instruction row's whole traffic: `Memory`, `Byte`, `Program`,
 `State`. `Syscall` is SP1's too — `SyscallInstrs` sends on it and `SyscallCore` receives — and it
-is listed here so that a syscall is classified as a syscall on *both* sides of a faithfulness
-anchor.
+retains its distinct identity in native ledgers and Rust comparison adapters.
 
 Two are native-only, and exist because Clean's flat AIR reserves `PublicIO` to the verifier row
 (`Air.Flat.Table` carries no public input, and `Ensemble.tables` cannot depend on one). SP1 binds
@@ -180,10 +179,8 @@ theorem active_filter (accesses : LookupAccessList) (keep : LookupAccess → Boo
     active (accesses.filter keep) = (active accesses).filter keep := by
   simp only [active, List.filter_filter, Bool.and_comm]
 
-/-- Negate a `LookupAccess`'s multiplicity, fixing its key. The faithfulness bridge for the W11
-program-bus polarity flip: our circuit now emits the Program fetch as a `pull` (`−is_real`), so it
-equals SP1's extracted oracle Program block **up to per-entry multiplicity negation** (a sound LogUp
-sign symmetry — negating one channel's multiplicities preserves the balance). -/
+/-- Negate an access multiplicity without changing its key. Applying this to every
+occurrence of one channel preserves its zero-sum balance. -/
 @[reducible] def negMult (a : LookupAccess) : LookupAccess := (a.1, a.2.1, a.2.2.1, -a.2.2.2)
 
 @[simp] lemma negMult_mk (k : InteractionKind) (s : String) (l : List ℕ) (m : ℤ) :
@@ -196,10 +193,8 @@ sign symmetry — negating one channel's multiplicities preserves the balance). 
 lemma negMult_negMult (a : LookupAccess) : negMult (negMult a) = a := by
   simp only [negMult, neg_neg]
 
-/-- `negMult` is a list-map involution: re-negating an already-negated block recovers it. Used (via
-`rw`) by the combined faithfulness anchors, whose Program block carries one `negMult` (the W11
-sign-flip) so the rest of the equation stays the pristine SP1 oracle. Not `@[simp]` (the bare LHS
-is not in simp-normal form — `List.map_map` rewrites it first). -/
+/-- Re-negating every multiplicity recovers the original list. This is not a simp lemma:
+`List.map_map` rewrites the left side before it is in simp-normal form. -/
 lemma map_negMult_negMult (l : LookupAccessList) :
     (l.map negMult).map negMult = l := by
   simp only [List.map_map, Function.comp_def, negMult_negMult, List.map_id']
@@ -501,13 +496,11 @@ theorem multiplicitySum_filterKind (l : LookupAccessList) {K : InteractionKind} 
     (fun a _ hka => by simp only [id] at hka; rw [← hka] at h; simpa using h)
   simpa using this
 
-/-! ## Partition by interaction kind (the recombine lemma for combined faithfulness anchors)
+/-! ## Partition by interaction kind
 
-A `LookupAccessList` permutes to the concatenation of its per-kind filters — every access carries
-exactly one `InteractionKind`. This is the bridge that assembles the per-channel syntactic
-faithfulness facts (each an `=`/`Perm` of the channel-filtered projections) into one combined "full
-emitted = full oracle" `Perm` over a chip's whole interaction list. The bus is a multiset, so the
-order the blocks come out in is irrelevant. -/
+Every access has one `InteractionKind`, so a list permutes to its concatenated per-kind filters.
+This combines channel-wise equalities while retaining every occurrence and multiplicity.
+-/
 
 /-- `count x` of a kind-filtered list: keeps the count iff `x`'s kind matches, else `0`. -/
 private lemma count_filter_kind (x : LookupAccess) (K : InteractionKind) (l : LookupAccessList) :
@@ -550,12 +543,8 @@ theorem perm_filter_by_kind_of_sp1_with_syscall (l : LookupAccessList)
   rwa [hexit, hpublicValues, hunmodelled, List.append_nil, List.append_nil,
     List.append_nil] at h
 
-/-- The four-block partition of an access list that touches only the four SP1 instruction buses —
-the Faithful anchors' form. An instruction chip's extracted oracle carries no native-only kind
-(`Exit`, `PublicValues`) and no raw payload (`Syscall`, `Unmodelled`), so all four side conditions
-reduce to `[]` and the anchors compare four blocks. The hypotheses are what make that a checked
-fact rather than an assumption: a table that *does* touch one of those buses cannot be assembled
-through this lemma. -/
+/-- Partition a list into the four instruction buses. The hypotheses exclude native-only
+and raw-payload buses; a table using those buses cannot apply this lemma. -/
 theorem perm_filter_by_kind_of_sp1_only (l : LookupAccessList)
     (hexit : l.filter (fun a => a.1 = InteractionKind.Exit) = [])
     (hsyscall : l.filter (fun a => a.1 = InteractionKind.Syscall) = [])

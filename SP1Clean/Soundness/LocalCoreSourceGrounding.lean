@@ -76,7 +76,7 @@ theorem memoryInitialFrontier_content_of_channels {image : ProgramImage} {source
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
       witness.BalancedChannel channel)
     {loc : MemLoc} {message : MemoryMsg (ZMod p)}
@@ -113,7 +113,7 @@ theorem memoryInitialFrontier_liveOK_of_channels {image : ProgramImage} {source 
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (membership : ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
       witness.BalancedChannel channel)
     (trajectory : Trajectory) (timeline : Timeline)

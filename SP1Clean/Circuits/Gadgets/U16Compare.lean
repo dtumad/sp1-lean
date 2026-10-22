@@ -9,7 +9,7 @@ import Clean.Utils.Tactics.CircuitProofStart
 
 Witness generation, arithmetic evidence and the bundled `FormalAssertion` live together.
 `Semantics/Specs/U16Compare` owns the semantic contract. `RawSpec` is intermediate constraint
-evidence used by the local proof and transitional Rust-faithfulness checks.
+evidence used by the local proof.
 -/
 
 @[expose] public section

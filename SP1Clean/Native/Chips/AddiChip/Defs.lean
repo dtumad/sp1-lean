@@ -29,17 +29,14 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- **Assertion half** — the literal meaning of SP1's `AddiCols.asserts` *own* (inline) assertZero tail
-(everything past the composed `AddOperation`/`CPUState`/`ITypeReader` sub-lists), in extracted order
-(`Extracted/ChipOracle/Addi.lean`: `E1, op_a_0`): the `is_real` binary gate and the `op_a_0` zeroing flag. -/
+/-- The chip's own assertions: the binary activity gate and destination-x0 zeroing flag.
+Arithmetic and reader obligations are composed through their bundled circuits. -/
 def AssertSpec (cols : Columns (ZMod p)) : Prop :=
   cols.is_real * (cols.is_real - 1) = 0 ∧
   cols.adapter.op_a_0 = 0
 
-/-- **Interaction half** — SP1's `AddiCols.interactions` *own* tail is **empty**
-(`Extracted/ChipOracle/Addi.lean` ends `… ++ [ ]`): every byte-range pull lives inside the composed
-`AddOperation`/`CPUState`/`ITypeReader` sub-lists, anchored there. So the chip's own interaction meaning
-is trivial. -/
+/-- The chip has no additional interactions: all byte-range pulls belong to its composed
+AddOperation, CPUState and ITypeReader circuits. -/
 def InteractSpec (_cols : Columns (ZMod p)) : Prop := True
 
 /-- Compose the `CPUState`/`AddOperation`/`ITypeReader` sub-circuits, witness the ALU result word via

@@ -67,6 +67,7 @@ theorem syscallInstrsRow_spec_of_pullCurrency
   have member := List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
   have finished := (sp1_finishedChannel_guarantees witness constraints balanced).2 _ member
   exact (syscallInstrsRow_contract_of_component _ witness.data (syscallInstrsTable_component witness)
+    (syscallInstrsTable_data witness)
     (constraints _ member) finished.1 finished.2 rowMem currency).1
 
 /-- **The row's committed `ECALL` fetch satisfies the Program bus's `RowSpec`.** The Program channel
@@ -79,6 +80,7 @@ theorem syscallInstrsRow_programRowSpec
     (real : (syscallInstrsRow witness.data row).is_real = 1) :
     Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow witness.data row)) :=
   syscallInstrsRow_programRowSpec_of_component _ witness.data (syscallInstrsTable_component witness)
+    (syscallInstrsTable_data witness)
     ((sp1_finishedChannel_guarantees witness constraints balanced).2 _
       (List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness))).2 rowMem real
 
@@ -97,6 +99,7 @@ theorem syscallInstrsRow_pulledFacts
   have member := List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
   have finished := (sp1_finishedChannel_guarantees witness constraints balanced).2 _ member
   exact (syscallInstrsRow_contract_of_component _ witness.data (syscallInstrsTable_component witness)
+    (syscallInstrsTable_data witness)
     (constraints _ member) finished.1 finished.2 rowMem currency).2
 
 /-- **The row's three operand columns are `x5`/`x10`/`x11`.** Nothing row-local says so — the chip
@@ -151,7 +154,7 @@ theorem syscall_pushesAt_eq
     TimedGrounding.pushesAt
         (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)) loc
       = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row))
       = (syscallRows.map (syscallInstrsRow witness.data)).map syscallRowFacts from
@@ -171,7 +174,7 @@ theorem syscall_pullsAt_eq
     TimedGrounding.pullsAt
         (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)) loc
       = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row))
       = (syscallRows.map (syscallInstrsRow witness.data)).map syscallRowFacts from
@@ -198,9 +201,9 @@ theorem walkedMemoryBalance
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1)
-    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
+    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
       memoryChannel) = [])
-    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
+    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
       memoryChannel) = [])
     (initUnique : MemoryInitProviderUnique witness)
     (finalizeUnique : MemoryFinalizeProviderUnique witness)
@@ -222,32 +225,32 @@ theorem walkedMemoryBalance
     TimedGrounding.optMS (memoryInitFrontier witness loc)
         + TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
       TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
         + TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   have base := memoryBalance_of_alignsWith witness balanced memBinary initPure finPure
     initUnique finalizeUnique paddingEmpty orderedRows exhaustive g aligns loc
   have hpush : TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
       = TimedGrounding.pushesAt (orderedRows.map g) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
     rw [pushesAt_perm splitPerm loc, TimedGrounding.pushesAt_append,
       syscall_pushesAt_eq witness constraints syscallRows syscallExhaustive loc]
   have hpull : TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
       = TimedGrounding.pullsAt (orderedRows.map g) loc
         + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
     rw [pullsAt_perm splitPerm loc, TimedGrounding.pullsAt_append,
       syscall_pullsAt_eq witness constraints syscallRows syscallExhaustive loc]
@@ -523,10 +526,9 @@ theorem ChipGroundingContracts.engineFactsG
 
 /-! ## The row's semantic context, from the walk
 
-`SyscallRowContext` names the five things a syscall row's meaning needs that the row itself does not
+`SyscallRowContext` names the four things a syscall row's meaning needs that the row itself does not
 carry. `syscallInstrsRow_operands` supplied the first from the Program bus. The three below come
-from the walk — the pulled state's pc and the three register reads. The released `pcCarry` premise
-remains for source compatibility; `rowLaw_of_spec_and_pulledFacts` proves the row law without it. -/
+from the walk — the pulled state's pc and the three register reads. -/
 
 /-- **`SyscallRowContext`, assembled at the walk's own state.** The three register reads all speak
 about the *same* state, and that is the content of the `+0`/`+3`/`+2` read times being below
@@ -540,7 +542,6 @@ theorem syscallRowContext_of_currency {program : Target.GuestProgram}
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) (providerBound : ProgramProviderBound program witness)
     {row : Array (ZMod p)} (rowMem : row ∈ realSyscallInstrsRows witness)
-    (pcCarry : ((syscallInstrsRow witness.data row).state.pc[0]).val + 4 < 2 ^ 16)
     {traj : Semantics.Trajectory} {initial source : SailState} {tl : Semantics.Timeline}
     {n : ℕ}
     (htraj : traj n = some source)
@@ -565,7 +566,7 @@ theorem syscallRowContext_of_currency {program : Target.GuestProgram}
   rw [locPullA, htime] at curA
   rw [locPullB, htime] at curB
   rw [locPullC, htime] at curC
-  exact SyscallRowContext.of_pieces (syscallInstrsRow witness.data row) _ source opA opB opC pcCarry
+  exact SyscallRowContext.of_pieces (syscallInstrsRow witness.data row) _ source opA opB opC
     (witness_syscallRow_ecallTruth witness constraints balanced providerBound rowMem).1 hpc
     ((TimedGrounding.localValueAtG_stepStart_iff htraj).mp curA)
     (TimedGrounding.localValueAtG_regRead_of_traj (k := 3) htraj (by norm_num) curB)

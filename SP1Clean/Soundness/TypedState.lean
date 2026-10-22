@@ -83,7 +83,7 @@ def CircuitStateEmissionShape {Input Output : TypeMap}
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
   ∀ data physical,
-    let component : Component (ZMod p) := { circuit := circuit }
+    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.interactionValuesWith stateChannel.toRaw env =
@@ -153,7 +153,7 @@ theorem circuitStateEmissionShape_of_exposure {Input Output : TypeMap}
     CircuitStateEmissionShape circuit view := by
   obtain ⟨gate, pullMessage, pushMessage, exposure, gate_eval, pull_eval, push_eval⟩ := contract
   intro data physical
-  let component : Component (ZMod p) := { circuit := circuit }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -752,7 +752,7 @@ pull/push pairs join the typed State decomposition explicitly. -/
 theorem witness_providerStateInteractions_eq_nil
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
     ((witness.tables.drop instructionTableCount).take stateSilentProviderTableCount).flatMap
-        (typedTableInteractionsWith · witness.data stateChannel) = [] := by
+        (typedTableInteractionsWith · stateChannel) = [] := by
   rw [List.flatMap_eq_nil_iff]
   intro table tableMem
   apply List.map_eq_nil_iff.mp
@@ -905,7 +905,7 @@ theorem typedEnsembleStateInteractions_eq
     simpa [instructionTableCount, stateSilentProviderTableCount, stateBumpIndex] using
       tables_drop25_split witness]
   have providerNil : ((witness.tables.drop 25).take 27).flatMap
-      (typedTableInteractionsWith · witness.data stateChannel) = [] := by
+      (typedTableInteractionsWith · stateChannel) = [] := by
     simpa [instructionTableCount, stateSilentProviderTableCount] using
       witness_providerStateInteractions_eq_nil witness
   have stateTail : witness.tables.drop 52 =
@@ -1019,11 +1019,11 @@ theorem witness_haltRows_selectorBinary
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : haltTable witness ∈ witness.tables :=
     List.getElem_mem (haltIndex_lt_tablesLength witness)
-  have tableConstraints : (haltTable witness).Constraints witness.data :=
+  have tableConstraints : (haltTable witness).Constraints :=
     constraints _ tableMem
   intro row rowMem
   have rowConstraints := tableConstraints row rowMem
-  rw [haltTable_component] at rowConstraints
+  rw [Table.environment, haltTable_data, haltTable_component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints (HaltChip.circuit (p := p))
     (Environment.fromArray row witness.data) rowConstraints
   have binary := HaltChip.selectorBinary_of_shallow (varFromOffset HaltChip.Inputs 0)
@@ -1046,11 +1046,11 @@ theorem witness_syscallInstrsRows_selectorBinary
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
-  have tableConstraints : (syscallInstrsTable witness).Constraints witness.data :=
+  have tableConstraints : (syscallInstrsTable witness).Constraints :=
     constraints _ tableMem
   intro row rowMem
   have rowConstraints := tableConstraints row rowMem
-  rw [syscallInstrsTable_component] at rowConstraints
+  rw [Table.environment, syscallInstrsTable_data, syscallInstrsTable_component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints (SyscallInstrsChip.circuit (p := p))
     (Environment.fromArray row witness.data) rowConstraints
   have binary := SyscallInstrsChip.selectorBinary_of_shallow
@@ -1074,11 +1074,11 @@ theorem witness_syscallInstrsRows_haltSelectorBinary
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
   have tableMem : syscallInstrsTable witness ∈ witness.tables :=
     List.getElem_mem (syscallInstrsIndex_lt_tablesLength witness)
-  have tableConstraints : (syscallInstrsTable witness).Constraints witness.data :=
+  have tableConstraints : (syscallInstrsTable witness).Constraints :=
     constraints _ tableMem
   intro row rowMem
   have rowConstraints := tableConstraints row rowMem
-  rw [syscallInstrsTable_component] at rowConstraints
+  rw [Table.environment, syscallInstrsTable_data, syscallInstrsTable_component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints (SyscallInstrsChip.circuit (p := p))
     (Environment.fromArray row witness.data) rowConstraints
   have binary := SyscallInstrsChip.haltSelectorBinary_of_shallow

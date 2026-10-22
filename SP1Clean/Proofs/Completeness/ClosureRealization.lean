@@ -596,7 +596,7 @@ theorem providerLedger_multiplicitySum (hreal : trace.ClosureRealized)
 
 /-- The public verifier's accesses followed by all 55 physical table ledgers. -/
 def fullLedger : LookupAccessList :=
-  trace.verifierLedger ++ tablesCleanAccesses trace.tables trace.data
+  trace.verifierLedger ++ tablesCleanAccesses trace.tables
 
 /-- The assembled table list really is the skeleton's two pieces with the provider window between
 them. -/
@@ -693,7 +693,10 @@ theorem fullLedger_eq_witness_interactions :
     trace.fullLedger = trace.witness.interactions.map Interaction.toAccess := by
   simp only [Air.Flat.EnsembleWitness.interactions, List.map_append, List.map_flatMap,
     witness_tables, witness_data, witness_publicInput, fullLedger, verifierLedger,
-    tablesCleanAccesses, tableCleanAccesses]
+    tablesCleanAccesses]
+  change trace.verifierLedger ++ tablesCleanAccesses trace.tables =
+    trace.verifierLedger ++ tablesCleanAccesses (Air.Flat.withDerivedData trace.tables)
+  rw [Air.Flat.withDerivedData, tablesCleanAccesses_setData]
 
 /-- **One channel's ledger and the whole ledger agree at every key that channel could produce.** -/
 theorem fullLedger_multiplicitySum_channel (channel : RawChannel (ZMod p))

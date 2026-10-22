@@ -100,7 +100,7 @@ theorem boundaryVerifier_limbBounds (input : SP1PublicIO (ZMod p)) (data : Prove
       OrderedBoundaryVerifier.main, Verifier.ofInteractions, circuit_norm] using member
   have guarantees : (boundaryVerifier (p := p)).circuitOperations.FullGuarantees
       (Environment.fromInput input data) := by
-    rw [Operations.guarantees_iff _ _ _ (boundaryVerifier.operations.inChannelsOrGuaranteesFull _)]
+    rw [Operations.guarantees_iff _ _ _ (boundaryVerifier.operations.circuitOperations_inChannelsOrGuaranteesFull _)]
     intro channel member
     have member := channels member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
@@ -171,7 +171,7 @@ private theorem source_requirements (source : ExecutionSnapshot) (component : Co
   rcases member with rfl | rfl | rfl <;>
     simp [SnapshotMemoryEnsemble.registerView, SnapshotMemoryEnsemble.ramView,
       SnapshotMemoryEnsemble.terminalView, OrderedMemoryEnsemble.providerView,
-      OrderedMemoryEnsemble.terminalView, OrderedMemoryProvider.circuit,
+      OrderedMemoryEnsemble.terminalView, OrderedMemoryProvider.circuit, Guarded.circuit, OrderedMemoryProvider.activeCircuit,
       OrderedBoundaryEnd.circuit, SnapshotRegisterProvider.circuit, SnapshotRamProvider.circuit]
 
 private theorem component_finished_requirements (image : ProgramImage) (source : ExecutionSnapshot)
@@ -182,7 +182,9 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
       source.sail.memorySnapshot.registerTable.channel.toRaw,
       (InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw])
-    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
+    (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env)
+    (romRequirements : component = FixedProgramProvider.Preprocessed.component image →
+      component.operations.ChannelRequirements channel env) :
     component.operations.ChannelRequirements channel env := by
   have absent (notRequired : channel ∉ component.circuit.channelsWithRequirements) :
       component.operations.ChannelRequirements channel env :=
@@ -196,7 +198,7 @@ private theorem component_finished_requirements (image : ProgramImage) (source :
       tauto))
   · rcases List.mem_append.mp member with native | fixed
     · exact NativeCore.afterInitialTables_finished_requirements image component native channel
-        (fun inside => outside (List.mem_append_left _ inside)) env constraints
+        (fun inside => outside (List.mem_append_left _ inside)) env constraints romRequirements
     · simp only [List.mem_cons, List.not_mem_nil, or_false] at fixed
       rcases fixed with rfl | rfl
       all_goals
@@ -215,8 +217,8 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
     ((ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
       (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw) ∧
     ∀ table ∈ witness.tables,
-      table.ChannelGuarantees witness.data byteChannel.toRaw ∧
-        table.ChannelGuarantees witness.data programChannel.toRaw := by
+      table.ChannelGuarantees byteChannel.toRaw ∧
+        table.ChannelGuarantees programChannel.toRaw := by
   have closed (channel : RawChannel (ZMod p)) [channel.Consistent]
       (member : channel ∈ (baseEnsemble (p := p) image source).channels)
       (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
@@ -225,13 +227,19 @@ theorem finishedChannel_guarantees (image : ProgramImage) (source : ExecutionSna
         source.sail.memorySnapshot.registerTable.channel.toRaw,
       (InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]) :
       (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data channel ∧
-        ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
-    apply witness.channelGuarantees_of_component_requirements channel constraints
+        ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
+    apply witness.channelGuarantees_of_requirements channel
       (balanced channel (List.mem_append_left _ member))
-    · intro input data interaction emitted _
+    · intro interaction emitted _
       exact verifier_requirements image source _ interaction emitted
-    · exact fun component mem env holds =>
-        component_finished_requirements image source component mem channel outside env holds
+    · intro table tableMem row rowMem
+      apply component_finished_requirements image source table.component
+        (EnsembleWitness.component_mem_tables_of_mem tableMem) channel outside
+        _ (constraints table tableMem row rowMem)
+      intro fixed interaction emitted _
+      exact (FixedProgramProvider.Preprocessed.table_spec_and_requirements image table fixed
+        (witness.dataConsistency_of_mem table tableMem) (constraints table tableMem)).2
+          row rowMem interaction emitted
   have byte := closed byteChannel.toRaw (by simp [baseEnsemble, sp1Ensemble_channels]) (by
     simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
       OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
@@ -248,14 +256,21 @@ theorem program_guarantees_of_balance (image : ProgramImage) (source : Execution
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw) :
     (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data programChannel.toRaw ∧
-      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data programChannel.toRaw := by
-  apply witness.channelGuarantees_of_component_requirements programChannel.toRaw constraints balanced
-  · intro input data interaction emitted _
+      ∀ table ∈ witness.tables, table.ChannelGuarantees programChannel.toRaw := by
+  apply witness.channelGuarantees_of_requirements programChannel.toRaw balanced
+  · intro interaction emitted _
     exact verifier_requirements image source _ interaction emitted
-  · exact fun component mem env holds => component_finished_requirements image source component mem
-      programChannel.toRaw (by simp [circuit_norm, OrderedBoundary.channel,
-        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, programChannel,
-        StaticTable.channel, MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership]) env holds
+  · intro table member row rowMember
+    apply component_finished_requirements image source table.component
+      (EnsembleWitness.component_mem_tables_of_mem member) programChannel.toRaw (by
+        simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+          OrderedFinalProvider.channelName, programChannel, StaticTable.channel,
+          MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership])
+      _ (constraints table member row rowMember)
+    intro fixed interaction emitted _
+    exact (FixedProgramProvider.Preprocessed.table_spec_and_requirements image table fixed
+      (witness.dataConsistency_of_mem table member) (constraints table member)).2
+        row rowMember interaction emitted
 
 /-- Fixed register rows discharge every provider requirement. Channel balance then authenticates
 the sparse source requests against those rows, using the witness's canonical prover data. -/
@@ -268,7 +283,7 @@ theorem membership_guarantees_of_balance (image : ProgramImage) (source : Execut
     (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data
         channel ∧
       ∀ table ∈ witness.tables,
-        table.ChannelGuarantees witness.data channel := by
+        table.ChannelGuarantees channel := by
   let : channel.Consistent := by
     rcases List.mem_cons.mp known with rfl | known
     · infer_instance
@@ -278,7 +293,7 @@ theorem membership_guarantees_of_balance (image : ProgramImage) (source : Execut
   · intro interaction emitted _
     exact verifier_requirements image source _ interaction emitted
   · intro table member
-    have location := EnsembleWitness.mem_component_of_mem member
+    have location := EnsembleWitness.component_mem_tables_of_mem member
     simp only [ensemble, PublicVerifier.install, baseEnsemble, tables, afterSourceTables,
       List.mem_append] at location
     rcases location with sourceTable | native | fixed
@@ -295,16 +310,20 @@ theorem membership_guarantees_of_balance (image : ProgramImage) (source : Execut
         memoryChannel, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
         Channel.toRaw] at used
     · intro row rowMember
-      apply NativeCore.afterInitialTables_finished_requirements image table.component native _ ?_
-        _ (constraints table member row rowMember)
-      simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
-        List.not_mem_nil, or_false] at known
-      rcases known with rfl | rfl
-      all_goals simp [StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows,
-        stateChannel, memoryChannel, OrderedBoundary.channel,
-        OrderedInitialProvider.channelName,
-        OrderedFinalProvider.channelName, Channel.toRaw]
-    · have assumptions : table.Assumptions witness.data := by
+      refine NativeCore.afterInitialTables_finished_requirements image table.component native _ ?_
+        _ (constraints table member row rowMember) ?_
+      · simp only [SnapshotMemoryEnsemble.membershipChannels, List.mem_cons,
+          List.not_mem_nil, or_false] at known
+        rcases known with rfl | rfl
+        all_goals simp [StaticTable.channel, InitialMemoryLookup.membership,
+          MemorySnapshot.registerTable, StaticTable.ofRows, stateChannel, memoryChannel,
+          OrderedBoundary.channel, OrderedInitialProvider.channelName,
+          OrderedFinalProvider.channelName, Channel.toRaw]
+      · intro fixed interaction emitted _
+        exact (FixedProgramProvider.Preprocessed.table_spec_and_requirements image table fixed
+          (witness.dataConsistency_of_mem table member) (constraints table member)).2
+            row rowMember interaction emitted
+    · have assumptions : table.Assumptions := by
         intro row _
         rcases List.mem_cons.mp fixed with fixed | fixed
         · rw [fixed]; trivial
@@ -314,7 +333,7 @@ theorem membership_guarantees_of_balance (image : ProgramImage) (source : Execut
           rcases List.mem_cons.mp fixed with fixed | fixed
           · rw [fixed]; rfl
           · rw [List.mem_singleton.mp fixed]; rfl)
-        (table.circuitAssumptions (witness.data_consistent table member) assumptions row rowMember)
+        (table.circuitAssumptions_of_dataConsistency (witness.dataConsistency_of_mem table member) assumptions row rowMember)
         (constraints table member row rowMember)).2 interaction emitted
 
 /-- Exactly the channel facts used by chronology, including the installed public source checks.
@@ -323,7 +342,7 @@ multiplicities or its Memory effects. -/
 structure OrderingChannels {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) : Prop where
   verifierByte : (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw
-  byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw
+  byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw
   sourceChecks : witness.BalancedChannel (sourceChannel image source)
   state : witness.BalancedChannel stateChannel.toRaw
 
@@ -332,10 +351,14 @@ theorem component_byte_requirements (image : ProgramImage) (source : ExecutionSn
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables)
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env) :
     component.operations.ChannelRequirements byteChannel.toRaw env := by
-  apply component_finished_requirements image source component member byteChannel.toRaw ?_ env constraints
-  simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
-    OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
-    MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership]
+  refine component_finished_requirements image source component member byteChannel.toRaw ?_ env constraints ?_
+  · simp [circuit_norm, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
+      OrderedFinalProvider.channelName, byteChannel, StaticTable.channel,
+      MemorySnapshot.registerTable, StaticTable.ofRows, InitialMemoryLookup.membership]
+  · intro same
+    rw [same] at constraints ⊢
+    exact FixedProgramProvider.Preprocessed.requirements_of_other_channel image _
+      (by simp [byteChannel_eq_programChannel_false]) env constraints
 
 /-- The local assembly derives the ordering interface from its Byte, State, and source-check ledgers. -/
 theorem orderingChannels_of_constraints {image : ProgramImage} {source : ExecutionSnapshot}
@@ -343,7 +366,7 @@ theorem orderingChannels_of_constraints {image : ProgramImage} {source : Executi
     (byte : witness.BalancedChannel byteChannel.toRaw) (state : witness.BalancedChannel stateChannel.toRaw)
     (sourceChecks : witness.BalancedChannel (sourceChannel image source)) : OrderingChannels witness := by
   have closed : (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw ∧
-      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw := by
+      ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw := by
     apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints byte
     · intro input data interaction emitted _
       exact verifier_requirements image source _ interaction emitted

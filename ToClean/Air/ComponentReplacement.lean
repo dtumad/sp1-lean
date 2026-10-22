@@ -26,9 +26,11 @@ def Table.withComponent (table : Table F) (component : Component F)
     (fixed : component.fixedColumns = table.component.fixedColumns) : Table F where
   component
   table := table.table
+  data := table.data
+  length_le := table.length_le
   uniform_width := fun row member => (table.uniform_width row member).trans width.symm
   fixed_rows_match := by
-    simpa only [Component.fixedRowsMatch, fixed] using table.fixed_rows_match
+    simpa only [Component.FixedRowsMatch, fixed] using table.fixed_rows_match
 
 /-- Changing only the component keeps the literal physical rows. -/
 @[simp] theorem Table.withComponent_rows (table : Table F) (component : Component F) (width fixed) :
@@ -45,35 +47,35 @@ def Table.withComponent (table : Table F) (component : Component F)
 
 namespace Table
 
-variable (table : Table F) (component : Component F) (width fixed) (data : ProverData F)
+variable (table : Table F) (component : Component F) (width fixed)
 
 /-- A proved implication between row circuits lifts to all retained physical rows. -/
 theorem withComponent_constraints_of
     (preserves : ∀ env, table.component.operations.ConstraintsHold env →
-      component.operations.ConstraintsHold env) (checked : table.Constraints data) :
-    (table.withComponent component width fixed).Constraints data :=
+      component.operations.ConstraintsHold env) (checked : table.Constraints) :
+    (table.withComponent component width fixed).Constraints :=
   fun row member => preserves _ (checked row member)
 
 /-- Identical assertion and lookup systems have identical constraints on retained rows. -/
 theorem withComponent_constraints
     (constraints : component.operations.constraints = table.component.operations.constraints)
     (lookups : component.operations.lookups = table.component.operations.lookups) :
-    (table.withComponent component width fixed).Constraints data ↔ table.Constraints data := by
-  simp only [Constraints, withComponent, Operations.ConstraintsHold, constraints, lookups]
+    (table.withComponent component width fixed).Constraints ↔ table.Constraints := by
+  simp only [Constraints, withComponent, environment, Operations.ConstraintsHold, constraints, lookups]
 
 /-- Equal channel operations retain every interaction occurrence in its original order. -/
 theorem withComponent_interactions (channel : RawChannel F)
     (same : component.operations.interactionsWith channel = table.component.operations.interactionsWith channel) :
-    (table.withComponent component width fixed).interactionsWith data channel =
-      table.interactionsWith data channel := by
-  simp only [interactionsWith, withComponent, Operations.interactionValuesWith, same]
+    (table.withComponent component width fixed).interactionsWith channel =
+      table.interactionsWith channel := by
+  simp only [interactionsWith, withComponent, environment, Operations.interactionValuesWith, same]
 
 /-- Channel guarantees transport at the same data, without assuming projected balance. -/
 theorem withComponent_channelGuarantees_of (channel : RawChannel F)
     (preserves : ∀ env, table.component.operations.ChannelGuarantees channel env →
       component.operations.ChannelGuarantees channel env)
-    (guarantees : table.ChannelGuarantees data channel) :
-    (table.withComponent component width fixed).ChannelGuarantees data channel :=
+    (guarantees : table.ChannelGuarantees channel) :
+    (table.withComponent component width fixed).ChannelGuarantees channel :=
   fun row member => preserves _ (guarantees row member)
 
 end Table
@@ -102,6 +104,20 @@ theorem deriveProverData_set (tables : List (Table F)) (index : Fin tables.lengt
       simp only [List.set_cons_succ, deriveProverData, tail]
 
 variable {PublicIO : TypeMap} [ProvableType PublicIO]
+
+/-- Replacing a table by one with the same named rows and data preserves canonicality. -/
+theorem EnsembleWitness.same_data_set {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
+    (index : Fin witness.tables.length) (replacement : Table F)
+    (name : replacement.component.circuit.name = witness.tables[index.val].component.circuit.name)
+    (entries : ∀ arity, replacement.proverRows arity = witness.tables[index.val].proverRows arity)
+    (data : replacement.data = witness.data) :
+    ∀ table ∈ witness.tables.set index.val replacement,
+      table.data = deriveProverData (witness.tables.set index.val replacement) := by
+  rw [deriveProverData_set witness.tables index replacement name entries]
+  intro table member
+  rcases List.mem_or_eq_of_mem_set member with old | rfl
+  · exact witness.same_data table old
+  · exact data
 
 /-- Replace a registered component, retaining its unique data key. -/
 def Ensemble.replaceComponent (ens : Ensemble F PublicIO) {component : Component F}

@@ -98,15 +98,15 @@ theorem LtChip.selectorActive_of_mainConstraints
 
 /-- Lt passes its independent state input through to the completed row. -/
 theorem LtChip.inputOutputState (env : Environment (ZMod p)) :
-    (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state =
-      (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state := by
+    (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state =
+      (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state := by
   let input : Var LtChip.Inputs (ZMod p) := varFromOffset LtChip.Inputs 0
   let offset := size LtChip.Inputs
   have inputEq : Eval.eval env input =
-      (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset LtChip.Inputs 0 env
   have outputEq : Eval.eval env ((LtChip.circuit (p := p)).output input offset) =
-      (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).state =
@@ -115,15 +115,15 @@ theorem LtChip.inputOutputState (env : Environment (ZMod p)) :
 
 /-- Lt passes its independent ALU adapter input through to the completed row. -/
 theorem LtChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
-      (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter := by
   let input : Var LtChip.Inputs (ZMod p) := varFromOffset LtChip.Inputs 0
   let offset := size LtChip.Inputs
   have inputEq : Eval.eval env input =
-      (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset LtChip.Inputs 0 env
   have outputEq : Eval.eval env ((LtChip.circuit (p := p)).output input offset) =
-      (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).adapter =
@@ -133,12 +133,12 @@ theorem LtChip.inputOutputAdapter (env : Environment (ZMod p)) :
 /-- The completed Lt columns at one physical component row. -/
 noncomputable def LtChip.physicalCols (env : Environment (ZMod p)) :
     LtChip.Columns (ZMod p) :=
-  ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
+  ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env
 
 /-- The completed Lt row view at one physical component row. -/
 noncomputable def LtChip.physicalView (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   LtChip.rowView
-    (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
     (LtChip.physicalCols env)
 
 /-- The folded physical view's selector is exactly the evaluated typed input selector. -/
@@ -146,7 +146,7 @@ theorem LtChip.physicalView_isReal (env : Environment (ZMod p)) :
     (LtChip.physicalView env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) LtChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset LtChip.Inputs 0) =
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset LtChip.Inputs 0 env
   simpa only [LtChip.physicalView, LtChip.rowView] using
     congrArg (fun input : LtChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -154,7 +154,7 @@ theorem LtChip.physicalView_isReal (env : Environment (ZMod p)) :
 /-- Component-level form of Lt's physical non-`x0` route. -/
 theorem LtChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
     (LtChip.physicalView env).adapter.op_a_0 = 0 := by
   let input : Var LtChip.Inputs (ZMod p) := varFromOffset LtChip.Inputs 0
   let offset := size LtChip.Inputs
@@ -162,9 +162,9 @@ theorem LtChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (Component.constraintsHold_iff env).mp constraints
   have route := (LtChip.controlFacts_of_mainConstraints input offset env mainConstraints).opA0Zero
   have inputEq : Eval.eval env input =
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset LtChip.Inputs 0 env
-  change (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+  change (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← LtChip.inputOutputAdapter env, ← inputEq, LtChip.eval_inputAdapter,
     Readers.ALUTypeReader.eval_opA0]
   exact route
@@ -172,7 +172,7 @@ theorem LtChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
 /-- Component-level exact opcode partition used by `advanceReady`. -/
 theorem LtChip.rowViewSelectorActive_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (LtChip.physicalView env).is_real = 1) :
     LtChip.ActiveSelector (LtChip.physicalCols env) := by
   let input : Var LtChip.Inputs (ZMod p) := varFromOffset LtChip.Inputs 0
@@ -210,7 +210,7 @@ theorem LtChip.aluTypeReader_mem (input : Var LtChip.Inputs (ZMod p)) (offset : 
 /-- The retained ALU reader binds source C to the decoded immediate on immediate rows. -/
 theorem LtChip.rowViewOpCBinding_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (immediate : (LtChip.physicalView env).adapter.imm_c = 1) :
     (LtChip.physicalView env).adapter.op_c_memory.prev_value =
       (LtChip.physicalView env).adapter.op_c := by
@@ -223,19 +223,19 @@ theorem LtChip.rowViewOpCBinding_of_constraints (env : Environment (ZMod p))
     ((LtChip.main input).operations offset) Readers.ALUTypeReader.circuit readerInput
     (offset + 10) (LtChip.aluTypeReader_mem input offset) mainConstraints
   have inputEq : Eval.eval env input =
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset LtChip.Inputs 0 env
   have immediateInput : Expression.eval env readerInput.cols.imm_c = 1 := by
     change Expression.eval env input.adapter.imm_c = 1
-    change (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.imm_c = 1
+    change (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.imm_c = 1
       at immediate
     rw [← LtChip.inputOutputAdapter env, ← inputEq, LtChip.eval_inputs,
       Readers.ALUTypeReader.eval_immC] at immediate
     exact immediate
   have binding := Readers.ALUTypeReader.eval_opCPrev_eq_opC_of_mainConstraints
     readerInput (offset + 10) env readerConstraints immediateInput
-  change (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
-    (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_c
+  change (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
+    (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_c
   rw [← LtChip.inputOutputAdapter env, ← inputEq, LtChip.eval_inputs,
     Readers.ALUTypeReader.eval_opCPrev, Readers.ALUTypeReader.eval_opC]
   simpa only [readerInput, LtChip.aluTypeReaderInput] using binding
@@ -267,7 +267,7 @@ private theorem LtChip.flagCombo_ne_ecall {x y : ZMod p}
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem LtChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (LtChip.physicalView env).is_real = 1) :
     (LtChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   have active := LtChip.rowViewSelectorActive_of_constraints env constraints real

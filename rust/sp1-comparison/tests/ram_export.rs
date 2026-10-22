@@ -14,7 +14,7 @@ mod ram;
 #[path = "support/export.rs"]
 #[allow(dead_code)]
 mod support;
-use support::{NativeEvaluation, RowWitness};
+use support::RowWitness;
 
 macro_rules! generated {
     ($module:ident, $file:literal) => {
@@ -58,12 +58,12 @@ fn byte_valid(message: &[u64]) -> bool {
     }
 }
 
-fn valid<P: Program<F>, S: GeneratedAirSpec>(row: &[F]) -> bool {
+fn valid<P: Program<F> + GeneratedAirSpec>(row: &[F]) -> bool {
     let intervals = ram::intervals();
-    S::constraints::<NativeEvaluation>(0, &[], row)
+    P::constraints::<F>(0, row)
         .iter()
         .all(|value| *value == F::ZERO)
-        && P::interactions(0, row).iter().all(|entry| {
+        && <P as Program<F>>::interactions(0, row).iter().all(|entry| {
             if entry.multiplicity == F::ZERO {
                 return true;
             }
@@ -81,7 +81,7 @@ fn valid<P: Program<F>, S: GeneratedAirSpec>(row: &[F]) -> bool {
         })
 }
 
-fn check<P: Program<F>, S: GeneratedAirSpec>(kind: &str, width: usize) {
+fn check<P: Program<F> + GeneratedAirSpec>(kind: &str, width: usize) {
     let reference: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
         "/ram_rows.reference.json"
@@ -128,7 +128,7 @@ fn check<P: Program<F>, S: GeneratedAirSpec>(kind: &str, width: usize) {
     }
     let cases = reference[kind].as_array().unwrap();
     assert_eq!(cases.len(), inputs.len());
-    assert_eq!(P::FIXED_WIDTHS, &[0]);
+    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[0]);
     for (input, case) in inputs.iter().zip(cases) {
         assert_eq!(case["input"], serde_json::json!(input));
         let input_fields = fields(input);
@@ -136,7 +136,7 @@ fn check<P: Program<F>, S: GeneratedAirSpec>(kind: &str, width: usize) {
         let row = &witness.tables[0][0];
         assert_eq!(row.len(), width);
         assert_eq!(serde_json::json!(values(row)), case["row"]);
-        let actual = P::interactions(0, row);
+        let actual = <P as Program<F>>::interactions(0, row);
         let ledger: Vec<_> = actual.iter().map(|entry| serde_json::json!({
             "channel": entry.channel, "message": values(&entry.message),
             "multiplicity": entry.multiplicity.as_canonical_u64(), "assumeGuarantees": entry.assume_guarantees,
@@ -153,7 +153,7 @@ fn check<P: Program<F>, S: GeneratedAirSpec>(kind: &str, width: usize) {
             && (kind == "byte" || address <= ram::LIMIT - 8)
             && (kind != "source" || address >= 65536 && address % 8 == 0)
             && (kind != "target" || input[5..] == ram::word(ram::value(address)));
-        assert_eq!(valid::<P, S>(row), expected, "{kind}: {input:?}");
+        assert_eq!(valid::<P>(row), expected, "{kind}: {input:?}");
         assert!(
             generate::<F, P>(&[], &input_fields).is_err(),
             "open RAM buses must not balance"
@@ -220,7 +220,7 @@ fn check<P: Program<F>, S: GeneratedAirSpec>(kind: &str, width: usize) {
         .filter(|&cell| {
             let mut forged = row.clone();
             forged[cell] += F::ONE;
-            !valid::<P, S>(&forged)
+            !valid::<P>(&forged)
         })
         .count();
     assert!(
@@ -231,17 +231,17 @@ fn check<P: Program<F>, S: GeneratedAirSpec>(kind: &str, width: usize) {
 
 #[test]
 fn byte_rows() {
-    check::<byte::RamByte, byte::RamByteAirSpec>("byte", 93);
+    check::<byte::Ensemble>("byte", 93);
 }
 #[test]
 fn word_rows() {
-    check::<word::RamWord, word::RamWordAirSpec>("word", 744);
+    check::<word::Ensemble>("word", 744);
 }
 #[test]
 fn source_rows() {
-    check::<source::RamSource, source::RamSourceAirSpec>("source", 748);
+    check::<source::Ensemble>("source", 748);
 }
 #[test]
 fn target_rows() {
-    check::<target::RamTarget, target::RamTargetAirSpec>("target", 749);
+    check::<target::Ensemble>("target", 749);
 }

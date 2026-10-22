@@ -20,6 +20,19 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
+- The complete installed 94-table assembly exports through the same path. Active-branch,
+  empty-local-segment, stopped-source and 16/24-byte HINT_READ fixtures supply inputs through
+  Clean hint tables; its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
+  including empty table positions, and exercises proof acceptance and endpoint/row mutations.
+  Empty and stopped segments retain their ordered, bank and Exit terminals. Fresh proof attempts
+  test missing terminals, altered public endpoints, resumed execution and forged optional exits.
+  Stopped cases include a nonzero exit code and banks; zero-multiplicity verifier messages keep
+  their complete payloads. Host banks are fixed instance parameters: a stopped segment can
+  accept a changed public digest carrier, so these cases do not establish digest-to-bank binding.
+  These finite cases do not prove general generation completeness.
+- The complete native opcode alphabet, including unsupported instructions, is compared with every
+  constructor and discriminant of the released Rust enum. Lean's derived constructor names and
+  native discriminants export as metadata; no Rust source parser or generated Lean enum is needed.
 - All 25 supported instruction families export through the same built-in path. Rust compares
   generated witnesses, local constraint satisfaction and complete
   interaction multisets with SP1 v6.9.0's supervisor AIR, including padding and column mutations.
@@ -28,11 +41,45 @@ interpreter or scheduler.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
   mprotect semantics remain outside their scope. Exact cases and counts live in the
   [coverage table](../rust/sp1-comparison/README.md).
+- ADD also has an exact algebraic comparison over arbitrary supervisor rows with untrusted
+  programs disabled: upstream symbolic degree
+  bounds justify a complete interpolation grid, and affine interaction occurrences match
+  individually before permutation. Both AIRs must independently enforce the zero-register
+  equation used in normalization. This is a trusted Rust check, not a kernel-checked theorem.
 - All six native byte providers export without legacy lookups. AND/OR/XOR share a bundled
   bit-decomposition gadget in `ToClean`; the other providers use the same upstream bit primitives.
   Rust compares all byte pairs and four field multiplicities against SP1's actual preprocessed
   table and AIR, retaining every message occurrence. Native polynomial membership and SP1's
   authenticated preprocessing have different row layouts.
+- All 17 installed Range providers compare with every released preprocessed row and AIR at four
+  multiplicities, retaining duplicate zero-width rows. Both bump components compare with SP1's
+  live trace generators, local constraints and complete ledgers, including timestamp/PC carries,
+  padding and mutations of every column. Bump rows are supplied as inputs; this does not establish
+  native execution-to-row generation or whole-ensemble balance.
+- The syscall instruction, full-code guard and installed host-call wrapper export through Clean.
+  Rust compares released supervisor rows, shared buses and public-value bindings, including all
+  eight native codes, every commit slot and WRITE's extra register read. The public adapter uses
+  named SP1 fields; `mprotect`'s additional supervisor trap cell must be zero before projection.
+  Public queries retain all eight field coefficients from the selector bitmap. Inactive-row
+  comparisons cover empty, unit, multi-hot, non-Boolean and cancelling weights, together with
+  public-cell and cached-result mutations. These finite tests do not prove arbitrary-row or
+  whole-shard public equivalence.
+- HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals export
+  with Lean row/ledger references. Rust executes real programs through SP1's executor and shard
+  builder, then checks native effects, complete receipts and released Byte-table membership.
+  Native commitment receipts describe each update to a mutable bank; SP1's syscall AIR binds
+  each update to the shard's final public digest. Repeated differing writes execute with the
+  same final bank but fail that upstream AIR condition. Both behaviors are tested explicitly;
+  handler-effect agreement does not establish whole-shard AIR equivalence.
+- Empty/nonempty HINT_LEN and HINT_READ handlers compare queue updates and word endpoints with
+  released execution, including repeated observations, empty hints, mandatory final padding and
+  limb carries. Complete 16/24-byte HINT_READ assemblies close physical Memory, hint and cursor
+  ledgers and compare final register/RAM values with released execution. Three active ordered
+  boundary, target-check or nonfinal word rows pad to four. Both word variants use Boolean
+  activity; semantic projections select active rows while physical ledgers retain every occurrence
+  and their count bounds. Rust tests accept arbitrary disabled cells and reject non-Boolean
+  activity, missing real checks/transfers and activated padding. Broader active-host coverage and
+  general generation completeness remain open.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and
@@ -43,13 +90,26 @@ interpreter or scheduler.
   Byte/word reads and source/target row programs export through Clean. Independent Rust checks
   cover sparse gaps, first-entry precedence, address bounds, generated rows and complete ledgers.
   Closed interval-provider ensembles test fixed endpoints/bytes, counts, padding and public binding.
-  Full ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
+  General ordered RAM/host assembly generation and SP1 global-memory comparison remain open.
+- Native write permissions authenticate writable intervals through a separate verifier-fixed
+  provider. Requests carry only an address; the circuit selects interval witnesses internally
+  using the same Clean IR selector as memory reads. Boolean row activity disables assertions
+  and channel multiplicities for padding while preserving witness programs and physical occurrences.
+  The closed three-request export pads to four rows through Clean's
+  ordinary demand scheduler without private inputs. Rust checks literal ROM-byte exclusion,
+  full rows/ledgers, public binding, interval/count mutations and invalid activity. Disabled
+  rows admit arbitrary child cells; disabling a real request or activating padding fails balance.
+  Permission tests alone do not establish complete host execution. This is not SP1 runtime `mprotect`.
+- Immutable hint nodes and words publish directly on their existing semantic channels from
+  verifier-fixed payloads and eligibility tags. Rust reconstructs node/tail identities, lengths
+  and little-endian words from literal byte buffers, including empty and aligned padding. Closed
+  fixtures compare generation outcomes and all rows/ledgers, and test public/count/height binding.
+  Native resource limits preserve the full word inventory; oversized inputs fail closed without
+  truncation. This source-queue contract is separate from complete host execution.
 - Static membership retains original row order and uses a fixed eligibility tag to select the
-  first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty tables
+  first copy of a repeated payload. Duplicate and padding rows must have zero counts. Empty inventories
   have one inactive row; other heights round up to a power of two. Capacity proofs must account
   for this expansion. Clean's scheduler, lowering and emitter handle the resulting tables.
-- Chip witness JSON and its Rust interpreter still compare against pinned SP1 dumps. They remain
-  migration evidence while provider coverage and live consumers move to the built-in path.
 - The [independent backend fixtures](../tools/backend-gadgets/README.md) compile IsZero,
   IsZeroWord and WordRangeCheck through Clean's Circom/WASM/R1CS backend. Their positive,
   alternate-valid and rejecting cases test a separate backend boundary.
@@ -57,23 +117,16 @@ interpreter or scheduler.
 Reproduce current export checks after the full build:
 
 ```sh
-python3 scripts/check_witgen_export.py
-scripts/check_ensemble_export.sh
+python3 scripts/check_ensemble_export.py
 scripts/check_backend_gadgets.sh
 ```
 
 The R1CS path rejects lookups/interactions. A fixed lookup alone does not make a circuit R1CS
 exportable. See [examples](examples.md) for the verified LoadByte replacement's narrower claim.
 
-The transitional [JSON format](witgen-wire-format.md) has three artifacts per chip: witness
-programs/constraints/interactions, a symbolic native-to-Rust row map, and a field/input/hint
-manifest. The fixture exporter reconstructs actual SP1 trace rows before writing test data;
-the [Rust interpreter](../rust/README.md) independently re-executes the serialized programs.
-Native outputs live under `.lake/witgen-export/`; the driver checks two fresh exports for
-byte agreement and runs locked Rust tests. Committed `export/sp1dump/` files remain independent
-source inputs. `scripts/run_sp1_conformance.py` stages the pinned SP1 checker with fresh artifacts
-under `.lake`, without modifying the extraction checkout. That opt-in check remains useful
-migration evidence; it is not the intended long-term interpreter or dependency arrangement.
+Rust comparisons use released SP1 code directly. The former reverse extractor, custom JSON
+wire format, interpreter and committed dumps are retired. Native semantic proofs and reusable
+mathematics remain; historical exact-AIR evidence is available in Git history.
 
 ## Rust migration
 
@@ -91,23 +144,58 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-Five installed legacy lookup meanings remain: program, syscall code, write permission, hint nodes
-and hint words. Built-in lowering rejects these forms; migrate their consumers before retiring
-chip JSON comparison.
+The installed 94-component host assembly is lookup-free. Its branch, empty, stopped and 16/24-byte
+HINT_READ exports check complete assembly construction and Rust agreement for those cases. Broader execution
+and host-call cases, general padding, data agreement and completeness remain open. The retired
+instruction-only pipeline did not supply that missing whole-assembly coverage.
 
-Clean's current scheduler selects handlers by channel and direction and rejects multiple matches.
-SP1's separate Byte providers share a channel, so complete generation needs upstream routing support
-or a consolidated provider. The existing test adapter constructs component rows with Clean's
+The native eight-call syscall profile uses degree-three arithmetic assertions and six shared
+products. Its full-register contract remains independent of channel balance. Clean exports the
+production guard and its witness program; Rust checks the selected codes against SP1’s pinned
+enum, rejects upper-limb aliases and unselected calls, and checks generated rows and tampered
+products. This profile is deliberately stricter than the executor’s truncating syscall dispatch.
+
+The Clean patch supports message-filtered demand handlers and checked indexing into preallocated
+providers. Production keeps SP1's specialized Byte providers: the channel payload selects the
+opcode/width handler. Filters must identify one handler; ambiguous or missing matches are errors.
+Indexed routes verify the selected row's actual message before changing its multiplicity.
+Zero contributions do not enter the scheduler's pending-demand worklist; physical rows and their
+zero-count ledger occurrences remain intact. These changes, plus the public-only-channel verifier
+fix, modify existing upstream declarations and therefore live in the dependency patch. Remove each
+patch when upstream provides the corresponding capability.
+
+The same dependency patch lets `minimumRows := 0` preserve empty mutable tables. The Rust
+backend keeps all indexed heights and widths, proving only nonempty tables; verifier-fixed
+tables cannot be omitted. Verifier interactions and the complete occurrence bound still apply.
+At least one table must be nonempty for the batch PCS. This removes spurious padding demands
+from unused chips, but active tables still need valid padding to power-of-two heights.
+
+Production retains the specialized Byte/Range providers. The archived
+[provider review](https://github.com/dtumad/sp1-lean/pull/153) compares generation, proving,
+verification, trace size and memory across small instruction cases and large workloads.
+The unified alternative cost more on large distinct demand; fully preprocessed tables added
+substantial proving and verification costs. Source and measurements remain in the linked checkpoints. Routine validation
+covers the installed providers. Revisit this choice when upstream demand indexing or reusable
+preprocessing changes those costs.
+
+The existing test adapter constructs component rows with Clean's
 runtime, then independently checks their external interactions. It is not a production scheduler
 or evidence of full-ensemble balance. Rust tests establish neither cryptographic security nor a
 formal lowering theorem.
 
+The installed Program provider has sixteen verifier-fixed instruction fields and one prover-owned
+count. It retains the complete decoded ROM, including unused entries, and pads with copies of the
+first instruction. Empty inventories have an inert zero-count row. Physical table invariants and
+Program balance authenticate counted fetches. Rust tests compare contiguous preprocessing and AIR
+with SP1; separate tests cover the native model's sparse, unordered addresses. The additive
+`ToClean.Air.MessageIndex` helper expresses first-match routing in Clean's existing witness IR;
+its scheduler rechecks the complete payload. A scalable sparse index remains an upstream optimization.
+
 The reviewed upgrade target is [SP1 v6.9.0](https://github.com/succinctlabs/sp1/releases/tag/v6.9.0).
 The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,
 independently of extraction. Cargo and the reviewed coverage record must agree with the release
-revision in provenance.json. The nested legacy provenance authenticates old generated evidence
-only until its remaining consumers and comparison coverage are replaced; it is deleted with that
-pipeline, rather than retained as another supported version.
+revision in provenance.json. This is the only supported SP1 pin; old generated evidence is
+historical rather than a second dependency.
 Review loader byte preservation, host output behavior, instruction execution, verifier behavior
 and table layouts separately; an unchanged instruction AIR does not imply unchanged system semantics.
 
@@ -125,7 +213,7 @@ The migration must cover:
 3. Valid and malformed native/SP1 witnesses, tables, interactions, public values, padding and
    count bounds, with deterministic generation and locked Cargo checks in CI.
 4. Explicit failures for unsupported layouts, native-only witness programs and legacy lookup forms.
-5. Native-owned carrier types and migration of every old export/extraction consumer before deletion.
+5. Native-owned carrier types and semantic proofs, with independent Rust comparison adapters.
 
 Clean's witness scheduler is not a proof of totality, final-data agreement or completeness.
 Retain constructor correctness and distinguish computable code from noncomputable semantic replay.
@@ -140,15 +228,14 @@ components; Cargo separately checks the Rust snapshots against source. Native RO
 requires a restricted comparison domain, recorded with each group's limits.
 
 Rust's mode-associated columns include zero-width supervisor fields and populated user/mprotect
-fields. The legacy IntoShape extraction skips mode-dependent fields and explicitly rejects
-mprotect. That gap is not proof coverage.
+fields. Both configurations have independently checked inventories, but compiling the same
+supervisor tests under both features does not establish user/mprotect execution coverage.
 
 Represent statically optional columns as a configuration-indexed fixed-width/zero-width carrier.
 ProvableType requires an exact vector isomorphism: ordinary runtime Option is not automatically
 such a carrier. Runtime optional values need an explicit tag/payload validity contract or an
 appropriate CircuitType. Solving representation does not prove mprotect semantics.
 
-After coverage and consumers migrate, delete reverse extraction, faithfulness-only proofs, dumps,
-the bespoke interpreter and duplicate export scripts. Preserve native semantic proofs and reusable
-mathematics. Rust comparison, formally verified lowering and cryptographic soundness remain
-distinct assurance claims.
+Rust comparison, formally verified lowering and cryptographic soundness remain distinct
+assurance claims. Retiring the old pipeline does not close the outstanding native assembly or
+capstone obligations.

@@ -79,7 +79,7 @@ from `main`, and reuses its structural certificates instead of reducing the full
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
   elaborate_circuit
 
-/-- The explicit completed row, kept folded for whole-chip row codecs and faithfulness proofs. -/
+/-- Explicit completed row, kept folded for structural consumers. -/
 @[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.is_real, input.state, input.adapter,

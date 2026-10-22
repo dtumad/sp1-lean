@@ -43,10 +43,9 @@ and full validation, and [examples](docs/examples.md) for the precise claims.
 | [Export and integration](docs/export.md) | Existing backends and the Clean-native Rust migration |
 
 Lean is the implementation source. The integration direction is Clean's built-in Lean → Rust
-AIR/witness export, with comparison against a pinned SP1 release in Rust. The current
-Rust → Lean oracles and whole-chip faithfulness proofs remain migration evidence; they are not
-the permanent export architecture. [Tracking issues](docs/roadmap.md) distinguish this work from
-the remaining semantic proofs and eventual cryptographic verifier.
+AIR/witness export, with comparison against a pinned SP1 release in Rust. The reverse-extraction
+pipeline is retired; its historical evidence remains in Git. [Tracking issues](docs/roadmap.md)
+distinguish remaining export coverage from semantic proofs and the eventual cryptographic verifier.
 
 Pins live in [Lake's manifest](lake-manifest.json), [the toolchain](lean-toolchain) and
 [external provenance](scripts/provenance.json). Do not run bare `lake update`.

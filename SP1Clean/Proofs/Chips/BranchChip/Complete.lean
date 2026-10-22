@@ -242,7 +242,7 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHin
 /-- The Branch chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
 
 /-- Real event inputs followed by zero padding inputs. -/
 def traceInputs (events : List ITypeEvent) (padding : ℕ) : List (Inputs (ZMod p)) :=
@@ -263,29 +263,32 @@ theorem proverAssumptions_of_mem_traceInputs {events : List ITypeEvent} {padding
 /-- Clean's ordinary table builder satisfies every constraint. -/
 theorem traceTable_constraints (events : List ITypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p))
-    (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets) :
+    (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets)
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      (ProverHint.empty _)).Constraints data :=
-  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
+      (ProverHint.empty _) bounded).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The built table satisfies its channel guarantees. -/
 theorem traceTable_guarantees (events : List ITypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p))
-    (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets) :
+    (h : ∀ e ∈ events, e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets)
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      (ProverHint.empty _)).Guarantees data :=
-  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
+      (ProverHint.empty _) bounded).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The table interaction list, preserving row order and multiplicities. -/
 theorem traceTable_interactionsWith (events : List ITypeEvent) (padding : ℕ)
-    (data : ProverData (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (data : ProverData (ZMod p)) (channel : RawChannel (ZMod p))
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding)
-        data (ProverHint.empty _)).interactionsWith data channel =
+        data (ProverHint.empty _) bounded).interactionsWith channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data (ProverHint.empty _)) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ _ data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
 
 end SP1Clean.BranchChip

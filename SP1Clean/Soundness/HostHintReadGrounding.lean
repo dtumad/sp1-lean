@@ -53,8 +53,8 @@ private theorem source_event_readsInWindow (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
-    ReadsInWindow (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
+    ReadsInWindow (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+      (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   have original := LocalCore.executionRows_readsInWindow_of_program valid _
     (HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.projected_constraints witness constraints))
     (source_program witness balanced) member
@@ -107,8 +107,8 @@ abbrev GroundingCarrier
       (sourceResources source.host.io.hints) channels
       (source_unique_names image source source.host.io.hints))) :=
   NativeCore.ExecutionCarrier
-    (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data))
+    (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+      (wordTables (HostHintQueueBoundary.projected witness))))
     (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput)
     (LocalCore.memoryInitialFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -145,7 +145,7 @@ theorem source_grounding_carrier (valid : image.Valid)
       RowOKCore (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) newer ∧
       newer.statePull = canonState original.statePull ∧ newer.statePush = canonState original.statePush)
       (rewrittenRows rows touches) (ordered.map (eventFacts witness.data
-        (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data))) := by
+        (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))))) := by
     apply rewriteRows_forall₂ alignment rewrite
     intro row rowMem original originalMem ts localAlignment rewritten
     obtain ⟨event, eventMem, rfl⟩ := List.mem_map.mp originalMem
@@ -153,7 +153,7 @@ theorem source_grounding_carrier (valid : image.Valid)
     have ok := chronology.rowOK row rowMem
     rw [source_public] at ok
     have canon := canonical_times witness constraints balanced event active
-      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness)))
     rw [← localAlignment.statePull, ← localAlignment.statePush] at canon
     have prior := fun pull member => (chronology.priorBounds row rowMem pull member).1
     have semantic := localAlignment.windowAligned
@@ -173,9 +173,9 @@ theorem source_grounding_carrier (valid : image.Valid)
     exact Walk.isWalk_forall₂ (ExecutionRow.canonEdge witness.data)
       (fun row : RowFacts p => (row.statePull, row.statePush))
       (fun event row => row.statePull = canonState (eventFacts witness.data
-          (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).statePull ∧
+          (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))) event).statePull ∧
         row.statePush = canonState (eventFacts witness.data
-          (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).statePush)
+          (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))) event).statePush)
       (fun related => by
         dsimp only [ExecutionRow.canonEdge]
         rw [ExecutionRow.edge_eq_facts]
@@ -198,15 +198,15 @@ theorem GroundingCarrier.ground_of_steps (valid : image.Valid)
     (trajectory : Trajectory) (initial : trajectory 0 = some source.sail.realize)
     (steps : ∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
       LocalStepFactG (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
-          (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-            (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) ∧
+          (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+            (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
       FrameFactG (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
-          (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-            (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event)) :
+          (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+            (wordTables (HostHintQueueBoundary.projected witness))) event)) :
     (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
       LocalStateTruthG (image.toGuestProgram valid) trajectory carrier.timeline (event.facts witness.data).statePull ∧
-      ∀ pull ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+      ∀ pull ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
         MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
           LocalValueAtG trajectory source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
       LocalStateTruthG (image.toGuestProgram valid) trajectory carrier.timeline (finalBoundaryStateMessage witness.publicInput) ∧

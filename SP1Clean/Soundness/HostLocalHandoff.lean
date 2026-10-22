@@ -54,6 +54,10 @@ def receiverTable (witness : EnsembleWitness (ensemble image source receivers re
     (index : Fin receivers.length) : Table (ZMod p) :=
   (receiverTables witness)[index.val]'(by rw [← (receiverTables_aligned witness).length_eq]; exact index.isLt)
 
+theorem receiverTable_mem (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+    (index : Fin receivers.length) : receiverTable witness index ∈ witness.tables :=
+  List.mem_of_mem_drop (List.mem_of_mem_take (List.getElem_mem _))
+
 theorem receiverTable_component (witness : EnsembleWitness (ensemble image source receivers resources channels names))
     (index : Fin receivers.length) : (receiverTable witness index).component = receivers[index.val].component := by
   have same := congrArg (fun tables => tables[index.val]?) (receiverTables_components witness)
@@ -63,26 +67,26 @@ theorem receiverTable_component (witness : EnsembleWitness (ensemble image sourc
 
 /-- The complete typed receiver inventory is read from the actual witness, in registration order. -/
 def calls (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :=
-  ReceiverView.messages receivers (receiverTables witness) witness.data
+  ReceiverView.messages receivers (receiverTables witness)
 
 /-- All installed physical tables are accounted for, including instruction padding. -/
 theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source receivers resources channels names))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels) :
     witness.interactionsWith HostCallChip.channel.toRaw =
-      (HostLocalCore.hostCallTable witness).interactionsWith witness.data HostCallChip.channel.toRaw ++
+      (HostLocalCore.hostCallTable witness).interactionsWith HostCallChip.channel.toRaw ++
         (calls witness).map HostCallChip.channel.pulledValue := by
   rw [HostLocalCore.hostCall_interactions]
   have split : receiverTables witness ++ resourceTables witness = HostLocalCore.auxiliaryTables witness :=
     List.take_append_drop _ _
   rw [← split, List.flatMap_append]
-  have resourceSilent : (resourceTables witness).flatMap (·.interactionsWith witness.data HostCallChip.channel.toRaw) = [] := by
+  have resourceSilent : (resourceTables witness).flatMap (·.interactionsWith HostCallChip.channel.toRaw) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply table.interactionsWith_nil_of_channel_not_mem
     apply silent table.component
     rw [← resourceTables_components witness]
     exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  rw [resourceSilent, List.append_nil, ReceiverView.messages_interactions _ _ witness.data (receiverTables_aligned witness)]
+  rw [resourceSilent, List.append_nil, ReceiverView.messages_interactions _ _ (receiverTables_aligned witness)]
   rfl
 
 /-- Complete handler accounting needs only the actual HostCall channel balance. -/
@@ -131,9 +135,9 @@ theorem receiver_clocks_nodup_of_orderingChannels
     (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (index : ℕ) (bound : index < receivers.length) :
     ((ReceiverView.tableMessages receivers[index]
-      ((receiverTables witness)[index]'(by rw [← (receiverTables_aligned witness).length_eq]; exact bound)) witness.data).map
+      ((receiverTables witness)[index]'(by rw [← (receiverTables_aligned witness).length_eq]; exact bound))).map
         HostCallLedger.clock).Nodup :=
-  ReceiverView.tableMessages_keys_nodup _ _ witness.data (receiverTables_aligned witness) _
+  ReceiverView.tableMessages_keys_nodup _ _ (receiverTables_aligned witness) _
     (calls_clocks_nodup_of_orderingChannels witness silent constraints ordering balanced) index bound
 
 /-- Every physical row of any registered handler inherits the global clock uniqueness. -/
@@ -143,7 +147,7 @@ theorem receiver_clocks_nodup (witness : EnsembleWitness (ensemble image source 
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (index : ℕ) (bound : index < receivers.length) :
     ((ReceiverView.tableMessages receivers[index]
-      ((receiverTables witness)[index]'(by rw [← (receiverTables_aligned witness).length_eq]; exact bound)) witness.data).map
+      ((receiverTables witness)[index]'(by rw [← (receiverTables_aligned witness).length_eq]; exact bound))).map
         HostCallLedger.clock).Nodup :=
   receiver_clocks_nodup_of_orderingChannels witness silent constraints
     (HostLocalCore.orderingChannels witness interface constraints balanced)

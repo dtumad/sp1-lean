@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.HostChecks
 import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
@@ -6,7 +7,7 @@ import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
 
 /-! # Current-head HINT_LEN, source authentication, and instruction handoff
 
-Evaluate the complete Clean witness programs and fixed source lookup. Joint checks balance
+Evaluate the complete Clean witness programs and fixed source inventory. Joint checks balance
 HostCall, node, and queue-state ledgers against explicit fixture endpoints; the instruction's
 Memory/Program/State channels remain external. These are component integration regressions,
 not a claim that the handler is installed in the full local-core ensemble.
@@ -42,8 +43,7 @@ private def evaluate (empty : Bool) (row : HostHintLengthChip.Inputs Fp)
     (toElements row).toList corrupt
 
 private def source (hints : List Bytes) (row : HintQueue.NodeRecord Fp) : Bool × Ledger :=
-  evaluateProgram (HostHintQueue.sourceMain hints (varFromOffset HintQueue.NodeRecord 0))
-    (toElements row).toList none [FiniteLookup.ofStatic (HintQueue.sourceTable hints)]
+  HintSourceExport.observe (HintSourceExport.nodes hints) row
 
 private def selected (names : List String) (ledger : Ledger) : Ledger :=
   ledger.filter (fun item => names.contains item.1)
@@ -171,6 +171,6 @@ theorem frontierTampering :
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (HostHintQueue.source (p := SP1Prime) [[1, 2, 3], []])
+#assert_exportable (HostHintQueue.source (p := SP1Prime) [[1, 2, 3], []]).circuit
 
 end SP1CleanTest.Core.HostHintLength

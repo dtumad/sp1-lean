@@ -236,10 +236,10 @@ theorem interactionsWith_memory_eq
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := BranchChip.circuit (p := p) } :
+    ({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk]
+    Air.Flat.Component.rowOperations]
   change ((BranchChip.main
     (varFromOffset BranchChip.Inputs 0)).operations
       (size BranchChip.Inputs)).lookups = []

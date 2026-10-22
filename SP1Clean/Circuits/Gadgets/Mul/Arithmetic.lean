@@ -730,11 +730,9 @@ lemma product_reassembly (cols : Circuits.Types.MulOperation (ZMod p)) (bb cc : 
     (productVal cols 0).val (productVal cols 1).val (productVal cols 2).val (productVal cols 3).val (productVal cols 4).val (productVal cols 5).val (productVal cols 6).val (productVal cols 7).val (productVal cols 8).val (productVal cols 9).val (productVal cols 10).val (productVal cols 11).val (productVal cols 12).val (productVal cols 13).val (productVal cols 14).val (productVal cols 15).val (carryVal cols 0).val (carryVal cols 1).val (carryVal cols 2).val (carryVal cols 3).val (carryVal cols 4).val (carryVal cols 5).val (carryVal cols 6).val (carryVal cols 7).val (carryVal cols 8).val (carryVal cols 9).val (carryVal cols 10).val (carryVal cols 11).val (carryVal cols 12).val (carryVal cols 13).val (carryVal cols 14).val (carryVal cols 15).val
     e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 e11 e12 e13 e14 e15
 
-/-- The raw schoolbook constraint form, stated against the witnessed `product`/`carry`/sign-extend
-cols: each product byte is the column sum plus incoming carry minus the outgoing carry times 256;
-product bytes are genuine bytes and carries are 16-bit-bounded; the sign-extend selectors are the
-gated operand MSBs; all booleanity. (The byte-MSB table lookups tying `b_msb`/`c_msb` to the operand
-top bytes are deferred to the faithfulness anchor.) -/
+/-- Schoolbook arithmetic over witnessed product, carry and sign-extension columns.
+Product bytes and carries are bounded; each column includes the incoming and outgoing carry.
+Operand-MSB channel checks are separate from this arithmetic relation. -/
 def RawSpec (input : Inputs (ZMod p)) (cols : Circuits.Types.MulOperation (ZMod p)) : Prop :=
   let bb := extendedBytes input.b cols.b_lower_byte cols.b_sign_extend
   let cc := extendedBytes input.c cols.c_lower_byte cols.c_sign_extend

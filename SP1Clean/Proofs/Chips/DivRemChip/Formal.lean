@@ -609,9 +609,8 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
       (exposedMemoryInteractions input offset).map ChannelInteraction.toRaw :=
   main_interactionsWith_memory input offset
 
-/-- The completed DivRem circuit's State projection is exactly the canonical CPU-state edge.
-Published alongside the Program and Memory projections so whole-chip faithfulness clients need not
-unfold the 210-cell witness program or the five-subcircuit constraint suffix. -/
+/-- The completed DivRem circuit's State projection is the canonical CPU-state edge.
+Consumers can use it without unfolding the 210-cell witness program or five-subcircuit suffix. -/
 theorem interactionsWith_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith stateChannel.toRaw =
       (Readers.CPUState.stateInteractions
@@ -623,10 +622,10 @@ theorem interactionsWith_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := DivRemChip.circuit (p := p) } :
+    ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk,
+    Air.Flat.Component.rowOperations,
     DivRemChip.circuit_main_eq]
   simp [DivRemChip.main, DivRemChip.populateRow,
     DivRemChip.constrainRow,

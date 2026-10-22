@@ -497,7 +497,7 @@ is the immediate).  The op_a read-prior pull and the op_b (rs1) pull + read-back
 the composed `ITypeReader`; the op_a write push from the composed `RegisterWrite`, carrying the
 witnessed link address `op_a_value` (cells `offset+4..7`, after the jump target `add_value`).
 Keeping this list beside `circuit` makes Clean's exposure interface the single structural source
-consumed by both faithfulness and semantic grounding. -/
+consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -939,9 +939,9 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := JalrChip.circuit (p := p) } :
+    ({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     JalrChip.circuit_main_eq]
   simp [JalrChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.ITypeReader.circuit,

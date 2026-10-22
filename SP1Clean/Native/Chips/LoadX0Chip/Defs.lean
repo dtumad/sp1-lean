@@ -37,11 +37,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Native LoadX0-chip row (Rust field order). A bespoke reader-only row: the `ITypeReader` block is
 read through both `ITypeReader` and `ITypeReaderImmutable` assertion families, there is no value
-logic, and the seven per-width selectors replace a single `is_real`. The reader and memory blocks
-reuse the project substrate (`Circuits.Types.AddressOperation` is still a standalone generated module;
-`Circuits.Types.MemoryAccessCols` lives in the generated `MemoryAccess` struct carrier).
-`Faithful.LoadX0Chip.loadX0ChipReconfigure` is the sole bridge to Rust's separately generated
-whole-chip row. -/
+logic, and the seven per-width selectors replace a single `is_real`. The reader, address and memory blocks use native-owned shared column types. -/
 structure Columns (F : Type) where
   state : Circuits.Types.CPUState F
   adapter : Circuits.Types.ITypeReader F

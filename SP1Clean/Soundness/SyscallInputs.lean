@@ -26,8 +26,8 @@ local instance syscallInputs_fact17 : Fact (2 ^ 17 < p) :=
 
 /-- Rebuild the row's Memory guarantee from its three incoming records. -/
 theorem syscallInstrsRow_memoryGuarantees_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
-    (constraints : table.Constraints data)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (constraints : table.Constraints)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
     (currency : ∀ mp ∈
         (syscallRowFacts (syscallInstrsRow data row)).memPulls,
@@ -85,8 +85,9 @@ theorem syscallInstrsRow_memoryGuarantees_of_component
 
 /-- Read the committed ECALL's local Program guarantee at one active physical row. -/
 theorem syscallInstrsRow_programRowSpec_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
-    (program : table.ChannelGuarantees data programChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (sameData : table.data = data)
+    (program : table.ChannelGuarantees programChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
     (real : (syscallInstrsRow data row).is_real = 1) :
     Channels.ProgramMsg.RowSpec (SyscallInstrsChip.programMessage (syscallInstrsRow data row)) := by
@@ -97,28 +98,29 @@ theorem syscallInstrsRow_programRowSpec_of_component
     (TypedInteraction.pulledIfValue programChannel (syscallInstrsRow data row).is_real
       (SyscallInstrsChip.programMessage (syscallInstrsRow data row)))
     (by rw [syscallInstrsRow_typedProgram_of_component table data component]; exact List.mem_cons_self)
-    programGuarantees (by rfl)
+    (by simpa only [Table.environment, sameData] using programGuarantees) (by rfl)
     (by rw [TypedInteraction.pulledIfValue_mult, real])
   simpa only [TypedInteraction.pulledIfValue_message, programChannel] using guarantee
 
 /-- The complete syscall contract and well-formed operand words, derived within incoming currency. -/
 theorem syscallInstrsRow_contract_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit })
-    (constraints : table.Constraints data)
-    (byte : table.ChannelGuarantees data byteChannel.toRaw)
-    (program : table.ChannelGuarantees data programChannel.toRaw)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (sameData : table.data = data)
+    (constraints : table.Constraints)
+    (byte : table.ChannelGuarantees byteChannel.toRaw)
+    (program : table.ChannelGuarantees programChannel.toRaw)
     {row : Array (ZMod p)} (member : row ∈ table.table)
     (currency : ∀ mp ∈ (syscallRowFacts (syscallInstrsRow data row)).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
     SyscallInstrsChip.Spec (syscallInstrsRow data row) ∧
       SyscallInstrsChip.PulledFacts (syscallInstrsRow data row) := by
-  refine ⟨syscallInstrsRow_spec_of_component table data component constraints byte program
+  refine ⟨syscallInstrsRow_spec_of_component table data component sameData constraints byte program
     (syscallInstrsRow_memoryGuarantees_of_component table data component constraints member currency) member, ?_⟩
   intro real
   obtain ⟨a, b, c⟩ := syscallRowFacts_currency_split _ currency
   exact SyscallInstrsChip.pulledFacts_of_buses _
-    (syscallInstrsRow_programRowSpec_of_component table data component program member real) a b c
-    (syscallInstrsRow_opAValue_isU64_of_component table data component byte member real) real
+    (syscallInstrsRow_programRowSpec_of_component table data component sameData program member real) a b c
+    (syscallInstrsRow_opAValue_isU64_of_component table data component sameData byte member real) real
 
 /-- The committed ECALL and the three incoming register values identify the semantic source.
 No assumption about the next PC's limb representation or the host's effects is needed. -/

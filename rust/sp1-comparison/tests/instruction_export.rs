@@ -3,12 +3,13 @@
 
 extern crate alloc;
 
-use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
+use clean_backend::witness_generation::Program;
 use clean_backend::GeneratedAirSpec;
-use p3_field::{PrimeCharacteristicRing, PrimeField64};
+use enum_map::Enum;
+use p3_field::PrimeCharacteristicRing;
 use p3_koala_bear::KoalaBear as NativeField;
-use slop_air::{Air, BaseAir};
-use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
+use slop_air::BaseAir;
+use slop_algebra::PrimeField64 as Sp1PrimeField64;
 use slop_matrix::{dense::RowMajorMatrix, Matrix};
 use sp1_core_executor::{
     events::{
@@ -54,174 +55,125 @@ use sp1_core_machine::{
     utype::{UTypeChip, UTypeColumns},
     SupervisorMode,
 };
-use sp1_hypercube::air::{MachineAir, SP1_PROOF_NUM_PV_ELTS};
+use sp1_hypercube::air::MachineAir;
 use sp1_primitives::SP1Field;
 use std::mem::offset_of;
 
+#[test]
+fn complete_native_opcode_alphabet_matches_released_sp1() {
+    let native: Vec<serde_json::Value> = serde_json::from_str(include_str!(concat!(
+        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+        "/opcodes.reference.json"
+    )))
+    .unwrap();
+    // Enum supplies every Rust constructor independently of Lean's alphabet or chip registry.
+    let released = (0..Opcode::LENGTH)
+        .map(Opcode::from_usize)
+        .map(|opcode| {
+            serde_json::json!({
+                "constructor": format!("SP1Clean.Soundness.Opcode.{opcode:?}"),
+                "discriminant": opcode as u8,
+            })
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(native, released);
+}
+
 // Clean emits shared helpers that some individual components do not use.
 macro_rules! generated_instruction {
-    ($module:ident, $file:literal, $program:ident, $air:ident) => {
+    ($module:ident, $file:literal, $program:ident) => {
         #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
         mod $module {
             include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/", $file));
         }
-        use $module::{$air, $program};
+        use $module::Ensemble as $program;
     };
 }
-generated_instruction!(
-    generated_add,
-    "add_instruction.rs",
-    AddInstruction,
-    AddInstructionAirSpec
-);
-generated_instruction!(
-    generated_addi,
-    "addi_instruction.rs",
-    AddiInstruction,
-    AddiInstructionAirSpec
-);
-generated_instruction!(
-    generated_addw,
-    "addw_instruction.rs",
-    AddwInstruction,
-    AddwInstructionAirSpec
-);
-generated_instruction!(
-    generated_sub,
-    "sub_instruction.rs",
-    SubInstruction,
-    SubInstructionAirSpec
-);
-generated_instruction!(
-    generated_subw,
-    "subw_instruction.rs",
-    SubwInstruction,
-    SubwInstructionAirSpec
-);
+generated_instruction!(generated_add, "add_instruction.rs", AddInstruction);
+generated_instruction!(generated_addi, "addi_instruction.rs", AddiInstruction);
+generated_instruction!(generated_addw, "addw_instruction.rs", AddwInstruction);
+generated_instruction!(generated_sub, "sub_instruction.rs", SubInstruction);
+generated_instruction!(generated_subw, "subw_instruction.rs", SubwInstruction);
 generated_instruction!(
     generated_bitwise,
     "bitwise_instruction.rs",
-    BitwiseInstruction,
-    BitwiseInstructionAirSpec
+    BitwiseInstruction
 );
-generated_instruction!(
-    generated_lt,
-    "lt_instruction.rs",
-    LtInstruction,
-    LtInstructionAirSpec
-);
+generated_instruction!(generated_lt, "lt_instruction.rs", LtInstruction);
 generated_instruction!(
     generated_shift_left,
     "shift_left_instruction.rs",
-    ShiftLeftInstruction,
-    ShiftLeftInstructionAirSpec
+    ShiftLeftInstruction
 );
 generated_instruction!(
     generated_shift_right,
     "shift_right_instruction.rs",
-    ShiftRightInstruction,
-    ShiftRightInstructionAirSpec
+    ShiftRightInstruction
 );
-generated_instruction!(
-    generated_jal,
-    "jal_instruction.rs",
-    JalInstruction,
-    JalInstructionAirSpec
-);
-generated_instruction!(
-    generated_jalr,
-    "jalr_instruction.rs",
-    JalrInstruction,
-    JalrInstructionAirSpec
-);
-generated_instruction!(
-    generated_branch,
-    "branch_instruction.rs",
-    BranchInstruction,
-    BranchInstructionAirSpec
-);
-generated_instruction!(
-    generated_u_type,
-    "u_type_instruction.rs",
-    UTypeInstruction,
-    UTypeInstructionAirSpec
-);
+generated_instruction!(generated_jal, "jal_instruction.rs", JalInstruction);
+generated_instruction!(generated_jalr, "jalr_instruction.rs", JalrInstruction);
+generated_instruction!(generated_branch, "branch_instruction.rs", BranchInstruction);
+generated_instruction!(generated_u_type, "u_type_instruction.rs", UTypeInstruction);
 generated_instruction!(
     generated_load_byte,
     "load_byte_instruction.rs",
-    LoadByteInstruction,
-    LoadByteInstructionAirSpec
+    LoadByteInstruction
 );
 generated_instruction!(
     generated_load_half,
     "load_half_instruction.rs",
-    LoadHalfInstruction,
-    LoadHalfInstructionAirSpec
+    LoadHalfInstruction
 );
 generated_instruction!(
     generated_load_word,
     "load_word_instruction.rs",
-    LoadWordInstruction,
-    LoadWordInstructionAirSpec
+    LoadWordInstruction
 );
 generated_instruction!(
     generated_load_double,
     "load_double_instruction.rs",
-    LoadDoubleInstruction,
-    LoadDoubleInstructionAirSpec
+    LoadDoubleInstruction
 );
 generated_instruction!(
     generated_load_x0,
     "load_x0_instruction.rs",
-    LoadX0Instruction,
-    LoadX0InstructionAirSpec
+    LoadX0Instruction
 );
 generated_instruction!(
     generated_store_byte,
     "store_byte_instruction.rs",
-    StoreByteInstruction,
-    StoreByteInstructionAirSpec
+    StoreByteInstruction
 );
 generated_instruction!(
     generated_store_half,
     "store_half_instruction.rs",
-    StoreHalfInstruction,
-    StoreHalfInstructionAirSpec
+    StoreHalfInstruction
 );
 generated_instruction!(
     generated_store_word,
     "store_word_instruction.rs",
-    StoreWordInstruction,
-    StoreWordInstructionAirSpec
+    StoreWordInstruction
 );
 generated_instruction!(
     generated_store_double,
     "store_double_instruction.rs",
-    StoreDoubleInstruction,
-    StoreDoubleInstructionAirSpec
+    StoreDoubleInstruction
 );
-generated_instruction!(
-    generated_mul,
-    "mul_instruction.rs",
-    MulInstruction,
-    MulInstructionAirSpec
-);
+generated_instruction!(generated_mul, "mul_instruction.rs", MulInstruction);
 generated_instruction!(
     generated_div_rem,
     "div_rem_instruction.rs",
-    DivRemInstruction,
-    DivRemInstructionAirSpec
+    DivRemInstruction
 );
-generated_instruction!(
-    generated_alu_x0,
-    "alu_x0_instruction.rs",
-    AluX0Instruction,
-    AluX0InstructionAirSpec
-);
+generated_instruction!(generated_alu_x0, "alu_x0_instruction.rs", AluX0Instruction);
 
 #[path = "support/export.rs"]
 mod export_support;
-use export_support::{Ledger, NativeEvaluation, RowWitness, Sp1Evaluation};
+#[path = "support/rows.rs"]
+mod row_support;
+use row_support::{
+    check_all_rows, check_mutations, check_open_buses, check_trace, padded_trace, reorder,
+};
 
 fn r_type_event(index: usize, opcode: Opcode, a: u64, b: u64, c: u64) -> (AluEvent, RTypeRecord) {
     let clk = 9 + 8 * index as u64;
@@ -314,128 +266,20 @@ fn add_trace() -> RowMajorMatrix<SP1Field> {
 
 fn add_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     // SP1: state, adapter, result limbs, is_real. Clean: is_real, state, adapter, result limbs.
-    assert_eq!(sp1.len(), AddInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), AddInstruction::WIDTHS[0]);
     std::iter::once(sp1.last().unwrap())
         .chain(&sp1[..sp1.len() - 1])
         .map(|value| NativeField::from_u64(value.as_canonical_u64()))
         .collect()
 }
 
-fn compare<P: Program<NativeField>, S: GeneratedAirSpec>(
-    sp1: &[SP1Field],
-    row: &[NativeField],
-    chip: &impl Air<Sp1Evaluation>,
-    case: &str,
-) -> bool {
-    let mut expected = Sp1Evaluation {
-        row: sp1.to_vec(),
-        preprocessed: vec![],
-        constraints: vec![],
-        ledger: vec![],
-        public: vec![SP1Field::zero(); SP1_PROOF_NUM_PV_ELTS],
-    };
-    chip.eval(&mut expected);
-    let constraints = S::constraints::<NativeEvaluation>(0, &[], row);
-    assert!(!constraints.is_empty() && !expected.constraints.is_empty());
-    let valid = constraints.iter().all(|value| *value == NativeField::ZERO);
-    assert_eq!(
-        valid,
-        expected
-            .constraints
-            .iter()
-            .all(|value| *value == SP1Field::zero()),
-        "local constraint satisfaction differs: {case}"
-    );
-    let mut ledger: Ledger = P::interactions(0, row)
-        .into_iter()
-        .map(|value| {
-            (
-                value.channel.to_owned(),
-                value.multiplicity.as_canonical_u64(),
-                value
-                    .message
-                    .iter()
-                    .map(PrimeField64::as_canonical_u64)
-                    .collect(),
-            )
-        })
-        .collect();
-    // Sorting preserves every occurrence; never filter zeros or combine repeated messages.
-    ledger.sort();
-    expected.ledger.sort();
-    assert_eq!(
-        ledger, expected.ledger,
-        "complete instruction interaction multiset differs: {case}"
-    );
-    valid
-}
-
-fn check_trace<P: Program<NativeField>, S: GeneratedAirSpec>(
-    trace: &RowMajorMatrix<SP1Field>,
-    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
-    chip: &impl Air<Sp1Evaluation>,
-) {
-    assert_eq!(
-        <NativeField as PrimeField64>::ORDER_U64,
-        <SP1Field as Sp1PrimeField64>::ORDER_U64
-    );
-    assert_eq!(S::WIDTHS, &[trace.width()]);
-    assert_eq!(S::FIXED_WIDTHS, &[0]);
-    for (index, sp1) in trace.values.chunks(trace.width()).enumerate() {
-        let row = map_row(sp1);
-        let input = &row[..P::PROVER_INPUTS];
-        let witness = generate::<NativeField, RowWitness<P>>(&[], input).unwrap();
-        assert_eq!(
-            witness.tables,
-            vec![vec![row.clone()]],
-            "witness row {index}"
-        );
-        assert!(
-            compare::<P, S>(sp1, &row, chip, &format!("SP1 row {index}")),
-            "SP1 row {index} must satisfy both AIRs"
-        );
-    }
-}
-
-fn check_mutations<P: Program<NativeField>, S: GeneratedAirSpec>(
-    trace: &RowMajorMatrix<SP1Field>,
-    indices: &[usize],
-    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
-    chip: &impl Air<Sp1Evaluation>,
-) {
-    let mut rejected = 0;
-    for &index in indices {
-        let original = trace.row_slice(index);
-        for column in 0..trace.width() {
-            for delta in [1, 65536, <SP1Field as Sp1PrimeField64>::ORDER_U64 - 1] {
-                let mut row = original.to_vec();
-                row[column] += SP1Field::from_canonical_u64(delta);
-                rejected += usize::from(!compare::<P, S>(
-                    &row,
-                    &map_row(&row),
-                    chip,
-                    &format!("SP1 row {index}, column {column}, delta {delta}"),
-                ));
-            }
-        }
-    }
-    assert!(
-        rejected > 0,
-        "the mutation battery must exercise rejected constraints"
-    );
-}
-
 #[test]
 fn generated_add_witness_and_air_match_released_sp1() {
     let trace = add_trace();
-    check_trace::<AddInstruction, AddInstructionAirSpec>(
-        &trace,
-        add_row,
-        &AddChip::<SupervisorMode>::default(),
-    );
+    check_trace::<AddInstruction>(&trace, add_row, &AddChip::<SupervisorMode>::default());
 
     // Carries, wraparound and inactive padding: 396 mutations.
-    check_mutations::<AddInstruction, AddInstructionAirSpec>(
+    check_mutations::<AddInstruction>(
         &trace,
         &[0, 40, 80, 81],
         add_row,
@@ -443,16 +287,6 @@ fn generated_add_witness_and_air_match_released_sp1() {
     );
 
     check_open_buses::<AddInstruction>(&add_row(&trace.row_slice(0)));
-}
-
-fn check_open_buses<P: Program<NativeField>>(row: &[NativeField]) {
-    let input = &row[..P::PROVER_INPUTS];
-    let error = generate::<NativeField, P>(&[], input).unwrap_err();
-    assert!(matches!(error, WitnessGenerationError::Runtime(_)));
-    assert!(matches!(
-        generate::<NativeField, RowWitness<P>>(&[], &input[..input.len() - 1]),
-        Err(WitnessGenerationError::ProverInputWidth { .. })
-    ));
 }
 
 fn load_event(
@@ -573,7 +407,7 @@ fn load_byte_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     let address = offset_of!(Columns, address_operation);
     let memory = offset_of!(Columns, memory_access);
     let selectors = offset_of!(Columns, is_lb);
-    assert_eq!(sp1.len(), LoadByteInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), LoadByteInstruction::WIDTHS[0]);
     assert_eq!(selectors + 2, sp1.len());
     assert_eq!(memory - address, 4);
     // Clean places selectors first and the four witnessed address cells last.
@@ -589,14 +423,14 @@ fn load_byte_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_load_byte_witness_and_air_match_released_sp1() {
     let trace = load_byte_trace();
-    check_trace::<LoadByteInstruction, LoadByteInstructionAirSpec>(
+    check_trace::<LoadByteInstruction>(
         &trace,
         load_byte_row,
         &LoadByteChip::<SupervisorMode>::default(),
     );
 
     // Both selectors, both address bounds, cross-window memory reads and padding.
-    check_mutations::<LoadByteInstruction, LoadByteInstructionAirSpec>(
+    check_mutations::<LoadByteInstruction>(
         &trace,
         &[0, 64, 128, 192, 256, 257, 258],
         load_byte_row,
@@ -719,7 +553,7 @@ fn div_rem_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     block!(remainder, 4);
     block!(quotient, 4);
     scalar!(b_msb, c_msb, rem_msb, quot_msb);
-    assert_eq!(sp1.len(), DivRemInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), DivRemInstruction::WIDTHS[0]);
     assert_eq!(
         <DivRemInstruction as Program<NativeField>>::PROVER_INPUTS,
         36
@@ -737,7 +571,7 @@ fn div_rem_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_div_rem_witness_and_air_match_released_sp1() {
     let trace = div_rem_trace();
-    check_trace::<DivRemInstruction, DivRemInstructionAirSpec>(
+    check_trace::<DivRemInstruction>(
         &trace,
         div_rem_row,
         &DivRemChip::<SupervisorMode>::default(),
@@ -748,7 +582,7 @@ fn generated_div_rem_witness_and_air_match_released_sp1() {
         .flat_map(|opcode| [0, 76, 109, 120].map(|row| opcode * 121 + row))
         .chain([968])
         .collect();
-    check_mutations::<DivRemInstruction, DivRemInstructionAirSpec>(
+    check_mutations::<DivRemInstruction>(
         &trace,
         &indices,
         div_rem_row,
@@ -823,7 +657,7 @@ fn mul_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     indices.extend(operation..operation + 45);
     let result = offset_of!(Columns, a);
     indices.extend(result..result + 4);
-    assert_eq!(sp1.len(), MulInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), MulInstruction::WIDTHS[0]);
     assert_eq!(<MulInstruction as Program<NativeField>>::PROVER_INPUTS, 33);
     let mut sorted = indices.clone();
     sorted.sort_unstable();
@@ -837,18 +671,14 @@ fn mul_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_mul_witness_and_air_match_released_sp1() {
     let trace = mul_trace();
-    check_trace::<MulInstruction, MulInstructionAirSpec>(
-        &trace,
-        mul_row,
-        &MulChip::<SupervisorMode>::default(),
-    );
+    check_trace::<MulInstruction>(&trace, mul_row, &MulChip::<SupervisorMode>::default());
 
     // Zero, word-sign boundary, signed high product, maximal limbs, and inactive padding.
     let indices: Vec<usize> = (0..5)
         .flat_map(|opcode| [0, 76, 109, 120].map(|row| opcode * 121 + row))
         .chain([605])
         .collect();
-    check_mutations::<MulInstruction, MulInstructionAirSpec>(
+    check_mutations::<MulInstruction>(
         &trace,
         &indices,
         mul_row,
@@ -926,7 +756,7 @@ fn bitwise_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     ]);
     indices.extend(operation..operation + 16);
     assert_eq!(sp1.len(), 51);
-    assert_eq!(sp1.len(), BitwiseInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), BitwiseInstruction::WIDTHS[0]);
     assert_eq!(
         <BitwiseInstruction as Program<NativeField>>::PROVER_INPUTS,
         35
@@ -943,7 +773,7 @@ fn bitwise_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_bitwise_witness_and_air_match_released_sp1() {
     let trace = bitwise_trace();
-    check_trace::<BitwiseInstruction, BitwiseInstructionAirSpec>(
+    check_trace::<BitwiseInstruction>(
         &trace,
         bitwise_row,
         &BitwiseChip::<SupervisorMode>::default(),
@@ -956,7 +786,7 @@ fn generated_bitwise_witness_and_air_match_released_sp1() {
         })
         .chain([612])
         .collect();
-    check_mutations::<BitwiseInstruction, BitwiseInstructionAirSpec>(
+    check_mutations::<BitwiseInstruction>(
         &trace,
         &indices,
         bitwise_row,
@@ -1041,7 +871,7 @@ fn lt_row(sp1: &[SP1Field]) -> Vec<NativeField> {
         offset_of!(Columns, lt_operation.c_msb),
     ]);
     assert_eq!(sp1.len(), 44);
-    assert_eq!(sp1.len(), LtInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), LtInstruction::WIDTHS[0]);
     assert_eq!(<LtInstruction as Program<NativeField>>::PROVER_INPUTS, 34);
     let mut sorted = indices.clone();
     sorted.sort_unstable();
@@ -1055,11 +885,7 @@ fn lt_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_lt_witness_and_air_match_released_sp1() {
     let trace = lt_trace();
-    check_trace::<LtInstruction, LtInstructionAirSpec>(
-        &trace,
-        lt_row,
-        &LtChip::<SupervisorMode>::default(),
-    );
+    check_trace::<LtInstruction>(&trace, lt_row, &LtChip::<SupervisorMode>::default());
 
     // Both opcodes and operand forms, equal/unequal limbs, sign boundaries and padding.
     let indices: Vec<usize> = (0..2)
@@ -1071,7 +897,7 @@ fn generated_lt_witness_and_air_match_released_sp1() {
         })
         .chain([468])
         .collect();
-    check_mutations::<LtInstruction, LtInstructionAirSpec>(
+    check_mutations::<LtInstruction>(
         &trace,
         &indices,
         lt_row,
@@ -1142,7 +968,7 @@ fn shift_left_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     indices.extend(offset_of!(Columns, a)..offset_of!(Columns, is_sll));
     indices.push(offset_of!(Columns, is_sllw_imm));
     assert_eq!(sp1.len(), 65);
-    assert_eq!(sp1.len(), ShiftLeftInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), ShiftLeftInstruction::WIDTHS[0]);
     assert_eq!(
         <ShiftLeftInstruction as Program<NativeField>>::PROVER_INPUTS,
         34
@@ -1159,7 +985,7 @@ fn shift_left_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_shift_left_witness_and_air_match_released_sp1() {
     let trace = shift_left_trace();
-    check_trace::<ShiftLeftInstruction, ShiftLeftInstructionAirSpec>(
+    check_trace::<ShiftLeftInstruction>(
         &trace,
         shift_left_row,
         &ShiftLeftChip::<SupervisorMode>::default(),
@@ -1179,7 +1005,7 @@ fn generated_shift_left_witness_and_air_match_released_sp1() {
         }))
         .chain([0, 2596])
         .collect();
-    check_mutations::<ShiftLeftInstruction, ShiftLeftInstructionAirSpec>(
+    check_mutations::<ShiftLeftInstruction>(
         &trace,
         &indices,
         shift_left_row,
@@ -1262,7 +1088,7 @@ fn shift_right_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     indices.extend(offset_of!(Columns, a)..offset_of!(Columns, is_srl));
     indices.push(offset_of!(Columns, is_w_imm));
     assert_eq!(sp1.len(), 69);
-    assert_eq!(sp1.len(), ShiftRightInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), ShiftRightInstruction::WIDTHS[0]);
     assert_eq!(
         <ShiftRightInstruction as Program<NativeField>>::PROVER_INPUTS,
         36
@@ -1279,7 +1105,7 @@ fn shift_right_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_shift_right_witness_and_air_match_released_sp1() {
     let trace = shift_right_trace();
-    check_trace::<ShiftRightInstruction, ShiftRightInstructionAirSpec>(
+    check_trace::<ShiftRightInstruction>(
         &trace,
         shift_right_row,
         &ShiftRightChip::<SupervisorMode>::default(),
@@ -1302,7 +1128,7 @@ fn generated_shift_right_witness_and_air_match_released_sp1() {
         }
     }
     assert_eq!(indices.len(), 133); // 27,531 independent column/value mutations.
-    check_mutations::<ShiftRightInstruction, ShiftRightInstructionAirSpec>(
+    check_mutations::<ShiftRightInstruction>(
         &trace,
         &indices,
         shift_right_row,
@@ -1399,7 +1225,7 @@ fn branch_row(sp1: &[SP1Field]) -> Vec<NativeField> {
     indices.push(offset_of!(Columns, is_branching));
     indices.extend(offset_of!(Columns, next_pc)..offset_of!(Columns, is_beq));
     assert_eq!(sp1.len(), 45);
-    assert_eq!(sp1.len(), BranchInstructionAirSpec::WIDTHS[0]);
+    assert_eq!(sp1.len(), BranchInstruction::WIDTHS[0]);
     assert_eq!(
         <BranchInstruction as Program<NativeField>>::PROVER_INPUTS,
         31
@@ -1416,11 +1242,7 @@ fn branch_row(sp1: &[SP1Field]) -> Vec<NativeField> {
 #[test]
 fn generated_branch_witness_and_air_match_released_sp1() {
     let trace = branch_trace();
-    check_trace::<BranchInstruction, BranchInstructionAirSpec>(
-        &trace,
-        branch_row,
-        &BranchChip::<SupervisorMode>::default(),
-    );
+    check_trace::<BranchInstruction>(&trace, branch_row, &BranchChip::<SupervisorMode>::default());
 
     // Every opcode, both outcomes, equality, sign boundaries, PC carries and padding.
     let indices: Vec<usize> = (0..6)
@@ -1434,7 +1256,7 @@ fn generated_branch_witness_and_air_match_released_sp1() {
         .chain([9720])
         .collect();
     assert_eq!(indices.len(), 271); // 36,585 independent column/value mutations.
-    check_mutations::<BranchInstruction, BranchInstructionAirSpec>(
+    check_mutations::<BranchInstruction>(
         &trace,
         &indices,
         branch_row,
@@ -1442,54 +1264,6 @@ fn generated_branch_witness_and_air_match_released_sp1() {
     );
 
     check_open_buses::<BranchInstruction>(&branch_row(&trace.row_slice(0)));
-}
-
-/// Every adapter is an independently checked permutation of the released SP1 layout.
-fn reorder<P: Program<NativeField>, S: GeneratedAirSpec>(
-    sp1: &[SP1Field],
-    input_width: usize,
-    indices: impl IntoIterator<Item = usize>,
-) -> Vec<NativeField> {
-    assert_eq!(S::WIDTHS, &[sp1.len()]);
-    assert_eq!(P::PROVER_INPUTS, input_width);
-    let indices: Vec<_> = indices.into_iter().collect();
-    let mut sorted = indices.clone();
-    sorted.sort_unstable();
-    assert_eq!(sorted, (0..sp1.len()).collect::<Vec<_>>());
-    indices
-        .into_iter()
-        .map(|i| NativeField::from_u64(sp1[i].as_canonical_u64()))
-        .collect()
-}
-
-fn padded_trace<C>(chip: &C, record: &ExecutionRecord, active: usize) -> RowMajorMatrix<SP1Field>
-where
-    C: MachineAir<SP1Field, Record = ExecutionRecord, Program = sp1_core_executor::Program>,
-{
-    let trace = chip.generate_trace(record, &mut ExecutionRecord::default());
-    assert_eq!(trace.width(), chip.width());
-    assert_eq!(trace.height(), active.div_ceil(32) * 32);
-    assert!(
-        active > 0 && trace.height() > active,
-        "exercise active and padding rows"
-    );
-    trace
-}
-
-/// New families mutate every column of every event and padding row.
-fn check_all_rows<P: Program<NativeField>, S: GeneratedAirSpec>(
-    trace: &RowMajorMatrix<SP1Field>,
-    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
-    chip: &impl Air<Sp1Evaluation>,
-) {
-    check_trace::<P, S>(trace, map_row, chip);
-    check_mutations::<P, S>(
-        trace,
-        &(0..trace.height()).collect::<Vec<_>>(),
-        map_row,
-        chip,
-    );
-    check_open_buses::<P>(&map_row(&trace.row_slice(0)));
 }
 
 fn read_record(value: u64, timestamp: u64, prev_timestamp: u64) -> MemoryRecordEnum {
@@ -1595,20 +1369,20 @@ fn arithmetic_record(opcode: Opcode) -> (ExecutionRecord, usize) {
 }
 
 macro_rules! arithmetic_case {
-    ($test:ident, $program:ident, $air:ident, $chip:ident, $cols:ident, $operation:ident, $opcode:ident) => {
+    ($test:ident, $program:ident, $chip:ident, $cols:ident, $operation:ident, $opcode:ident) => {
         #[test]
         fn $test() {
             let (record, active) = arithmetic_record(Opcode::$opcode);
             let chip = $chip::<SupervisorMode>::default();
             let trace = padded_trace(&chip, &record, active);
-            check_all_rows::<$program, $air>(
+            check_all_rows::<$program>(
                 &trace,
                 |row| {
                     type Columns = $cols<u8, SupervisorMode>;
                     let real = offset_of!(Columns, is_real);
                     let operation = offset_of!(Columns, $operation);
                     assert_eq!(real + 1, row.len());
-                    reorder::<$program, $air>(row, operation + 1, [real].into_iter().chain(0..real))
+                    reorder::<$program>(row, operation + 1, [real].into_iter().chain(0..real))
                 },
                 &chip,
             );
@@ -1618,7 +1392,6 @@ macro_rules! arithmetic_case {
 arithmetic_case!(
     addi,
     AddiInstruction,
-    AddiInstructionAirSpec,
     AddiChip,
     AddiCols,
     add_operation,
@@ -1627,25 +1400,15 @@ arithmetic_case!(
 arithmetic_case!(
     addw,
     AddwInstruction,
-    AddwInstructionAirSpec,
     AddwChip,
     AddwCols,
     addw_operation,
     ADDW
 );
-arithmetic_case!(
-    sub,
-    SubInstruction,
-    SubInstructionAirSpec,
-    SubChip,
-    SubCols,
-    sub_operation,
-    SUB
-);
+arithmetic_case!(sub, SubInstruction, SubChip, SubCols, sub_operation, SUB);
 arithmetic_case!(
     subw,
     SubwInstruction,
-    SubwInstructionAirSpec,
     SubwChip,
     SubwCols,
     subw_operation,
@@ -1708,13 +1471,13 @@ fn alu_x0() {
     assert_eq!(record.alu_x0_events.len(), 451);
     let chip = AluX0Chip::<SupervisorMode>::default();
     let trace = padded_trace(&chip, &record, 451);
-    check_all_rows::<AluX0Instruction, AluX0InstructionAirSpec>(
+    check_all_rows::<AluX0Instruction>(
         &trace,
         |row| {
             type Columns = AluX0Cols<u8, SupervisorMode>;
             assert_eq!(offset_of!(Columns, adapter_cols), row.len());
             assert_eq!(offset_of!(Columns, selector_cols), row.len());
-            reorder::<AluX0Instruction, AluX0InstructionAirSpec>(row, row.len(), 0..row.len())
+            reorder::<AluX0Instruction>(row, row.len(), 0..row.len())
         },
         &chip,
     );
@@ -1766,7 +1529,7 @@ fn u_type() {
     assert_eq!(record.utype_events.len(), 80);
     let chip = UTypeChip::<SupervisorMode>::default();
     let trace = padded_trace(&chip, &record, 80);
-    check_all_rows::<UTypeInstruction, UTypeInstructionAirSpec>(
+    check_all_rows::<UTypeInstruction>(
         &trace,
         |row| {
             type Columns = UTypeColumns<u8, SupervisorMode>;
@@ -1774,7 +1537,7 @@ fn u_type() {
             let selector = offset_of!(Columns, is_auipc);
             let witness = offset_of!(Columns, addend);
             assert_eq!(real + 1, row.len());
-            reorder::<UTypeInstruction, UTypeInstructionAirSpec>(
+            reorder::<UTypeInstruction>(
                 row,
                 witness + 2,
                 [real]
@@ -1824,13 +1587,13 @@ fn jal() {
     assert_eq!(record.jal_events.len(), 40);
     let chip = JalChip::<SupervisorMode>::default();
     let trace = padded_trace(&chip, &record, 40);
-    check_all_rows::<JalInstruction, JalInstructionAirSpec>(
+    check_all_rows::<JalInstruction>(
         &trace,
         |row| {
             type Columns = JalColumns<u8, SupervisorMode>;
             let real = offset_of!(Columns, is_real);
             assert_eq!(real + 1, row.len());
-            reorder::<JalInstruction, JalInstructionAirSpec>(
+            reorder::<JalInstruction>(
                 row,
                 offset_of!(Columns, add_operation) + 1,
                 [real].into_iter().chain(0..real),
@@ -1902,13 +1665,13 @@ fn jalr() {
     assert_eq!(record.jalr_events.len(), 321);
     let chip = JalrChip::<SupervisorMode>::default();
     let trace = padded_trace(&chip, &record, 321);
-    check_all_rows::<JalrInstruction, JalrInstructionAirSpec>(
+    check_all_rows::<JalrInstruction>(
         &trace,
         |row| {
             type Columns = JalrColumns<u8, SupervisorMode>;
             let real = offset_of!(Columns, is_real);
             assert_eq!(real + 1, offset_of!(Columns, add_operation));
-            reorder::<JalrInstruction, JalrInstructionAirSpec>(
+            reorder::<JalrInstruction>(
                 row,
                 real + 1,
                 [real].into_iter().chain(0..real).chain(real + 1..row.len()),
@@ -1968,7 +1731,7 @@ fn load_events(opcodes: &[Opcode], discard: bool) -> Vec<(MemInstrEvent, ITypeRe
 
 // The native memory chips take selectors first and compute four address limbs last.
 macro_rules! memory_row {
-    ($row:expr, $program:ident, $air:ident, $cols:ident, $selector:ident) => {{
+    ($row:expr, $program:ident, $cols:ident, $selector:ident) => {{
         type Columns = $cols<u8, SupervisorMode>;
         let row = $row;
         let address = offset_of!(Columns, address_operation);
@@ -1976,7 +1739,7 @@ macro_rules! memory_row {
         let selectors = offset_of!(Columns, $selector);
         assert_eq!(memory - address, 4);
         assert_eq!(offset_of!(Columns, adapter_cols), row.len());
-        reorder::<$program, $air>(
+        reorder::<$program>(
             row,
             row.len() - 4,
             (selectors..row.len())
@@ -1988,7 +1751,7 @@ macro_rules! memory_row {
 }
 
 macro_rules! load_case {
-    ($test:ident, $program:ident, $air:ident, $chip:ident, $cols:ident, $selector:ident,
+    ($test:ident, $program:ident, $chip:ident, $cols:ident, $selector:ident,
      $events:ident, $opcodes:expr, $discard:literal, $active:literal) => {
         #[test]
         fn $test() {
@@ -1997,9 +1760,9 @@ macro_rules! load_case {
             assert_eq!(record.$events.len(), $active);
             let chip = $chip::<SupervisorMode>::default();
             let trace = padded_trace(&chip, &record, $active);
-            check_all_rows::<$program, $air>(
+            check_all_rows::<$program>(
                 &trace,
-                |row| memory_row!(row, $program, $air, $cols, $selector),
+                |row| memory_row!(row, $program, $cols, $selector),
                 &chip,
             );
         }
@@ -2008,7 +1771,6 @@ macro_rules! load_case {
 load_case!(
     load_half,
     LoadHalfInstruction,
-    LoadHalfInstructionAirSpec,
     LoadHalfChip,
     LoadHalfColumns,
     is_lh,
@@ -2020,7 +1782,6 @@ load_case!(
 load_case!(
     load_word,
     LoadWordInstruction,
-    LoadWordInstructionAirSpec,
     LoadWordChip,
     LoadWordColumns,
     is_lw,
@@ -2032,7 +1793,6 @@ load_case!(
 load_case!(
     load_double,
     LoadDoubleInstruction,
-    LoadDoubleInstructionAirSpec,
     LoadDoubleChip,
     LoadDoubleColumns,
     is_real,
@@ -2044,7 +1804,6 @@ load_case!(
 load_case!(
     load_x0,
     LoadX0Instruction,
-    LoadX0InstructionAirSpec,
     LoadX0Chip,
     LoadX0Columns,
     is_lb,
@@ -2158,7 +1917,7 @@ fn store_events(opcode: Opcode) -> Vec<(MemInstrEvent, ITypeRecord)> {
 }
 
 macro_rules! store_case {
-    ($test:ident, $program:ident, $air:ident, $chip:ident, $cols:ident,
+    ($test:ident, $program:ident, $chip:ident, $cols:ident,
      $events:ident, $opcode:ident, $active:literal) => {
         #[test]
         fn $test() {
@@ -2167,9 +1926,9 @@ macro_rules! store_case {
             assert_eq!(record.$events.len(), $active);
             let chip = $chip::<SupervisorMode>::default();
             let trace = padded_trace(&chip, &record, $active);
-            check_all_rows::<$program, $air>(
+            check_all_rows::<$program>(
                 &trace,
-                |row| memory_row!(row, $program, $air, $cols, is_real),
+                |row| memory_row!(row, $program, $cols, is_real),
                 &chip,
             );
         }
@@ -2178,7 +1937,6 @@ macro_rules! store_case {
 store_case!(
     store_byte,
     StoreByteInstruction,
-    StoreByteInstructionAirSpec,
     StoreByteChip,
     StoreByteColumns,
     memory_store_byte_events,
@@ -2188,7 +1946,6 @@ store_case!(
 store_case!(
     store_half,
     StoreHalfInstruction,
-    StoreHalfInstructionAirSpec,
     StoreHalfChip,
     StoreHalfColumns,
     memory_store_half_events,
@@ -2198,7 +1955,6 @@ store_case!(
 store_case!(
     store_word,
     StoreWordInstruction,
-    StoreWordInstructionAirSpec,
     StoreWordChip,
     StoreWordColumns,
     memory_store_word_events,
@@ -2208,7 +1964,6 @@ store_case!(
 store_case!(
     store_double,
     StoreDoubleInstruction,
-    StoreDoubleInstructionAirSpec,
     StoreDoubleChip,
     StoreDoubleColumns,
     memory_store_double_events,

@@ -25,8 +25,7 @@ that, given those inputs, imposes exactly SP1's per-row checks/interactions:
 - the two **State** bus interactions: `receive_state(clk, pc)` (`emit (-is_real)`) and
   `send_state(clk + clk_inc, next_pc)` (`emit (is_real)`).
 
-The `Spec` is the two clock byte bounds (`is_real`-gated, exactly `Faithful/CPUState.lean`'s
-`cpustate_constraints_faithful`): **soundness derives them from the byte-bus pull `Guarantees`**, and
+The `Spec` is the two clock byte bounds (`is_real`-gated): **soundness derives them from the byte-bus pull `Guarantees`**, and
 **completeness consumes them** to discharge the pulls. The composing chip witnesses `cols` with a
 padding-safe clock (`clk_0_16 = 1`, `clk_16_24 = 0`), establishing the bounds. Cross-row execution is
 derived from the typed State interactions by the ranked grounding layer. -/

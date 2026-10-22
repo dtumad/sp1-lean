@@ -37,8 +37,7 @@ provable_struct_eval_lemmas Inputs
 
 /-- Native Bitwise-chip row (Rust field order — the chip has no separate `is_real` column; the
 real-row selector is the flag sum). The reader blocks reuse the project substrate; only the composed
-u16 bitwise block is owned by the local Lean gadget. `Faithful.BitwiseChip.bitwiseChipReconfigure` is
-the sole bridge to Rust's separately generated whole-chip row. -/
+u16 bitwise block is owned by the local Lean gadget. -/
 structure Columns (F : Type) where
   /-- Execution clock and program counter. -/
   state : Circuits.Types.CPUState F

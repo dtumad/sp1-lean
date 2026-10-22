@@ -35,7 +35,7 @@ private theorem length_edge (empty : Bool) (env : Environment (ZMod p)) :
       (valueFromOffset HostHintLengthChip.Inputs 0 env).next) := rfl
 
 private theorem length_component (empty : Bool) :
-    (view (p := p) (some empty)).component = { circuit := HostHintLengthChip.circuit empty } := rfl
+    (view (p := p) (some empty)).component = { circuit := HostHintLengthChip.circuit empty, Assumptions := (HostHintLengthChip.circuit empty).Assumptions } := rfl
 
 /-- Queue transitions stamp the successor with the call's incoming CPU clock. -/
 theorem call_time (row : Row (p := p)) :
@@ -68,12 +68,12 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem call_mem
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data) :
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
     call row ∈ HostLocalHandoff.calls witness := by
   have inside : HostCallChip.channel.pulledValue (call row) ∈
-      (queueTables witness).flatMap (·.interactionsWith witness.data HostCallChip.channel.toRaw) := by
+      (queueTables witness).flatMap (·.interactionsWith HostCallChip.channel.toRaw) := by
     rw [TransitionView.readIndexedRows_interactions indices (fun index => (view index).component)
-      _ witness.data _ (queueTables_aligned witness)]
+      _ _ (queueTables_aligned witness)]
     apply List.mem_flatMap.mpr
     refine ⟨row, member, ?_⟩
     change HostCallChip.channel.pulledValue (call row) ∈
@@ -81,7 +81,7 @@ private theorem call_mem
     rw [call_interactions]
     exact List.mem_singleton_self _
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp inside
-  apply ReceiverView.message_mem_of_pull_mem _ _ witness.data (HostLocalHandoff.receiverTables_aligned witness) _
+  apply ReceiverView.message_mem_of_pull_mem _ _ (HostLocalHandoff.receiverTables_aligned witness) _
   refine List.mem_flatMap.mpr ⟨table, ?_, present⟩
   rcases List.mem_cons.mp tableMem with rfl | member
   · exact List.getElem_mem _
@@ -93,7 +93,7 @@ theorem call_cpu
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data) :
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
       HostCallLedger.call env = call row ∧
       ExecutionRow.syscall (HostCallLedger.input env).instruction ∈
@@ -121,7 +121,7 @@ theorem call_cpu_at
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness) witness.data)
+    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness))
     (cpu : ExecutionRow p) (cpuMember : cpu ∈ LocalCore.executionRows (HostLocalCore.localWitness witness))
     (clock : StateMsg.timeNat (cpu.edge witness.data).1 = eventTime row) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
@@ -148,9 +148,9 @@ theorem clocks_sublist
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data)
+    (specs : ∀ table ∈ queueTables witness, table.Spec)
     {path : List (Row (p := p))} {initial final : State (ZMod p)}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness) witness.data))
+    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
@@ -158,7 +158,7 @@ theorem clocks_sublist
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu) :
     (path.map eventTime).Sublist (cpu.map fun row => StateMsg.timeNat (row.edge witness.data).1) := by
   have queueSorted := times_pairwise queueWalk
-    (fun row member => rows_spec _ witness.data (queueTables_aligned witness) specs row (queueExhaustive.mem_iff.mp member))
+    (fun row member => rows_spec _ (queueTables_aligned witness) specs row (queueExhaustive.mem_iff.mp member))
   have edgeData : ExecutionRow.canonEdge (HostLocalCore.localWitness witness).data =
       ExecutionRow.canonEdge witness.data := funext fun row => row.canonEdge_setData _ _
   have publicInput : (HostLocalCore.localWitness witness).publicInput = witness.publicInput := rfl
@@ -241,11 +241,11 @@ private theorem ordered_history
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data)
+    (specs : ∀ table ∈ queueTables witness, table.Spec)
     {hints : List Bytes} {upper : HintQueue.Store}
     {path : List (Row (p := p))} {initial final : State (ZMod p)}
     (history : HostHintQueueHistory.History hints final upper path)
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness) witness.data))
+    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
@@ -256,7 +256,7 @@ private theorem ordered_history
   have included := clocks_sublist witness interface constraints balanced ordering specs
     queueExhaustive queueWalk cpuExhaustive cpuWalk
   have queueSorted := times_pairwise queueWalk
-    (fun row member => rows_spec _ witness.data (queueTables_aligned witness) specs row (queueExhaustive.mem_iff.mp member))
+    (fun row member => rows_spec _ (queueTables_aligned witness) specs row (queueExhaustive.mem_iff.mp member))
   have edgeData : ExecutionRow.canonEdge (HostLocalCore.localWitness witness).data =
       ExecutionRow.canonEdge witness.data := funext fun row => row.canonEdge_setData _ _
   have publicInput : (HostLocalCore.localWitness witness).publicInput = witness.publicInput := rfl
@@ -277,7 +277,7 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
       cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ∧
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu ∧
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (HostHintQueueBoundary.projected witness)) witness.data) ∧
+      path.Perm (TransitionView.readIndexedRows indices (queueTables (HostHintQueueBoundary.projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       HostHintQueueHistory.History source.host.io.hints final (HintQueue.ofList source.host.io.hints).1 path ∧
       (path.map eventTime).Sublist (cpu.map fun row => StateMsg.timeNat (row.edge witness.data).1) ∧

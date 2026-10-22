@@ -14,8 +14,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 Composes the three column blocks as Clean `subcircuit`s — `Readers.CPUState.circuit`,
 `AddOperation.circuit`, `Readers.RTypeReader.circuit` — gates the row by the `is_real` selector, and
-returns the native `Columns` struct assembled from their outputs.  Its relationship to SP1's extracted
-row is stated once by the chip-level reconfiguration in `Faithful/AddChip.lean`. The `Spec` composes the
+returns the native `Columns` struct assembled from their outputs.  Released-SP1 row agreement is tested through the built-in Rust export. The `Spec` composes the
 sub-circuits' own `Spec`s plus the proven `is_real`-binary fact and the `is_real`-gated add identity;
 the buses' cross-row meaning (PC chain, memory permutation) lives at the trace level in
 `Soundness/{State,Program,Memory}Consistency.lean`.

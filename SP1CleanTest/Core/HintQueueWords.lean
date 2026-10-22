@@ -1,11 +1,11 @@
+import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.HostChecks
 import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Operations.HintQueueWordSource
 import SP1Clean.Native.Operations.HintQueueSource
 
 /-! # Byte-authenticated source hints and complete padded requests
 
-Evaluate actual fixed-lookup providers and fixture consumers on the node/word ledgers. These
+Evaluate actual fixed-column providers and fixture consumers on the node/word ledgers. These
 tests expose missing words, content changes, and the need for separate length authentication.
 The fixture consumer is not the full HINT_READ handler or a mixed-AIR integration claim.
 -/
@@ -17,12 +17,10 @@ open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
 private abbrev Fp := ZMod SP1Prime
 
 private def sourceWord (hints : List Bytes) (row : WordRecord Fp) : Bool × Ledger :=
-  evaluateProgram (HostHintQueue.sourceWordMain hints (varFromOffset WordRecord 0))
-    (toElements row).toList none [FiniteLookup.ofStatic (sourceWordTable hints)]
+  HintSourceExport.observe (HintSourceExport.words hints) row
 
 private def sourceNode (hints : List Bytes) (row : NodeRecord Fp) : Bool × Ledger :=
-  evaluateProgram (HostHintQueue.sourceMain hints (varFromOffset NodeRecord 0))
-    (toElements row).toList none [FiniteLookup.ofStatic (sourceTable hints)]
+  HintSourceExport.observe (HintSourceExport.nodes hints) row
 
 private def demand (pointer : ℕ) (bytes : Bytes) : Bool × Ledger :=
   evaluateProgram (do
@@ -84,7 +82,7 @@ theorem forgedWords :
        (fun forged => !(sourceWord [actual] forged).1) = true ∧
       (sourceWord [] (WordRecord.encode 1 [] 0)).1 = false := by native_decide
 
-/-- The fixed source lookup authenticates exactly one final word, including empty hints. -/
+/-- The fixed source inventory authenticates exactly one final word, including empty hints. -/
 theorem authenticatedEnds : (List.range 26).all (fun length =>
     let actual := bytes length
     let rows := nodeWordRows (p := SP1Prime) 1 actual
@@ -122,6 +120,6 @@ theorem historicalAndFresh :
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (HostHintQueue.sourceWord (p := SP1Prime) [[], [1, 2, 3], bytes 8])
+#assert_exportable (HostHintQueue.sourceWord (p := SP1Prime) [[], [1, 2, 3], bytes 8]).circuit
 
 end SP1CleanTest.Core.HintQueueWords

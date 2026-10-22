@@ -38,13 +38,16 @@ theorem haltRows_staticFacts {image : ProgramImage}
       (((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧ row.state.clk_16_24.val < 2 ^ 8) := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := halt_member member
   have checked := systemTable_constraints witness constraints 2 physical physicalMem
-  rw [systemTable_component witness 2] at checked
+  have shared : (systemTable witness 2).data = witness.data :=
+    witness.same_data _ (systemTable_mem witness 2)
+  rw [Table.environment, shared, systemTable_component witness 2] at checked
   have realEval : Expression.eval (Environment.fromArray physical witness.data)
       (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)).is_real = 1 := by
     simpa only [haltRow_eq, circuit_norm] using real
   have zero := HaltChip.codeZero_of_shallow _ _ _
     (shallowConstraints_of_componentConstraints HaltChip.circuit _ checked) realEval
   refine ⟨?_, haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
     ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 2)).1
     physicalMem real⟩
   simpa only [haltEventOfRow, haltRow_eq] using zero

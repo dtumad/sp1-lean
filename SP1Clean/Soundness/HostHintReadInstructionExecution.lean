@@ -26,15 +26,17 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 private theorem instruction_staticInputs
     (witness : EnsembleWitness (LocalCore.ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
-    (program : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data programChannel.toRaw)
+    (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
+    (program : ∀ table ∈ witness.tables, table.ChannelGuarantees programChannel.toRaw)
     {row : DecodedInstructionRow p} (member : row ∈ LocalCore.instructionRows witness) :
     DecodedRowStaticInputs row witness.data :=
   ⟨mem_chip_of_mem_decodeInstructionTables member,
     LocalCore.instructionRows_constraints witness constraints row member,
     channelGuarantees_of_mem_decodeInstructionTables witness.data _ (LocalCore.instructionTables_aligned witness)
+      (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
       (fun table tableMem => byte table (LocalCore.instructionTables_mem witness tableMem)) row member,
     channelGuarantees_of_mem_decodeInstructionTables witness.data _ (LocalCore.instructionTables_aligned witness)
+      (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
       (fun table tableMem => program table (LocalCore.instructionTables_mem witness tableMem)) row member⟩
 
 private theorem instruction_inputs (valid : image.Valid)
@@ -113,11 +115,11 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-        (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.instruction row)) ∧
+        (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-        (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) (.instruction row)) := by
+        (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.instruction row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]
@@ -131,7 +133,9 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have permissions := HostHintQueueBoundary.projected_permission_balancedChannel witness balanced
   have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.projected witness)
-    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source)) checks permissions active.1 active.2
+    (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source))
+    (auxiliary_membership_silent (HostQueueCurrent.source_membership_silent image source)) checks permissions
+    (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) active.1 active.2
   rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
   apply contracts.engineFactsLocalG_of_rowEffect witness.data row rfl checked.1 active.2 _ checked.2
     (carrier.trajectory valid) source.sail.realize carrier.timeline
@@ -182,8 +186,10 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
   have permission := HostLocalCore.instructionRows_write_permitted (HostHintQueueBoundary.projected witness)
     (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source))
+    (auxiliary_membership_silent (HostQueueCurrent.source_membership_silent image source))
     (HostHintQueueBoundary.projected_constraints witness constraints)
-    (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced) active.1 active.2
+    (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced)
+    (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) active.1 active.2
   rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
   have guard := contracts.routingLocal witness.data row rfl checked.1.constraints active.2 _ checked.2
   have migrated : (row.toChipRow witness.data).kind.advance.isSome = true := contracts.migrated

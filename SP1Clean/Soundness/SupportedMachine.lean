@@ -33,7 +33,7 @@ This is the circuit-bearing realization of the neutral identity list
 table and heterogeneous semantic `ChipKind`.  The opcode family and `rd == x0` dispatch guard live
 once, in the pure `Model.InstructionRouting` table indexed by that same identity.
 
-Faithfulness to Rust's `RiscvAir` and `tracing.rs` remains a theorem obligation. Provider and
+Released-Rust agreement is tested separately; no formal code-generation theorem is claimed. Provider and
 boundary tables remain separate from instruction identities; this module does not turn the
 supported subset into a monolithic full-machine descriptor. -/
 
@@ -75,7 +75,7 @@ def SupportedChip.rdGuard (chip : SupportedChip p) : RdGuard :=
 def SupportedChip.table (chip : SupportedChip p) : Component (ZMod p) :=
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  { circuit := chip.circuit }
+  { circuit := chip.circuit, Assumptions := (chip.circuit).Assumptions }
 
 /-- Whether this descriptor claims an instruction dispatch key. -/
 def SupportedChip.claims (chip : SupportedChip p) (opcode : Opcode) (rdIsX0 : Bool) : Bool :=

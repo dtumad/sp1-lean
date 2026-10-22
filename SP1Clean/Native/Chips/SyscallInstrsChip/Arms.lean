@@ -5,22 +5,13 @@ import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.ProvableStructDeriving
 
-/-! # The `SyscallInstrs` row's arms, as bundled assertions
+/-! # Bundled syscall instruction arms
 
-SP1's ECALL row dispatches on the syscall identifier, and each arm is an independent proof
-boundary. Written inline, the row is a single do-block of some sixty assertions, and every
-obligation about it — `localLength_eq`, the completeness closers, the requirement discharge — has
-to normalise the whole block at once; that exceeds the elaboration budget, which this repository
-does not raise. Bundling each arm as a `FormalAssertion` is Clean's own prescription for exactly
-this ("bundle it if it is a proof boundary"), and it makes the parent's constraint list short
-enough to reason about.
-
-The regrouping changes neither the constraint list nor the interaction list the row emits, so the
-faithfulness anchor is unaffected: `List.Forall (· = 0)` over a reassociated conjunction and
-`List.Perm` over a reordered interaction list are the same propositions.
-
-Contracts (`Inputs` and `Spec` per arm) live beside the chip's own in
-`FormalModel/Contracts/SyscallInstrsChip.lean`; the proofs are in `Proofs/Chips/SyscallInstrsChip/`. -/
+Each ECALL arm has a separate assertion and proof boundary. Bundling keeps the parent circuit's
+structural obligations small while preserving its constraints and interactions.
+Contracts live in `FormalModel/Contracts/SyscallInstrsChip.lean`; proofs live in
+`Proofs/Chips/SyscallInstrsChip/`.
+-/
 
 namespace SP1Clean.SyscallInstrsChip
 

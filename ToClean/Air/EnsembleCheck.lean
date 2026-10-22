@@ -109,16 +109,16 @@ theorem checkRow_iff (description : EnsembleCheck ens) {component : Component F}
   exact forall₂_congr fun lookup used => description.containsFixed_iff member used env
 
 /-- Check every physical row under the canonical data of its containing witness. -/
-def checkTable (description : EnsembleCheck ens) (data : ProverData F) (table : Table F) : Bool :=
+def checkTable (description : EnsembleCheck ens) (table : Table F) : Bool :=
   table.table.all (fun row =>
-    description.checkRow table.component (Environment.fromArray row data))
+    description.checkRow table.component (table.environment row))
 
 /-- Finite table checking agrees with the table's raw constraints. -/
-theorem checkTable_iff (description : EnsembleCheck ens) (data : ProverData F) {table : Table F}
+theorem checkTable_iff (description : EnsembleCheck ens) {table : Table F}
     (member : table.component ∈ ens.tables) :
-    description.checkTable data table = true ↔ table.Constraints data := by
+    description.checkTable table = true ↔ table.Constraints := by
   simp only [checkTable, List.all_eq_true, Table.Constraints]
-  exact forall₂_congr fun row _ => description.checkRow_iff member (Environment.fromArray row data)
+  exact forall₂_congr fun row _ => description.checkRow_iff member (table.environment row)
 
 omit [DecidableEq F] in
 /-- Every evaluated occurrence, including the separate verifier's, uses a registered channel. -/
@@ -130,7 +130,7 @@ theorem interaction_registered (description : EnsembleCheck ens) (witness : Ense
   rcases member with ⟨abstract, used, rfl⟩ | ⟨table, tableMem, row, _, abstract, used, rfl⟩
   · exact description.verifier_channels_complete abstract used
   · exact description.channels_complete table.component
-      (EnsembleWitness.mem_component_of_mem tableMem) abstract used
+      (EnsembleWitness.component_mem_tables_of_mem tableMem) abstract used
 
 omit [DecidableEq F] in
 /-- Filtering the canonical ledger by name preserves exactly the registered raw channel. -/
@@ -151,7 +151,7 @@ theorem interactionsNamed_eq (description : EnsembleCheck ens) (witness : Ensemb
 def checkWitness (description : EnsembleCheck ens) (characteristic : ℕ)
     (witness : EnsembleWitness ens) : Bool :=
   let ledger := witness.interactions
-  witness.tables.all (description.checkTable witness.data) &&
+  witness.tables.all description.checkTable &&
     ens.channels.all (fun channel =>
       checkInteractionBalance characteristic
         (ledger.filter fun interaction => interaction.channel.name == channel.name))
@@ -161,12 +161,12 @@ theorem checkWitness_iff (description : EnsembleCheck ens) (characteristic : ℕ
     [CharP F characteristic] (witness : EnsembleWitness ens) :
     description.checkWitness characteristic witness = true ↔
       witness.Constraints ∧ witness.BalancedChannels := by
-  rw [EnsembleWitness.constraints_iff]
+  rw [EnsembleWitness.Constraints]
   simp only [checkWitness, Bool.and_eq_true, List.all_eq_true,
     EnsembleWitness.BalancedChannels]
   apply and_congr
-  · exact forall₂_congr fun table member => description.checkTable_iff witness.data
-      (EnsembleWitness.mem_component_of_mem member)
+  · exact forall₂_congr fun table member => description.checkTable_iff
+      (EnsembleWitness.component_mem_tables_of_mem member)
   · apply forall₂_congr
     intro channel registered
     rw [checkInteractionBalance_iff, description.interactionsNamed_eq witness registered]

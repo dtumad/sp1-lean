@@ -3,8 +3,8 @@
 This library specifies and proves native Clean circuits for SP1's RISC-V execution model.
 Lean owns the circuit definitions and semantic proofs. The intended integration is Clean's
 built-in Lean → Rust AIR/witness export, compared with a pinned SP1 release in Rust.
-The existing Rust → Lean oracles and faithfulness proofs remain migration evidence until their
-live type/proof consumers and conformance coverage have been replaced.
+Reverse extraction and its faithfulness-only layer are retired. Keep comparisons against
+independent released Rust sources; do not add another extraction IR or interpreter.
 
 ## Current work and scope
 
@@ -118,10 +118,9 @@ must be reachable from a published branch/tag so a fresh clone works.
 
 LeanRV64D and the Sail runtime move as a compatible pair. Generate LeanRV64D through
 scripts/sail-config/generate_lean_rv64d.sh; never hand-edit it. The separate RvfiDii Lake library
-is a temporary elaboration workaround owned by #6. SP1Clean/Extracted is likewise generated only
-by update_extracted.py while that migration pipeline remains. Do not silently repin old generated
-oracles to a newer SP1 release.
+is a temporary elaboration workaround owned by #6. SP1 comparisons use the released Rust
+revision in provenance; generated Lean-to-Rust artifacts belong under the ignored build tree.
 
-For pin/ToClean/export changes, run fresh witness and ensemble export regeneration and the
+For pin/ToClean/export changes, run fresh ensemble AIR/witness regeneration and the
 applicable Rust/backend comparisons, in addition to the full Lean checks. Preserve independent
 source-side comparison: a generated inventory cannot authenticate itself.

@@ -27,15 +27,15 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
 /-- The internal equality output; the raw-constraint bridge identifies its meaning. -/
 def selector (input : Var Inputs (ZMod p)) (offset : ℕ) : Expression (ZMod p) :=
   Gadgets.IsEqual.circuit.output
-    (input.instruction.op_a_memory.prev_value, const writeWord) offset
+    (input.instruction.op_a_memory.prev_value, const writeWord) (offset + 6)
 
 /-- Keep the composed operation spine separate from the instruction's large row. -/
 theorem operations_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (main input).operations offset =
       [.subcircuit (CoreSyscallChip.circuit.toSubcircuit offset input.instruction),
-       .subcircuit (Gadgets.IsEqual.circuit.toSubcircuit offset
+       .subcircuit (Gadgets.IsEqual.circuit.toSubcircuit (offset + 6)
          (input.instruction.op_a_memory.prev_value, const writeWord)),
-       .subcircuit (Readers.RegisterRead.circuit.toSubcircuit (offset + 8)
+       .subcircuit (Readers.RegisterRead.circuit.toSubcircuit (offset + 6 + 8)
          (input.read (selector input offset))),
        .interact (channel.pushedIf input.instruction.is_real
          (input.message (selector input offset))).toRaw] := by

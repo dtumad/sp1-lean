@@ -1,5 +1,6 @@
 import SP1Clean.Native.Operations.HostExitBoundary
 import ToClean.Air.Footprint
+import ToClean.Air.TableBuild
 
 /-! # Public verifier boundary regressions
 
@@ -18,6 +19,8 @@ private instance : Fact (Nat.Prime 7) := ⟨by decide⟩
 private def physical : Table Fp where
   component := { circuit := { GeneralFormalCircuit.empty Fp (fields 1) with name := "retained" } }
   table := [#[3]]
+  data := fun _ _ => #[]
+  length_le := by decide
   uniform_width := by
     intro row member
     obtain rfl := List.mem_singleton.mp member
@@ -77,7 +80,9 @@ theorem disabledReceiptOccurrence :
       (candidate none none)).interactionsWith HostExitBoundary.channel.toRaw = [] := by
     change original.interactionsWith HostExitBoundary.channel.toRaw = []
     rw [EnsembleWitness.interactionsWith_of_verifier_empty rfl]
-    change physical.interactionsWith original.data HostExitBoundary.channel.toRaw ++ [] = []
+    change (withDerivedData [physical]).flatMap (·.interactionsWith HostExitBoundary.channel.toRaw) = []
+    rw [withDerivedData_interactionsWith]
+    change physical.interactionsWith HostExitBoundary.channel.toRaw ++ [] = []
     rw [List.append_nil]
     simp only [Table.interactionsWith, Operations.interactionValuesWith, Component.interactionsWith_eq]
     simp [physical, Component.rowOperations, GeneralFormalCircuit.empty, circuit_norm]

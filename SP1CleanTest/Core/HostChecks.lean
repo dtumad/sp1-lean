@@ -5,7 +5,7 @@ import ToClean.Air.FiniteLookup
 
 /-! # Executing native host-circuit regressions
 
-Evaluate complete witness programs, local assertions, and the fixed syscall lookup. Byte and
+Evaluate complete witness programs, local assertions, and any supplied fixed lookups. Byte and
 Memory and host-read guarantees are checked directly; Program messages must be the fixture's canonical ECALL
 at the supplied address (default `2^16`). Structural-channel messages are retained for each test's ledger assertions.
 These fixture checks do not assert whole-machine balance or authentic boot-memory contents.
@@ -16,6 +16,7 @@ namespace SP1CleanTest.Core.HostChecks
 open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
 
 private abbrev Fp := ZMod SP1Prime
+/-- Active interactions retained for fixture balance and endpoint checks. -/
 abbrev Ledger := List (String × List Fp × Fp)
 
 private instance byteDecidable (op : ByteOpcode) (a b c : Fp) : Decidable (op.constrain a b c) := by
@@ -28,6 +29,8 @@ private def byteValid (values : List Fp) : Bool :=
       opcode == (op.idx : Fp) && decide (op.constrain a b c)
   | _ => false
 
+/-- Execute Clean's witness program, check its local constraints and fixture channel meanings,
+and retain active interactions. An optional offset corrupts one generated witness cell. -/
 def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
     (corrupt : Option ℕ := none) (lookups : List (FiniteLookup Fp) := [])
     (programAddress : ℕ := 2 ^ 16) : Bool × Ledger :=
@@ -35,11 +38,10 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
   let env : Environment Fp := { honest with get := fun i =>
     if corrupt == (some (i - inputs.length)) && inputs.length ≤ i then honest.get i + 1 else honest.get i }
   let operations := (program.operations inputs.length).toFlat
-  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => (fixed :: lookups).any fun table => lookup.table.name == table.table.name &&
+    | .lookup lookup => lookups.any fun table => lookup.table.name == table.table.name &&
       table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
     | .witness .. => true
     | .interact interaction =>
@@ -82,6 +84,7 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
             0 < a.val + b.val * 65536 + c.val * 65536 ^ 2 && (last == 0 || last == 1)
         | _ => false
       else ["sp1.native.hint_queue_state", "sp1.native.hint_read_state", "SP1WritePermission",
+        "sp1.native.write_permission",
         "SP1State", "SP1Exit", "SP1HostExit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
         "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access",
         "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"].contains

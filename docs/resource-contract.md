@@ -151,7 +151,7 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 
 | Compatibility surface | Replacement / removal condition |
 |---|---|
-| `EventExecutionTrace`, `CoreShardSemanticWitness` | Retain for ordinary/exact-Core consumers; migrate the mixed compiler to the complete path in A6. Delete only after retained exact/export consumers have adapters. |
+| `EventExecutionTrace`, `CoreShardSemanticWitness` | Retain for ordinary-shard consumers; migrate the mixed compiler to the complete path in A6. Delete after all retained consumers migrate. |
 | `InstructionPlanReady`, `NativeCompilerReady`, `NativeTraceReady` | Prove their applicable fields from semantics for retained APIs; no occurrence in the new domain. Remove wrappers once all relevant consumers use the derived results. The legacy `syscallFree` field cannot describe mixed execution. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
 
@@ -164,5 +164,5 @@ for all 25 routed families. The family lemmas inspect the existing router and co
 or path is introduced. The old readiness wrappers remain for legacy consumers; extraction
 readiness is now derived, while per-chip event validity and all-table mixed assembly remain A6.
 
-No whole-chip faithfulness anchor is retired by this work. Native range/resource strengthening
-does not automatically become exact upstream SP1 refinement.
+Native range/resource strengthening does not by itself establish agreement with released SP1.
+The native proofs and Rust comparison tests have separate scopes.

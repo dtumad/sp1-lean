@@ -14,7 +14,6 @@ open SP1Clean.Model.Core
 
 structure Inputs (F : Type) where
   address : fields 3 F
-  interval : WritePermissionInterval F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 

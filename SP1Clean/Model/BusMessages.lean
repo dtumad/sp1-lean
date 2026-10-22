@@ -26,8 +26,7 @@ namespace SP1Clean.Channels
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The State-bus message — `(clk_high, clk_low, pc0, pc1, pc2)`, arity 5, matching SP1's
-`AirInteraction.state` (`crates/hypercube/src/lookup/interaction.rs`) and the `.state` interaction in
-`Extracted/CPUState.lean`. Each CPU/ALU row receives the current `(clk, pc)` and sends the next. -/
+`AirInteraction.state` (`crates/hypercube/src/lookup/interaction.rs`) and the native CPUState circuit. Each CPU/ALU row receives the current `(clk, pc)` and sends the next. -/
 structure StateMsg (F : Type) where
   clk_high : F
   clk_low : F
@@ -37,7 +36,7 @@ structure StateMsg (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas StateMsg
 
-/-- The exact v6.4.0 Syscall-bus message — `(clk_high, clk_low, syscall_id, arg1[0..2],
+/-- The released supervisor Syscall-bus message — `(clk_high, clk_low, syscall_id, arg1[0..2],
 arg2[0..2])`, arity 9. `SyscallInstrs` sends this tuple when byte one of the raw syscall code says
 that the handler has its own table, and `SyscallCore` receives it.
 
@@ -92,8 +91,7 @@ def StateMsg.Spec (_ : StateMsg (ZMod p)) : Prop := True
 
 /-- The Memory-bus message — `(clk_high, clk_low, addr0, addr1, addr2, value)`, where `value : Word` is
 the 4-limb little-endian word; `ProvableStruct` flattens it to the same arity-9 element tuple, matching
-SP1's `AirInteraction.memory` (`crates/hypercube/src/lookup/interaction.rs`) and the `.memory`
-interaction in `Extracted/RTypeReader.lean`. Registers use `addr0` = register index, `addr1 = addr2 = 0`.
+SP1's `AirInteraction.memory` (`crates/hypercube/src/lookup/interaction.rs`) and native reader interactions. Registers use `addr0` = register index, `addr1 = addr2 = 0`.
 Each register access sends the prior value at the previous timestamp and receives the new value at the
 current timestamp. -/
 structure MemoryMsg (F : Type) where
@@ -190,7 +188,7 @@ Namespace is `SP1Clean.Readers` (the readers' own), not `SP1Clean.Channels`: thi
 contract, stated over the raw clock limbs. It lives in this module — below `FormalModel/Contracts/
 Readers.lean`, where the rest of the reader contract surface sits — because `Native/Readers/
 RegisterWrite.lean` and `Native/Readers/MemoryAccess.lean` reach `Model/Channels` but deliberately do
-**not** import the contract file (they need none of its `Extracted/` column structs), and every reader
+**not** import the contract file (they need none of its chip column structs), and every reader
 reaches this module through `Model/Channels`. Repo convention is that namespaces are decoupled from
 directories, so the `Readers.*` names resolve identically wherever the declaration is filed. -/
 
@@ -266,8 +264,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The Program-bus message — the arity-16 instruction-fetch tuple `(pc0, pc1, pc2, opcode, op_a,
 op_b0..3, op_c0..3, op_a_0, imm_b, imm_c)`, matching SP1's `AirInteraction.program`
-(`crates/hypercube/src/lookup/interaction.rs`, `InteractionKind::Program => 16`) and the `.send
-(.program …)` in `Extracted/RTypeReader.lean`. `op_b`/`op_c` are the two operands as 4-limb **`Word`s**;
+(`crates/hypercube/src/lookup/interaction.rs`, `InteractionKind::Program => 16`) and the native reader fetch. `op_b`/`op_c` are the two operands as 4-limb **`Word`s**;
 `ProvableStruct` flattens each to the same 4 elements, so the emitted arity-16 row is byte-identical to
 the older 8-scalar-limb form (the `MemoryMsg.value : Word` precedent). **Field order preserves the row**:
 `op_b`/`op_c` are adjacent, `imm_b`/`imm_c` stay last — do NOT interleave `imm_b` between them (that would
@@ -321,22 +318,36 @@ structure ExitMsg (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas ExitMsg
 
-/-- The public-values message — one addressed cell of the committed public-values vector.
+/-- A public-value query computes `Σ coefficients[i] * public[base + stride * i]`.
 
-The second instance of the `ExitMsg` situation, and deliberately uniform where SP1 is not: SP1's
-syscall chip reads `public_values` at three differently-shaped places (the 8×4-cell
-`committed_value_digest`, the 8-cell `deferred_proofs_digest`, and two scalar commit flags), all by
-direct chip-level access that Clean's flat AIR reserves to the verifier. A single `⟨index, value⟩`
-cell covers all three without a variant type, and every message is built from columns the row
-already has — so a chip carrying these keeps its upstream column count.
+The address family identifies named public fields; it is not the released Rust struct layout.
+Keeping all eight field coefficients preserves SP1's weighted selection even when inactive rows
+have an empty or non-Boolean bitmap. Commit bytes use bases 32..35 and stride 4; deferred words
+use base 72 and stride 1. Scalar flags use stride zero and a unit coefficient.
 
-Like `SyscallMsg` this channel is declared with no provider, so balance forces the commit selectors
-to zero. Serving it for real is SP1's own `PublicValues` chip; that provider is what a later COMMIT
-phase adds. -/
+Every field is built from existing row expressions, so this changes the interaction payload
+without adding witness columns. Public binding and native per-call receipts remain distinct
+contracts; the message representation alone does not connect the final host bank to a shard digest. -/
 structure PublicValueMsg (F : Type) where
-  index : F
+  /-- First named public field in the query's address family. -/
+  base : F
+  /-- Address step between successive family members. -/
+  stride : F
+  /-- Field weights applied to the eight family members. -/
+  coefficients : Vector F 8
+  /-- Claimed weighted sum of the selected public fields. -/
   value : F
 deriving ProvableStruct
 provable_struct_eval_lemmas PublicValueMsg
+
+/-- A scalar public field as a weighted query with one unit coefficient. -/
+@[circuit_norm] def PublicValueMsg.scalar {F : Type} [Zero F] [One F]
+    (index value : F) : PublicValueMsg F :=
+  ⟨index, 0, #v[1, 0, 0, 0, 0, 0, 0, 0], value⟩
+
+/-- One named bank slot, in the same query representation as an instruction's bitmap. -/
+@[circuit_norm] def PublicValueMsg.atSlot {F : Type} [Zero F] [One F]
+    (base stride : F) (slot : Fin 8) (value : F) : PublicValueMsg F :=
+  ⟨base, stride, Vector.ofFn (fun index => if index = slot then 1 else 0), value⟩
 
 end SP1Clean.Channels

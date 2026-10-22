@@ -1,9 +1,20 @@
 import SP1CleanTest.Core.EnsembleExport
+import SP1CleanTest.Core.SyscallCodeExport
 import SP1CleanTest.Core.InstructionExport
 import SP1CleanTest.Core.ByteProviderExport
+import SP1CleanTest.Core.RangeProviderExport
+import SP1CleanTest.Core.SystemExport
+import SP1CleanTest.Core.SyscallExport
+import SP1CleanTest.Core.HostControlExport
 import SP1CleanTest.Core.SnapshotRegisterExport
 import SP1CleanTest.Core.StaticProviderExport
 import SP1CleanTest.Core.RamExport
+import SP1CleanTest.Core.ProgramExport
+import SP1CleanTest.Core.HintSourceExport
+import SP1CleanTest.Core.WritePermissionExport
+import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
+import SP1CleanTest.Alignment.Support.StoppedAssemblyFixture
+import SP1CleanTest.Alignment.Support.HintReadAssemblyFixture
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
@@ -13,28 +24,324 @@ The comparison script regenerates twice, checks the completion marker and compil
 
 open Lean SP1CleanTest.Core.EnsembleExport
 
+private def interactionReference (interaction : Interaction (ZMod SP1Clean.SP1Prime)) : Json :=
+  Json.mkObj [
+    ("channel", toJson interaction.channel.name),
+    ("message", toJson (interaction.msg.map (·.val))),
+    ("multiplicity", toJson interaction.mult.val),
+    ("assumeGuarantees", toJson interaction.assumeGuarantees)]
+
 private def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
     {ensemble : Air.Flat.Ensemble (ZMod SP1Clean.SP1Prime) PublicIO}
     (witness : Air.Flat.EnsembleWitness ensemble) : Json :=
   Json.mkObj [
     ("tables", toJson (witness.tables.map fun table =>
       table.table.map fun row => row.map (·.val))),
-    ("interactions", toJson (witness.interactions.map fun interaction => Json.mkObj [
-      ("channel", toJson interaction.channel.name),
-      ("message", toJson (interaction.msg.map (·.val))),
-      ("multiplicity", toJson interaction.mult.val),
-      ("assumeGuarantees", toJson interaction.assumeGuarantees)]))]
+    ("interactions", toJson (witness.interactions.map interactionReference))]
+
+private def expressionDegree : Expression (ZMod SP1Clean.SP1Prime) → ℕ
+  | .var _ => 1
+  | .const _ => 0
+  | .add left right => max (expressionDegree left) (expressionDegree right)
+  | .mul left right => expressionDegree left + expressionDegree right
+
+private def installedCase (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed)
+    (name : String) (publicInput : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime))
+    (privateInput : fields (SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers).size
+      (ZMod SP1Clean.SP1Prime)) (expected : Bool) : IO Json := do
+  -- The built-in exporter checks that this verifier depends only on public inputs.
+  -- Retain its occurrences even when witness generation rejects the instance.
+  let verifier := (SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).verifierOperations
+    |>.interactionValues (Environment.fromInput publicInput (fun _ _ => #[]))
+  let fields := [("name", toJson name), ("accepted", toJson expected),
+    ("verifier", toJson (verifier.map interactionReference)),
+    ("publicInput", toJson ((toElements publicInput).toArray.map (·.val))),
+    ("privateInput", toJson (privateInput.toArray.map (·.val)))]
+  match SP1CleanTest.Alignment.InstalledAssemblyExport.generate context consumers publicInput privateInput with
+  | .error message =>
+    if expected then throw (IO.userError s!"installed assembly {name}: {message}")
+    pure (Json.mkObj (fields ++ [("error", toJson message)]))
+  | .ok witness =>
+    unless (SP1CleanTest.Alignment.InstalledAssembly.description context).checkWitness
+        SP1Clean.SP1Prime witness == expected do
+      throw (IO.userError s!"unexpected installed assembly acceptance: {name}")
+    pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+
+private def installedInventory (context : SP1CleanTest.Alignment.InstalledAssembly.Context) : Json :=
+  toJson ((SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).tables.map fun component =>
+    Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
+      ("fixedWidth", toJson (component.fixedColumns.map (·.width) |>.getD 0)),
+      ("fixedHeight", toJson (component.fixedColumns.map (·.height.toNat) |>.getD 0))])
+
+private def installedReference : IO Json := do
+  let context := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
+  let consumers := SP1Clean.Audit.BranchEnsemble.consumerSeeds
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+  let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
+  let some branchHint := (SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers)[18]?
+    | throw (IO.userError "installed assembly has no branch input")
+  let changed := Vector.ofFn fun index : Fin input.size =>
+    input[index] + if index.val == branchHint.offset then 1 else 0
+  let header := SP1Clean.Audit.BranchEnsemble.header
+  let cases ← [
+      ("active-branch", header, base, true),
+      ("wrong-final-pc", { header with final_pc0 := header.final_pc0 + 4 }, base, false),
+      ("changed-branch-input", header, changed, false)].mapM
+      fun (name, publicInput, privateInput, expected) =>
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context),
+    ("compilerBranchRow", toJson (SP1Clean.Audit.BranchCompilerRoundTrip.row.map (·.val)))]
+
+private def installedIdentityReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+    (header : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime)) (label : String) : IO Json := do
+  let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+  let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
+  let some terminal := (SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers).find?
+      (fun hint => hint.key == (SP1Clean.HostCommitBoundary.terminal (p := SP1Clean.SP1Prime) false).name)
+    | throw (IO.userError "installed assembly has no commitment terminal")
+  let changed := Vector.ofFn fun index : Fin input.size =>
+    input[index] + if index.val == terminal.offset then 1 else 0
+  let cases ← [
+      (label, header, base, true),
+      ("wrong-initial-clock", { header with init_clk_0_16 := header.init_clk_0_16 + 1 }, base, false),
+      ("wrong-final-clock", { header with final_clk_0_16 := header.final_clk_0_16 + 1 }, base, false),
+      ("wrong-final-pc", { header with final_pc0 := header.final_pc0 + 4 }, base, false),
+      ("nonzero-exit", { header with exit_code := 1 }, base, false),
+      ("changed-bank-terminal", header, changed, false)].mapM
+      fun (name, publicInput, privateInput, expected) =>
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
+
+private def installedHintReadReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed) (length : ℕ) : IO Json := do
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+  let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
+  let hints := SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers
+  let some registers := hints[90]?
+    | throw (IO.userError "HINT_READ assembly has no register target checker")
+  let some ram := hints[91]?
+    | throw (IO.userError "HINT_READ assembly has no RAM target checker")
+  let some words := hints[84]?
+    | throw (IO.userError "HINT_READ assembly has no nonfinal word consumer")
+  let replace (column : ℕ) (value : ZMod SP1Clean.SP1Prime) := Vector.ofFn fun index : Fin input.size =>
+    if index.val == column then value else input[index]
+  let header := SP1CleanTest.Alignment.HintReadAssembly.header
+  let cases ← [
+      (s!"active-hint-read-{length}", header, base, true),
+      ("wrong-final-clock", { header with final_clk_0_16 := header.final_clk_0_16 + 1 }, base, false),
+      ("disabled-real-register-check", header, replace (registers.offset + registers.width - 1) 0, false),
+      ("nonboolean-register-activity", header, replace (registers.offset + registers.width - 1) 2, false),
+      ("wrong-target-ram-value", header, replace (ram.offset + 5) 0, false),
+      ("disabled-real-word", header, replace (words.offset + words.width - 1) 0, false),
+      ("nonboolean-word-activity", header, replace (words.offset + words.width - 1) 2, false)].mapM
+      fun (name, publicInput, privateInput, expected) =>
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
+
+private def installedWideReference : IO Json := do
+  let context := SP1CleanTest.Alignment.StoppedAssembly.wide
+  let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+  let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
+  let hints := SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers
+  let terminal (deferred : Bool) : IO Air.Flat.HintTable := do
+    let name := (SP1Clean.HostCommitBoundary.terminal (p := SP1Clean.SP1Prime) deferred).name
+    let some hint := hints.find? (fun hint => hint.key == name)
+      | throw (IO.userError s!"stopped assembly has no terminal {name}")
+    return hint
+  let committed ← terminal false
+  let deferred ← terminal true
+  let erase (hint : Air.Flat.HintTable) := Vector.ofFn fun index : Fin input.size =>
+    if hint.offset ≤ index.val && index.val < hint.offset + hint.width then 0 else input[index]
+  let changedClock := Vector.ofFn fun index : Fin input.size =>
+    input[index] + if index.val == committed.offset then 1 else 0
+  let header := SP1CleanTest.Alignment.StoppedAssembly.wideHeader
+  -- Host banks are fixed instance endpoints. This unused digest carrier is not their binding.
+  let changedDigest := { header with committed_value_digest := header.committed_value_digest.set 0 18 }
+  let cases ← [
+      ("stopped-wide-nonzero-banks", header, base, true),
+      ("optional-exit-is-not-public-exit", { header with exit_code := 65536 }, base, false),
+      ("unbound-public-digest-byte", changedDigest, base, true),
+      ("zeroed-committed-terminal", header, erase committed, false),
+      ("zeroed-deferred-terminal", header, erase deferred, false),
+      ("changed-terminal-clock", header, changedClock, false)].mapM
+      fun (name, publicInput, privateInput, expected) =>
+        installedCase context consumers name publicInput privateInput expected
+  return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
+
+private def installedChangedReference : IO Json := do
+  let variants := [
+    ("changed-stopped-code", SP1CleanTest.Alignment.StoppedAssembly.changedCode),
+    ("restart-stopped", SP1CleanTest.Alignment.StoppedAssembly.restarted)]
+  let cases ← variants.mapM fun (name, context) => do
+    let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+    let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+    installedCase context consumers name SP1CleanTest.Alignment.StoppedAssembly.wideHeader
+      ⟨input, rfl⟩ false
+  return Json.mkObj [("cases", toJson cases),
+    ("inventory", installedInventory SP1CleanTest.Alignment.StoppedAssembly.changedCode)]
+
+private def installedFabricatedReference : IO Json := do
+  let context := SP1CleanTest.Alignment.StoppedAssembly.fabricatedHalt
+  let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+  let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
+  let sample ← installedCase context consumers "invent-halt-zero"
+    SP1CleanTest.Alignment.StoppedAssembly.header ⟨input, rfl⟩ false
+  return Json.mkObj [("cases", toJson [sample]), ("inventory", installedInventory context)]
+
+
+private def programReference (image : SP1Clean.Model.Core.ProgramImage) {n : ℕ}
+    (requests : SP1CleanTest.Core.ProgramExport.Requests n (ZMod SP1Clean.SP1Prime)) : IO Json := do
+  match SP1CleanTest.Core.ProgramExport.generate image requests with
+  | .error message => throw (IO.userError message)
+  | .ok witness =>
+    unless (SP1CleanTest.Core.ProgramExport.description image n).checkWitness SP1Clean.SP1Prime witness do
+      throw (IO.userError "fixed Program witness failed raw acceptance")
+    return Json.mkObj [("publicInput", toJson ((toElements requests).toList.map (·.val))),
+      ("witness", physicalReference witness)]
+
+private def componentMetrics (component : Air.Flat.Component (ZMod SP1Clean.SP1Prime)) : Json :=
+  let constraints := component.rowOperations.constraints
+  Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
+    ("constraints", toJson constraints.length),
+    ("degreeBound", toJson ((constraints.map expressionDegree).foldl max 0))]
+
+private def permissionReference (rom : SP1Clean.Model.Core.ProgramImage) (empty : Bool) : IO Json := do
+  let cases ← SP1CleanTest.Core.WritePermissionExport.cases.mapM fun (name, requests, expected) => do
+    let expected := if empty then requests.toList.all (fun address =>
+      address.toList.all (fun limb => limb.val < 65536)) else expected
+    let fields := [("name", toJson name), ("publicInput", toJson ((toElements requests).toList.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.WritePermissionExport.generate rom requests with
+    | .error message =>
+      if expected then throw (IO.userError s!"permission {name}: {message}")
+      pure (Json.mkObj (fields ++ [("error", toJson message)]))
+    | .ok witness =>
+      unless (SP1CleanTest.Core.WritePermissionExport.description rom).checkWitness SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected permission acceptance: {name}")
+      pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+  return toJson cases
+
+private def hintCases {Row : TypeMap} [ProvableType Row]
+    (samples : List (Row (ZMod SP1Clean.SP1Prime))) :
+    List (String × List (Row (ZMod SP1Clean.SP1Prime)) × Bool) :=
+  let zero := fromElements (Vector.replicate (size Row) 0)
+  let first := samples.headD zero
+  samples.zipIdx.map (fun (record, index) => (s!"record-{index}", [record, record], true)) ++
+    [("mixed", [first, samples.getLastD zero], true)] ++
+    (List.finRange (size Row)).map (fun (index : Fin (size Row)) =>
+      let changed := fromElements ((toElements first).set index.val ((toElements first)[index] + 1))
+      (s!"forged-{index.val}", [first, changed], false)) ++ [("padding", [zero, zero], false)]
+
+private def hintReference {Row : TypeMap} [ProvableType Row]
+    (source : SP1CleanTest.Core.HintSourceExport.Source Row)
+    (cases : List (String × List (Row (ZMod SP1Clean.SP1Prime)) × Bool)) : IO Json := do
+  let results ← cases.mapM fun (name, requests, expected) => do
+    let fields := [("name", toJson name),
+      ("publicInput", toJson (requests.flatMap fun row => (toElements row).toList.map (·.val))),
+      ("accepted", toJson expected)]
+    match SP1CleanTest.Core.HintSourceExport.generate source requests with
+    | .error message =>
+      if expected then throw (IO.userError s!"hint {name}: {message}")
+      pure (Json.mkObj (fields ++ [("error", toJson message)]))
+    | .ok witness =>
+      unless (SP1CleanTest.Core.HintSourceExport.description source requests.length).checkWitness
+          SP1Clean.SP1Prime witness == expected do
+        throw (IO.userError s!"unexpected hint acceptance: {name}")
+      pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
+  return toJson results
+
+private def hintReferences : IO Json := do
+  let hints := SP1CleanTest.Core.HintSourceExport.hints
+  let nodes := SP1Clean.Model.Core.HintQueue.sourceRows (p := SP1Clean.SP1Prime) hints
+  let words := SP1Clean.Model.Core.HintQueue.sourceWordRows (p := SP1Clean.SP1Prime) hints
+  let nodeCases := hintCases nodes
+  let wordCases := hintCases words
+  return Json.mkObj [
+    ("nodes", ← hintReference (SP1CleanTest.Core.HintSourceExport.nodes hints) nodeCases),
+    ("words", ← hintReference (SP1CleanTest.Core.HintSourceExport.words hints) wordCases),
+    ("nodes_empty", ← hintReference (SP1CleanTest.Core.HintSourceExport.nodes [])
+      (nodeCases.map fun (name, rows, _) => (name, rows, false))),
+    ("words_empty", ← hintReference (SP1CleanTest.Core.HintSourceExport.words [])
+      (wordCases.map fun (name, rows, _) => (name, rows, false))),
+    ("nodes_unused", ← hintReference (SP1CleanTest.Core.HintSourceExport.nodes hints) [("unused", [], true)]),
+    ("words_unused", ← hintReference (SP1CleanTest.Core.HintSourceExport.words hints) [("unused", [], true)])]
 
 private def exportEnsembleFixture : IO Unit := do
   let out := System.FilePath.mk
     ((← IO.getEnv "ENSEMBLE_EXPORT_OUT").getD ".lake/ensemble-export/manual")
   IO.FS.createDirAll out
+  let opcodes := SP1Clean.Soundness.Opcode.all.map fun opcode => Json.mkObj [
+    ("constructor", toJson (reprStr opcode)), ("discriminant", toJson opcode.toNat)]
+  IO.FS.writeFile (out / "opcodes.reference.json") ((toJson opcodes).compress ++ "\n")
+  let context := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
+  for (name, consumers) in [
+      ("installed_assembly", SP1Clean.Audit.BranchEnsemble.consumerSeeds),
+      ("installed_empty", SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context)] do
+    let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust context consumers with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    IO.FS.writeFile (out / (name ++ ".rs")) installed
+  IO.FS.writeFile (out / "installed_assembly.reference.json") ((← installedReference).compress ++ "\n")
+  IO.FS.writeFile (out / "installed_empty.reference.json")
+    ((← installedIdentityReference context SP1Clean.Audit.BranchEnsemble.identityHeader
+      "empty-local").compress ++ "\n")
+  for (name, context) in [
+      ("installed_stopped_zero", SP1CleanTest.Alignment.StoppedAssembly.zero),
+      ("installed_stopped_wide", SP1CleanTest.Alignment.StoppedAssembly.wide),
+      ("installed_stopped_changed", SP1CleanTest.Alignment.StoppedAssembly.changedCode),
+      ("installed_fabricated_halt", SP1CleanTest.Alignment.StoppedAssembly.fabricatedHalt)] do
+    let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
+    let exported ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust context consumers with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    if name == "installed_stopped_changed" then
+      let restarted := SP1CleanTest.Alignment.StoppedAssembly.restarted
+      let restartedConsumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers restarted
+      let restartedExport ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust restarted restartedConsumers with
+        | .ok value => pure value
+        | .error message => throw (IO.userError message)
+      unless exported == restartedExport do
+        throw (IO.userError "changed-code and restarted instances no longer have identical full exports")
+    IO.FS.writeFile (out / (name ++ ".rs")) exported
+  IO.FS.writeFile (out / "installed_stopped_zero.reference.json")
+    ((← installedIdentityReference SP1CleanTest.Alignment.StoppedAssembly.zero
+      SP1CleanTest.Alignment.StoppedAssembly.header "stopped-zero").compress ++ "\n")
+  IO.FS.writeFile (out / "installed_stopped_wide.reference.json")
+    ((← installedWideReference).compress ++ "\n")
+  IO.FS.writeFile (out / "installed_stopped_changed.reference.json")
+    ((← installedChangedReference).compress ++ "\n")
+  IO.FS.writeFile (out / "installed_fabricated_halt.reference.json")
+    ((← installedFabricatedReference).compress ++ "\n")
+  for (name, length) in [("installed_hint_read", 16), ("installed_hint_word_padding", 24)] do
+    let (hintContext, hintConsumers) ← match SP1CleanTest.Alignment.HintReadAssembly.prepare length with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    let hintExport ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust hintContext hintConsumers with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    IO.FS.writeFile (out / (name ++ ".rs")) hintExport
+    IO.FS.writeFile (out / (name ++ ".reference.json"))
+      ((← installedHintReadReference hintContext hintConsumers length).compress ++ "\n")
   let exported ← match rust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)
   IO.FS.writeFile (out / "fixed_membership.rs") exported
+  IO.FS.writeFile (out / "syscall_code_guard.reference.json")
+    ((Json.mkObj [("cases", SP1CleanTest.Core.SyscallCodeExport.reference),
+      ("metrics", componentMetrics SP1CleanTest.Core.SyscallCodeExport.component)]).compress ++ "\n")
   for (name, result) in SP1CleanTest.Core.InstructionExport.rustExports ++
       SP1CleanTest.Core.ByteProviderExport.rustExports ++
+      SP1CleanTest.Core.RangeProviderExport.rustExports ++
+      SP1CleanTest.Core.SystemExport.rustExports ++
+      SP1CleanTest.Core.SyscallExport.rustExports ++
+      SP1CleanTest.Core.HostControlExport.rustExports ++
+      SP1CleanTest.Core.SyscallCodeExport.rustExports ++
+      SP1CleanTest.Core.ProgramExport.rustExports ++
+      SP1CleanTest.Core.WritePermissionExport.rustExports ++
+      SP1CleanTest.Core.HintSourceExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.rustExports ++
       SP1CleanTest.Core.SnapshotRegisterExport.Target.rustExports ++
       SP1CleanTest.Core.StaticProviderExport.rustExports ++
@@ -43,6 +350,26 @@ private def exportEnsembleFixture : IO Unit := do
       | .ok value => pure value
       | .error message => throw (IO.userError message)
     IO.FS.writeFile (out / name) source
+  IO.FS.writeFile (out / "host_control.reference.json")
+    (SP1CleanTest.Core.HostControlExport.reference.compress ++ "\n")
+  let hints ← match SP1CleanTest.Core.HostControlExport.hintReference with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  IO.FS.writeFile (out / "host_hints.reference.json") (hints.compress ++ "\n")
+  let programActive ← programReference SP1CleanTest.Core.ProgramExport.image
+    SP1CleanTest.Core.ProgramExport.requests
+  let programUnused ← programReference SP1CleanTest.Core.ProgramExport.image #v[]
+  let programEmpty ← programReference SP1CleanTest.Core.ProgramExport.emptyImage #v[]
+  let programSparse ← programReference SP1CleanTest.Core.ProgramExport.sparseImage
+    SP1CleanTest.Core.ProgramExport.sparseRequests
+  IO.FS.writeFile (out / "program_fixed.reference.json")
+    ((Json.mkObj [("active", programActive), ("unused", programUnused), ("empty", programEmpty),
+      ("sparse", programSparse)]).compress ++ "\n")
+  IO.FS.writeFile (out / "hint_sources.reference.json") ((← hintReferences).compress ++ "\n")
+  let permissions ← permissionReference SP1CleanTest.Core.WritePermissionExport.image false
+  let emptyPermissions ← permissionReference SP1CleanTest.Core.WritePermissionExport.emptyImage true
+  IO.FS.writeFile (out / "write_permission.reference.json")
+    ((Json.mkObj [("rom", permissions), ("empty", emptyPermissions)]).compress ++ "\n")
   let cases ← ([7, 9, 8] : List Nat).mapM fun (value : Nat) => do
     let result ← match generate (Nat.cast value) with
       | .error message => pure <| Json.mkObj [
@@ -103,24 +430,26 @@ private def exportEnsembleFixture : IO Unit := do
       pure (physicalReference witness)
   IO.FS.writeFile (out / "target_registers.reference.json")
     ((Json.mkObj [("cases", toJson targetCases), ("empty", targetEmpty)]).compress ++ "\n")
-  let staticFixtures ← SP1CleanTest.Core.StaticProviderExport.fixtures.mapM fun (name, rows) => do
+  let staticFixtures ← SP1CleanTest.Core.StaticProviderExport.fixtures.mapM fun fixture => do
+    let name := fixture.name
+    let rows := fixture.rows
     let cases ← SP1CleanTest.Core.StaticProviderExport.requests.mapM fun request => do
       let expected := rows.contains request[0] && rows.contains request[1]
       let fields := [("publicInput", toJson ((toElements request).toArray.map (·.val))),
         ("accepted", toJson expected)]
-      match SP1CleanTest.Core.StaticProviderExport.generate rows request with
+      match SP1CleanTest.Core.StaticProviderExport.generate fixture request with
       | .error message =>
         if expected then throw (IO.userError s!"{name}: {message}")
         pure <| Json.mkObj (fields ++ [("error", toJson message)])
       | .ok witness =>
-        unless expected && (SP1CleanTest.Core.StaticProviderExport.description rows).checkWitness
+        unless expected && (SP1CleanTest.Core.StaticProviderExport.description fixture).checkWitness
             SP1Clean.SP1Prime witness do
           throw (IO.userError s!"unexpected padded membership acceptance: {name}")
         pure <| Json.mkObj (fields ++ [("witness", physicalReference witness)])
-    let unused ← match SP1CleanTest.Core.StaticProviderExport.generateEmpty rows with
+    let unused ← match SP1CleanTest.Core.StaticProviderExport.generateEmpty fixture with
       | .error message => throw (IO.userError s!"{name}: {message}")
       | .ok witness =>
-        unless (SP1CleanTest.Core.StaticProviderExport.emptyDescription rows).checkWitness
+        unless (SP1CleanTest.Core.StaticProviderExport.emptyDescription fixture).checkWitness
             SP1Clean.SP1Prime witness do
           throw (IO.userError s!"unused padded provider failed: {name}")
         pure (physicalReference witness)

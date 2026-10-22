@@ -11,8 +11,7 @@ import Mathlib.Tactic.LinearCombination
 /-! # Native unsigned word comparison
 
 The bundled assertion checks a semantic limb-selection certificate. Local algebraic evidence
-connects that contract to the unchanged AIR; reverse-extraction faithfulness still consumes
-the real-row RawSpec until its Rust replacement has equivalent coverage.
+connects that contract to the circuit's assertions through `RawSpec`.
 -/
 
 @[expose] public section
@@ -290,9 +289,8 @@ theorem flags_sum_zero_iff_eq {cols : Circuits.Types.LtOperationUnsigned (ZMod p
       h10, fun heq => ?_⟩
     exfalso; simp only [Word.toNat_def] at heq; omega
 
-/-- Semantic readout from `RawSpec` (used by `LtOperationSigned` and the `Faithful` anchor): the
-`U16Compare` `RawSpec` yields the subcircuit implication via `compare_of_raw`, so the compare `bit`
-is the unsigned-less-than indicator; the equality conjunct comes from `flags_sum_zero_iff_eq`. -/
+/-- Semantic readout from `RawSpec`, used by `LtOperationSigned`: `compare_of_raw` identifies
+the comparison bit, and `flags_sum_zero_iff_eq` supplies the equality case. -/
 theorem ltUnsigned_semantic {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (b cc : Word (ZMod p)) (hb : Word.isU64 b) (hcc : Word.isU64 cc)
     (h_raw : RawSpec b cc cols) :

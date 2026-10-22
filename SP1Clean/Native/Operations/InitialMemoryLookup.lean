@@ -26,6 +26,18 @@ def membership (memory : ByteMemory) (limit : ℕ) (name : String) :
   { memory.fixedTable limit with name := name }
 
 omit [Fact (2 ^ 17 < p)] in
+/-- The complete 48-bit memory inventory, including padding, fits Clean's physical row index. -/
+theorem membership_height_lt_uint64 (memory : ByteMemory) (name : String) :
+    (membership (p := p) memory (2 ^ 48) name).height < UInt64.size := by
+  have length := memory.fixedTable_length_le (p := p) (2 ^ 48)
+  have padded := (membership (p := p) memory (2 ^ 48) name).height_lt_double
+  change (memory.fixedTable (p := p) (2 ^ 48)).height < UInt64.size
+  change (memory.fixedTable (p := p) (2 ^ 48)).height <
+    2 * max (memory.fixedTable (p := p) (2 ^ 48)).length 1 at padded
+  norm_num [UInt64.size] at *
+  omega
+
+omit [Fact (2 ^ 17 < p)] in
 private theorem compare_lower {address lower : Word (ZMod p)}
     {cols : Circuits.Types.LtOperationUnsigned (ZMod p)}
     (spec : LtOperationUnsigned.Spec ⟨address, lower, cols, 1⟩)
@@ -52,8 +64,7 @@ private theorem compare_upper {address upper : Word (ZMod p)}
 /-- Select and authenticate a fixed interval, then return its byte. -/
 def main (memory : ByteMemory) (limit : ℕ) (address : Var Word (ZMod p))
     (tableName : String := "sp1.native.initial_memory") : Circuit (ZMod p) (Expression (ZMod p)) := do
-  let interval ← witness (var := Var MemoryIntervalRow)
-    (intervalFE memory limit (address.map Witgen.FExpr.expr))
+  let interval ← witnessIR MemoryIntervalRow (intervalIR memory limit address)
   (membership memory limit tableName).channel.pull ⟨interval, 1⟩
   assertion WordRangeCheck.circuit address
   let lower ← witness (var := Var Circuits.Types.LtOperationUnsigned)
@@ -110,9 +121,19 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
     obtain ⟨interval, found⟩ := Option.isSome_iff_exists.mp
       ((memory.intervalAt?_isSome_iff limit (Word.toNat input)).mpr h_assumptions.2)
     have selection := memory.intervalAt?_sound limit (Word.toNat input) interval found
-    have selected := h_env.1.trans
-      (intervalFE_eval { env := env } memory limit limitBound _ input inputEval h_assumptions.1
-        interval found)
+    have generated := intervalIR_eval env memory limit limitBound input_var input
+      (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval] using inputEval i hi)
+      h_assumptions.1 interval found
+    have cells : (Vector.mapRange 9 fun i => env.get (i₀ + i)) =
+        toElements (interval.encode (p := p)) := by
+      ext i hi
+      simpa only [Vector.getElem_mapRange] using
+        (h_env.1 ⟨i, hi⟩).trans (congrArg (fun cells => cells[i]) generated)
+    have decoded := congrArg (fromElements (M := MemoryIntervalRow)) cells
+    simp only [ProvableType.fromElements_toElements] at decoded
+    have selected := (ProvableType.eval_varFromOffset (α := MemoryIntervalRow)
+      env.toEnvironment i₀).trans decoded
+    simp only [circuit_norm] at selected
     have lowerEq := congrArg MemoryIntervalRow.lower selected
     have upperEq := congrArg MemoryIntervalRow.upper selected
     dsimp only at lowerEq upperEq

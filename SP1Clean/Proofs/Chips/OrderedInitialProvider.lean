@@ -25,14 +25,14 @@ The provider's interface must omit this private channel; its Memory/Byte effects
 theorem main_interactions (name : String) (distinct : name ≠ "SP1Byte")
     (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
     (privateChannel : (OrderedBoundary.channel name).toRaw ∉ provider.channels)
-    (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
+    (input : Var (OrderedMemoryProvider.Inputs Payload) (ZMod p)) (offset : ℕ) :
     ((main name provider input).operations offset).interactionsWith (OrderedBoundary.channel name).toRaw =
       [((OrderedBoundary.channel name).pulled input.link.previous).toRaw,
        ((OrderedBoundary.channel name).pushed input.link.current).toRaw] :=
   OrderedMemoryProvider.main_interactions name distinct provider privateChannel input offset
 
 def circuit (name : String) (image : ProgramImage)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (binds : ∀ input output data, provider.Spec input output data → MemoryBoundary.InitialSpec image output) :
     GeneralFormalCircuit (ZMod p) (Inputs Payload) MemoryMsg :=
   OrderedMemoryProvider.circuit name (MemoryBoundary.InitialSpec image) provider binds
@@ -56,7 +56,7 @@ abbrev populate := @OrderedMemoryProvider.populate
 In particular, the universally quantified internal output condition is discharged here rather
 than left as a compiler-readiness condition on an execution. -/
 theorem populate_assumptions (name : String) (image : ProgramImage)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (query : Payload (ZMod p) → ℕ)
     (bindsAt : ∀ input output data,
       provider.Spec input output data → MemoryBoundary.InitialAtSpec image (query input) output)

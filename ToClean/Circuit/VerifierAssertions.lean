@@ -1,6 +1,6 @@
 module
 
-public import Clean.Circuit.Verifier
+public import Clean.Air.Verifier
 public import ToClean.Air.UnitBalance
 
 /-! # Public assertions through verifier interactions

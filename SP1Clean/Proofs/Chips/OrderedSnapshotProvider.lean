@@ -14,12 +14,12 @@ namespace SP1Clean.OrderedSnapshotProvider
 open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
-abbrev Inputs := OrderedMemoryProvider.Inputs
+abbrev Inputs := OrderedMemoryProvider.RowInput
 
 variable {Payload : TypeMap} [ProvableType Payload]
 
 def circuit (name : String) (snapshot : MemorySnapshot)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (binds : ∀ input output data, provider.Spec input output data → MemoryBoundary.SnapshotSpec snapshot output) :
     GeneralFormalCircuit (ZMod p) (Inputs Payload) MemoryMsg :=
   OrderedMemoryProvider.circuit name (MemoryBoundary.SnapshotSpec snapshot) provider binds
@@ -40,7 +40,7 @@ abbrev populate := @OrderedMemoryProvider.populate
 In particular, the universally quantified internal output condition is discharged here rather
 than left as a compiler-readiness condition on an execution. -/
 theorem populate_assumptions (name : String) (snapshot : MemorySnapshot)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (query : Payload (ZMod p) → ℕ)
     (bindsAt : ∀ input output data,
       provider.Spec input output data → MemoryBoundary.SnapshotAtSpec snapshot (query input) output)

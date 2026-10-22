@@ -137,8 +137,10 @@ private theorem step_of_replay (valid : image.Valid)
       simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
     have authorization := HostLocalCore.instructionRows_write_authorized (HostHintQueueBoundary.projected witness)
       (auxiliary_permission_pulls (HostQueueCurrent.source_permission_pulls source))
+      (auxiliary_membership_silent (HostQueueCurrent.source_membership_silent image source))
       (HostHintQueueBoundary.projected_constraints witness constraints)
-      (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced) active.1 active.2
+      (HostHintQueueBoundary.projected_permission_balancedChannel witness balanced)
+      (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) active.1 active.2
     rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data]
       at authorization
     exact effect.memory_outside_of_writeAuthorization valid authorization

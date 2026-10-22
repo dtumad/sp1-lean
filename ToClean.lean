@@ -1,14 +1,19 @@
 module
 
 public import ToClean.Circuit.ProvableOptional
+public import ToClean.Circuit.ExpressionSum
 public import ToClean.Circuit.StructEvalLemmas
 public import ToClean.Circuit.SubcircuitProjection
 public import ToClean.Circuit.VerifierAssertions
 public import ToClean.Circuit.VerifierInteractions
 public import ToClean.Circuit.Receipt
+public import ToClean.Circuit.Guarded
 public import ToClean.Air.EnsembleProjection
 public import ToClean.Air.ExpressionScope
 public import ToClean.Air.TableSlot
+public import ToClean.Air.FixedPrefix
+public import ToClean.Air.FixedRows
+public import ToClean.Air.MessageIndex
 public import ToClean.Air.StaticProvider
 public import ToClean.Circuit.WitnessCombinator
 public import ToClean.Circuit.WitgenBridge
@@ -21,6 +26,8 @@ public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.LookupProjection
 public import ToClean.Gadgets.ComputableWitnesses
 public import ToClean.Gadgets.BitwiseByte
+public import ToClean.Gadgets.OneHot
+public import ToClean.Gadgets.VariableRange
 public import ToClean.Air.ChannelRegistry
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension

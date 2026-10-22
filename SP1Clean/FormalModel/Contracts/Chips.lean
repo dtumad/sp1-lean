@@ -28,9 +28,7 @@ namespace SP1Clean.AddChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native Add-chip row.  Its arithmetic block follows the local Lean gadget, not Rust's
-`AddOperation` type.  `Faithful.addChipReconfigure` is the explicit whole-chip bridge to the
-extracted `AddCols` oracle.  The reader blocks remain layout-compatible while that migration proceeds. -/
+/-- Native Add-chip row. Arithmetic and reader blocks use shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -82,9 +80,7 @@ namespace SP1Clean.AddiChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native Addi-chip row.  Its arithmetic block follows the local Lean gadget, not Rust's
-`AddOperation` type.  `Faithful.addiChipReconfigure` is the explicit whole-chip bridge to the
-extracted `AddiOracle.AddiCols` oracle.  The reader blocks also use the shared native column types. -/
+/-- Native Addi-chip row. Arithmetic and reader blocks use shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -138,9 +134,7 @@ namespace SP1Clean.SubChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native Sub-chip row. The reader blocks reuse the project substrate; only the arithmetic block is
-owned by the local Lean gadget. `Faithful.subChipReconfigure` is the sole bridge to Rust's
-separately generated whole-chip row. -/
+/-- Native Sub-chip row. Arithmetic and reader blocks use shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -194,10 +188,7 @@ lemma rv64_addw_eq (x y : BitVec 64) :
   congr 1
   exact (BitVec.setWidth_add y x (by omega)).symm
 
-/-- Native ADDW-chip row. The reader blocks reuse the project substrate; only the arithmetic block is
-owned by the local Lean gadget (two witnessed low limbs + the composed sign-bit block).
-`Faithful.addwChipReconfigure` is the sole bridge to Rust's separately generated whole-chip
-row. -/
+/-- Native ADDW-chip row. The arithmetic block witnesses two low limbs and a shared sign-bit block. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -262,10 +253,7 @@ lemma rv64_subw_eq (x y : BitVec 64) :
   simp only [BitVec.toNat_sub, BitVec.extractLsb'_toNat, BitVec.toNat_setWidth, Nat.shiftRight_zero]
   omega
 
-/-- Native SUBW-chip row. The reader blocks reuse the project substrate; only the arithmetic block is
-owned by the local Lean gadget (two witnessed low limbs + the composed sign-bit block).
-`Faithful.subwChipReconfigure` is the sole bridge to Rust's separately generated whole-chip
-row. -/
+/-- Native SUBW-chip row. The arithmetic block witnesses two low limbs and a shared sign-bit block. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -331,10 +319,7 @@ namespace SP1Clean.JalChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native JAL-chip row.  The two arithmetic blocks follow the local Lean gadget
-(`Circuits.Types.AddOperation`); `Faithful.jalChipReconfigure` is the
-explicit whole-chip bridge to the extracted `JalOracle.JalColumns` oracle.  The reader blocks
-also use the shared native column types. -/
+/-- Native JAL-chip row. Arithmetic and reader blocks use shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -392,10 +377,7 @@ namespace SP1Clean.UTypeChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native U-type chip row.  The arithmetic block follows the local Lean gadget
-(`Circuits.Types.AddOperation`); `Faithful.uTypeChipReconfigure` is the
-explicit whole-chip bridge to the extracted `UTypeOracle.UTypeColumns` oracle.  The reader blocks
-also use the shared native column types. -/
+/-- Native U-type chip row. Arithmetic and reader blocks use shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F
@@ -460,10 +442,7 @@ namespace SP1Clean.JalrChip
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native JALR-chip row.  The two arithmetic blocks follow the local Lean gadget
-(`Circuits.Types.AddOperation`); `Faithful.jalrChipReconfigure` is the
-explicit whole-chip bridge to the extracted `JalrOracle.JalrColumns` oracle.  The reader blocks
-also use the shared native column types. -/
+/-- Native JALR-chip row. Arithmetic and reader blocks use shared native column types. -/
 structure Columns (F : Type) where
   is_real : F
   state : Circuits.Types.CPUState F

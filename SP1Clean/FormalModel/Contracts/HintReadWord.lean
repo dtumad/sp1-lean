@@ -30,6 +30,9 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
+/-- Physical rows append an activity field; semantic word transfers retain their payload. -/
+abbrev RowInput := ProvablePair Inputs field
+
 def stateChannel {p : ℕ} : Channel (ZMod p) State where
   name := "sp1.native.hint_read_state"
   Guarantees _ _ := True

@@ -1,4 +1,4 @@
-import Clean.Air.Extraction.Rust
+import SP1CleanTest.Core.ComponentExport
 import SP1CleanTest.Core.EnsembleCheck
 
 /-! # Built-in Rust export of fixed membership and a public boundary
@@ -34,7 +34,7 @@ def provider : GeneralFormalCircuit Fp fieldPair field where
 /-- The original finite lookup meaning is supplied by the verifier, independently of prover data. -/
 def fixed : FixedColumns Fp where
   height := 2
-  program := .ofFExprs #v[.listGetAtIndex [.const 7, .const 9]]
+  program := .ofFExprs #v[.listGet [.const 7, .const 9] .idx]
   valid := by rfl
 
 /-- The multiplicity is prover-owned; the allowed value is the fixed prefix. -/
@@ -51,14 +51,16 @@ def ensemble : Ensemble Fp field where
   verifier := verifier
 
 /-- Built-in preallocation updates only the count, selected by the actual emitted message. -/
-def config : WitnessGeneration.Config Fp unit where
-  modes := [.preallocated {
-    rows := 2
-    input := .ofFExprs #v[.const 0]
-    input_valid := by rfl
-    handlers := [{ interaction := 0, column := 1 }]
-  }]
-  padding := [{ input := #[7, 0], minimumRows := 2 }]
+def config : WitnessGeneration.Config Fp where
+  components := [(provider.name, {
+    mode := .preallocated {
+      rows := 2
+      input := .ofFExprs #v[.const 0]
+      input_valid := by rfl
+      handlers := [{ interaction := 0, column := 1 }]
+    }
+    padding := { input := #[7, 0], minimumRows := 2 }
+  })]
   fuel := 8
 
 /-- Independent raw acceptance includes all occurrences, including the unused fixed row. -/
@@ -76,11 +78,11 @@ def description : Air.Flat.EnsembleCheck ensemble where
 
 /-- Use Clean's scheduler with no external prover input or custom witness evaluator. -/
 def generate (value : Fp) : Except String (EnsembleWitness ensemble) :=
-  WitnessGeneration.generate ensemble config value ()
+  WitnessGeneration.generate (ComponentExport.fixture ensemble) config value () |>.mapError toString
 
 /-- The entire output is rendered by Clean's built-in exporter. -/
 def rust : Except String String :=
-  Extraction.Rust.ensembleToRust "FixedMembership" ensemble config
+  Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) config
 
 /-- Check generation against raw constraints and the full ledger. -/
 def accepts (value : Fp) : Bool :=

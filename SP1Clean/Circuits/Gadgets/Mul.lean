@@ -943,9 +943,8 @@ private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)
     and_intros
     all_goals exact h_pull _
 
-/-- The internal multiply semantic gadget as a Clean `FormalAssertion`: `is_real`-gated
-multiply-family constraints over the `populate`d product/carry columns; no fresh witnesses.
-Its semantic lemmas are consumed by chip proofs; Rust faithfulness is asserted only at chip level. -/
+/-- Internal multiply semantics as a Clean `FormalAssertion`: `is_real`-gated constraints
+over populated product/carry columns, without fresh witnesses. -/
 def circuit : FormalAssertion (ZMod p) Inputs :=
   { main, elaborated,
     Assumptions := Assumptions,

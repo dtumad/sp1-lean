@@ -27,10 +27,8 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- The literal meaning of SP1's `MulCols.asserts` own (inline) assertZero tail
-(`Extracted/ChipOracle/Mul.lean` `E5,E7,E9,E11,E13,E15,op_a_0`): the five variant-flag booleans (in SP1's
-extraction order), the flag-sum boolean, and `op_a_0 = 0`. The schoolbook arithmetic belongs to
-`MulOperation`, not here. -/
+/-- The multiplication row's own assertions: five binary opcode selectors, a binary flag sum
+and `op_a_0 = 0`. The arithmetic relation belongs to the composed MulOperation circuit. -/
 def AssertSpec (cols : Columns (ZMod p)) : Prop :=
   let m := cols.is_mul; let mh := cols.is_mulh; let mhu := cols.is_mulhu
   let mhsu := cols.is_mulhsu; let mw := cols.is_mulw
@@ -131,8 +129,8 @@ set_option linter.unusedSectionVars false in
 @[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 49 := rfl
 
-/-- Explicit MUL witness layout: the 45-cell multiplication block and four-limb result word.
-The selectors are retained from the input row.  This is a symbolic normalization boundary for grounding and faithfulness. -/
+/-- Explicit MUL layout: the 45-cell multiplication block and four-limb result word.
+Selectors remain in the input; grounding uses this folded normalization boundary. -/
 @[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,

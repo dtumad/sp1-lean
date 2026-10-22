@@ -1,7 +1,6 @@
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
-import ToClean.Air.FiniteLookup
 import Clean.Circuit.WitnessExport
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -11,7 +10,7 @@ import ToClean.Air.TableBuild
 
 /-! # Executed instruction-to-host handoff regressions
 
-Run complete syscall rows through the witness program, all assertions, the fixed code lookup,
+Run complete syscall rows through the witness program, all assertions,
 and Byte/Memory/Program local checks. State, Exit and PublicValues balance, and the host effects,
 remain whole-ensemble obligations outside these local satisfiability tests.
 -/
@@ -43,15 +42,13 @@ private def evaluate (input : Inputs Fp) (corruptSelector := false) :
   let program := HostCallChip.main (varFromOffset Inputs 0)
   let honest := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
   let env : Environment Fp := if corruptSelector then
-      { honest with get := fun i => if i == size Inputs + 1 then 1 - honest.get i else honest.get i }
+      { honest with get := fun i => if i == size Inputs + 6 + 1 then 1 - honest.get i else honest.get i }
     else honest
   let operations := (program.operations (size Inputs)).toFlat
-  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   let valid := operations.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => lookup.table.name == fixed.table.name &&
-      fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+    | .lookup _ => false
     | .witness .. => true
     | .interact interaction =>
       if env interaction.mult == 0 then true
@@ -126,7 +123,7 @@ theorem rejectedAliases :
       !(evaluate { (row 2) with instruction := { (row 2).instruction with
         op_a_memory := ⟨code, ⟨0, 4⟩⟩ } }).1) = true := by native_decide
 
-/-- info: exportable ✓ (8 witness cells) -/
+/-- info: exportable ✓ (14 witness cells) -/
 #guard_msgs in
 #assert_exportable (HostCallChip.circuit (p := SP1Prime))
 
@@ -156,14 +153,18 @@ private def instructionOfCall (message : HostCallChip.Message Fp) : Inputs Fp :=
       op_c_memory := ⟨message.arg2, ⟨0, message.clk_low + 1⟩⟩
       op_a_value := message.result } }
 
-private def instructionTable (rows : List (Inputs Fp)) : Table Fp :=
-  Table.build Soundness.HostCallLedger.producer rows (fun _ _ => #[]) (ProverHint.empty Fp)
+private def instructionTable (rows : List (Inputs Fp))
+    (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
+  Table.build Soundness.HostCallLedger.producer rows (fun _ _ => #[]) (ProverHint.empty Fp) bounded
 
-private def handlerTable (rows : List (HostHintReadChip.Inputs Fp)) : Table Fp :=
-  Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp)
+private def handlerTable (rows : List (HostHintReadChip.Inputs Fp))
+    (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
+  Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp) bounded
 
-private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp)) : Bool :=
-  let tables := [instructionTable instructions, handlerTable handlers]
+private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp))
+    (instructionBound : instructions.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide)
+    (handlerBound : handlers.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Bool :=
+  let tables := [instructionTable instructions instructionBound, handlerTable handlers handlerBound]
   let data := deriveProverData tables
   let ledger := tables.flatMap fun table =>
     table.table.flatMap fun physical =>
@@ -215,14 +216,12 @@ private def physicalLedger (table : Table Fp) (name : String) : List (String × 
         some (name, (interaction.msg.map env).toList, env interaction.mult) else none
 
 private def physicalChecks (table : Table Fp) : Bool :=
-  let fixed := FiniteLookup.ofStatic (SyscallKind.fixedTable (p := SP1Prime))
   table.table.all fun physical =>
     let env := Environment.fromArray physical (deriveProverData [table])
     table.component.rowOperations.toFlat.all fun operation =>
       match operation with
       | .assert expression => env expression == 0
-      | .lookup lookup => lookup.table.name == fixed.table.name &&
-          fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
+      | .lookup _ => false
       | .witness .. | .interact .. => true
 
 /-- An installed WRITE row plus padding retains its instruction prefix, original constraints, and State
@@ -259,12 +258,12 @@ private def registeredTables : List (Table Fp) :=
   List.ofFn fun index : Fin views.length =>
     if index.val = 0 then handlerTable [hintHandler 1]
     else if index.val = 2 then Table.build (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
-      [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp)
+      [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide))
     else if index.val = 19 then Table.build (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
-      [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp)
-    else Table.build views[index].component [] (fun _ _ => #[]) (ProverHint.empty Fp) (by
+      [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide))
+    else Table.build views[index].component [] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact Nat.zero_le _) (by
       have noFixed : views[index].component.fixedColumns = none := by fin_cases index <;> rfl
-      simp only [Component.fixedRowsMatch, noFixed])
+      simp only [Component.FixedRowsMatch, noFixed])
 
 /-- The heterogeneous physical tables retain the exact registered components, without casts. -/
 private theorem registeredTables_components :
@@ -286,7 +285,7 @@ theorem registeredReceiverHandoff :
     let instructions := instructionTable (padding :: (messages.map instructionOfCall).reverse ++ [padding])
     let ledger := registeredTables.flatMap fun table => physicalLedger table "sp1.native.host_call"
     views.length = 21 ∧ registeredTables.all physicalChecks = true ∧ physicalChecks instructions = true ∧
-      (ReceiverView.messages views registeredTables (deriveProverData registeredTables)).map toElements = messages.map toElements ∧
+      (ReceiverView.messages views registeredTables).map toElements = messages.map toElements ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger) = true ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger.drop 1) = false ∧
       HintReadFixtures.balanced (physicalLedger instructions "sp1.native.host_call" ++ ledger ++ ledger.take 1) = false := by

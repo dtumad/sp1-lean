@@ -102,8 +102,6 @@ jobs:
         run: scripts/check_option_escapes.sh
       - name: Witness-generation escape hatches (enforced — the witgen cutover is complete)
         run: scripts/check_no_witness_native.sh --enforce
-      - name: Independent SP1 witness inputs are structurally clean
-        run: python3 scripts/check_witgen_export.py --source-only
       - name: Recorded pins match the build graph
         run: scripts/check_pins.py
       - name: Trust policy is well-formed
@@ -253,12 +251,21 @@ jobs:
         with:
           workspaces: |
             rust/sp1-comparison
-            rust/witgen-interp
           key: clean-export
       - name: Built-in ensemble export and Rust backend comparison
-        run: /usr/bin/time -v bash scripts/check_ensemble_export.sh
-      # Native witness artifacts are generated under .lake, checked against independent SP1
-      # dumps and regenerated for determinism. Their Rust comparison uses the same runner.
+        id: ensemble
+        run: /usr/bin/time -v python3 scripts/check_ensemble_export.py
+      - name: Upload ensemble export artifacts
+        if: always() && steps.ensemble.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensemble-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .lake/ensemble-export/
+            !.lake/ensemble-export/compile-inputs/
+            !.lake/ensemble-export/inputs.lock
+          if-no-files-found: error
+          retention-days: 14
       - name: Library examples and adversarial witnesses
         if: env.FULL_BUILD == 'true'
         id: examples
@@ -273,18 +280,6 @@ jobs:
           path: .lake/build/examples/
           if-no-files-found: error
           retention-days: 30
-      - name: Fresh deterministic witnesses and Rust comparison
-        if: env.FULL_BUILD == 'true'
-        id: witgen
-        run: python3 scripts/check_witgen_export.py
-      - name: Upload witness export evidence
-        if: always() && env.FULL_BUILD == 'true' && steps.witgen.outcome != 'skipped'
-        uses: actions/upload-artifact@v4
-        with:
-          name: witgen-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .lake/witgen-export/
-          if-no-files-found: ignore
-          retention-days: 14
       - name: Pinned Node for backend conformance
         if: env.FULL_BUILD == 'true'
         uses: actions/setup-node@v4

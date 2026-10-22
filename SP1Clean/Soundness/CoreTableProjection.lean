@@ -19,9 +19,9 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 
 omit [Fact (2 ^ 24 < p)] in
 theorem typedTableInteractions_nil {Message : TypeMap} [ProvableType Message]
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (channel : Channel (ZMod p) Message)
+    (table : Table (ZMod p)) (channel : Channel (ZMod p) Message)
     (silent : channel.toRaw ∉ table.component.circuit.channels) :
-    typedTableInteractionsWith table data channel = [] := by
+    typedTableInteractionsWith table channel = [] := by
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedTableInteractionsWith_raw, List.map_nil]
   exact table.interactionsWith_nil_of_channel_not_mem silent

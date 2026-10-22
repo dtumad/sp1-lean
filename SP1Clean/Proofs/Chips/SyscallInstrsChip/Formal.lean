@@ -501,9 +501,9 @@ private theorem dispatchArmLookups (input : Var SyscallInstrsChip.DispatchArm.In
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := SyscallInstrsChip.circuit (p := p) } :
+    ({ circuit := SyscallInstrsChip.circuit (p := p), Assumptions := (SyscallInstrsChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     SyscallInstrsChip.circuit_main_eq]
   simp only [SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def, assertZero,
     subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,

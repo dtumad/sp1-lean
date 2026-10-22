@@ -121,6 +121,7 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
     have program := LocalCore.program_guarantees_of_balance image source _ checked programBalance
     have contract := syscallInstrsRow_contract_of_component _
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data (LocalCore.systemTable_component _ 3)
+      ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).same_data _ (LocalCore.systemTable_mem _ 3))
       (LocalCore.systemTable_constraints _ checked 3)
       (ordering.byte _ (LocalCore.systemTable_mem _ 3))
       (program.2 _ (LocalCore.systemTable_mem _ 3)) physicalMem (by rwa [rowEq])

@@ -17,11 +17,11 @@ use fixed widths (notably 8, 13, 14, and 16), while ShiftLeft and ShiftRight can
 across the full `0, …, 16` interval. The native provider must therefore expose the complete
 preprocessed family; four hand-picked tables leave valid shift rows without a native producer.
 
-Clean has no "trusted preprocessed table" primitive for channels, so a finished-`byteChannel` **provider
-must re-prove each pushed row valid in-circuit** — the `ByteRowSpec` membership predicate
-(`Model/ByteTable.lean`), here `a.val < 2^bits` via `byteRowSpec_range`. This is strictly more work than
-SP1's preprocessing (where validity is definitional), but it supplies the local guarantee needed by
-the native balanced ensemble with a Lean proof.
+The installed providers prove each pushed row's `ByteRowSpec` membership in-circuit, using
+`byteRowSpec_range`. Clean also supports verifier-fixed columns, as used by the native Program and
+host-source providers. Moving this Range family to that representation requires migrating its
+membership proofs and assembly together; the current bit-decomposition circuits remain the
+production providers. Their message coverage matches SP1, but their physical layout and cost differ.
 
 ## Fixed-width family
 

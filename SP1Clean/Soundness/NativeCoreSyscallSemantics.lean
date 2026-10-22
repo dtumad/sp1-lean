@@ -46,6 +46,7 @@ theorem syscallRows_contract {image : ProgramImage}
   obtain ⟨physical, physicalMem, rfl, _⟩ := syscall_member member
   have finished := (finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)
   exact syscallInstrsRow_contract_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
     (systemTable_constraints witness constraints 3) finished.1 finished.2 physicalMem currency
 
 /-- Row-local AIR semantics for every active syscall, including a PC increment across a 16-bit
@@ -103,6 +104,7 @@ private theorem syscall_returnCoordinates {image : ProgramImage} (valid : image.
   obtain ⟨physical, physicalMem, rfl, real⟩ := syscall_member member
   have committed := syscall_program_committed valid witness constraints balanced physicalMem real
   have clock := syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
     ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)).1 physicalMem real
   exact syscall_returnCoordinates_of_facts _ _ committed clock
 

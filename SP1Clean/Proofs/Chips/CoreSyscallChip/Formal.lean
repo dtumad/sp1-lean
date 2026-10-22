@@ -2,9 +2,9 @@ import SP1Clean.Native.Chips.CoreSyscallChip.Defs
 
 /-! # Soundness and completeness of the native syscall instruction boundary
 
-The resulting contract includes both the whole instruction chip's semantics and the enforced
-eight-code profile. The exact Rust-faithfulness anchor stays on the original instruction circuit;
-the additional native lookup is deliberately outside that claim.
+The contract combines instruction semantics with the enforced eight-code profile. Its
+full-register restriction is stricter than the released executor's truncating dispatch.
+Rust comparisons test the instruction and profile boundaries separately.
 -/
 
 namespace SP1Clean.CoreSyscallChip

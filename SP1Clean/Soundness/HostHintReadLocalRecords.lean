@@ -97,8 +97,8 @@ after grounding their inputs; fixed providers derive it directly from local cons
 def RecordAuthentication (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) : Prop :=
   ∀ table ∈ HostLocalCore.auxiliaryTables witness,
-    table.Authenticates witness.data nodeChannel (fun record => record.Valid ∧ record.Binds store) ∧
-    table.Authenticates witness.data wordChannel (fun record => record.Valid ∧ record.Binds store)
+    table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds store) ∧
+    table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds store)
 
 theorem record_authentication_of_components
     (witness : EnsembleWitness (ensemble image source others resources channels names))
@@ -110,8 +110,8 @@ theorem record_authentication_of_components
   rw [HostLocalCore.auxiliaryTables_components] at component
   have source := auxiliary_record_sources store sources table.component component
   have checked := constraints table (List.mem_of_mem_drop member)
-  exact ⟨Table.Authenticates.of_component table witness.data _ _ source.node checked,
-    Table.Authenticates.of_component table witness.data _ _ source.word checked⟩
+  exact ⟨Table.Authenticates.of_component table _ _ source.node checked,
+    Table.Authenticates.of_component table _ _ source.word checked⟩
 
 /-- The three closed ledgers needed to authenticate local record consumers.
 Queue and commitment endpoints remain in the enclosing verifier's ledger. -/
@@ -138,13 +138,14 @@ theorem node_authenticated (witness : EnsembleWitness (ensemble image source oth
     (member : nodeChannel.pulledValue record ∈ witness.interactionsWith nodeChannel.toRaw) :
     record.Valid ∧ record.Binds store := by
   apply HostLocalCore.authenticated_auxiliary_pull witness nodeChannel ?_ node_fresh
-    (by simp [nodeChannel, WritePermissionProvider.channel, Channel.toRaw]) wrapper_node_silent
+    (by simp [nodeChannel, WritePermissionProvider.channel, Channel.toRaw])
+    (by simp [nodeChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]) wrapper_node_silent
     (fun record => record.Valid ∧ record.Binds store)
     (fun table member => (authenticated table member).1) balanced record member
-  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
-          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))
+          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩))))))
 
 theorem word_authenticated (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
@@ -152,25 +153,26 @@ theorem word_authenticated (witness : EnsembleWitness (ensemble image source oth
     (member : wordChannel.pulledValue record ∈ witness.interactionsWith wordChannel.toRaw) :
     record.Valid ∧ record.Binds store := by
   apply HostLocalCore.authenticated_auxiliary_pull witness wordChannel ?_ word_fresh
-    (by simp [wordChannel, WritePermissionProvider.channel, Channel.toRaw]) wrapper_word_silent
+    (by simp [wordChannel, WritePermissionProvider.channel, Channel.toRaw])
+    (by simp [wordChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]) wrapper_word_silent
     (fun record => record.Valid ∧ record.Binds store)
     (fun table member => (authenticated table member).2) balanced record member
-  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
       (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
         ⟨HostHintReadCoverage.handler, by simp [receiver], by
-          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩)))))
+          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩))))))
 
 theorem node_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
     (balanced : witness.BalancedChannel nodeChannel.toRaw) :
-    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data nodeChannel.toRaw :=
+    ∀ table ∈ witness.tables, table.ChannelGuarantees nodeChannel.toRaw :=
   (witness.channelGuarantees_of_authenticated_pulls nodeChannel
     (fun record member => (node_authenticated witness store authenticated balanced record member).1)).2
 
 theorem word_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (store : Store) (authenticated : RecordAuthentication witness store)
     (balanced : witness.BalancedChannel wordChannel.toRaw) :
-    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data wordChannel.toRaw :=
+    ∀ table ∈ witness.tables, table.ChannelGuarantees wordChannel.toRaw :=
   (witness.channelGuarantees_of_authenticated_pulls wordChannel
     (fun record member => (word_authenticated witness store authenticated balanced record member).1)).2
 
@@ -195,14 +197,10 @@ private theorem handler_spec_of_channels (env : Environment (ZMod p))
     | exact Operations.channelGuarantees_of_trivial _
         (by simp [HostCallChip.channel, stateChannel, HintReadWordChip.stateChannel, Channel.toRaw]) _ _
 
-theorem handlerTable_mem (witness : EnsembleWitness (ensemble image source others resources channels names)) :
-    handlerTable witness ∈ witness.tables := by
-  exact List.mem_of_mem_drop (List.mem_of_mem_take (List.getElem_mem _))
-
 theorem byte_guarantees (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannel Channels.byteChannel.toRaw) :
-    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data Channels.byteChannel.toRaw :=
+    ∀ table ∈ witness.tables, table.ChannelGuarantees Channels.byteChannel.toRaw :=
   (HostLocalCore.byte_guarantees witness (auxiliaryInterface interface) constraints balanced).2
 
 /-- Handler row specifications follow from the installed AIR and its authenticated sources. -/
@@ -210,7 +208,7 @@ theorem handler_spec (witness : EnsembleWitness (ensemble image source others re
     (interface : ExtensionInterface others resources) (store : Store)
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : RecordChannels witness) :
-    (handlerTable witness).Spec witness.data := by
+    (handlerTable witness).Spec := by
   have member := handlerTable_mem witness
   have bytes := byte_guarantees witness interface constraints balanced.byte _ member
   have nodes := node_guarantees witness store authenticated balanced.node _ member
@@ -264,23 +262,26 @@ theorem word_steps (witness : EnsembleWitness (ensemble image source others reso
     (interface : ExtensionInterface others resources) (store : Store)
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : RecordChannels witness) :
-    HintReadCoverage.Steps (wordTables witness) witness.data := by
-  intro row member
-  obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  have component := List.forall₂_zip (wordTables_aligned witness) paired
-  have present := wordTables_mem witness table (List.of_mem_zip paired).2
-  have checked := constraints table present physical physicalMem
-  have bytes := byte_guarantees witness interface constraints balanced.byte table present physical physicalMem
-  have words := word_guarantees witness store authenticated balanced.word table present physical physicalMem
-  rw [← component] at checked bytes words
-  rw [Component.constraintsHold_iff] at checked
-  rw [Component.channelGuarantees_iff] at bytes words
-  simp only [HintReadCoverage.view, Component.rowOperations,
-    HintReadWordChip.circuit] at checked bytes words
-  have valid := word_step_of_channels last (varFromOffset HintReadWordChip.Inputs 0)
-    (size HintReadWordChip.Inputs) (Environment.fromArray physical witness.data) checked bytes words
-  simpa only [eval_varFromOffset_valueFromOffset, HintReadCoverage.rowInput] using valid
+    HintReadCoverage.Steps (wordTables witness) := by
+  constructor
+  · exact HintReadCoverage.rows_activity_binary _ (wordTables_aligned witness)
+      (fun table member => constraints table (wordTables_mem witness table member))
+  · intro row member
+    obtain ⟨member, active⟩ := HintReadCoverage.mem_active_rows.mp member
+    obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
+    obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
+    have component := List.forall₂_zip (wordTables_aligned witness) paired
+    have present := wordTables_mem witness table (List.of_mem_zip paired).2
+    have checked := constraints table present physical physicalMem
+    have bytes := byte_guarantees witness interface constraints balanced.byte table present physical physicalMem
+    have words := word_guarantees witness store authenticated balanced.word table present physical physicalMem
+    rw [← component] at checked bytes words
+    have valid := word_step_of_channels last (varFromOffset (F := ZMod p) HintReadWordChip.RowInput 0).1
+      (size HintReadWordChip.RowInput) (table.environment physical)
+      (HintReadCoverage.active_constraints (last, table.environment physical) active checked)
+      (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active bytes)
+      (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active words)
+    rwa [HintReadCoverage.eval_rowInput (last, table.environment physical)] at valid
 
 private theorem word_spec_of_channels (last : Bool) (env : Environment (ZMod p))
     (constraints : (HintReadCoverage.view last).component.operations.ConstraintsHold env)
@@ -288,7 +289,7 @@ private theorem word_spec_of_channels (last : Bool) (env : Environment (ZMod p))
     (memory : (HintReadCoverage.view last).component.operations.ChannelGuarantees Channels.memoryChannel.toRaw env)
     (words : (HintReadCoverage.view last).component.operations.ChannelGuarantees wordChannel.toRaw env) :
     (HintReadCoverage.view last).component.Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
+  apply (Component.weakSoundness (by intro _; trivial) constraints ?_).1
   rw [Operations.guarantees_iff _ _ _ ((HintReadCoverage.view last).component.inChannelsOrGuarantees env)]
   intro channel member
   cases last
@@ -316,8 +317,8 @@ theorem word_spec (witness : EnsembleWitness (ensemble image source others resou
     (interface : ExtensionInterface others resources) (store : Store)
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : RecordChannels witness)
-    (memory : ∀ table ∈ wordTables witness, table.ChannelGuarantees witness.data Channels.memoryChannel.toRaw) :
-    ∀ table ∈ wordTables witness, table.Spec witness.data := by
+    (memory : ∀ table ∈ wordTables witness, table.ChannelGuarantees Channels.memoryChannel.toRaw) :
+    ∀ table ∈ wordTables witness, table.Spec := by
   intro table member
   have present := wordTables_mem witness table member
   have byte := byte_guarantees witness interface constraints balanced.byte table present
@@ -339,8 +340,8 @@ theorem word_spec (witness : EnsembleWitness (ensemble image source others resou
 
 /-- Source hint records and the two physical bank terminals. The verifier supplies their endpoints. -/
 def sourceResources (hints : List Bytes) : List (Component (ZMod p)) :=
-  [{ circuit := HostHintQueue.source hints }, { circuit := HostHintQueue.sourceWord hints },
-    { circuit := HostCommitBoundary.terminal false }, { circuit := HostCommitBoundary.terminal true }]
+  [HostHintQueue.source hints, HostHintQueue.sourceWord hints,
+    { circuit := HostCommitBoundary.terminal false, Assumptions := (HostCommitBoundary.terminal false).Assumptions }, { circuit := HostCommitBoundary.terminal true, Assumptions := (HostCommitBoundary.terminal true).Assumptions }]
 
 private theorem source_auxiliary_names (hints : List Bytes) :
     (((receiver (p := p) :: HostCallReceivers.available).map
@@ -394,30 +395,55 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
     rw [List.contains_iff_mem.mpr (same.symm ▸ added)] at absent
     exact Bool.noConfusion absent
 
-/-- The existing handlers plus source providers need no caller-supplied record-source proof. -/
-theorem source_record_sources (hints : List Bytes) (store : Store)
-    (extension : Extends (ofList hints).1 store)
-    (component : Component (ZMod p))
-    (member : component ∈ (HostCallReceivers.available (p := p)).map (·.component) ++ sourceResources hints) :
-    HostHintRecordSources.Authenticates store component := by
-  rcases List.mem_append.mp member with handler | fixed
-  · exact HostHintRecordSources.available_authenticates store component handler
-  · simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at fixed
-    rcases fixed with rfl | rfl | rfl | rfl
-    · exact (HostHintRecordSources.source_node_authenticates hints).extend extension
-    · exact (HostHintRecordSources.source_word_authenticates hints).extend extension
-    all_goals
-      constructor <;> apply Component.Authenticates.of_silent <;>
-        simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel, Channel.toRaw, circuit_norm]
-
-/-- The fixed-source registration authenticates its actual records from the snapshot's hint bytes. -/
+/-- Fixed source records authenticate from actual physical prefixes and canonical prover data.
+No additional source-validity or membership-balance premise is supplied by the caller. -/
 theorem source_record_authentication
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available
       (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
     (store : Store) (extension : Extends (ofList source.host.io.hints).1 store)
-    (constraints : witness.Constraints) : RecordAuthentication witness store :=
-  record_authentication_of_components witness store
-    (source_record_sources source.host.io.hints store extension) constraints
+    (constraints : witness.Constraints) : RecordAuthentication witness store := by
+  intro table member
+  have present := List.mem_of_mem_drop member
+  have checked := constraints table present
+  have consistent := witness.dataConsistency_of_mem table present
+  have fromComponent (authenticated : HostHintRecordSources.Authenticates store table.component) :
+      table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds store) ∧
+      table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds store) :=
+    ⟨Table.Authenticates.of_component table _ _ authenticated.node checked,
+      Table.Authenticates.of_component table _ _ authenticated.word checked⟩
+  have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+  rw [HostLocalCore.auxiliaryTables_components] at component
+  simp only [List.map_cons, List.mem_append, List.mem_cons, wordResources, sourceResources,
+    List.not_mem_nil, or_false] at component
+  rcases component with (handler | other) | ((next | last) | (node | word | terminal | deferred))
+  · apply fromComponent
+    rw [handler]
+    exact HostHintRecordSources.handler_authenticates store
+  · exact fromComponent (HostHintRecordSources.available_authenticates store table.component other)
+  · apply fromComponent
+    rw [next]
+    exact HostHintRecordSources.word_consumer_authenticates store false
+  · apply fromComponent
+    rw [last]
+    exact HostHintRecordSources.word_consumer_authenticates store true
+  · have authenticated := HostHintRecordSources.source_node_authenticates source.host.io.hints table
+      node consistent checked
+    exact ⟨authenticated.1.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩),
+      authenticated.2.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩)⟩
+  · have authenticated := HostHintRecordSources.source_word_authenticates source.host.io.hints table
+      word consistent checked
+    exact ⟨authenticated.1.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩),
+      authenticated.2.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩)⟩
+  · apply fromComponent
+    rw [terminal]
+    constructor <;> apply Component.Authenticates.of_silent <;>
+      simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel,
+        Channel.toRaw, circuit_norm]
+  · apply fromComponent
+    rw [deferred]
+    constructor <;> apply Component.Authenticates.of_silent <;>
+      simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel,
+        Channel.toRaw, circuit_norm]
 
 theorem source_interface (hints : List Bytes) :
     ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) := by

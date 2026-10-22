@@ -66,7 +66,7 @@ theorem tables_aligned :
 theorem auxiliary_silent
     (privateChannel : ∀ component ∈ auxiliary, (stateChannel deferred).toRaw ∉ component.circuit.channels) :
     (witness.tables.drop (components (p := p) deferred).length).flatMap
-      (·.interactionsWith witness.data (stateChannel deferred).toRaw) = [] := by
+      (·.interactionsWith (stateChannel deferred).toRaw) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have same := congrArg (List.drop (components (p := p) deferred).length) witness.tables_map_component
@@ -79,7 +79,7 @@ theorem auxiliary_silent
   intro interaction member equal
   have sameChannel : interaction.channel = (stateChannel deferred).toRaw := by simpa using equal
   exact privateChannel table.component componentMem
-    (sameChannel ▸ table.channel_mem_channels_of_mem_interactions witness.data interaction member)
+    (sameChannel ▸ table.channel_mem_channels_of_mem_interactions interaction member)
 
 /-- The public verifier fixes the final bank words without a boundary premise. -/
 theorem interactions_eq
@@ -87,7 +87,7 @@ theorem interactions_eq
     witness.interactionsWith (stateChannel deferred).toRaw =
       [(stateChannel deferred).pushedValue (HostCommitBoundary.start (sourceValues deferred source)),
        (stateChannel deferred).pulledValue (HostCommitBoundary.final witness.publicInput)] ++
-        (bankTables witness).flatMap (·.interactionsWith witness.data (stateChannel deferred).toRaw) := by
+        (bankTables witness).flatMap (·.interactionsWith (stateChannel deferred).toRaw) := by
   have verifier : witness.verifierInteractionsWith (stateChannel deferred).toRaw =
       [(stateChannel deferred).pushedValue (HostCommitBoundary.start (sourceValues deferred source)),
        (stateChannel deferred).pulledValue (HostCommitBoundary.final witness.publicInput)] := by
@@ -95,8 +95,8 @@ theorem interactions_eq
       Verifier.Program.circuitOperations, Verifier.Program.operations, HostCommitBoundary.verifierProgram]
     rw [Verifier.ofInteractions_values, HostCommitBoundary.verifier_values,
       ProvableType.eval_fromInput_varFromOffset_zero]
-  simp only [EnsembleWitness.interactionsWith, verifier, EnsembleWitness.tableContext,
-    TableContext.interactionsWith]
+  simp only [EnsembleWitness.interactionsWith, verifier, EnsembleWitness.toTables,
+    Tables.interactionsWith]
   have split := List.take_append_drop (components (p := p) deferred).length witness.tables
   rw [← split, List.flatMap_append, auxiliary_silent witness privateChannel, List.append_nil]
   rfl
@@ -116,7 +116,7 @@ theorem byte_guarantees
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (providers : ∀ component ∈ auxiliary, ∀ env, component.operations.ConstraintsHold env →
       component.operations.ChannelRequirements Channels.byteChannel.toRaw env) :
-    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data Channels.byteChannel.toRaw := by
+    ∀ table ∈ witness.tables, table.ChannelGuarantees Channels.byteChannel.toRaw := by
   apply (witness.channelGuarantees_of_component_requirements Channels.byteChannel.toRaw constraints
     (balanced _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))) ?_ ?_).2
   · intro input data
@@ -141,7 +141,7 @@ theorem sound
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (bankTables witness) witness.data) ∧
+      path.Perm (TransitionView.readIndexedRows indices (bankTables witness)) ∧
       Walk.IsWalk (edge deferred) (HostCommitBoundary.start (sourceValues deferred source)) (HostCommitBoundary.final witness.publicInput) path ∧
       path.foldlM (execute deferred policy context) source =
         some ((HostCommitBoundary.final witness.publicInput).apply deferred source) := by
@@ -150,7 +150,7 @@ theorem sound
   have bank := balanced (stateChannel deferred).toRaw (List.mem_cons_self ..)
   change BalancedInteractions (witness.interactionsWith (stateChannel deferred).toRaw) at bank
   rw [interactions_eq witness privateChannel] at bank
-  have history := ordered_history deferred (bankTables witness) witness.data (sourceValues deferred source) witness.publicInput (tables_aligned witness)
+  have history := ordered_history deferred (bankTables witness) (sourceValues deferred source) witness.publicInput (tables_aligned witness)
     (fun table member => constraints table (inTables table member))
     (fun table member => byte_guarantees witness constraints balanced providers table (inTables table member))
     bank policy characteristic context source

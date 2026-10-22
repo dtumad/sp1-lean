@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "clean_backend"
 version = "0.1.0"
-source = "git+https://github.com/dtumad/clean?rev=c4abcbb9728e8e2805ffc0a383eba96422602c27#c4abcbb9728e8e2805ffc0a383eba96422602c27"
+source = "git+https://github.com/dtumad/clean?rev=8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc#8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 dependencies = [
  "p3-air 0.4.2",
  "p3-batch-stark",
@@ -1399,7 +1399,7 @@ dependencies = [
 [[package]]
 name = "p3-batch-stark"
 version = "0.4.2"
-source = "git+https://github.com/dtumad/clean?rev=c4abcbb9728e8e2805ffc0a383eba96422602c27#c4abcbb9728e8e2805ffc0a383eba96422602c27"
+source = "git+https://github.com/dtumad/clean?rev=8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc#8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 dependencies = [
  "hashbrown 0.16.1",
  "itertools 0.14.0",
@@ -2810,6 +2810,7 @@ name = "sp1-clean-comparison"
 version = "0.1.0"
 dependencies = [
  "clean_backend",
+ "enum-map",
  "p3-air 0.4.2",
  "p3-challenger 0.4.2",
  "p3-commit 0.4.2",
@@ -2826,6 +2827,7 @@ dependencies = [
  "slop-air",
  "slop-algebra",
  "slop-matrix",
+ "slop-uni-stark",
  "sp1-core-executor",
  "sp1-core-machine",
  "sp1-hypercube",

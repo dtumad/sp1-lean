@@ -1,4 +1,5 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
+import SP1Clean.Proofs.Chips.BranchChip.Complete
 import SP1Clean.Alignment.Chips.BranchChip.Bridge
 import SP1Clean.Model.SP1Field
 import Clean.Air.WitnessGeneration
@@ -140,11 +141,11 @@ theorem row_target : sndPcOf (SP1Clean.Soundness.stateAccess rowView) = 69628#64
 
 /-- One circuit-built Branch table, with the compiled event and no padding. -/
 def table : Table (ZMod SP1Prime) :=
-  Table.build BranchChip.component (BranchChip.traceInputs [event] 0) data (ProverHint.empty _)
+  Table.build BranchChip.component (BranchChip.traceInputs [event] 0) data (ProverHint.empty _) (by decide)
 
 /-- Completeness checks the real local table. It does not assert ensemble channel balance. -/
-theorem table_constraints : table.Constraints data :=
-  BranchChip.traceTable_constraints [event] 0 data (by simpa using event_valid)
+theorem table_constraints : table.Constraints :=
+  BranchChip.traceTable_constraints [event] 0 data (by simpa using event_valid) (by decide)
 
 /-- The accepted table contains exactly the generated non-padding row. -/
 theorem table_one_real_row : table.table = [row] ∧
@@ -214,7 +215,7 @@ theorem joined (policy : HostPolicy) :
     compileInstructionEvent? view AccessFrontier.initial 1 = some compiled ∧
     compiled.routed = ⟨.branch, event⟩ ∧ event.branchNextPc = 69628 ∧
     sndPcOf (SP1Clean.Soundness.stateAccess rowView) = 69628#64 ∧
-    table.Constraints data ∧ table.table = [row] ∧
+    table.Constraints ∧ table.table = [row] ∧
     (BranchChip.component.rowInput env).is_real = 1 ∧ flatCheck = true :=
   ⟨official_try_step, execution_step policy, target_pc, projected target, compiled_eq,
     compiled_routed, event_target.2.2, row_target, table_constraints, table_one_real_row.1,

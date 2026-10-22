@@ -282,42 +282,43 @@ Byte and Program are closed against the literal Clean field interactions, so agg
 counts may cross the centered half of `ZMod p`.  State and Memory remain token hand-offs.  The only
 capacity premise is Clean's own interaction-list bound on each channel. -/
 theorem canonicalClosure_balancedChannels_of_handoff
-    (hwf : trace.canonicalClosure.WellFormed)
+    (capacity : trace.CanonicalCapacity)
+    (hwf : (trace.canonicalClosure capacity).WellFormed)
     (hserv : trace.DemandServable)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
       LookupAccessList.multiplicitySum trace.skeletonLedger key ≤ 0)
     (stateKeys memoryKeys : List LookupAccessList.LookupKey)
-    (hstate : (LookupAccessList.active trace.canonicalClosure.stateLedger).Perm
+    (hstate : (LookupAccessList.active (trace.canonicalClosure capacity).stateLedger).Perm
       (LookupAccessList.handoff stateKeys))
-    (hmemory : (LookupAccessList.active trace.canonicalClosure.memoryLedger).Perm
+    (hmemory : (LookupAccessList.active (trace.canonicalClosure capacity).memoryLedger).Perm
       (LookupAccessList.handoff memoryKeys))
-    (hhaltClosure : ∀ row ∈ (haltTable trace.canonicalClosure.witness).table,
-      (haltRow trace.canonicalClosure.witness.data row).is_real = 0)
-    (hhaltLenClosure : (haltTable trace.canonicalClosure.witness).table.length = 1)
-    (hexitZero : trace.canonicalClosure.witness.publicInput.exit_code = 0)
+    (hhaltClosure : ∀ row ∈ (haltTable (trace.canonicalClosure capacity).witness).table,
+      (haltRow (trace.canonicalClosure capacity).witness.data row).is_real = 0)
+    (hhaltLenClosure : (haltTable (trace.canonicalClosure capacity).witness).table.length = 1)
+    (hexitZero : (trace.canonicalClosure capacity).witness.publicInput.exit_code = 0)
     (hlen : ∀ channel ∈ (sp1Ensemble (p := p)).channels,
-      (trace.canonicalClosure.witness.interactionsWith channel).length < p) :
-    trace.canonicalClosure.witness.BalancedChannels := by
+      ((trace.canonicalClosure capacity).witness.interactionsWith channel).length < p) :
+    (trace.canonicalClosure capacity).witness.BalancedChannels := by
   intro channel hchannel
-  change BalancedInteractions (trace.canonicalClosure.witness.interactionsWith channel)
+  change BalancedInteractions ((trace.canonicalClosure capacity).witness.interactionsWith channel)
   have channelCase := hchannel
   simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelCase
   rcases channelCase with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact trace.canonicalClosure.balancedInteractions_of_handoff _ hchannel
+  · exact (trace.canonicalClosure capacity).balancedInteractions_of_handoff _ hchannel
       InteractionKind.State rfl stateKeys hstate (hlen _ hchannel)
-  · exact trace.canonicalClosure_byte_balancedInteractions hwf hserv hnonpos (hlen _ hchannel)
-  · exact trace.canonicalClosure_program_balancedInteractions hwf hserv hnonpos (hlen _ hchannel)
-  · exact trace.canonicalClosure.balancedInteractions_of_handoff _ hchannel
+  · exact trace.canonicalClosure_byte_balancedInteractions capacity hwf hserv hnonpos (hlen _ hchannel)
+  · exact trace.canonicalClosure_program_balancedInteractions capacity hwf hserv hnonpos (hlen _ hchannel)
+  · exact (trace.canonicalClosure capacity).balancedInteractions_of_handoff _ hchannel
       InteractionKind.Memory rfl memoryKeys hmemory (hlen _ hchannel)
   · exact LookupAccessList.balancedInteractions_of_isConsistentBalanced _ _ _
       (fun _ interactionMem =>
         Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith interactionMem)
       (List.Perm.refl _) (hlen _ hchannel)
-      (trace.canonicalClosure.balancedOn_exit hhaltClosure hhaltLenClosure hexitZero
+      ((trace.canonicalClosure capacity).balancedOn_exit hhaltClosure hhaltLenClosure hexitZero
         (hlen _ hchannel)).2
-  · rw [witness_syscallChannel_silent _ trace.canonicalClosure.witness_syscallTable_nil]
+  · rw [witness_syscallChannel_silent _ (trace.canonicalClosure capacity).witness_syscallTable_nil]
     exact balancedInteractions_nil
-  · rw [witness_publicValuesChannel_silent _ trace.canonicalClosure.witness_syscallTable_nil]
+  · rw [witness_publicValuesChannel_silent _ (trace.canonicalClosure capacity).witness_syscallTable_nil]
     exact balancedInteractions_nil
 
 /-- Integer balance on every registered channel: Byte/Program use provider closure,

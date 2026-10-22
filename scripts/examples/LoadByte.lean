@@ -30,13 +30,14 @@ def costs (tables : List (Table F)) : Json :=
     ("fixedLookupOccurrences", toJson lookups.length),
     ("maxLookupEntryDegreeBound", toJson
       ((lookups.flatMap fun lookup => lookup.entry.toList.map degreeBound).foldl max 0)),
-    ("rawInteractions", toJson ((tables.flatMap (·.interactions (deriveProverData tables))).length)),
+    ("rawInteractions", toJson ((tables.flatMap (·.interactions)).length)),
     ("rawByteInteractions", toJson (byteLedger tables).length),
     ("zeroByteInteractions", toJson ((byteLedger tables).countP fun interaction => interaction.mult == 0))]
 
 /-- Print one deterministic report; any failed case or unsupported provider demand exits nonzero. -/
 def main : IO Unit := do
-  let some residual := residual? workload | throw (IO.userError "unsupported residual provider demand")
+  have bounded : workload.length ≤ UInt64.size := by decide
+  let some residual := residual? workload bounded | throw (IO.userError "unsupported residual provider demand")
   let cases := matrix.map fun sample =>
     let signed := sample.1
     let offset := sample.2.1
@@ -46,8 +47,8 @@ def main : IO Unit := do
   let cases := cases ++ [("inactive-byte-300", true, caseCheck inactive),
     ("same-key-reader-demand", true, repeatedKeyRetained)] ++
       invalidCases.map (fun (name, accepted) => (name, false, accepted))
-  let old := originalAssembly workload data hint residual
-  let new := replacementAssembly workload data hint residual
+  let old := originalAssembly workload bounded data hint residual
+  let new := replacementAssembly workload bounded data hint residual
   let oldByteBalanced := byteBalanced old
   let newByteBalanced := byteBalanced new
   let report := Json.mkObj [
@@ -60,8 +61,8 @@ def main : IO Unit := do
     ("oldDedicatedProviderRows", toJson workload.length),
     ("newDedicatedProviderRows", toJson (0 : ℕ)),
     ("sharedResidualProviderRows", toJson ((residual.map fun table => table.table.length).sum)),
-    ("oldConsumer", costs [originalTable workload data hint]),
-    ("newConsumer", costs [replacementTable workload data hint]),
+    ("oldConsumer", costs [originalTable workload bounded data hint]),
+    ("newConsumer", costs [replacementTable workload bounded data hint]),
     ("oldAssembly", costs old), ("newAssembly", costs new),
     ("oldByteBalanced", toJson oldByteBalanced), ("newByteBalanced", toJson newByteBalanced),
     ("cases", toJson (cases.map fun (name, expected, actual) => Json.mkObj

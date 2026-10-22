@@ -69,7 +69,7 @@ one of the `ByteChip`'s six `byte_table()` ops, while `Range` rows are received 
 preprocessed `RangeChip` (`range/air.rs`), mirrored here by the complete indexed
 `RangeChip.circuitFor` family
 (`Proofs/Chips/ByteChip/RangeChip.lean`). The readers use two forms
-(`Extracted/{CPUState,RTypeReader}`):
+(`Readers.CPUState` and `Readers.RTypeReader`):
 
 - **`Range`** (`send_byte(Range, x, n, 0)`, `Range.constrain a b c := a.val < 2^b.val`) — the `n`-bit
   check used by all three RTypeReader access-timestamp checks (`< 2^16`, `< 2^8`) and CPUState's

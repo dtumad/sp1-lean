@@ -89,12 +89,12 @@ theorem Fresh.empty_ledger (stem : String) {ens : Ensemble F PublicIO} (fresh : 
     (witness : EnsembleWitness ens) : witness.interactionsWith (channel stem ens) = [] := by
   change ens.verifierOperations.interactionValuesWith (channel stem ens)
     (Environment.fromInput witness.publicInput witness.data) ++
-      witness.tables.flatMap (fun table => table.interactionsWith witness.data (channel stem ens)) = []
+      witness.tables.flatMap (fun table => table.interactionsWith (channel stem ens)) = []
   rw [fresh.verifier, List.nil_append]
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply List.flatMap_eq_nil_iff.mpr
   intro row _
-  exact fresh.tables table.component (EnsembleWitness.mem_component_of_mem member) _
+  exact fresh.tables table.component (EnsembleWitness.component_mem_tables_of_mem member) _
 
 end Air.Flat.VerifierChannel

@@ -44,7 +44,7 @@ quantifiers at these boundaries:
 | [Reader contracts](../SP1Clean/FormalModel/Contracts/Readers.lean) | Live operand/address/clock observations, explicit assumptions and channel requirements? |
 | [Complete execution](../SP1Clean/Model/Core/Execution.lean) | One evolving complete Sail/host/clock state? |
 | [Memory snapshots](../SP1Clean/Model/Core/MemorySnapshot.lean) | Untouched locations, absent keys and full boundary changes covered? |
-| [Core AIR relation](../SP1Clean/FormalModel/CoreAIRRelation.lean) | Exact pinned table/public-value scope distinguished from the native model? |
+| [Rust coverage](../rust/sp1-comparison/inventory/coverage.json) | Released component agreement, native semantics and deliberately different public/host contracts distinguished? |
 | [Realizes](../ToClean/Air/Realizes.lean) | The intended public language rather than a vacuous profile? |
 
 `python3 scripts/check_capstone_contract.py` builds the checked roots and compares their types
@@ -57,15 +57,29 @@ update this record. Declaration-name presence in prose is not a semantic check.
 [Lake's manifest](../lake-manifest.json) resolves Lean dependencies.
 [External provenance](../scripts/provenance.json) records SP1/Sail inputs and generated output
 fingerprints. `scripts/check_pins.py` checks actual values, including repository URLs, generated
-Sail/config hashes, the Lean semantic revision and dump pin. Regeneration CI independently
-compares fresh output with the checked-in trees.
+Sail/config hashes and every direct/transitive SP1 Cargo pin. Sail regeneration CI independently
+compares fresh output with its recorded fingerprint.
 
-The legacy Rust extractor checks the clean pinned checkout, semantic ancestor and derive-only
-machine-source changes. Its compiler and serializer remain trusted. Whole-chip faithfulness
-proves equality of specified assertion/interaction systems on reconstructed rows; it does not
-prove the extractor implementation correct or close exact-Core-to-Sail refinement.
+Clean owns extraction, lowering, Rust printing and witness generation. Fresh exports are
+regenerated twice; Rust compares actual released columns, AIR, interactions and executor effects.
+The old extractor's faithfulness proofs are historical evidence, not current released-SP1 proofs.
+Removing them does not turn the replacement tests into a formal code-generation theorem.
 
-Real-row non-vacuity, accepted and adversarial assemblies, SP1 dump comparison, Rust evaluation and
+The retired faithfulness theorems quantified over all rows in their stated domains, relative to
+the extracted Lean oracle; the reverse extractor's agreement with Rust was a separate trust
+boundary. Current comparisons exercise the released Rust implementation and the forward export
+path directly, principally through finite inputs and mutations. Native semantic proofs remain kernel checked;
+library-wide universal equivalence with released SP1 AIR is not a current claim. Regressions that record known
+differences are coverage of an open gap, not evidence that the gap has been closed.
+
+ADD additionally has an exact algebraic guard: upstream symbolic degree bounds and a complete
+interpolation grid check row-constraint equivalence, with full affine interaction comparison.
+Its supervisor profile fixes the untrusted-program mode flag to zero; unexpected public-input
+dependencies fail. It includes arbitrary inactive rows and only substitutes a zero column after both AIRs
+independently enforce it. This decision procedure trusts the Rust checker, evaluators, degree
+bounds and layout/channel adapters; it is not a Lean-kernel or code-generation proof.
+
+Real-row non-vacuity, accepted and adversarial assemblies, released-SP1 Rust comparison and
 independent WASM/R1CS witnesses supply distinct tests. The shared example runner rejects malformed
 or incomplete JSON, mismatched expectations and Lean diagnostics even after a zero exit.
 Repeated and zero-multiplicity occurrences, provider demand, padding and alternate valid witnesses
@@ -74,9 +88,8 @@ must survive fixture consolidation.
 ## Current and future claims
 
 See [semantics](semantics.md) for the exact proved/open boundary. Native ROM/host strengthening
-does not automatically agree with Rust. The Lean → Rust migration will replace reverse extraction
-with independently sourced Rust comparisons for declared profiles. It will not turn tests into
-a formal lowering theorem.
+does not automatically agree with Rust. Lean → Rust export uses independent released-SP1
+comparisons for declared profiles. These tests do not supply a formal lowering theorem.
 
 Cryptographic knowledge soundness, transcript/PCS assumptions, extraction error bounds and
 Core/Compressed/Plonk/Groth16 distinctions remain separate from AIR-to-execution correctness.

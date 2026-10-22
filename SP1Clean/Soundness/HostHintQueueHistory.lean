@@ -59,7 +59,7 @@ theorem of_witness
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness)) witness.data) ∧
+      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final upper path := by
   obtain ⟨path, exhaustive, walk⟩ := queue_ordered witness interface upper authenticated silent constraints balanced
@@ -71,9 +71,8 @@ theorem of_witness
     (source_binding witness balanced) extension
   intro row member
   have physical := exhaustive.mem_iff.mp member
-  rw [← projected_data witness] at physical
   exact HostQueueHistory.advance row upper
-    (rows_spec _ (projected witness).data (queueTables_aligned (projected witness)) specs row physical)
+    (rows_spec _ (queueTables_aligned (projected witness)) specs row physical)
     (HostQueueHistory.records_of_witness (projected witness) upper authenticated records row physical)
 
 /-- Source bytes and the installed AIR alone determine every observed length, queue pop, and final
@@ -83,7 +82,7 @@ theorem source_history
       (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness)) witness.data) ∧
+      path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final (ofList source.host.io.hints).1 path := by
   apply of_witness witness (source_interface source.host.io.hints) _ (.refl _)

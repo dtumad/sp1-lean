@@ -54,7 +54,9 @@ theorem halt_code {image : ProgramImage} {source : ExecutionSnapshot}
     Word.toBitVec64 row.x5_memory.prev_value = 0 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   have checked := LocalCore.systemTable_constraints witness constraints 2 physical physicalMem
-  rw [LocalCore.systemTable_component witness 2] at checked
+  have shared : (LocalCore.systemTable witness 2).data = witness.data :=
+    witness.same_data _ (LocalCore.systemTable_mem witness 2)
+  rw [Table.environment, shared, LocalCore.systemTable_component witness 2] at checked
   have realEval : Expression.eval (Environment.fromArray physical witness.data)
       (varFromOffset HaltChip.Inputs 0 : Var HaltChip.Inputs (ZMod p)).is_real = 1 := by
     simpa only [haltRow_eq, circuit_norm] using real
@@ -121,7 +123,7 @@ theorem cpu_safe
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data) :
+    (specs : ∀ table ∈ queueTables witness, table.Spec) :
     ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), QueueProjectionSafe row.event := by
   have safeCalls := (calls_projection witness interface constraints bytes specs).1
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
@@ -174,13 +176,13 @@ theorem cpu_projection
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data)
+    (specs : ∀ table ∈ queueTables witness, table.Spec)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
     (cpuWalk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {path : List (Row (p := p))} {initial final : HostHintQueue.State (ZMod p)}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness) witness.data))
+    (queueExhaustive : path.Perm (TransitionView.readIndexedRows indices (queueTables witness)))
     (queueWalk : Walk.IsWalk edge initial final path) :
     cpu.filterMap (stampedCPU witness.data) = path.map fun row => (eventTime row, HostQueueHistory.event row) := by
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface)
@@ -197,7 +199,7 @@ theorem cpu_projection
     (by simpa only [edgeData, publicInput] using cpuWalk)
   simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at cpuSorted
   exact ordered_projection witness.data cpu path projected cpuSorted
-    (times_pairwise queueWalk (fun row member => rows_spec _ witness.data (queueTables_aligned witness) specs row
+    (times_pairwise queueWalk (fun row member => rows_spec _ (queueTables_aligned witness) specs row
       (queueExhaustive.mem_iff.mp member)))
 
 end SP1Clean.Soundness.HostQueueCPUReplay

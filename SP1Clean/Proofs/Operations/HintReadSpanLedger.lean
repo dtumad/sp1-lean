@@ -23,11 +23,11 @@ theorem main_other_interactions (target : RawChannel (ZMod p)) (notByte : target
   simp [circuit, circuit_norm, notByte]
 
 theorem component_spec_of_byte (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit } : Component (ZMod p)).operations.ConstraintsHold env)
-    (byte : ({ circuit := circuit } : Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env) :
-    ({ circuit := circuit } : Component (ZMod p)).Spec env := by
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
+    (byte : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env) :
+    ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).Spec env := by
   apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit } : Component (ZMod p)).inChannelsOrGuarantees env)]
+  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).inChannelsOrGuarantees env)]
   intro selected member
   have same : selected = byteChannel.toRaw := by simpa [circuit, circuit_norm] using member
   simpa only [same] using byte

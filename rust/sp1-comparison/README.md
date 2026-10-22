@@ -1,7 +1,7 @@
 # Released SP1 comparison
 
-This crate reads the installed AIR inventory directly from SP1 v6.9.0. Its Git dependency
-and Cargo lockfile are independent of the legacy Rust-to-Lean extraction checkout.
+This crate reads the installed AIR inventory directly from pinned SP1 v6.9.0 Rust sources.
+Those sources provide the independent reference for generated native artifacts.
 
 ```sh
 cargo test --locked --manifest-path rust/sp1-comparison/Cargo.toml
@@ -25,22 +25,30 @@ the latter do not claim agreement with a released layout sharing that group.
 
 `scripts/check_release_surface.py` checks this record against both Rust inventory snapshots and
 the target revision in provenance. After the full test build, its `--native` option also reads the
-actual installed 93-component assembly; the full audit runs this check. The Cargo inventory tests
+actual installed 94-component assembly; the full audit runs this check. The Cargo inventory tests
 independently authenticate the snapshots against released Rust source. No generated Lean registry
 serves as the Rust reference.
 
-The inventory checks establish layout drift only. Fresh Clean Rust is compiled against the backend
+The inventory checks establish layout drift only. The instruction export suite also compares the
+complete native opcode alphabet with every constructor and discriminant of the released Rust enum,
+including unsupported instructions. This replaces the legacy Rust-to-Lean opcode-table parser.
+Fresh Clean Rust is compiled against the backend
 pinned to the same revision as the Lean emitter and compared with SP1:
 
 ```sh
-bash scripts/check_ensemble_export.sh
+python3 scripts/check_ensemble_export.py
 ```
 
-The comparison crate uses release optimization level 1 to bound generated-code compiler memory;
-dependency crates retain their normal release settings. CI logs the export step's time and peak memory.
+Component comparisons use release optimization level 1. The runner compiles the large installed
+assembly fixture separately at level 0, with release debug assertions still disabled; this avoids
+expensive optimization of repeated complete-assembly instances. Both feature configurations run
+every test, and dependency crates retain their normal release settings. CI logs the export step's
+time and peak memory. These fixture settings do not measure optimized application performance.
 
-The runner checks two byte-identical generations under `.lake/ensemble-export/`. Cargo compiles
-that output and exercises these boundaries:
+The runner checks two byte-identical generations under `.lake/ensemble-export/`, then refreshes
+the owned `compile-inputs/` directory without rewriting unchanged files. Cargo can reuse those
+inputs across runs; fresh artifacts and provenance stay in separate run directories. Concurrent
+runners are rejected before either can change the shared inputs. Comparisons cover these boundaries:
 
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public
@@ -70,11 +78,93 @@ that output and exercises these boundaries:
   ensembles bind every public endpoint and byte; backend mutations cover all counts and padding.
   These are native RAM tests, not agreement with SP1's global-memory digest machinery.
 
-Five legacy lookup meanings still block full export: program, syscall code, write permission,
-hint nodes and hint words. Clean's current scheduler also rejects multiple handlers for one
-channel, so the separate Byte providers need upstream routing support or consolidation before
-whole-assembly generation. The component tests use the existing row adapter and independently
-check external interactions; they do not establish complete ensemble balance.
+- The full-register syscall guard exports as arithmetic AIR with six shared witness products,
+  eleven assertions and maximum degree three. Rust checks every 16-bit low code against the
+  eight selected variants of SP1's enum, compares twelve Lean reference rows, rejects upper-limb
+  aliases and nonboolean activity, and mutates every product on active and padded rows. This
+  checks the stricter native code profile; host effects remain separate obligations.
+
+- The syscall instruction, guarded instruction and installed host-call wrapper use the same
+  exporter/runtime. Eighty-five released events and eleven padding rows cover all eight native
+  codes, every commit slot, canonical field-sized exits, full-word arguments and clock/PC carries;
+  18,720 column mutations compare constraints, public bindings and every shared interaction.
+  Public-value mutations bind the exit, flags and selected digest cells. Composed tests reject
+  upper-word aliases and precompile dispatch, check WRITE's x12 read and retain inactive messages.
+  Both configurations check supervisor mode; the optional syscall trap cell is explicitly zero.
+  Weighted public queries preserve the complete bitmap, including on inactive rows. Sixteen
+  inactive cases cover empty, unit, multi-hot, non-Boolean and cancelling weights, with public
+  and cached-result mutations. The previous empty-bitmap drift is a passing regression; these
+  finite comparisons do not establish arbitrary-row public equivalence. Host-handler effect coverage is
+  described below; general active-host assembly generation remains open.
+
+- HALT, constrained-replay ENTER, sixteen commitment handlers and two bank terminals compare
+  their generated rows and complete ledgers with Lean references. Released SP1 execution and
+  shard construction supply the control results, commit events and final banks. The comparison
+  covers every slot and value boundary, repeated writes, literal per-call receipts, invalid
+  clocks/arguments and source-backed Byte/Range membership. The unadapted components must reject
+  open buses; their ungated rows are not inactive padding. Native receipts authenticate mutable
+  bank history. A separate regression demonstrates that SP1's shard AIR rejects earlier differing
+  writes to a slot even though its executor produces the same final bank.
+
+- Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows and ledgers with native
+  constructor references. Released execution supplies repeated length observations, queue pops,
+  return values and padded memory writes across byte, word and limb boundaries. Tests match the
+  resulting node, final-word and cursor receipts and reject malformed calls/clocks/spans. These
+  handler checks alone do not establish physical Memory coverage or whole-assembly acceptance.
+
+- The installed fixed Program provider retains sixteen verifier-owned instruction fields and one count.
+  Tests compare SP1's preprocessing, count generator and AIR, including unused instructions,
+  first-row padding and zero counts. Backend checks bind every instruction field and reject
+  changed counts, while allowing count redistribution among duplicate padding keys. The empty
+  native inventory has one inert row. Separate native tests cover unordered sparse addresses
+  across all PC limbs using a first-match index in Clean's witness IR and its checked routing. The sparse native ROM contract
+  is broader than the contiguous SP1 fixture. Clean requires
+  power-of-two heights, so larger source comparisons must request a matching fixed SP1 shape.
+
+- Native write permissions use their production request circuit and a verifier-fixed interval
+  provider. Independent Rust expectations derive writable bytes from literal ROM PCs. Closed
+  three-request fixtures pad to four rows and compare complete Lean/Rust rows and ledgers, including repeated requests,
+  unused intervals, address bounds and empty ROM; backend tests reject forged endpoints, counts,
+  public values and witness cells. Clean's ordinary demand scheduler receives each public address;
+  the production circuit generates interval witnesses using the shared memory selector. No private
+  inputs or fixture-specific interval programs are needed. Boolean activity gates assertions and
+  multiplicities while preserving both physical interaction occurrences on padding rows. Backend
+  checks reject invalid activity, missing active requests and activated padding, and accept arbitrary
+  child cells on disabled rows. General host-assembly generation remains open. This is native ROM protection, not released SP1 runtime
+  `mprotect` semantics.
+
+- Immutable hint sources use verifier-fixed node/word payloads on their existing channels.
+  Independent Rust inputs reconstruct reverse allocation order, tail links, lengths, little-endian
+  words and mandatory final padding. Closed fixtures compare every physical row and ledger
+  occurrence, generation failures and raw acceptance, including repeated requests, unused sources
+  and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
+  are native source-queue tests; complete SP1 host execution remains outside their scope.
+
+The installed 94-component assembly is lookup-free. Its active-branch, empty, stopped and 16/24-byte
+HINT_READ fixtures export all components, read consumer inputs through Clean's private hint tables,
+and generate providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
+retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
+endpoints and committed branch rows. Empty segments retain the complete fixed providers and all
+ordered, bank and Exit terminals; backend tests reject removing each terminal even when the new
+statement declares the smaller table shape. Stopped sources cover zero and wide optional exit
+codes, nonzero commitment banks, and complete verifier occurrences even when generation fails.
+Fresh proof attempts reject altered public endpoints, resumption with an otherwise valid branch,
+changed stopped codes and fabricated HALT receipts. A changed digest carrier remains accepted
+in the stopped case: host-bank endpoints are fixed instance parameters, and this public field
+is unused. The HINT_READ fixtures close physical Memory, hint and cursor ledgers and compare
+final register/RAM values with released execution, including the mandatory final zero word. The
+16-byte case pads three active register/RAM boundary and target-check rows to four; the 24-byte
+case also pads three nonfinal word rows to four. Both word variants accept arbitrary disabled
+cells and reject non-Boolean activity. Missing real transfers/checks and activated padding fail
+backend verification. Acceptance comparisons check local assertions and complete channel balances,
+counting repeated and zero-multiplicity occurrences. These finite cases do not establish
+digest-to-bank binding or general generation completeness; broader active-host coverage remains open.
+
+The experimental Clean pin adds message
+predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
+general whole-assembly generation still needs its own routing, padding, data and completeness contracts.
+The component tests use the existing row adapter and independently check external interactions;
+they do not establish complete ensemble balance.
 
 - All 25 production instruction components use the same comparison harness:
 
@@ -114,6 +204,25 @@ check external interactions; they do not establish complete ensemble balance.
   SUBW, JAL, JALR, UType, AluX0 and memory components other than LoadByte mutate every row;
   the remaining components use selected boundary rows.
 
+`symbolic_add_export` strengthens ADD's row comparison to an exact algebraic check. Upstream
+symbolic expressions bound total degree by three. Both actual AIR evaluators run on the complete
+6,545-point interpolation grid after each independently enforces `op_a_0 = 0`; their constraint
+systems match up to nonzero scaling, duplicate equations and zero equations. All 21 affine
+interaction occurrences match on zero and every unit vector, including arbitrary inactive-row
+values. The supervisor profile fixes the untrusted-program flag to zero; the `mprotect` AIR's
+rejection of flag one is checked, and unexpected symbolic public dependencies fail. Fault controls
+remove the zero equation, exclude inactive rows, reverse a multiplicity, exceed the degree budget
+and introduce a public interaction. This uses no expression interpreter or new extraction IR, but
+trusts the Rust checker and adapters; it does not prove lowering or complete execution.
+
+The same harness compares both installed bump tables, including every padding row and mutations
+of every column with three deltas. MemoryBump covers 24 refresh/bump events and eight padding rows,
+read/write origins, register boundaries, 24/32/48-bit timestamp boundaries and unchanged old values.
+StateBump covers seven events and 25 padding rows, clock carries and one/two-limb PC carries.
+Separate padding checks preserve SP1's gated memory comparison and ungated PC-carry equations.
+All bump cells are inputs: these tests compare the supplied rows, local constraints and complete
+open-bus ledger, not a native execution-to-row generator.
+
 All six native byte providers are compared with SP1's actual `ByteChip` preprocessed trace and
 AIR over all 65,536 operand pairs, each at multiplicities `0`, `1`, `2` and `p-1`. The full six-entry
 message multiset is compared without dropping zeros or combining repeated MSB keys. Native rows
@@ -122,6 +231,18 @@ layouts and local constraint lists are intentionally different. Boundary-pair mu
 every native column with three deltas. Out-of-range operands must fail even at zero multiplicity;
 zero padding balances, and unmatched nonzero provider rows fail. These tests also run with
 `mprotect` enabled; they establish no additional mode semantics or ensemble count bounds.
+
+All 17 installed fixed-width Range providers are compared with every row of SP1's 131,072-row
+preprocessed Range table and its AIR at the same four multiplicities. The two `(0, 0)` physical
+occurrences are retained. Boundary values exercise every native column, out-of-range values reject
+even at count zero, and unmatched nonzero counts cannot balance. The released count generator is
+also checked on sparse boundary requests. As with Byte, native bit-decomposition rows and SP1's
+fixed rows have different physical layouts.
+
+The [archived provider experiments](https://github.com/dtumad/sp1-lean/pull/153) compare unified
+and verifier-fixed alternatives with the installed specialized providers. Their source and timing
+transcripts remain in the linked checkpoints; the routine checks cover the installed library.
+Proving and verification currently rebuild preprocessing, so those measurements include setup.
 
 The instruction fixture has open external buses. A test-only `Program` adapter uses Clean's runtime
 to construct the local row without scheduling those buses; the unadapted program is checked to
@@ -134,8 +255,8 @@ reverses Byte, Memory and Program signs to match Clean's provider-to-consumer gu
 The default `inventory` feature retains the independent inventory checks. `clean-export` enables
 the backend fixture alone; `instruction-export` also enables the live SP1 instruction and byte-provider comparisons.
 
-The native semantic restrictions are independent of extraction. Existing reverse-extraction
-evidence retains its original provenance until replacement coverage allows the pipeline's deletion.
+The native semantic restrictions are independent of extraction. The reverse-extraction pipeline
+is retired; its evidence and original provenance remain in Git history.
 Neither inventory coverage nor a statically optional carrier establishes mprotect correctness.
 
 Track remaining provider, ensemble and mode coverage in [#28](https://github.com/dtumad/sp1-lean/issues/28)

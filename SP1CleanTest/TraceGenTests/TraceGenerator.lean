@@ -1,33 +1,15 @@
 import Clean.Circuit.Basic
 
-/-! # Circuit-as-trace-generator: derive a chip's trace rows from its own circuit definition.
+/-! # Circuit-derived trace rows
 
-In Clean, witness generation is part of the circuit *language*: a chip's `main` interleaves
-constraints with `.witness m (fun env => …)` operations, so the same program elaborates to both the
-constraint system and the witness generator. This file makes that operational ("compiler-style"
-trace generation): given a chip's `main` and one row's concrete input column values, we
+Run Clean's witness interpreter on concrete inputs, then evaluate the output columns. Column
+order, witness formulas and wiring come from the circuit. `generateTrace` assembles real rows
+and zero padding for native conformance fixtures.
 
-1. run the circuit's own witness closures in emission order via `FlatOperation.dynamicWitnesses`
-   (through `Circuit.proverEnvironment`), threading the environment so later closures read earlier
-   witnesses — indices `< inputs.length` read the inputs, indices `≥ inputs.length` read accumulated
-   local witnesses;
-2. evaluate `main`'s *output struct* (the chip's extracted cols assembled from input vars and
-   witness vars) under the resulting environment — the output layout **is** the row layout.
-
-So a full trace row is *derived* from the circuit definition; nothing about column order, witness
-formulas, or wiring is restated. `generateTrace` then assembles a whole matrix: derived rows for the
-real events plus all-zero padding rows, exactly mirroring SP1's `generate_trace` (which zero-fills
-padding). Consumers: the real-row satisfiability anchors (`SP1CleanTest/Alignment/NonVacuityReal.lean`) and
-the exporter's per-chip `circuitTraceRowMapped` spot check, which pins the dump-anchored
-generation-time gate's row evaluation to this value-level path on real SP1 data.
-
-Everything here is computable and axiom-clean; `native_decide` appears only in the anchor files.
-
-Reasoning hook (not used yet): for circuits satisfying `Circuit.ComputableWitnesses`, the witness
-segment of the environment built here agrees with `Operations.localWitnesses` at the fixpoint
-environment (`Circuit.proverEnvironment_usesLocalWitnesses` in `Clean.Circuit.Theorems`) — the
-bridge from this layer to the chips' completeness theorems, if we later upgrade the sampled
-conformance into an all-inputs statement. -/
+These helpers support real-row satisfiability and event-population tests in `SP1CleanTest`.
+Built-in Lean-to-Rust export has separate comparisons against released SP1. This sampled path
+does not establish all-input witness agreement or compiler completeness.
+-/
 
 namespace SP1Clean.TraceGenTests
 
@@ -46,10 +28,9 @@ def circuitTraceRow (Input : TypeMap) [ProvableType Input] {Output : TypeMap} [P
   let out : Output (Expression F) := circ.output inputs.length
   (toElements out).toList.map (Expression.eval env.toEnvironment)
 
-/-- Derive one trace row and then cross an explicit whole-row layout boundary. Native proof rows are
-allowed to order or factor their columns differently from Rust; `reconfigure` is the same complete-row
-map audited by `ChipFaithful`. Witness generation still comes exclusively from `main`, and the map is
-applied only after evaluating the circuit output to concrete field values. -/
+/-- Derive a circuit row and apply an explicit complete-row layout map after evaluation.
+Native columns may be ordered or factored differently from Rust. This helper does not establish
+the map's correctness; independent released-row comparisons own that test boundary. -/
 def circuitTraceRowMapped (Input : TypeMap) [ProvableType Input]
     {Output RustOutput : TypeMap} [ProvableType Output] [ProvableType RustOutput]
     (main : Var Input F → Circuit F (Var Output F))

@@ -25,7 +25,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 private theorem wrapper_extra_bound
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (bytes : ∀ table ∈ (localWitness witness).tables,
-      table.ChannelGuarantees (localWitness witness).data byteChannel.toRaw)
+      table.ChannelGuarantees byteChannel.toRaw)
     (physical : Array (ZMod p)) (member : physical ∈ (hostCallTable witness).table)
     (real : (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real = 1) :
     MemoryMsg.ClkBound (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).pushed := by
@@ -40,6 +40,7 @@ private theorem wrapper_extra_bound
   have bounds := syscallInstrsRow_cpuState_bounds_of_component
     (LocalCore.systemTable (localWitness witness) 3) (localWitness witness).data
     (LocalCore.systemTable_component (localWitness witness) 3)
+    ((localWitness witness).same_data _ (LocalCore.systemTable_mem (localWitness witness) 3))
     (bytes _ (LocalCore.systemTable_mem (localWitness witness) 3)) prefixMem (by rw [same]; exact real)
   rw [same] at bounds
   exact MemoryMsg.clkBound_of_cpuState_bounds _ _ 1 1 (ZMod.val_one _) (by decide) bounds.1 bounds.2
@@ -48,13 +49,15 @@ private theorem wrapper_push_bound
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (constraints : witness.Constraints)
     (bytes : ∀ table ∈ (localWitness witness).tables,
-      table.ChannelGuarantees (localWitness witness).data byteChannel.toRaw) :
+      table.ChannelGuarantees byteChannel.toRaw) :
     ∀ message ∈ producedMessages (wrapperMemory witness), MemoryMsg.ClkBound message := by
   intro message member
   rw [wrapperMemory, List.flatMap_map, producedMessages_flatMap] at member
   obtain ⟨physical, physicalMem, extra⟩ := List.mem_flatMap.mp member
   have checked := constraints _ (hostCallTable_mem witness) physical physicalMem
-  rw [hostCallTable_component] at checked
+  have shared : (hostCallTable witness).data = witness.data :=
+    witness.same_data _ (hostCallTable_mem witness)
+  rw [Table.environment, shared, hostCallTable_component] at checked
   have binary := HostCallLedger.binary_of_constraints (Environment.fromArray physical witness.data) checked
   have flag := HostCallChip.writeFlag_binary
     (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.op_a_memory.prev_value
@@ -83,10 +86,10 @@ retains original rows, WRITE's x12 read-back and all auxiliary pushes; Memory ba
 theorem memoryInterior_push_bound (valid : image.Valid)
     (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (program : (localWitness witness).BalancedChannel programChannel.toRaw)
     (extra : ∀ table ∈ auxiliaryTables witness,
-      ∀ message ∈ producedMessages (typedTableInteractionsWith table witness.data memoryChannel),
+      ∀ message ∈ producedMessages (typedTableInteractionsWith table memoryChannel),
         MemoryMsg.ClkBound message) :
     ∀ message ∈ producedMessages (memoryInterior witness), MemoryMsg.ClkBound message := by
   have originalBytes := localWitness_byte_of_guarantees witness bytes

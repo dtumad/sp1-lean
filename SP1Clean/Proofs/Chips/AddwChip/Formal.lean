@@ -138,8 +138,7 @@ Unlike the R-type six-pack, the op_c register pull/read-back pair is gated by **
 (an immediate does no register read) and addressed by the low limb `op_c[0]` (the ALU adapter's `op_c`
 is a full `Word`).  The op_a write push carries the **sign-extended** W result
 `[v0, v1, msb·65535, msb·65535]` (witness cells `offset..offset+2`).  Keeping this list beside
-`circuit` makes Clean's exposure interface the single structural source consumed by both faithfulness
-and semantic grounding. -/
+`circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -285,9 +284,9 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := AddwChip.circuit (p := p) } :
+    ({ circuit := AddwChip.circuit (p := p), Assumptions := (AddwChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     AddwChip.circuit_main_eq]
   simp [AddwChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,

@@ -63,7 +63,7 @@ def tablesCheck (tables : List (Table F)) : Bool :=
 
 /-- Read all physical Byte interactions, including disabled occurrences. -/
 def byteLedger (tables : List (Table F)) : List (Interaction F) :=
-  (tables.flatMap (fun table => table.interactions (deriveProverData tables))).filter
+  (tables.flatMap (fun table => table.interactions)).filter
     (fun interaction => interaction.channel.name == "SP1Byte")
 
 /-- Finite support check with the exact raw occurrence count, including zeros. -/
@@ -78,33 +78,33 @@ def providerFor (interaction : Interaction F) : Option (Option (Table F)) :=
   match interaction.msg.toList with
   | [opcode, a, b, c] =>
     if opcode == 3 then
-      some (some (Table.build ByteChip.U8Range.component [⟨b, c, -(interaction.mult)⟩] data hint))
+      some (some (Table.build ByteChip.U8Range.component [⟨b, c, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
     else if opcode == 4 then
-      some (some (Table.build ByteChip.Ltu.component [⟨b, c, -(interaction.mult)⟩] data hint))
+      some (some (Table.build ByteChip.Ltu.component [⟨b, c, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
     else if opcode == 5 then
-      some (some (Table.build ByteChip.MSB.component [⟨b, -(interaction.mult)⟩] data hint))
+      some (some (Table.build ByteChip.MSB.component [⟨b, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
     else if opcode == 6 then
       if bound : b.val < 17 then
         some (some (Table.build (RangeChip.componentFor ⟨b.val, bound⟩)
-          [⟨a, -(interaction.mult)⟩] data hint))
+          [⟨a, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
       else none
     else none
   | _ => none
 
 /-- Shared residual providers preserve reader demands even when their keys equal selectedRange. -/
-def residual? (inputs : List (LoadByteChip.Inputs F)) : Option (List (Table F)) := do
-  let rows ← (byteLedger [replacementTable inputs data hint]).mapM providerFor
+def residual? (inputs : List (LoadByteChip.Inputs F)) (bounded : inputs.length ≤ UInt64.size) : Option (List (Table F)) := do
+  let rows ← (byteLedger [replacementTable inputs bounded data hint]).mapM providerFor
   pure (rows.filterMap id)
 
 /-- Both actual assemblies satisfy local constraints and Byte balance, with identical consumer cells. -/
 def caseCheck (rowInput : LoadByteChip.Inputs F) : Bool :=
-  match residual? [rowInput] with
+  match residual? [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) with
   | none => false
   | some residual =>
-    let old := originalAssembly [rowInput] data hint residual
-    let new := replacementAssembly [rowInput] data hint residual
+    let old := originalAssembly [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) data hint residual
+    let new := replacementAssembly [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) data hint residual
     tablesCheck old && tablesCheck new && byteBalanced old && byteBalanced new &&
-      (originalTable [rowInput] data hint).table == (replacementTable [rowInput] data hint).table &&
+      (originalTable [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) data hint).table == (replacementTable [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) data hint).table &&
       (byteLedger old).length == (byteLedger new).length + 2
 
 /-- Signedness × all eight offsets × the four boundary byte values. -/
@@ -123,11 +123,11 @@ theorem inactive_passes : caseCheck inactive = true := by native_decide
 /-- Invalid active byte fields and nonbinary opcode selectors fail actual replacement constraints. -/
 def invalidCases : List (String × Bool) :=
   [("wrong-low-byte", tablesCheck [replacementTable
-      [{ input true 0 127 with selected_limb_low_byte := 126 }] data hint]),
+      [{ input true 0 127 with selected_limb_low_byte := 126 }] (by exact (show 1 ≤ UInt64.size from by decide)) data hint]),
    ("wrong-selectors", tablesCheck [replacementTable
-      [{ input true 0 127 with is_lbu := 1 }] data hint]),
+      [{ input true 0 127 with is_lbu := 1 }] (by exact (show 1 ≤ UInt64.size from by decide)) data hint]),
    ("active-out-of-range", tablesCheck [replacementTable
-      [{ inactive with is_lb := 1 }] data hint])]
+      [{ inactive with is_lb := 1 }] (by exact (show 1 ≤ UInt64.size from by decide)) data hint])]
 
 /-- Every negative fixture is rejected. -/
 theorem invalid_rejected : invalidCases.all (fun sample => !sample.2) = true := by native_decide
@@ -136,8 +136,8 @@ theorem invalid_rejected : invalidCases.all (fun sample => !sample.2) = true := 
 def repeatedKeyRetained : Bool :=
   let rowInput := input true 0 0
   let selected := selectedPull rowInput
-  let consumer := replacementTable [rowInput] data hint
-  match residual? [rowInput] with
+  let consumer := replacementTable [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) data hint
+  match residual? [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) with
   | none => false
   | some residual =>
     let pulls := (byteLedger [consumer]).countP fun i => i.msg == selected.msg && i.mult == -1

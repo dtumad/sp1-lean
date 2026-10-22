@@ -30,7 +30,7 @@ U16MSB use struct literals), so bumping `ProvableType.eval_fromElements` to top 
 (below) intercepts `eval (fromElements w)` and rewrites it to the **flat** `fromElements (w.map env)`
 *before* `eval_eq_eval` (`@[circuit_norm ↓ high]`) can decompose it — selectively, touching only these
 five cols. Each pin then closes by `simp only [toElements_fromElements, getElem_map/mapRange,
-circuit_norm]`. No struct flattening, no brute force, no faithfulness impact. -/
+circuit_norm]`. The circuit and its witness layout remain unchanged. -/
 
 namespace SP1Clean.DivRemChip
 

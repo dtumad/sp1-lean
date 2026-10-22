@@ -181,7 +181,8 @@ theorem anchorExecution_stateChronology :
 
 theorem anchorBase_instructionTable_table_nil (id : InstructionChipId) :
     ((nativeBaseTraceOfCompiled stmt
-      (emptyCompiledExecution (nativeInitialClock stmt))).instructionTableFor id).table = [] := by
+      (emptyCompiledExecution (nativeInitialClock stmt))
+      (emptyCompiledExecution_capacity (nativeInitialClock stmt))).instructionTableFor id).table = [] := by
   cases id <;> rfl
 
 theorem anchorExecution_stateProjection :
@@ -192,11 +193,12 @@ theorem anchorExecution_stateProjection :
         emptyCompiledExecution (nativeInitialClock stmt) := by
     simpa only [stmt] using anchorExecution_compileExecution_eq
   unfold nativeBaseTrace
-  rw [compiledEq]
+  simp only [compiledEq]
   have instructionLinksNil :
       stateInstrLinks
           (nativeBaseTraceOfCompiled stmt
-            (emptyCompiledExecution (nativeInitialClock stmt))) = [] := by
+            (emptyCompiledExecution (nativeInitialClock stmt))
+            (emptyCompiledExecution_capacity (nativeInitialClock stmt))) = [] := by
     rw [SupportedCoreTraceWitness.stateInstrLinks_eq_flatMap]
     apply List.flatMap_eq_nil_iff.mpr
     intro id _
@@ -229,6 +231,8 @@ what makes its table the single all-zero padding row (`haltTablePadding`). -/
 def concreteBaseTrace : SupportedCoreTraceWitness SP1Prime where
   instructionEvents := fun _ => []
   providerOccurrences := fun _ => []
+  instructionCapacity := fun _ => Nat.zero_le _
+  providerCapacity := fun _ => Nat.zero_le _
   generationData := anchorData
   hint := ProverHint.empty _
   boundary := pv
@@ -246,7 +250,7 @@ theorem anchorData_eq_nativeData :
 theorem anchorExecution_nativeBaseTrace_eq :
     nativeBaseTrace stmt anchorExecution = concreteBaseTrace := by
   unfold nativeBaseTrace
-  rw [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
+  simp only [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
       emptyCompiledExecution (nativeInitialClock stmt) by
     simpa only [stmt] using anchorExecution_compileExecution_eq]
   unfold nativeBaseTraceOfCompiled concreteBaseTrace nativeBaseProviderOccurrences
@@ -267,8 +271,7 @@ theorem concreteBaseTrace_skeletonLedger :
       (env' := Environment.fromInput anchorTrace.publicValues anchorTrace.data)
     rw [anchorTrace_publicValues]
     rfl
-  · rw [tablesCleanAccesses_setData _ concreteBaseTrace.data anchorTrace.data]
-    rfl
+  · rfl
 
 /-- The three keys the boundary-only shard actually demands.  The padding Halt row's own Byte,
 Program and Memory accesses are all gated to multiplicity zero, so `closingKeys` (which recounts
@@ -284,6 +287,7 @@ theorem concreteBaseTrace_closingKeyList :
     concreteBaseTrace.closingKeyList = boundaryClosingKeys := by
   native_decide
 
+/-- Literal public-verifier and Halt-padding ledger before provider closure. -/
 def boundarySkeletonLedger : LookupAccessList :=
   [(InteractionKind.State, "SP1State", [0, 1, 0, 1, 0], -1),
    (InteractionKind.State, "SP1State", [0, 1, 0, 1, 0], 1),
@@ -391,7 +395,7 @@ theorem concreteBaseTrace_decodedInstructionRows_nil :
 theorem anchorExecution_nativeTrace_decodedInstructionRows_nil :
     decodedInstructionRows (p := SP1Prime)
       (nativeTrace stmt anchorExecution).witness.tables = [] := by
-  rw [SupportedCoreTraceWitness.witness_tables]
+  rw [SupportedCoreTraceWitness.witness_tables, decodedInstructionRows_withDerivedData]
   unfold nativeTrace
   rw [SupportedCoreTraceWitness.canonicalClosure_decodedInstructionRows,
     anchorExecution_nativeBaseTrace_eq]
@@ -400,7 +404,7 @@ theorem anchorExecution_nativeTrace_decodedInstructionRows_nil :
 theorem anchorExecution_memoryBumpTable_table_nil :
     (memoryBumpTable (nativeTrace stmt anchorExecution).witness).table = [] := by
   unfold nativeTrace nativeBaseTrace memoryBumpTable
-  rw [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
+  simp only [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
       emptyCompiledExecution (nativeInitialClock stmt) by
     simpa only [stmt] using anchorExecution_compileExecution_eq]
   rfl
@@ -410,13 +414,13 @@ theorem anchorExecution_memoryProjection :
   constructor
   · unfold physicalInstructionMemoryLedger
     rw [anchorExecution_nativeTrace_decodedInstructionRows_nil]
-    rw [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
+    simp only [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
         emptyCompiledExecution (nativeInitialClock stmt) by
       simpa only [stmt] using anchorExecution_compileExecution_eq]
     rfl
   · unfold physicalMemoryBumpLedger typedTableInteractionsWith
     rw [anchorExecution_memoryBumpTable_table_nil]
-    rw [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
+    simp only [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
         emptyCompiledExecution (nativeInitialClock stmt) by
       simpa only [stmt] using anchorExecution_compileExecution_eq]
     rfl
@@ -438,7 +442,7 @@ three aggregate Byte-provider pushes that close the shard's actual demand. -/
 theorem anchorExecution_nativeTrace_interactions_length :
     (nativeTrace stmt anchorExecution).witness.interactions.length = 37 := by
   unfold nativeTrace nativeBaseTrace
-  rw [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
+  simp only [show compileExecution stmt.program anchorExecution (nativeInitialClock stmt) =
       emptyCompiledExecution (nativeInitialClock stmt) by
     simpa only [stmt] using anchorExecution_compileExecution_eq]
   simp only [nativeBaseTraceOfCompiled]
@@ -490,11 +494,16 @@ theorem anchorExecution_haltPaddingHeight :
 theorem anchorExecution_zeroRows_rejected (occurrences : ℕ) :
     ¬ (nativeTrace stmt anchorExecution).witness.PhysicalFits 0 occurrences := by
   intro fits
-  have member : (nativeTrace stmt anchorExecution).providerTableFor .halt ∈
+  have member : { (nativeTrace stmt anchorExecution).providerTableFor .halt with
+      data := (nativeTrace stmt anchorExecution).data } ∈
       (nativeTrace stmt anchorExecution).witness.tables := by
-    rw [SupportedCoreTraceWitness.witness_tables, SupportedCoreTraceWitness.tables]
-    exact List.mem_append_right _ (List.mem_map.mpr ⟨.halt, by decide, rfl⟩)
+    rw [SupportedCoreTraceWitness.witness_tables, withDerivedData]
+    apply List.mem_map.mpr
+    refine ⟨(nativeTrace stmt anchorExecution).providerTableFor .halt, ?_, rfl⟩
+    rw [SupportedCoreTraceWitness.tables]
+    exact List.mem_append_right _ (List.mem_map.mpr ⟨ProviderTableId.halt, by decide, rfl⟩)
   have bound := ((EnsembleWitness.physicalFits_iff _ _ _).mp fits).1 _ member
+  change ((nativeTrace stmt anchorExecution).providerTableFor .halt).length ≤ 0 at bound
   rw [anchorExecution_haltPaddingHeight] at bound
   omega
 

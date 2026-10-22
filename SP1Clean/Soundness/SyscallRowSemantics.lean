@@ -1,18 +1,11 @@
-import SP1Clean.Faithful.SyscallInstrsChip
-import SP1Clean.Faithful.SyscallRowDecode
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
 import SP1Clean.Model.Machine.Shard
 
 /-! # What a syscall row means
 
-The bridge from one `SyscallInstrsChip` row to one `Machine.CoreSyscallEvent`, and from the row's
-constraints to that event's semantic laws. This is the layer at which "the chip is faithful to SP1's
-AIR" becomes "the shard executed a syscall".
-
-**The decoder is reused, not rewritten.** `decodeSyscallRow` (`Faithful/SyscallRowDecode.lean`)
-already maps an *extracted* row to a `CoreSyscallEvent`, and `syscallInstrsReconfigure` maps a
-native row to an extracted one index-for-index with both round-trips proved. Composing them is what
-makes this bridge land on the same events `CoreAIRRefinementObligations` quantifies over; a fresh
-decoder would silently fail to connect to the commit obligations.
+The native row decoder and the semantic laws proved from the row's constraints. Word values
+use the library's little-endian limb decoding; no extracted Rust type participates in this
+semantic boundary. Agreement with released SP1 is tested separately by Rust conformance tests.
 
 **What the row gives, and what it does not.** Three of the four `RowLaw` conjuncts are the arm
 `Spec`s almost verbatim — `WriteArm ↔ ResultLaw`, `PcArm ↔ PcLaw`, `DispatchArm ↔
@@ -23,9 +16,7 @@ HandlerAddressesFit`. What the row does **not** give, and must be supplied by th
 * canonicity of the syscall code — see `IsInlineCanonical` below.
 
 The Program bus's low-limb bound suffices to prove `nextPc = pc + 4`, even when the raw next
-low limb exceeds `65535`. StateBump normalizes that representation separately. The released
-`SyscallRowContext.pcCarry` premise remains for source compatibility; the component-local
-`rowLaw_of_spec_and_pulledFacts` theorem needs no such premise.
+low limb exceeds `65535`. StateBump normalizes that representation separately.
 
 **The canonical-code profile premise.** SP1's AIR selects from bytes 0 and 1 of `x5`. The executor
 dispatches on `x5 as u32` through `SyscallCode::from_u32`, rejecting unrecognized low-32-bit codes.
@@ -41,17 +32,23 @@ open LeanRV64D.Defs
 namespace SP1Clean.Soundness
 
 open SP1Clean.Machine
-open SP1Clean.CoreAIR.Current (decodeSyscallRow)
-open SP1Clean.Faithful (syscallInstrsReconfigure)
 open SP1Clean.Soundness.Target (GuestProgram)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-! ## The row's event -/
 
-/-- The event a native syscall row denotes, through the extracted decoder. -/
-noncomputable def syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p)) : CoreSyscallEvent :=
-  decodeSyscallRow (syscallInstrsReconfigure r)
+/-- The event denoted by a native syscall row. -/
+noncomputable def syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p)) : CoreSyscallEvent where
+  clock := r.state.clk_high.val * 2 ^ 24 + r.state.clk_16_24.val * 2 ^ 16 + r.state.clk_0_16.val
+  pc := BitVec.ofNat 64
+    (r.state.pc[0].val + r.state.pc[1].val * 2 ^ 16 + r.state.pc[2].val * 2 ^ 32)
+  nextPc := BitVec.ofNat 64
+    (r.next_pc[0].val + r.next_pc[1].val * 2 ^ 16 + r.next_pc[2].val * 2 ^ 32)
+  rawCode := Word.toBitVec64 r.op_a_memory.prev_value
+  arg1 := Word.toBitVec64 r.op_b_memory.prev_value
+  arg2 := Word.toBitVec64 r.op_c_memory.prev_value
+  result := Word.toBitVec64 r.op_a_value
 
 /-- Lifting one byte split from the field to `ℕ`. The two bytes are each below `256`, so their
 recombination is below `2 ^ 16` and cannot wrap the modulus — which is what `Fact (2 ^ 17 < p)` is
@@ -84,19 +81,9 @@ theorem syscallId_syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p))
         + ((r.op_a_memory.prev_value[0] - r.syscall_id_bytes.low_bytes[0]) * 256⁻¹).val * 256 :=
     byteSplit_val hlow hhigh heq
   have hlow' : (SyscallInstrsChip.syscallId r).val < 256 := hlow
-  show (SP1Clean.CoreAIR.Current.word64 (syscallInstrsReconfigure r).values 7 8 9 10).toNat % 256
-    = _
-  rw [SP1Clean.CoreAIR.Current.word64, BitVec.toNat_ofNat]
-  -- `256 ∣ 2 ^ 64`, so the outer truncation does not disturb the low byte; the three high limbs are
-  -- multiples of `2 ^ 16` and drop out.
-  rw [Nat.mod_mod_of_dvd _ (by norm_num : (256 : ℕ) ∣ 2 ^ 64)]
-  show (((syscallInstrsReconfigure r).values[(7 : Fin 65)]).val
-    + ((syscallInstrsReconfigure r).values[(8 : Fin 65)]).val * 2 ^ 16
-    + ((syscallInstrsReconfigure r).values[(9 : Fin 65)]).val * 2 ^ 32
-    + ((syscallInstrsReconfigure r).values[(10 : Fin 65)]).val * 2 ^ 48) % 256 = _
-  have hidx : (syscallInstrsReconfigure r).values[(7 : Fin 65)]
-      = r.op_a_memory.prev_value[0] := rfl
-  rw [hidx, hlift]
+  change (Word.toBitVec64 r.op_a_memory.prev_value).toNat % 256 = _
+  rw [Word.toBitVec64, BitVec.toNat_ofNat,
+    Nat.mod_mod_of_dvd _ (by norm_num : (256 : ℕ) ∣ 2 ^ 64), Word.toNat, hlift]
   omega
 
 /-- The event's table byte is the chip's `tableByteVar` — the very multiplicity of the syscall-bus
@@ -110,17 +97,8 @@ theorem tableByte_syscallEventOfRow (r : SyscallInstrsChip.Inputs (ZMod p))
     byteSplit_val hlow hhigh heq
   have hlow' : (SyscallInstrsChip.syscallId r).val < 256 := hlow
   have hhigh' : (SyscallInstrsChip.tableByte r).val < 256 := hhigh
-  show (SP1Clean.CoreAIR.Current.word64 (syscallInstrsReconfigure r).values 7 8 9 10).toNat
-    / 256 % 256 = _
-  rw [SP1Clean.CoreAIR.Current.word64, BitVec.toNat_ofNat]
-  show ((((syscallInstrsReconfigure r).values[(7 : Fin 65)]).val
-    + ((syscallInstrsReconfigure r).values[(8 : Fin 65)]).val * 2 ^ 16
-    + ((syscallInstrsReconfigure r).values[(9 : Fin 65)]).val * 2 ^ 32
-    + ((syscallInstrsReconfigure r).values[(10 : Fin 65)]).val * 2 ^ 48) % 2 ^ 64)
-    / 256 % 256 = _
-  have hidx : (syscallInstrsReconfigure r).values[(7 : Fin 65)]
-      = r.op_a_memory.prev_value[0] := rfl
-  rw [hidx, hlift]
+  change (Word.toBitVec64 r.op_a_memory.prev_value).toNat / 256 % 256 = _
+  rw [Word.toBitVec64, BitVec.toNat_ofNat, Word.toNat, hlift]
   omega
 
 /-! ## The row's bus messages
@@ -260,9 +238,6 @@ structure SyscallRowContext (r : SyscallInstrsChip.Inputs (ZMod p)) (program : G
     (source : SailState) : Prop where
   /-- The register operands are `x5`/`x10`/`x11`, from the Program bus's committed ECALL row. -/
   operands : r.op_a = 5 ∧ r.op_b = 10 ∧ r.op_c = 11
-  /-- Legacy no-carry restriction, retained for source compatibility. The row-law proof only
-  needs the Program bus's input bound, as `arm_pcAdvance_of_pcBound` shows. -/
-  pcCarry : (r.state.pc[0]).val + 4 < 2 ^ 16
   /-- The row sits at an `ECALL` word of the committed program. -/
   ecall : Machine.AboutToExecuteEcall program source
   /-- The three pulled registers hold the row's prior words at this state. -/
@@ -279,36 +254,35 @@ variable (r : SyscallInstrsChip.Inputs (ZMod p)) (program : GuestProgram) (sourc
 
 /-! ### The event's fields, at the row's spelling
 
-Each holds by `rfl` — `syscallInstrsReconfigure` is a field permutation, so the decoder's numeric
-indices *are* the row's columns. Stating them once is what keeps every arm proof from re-deriving
-the layout. -/
+These unfold the native event decoder at an abstract row, keeping concrete row values opaque
+in the arm proofs. -/
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem pc_syscallEventOfRow : (syscallEventOfRow r).pc = BitVec.ofNat 64
     ((r.state.pc[0]).val + (r.state.pc[1]).val * 2 ^ 16 + (r.state.pc[2]).val * 2 ^ 32) := rfl
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem nextPc_syscallEventOfRow : (syscallEventOfRow r).nextPc = BitVec.ofNat 64
     ((r.next_pc[0]).val + (r.next_pc[1]).val * 2 ^ 16 + (r.next_pc[2]).val * 2 ^ 32) := rfl
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem rawCode_syscallEventOfRow : (syscallEventOfRow r).rawCode = BitVec.ofNat 64
     ((r.op_a_memory.prev_value[0]).val + (r.op_a_memory.prev_value[1]).val * 2 ^ 16 +
       (r.op_a_memory.prev_value[2]).val * 2 ^ 32 +
       (r.op_a_memory.prev_value[3]).val * 2 ^ 48) := rfl
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem result_syscallEventOfRow : (syscallEventOfRow r).result = BitVec.ofNat 64
     ((r.op_a_value[0]).val + (r.op_a_value[1]).val * 2 ^ 16 +
       (r.op_a_value[2]).val * 2 ^ 32 + (r.op_a_value[3]).val * 2 ^ 48) := rfl
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem arg1_syscallEventOfRow : (syscallEventOfRow r).arg1 = BitVec.ofNat 64
     ((r.op_b_memory.prev_value[0]).val + (r.op_b_memory.prev_value[1]).val * 2 ^ 16 +
       (r.op_b_memory.prev_value[2]).val * 2 ^ 32 +
       (r.op_b_memory.prev_value[3]).val * 2 ^ 48) := rfl
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
+omit [Fact (2 ^ 17 < p)] in
 theorem arg2_syscallEventOfRow : (syscallEventOfRow r).arg2 = BitVec.ofNat 64
     ((r.op_c_memory.prev_value[0]).val + (r.op_c_memory.prev_value[1]).val * 2 ^ 16 +
       (r.op_c_memory.prev_value[2]).val * 2 ^ 32 +
@@ -357,13 +331,6 @@ theorem arm_pcAdvance_of_pcBound (spec : SyscallInstrsChip.Spec r) (sel : Syscal
         + (r.state.pc[2]).val * 2 ^ 32) + 4 := by ring
   rw [nextPc_syscallEventOfRow, pc_syscallEventOfRow, hpc.1, hpc.2.1, hpc.2.2, hval, harith]
   simp [BitVec.ofNat_add]
-
-/-- The released no-carry interface specializes the weaker Program-bound theorem. -/
-theorem arm_pcAdvance (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.SelectorsValid r)
-    (real : r.is_real = 1) (hid : (syscallEventOfRow r).syscallId ≠ Machine.haltSyscallId)
-    (carry : (r.state.pc[0]).val + 4 < 2 ^ 16) :
-    (syscallEventOfRow r).nextPc = (syscallEventOfRow r).pc + 4 :=
-  arm_pcAdvance_of_pcBound r spec sel real hid (by omega)
 
 /-- **ENTER_UNCONSTRAINED.** `t0 := 0`. The tracing VM returns `0` here (the minimal executor's `1`
 is never traced), which is what the AIR's zero-word arm records. The `op_a_0` booleanity the write
@@ -660,7 +627,7 @@ theorem syscallTransition_of_row (r : SyscallInstrsChip.Inputs (ZMod p)) (progra
       inlineSyscallIds_exhaustive _ canonical
     refine ⟨_, full_run_inline program _ source htable h0 hmem, hlaw,
       ⟨hpc, hx5, hx10, hx11, ?_, ?_⟩, full_run_inline program _ source htable h0 hmem⟩
-    · rw [arm_pcAdvance r spec sel real h0 ctx.pcCarry]
+    · rw [arm_pcAdvance_of_pcBound r spec sel real h0 (pulled real).2.1]
       simp [Std.ExtDHashMap.get?_insert]
     · simp [SailState.get_reg?]
 

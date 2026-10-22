@@ -1,6 +1,9 @@
 module
 
-public import Clean.Air.FlatComponent
+public import ToClean.Air.FixedPrefix
+public import ToClean.Air.FixedRows
+public import ToClean.Air.ChannelClosure
+public import ToClean.Air.Authentication
 public import Clean.Circuit.WitnessIRSugar
 public import Clean.Utils.Tactics
 public import Clean.Utils.Tactics.ProvableStructDeriving
@@ -34,6 +37,12 @@ structure Entry (Row : TypeMap) (F : Type) where
   /-- Fixed authorization flag: one only on the first occurrence of an original payload. -/
   eligible : F
 deriving ProvableStruct
+
+/-- Evaluating a tagged entry preserves the original payload's own provable representation. -/
+theorem Entry.eval_payload (env : Environment F) (entry : Var (Entry Row) F) :
+    (ProvableStruct.eval env entry).payload = eval env entry.payload := by
+  cases entry
+  rfl
 
 /-- The channel carries the original static predicate, independently of committed prover data. -/
 def channel (table : StaticTable F Row) : Channel F (Entry Row) where
@@ -124,35 +133,23 @@ theorem spec_iff_fixedEntry (table : StaticTable F Row) (row : Row F) :
     simpa only [equal] using valid.2
 
 /-- Enumerate the typed table through Clean's index-aware fixed-column IR. -/
-def fixedColumns (table : StaticTable F Row) : FixedColumns F where
-  height := table.height
-  program := .ofFExprs (Vector.ofFn fun column : Fin (size (Entry Row)) =>
-    .listGetAtIndex ((Vector.ofFn fun index : Fin table.height =>
-      (toElements (table.fixedEntry index.val))[column.val]).toList.map .const))
-  valid := by
-    simp only [Witgen.RowProgram.Valid, Witgen.RowProgram.ofFExprs,
-      Witgen.VExpr.validForRow, Vector.toList_ofFn, List.all_nil, Bool.true_and,
-      decide_eq_true_eq, List.all_eq_true, List.forall_mem_ofFn_iff]
-    intro column
-    simp only [Witgen.FExpr.validForRow]
-    exact Witgen.FExprList.validForRow_map_const _ _
+def fixedColumns (table : StaticTable F Row) (bounded : table.height < UInt64.size) : FixedColumns F :=
+  FixedColumns.ofRows (Vector.ofFn fun index : Fin table.height =>
+    toElements (table.fixedEntry index.val)) bounded
 
 /-- Fixed columns are exactly the message prefix; multiplicities remain committed columns. -/
-@[simp] theorem fixedColumns_width (table : StaticTable F Row) :
-    table.fixedColumns.width = size (Entry Row) := rfl
+@[simp] theorem fixedColumns_width (table : StaticTable F Row) (bounded : table.height < UInt64.size) :
+    (table.fixedColumns bounded).width = size (Entry Row) := rfl
 
 /-- Fixed columns already have their final physical height before witness generation. -/
-@[simp] theorem fixedColumns_height (table : StaticTable F Row) :
-    table.fixedColumns.height = table.height := rfl
+@[simp] theorem fixedColumns_height (table : StaticTable F Row) (bounded : table.height < UInt64.size) :
+    (table.fixedColumns bounded).height.toNat = table.height := rfl
 
 /-- The canonical row program realizes every enumerated row without a native witness closure. -/
-theorem fixedColumns_row (table : StaticTable F Row) (index : Fin table.height) :
-    table.fixedColumns.row index.val = (toElements (table.fixedEntry index.val)).toArray := by
-  apply Array.ext
-  · simp [FixedColumns.row, fixedColumns, Witgen.RowProgram.ofFExprs]
-  · intro column left right
-    simp [FixedColumns.row, fixedColumns, Witgen.RowProgram.eval, Witgen.RowProgram.ofFExprs,
-      Witgen.VExpr.eval, Witgen.FExpr.eval, Witgen.evalList_map_vector_const, index.isLt]
+theorem fixedColumns_row (table : StaticTable F Row) (bounded : table.height < UInt64.size)
+    (index : Fin table.height) :
+    (table.fixedColumns bounded).row (UInt64.ofNat index.val) = (toElements (table.fixedEntry index.val)).toArray := by
+  simp [fixedColumns, FixedColumns.ofRows_row]
 
 /-- A membership provider emits the authenticated message at its supplied multiplicity.
 The fixed prefix authenticates eligibility; inactive rows must have zero multiplicity. -/
@@ -192,36 +189,157 @@ def provider (table : StaticTable F Row) :
 
 /-- Membership follows from the verifier-fixed prefix, with no residual provider-validity
 assumption on the ensemble or its caller. Counts are the only prover-owned input cells. -/
-def component (table : StaticTable F Row) : Component F where
+def component (table : StaticTable F Row) (bounded : table.height < UInt64.size) : Component F where
   circuit := table.provider
-  fixedColumns := some table.fixedColumns
+  fixedColumns := some (table.fixedColumns bounded)
   Assumptions _ _ := True
-  assumptions_imply_circuit := by
-    intro index row data fixed _ _
-    obtain ⟨bound, fixedPrefix⟩ := fixed
-    change index < table.height at bound
-    rw [fixedColumns_row table ⟨index, bound⟩] at fixedPrefix
-    have rowWidth : size (Entry Row) ≤ row.size := by
-      have width := congrArg Array.size fixedPrefix
-      simp only [fixedColumns_width, Array.size_extract, Nat.sub_zero,
-        Vector.size_toArray] at width
-      omega
-    have decoded : (valueFromOffset (ProvablePair (Entry Row) field) 0
-        (Environment.fromArray row data)).1 = table.fixedEntry index := by
-      change fromElements (M := Entry Row) _ = table.fixedEntry index
-      rw [← ProvableType.fromElements_toElements (table.fixedEntry index)]
-      congr 1
-      apply Vector.ext
-      intro column columnBound
-      have columnWidth : column < ProvableStruct.combinedSize (Entry Row) := columnBound
-      have cells := congrArg (fun array : Array F => array[column]?.getD 0) fixedPrefix
-      simpa [valueFromOffset, size, ProvablePair.instance, Array.getElem?_extract, Vector.getElem_extract,
-        Vector.getElem_mapRange, columnWidth, Nat.lt_of_lt_of_le columnBound rowWidth] using cells
-    change _ ≠ 0 → _ = 1 ∧ table.Spec _
+  circuit_assumptions_of_assumptions := by
+    intro index input data fixed _ _
+    have bound : index.toNat < table.height := (fixed (table.fixedColumns bounded) (by simp)).1
+    have fixedCells := fixed.input_prefix (by rfl)
+    have rowEq := table.fixedColumns_row bounded ⟨index.toNat, bound⟩
+    simp only [UInt64.ofNat_toNat] at rowEq
+    rw [rowEq] at fixedCells
+    have decoded := congrArg (fromElements (M := Entry Row)) (Vector.toArray_inj.mp fixedCells)
+    simp only [ProvableType.fromElements_toElements] at decoded
+    change input.1.eligible ≠ 0 → input.1.eligible = 1 ∧ table.Spec input.1.payload
     rw [decoded]
-    exact table.fixedEntry_spec index
+    exact table.fixedEntry_spec index.toNat
   fixed_width_le_input := by
     change size (Entry Row) ≤ size (Entry Row) + 1
     omega
+
+/-- Authenticate every membership pull from the actual fixed provider and the complete balanced
+ledger. Other components may consume this channel, but cannot declare it as an outgoing requirement.
+The fixed provider's semantic assumptions follow from its physical prefix and canonical data. -/
+theorem guarantees_of_balance (table : StaticTable F Row) (bounded : table.height < UInt64.size)
+    {Public : TypeMap} [ProvableType Public] {ensemble : Ensemble F Public}
+    (witness : EnsembleWitness ensemble) (constraints : witness.Constraints)
+    (balanced : witness.BalancedChannel table.channel.toRaw)
+    (verifier : ensemble.VerifierChannelRequirements witness.publicInput witness.data table.channel.toRaw)
+    (sources : ∀ component ∈ ensemble.tables, component = table.component bounded ∨
+      table.channel.toRaw ∉ component.circuit.channelsWithRequirements) :
+    ensemble.VerifierChannelGuarantees witness.publicInput witness.data table.channel.toRaw ∧
+      ∀ physical ∈ witness.tables, physical.ChannelGuarantees table.channel.toRaw := by
+  apply witness.channelGuarantees_of_requirements table.channel.toRaw balanced verifier
+  intro physical member
+  rcases sources physical.component (EnsembleWitness.component_mem_tables_of_mem member) with fixed | silent
+  · have assumptions : physical.Assumptions := by
+      intro row _
+      change physical.component.Assumptions _ _
+      rw [fixed]
+      trivial
+    intro row rowMember interaction emitted _
+    exact (physical.component.weakSoundness_of_no_guarantees (by rw [fixed]; rfl)
+      (physical.circuitAssumptions_of_dataConsistency (witness.dataConsistency_of_mem physical member)
+        assumptions row rowMember)
+      (constraints physical member row rowMember)).2 interaction emitted
+  · intro row rowMember
+    exact Operations.requirements_of_not_mem _ _ _
+      (physical.component.inChannelsOrRequirements_of_constraints _
+        (constraints physical member row rowMember)) _ silent
+
+/-- Emit original payloads on an existing semantic channel. Eligibility stays in the fixed
+prefix, so consumers need neither a second membership channel nor an eligibility field. -/
+def payloadProvider (table : StaticTable F Row) (target : Channel F Row)
+    (valid : ∀ row, table.Spec row → ∀ data, target.Guarantees row data) :
+    GeneralFormalCircuit F (ProvablePair (Entry Row) field) unit where
+  name := target.name ++ ".source"
+  main input := do
+    assertZero ((1 - input.1.eligible) * input.2)
+    target.emit input.2 input.1.payload
+  Assumptions input _ := input.1.eligible ≠ 0 → input.1.eligible = 1 ∧ table.Spec input.1.payload
+  Spec input _ _ := input.2 ≠ 0 → table.Spec input.1.payload
+  ProverAssumptions input _ _ := input.2 = 0 ∨ input.1.eligible = 1
+  channelsWithRequirements := [target.toRaw]
+  soundness := by
+    circuit_proof_start
+    rw [← h_input] at h_assumptions ⊢
+    dsimp only at h_assumptions ⊢
+    have active : Expression.eval env input_var.2 ≠ 0 →
+        (ProvableStruct.eval env input_var.1).eligible = 1 := by
+      intro counted
+      exact (sub_eq_zero.mp ((mul_eq_zero.mp h_holds).resolve_right counted)).symm
+    have member : Expression.eval env input_var.2 ≠ 0 →
+        table.Spec (ProvableStruct.eval env input_var.1).payload := by
+      intro counted
+      exact (h_assumptions (by rw [active counted]; exact one_ne_zero)).2
+    exact ⟨member, fun _ counted => valid _ (member counted) _⟩
+  completeness := by
+    circuit_proof_start
+    rw [← h_input] at h_assumptions
+    rcases h_assumptions with zero | active
+    · dsimp only at zero
+      rw [zero, mul_zero]
+    · dsimp only at active
+      rw [active, sub_self, zero_mul]
+
+/-- Publish fixed payloads at prover-owned counts. Physical preprocessing discharges all
+semantic source assumptions; inactive and repeated rows remain present with zero counts. -/
+def payloadComponent (table : StaticTable F Row) (target : Channel F Row)
+    (valid : ∀ row, table.Spec row → ∀ data, target.Guarantees row data)
+    (bounded : table.height < UInt64.size) : Component F where
+  circuit := table.payloadProvider target valid
+  fixedColumns := some (table.fixedColumns bounded)
+  Assumptions _ _ := True
+  circuit_assumptions_of_assumptions := by
+    intro index input data fixed _ _
+    have bound : index.toNat < table.height := (fixed (table.fixedColumns bounded) (by simp)).1
+    have fixedCells := fixed.input_prefix (by rfl)
+    have rowEq := table.fixedColumns_row bounded ⟨index.toNat, bound⟩
+    simp only [UInt64.ofNat_toNat] at rowEq
+    rw [rowEq] at fixedCells
+    have decoded := congrArg (fromElements (M := Entry Row)) (Vector.toArray_inj.mp fixedCells)
+    simp only [ProvableType.fromElements_toElements] at decoded
+    change input.1.eligible ≠ 0 → input.1.eligible = 1 ∧ table.Spec input.1.payload
+    rw [decoded]
+    exact table.fixedEntry_spec index.toNat
+  fixed_width_le_input := by
+    change size (Entry Row) ≤ size (Entry Row) + 1
+    omega
+
+/-- Source authenticity uses the actual table's fixed prefix and canonical data, rather than
+assuming arbitrary prover-selected environments already contain authenticated payloads. -/
+theorem payload_authenticates (table : StaticTable F Row) (target : Channel F Row)
+    (valid : ∀ row, table.Spec row → ∀ data, target.Guarantees row data)
+    (bounded : table.height < UInt64.size) (physical : Table F)
+    (same : physical.component = table.payloadComponent target valid bounded)
+    (consistent : physical.DataConsistency) (constraints : physical.Constraints) :
+    physical.Authenticates target table.Spec := by
+  have assumptions : physical.Assumptions := by
+    intro row _
+    change physical.component.Assumptions _ _
+    rw [same]
+    trivial
+  intro row rowMember interaction emitted active _
+  have sound := (physical.component.weakSoundness_of_no_guarantees (by rw [same]; rfl)
+    (physical.circuitAssumptions_of_dataConsistency consistent assumptions row rowMember)
+    (constraints row rowMember)).1
+  rw [same] at sound emitted
+  change (valueFromOffset (ProvablePair (Entry Row) field) 0 (physical.environment row)).2 ≠ 0 →
+    table.Spec (valueFromOffset (ProvablePair (Entry Row) field) 0 (physical.environment row)).1.payload at sound
+  rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at emitted
+  change interaction ∈ ((((table.payloadProvider target valid).main
+    (varFromOffset (ProvablePair (Entry Row) field) 0)).operations
+    (size (ProvablePair (Entry Row) field))).interactionsWith target.toRaw).map _ at emitted
+  have interactions (input : Var (ProvablePair (Entry Row) field) F) (offset : ℕ) :
+      (((table.payloadProvider target valid).main input).operations offset).interactionsWith
+        target.toRaw = [(target.pushedIf input.2 input.1.payload).toRaw] := by
+    simp [payloadProvider, circuit_norm]
+  rw [interactions, List.map_cons, List.map_nil] at emitted
+  obtain rfl := List.mem_singleton.mp emitted
+  have evaluated := Channel.eval_pushedIf (channel := target)
+    (enabled := (varFromOffset (ProvablePair (Entry Row) field) 0).2)
+    (msg := (varFromOffset (ProvablePair (Entry Row) field) 0).1.payload)
+    (env := physical.environment row)
+  have inputEq := eval_varFromOffset_valueFromOffset (F := F)
+    (ProvablePair (Entry Row) field) 0 (physical.environment row)
+  simp only [CircuitType.eval_provablePair_dispatch] at inputEq
+  refine ⟨_, (congrArg Interaction.msg evaluated).trans ?_, sound ?_⟩
+  · have payload := congrArg (fun input : ProvablePair (Entry Row) field F =>
+      (toElements input.1.payload).toArray) inputEq
+    simpa only [Channel.pushedIfValue, ProvableStruct.eval_eq_eval, Entry.eval_payload] using payload
+  · rw [(congrArg Interaction.mult evaluated).trans (congrArg Prod.snd inputEq)] at active
+    exact active
 
 end StaticTable

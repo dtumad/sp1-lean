@@ -4,10 +4,11 @@ import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
 Generated reports live under the ignored build tree; Rust supplies the independent release layout.
 -/
 
+open SP1CleanTest.Alignment.InstalledAssembly
 open Lean Circuit Air.Flat SP1Clean.Audit.BranchEnsemble
 
 private def releaseInventory : IO Unit := do
-  let ensemble := assembly target
+  let ensemble := assembly (context target)
   let tables := ensemble.tables.mapIdx fun index component => Json.mkObj [
     ("slot", toJson index), ("name", toJson component.circuit.name),
     ("width", toJson component.width), ("inputWidth", toJson component.rowOffset),

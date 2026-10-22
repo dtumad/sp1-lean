@@ -1,6 +1,8 @@
 //! Concrete field evaluation and one-row Clean runtime support for export comparisons.
 
-use clean_backend::witness_generation::{Interaction, Mode, Padding, Program, WitnessData};
+use clean_backend::witness_generation::{
+    HintTable, Interaction, Mode, Padding, Program, WitnessData,
+};
 use p3_koala_bear::KoalaBear as NativeField;
 use slop_air::{AirBuilder, AirBuilderWithPublicValues};
 use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
@@ -73,6 +75,7 @@ impl Sp1Evaluation {
             InteractionKind::Byte => ("SP1Byte", true),
             InteractionKind::Memory => ("SP1Memory", true),
             InteractionKind::Program => ("SP1Program", true),
+            InteractionKind::Syscall => ("SP1Syscall", false),
             other => panic!("unmapped SP1 instruction interaction: {other:?}"),
         };
         let mult = if receiving ^ reverse {
@@ -100,47 +103,20 @@ impl MessageBuilder<AirInteraction<SP1Field>> for Sp1Evaluation {
     }
 }
 
-/// The generated constraint function takes row values directly; no expression interpreter.
-pub struct NativeEvaluation;
-impl p3_air::AirBuilder for NativeEvaluation {
-    type F = NativeField;
-    type Expr = NativeField;
-    type Var = NativeField;
-    type M = p3_matrix::dense::RowMajorMatrix<NativeField>;
-    fn main(&self) -> Self::M {
-        unreachable!("generated constraints take an explicit row")
-    }
-    fn is_first_row(&self) -> Self::Expr {
-        unreachable!("flat AIR has no row selectors")
-    }
-    fn is_last_row(&self) -> Self::Expr {
-        unreachable!("flat AIR has no row selectors")
-    }
-    fn is_transition_window(&self, _: usize) -> Self::Expr {
-        unreachable!("flat AIR has no adjacent-row constraints")
-    }
-    fn assert_zero<I: Into<Self::Expr>>(&mut self, _: I) {
-        unreachable!("generated constraints return their values")
-    }
-}
-impl p3_air::AirBuilderWithPublicValues for NativeEvaluation {
-    type PublicVar = NativeField;
-    fn public_values(&self) -> &[NativeField] {
-        &[]
-    }
-}
-
 /// Use Clean's runtime to construct one row, without satisfying its external buses.
 /// Only this test adapter suppresses scheduling interactions. The generated interactions
 /// are checked separately against SP1, including repeated and zero-multiplicity entries.
 /// The unadapted generated program must still reject an active row with no providers.
 pub struct RowWitness<P>(PhantomData<P>);
 impl<P: Program<NativeField>> Program<NativeField> for RowWitness<P> {
+    const FIELD_ORDER: u64 = P::FIELD_ORDER;
+    const HINT_TABLES: &'static [HintTable] = P::HINT_TABLES;
     const FUEL: usize = <P as Program<NativeField>>::FUEL;
     const COMPONENTS: usize = <P as Program<NativeField>>::COMPONENTS;
     const PUBLIC_INPUTS: usize = <P as Program<NativeField>>::PUBLIC_INPUTS;
     const PROVER_INPUTS: usize = <P as Program<NativeField>>::PROVER_INPUTS;
     const FIXED_WIDTHS: &'static [usize] = <P as Program<NativeField>>::FIXED_WIDTHS;
+    const ROW_WIDTHS: &'static [usize] = <P as Program<NativeField>>::ROW_WIDTHS;
     const COMPONENT_NAMES: &'static [&'static str] = <P as Program<NativeField>>::COMPONENT_NAMES;
     fn modes() -> Vec<Mode<NativeField>> {
         P::modes()
@@ -148,18 +124,20 @@ impl<P: Program<NativeField>> Program<NativeField> for RowWitness<P> {
     fn padding() -> Vec<Padding<NativeField>> {
         P::padding()
     }
-    fn initial_rows(
+    fn initial_row(
         component: usize,
-        input: &[NativeField],
-    ) -> Result<Vec<Vec<NativeField>>, String> {
-        P::initial_rows(component, input)
+        row: u64,
+        hint: &WitnessData<NativeField>,
+    ) -> Vec<NativeField> {
+        P::initial_row(component, row, hint)
     }
     fn complete_row(
         component: usize,
         input: &[NativeField],
         data: &WitnessData<NativeField>,
+        hint: &WitnessData<NativeField>,
     ) -> Result<Vec<NativeField>, String> {
-        P::complete_row(component, input, data)
+        P::complete_row(component, input, data, hint)
     }
     fn interactions(_: usize, _: &[NativeField]) -> Vec<Interaction<NativeField>> {
         vec![]

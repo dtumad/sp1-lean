@@ -18,6 +18,8 @@ duplicate implementations or compatibility wrappers after consumers migrate.
 | EnsembleCheck / FiniteLookup | Authenticated finite lookup inventory and executable raw-witness acceptance |
 | Realizes / CompleteEnsemble / EnsembleCompiler | Machine interpretation and constructive equivalence interfaces |
 | Receipt / PublicVerifier / projection helpers | Preserve original circuit/ledger behavior across actual composed consumers |
+| Guarded | Boolean activity for bundled circuits, preserving witness programs and all physical interaction occurrences; remove when Clean supplies this interface |
+| OneHot / VariableRange / ExpressionSum | Decode a bounded index and prove a runtime unsigned-width bound using ordinary Clean witnesses and constraints |
 
 These are reusable additions, not alternate SP1 semantics. Their concrete consumers determine
 whether an abstraction earns its place. When upstream accepts an API, migrate imports and delete
@@ -33,11 +35,24 @@ remains in its linked history rather than adding that broad fork pin.
 
 Clean #445/#446 supply direct generated Rust AIR/witness programs, fixed columns and runtime
 prover inputs. The selected version must be reconciled with this repository's toolchain and module
-system. Prefer those APIs over extending the legacy JSON emitter/interpreter.
+system. Use those APIs for AIR and witness export; the bespoke JSON interpreter is retired.
 
 Representation changes to canonical Component/Ensemble/Witgen objects may need an upstream patch;
 new adapters and supporting lemmas belong in ToClean. Scheduler support is not scheduler
 completeness or final-data agreement. Preserve those proof obligations explicitly.
 
+The current fork also preserves empty dynamic tables when the generation minimum is zero.
+This changes the canonical scheduler and Rust statement/prover APIs: indexed empty tables
+remain in the witness inventory, fixed heights stay mandatory, and only nonempty AIRs enter
+Plonky3. It cannot be supplied by an additive adapter without replacing the scheduler. Remove
+the patch when compatible upstream APIs provide these semantics; active-table padding and
+general generation completeness remain separate obligations.
+
 See [export](../export.md) and #28/#29 for the live migration. Upstream submissions are separate
 from maintaining reproducible reviewed code in this fork; issue/PR history owns submission status.
+
+Clean #398's conditional push/pull support is already inherited from upstream main; it is not
+a remaining fork patch. Switching back to a pinned main commit also requires #446's ensemble
+export/scheduler APIs and the routing, public-only-channel and empty-table fixes described
+above. The vendored Plonky3 batch-STARK code belongs to #446's public-lookup integration,
+separately from #398; replace it only when the upstream backend supplies that interface.

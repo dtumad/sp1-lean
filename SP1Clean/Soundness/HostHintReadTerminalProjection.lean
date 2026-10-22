@@ -52,6 +52,9 @@ theorem legacy_rows_nil
   have checked := constraints _ (List.getElem_mem _) physical physicalMem
   have component : (witness.tables[57]'(bound witness)).component = HaltPaddingChip.component :=
     HaltPadding.table_component witness
+  have shared : (witness.tables[57]'(bound witness)).data = witness.data :=
+    witness.same_data _ (List.getElem_mem _)
+  simp only [Table.environment, shared] at checked
   change (witness.tables[57]'(bound witness)).component.operations.ConstraintsHold
     (Environment.fromArray physical witness.data) at checked
   rw [component] at checked

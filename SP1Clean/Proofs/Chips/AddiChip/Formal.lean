@@ -79,7 +79,7 @@ theorem completeness :
 
 /-- Addi's exact Memory-channel interaction list (I-type: no op_c register read — the second operand
 is the immediate).  Keeping this list beside `circuit` makes Clean's exposure interface the single
-structural source consumed by both faithfulness and semantic grounding. -/
+structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -206,9 +206,9 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := AddiChip.circuit (p := p) } :
+    ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     AddiChip.circuit_main_eq]
   simp [AddiChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ITypeReader.circuit, Readers.ITypeReader.main,

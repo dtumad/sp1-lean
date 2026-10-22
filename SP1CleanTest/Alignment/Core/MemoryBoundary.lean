@@ -47,11 +47,11 @@ private def word (address : ℕ) : Word Fp := bitVecToWord (BitVec.ofNat 64 addr
 
 private def ramInput (previous address current : ℕ) :
     OrderedInitialProvider.Inputs Word Fp :=
-  ⟨word address,
-    OrderedBoundary.populate (word previous) (word current)⟩
+  (⟨word address,
+    OrderedBoundary.populate (word previous) (word current)⟩, 1)
 
 private def registerInput (previous index current : ℕ) : OrderedInitialProvider.Inputs field Fp :=
-  ⟨index, OrderedBoundary.populate (word previous) (word current)⟩
+  (⟨index, OrderedBoundary.populate (word previous) (word current)⟩, 1)
 
 /-- info: exportable ✓ (872 witness cells) -/
 #guard_msgs in
@@ -160,8 +160,8 @@ private def finalRecord (address value clock : ℕ) : Channels.MemoryMsg Fp :=
     word value⟩
 
 private def finalInput (previous address current value clock : ℕ) :
-    OrderedMemoryProvider.Inputs Channels.MemoryMsg Fp :=
-  ⟨finalRecord address value clock, OrderedBoundary.populate (word previous) (word current)⟩
+    OrderedMemoryProvider.RowInput Channels.MemoryMsg Fp :=
+  (⟨finalRecord address value clock, OrderedBoundary.populate (word previous) (word current)⟩, 1)
 
 private def finalVerifierRow :=
   controlRow (OrderedBoundaryVerifier.circuit OrderedFinalProvider.channelName
@@ -225,6 +225,28 @@ theorem rejectsMalformedFinalInventories :
        (Soundness.OrderedMemoryEnsemble.startKey (p := SP1Prime))
        Soundness.OrderedMemoryEnsemble.endKey).main () OrderedFinalProvider.channelName,
        finalTerminalRow 0]] = [false, false, false, false, false] := by native_decide
+
+/-- Disabled invalid payloads remain physical Memory occurrences with zero multiplicity. -/
+theorem paddingRetainsMemoryOccurrences :
+    [controlRow (OrderedInitialProvider.registerCircuit image).main
+        ((registerInput 0 32 0).1, 0) "SP1Memory",
+     controlRow (OrderedInitialProvider.ramCircuit image).main
+        ((ramInput 0 32 0).1, 0) "SP1Memory",
+     controlRow OrderedFinalProvider.registerCircuit.main
+        ((finalInput 0 32 0 9 16).1, 0) "SP1Memory",
+     controlRow OrderedFinalProvider.ramCircuit.main
+        ((finalInput 0 32 0 9 16).1, 0) "SP1Memory"].all
+      (fun row => row.1 && row.2.length == 1 && row.2.all (fun occurrence => occurrence.2 == 0)) = true := by
+  native_decide
+
+/-- Activity is constrained Boolean even when the payload could otherwise be padding. -/
+theorem rejectsNonBooleanActivity :
+    [(evaluate (OrderedInitialProvider.registerCircuit image).main ((registerInput 0 0 1).1, 2)).1,
+     (evaluate (OrderedInitialProvider.ramCircuit image).main ((ramInput 0 65536 65537).1, 2)).1,
+     (evaluate OrderedFinalProvider.registerCircuit.main ((finalInput 0 0 1 9 16).1, 2)).1,
+     (evaluate OrderedFinalProvider.ramCircuit.main ((finalInput 0 65536 65537 9 16).1, 2)).1] =
+      [false, false, false, false] := by
+  native_decide
 
 /-- Initial/final physical Memory ledgers close only when every clock, location, and value agrees. -/
 theorem pairedMemoryBoundary :

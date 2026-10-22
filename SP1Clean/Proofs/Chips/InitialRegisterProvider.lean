@@ -1,3 +1,5 @@
+import ToClean.Circuit.Guarded
+import ToClean.Gadgets.LookupProjection
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Model.Channels
@@ -89,5 +91,28 @@ def populate (index : BitVec 5) : ZMod p := index.toNat
 theorem populate_assumptions (index : BitVec 5) : (populate (p := p) index).val < 32 := by
   have bound : index.toNat < p := lt_trans index.isLt indexBound
   simpa only [populate, ZMod.val_natCast_of_lt bound] using index.isLt
+
+/-- Every physical interaction supports Boolean row activity without a legacy lookup. -/
+instance guardSupported (image : ProgramImage) : Guarded.Supported (circuit image (p := p)) :=
+  Guarded.Supported.of_emitted_requirements _
+    (fun input offset => by
+      simp [circuit, main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm])
+    (by
+      intro selected member
+      change selected ∈ [memoryChannel.toRaw] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      subst selected
+      infer_instance)
+    (by
+      intro input offset selected member _ interaction occurs
+      have same : selected = memoryChannel.toRaw := by
+        simpa only [circuit, List.mem_singleton] using member
+      subst selected
+      change interaction ∈ ((main input).operations offset).interactionsWith
+        memoryChannel.toRaw at occurs
+      rw [main_memory_interactions] at occurs
+      have same := List.mem_singleton.mp occurs
+      subst interaction
+      rfl)
 
 end SP1Clean.InitialRegisterProvider

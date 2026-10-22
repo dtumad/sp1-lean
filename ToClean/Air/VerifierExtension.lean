@@ -57,9 +57,14 @@ def CountBound : Prop :=
   2 * closed.operations.constraints.length < ringChar F ∨ ringChar F = 0
 
 /-- A local proof representation; this row is not a committed ensemble table. -/
-def singleton : Table F where
-  component := { circuit := closed.circuit }
+def singleton (data : ProverData F) : Table F where
+  component := {
+    circuit := closed.circuit
+    circuit_assumptions_of_assumptions := fun _ _ data _ _ _ => closed.assumptions data }
   table := [#[]]
+  data := data
+  length_le := by change 1 ≤ UInt64.size; decide
+  fixed_rows_match := trivial
   uniform_width := by
     intro row member
     obtain rfl := List.mem_singleton.mp member
@@ -67,12 +72,12 @@ def singleton : Table F where
     simpa only [Array.size_empty, show size unit = 0 from rfl, Nat.zero_add] using closed.length_zero.symm
 
 theorem singleton_constraints (data : ProverData F) :
-    closed.singleton.Constraints data ↔ closed.Checks data := by
+    (closed.singleton data).Constraints ↔ closed.Checks data := by
   simp only [Table.Constraints, singleton, List.mem_singleton, forall_eq]
   exact Component.constraintsHold_iff _
 
 theorem singleton_interactions (data : ProverData F) (channel : RawChannel F) :
-    closed.singleton.interactionsWith data channel =
+    (closed.singleton data).interactionsWith channel =
       closed.operations.interactionValuesWith channel (Environment.fromInput (Input := unit) () data) := by
   simp only [Table.interactionsWith, singleton, List.flatMap_cons, List.flatMap_nil, List.append_nil,
     Operations.interactionValuesWith, Component.interactionsWith_eq]
@@ -96,6 +101,8 @@ variable {PublicIO : TypeMap} [ProvableType PublicIO]
 /-- Interaction-only projection, used to choose a channel disjoint from all existing traffic. -/
 def interactionProgram : Verifier.Program F PublicIO where
   main _ := closed.emit
+  Spec _ _ := True
+  soundness _ _ := trivial
 
 /-- Retain the source interactions while forgetting only the added assertion checks. -/
 def withInteractions (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
@@ -160,7 +167,7 @@ theorem program_requirements (ens : Ensemble F PublicIO) (env : Environment F)
 /-- Forget the boundary while retaining all committed rows. -/
 def project {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     EnsembleWitness ens :=
-  EnsembleWitness.ofTables ens witness.tables witness.publicInput witness.tables_map_component
+  witness.withEnsemble ens rfl
 
 @[simp] theorem project_tables {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     (closed.project witness).tables = witness.tables := rfl
@@ -178,7 +185,7 @@ theorem project_constraints {ens : Ensemble F PublicIO} (witness : EnsembleWitne
 /-- Forget only the assertion checks, keeping the exactly-once boundary interactions. -/
 def interactionView {ens : Ensemble F PublicIO} (witness : EnsembleWitness (closed.install ens)) :
     EnsembleWitness (closed.withInteractions ens) :=
-  EnsembleWitness.ofTables _ witness.tables witness.publicInput witness.tables_map_component
+  witness.withEnsemble _ rfl
 
 @[simp] theorem interactionView_data {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (closed.install ens)) :
@@ -217,13 +224,13 @@ theorem installed_check_interactions {ens : Ensemble F PublicIO}
       (Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.interactionValuesWith
         (closed.channel ens) (Environment.fromInput witness.publicInput witness.data) := by
   have fresh := VerifierChannel.fresh closed.name (closed.withInteractions ens)
-  have physical : witness.tableContext.interactionsWith (closed.channel ens) = [] := by
+  have physical : witness.toTables.interactionsWith (closed.channel ens) = [] := by
     apply List.flatMap_eq_nil_iff.mpr
     intro table member
     apply List.flatMap_eq_nil_iff.mpr
     intro row _
     exact fresh.tables table.component
-      (EnsembleWitness.mem_component_of_mem (witness := closed.interactionView witness) member) _
+      (EnsembleWitness.component_mem_tables_of_mem (witness := closed.interactionView witness) member) _
   change (closed.install ens).verifierOperations.interactionValuesWith (closed.channel ens)
     (Environment.fromInput witness.publicInput witness.data) ++ _ = _
   rw [closed.verifier_interactions, fresh.verifier, List.nil_append, physical, List.append_nil]
@@ -274,16 +281,16 @@ theorem interactionView_interactions_perm {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (closed.install ens)) (selected : RawChannel F) :
     ((closed.interactionView witness).interactionsWith selected).Perm
       ((closed.project witness).interactionsWith selected ++
-        closed.singleton.interactionsWith witness.data selected) := by
+        (closed.singleton witness.data).interactionsWith selected) := by
   change ((ens.verifier.andThen closed.interactionProgram).circuitOperations.interactionValuesWith selected
     (Environment.fromInput witness.publicInput witness.data) ++
-      witness.tables.flatMap (fun table => table.interactionsWith witness.data selected)).Perm _
+      witness.tables.flatMap (fun table => table.interactionsWith selected)).Perm _
   rw [Verifier.Program.andThen_values]
   change ((_ ++ closed.emit.circuitOperations.interactionValuesWith selected
     (Environment.fromInput witness.publicInput witness.data)) ++ _).Perm _
   rw [closed.emit_values, ← closed.singleton_interactions]
-  change ((_ ++ closed.singleton.interactionsWith witness.data selected) ++ _).Perm
-    ((_ ++ witness.tables.flatMap (fun table => table.interactionsWith witness.data selected)) ++ _)
+  change ((_ ++ (closed.singleton witness.data).interactionsWith selected) ++ _).Perm
+    ((_ ++ witness.tables.flatMap (fun table => table.interactionsWith selected)) ++ _)
   simp only [List.append_assoc]
   exact (List.perm_append_comm ..).append_left _
 
@@ -296,8 +303,8 @@ theorem project_balancedChannel {ens : Ensemble F PublicIO}
     intro same
     exact closed.channel_not_mem ens (show closed.channel ens ∈ ens.channels ++ closed.circuit.channels from
       same ▸ List.mem_append_left _ registered)
-  have empty : closed.singleton.interactionsWith witness.data selected = [] :=
-    closed.singleton.interactionsWith_nil_of_channel_not_mem silent
+  have empty : (closed.singleton witness.data).interactionsWith selected = [] :=
+    (closed.singleton witness.data).interactionsWith_nil_of_channel_not_mem silent
   have permutation := closed.interactionView_interactions_perm witness selected
   rw [closed.interactionView_interactions witness selected different, empty, List.append_nil] at permutation
   exact balancedInteractions_of_perm balanced permutation

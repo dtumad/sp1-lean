@@ -55,7 +55,7 @@ def verifier : Verifier.Program Fp field where
   soundness := by intro _ _; trivial
 
 def ensemble : Ensemble Fp field where
-  tables := [{ circuit := provider }]
+  tables := [{ circuit := provider, Assumptions := (provider).Assumptions }]
   unique_names := by simp
   channels := [values.toRaw]
   verifier := verifier
@@ -78,9 +78,10 @@ def description : Air.Flat.EnsembleCheck ensemble where
 def data : ProverData Fp := fun _ _ => #[]
 
 /-- Physical provider rows with the exact public input retained in the verifier. -/
-def witness (publicInput : Fp) (rows : List Fp) : EnsembleWitness ensemble :=
+def witness (publicInput : Fp) (rows : List Fp)
+    (bounded : rows.length ≤ UInt64.size := by decide) : EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
-    [Table.build { circuit := provider } rows data (ProverHint.empty Fp)] publicInput rfl
+    [Table.build { circuit := provider, Assumptions := (provider).Assumptions } rows data (ProverHint.empty Fp) bounded] publicInput rfl
 
 /-- Both allowed values accept; malformed membership and boundary inventories reject. -/
 def outcomes : List (String × Bool × Bool) :=

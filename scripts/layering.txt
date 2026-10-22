@@ -24,7 +24,6 @@
 2   Circuits      SP1Clean/Circuits/Types/
 2   Semantics     SP1Clean/Semantics/
 2   Semantics     SP1Clean/Model/Semantics/
-3   Extracted     SP1Clean/Extracted/
 
 # 4 — semantic contracts and the row view they are read through.
 4   FormalModel   SP1Clean/FormalModel/
@@ -44,9 +43,6 @@
 6   -             SP1Clean/Proofs/Chips/
 6   FormalModel   SP1Clean/FormalModel/TraceGen/
 
-# 7 — per-chip and list-level Rust faithfulness.
-7   Faithful      SP1Clean/Faithful/
-
 # 8 — the machine: registry, ensemble, grounding, soundness capstone.
 #
 # The three per-chip files under Proofs/Chips/<X>/ are NOT all at the chip stratum. `Bridge.lean`
@@ -63,8 +59,3 @@
 # 10 — the converse capstone.
 10  Soundness     SP1Clean/Soundness/AIRCompleteness.lean
 10  Soundness     SP1Clean/Soundness/NativeCompleteness.lean
-
-# 11 — the composed exact -> native artifact. Its own pillar since 2026-08: it sits ABOVE the
-# machine (CoreArtifact imports Soundness.AIR), so keeping it inside Faithful/ made the two pillars
-# mutually dependent. Moving it made the directory names match the strata.
-11  Composition   SP1Clean/Composition/

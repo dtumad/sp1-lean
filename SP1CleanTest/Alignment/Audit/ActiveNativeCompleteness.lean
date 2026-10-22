@@ -160,6 +160,7 @@ theorem activeView_compiled_event_exists :
 theorem activeExecution_compileExecution?_exists :
     ∃ compiled, compileExecution? anchorProgram activeExecution 1 = some compiled := by
   apply compileExecution?_exists_of_views
+    (by change 1 ≤ Model.Core.Profile.maxOrdinaryTransitions; decide)
   intro located member
   rw [activeExecution_locatedTransitions, List.mem_singleton] at member
   subst located
@@ -170,7 +171,8 @@ theorem activeExecution_compiled_rows_length :
     (compileExecution anchorProgram activeExecution 1).rows.length = 1 := by
   obtain ⟨compiled, generated⟩ := activeExecution_compileExecution?_exists
   rw [compileExecution_eq_of_some generated]
-  exact compileLocatedTransitions?_rows_length generated
+  exact compileLocatedTransitions?_rows_length
+    ((compileExecution?_eq_some_iff ..).mp generated).2
 
 /-- The nonempty execution embedded in the one common semantic witness. -/
 noncomputable def activeSemanticWitness : Machine.CoreShardSemanticWitness :=

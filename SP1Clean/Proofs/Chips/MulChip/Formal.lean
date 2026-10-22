@@ -307,7 +307,7 @@ def exposedStateInteractions (input : Var Inputs (ZMod p)) :
 /-- Mul's exact Memory-channel interaction list.  The op_a write push carries the witnessed result
 word `a` (cells `offset+45..48`, after the 45 `MulOperation` columns).
 Keeping this list beside `circuit` makes Clean's exposure interface the single structural source
-consumed by both faithfulness and semantic grounding. -/
+consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -469,10 +469,10 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := MulChip.circuit (p := p) } :
+    ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
   rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations_mk, MulChip.circuit_main_eq]
+    Air.Flat.Component.rowOperations, MulChip.circuit_main_eq]
   simp [MulChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.RTypeReader.circuit,
     Readers.RTypeReader.main, Readers.RegisterWrite.circuit,

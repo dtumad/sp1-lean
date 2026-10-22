@@ -5,8 +5,9 @@ import Clean.Air.Balance
 
 /-! # Physical hint word ledgers
 
-Every row contributes one Memory transfer, one immutable word pull, eight byte permissions,
-and an exact cursor edge. The internal access-coordination pair cancels for every environment.
+Every active row contributes one Memory transfer, one immutable word pull, eight byte permissions,
+and an exact cursor edge. Disabled physical rows retain each occurrence at zero multiplicity.
+The internal access-coordination pair cancels for every environment.
 The coverage proof consumes these equations for actual circuit operations.
 -/
 
@@ -141,5 +142,63 @@ theorem access_balance (last : Bool) (input : Var Inputs (ZMod p)) (offset : ℕ
   simp only [balanceOf_cons]
   by_cases equal : (toElements (Eval.eval env input.ram.message)).toArray = message <;>
     simp [Channel.pushedValue, Channel.pulledValue, equal, balanceOf]
+
+/-- Guarding retains each physical state occurrence at the row's activity. -/
+theorem guarded_state_values (last : Bool) (input : Var RowInput (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p)) :
+    (((circuit last).main input).operations offset).interactionValuesWith stateChannel.toRaw env =
+      [stateChannel.pulledIfValue (env input.2) (Eval.eval env input.1.previous),
+       stateChannel.pushedIfValue (env input.2) (Eval.eval env input.1.next)] := by
+  change ((Guarded.main (activeCircuit last) (guardSupported last) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, state_values, List.map_cons, List.map_nil,
+    Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
+    mul_neg, mul_one]
+
+/-- Guarding retains each physical word occurrence at the row's activity. -/
+theorem guarded_word_values (last : Bool) (input : Var RowInput (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p)) :
+    (((circuit last).main input).operations offset).interactionValuesWith HostHintQueue.wordChannel.toRaw env =
+      [HostHintQueue.wordChannel.pulledIfValue (env input.2) (Eval.eval env (input.1.step last).word)] := by
+  change ((Guarded.main (activeCircuit last) (guardSupported last) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, word_values, List.map_cons, List.map_nil,
+    Channel.pulledValue, Channel.pulledIfValue, mul_neg, mul_one]
+
+/-- Guarding retains each physical memory occurrence at the row's activity. -/
+theorem guarded_memory_values (last : Bool) (input : Var RowInput (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p)) :
+    (((circuit last).main input).operations offset).interactionValuesWith memoryChannel.toRaw env =
+      [memoryChannel.pulledIfValue (env input.2) (Eval.eval env input.1.ram.prior),
+       memoryChannel.pushedIfValue (env input.2) (Eval.eval env input.1.ram.pushed)] := by
+  change ((Guarded.main (activeCircuit last) (guardSupported last) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, memory_values, List.map_cons, List.map_nil,
+    Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
+    mul_neg, mul_one]
+
+/-- Guarding retains each physical access occurrence at the row's activity. -/
+theorem guarded_access_values (last : Bool) (input : Var RowInput (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p)) :
+    (((circuit last).main input).operations offset).interactionValuesWith HostRamAccessChip.channel.toRaw env =
+      [HostRamAccessChip.channel.pushedIfValue (env input.2) (Eval.eval env input.1.ram.message),
+       HostRamAccessChip.channel.pulledIfValue (env input.2) (Eval.eval env input.1.ram.message)] := by
+  change ((Guarded.main (activeCircuit last) (guardSupported last) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, access_values, List.map_cons, List.map_nil,
+    Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
+    mul_neg, mul_one]
+
+/-- Disabled rows retain all eight permission occurrences with zero multiplicity. -/
+theorem guarded_permission_values (last : Bool) (input : Var RowInput (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p)) :
+    (((circuit last).main input).operations offset).interactionValuesWith WritePermissionProvider.channel.toRaw env =
+      List.ofFn (fun index : Fin 8 => WritePermissionProvider.channel.pulledIfValue (env input.2)
+        (Eval.eval env (Address.offset input.1.address (.const (index.val : ZMod p))))) := by
+  change ((Guarded.main (activeCircuit last) (guardSupported last) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, Operations.interactionValuesWith, main_permission_interactions,
+    List.map_ofFn, Function.comp_def, Channel.eval_pulled, Channel.pulledValue,
+    Channel.pulledIfValue, mul_neg, mul_one]
 
 end SP1Clean.HintReadWordChip

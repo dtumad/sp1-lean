@@ -36,9 +36,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 namespace StateBumpChip
 
-/-- The native StateBump row — field-for-field SP1's `StateBumpCols` (`adapter/bump.rs`; the
-extracted flat vector `Extracted/SystemOracle/StateBump.lean` lists the same 14 cells in this
-order). `clk_high`/`clk_low`/`pc0..2` are the **pulled** (possibly non-canonical) state;
+/-- The native StateBump row — field-for-field SP1's `StateBumpCols` (`adapter/bump.rs`, 14 cells). `clk_high`/`clk_low`/`pc0..2` are the **pulled** (possibly non-canonical) state;
 `next_clk_*` are the four canonical limbs of the pushed clock (`clk_high' = next_clk_24_32 +
 next_clk_32_48 · 2^8`, `clk_low' = next_clk_0_16 + next_clk_16_24 · 2^16`); `next_pc0..2` the pushed
 canonical pc limbs; `is_clk` the `2^24` clock-carry bit; `is_real` the row selector. -/
@@ -87,9 +85,7 @@ end StateBumpChip
 
 namespace MemoryBumpChip
 
-/-- The native MemoryBump row — field-for-field SP1's `MemoryBumpCols` (`memory/bump.rs`; the
-extracted flat vector `Extracted/SystemOracle/MemoryBump.lean` lists the same 15 cells in this
-order). `access` is the standard `MemoryAccessCols` carrier (the pulled record's value word + the
+/-- The native MemoryBump row — field-for-field SP1's `MemoryBumpCols` (`memory/bump.rs`, 15 cells). `access` is the standard `MemoryAccessCols` carrier (the pulled record's value word + the
 five timestamp-comparison columns, exactly as in the load/store chips); `clk_*` the four canonical
 limbs of the **refreshed** timestamp the row pushes (`clk_high' = clk_24_32 + clk_32_48 · 2^8`,
 `clk_low' = clk_0_16 + clk_16_24 · 2^16`); `addr` the register index; `is_real` the row selector. -/
