@@ -39,7 +39,7 @@
         "rust/sp1-comparison/tests/instruction_export.rs",
         "rust/sp1-comparison/tests/symbolic_arithmetic_export.rs"
       ],
-      "limit": "Supervisor local AIR and open interaction buses; no whole-execution or user-mode agreement. ADD additionally has an exact arbitrary-row algebraic comparison for the supervisor profile with untrusted programs disabled, using upstream degree bounds, complete polynomial interpolation and full affine interaction signatures; unexpected public dependencies fail and the Rust checker/adapters remain trusted."
+      "limit": "Supervisor local AIR and open interaction buses; no whole-execution or user-mode agreement. ADD, ADDI, ADDW, SUB and SUBW additionally have exact arbitrary-row algebraic comparisons for the supervisor profile with untrusted programs disabled, using upstream degree bounds, complete polynomial interpolation and full affine interaction signatures; unexpected public dependencies fail and the Rust checker/adapters remain trusted."
     },
     "bytes": {
       "lean": [
@@ -88,9 +88,10 @@
       "comparison": [
         "rust/sp1-comparison/tests/clean_export.rs",
         "rust/sp1-comparison/tests/ram_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
-      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch, empty and stopped fixtures compare source/target register boundaries, fixed inventories and all table positions; empty and stopped cases reject removal of either ordered boundary terminal. The complete sixteen-byte HINT_READ fixture checks physical RAM writes and final register/RAM values against released execution. Its six ordered boundary/target-check tables pad three active rows to four; backend tests cover arbitrary disabled cells, invalid activity and erased real checks. General ordered-memory execution remains open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
+      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch, empty and stopped fixtures compare source/target register boundaries, fixed inventories and all table positions; empty and stopped cases reject removal of either ordered boundary terminal. The complete sixteen-byte HINT_READ fixture checks physical RAM writes and final register/RAM values against released execution. Its six ordered boundary/target-check tables pad three active rows to four; backend tests cover arbitrary disabled cells, invalid activity and erased real checks. Arithmetic/branch programs with repeated RAM accesses and aliased registers compare full and split local Memory ledgers against released records; overlapping hint reads compare intermediate and final memory. These remain finite cases. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
     },
     "program": {
       "lean": [
@@ -100,7 +101,8 @@
       "comparisonKind": "sp1-component",
       "comparison": [
         "rust/sp1-comparison/tests/program_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
       "limit": "Installed verifier-fixed Program provider. Independent released preprocessing, AIR and count-generation comparison covers a contiguous ROM; native tests cover sparse unordered addresses, unused rows, padding and empty inventory. The complete branch fixture exercises installed fetch generation; the empty segment retains fixed ROM rows with zero demand. User-mode execution remains open."
     },
@@ -120,7 +122,8 @@
         "rust/sp1-comparison/tests/host_control_export.rs",
         "rust/sp1-comparison/tests/write_permission_export.rs",
         "rust/sp1-comparison/tests/hint_source_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
       "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN and HINT_READ; WRITE and VERIFY_SP1_PROOF installation remains #12. Full-word code checks, weighted public queries and all control/hint handlers compare released supervisor rows, effects and complete ledgers. Complete assemblies cover active HALT, repeated declarations, partial and full commit-to-HALT programs, 16/24-byte HINT_READ, repeated queue observations with overlapping empty/aligned/byte-tail reads, and constrained ENTER replay. The immutable statement fixes sixteen declaration payloads, canonical public bytes/deferred elements and flags; mutable bank histories remain distinct. Repeated identical declarations are valid; conflicting words execute but are outside the proof statement. Guarded commitment and hint-word rows retain inactive physical occurrences. Full-word coverage and call occurrence do not follow from a flag. Native ROM permission tests do not implement runtime mprotect. Arbitrary mixed execution and all-eight-call generation remain open."
     },
@@ -131,7 +134,8 @@
       "export": "component",
       "comparisonKind": "native-backend",
       "comparison": [
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
       "limit": "The padding Exit component closes continuing, empty and stopped segments. Active HALT fixtures use the real instruction and host handler with zero, wide and maximal field exits, omitting padding Exit. Fresh proofs test missing terminals, duplicate Exit and changed public values. Optional stopped status remains distinct from public exit accounting."
     },
@@ -164,7 +168,8 @@
       "comparisonKind": "native-backend",
       "comparison": [
         "rust/sp1-comparison/tests/clean_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
       "limit": "The complete 95-table assembly exports arithmetic/branch/RAM programs and local cuts, empty/stopped segments, HALT, repeated/partial/full commitments, HINT_READ/length programs and constrained ENTER replay. Every public verifier occurrence is retained. The 58-cell header binds canonical commitment bytes, deferred words and flags to the fixed declaration provider; stopped segments reject changed digest fields. Fresh proofs test public mutations, missing/fabricated terminals, changed provider counts and padding; fixed declarations are independently checked against released public values. These are finite assembly tests, not total compiler or cryptographic verifier soundness proofs."
     }

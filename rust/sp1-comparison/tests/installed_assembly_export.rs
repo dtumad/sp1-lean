@@ -565,12 +565,22 @@ fn halt_matches_released<P: Program<F>>(reference: &serde_json::Value, exit: u64
     let handler = &witness.tables[64][0];
     let mut instructions = vec![];
     execution::syscall(&mut instructions, SyscallCode::HALT, exit, 17);
-    let (_, records) = execution::run(Sp1Program::new(instructions, 131072, 131072), &[]);
+    let base = 131072 - 4 * (instructions.len() as u64 - 1);
+    let (_, records) = execution::run(Sp1Program::new(instructions, base, base), &[]);
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].syscall_events.len(), 1);
     let (event, access) = &records[0].syscall_events[0];
     assert_eq!(event.syscall_code, SyscallCode::HALT);
     assert_eq!((event.arg1, event.arg2), (exit, 17));
+    assert_eq!(event.pc, 131072);
+    check_endpoints(
+        &public,
+        (9, event.pc),
+        (
+            records[0].public_values.last_timestamp - event.clk + 9,
+            records[0].public_values.next_pc,
+        ),
+    );
     let MemoryRecordEnum::Write(result) = access.a else {
         panic!("HALT must write x5");
     };
@@ -692,6 +702,21 @@ fn commitment_execution<P: Program<F> + GeneratedAirSpec>(
     assert_eq!(record.syscall_events.len(), count + 1);
     let first = record.syscall_events[0].0.clk;
     assert_eq!(record.syscall_events[0].0.pc, 131072);
+    let (end_clock, end_pc) = if stopped {
+        (
+            record.public_values.last_timestamp,
+            record.public_values.next_pc,
+        )
+    } else {
+        let next_pc = record.syscall_events[count - 1].0.next_pc;
+        let (next, _) = record
+            .addi_events
+            .iter()
+            .find(|(event, _)| event.pc == next_pc)
+            .expect("the continuing segment ends before the observed HALT setup");
+        (next.clk, next.pc)
+    };
+    check_endpoints(&public, (9, 131072), (end_clock - first + 9, end_pc));
     for bank in 0..2 {
         for slot in 0..8 {
             let value = if bank == 0 {
