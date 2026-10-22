@@ -97,13 +97,18 @@ theorem word_consumer_authenticates (store : Store) (last : Bool) :
     have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
     cases last <;> change false = true at present <;> contradiction
   · apply Component.Authenticates.of_pulls
-    intro env _ interaction member
+    intro env checked interaction member
+    have binary := HintReadCoverage.row_activity_binary (last, env) checked
     rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ (((HintReadWordChip.main last (varFromOffset HintReadWordChip.Inputs 0)).operations
-      (size HintReadWordChip.Inputs)).interactionsWith wordChannel.toRaw).map _ at member
-    rw [HintReadWordChip.main_word_interactions] at member
+    change interaction ∈ (((HintReadWordChip.circuit last).main (varFromOffset HintReadWordChip.RowInput 0)).operations
+      (size HintReadWordChip.RowInput)).interactionValuesWith wordChannel.toRaw env at member
+    rw [HintReadWordChip.guarded_word_values] at member
     obtain rfl := List.mem_singleton.mp member
-    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue])
+    simp only [HintReadCoverage.rowActivity] at binary
+    simp only [Channel.pulledIfValue, varFromOffset_pair, Nat.zero_add]
+    rcases binary with inactive | active
+    · exact Or.inl (by rw [inactive, neg_zero])
+    · exact Or.inr (congrArg Neg.neg active)
 
 theorem hint_length_authenticates (store : Store) (empty : Bool) :
     Authenticates store (HostCallReceivers.hintLength (p := p) empty).component := by

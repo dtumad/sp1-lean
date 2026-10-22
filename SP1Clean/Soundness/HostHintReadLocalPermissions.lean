@@ -20,10 +20,13 @@ local instance permissionLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out
 
 /-- Neither physical word variant can manufacture a positive permission. -/
 theorem word_permission_pulls (last : Bool) : WritePermission.Pulls (HintReadCoverage.view (p := p) last).component := by
-  intro data physical _ interaction member
+  intro data physical checked interaction member
+  have binary := HintReadCoverage.row_activity_binary (last, Environment.fromArray physical data) checked
   rw [HintReadWriteLedger.row_permission_values (last, Environment.fromArray physical data)] at member
   obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
-  exact Or.inr rfl
+  rcases binary with inactive | active
+  · exact Or.inl (by simp only [Channel.pulledIfValue, inactive, neg_zero])
+  · exact Or.inr (congrArg Neg.neg active)
 
 /-- The existing non-RAM handlers are all silent on byte permissions. -/
 theorem available_permission_pulls : ∀ component ∈ (HostCallReceivers.available (p := p)).map (·.component),
@@ -116,7 +119,7 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
     (handlerSpecs : (handlerTable witness).Spec)
     (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     2 ^ 16 ≤ Address.toNat (HintReadCoverage.rowInput row).address := by
   obtain ⟨env, handlerMem, clock⟩ := consumer_has_handler_of_balancedChannel witness interface cursor wordSpecs row member
   have selected := balanced_for_of_channels witness interface constraints ordering calls cursor env handlerMem
@@ -127,7 +130,7 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
     (TransitionView.selectTables_aligned _ _ (fun last => (HintReadCoverage.view last).component)
       (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) fixed (wordTables_aligned witness))
     (wordSpecs.select (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) fixed) selected row (by
-      rw [TransitionView.readIndexedRows_selectTables]
+      rw [TransitionView.readIndexedActiveRows_selectTables]
       exact List.mem_filter.mpr ⟨member, by
         simp only [HostHintReadPartition.keepWord, HostHintReadPartition.keepState,
           HintReadCoverage.rowInput]
@@ -144,7 +147,7 @@ private theorem row_address_lower (witness : EnsembleWitness (ensemble image sou
 private theorem permission_request_lower (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
       HintReadCoverage.variants tables) (wordSpecs : HintReadCoverage.Steps tables)
-    (lower : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+    (lower : ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables,
       2 ^ 16 ≤ Address.toNat (HintReadCoverage.rowInput row).address)
     (address : fields 3 (ZMod p))
     (member : WritePermissionProvider.channel.pulledValue address ∈
@@ -153,10 +156,14 @@ private theorem permission_request_lower (tables : List (Table (ZMod p)))
   rw [HintReadWriteLedger.permission_ledger _ aligned] at member
   obtain ⟨row, rowMem, present⟩ := List.mem_flatMap.mp member
   obtain ⟨index, equal⟩ := List.mem_ofFn.mp present
+  have enabled : HintReadCoverage.rowActivity row = 1 := by
+    have mult := congrArg Interaction.mult equal
+    exact neg_inj.mp mult
+  have activeMem := HintReadCoverage.mem_active_rows.mpr ⟨rowMem, enabled⟩
   have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp (congrArg Interaction.msg equal))
   simp only [ProvableType.fromElements_toElements] at addressEq
-  have valid := wordSpecs row rowMem
-  have lower := lower row rowMem
+  have valid := wordSpecs.step row activeMem
+  have lower := lower row activeMem
   have offset : Address.toNat address = Address.toNat (HintReadCoverage.rowInput row).address + index.val := by
     rw [← addressEq]
     exact Address.toNat_offset (HintReadCoverage.rowInput row).address valid.2.2.1
@@ -219,7 +226,7 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
     (current : (HostHintReadCoverage.input env).previous.Binds store host.io.hints)
     (header : (HostHintReadCoverage.input env).node.Binds store)
     (ending : (HostHintReadCoverage.input env).endStep.word.Binds store)
-    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness),
+    (words : ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness),
       HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous = HostHintReadPartition.callClock env →
         ((HintReadCoverage.rowInput row).step row.1).word.Binds store)
     (running : host.exitCode = none) (context : HostReadContext)
@@ -228,7 +235,7 @@ theorem run_of_witness (witness : EnsembleWitness (ensemble image source others 
     (arg2 : context.register 11 = some (Word.toBitVec64 (HostHintReadCoverage.input env).call.arg2)) :
     ∃ bytes rest, host.io.hints = bytes :: rest ∧ (HostHintReadCoverage.input env).next.Binds store rest ∧
       host.run ⟨{ readOnly := image.readOnly }, p⟩ context = some (HostHintReadChip.execution (HostHintReadCoverage.input env) host bytes rest) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) (wordTables_aligned witness))).map
         HintReadWrites.produced).Perm (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by
   have shared : (handlerTable witness).data = witness.data :=

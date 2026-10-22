@@ -73,9 +73,9 @@ private def joint (actual : Bytes) (address : ℕ) (row : HostHintReadChip.Input
   let finalWord := HintReadFixtures.source actual row.endStep.word
   let cpu := instruction row.call
   let consumers := words.map HintReadFixtures.checked
-  let sources := words.map fun row => HintReadFixtures.source actual (row.2.step row.1).word
+  let sources := words.map fun row => HintReadFixtures.source actual (row.2.1.step row.1).word
   let permissions := words.flatMap fun row => (List.range 8).map fun index =>
-    HintReadFixtures.permission HintReadFixtures.image (Address.toNat row.2.address + index)
+    HintReadFixtures.permission HintReadFixtures.image (Address.toNat row.2.1.address + index)
   let memory := (HintReadFixtures.boundaries address actual).filter (fun item => item.1 == "SP1Memory")
   handler.1 && node.1 && finalWord.1 && cpu.1 && consumers.all (·.1) && sources.all (·.1) &&
     permissions.all (·.1) && HintReadFixtures.balanced
@@ -116,8 +116,8 @@ theorem finalWordAuthentication :
 Authenticating each consumer's marker rejects this even when the handler's end word is honest. -/
 theorem consumerMarkerAuthentication :
     let actual := HintReadFixtures.bytes 8
-    let first := (HintReadFixtures.row 65536 actual 0).2
-    let second := (HintReadFixtures.row 65528 actual 1).2
+    let first := (HintReadFixtures.row 65536 actual 0).2.1
+    let second := (HintReadFixtures.row 65528 actual 1).2.1
     let early := (true, HintReadWordChip.populate true first.ram first.pointer first.index)
     let late := (false, HintReadWordChip.populate false second.ram second.pointer second.index)
     let handler := input actual 65536
@@ -125,10 +125,10 @@ theorem consumerMarkerAuthentication :
       HintReadFixtures.balanced
         (((evaluate handler).2 ++ (HintReadFixtures.checked early).2 ++
           (HintReadFixtures.checked late).2).filter (fun item => item.1 == "sp1.native.hint_read_state")) = true ∧
-      Address.toNat early.2.address = Address.toNat late.2.address ∧
+      Address.toNat early.2.1.address = Address.toNat late.2.1.address ∧
       (HintReadFixtures.source actual handler.endStep.word).1 = true ∧
-      (HintReadFixtures.source actual (early.2.step true).word).1 = false ∧
-      (HintReadFixtures.source actual (late.2.step false).word).1 = false ∧
+      (HintReadFixtures.source actual (early.2.1.step true).word).1 = false ∧
+      (HintReadFixtures.source actual (late.2.1.step false).word).1 = false ∧
       joint actual 65536 handler [early, late] = false := by native_decide
 
 /-- The actual host loses one hint and preserves all unrelated state across clock boundaries. -/

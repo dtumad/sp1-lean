@@ -194,7 +194,7 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current, carrier.ordered[n]? = some event ∧ carrier.pairedTrajectory valid n = some current ∧
@@ -274,7 +274,7 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current store bytes remaining, carrier.ordered[n]? = some event ∧
@@ -284,7 +284,7 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
       (HostHintReadCoverage.input env).next.Binds store remaining ∧
       current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
         some (HostHintReadChip.execution (HostHintReadCoverage.input env) current.host bytes remaining) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
           (wordTables (HostHintQueueBoundary.projected witness))
           (wordTables_aligned (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm

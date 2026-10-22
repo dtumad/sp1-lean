@@ -258,6 +258,25 @@ theorem gatedTransitionLedger_length {Row : Type*} (channel : Channel F Message)
   simp only [gatedTransitionLedger, List.length_append, List.length_cons, List.length_nil, pairs]
   omega
 
+/-- Active transition pairs are exactly the nonzero occurrences of their physical ledger. -/
+theorem gatedPairs_filter_nonzero {Row : Type*} (channel : Channel F Message)
+    (rows : List Row) (gate : Row → F) (edge : Row → Message F × Message F)
+    (binary : ∀ row ∈ rows, gate row = 0 ∨ gate row = 1) :
+    ((rows.flatMap fun row => [channel.pulledIfValue (gate row) (edge row).1,
+      channel.pushedIfValue (gate row) (edge row).2]).filter
+      fun interaction => decide (interaction.mult ≠ 0)) =
+    (rows.filter fun row => decide (gate row = 1)).flatMap
+      (fun row => [channel.pulledValue (edge row).1, channel.pushedValue (edge row).2]) := by
+  induction rows with
+  | nil => rfl
+  | cons row rest ih =>
+    have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
+    simp only [List.flatMap_cons, List.filter_append]
+    rw [tail]
+    rcases binary row (List.mem_cons_self ..) with disabled | active
+    · simp [pulledIfValue, pushedIfValue, disabled]
+    · simp [pulledIfValue, pushedIfValue, pulledValue, pushedValue, active]
+
 /-- Erasing zero contributions is an explicit semantic projection of the original ledger. -/
 theorem gatedTransitionLedger_filter_nonzero {Row : Type*} (channel : Channel F Message)
     (initial final : Message F) (rows : List Row) (gate : Row → F)
@@ -266,21 +285,7 @@ theorem gatedTransitionLedger_filter_nonzero {Row : Type*} (channel : Channel F 
     ((channel.gatedTransitionLedger initial final rows gate edge).filter
       fun interaction => decide (interaction.mult ≠ 0)) =
       channel.transitionLedger initial final (rows.filter fun row => decide (gate row = 1)) edge := by
-  have pairs :
-      ((rows.flatMap fun row => [channel.pulledIfValue (gate row) (edge row).1,
-        channel.pushedIfValue (gate row) (edge row).2]).filter
-        fun interaction => decide (interaction.mult ≠ 0)) =
-      (rows.filter fun row => decide (gate row = 1)).flatMap
-        (fun row => [channel.pulledValue (edge row).1, channel.pushedValue (edge row).2]) := by
-    induction rows with
-    | nil => rfl
-    | cons row rest ih =>
-      have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
-      simp only [List.flatMap_cons, List.filter_append]
-      rw [tail]
-      rcases binary row (List.mem_cons_self ..) with disabled | active
-      · simp [pulledIfValue, pushedIfValue, disabled]
-      · simp [pulledIfValue, pushedIfValue, pulledValue, pushedValue, active]
+  have pairs := channel.gatedPairs_filter_nonzero rows gate edge binary
   simp only [gatedTransitionLedger, transitionLedger, List.filter_append, pairs]
   simp [pushedValue, pulledValue]
 

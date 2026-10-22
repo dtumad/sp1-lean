@@ -71,7 +71,8 @@ def artifact_names():
     ]
     files += ["installed_assembly.rs", "installed_assembly.reference.json",
               "installed_empty.rs", "installed_empty.reference.json", "opcodes.reference.json",
-              "installed_hint_read.rs", "installed_hint_read.reference.json"]
+              "installed_hint_read.rs", "installed_hint_read.reference.json",
+              "installed_hint_word_padding.rs", "installed_hint_word_padding.reference.json"]
     files += [name + suffix
               for name in ["installed_stopped_zero", "installed_stopped_wide",
                            "installed_stopped_changed", "installed_fabricated_halt"]

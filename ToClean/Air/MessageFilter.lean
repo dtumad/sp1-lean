@@ -206,6 +206,20 @@ theorem readIndexedRows_selectTables (indices : List Index) (tables : List (Tabl
       congr 1
       simp only [Table.filterRows, Table.environment, List.filter_map, Function.comp_def]
 
+/-- Active semantic selection commutes with filtering the original physical rows. -/
+theorem readIndexedActiveRows_selectTables {Message : TypeMap} [ProvableType Message]
+    {channel : Channel F Message} (indices : List Index) (view : Index → TransitionView channel)
+    (tables : List (Table F)) (keep : Index → Environment F → Bool)
+    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
+      table.component.FixedRowsMatch
+        (table.table.filter fun row => keep index (table.environment row))) :
+    readIndexedActiveRows indices view (selectTables indices tables keep fixed) =
+      (readIndexedActiveRows indices view tables).filter (fun (index, env) => keep index env) := by
+  simp only [readIndexedActiveRows, readIndexedRows_selectTables, List.filter_filter]
+  congr 1
+  funext row
+  exact Bool.and_comm _ _
+
 /-- Selecting physical rows preserves the source of every interaction, on any channel. -/
 theorem selectTables_interactions_sublist (indices : List Index) (tables : List (Table F))
     (component : Index → Component F) (keep : Index → Environment F → Bool)

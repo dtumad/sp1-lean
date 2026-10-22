@@ -809,14 +809,18 @@ private theorem lookup_slot_83 (context : Context) :
 /-- No legacy lookup at physical component 84. -/
 private theorem lookup_slot_84 (context : Context) :
     (componentAt context 84).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change (HintReadCoverage.component false).rowOperations.lookups.map (·.table) = []
+  simp only [HintReadCoverage.component, Component.rowOperations, HintReadWordChip.circuit, Guarded.circuit]
+  rw [Guarded.main_lookups]
+  rfl
 
 /-- No legacy lookup at physical component 85. -/
 private theorem lookup_slot_85 (context : Context) :
     (componentAt context 85).rowOperations.lookups.map (·.table) = [] := by
-  conv_lhs => arg 2; arg 1; arg 1; whnf
-  simp [circuit_norm]
+  change (HintReadCoverage.component true).rowOperations.lookups.map (·.table) = []
+  simp only [HintReadCoverage.component, Component.rowOperations, HintReadWordChip.circuit, Guarded.circuit]
+  rw [Guarded.main_lookups]
+  rfl
 
 /-- No legacy lookup at physical component 86. -/
 private theorem lookup_slot_86 (context : Context) :

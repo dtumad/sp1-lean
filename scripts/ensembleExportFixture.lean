@@ -115,7 +115,7 @@ private def installedIdentityReference (context : SP1CleanTest.Alignment.Install
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
 
 private def installedHintReadReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
-    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed) : IO Json := do
+    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed) (length : ℕ) : IO Json := do
   let input := SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers
   let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
   let hints := SP1CleanTest.Alignment.InstalledAssemblyExport.hintTables context consumers
@@ -123,15 +123,19 @@ private def installedHintReadReference (context : SP1CleanTest.Alignment.Install
     | throw (IO.userError "HINT_READ assembly has no register target checker")
   let some ram := hints[91]?
     | throw (IO.userError "HINT_READ assembly has no RAM target checker")
+  let some words := hints[84]?
+    | throw (IO.userError "HINT_READ assembly has no nonfinal word consumer")
   let replace (column : ℕ) (value : ZMod SP1Clean.SP1Prime) := Vector.ofFn fun index : Fin input.size =>
     if index.val == column then value else input[index]
   let header := SP1CleanTest.Alignment.HintReadAssembly.header
   let cases ← [
-      ("active-hint-read-16", header, base, true),
+      (s!"active-hint-read-{length}", header, base, true),
       ("wrong-final-clock", { header with final_clk_0_16 := header.final_clk_0_16 + 1 }, base, false),
       ("disabled-real-register-check", header, replace (registers.offset + registers.width - 1) 0, false),
       ("nonboolean-register-activity", header, replace (registers.offset + registers.width - 1) 2, false),
-      ("wrong-target-ram-value", header, replace (ram.offset + 5) 0, false)].mapM
+      ("wrong-target-ram-value", header, replace (ram.offset + 5) 0, false),
+      ("disabled-real-word", header, replace (words.offset + words.width - 1) 0, false),
+      ("nonboolean-word-activity", header, replace (words.offset + words.width - 1) 2, false)].mapM
       fun (name, publicInput, privateInput, expected) =>
         installedCase context consumers name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
@@ -311,15 +315,16 @@ private def exportEnsembleFixture : IO Unit := do
     ((← installedChangedReference).compress ++ "\n")
   IO.FS.writeFile (out / "installed_fabricated_halt.reference.json")
     ((← installedFabricatedReference).compress ++ "\n")
-  let (hintContext, hintConsumers) ← match SP1CleanTest.Alignment.HintReadAssembly.prepare 16 with
-    | .ok value => pure value
-    | .error message => throw (IO.userError message)
-  let hintExport ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust hintContext hintConsumers with
-    | .ok value => pure value
-    | .error message => throw (IO.userError message)
-  IO.FS.writeFile (out / "installed_hint_read.rs") hintExport
-  IO.FS.writeFile (out / "installed_hint_read.reference.json")
-    ((← installedHintReadReference hintContext hintConsumers).compress ++ "\n")
+  for (name, length) in [("installed_hint_read", 16), ("installed_hint_word_padding", 24)] do
+    let (hintContext, hintConsumers) ← match SP1CleanTest.Alignment.HintReadAssembly.prepare length with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    let hintExport ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportRust hintContext hintConsumers with
+      | .ok value => pure value
+      | .error message => throw (IO.userError message)
+    IO.FS.writeFile (out / (name ++ ".rs")) hintExport
+    IO.FS.writeFile (out / (name ++ ".reference.json"))
+      ((← installedHintReadReference hintContext hintConsumers length).compress ++ "\n")
   let exported ← match rust with
     | .ok value => pure value
     | .error message => throw (IO.userError message)

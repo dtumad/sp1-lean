@@ -36,6 +36,7 @@ fixture!(stopped_wide, "installed_stopped_wide");
 fixture!(changed_stopped, "installed_stopped_changed");
 fixture!(fabricated_halt, "installed_fabricated_halt");
 fixture!(hint_read, "installed_hint_read");
+fixture!(hint_word_padding, "installed_hint_word_padding");
 
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::{prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec};
@@ -50,6 +51,34 @@ fn fields(value: &serde_json::Value) -> Vec<F> {
         .iter()
         .map(|cell| F::from_u64(cell.as_u64().unwrap()))
         .collect()
+}
+
+// Keep the physical count bound, including repeated and zero-multiplicity entries.
+// Local assertions alone do not detect a missing consumer on a shared channel.
+fn physical_balance<P: Program<F>>(public: &[F], tables: &[Vec<Vec<F>>]) -> bool {
+    use std::collections::BTreeMap;
+
+    let mut channels = BTreeMap::<String, (usize, BTreeMap<Vec<u64>, F>)>::new();
+    for entry in
+        P::verifier_interactions(public)
+            .into_iter()
+            .chain(tables.iter().enumerate().flat_map(|(component, rows)| {
+                rows.iter()
+                    .flat_map(move |row| P::interactions(component, row))
+            }))
+    {
+        let (count, messages) = channels.entry(entry.channel.to_owned()).or_default();
+        *count += 1;
+        let message = entry
+            .message
+            .iter()
+            .map(PrimeField64::as_canonical_u64)
+            .collect();
+        *messages.entry(message).or_default() += entry.multiplicity;
+    }
+    channels.values().all(|(count, messages)| {
+        (*count as u64) < F::ORDER_U64 && messages.values().all(|value| *value == F::ZERO)
+    })
 }
 
 fn check_reference<P: Program<F> + GeneratedAirSpec>(reference: &serde_json::Value, cases: usize) {
@@ -85,7 +114,12 @@ fn check_reference<P: Program<F> + GeneratedAirSpec>(reference: &serde_json::Val
                         .all(|v| v == F::ZERO)
                 })
             });
-            assert_eq!(constraints, case["accepted"].as_bool().unwrap());
+            assert_eq!(
+                constraints && physical_balance::<P>(&public, &witness.tables),
+                case["accepted"].as_bool().unwrap(),
+                "acceptance mismatch: {}",
+                case["name"]
+            );
             if case["name"] == "active-branch" {
                 assert_eq!(
                     witness.tables[18],
@@ -464,28 +498,37 @@ fn invalid_optional_exit_instances_reject_otherwise_valid_empty_traces() {
 
 #[test]
 fn complete_hint_read_matches_native_rows_and_rejects_malformed_consumers() {
-    check_reference::<hint_read::Ensemble>(&hint_read::reference(), 5);
+    check_reference::<hint_read::Ensemble>(&hint_read::reference(), 7);
+    check_reference::<hint_word_padding::Ensemble>(&hint_word_padding::reference(), 7);
 }
 
 #[test]
 fn complete_hint_read_target_words_match_released_execution() {
+    hint_target_words_match_released::<hint_read::Ensemble>(&hint_read::reference(), 16);
+    hint_target_words_match_released::<hint_word_padding::Ensemble>(
+        &hint_word_padding::reference(),
+        24,
+    );
+}
+
+fn hint_target_words_match_released<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     use sp1_core_executor::{events::MemoryRecordEnum, Program as Sp1Program, SyscallCode};
 
-    let reference = hint_read::reference();
     let case = &reference["cases"][0];
-    let witness = hint_read::generate(
+    let witness = generate::<F, P>(
         &fields(&case["publicInput"]),
         &fields(&case["privateInput"]),
     )
     .unwrap();
-    let bytes = (0..16)
+    let bytes = (0..length)
         .map(|index| (19 * index + 3) as u8)
         .collect::<Vec<_>>();
     let mut instructions = vec![];
-    execution::syscall(&mut instructions, SyscallCode::HINT_READ, 65536, 16);
+    execution::syscall(&mut instructions, SyscallCode::HINT_READ, 65536, length);
     execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
     let mut program = Sp1Program::new(instructions, 131072, 131072);
-    for index in 0..4 {
+    let words = (length / 8 + 1) as usize;
+    for index in 0..words as u64 + 1 {
         std::sync::Arc::make_mut(&mut program.memory_image).insert(65536 + 8 * index, u64::MAX);
     }
     let (executor, records) = execution::run(program, &[bytes]);
@@ -493,7 +536,7 @@ fn complete_hint_read_target_words_match_released_execution() {
     assert_eq!(records[0].syscall_events.len(), 2);
     let (event, access) = &records[0].syscall_events[0];
     assert_eq!(event.syscall_code, SyscallCode::HINT_READ);
-    assert_eq!((event.arg1, event.arg2), (65536, 16));
+    assert_eq!((event.arg1, event.arg2), (65536, length));
     let MemoryRecordEnum::Write(result) = access.a else {
         panic!("released HINT_READ must write its return register");
     };
@@ -507,66 +550,69 @@ fn complete_hint_read_target_words_match_released_execution() {
     for (row, (address, value)) in
         witness.tables[90][..3]
             .iter()
-            .zip([(5, result.value), (10, 65536), (11, 16)])
+            .zip([(5, result.value), (10, 65536), (11, length)])
     {
         assert_eq!(decode(&row[2..5]), address);
         assert_eq!(decode(&row[5..9]), value);
         assert_eq!(row[10], F::ONE);
     }
-    assert_eq!(witness.tables[91].len(), 4);
-    for (index, row) in witness.tables[91][..3].iter().enumerate() {
+    assert_eq!(witness.tables[91].len(), words.next_power_of_two());
+    for (index, row) in witness.tables[91][..words].iter().enumerate() {
         let address = 65536 + 8 * index as u64;
         assert_eq!(decode(&row[2..5]), address);
         assert_eq!(decode(&row[5..9]), executor.get_memory_value(address).value);
         assert_eq!(&row[9..11], &[F::ONE, F::ONE]);
     }
     // Aligned HINT_READ writes a final zero word and leaves the next word alone.
-    assert_eq!(executor.get_memory_value(65552).value, 0);
-    assert_eq!(executor.get_memory_value(65560).value, u64::MAX);
+    assert_eq!(executor.get_memory_value(65536 + length).value, 0);
+    assert_eq!(executor.get_memory_value(65544 + length).value, u64::MAX);
 }
 
 #[test]
 fn complete_hint_read_proves_with_arbitrary_disabled_cells_and_rejects_bad_activity() {
+    check_hint_padding::<hint_read::Ensemble>(&hint_read::reference(), &[0, 1, 3, 4, 90, 91]);
+    check_hint_padding::<hint_word_padding::Ensemble>(
+        &hint_word_padding::reference(),
+        &[0, 3, 84, 90],
+    );
+}
+
+fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
+    reference: &serde_json::Value,
+    guarded: &[usize],
+) {
     use p3_air::{Entry, SymbolicExpression, SymbolicVariable};
 
-    let reference = hint_read::reference();
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = hint_read::generate(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
     let mut tables = witness.tables.clone();
-    let guarded = [0, 1, 3, 4, 90, 91];
     let activity = |component: usize| {
-        let hint = &<hint_read::Ensemble as Program<F>>::HINT_TABLES[component];
-        assert_eq!(
-            hint.key,
-            <hint_read::Ensemble as Program<F>>::COMPONENT_NAMES[component]
-        );
-        assert_eq!(hint.rows, 3);
+        let hint = &<P as Program<F>>::HINT_TABLES[component];
+        assert_eq!(hint.key, <P as Program<F>>::COMPONENT_NAMES[component]);
         hint.width - 1
     };
-    for component in guarded {
+    for &component in guarded {
+        assert_eq!(P::HINT_TABLES[component].rows, 3);
         assert_eq!(tables[component].len(), 4);
         let enabled = activity(component);
         assert_eq!(tables[component][3][enabled], F::ZERO);
         tables[component][3].fill(F::from_u64(17));
         tables[component][3][enabled] = F::ZERO;
+        assert!(P::constraints(component, &tables[component][3])
+            .into_iter()
+            .all(|value| value == F::ZERO));
         assert!(
-            hint_read::Ensemble::constraints(component, &tables[component][3])
+            <P as Program<F>>::interactions(component, &tables[component][3])
                 .into_iter()
-                .all(|value| value == F::ZERO)
+                .all(|entry| entry.multiplicity == F::ZERO)
         );
-        assert!(<hint_read::Ensemble as Program<F>>::interactions(
-            component,
-            &tables[component][3]
-        )
-        .into_iter()
-        .all(|entry| entry.multiplicity == F::ZERO));
     }
     let mut padded = witness.clone();
     padded.tables = tables;
     let traces = padded.into_traces().unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = hint_read::Statement::<F>::new(&heights).unwrap();
+    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights).unwrap();
     // Active host-call constraints have degree ten; their quotient needs a 16x LDE.
     // Read the actual emitted constraints so that this fixture detects degree drift.
     let mut max_degree = 0;
@@ -574,7 +620,7 @@ fn complete_hint_read_proves_with_arbitrary_disabled_cells_and_rejects_bad_activ
         if rows.is_empty() {
             continue;
         }
-        let row = (0..<hint_read::Ensemble as Program<F>>::ROW_WIDTHS[component])
+        let row = (0..<P as Program<F>>::ROW_WIDTHS[component])
             .map(|index| {
                 SymbolicExpression::<F>::from(SymbolicVariable::new(
                     Entry::Main { offset: 0 },
@@ -583,7 +629,7 @@ fn complete_hint_read_proves_with_arbitrary_disabled_cells_and_rejects_bad_activ
             })
             .collect::<Vec<_>>();
         max_degree = max_degree.max(
-            hint_read::Ensemble::constraints(component, &row)
+            P::constraints(component, &row)
                 .iter()
                 .map(SymbolicExpression::degree_multiple)
                 .max()
@@ -598,15 +644,41 @@ fn complete_hint_read_proves_with_arbitrary_disabled_cells_and_rejects_bad_activ
     wrong_public[7] += F::ONE;
     assert!(verify_ensemble(&config, &statement, &proof, &wrong_public).is_err());
     // Non-Boolean activity is constrained even when all child cells are padding.
-    for component in guarded {
+    for &component in guarded {
         let mut row = witness.tables[component][3].clone();
         row[activity(component)] = F::from_u64(2);
-        assert!(hint_read::Ensemble::constraints(component, &row)
+        assert!(P::constraints(component, &row)
             .into_iter()
             .any(|value| value != F::ZERO));
     }
-    // A real target checker cannot be erased, nor can a padding row consume a receipt.
-    for (component, row, enabled) in [(90, 0, F::ZERO), (90, 3, F::ONE), (91, 0, F::ZERO)] {
+    // Both word variants must also be neutral on arbitrary inactive payloads.
+    for component in [84, 85] {
+        let enabled = P::HINT_TABLES[component].width - 1;
+        let mut row = vec![F::from_u64(17); P::ROW_WIDTHS[component]];
+        row[enabled] = F::ZERO;
+        assert!(P::constraints(component, &row)
+            .into_iter()
+            .all(|value| value == F::ZERO));
+        assert!(<P as Program<F>>::interactions(component, &row)
+            .into_iter()
+            .all(|entry| entry.multiplicity == F::ZERO));
+        row[enabled] = F::from_u64(2);
+        assert!(P::constraints(component, &row)
+            .into_iter()
+            .any(|value| value != F::ZERO));
+    }
+    // A real target checker or word cannot be erased, nor can padding consume a receipt.
+    let mut activity_mutations = vec![
+        (90, 0, F::ZERO),
+        (90, 3, F::ONE),
+        (91, 0, F::ZERO),
+        (84, 0, F::ZERO),
+        (85, 0, F::ZERO),
+    ];
+    if guarded.contains(&84) {
+        activity_mutations.push((84, 3, F::ONE));
+    }
+    for (component, row, enabled) in activity_mutations {
         let mut changed = traces.clone();
         let column = row * changed[component].width() + activity(component);
         changed[component].values[column] = enabled;

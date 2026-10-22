@@ -287,7 +287,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
       (HostHintReadCoverage.input env).next.Binds store remaining ∧
       current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
         some (HostHintReadChip.execution (HostHintReadCoverage.input env) current.host bytes remaining) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
           (wordTables (HostHintQueueBoundary.projected witness))
           (wordTables_aligned (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm

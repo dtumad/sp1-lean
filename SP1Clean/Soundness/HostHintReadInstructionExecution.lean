@@ -115,10 +115,10 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-        (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) ∧
       FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-        (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
+        (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.instruction row) member
     (fun _ impossible => by cases impossible)

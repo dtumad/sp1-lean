@@ -21,7 +21,7 @@ interpreter or scheduler.
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
 - The complete installed 94-table assembly exports through the same path. Active-branch,
-  empty-local-segment, stopped-source and sixteen-byte HINT_READ fixtures supply inputs through
+  empty-local-segment, stopped-source and 16/24-byte HINT_READ fixtures supply inputs through
   Clean hint tables; its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
   including empty table positions, and exercises proof acceptance and endpoint/row mutations.
   Empty and stopped segments retain their ordered, bank and Exit terminals. Fresh proof attempts
@@ -73,11 +73,13 @@ interpreter or scheduler.
   handler-effect agreement does not establish whole-shard AIR equivalence.
 - Empty/nonempty HINT_LEN and HINT_READ handlers compare queue updates and word endpoints with
   released execution, including repeated observations, empty hints, mandatory final padding and
-  limb carries. A complete sixteen-byte HINT_READ assembly also closes physical Memory, hint and
-  cursor ledgers and compares final register/RAM values with released execution. Three active
-  rows in each ordered boundary and target-check table pad to four. Rust tests accept arbitrary
-  disabled cells and reject non-Boolean activity, missing real checks and activated padding.
-  Arbitrary hint lengths still need word-transfer padding; broader active-host coverage remains open.
+  limb carries. Complete 16/24-byte HINT_READ assemblies close physical Memory, hint and cursor
+  ledgers and compare final register/RAM values with released execution. Three active ordered
+  boundary, target-check or nonfinal word rows pad to four. Both word variants use Boolean
+  activity; semantic projections select active rows while physical ledgers retain every occurrence
+  and their count bounds. Rust tests accept arbitrary disabled cells and reject non-Boolean
+  activity, missing real checks/transfers and activated padding. Broader active-host coverage and
+  general generation completeness remain open.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and
@@ -142,7 +144,7 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 94-component host assembly is lookup-free. Its branch, empty, stopped and sixteen-byte
+The installed 94-component host assembly is lookup-free. Its branch, empty, stopped and 16/24-byte
 HINT_READ exports check complete assembly construction and Rust agreement for those cases. Broader execution
 and host-call cases, general padding, data agreement and completeness remain open. The retired
 instruction-only pipeline did not supply that missing whole-assembly coverage.

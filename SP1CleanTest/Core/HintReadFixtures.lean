@@ -20,7 +20,7 @@ open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
 /-- Field used by the native SP1 circuits. -/
 abbrev Fp := ZMod SP1Prime
 /-- Final-word selector paired with the word-transfer constructor input. -/
-abbrev Row := Bool × HintReadWordChip.Inputs Fp
+abbrev Row := Bool × HintReadWordChip.RowInput Fp
 
 /-- Single-ECALL program image used to authenticate the fixture's write permissions. -/
 def image : ProgramImage := ⟨[(131072, 0x00000073)], 131072, []⟩
@@ -45,7 +45,7 @@ def rows (address : ℕ) (actual : Bytes) : List Row :=
 
 /-- Execute one word transfer, optionally corrupting a generated witness cell. -/
 def checked (row : Row) (corrupt : Option ℕ := none) : Bool × Ledger :=
-  evaluateProgram (HintReadWordChip.main row.1 (varFromOffset HintReadWordChip.Inputs 0))
+  evaluateProgram ((HintReadWordChip.circuit row.1).main (varFromOffset HintReadWordChip.RowInput 0))
     (toElements row.2).toList corrupt
 
 /-- Observe the requested word against the verifier-fixed payload inventory. -/
@@ -90,9 +90,10 @@ endpoints. Omitting one requested permission exercises the unbalanced-demand rej
 def check (image : ProgramImage) (address : ℕ) (actual : Bytes) (rows : List Row)
     (missingPermission : Option ℕ := none) : Bool :=
   let consumers := rows.map checked
-  let sources := rows.map fun row => source actual (row.2.step row.1).word
-  let permissions := rows.flatMap fun row => (List.range 8).filterMap fun index =>
-    let target := Address.toNat row.2.address + index
+  let active := rows.filter (fun row => row.2.2 == 1)
+  let sources := active.map fun row => source actual (row.2.1.step row.1).word
+  let permissions := active.flatMap fun row => (List.range 8).filterMap fun index =>
+    let target := Address.toNat row.2.1.address + index
     if missingPermission == some target then none else some (permission image target)
   consumers.all (·.1) && sources.all (·.1) && permissions.all (·.1) &&
     balanced (boundaries address actual ++ consumers.flatMap (·.2) ++ sources.flatMap (·.2) ++ permissions.flatMap (·.2))

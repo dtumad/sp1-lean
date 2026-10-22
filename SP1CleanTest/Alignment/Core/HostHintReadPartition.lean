@@ -255,7 +255,7 @@ theorem installedCursor :
 private def permissionRows (rows : List HintReadFixtures.Row) (forge := false) :
     List (WritePermissionProvider.RowInput Fp) :=
   rows.flatMap fun row => (List.range 8).filterMap fun index =>
-    let address := Address.toNat row.2.address + index
+    let address := Address.toNat row.2.1.address + index
     match WritePermissionProvider.populate? (p := SP1Prime) image address with
     | some input => some input
     | none => if forge then (WritePermissionProvider.populate? (p := SP1Prime) image (address - 8)).map
@@ -338,7 +338,7 @@ inventory; changing source bytes also fails record balance. Other channels are o
 theorem installedRecords :
     let rows := (calls.flatMap words).reverse
     let nodes := calls.map (·.node)
-    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
+    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.1.step row.1).word)
     let witness := withSources hints calls rows nodes records ⟨calls_bounded, reversedWords_bounded⟩
     let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
     witness.tables.length = 90 ∧ sourceRowsChecked hints nodes records = true ∧
@@ -365,9 +365,9 @@ does not authorize their use by an earlier call: its actual cursor ledger reject
 theorem futureNodeConsumers :
     let earlier := call 3 0 1 65536
     let actual := HintReadFixtures.bytes 16 :: hints
-    let rows := (words earlier).map fun row => (row.1, { row.2 with pointer := Address.ofNat 4 })
+    let rows := (words earlier).map fun row => (row.1, ({ row.2.1 with pointer := Address.ofNat 4 }, row.2.2))
     let nodes := [earlier.node]
-    let records := earlier.endStep.word :: rows.map (fun row => (row.2.step row.1).word)
+    let records := earlier.endStep.word :: rows.map (fun row => (row.2.1.step row.1).word)
     have rowsBound : rows.length ≤ UInt64.size := by
       simpa only [rows, earlier, List.length_map] using earlierWords_bounded
     let tables := consumers rows rowsBound
@@ -387,7 +387,7 @@ The explicit pair closes only that ledger; forged final heads or reset allocatio
 theorem missingQueueEndpoints :
     let rows := (calls.flatMap words).reverse
     let nodes := calls.map (·.node)
-    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
+    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.1.step row.1).word)
     let witness := withSources hints calls rows nodes records ⟨calls_bounded, reversedWords_bounded⟩
     let actual := queueLedger witness.interactions
     let initial := (call 3 0 1 65536).previous
@@ -421,7 +421,7 @@ outside this fixture, so this is not yet a full mixed-execution non-vacuity proo
 theorem installedQueueEndpoints :
     let rows := (calls.flatMap words).reverse
     let nodes := calls.map (·.node)
-    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.step row.1).word)
+    let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.1.step row.1).word)
     let final := (call 1 265 (2 ^ 24 + 1) (2 ^ 48 - 8)).next
     let witness := withQueueBoundary hints final calls rows nodes records ⟨calls_bounded, reversedWords_bounded⟩
     let projected := Soundness.HostHintQueueBoundary.projected witness

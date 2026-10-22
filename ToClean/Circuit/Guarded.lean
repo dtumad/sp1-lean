@@ -436,6 +436,18 @@ theorem activity_of_constraints
   apply IsBool.iff_mul_sub_one.mpr
   simpa [eval_sub, Expression.eval] using flat.1
 
+/-- An active guarded row retains the child's raw assertions and lookup constraints. -/
+theorem constraints_of_active
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
+    (input : Var (ProvablePair Input field) F) (offset : ℕ) (env : Environment F)
+    (active : env input.2 = 1)
+    (valid : ((main provider supported input).operations offset).ConstraintsHold env) :
+    ((provider.main input.1).operations offset).ConstraintsHold env := by
+  have flat := Circuit.constraintsHold_toFlat_iff.mpr valid
+  rw [main_toFlat] at flat
+  exact Circuit.constraintsHold_toFlat_iff.mp
+    ((FlatOperation.constraints_guard_one input.2 _ env active).mp flat.2)
+
 /-- The complete interaction list retains its order and every zero-multiplicity occurrence. -/
 @[circuit_norm] theorem main_interactions
     (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
@@ -446,6 +458,18 @@ theorem activity_of_constraints
   rw [← Operations.interactions_toFlat, main_toFlat]
   simp only [FlatOperation.interactions, FlatOperation.interactions_guard,
     Operations.interactions_toFlat]
+
+/-- Active rows inherit each channel guarantee at the child's original witness offset. -/
+theorem channelGuarantees_of_active
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
+    (input : Var (ProvablePair Input field) F) (offset : ℕ) (env : Environment F)
+    (channel : RawChannel F) (active : env input.2 = 1)
+    (valid : ((main provider supported input).operations offset).ChannelGuarantees channel env) :
+    ((provider.main input.1).operations offset).ChannelGuarantees channel env := by
+  intro interaction member selected
+  have guarded := valid (interaction.guard input.2)
+    (by rw [main_interactions]; exact List.mem_map.mpr ⟨interaction, member, rfl⟩) selected
+  exact (AbstractInteraction.guard_guarantees_one input.2 interaction env active).mp guarded
 
 /-- A channel projection retains its complete payloads while scaling only multiplicities. -/
 @[circuit_norm] theorem main_interactionsWith

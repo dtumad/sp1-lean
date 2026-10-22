@@ -140,7 +140,7 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
   are native source-queue tests; complete SP1 host execution remains outside their scope.
 
-The installed 94-component assembly is lookup-free. Its active-branch, empty, stopped and sixteen-byte
+The installed 94-component assembly is lookup-free. Its active-branch, empty, stopped and 16/24-byte
 HINT_READ fixtures export all components, read consumer inputs through Clean's private hint tables,
 and generate providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
 retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
@@ -151,12 +151,14 @@ codes, nonzero commitment banks, and complete verifier occurrences even when gen
 Fresh proof attempts reject altered public endpoints, resumption with an otherwise valid branch,
 changed stopped codes and fabricated HALT receipts. A changed digest carrier remains accepted
 in the stopped case: host-bank endpoints are fixed instance parameters, and this public field
-is unused. The HINT_READ fixture closes physical Memory, hint and cursor ledgers and compares
-final register/RAM values with released execution, including the mandatory final zero word. Its
-three active source/final register and RAM rows and target checks pad to four; Rust tests
-accept arbitrary disabled cells and reject malformed activity, erased checks and activated padding.
-These finite cases do not establish digest-to-bank binding or general execution. Arbitrary hint
-lengths still need word-transfer padding; broader active-host coverage remains open.
+is unused. The HINT_READ fixtures close physical Memory, hint and cursor ledgers and compare
+final register/RAM values with released execution, including the mandatory final zero word. The
+16-byte case pads three active register/RAM boundary and target-check rows to four; the 24-byte
+case also pads three nonfinal word rows to four. Both word variants accept arbitrary disabled
+cells and reject non-Boolean activity. Missing real transfers/checks and activated padding fail
+backend verification. Acceptance comparisons check local assertions and complete channel balances,
+counting repeated and zero-multiplicity occurrences. These finite cases do not establish
+digest-to-bank binding or general generation completeness; broader active-host coverage remains open.
 
 The experimental Clean pin adds message
 predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;

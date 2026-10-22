@@ -49,7 +49,8 @@ theorem auxiliaryInterface : HostLocalCore.AuxiliaryInterface
   · intro component member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;>
-      simp [handler, HintReadCoverage.view, HostHintReadChip.circuit, HintReadWordChip.circuit,
+      simp [handler, HintReadCoverage.view, HintReadCoverage.component, HostHintReadChip.circuit,
+        HintReadWordChip.circuit, Guarded.circuit, HintReadWordChip.activeCircuit,
         Channels.byteChannel, Channels.memoryChannel, HostHintQueue.nodeChannel,
         HostHintQueue.wordChannel, HostHintQueue.stateChannel, HostCallChip.channel,
         HintReadWordChip.stateChannel, HostRamAccessChip.channel, WritePermissionProvider.channel, Channel.toRaw]

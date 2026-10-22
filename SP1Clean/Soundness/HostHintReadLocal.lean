@@ -310,7 +310,7 @@ theorem consumer_has_handler_of_balancedChannel
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     ∃ env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
       HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous := by
   have shared : (handlerTable witness).data = witness.data :=
@@ -326,7 +326,7 @@ theorem consumer_has_handler (witness : EnsembleWitness (ensemble image source o
     (interface : ExtensionInterface others resources) (balanced : witness.BalancedChannels)
     (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)) :
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     ∃ env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
       HostHintReadPartition.callClock env = HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous :=
   consumer_has_handler_of_balancedChannel witness interface

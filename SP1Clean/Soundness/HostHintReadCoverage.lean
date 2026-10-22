@@ -42,7 +42,7 @@ theorem complete_indices (env : Environment (ZMod p)) (tables : List (Table (ZMo
     (store : Store) (hints : List Bytes) (current : (input env).previous.Binds store hints)
     (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store) :
     ∃ bytes rest, hints = bytes :: rest ∧ (input env).next.Binds store rest ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants tables).map
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables).map
         fun row => Address.toNat (HintReadCoverage.rowInput row).index).Perm
           (List.range (wordCount bytes)) := by
   obtain ⟨node, rest, _, head, next, _, count⟩ :=

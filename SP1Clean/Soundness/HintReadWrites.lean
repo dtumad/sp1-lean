@@ -106,7 +106,7 @@ private theorem writes_of_walk {R V : Type*} (edge : R → V × V)
   rw [equal, ← List.map_map, indices]
   rfl
 
-/-- Every physical row writes its exact node word at the corresponding consecutive address. -/
+/-- Every active row writes its exact node word at the corresponding consecutive address. -/
 theorem ordered_writes (tables : List (Table (ZMod p)))
     (initial final : HintReadWordChip.State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
@@ -115,9 +115,9 @@ theorem ordered_writes (tables : List (Table (ZMod p)))
       ([HintReadWordChip.stateChannel.pushedValue initial, HintReadWordChip.stateChannel.pulledValue final] ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (store : Store) (node : Node) (read : node? store (Address.toNat initial.pointer) = some node)
-    (bindings : ∀ row ∈ TransitionView.readIndexedRows variants tables, ((rowInput row).step row.1).word.Binds store)
+    (bindings : ∀ row ∈ TransitionView.readIndexedActiveRows variants view tables, ((rowInput row).step row.1).word.Binds store)
     (zero : Address.toNat initial.index = 0) (count : Address.toNat final.index = wordCount node.bytes) :
-    ∃ path : List (Row (p := p)), path.Perm (TransitionView.readIndexedRows variants tables) ∧
+    ∃ path : List (Row (p := p)), path.Perm (TransitionView.readIndexedActiveRows variants view tables) ∧
       Walk.IsWalk edge initial final path ∧
       path.map produced = wordWrites (Address.toNat initial.address) node.bytes ∧
       ∀ row ∈ path, context (rowInput row).previous = context initial ∧
@@ -133,7 +133,7 @@ theorem ordered_writes (tables : List (Table (ZMod p)))
       intro row member
       have pointer := congrArg (fun c => c.2.2) (same row member)
       change (rowInput row).pointer = initial.pointer at pointer
-      exact row_steps row.1 (rowInput row) (valid row (perm.mem_iff.mp member))
+      exact row_steps row.1 (rowInput row) (valid.step row (perm.mem_iff.mp member))
         store node (bindings row (perm.mem_iff.mp member)) (by rwa [pointer])) zero
   exact ⟨path, perm, walk, written.1, fun row member => ⟨same row member, written.2 row member⟩⟩
 

@@ -84,6 +84,16 @@ theorem rows_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p)))
         (fun row => keepWord key row.1 row.2) :=
   TransitionView.readIndexedRows_selectTables _ _ _ _
 
+/-- Active semantic transfers commute with physical selection by call clock. -/
+theorem active_rows_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
+      HintReadCoverage.variants tables) :
+    TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (tablesFor key tables aligned) =
+      (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables).filter
+        (fun row => keepWord key row.1 row.2) :=
+  TransitionView.readIndexedActiveRows_selectTables _ _ _ _ _
+
 /-- Selecting the actual consumer tables is exactly payload selection in their shared cursor ledger. -/
 theorem cursor_for (key : ZMod p × ZMod p) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
@@ -184,7 +194,7 @@ theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.c
       (handlers.interactionsWith HintReadWordChip.stateChannel.toRaw ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables) :
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables) :
     ∃ env ∈ handlers.table.map (fun row => handlers.environment row),
       callClock env = clock (HintReadCoverage.rowInput row).previous := by
   classical
@@ -209,8 +219,8 @@ theorem consumer_has_handler (handlers : Table (ZMod p)) (component : handlers.c
     (HintReadCoverage.selection_fixed tables (keepWord key) aligned) aligned
   have specs := valid.select (keepWord key) (HintReadCoverage.selection_fixed tables (keepWord key) aligned)
   have empty := HintReadCoverage.rows_nil_of_balanced (tablesFor key tables aligned) alignment specs selected
-  have included : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor key tables aligned) := by
-    rw [rows_for]
+  have included : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (tablesFor key tables aligned) := by
+    rw [active_rows_for]
     exact List.mem_filter.mpr ⟨member, by simp [keepWord, keepState, key]⟩
   rw [empty] at included
   exact List.not_mem_nil included
@@ -228,7 +238,7 @@ theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.c
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (host : HostState) (store : Store) (current : (input env).previous.Binds store host.io.hints)
     (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store)
-    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+    (words : ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables,
       clock (HintReadCoverage.rowInput row).previous = callClock env →
         ((HintReadCoverage.rowInput row).step row.1).word.Binds store)
     (running : host.exitCode = none) (policy : HostPolicy) (context : HostReadContext)
@@ -240,7 +250,7 @@ theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.c
     (arg2 : context.register 11 = some (Word.toBitVec64 (input env).call.arg2)) :
     ∃ bytes rest, host.io.hints = bytes :: rest ∧ (input env).next.Binds store rest ∧
       host.run policy context = some (HostHintReadChip.execution (input env) host bytes rest) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants (tablesFor (callClock env) tables aligned)).map
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (tablesFor (callClock env) tables aligned)).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
   have valid : handler.Spec env := by
     obtain ⟨physical, present, equal⟩ := List.mem_map.mp member
@@ -258,7 +268,7 @@ theorem run_of_shared_tables (handlers : Table (ZMod p)) (component : handlers.c
   exact HostHintReadWrites.run_of_tables env (tablesFor (callClock env) tables aligned) valid alignment specs
     (balanced_for handlers component tables aligned env member unique balanced) host store current header ending
     (fun row present => by
-      have selected := List.mem_filter.mp ((rows_for _ tables aligned) ▸ present)
+      have selected := List.mem_filter.mp ((active_rows_for _ tables aligned) ▸ present)
       exact words row selected.1 (of_decide_eq_true selected.2))
     running policy context (fun request present => permissions request (selectedPermissions.subset present))
     code arg1 arg2

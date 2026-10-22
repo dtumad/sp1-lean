@@ -30,10 +30,10 @@ theorem writes_of_records (env : Environment (ZMod p)) (tables : List (Table (ZM
       (handler.operations.interactionValuesWith HintReadWordChip.stateChannel.toRaw env ++
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (store : Store) (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store)
-    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+    (words : ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables,
       ((HintReadCoverage.rowInput row).step row.1).word.Binds store) :
     ∃ node, node? store (Address.toNat (input env).node.pointer) = some node ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants tables).map HintReadWrites.produced).Perm
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables).map HintReadWrites.produced).Perm
         (wordWrites (Address.toNat (input env).span.start) node.bytes) := by
   have headerBinding := header
   obtain ⟨node, read, _, _⟩ := header
@@ -57,11 +57,11 @@ theorem complete_writes (env : Environment (ZMod p)) (tables : List (Table (ZMod
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (store : Store) (hints : List Bytes) (current : (input env).previous.Binds store hints)
     (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store)
-    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+    (words : ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables,
       ((HintReadCoverage.rowInput row).step row.1).word.Binds store) :
     ∃ bytes rest, hints = bytes :: rest ∧ (input env).next.Binds store rest ∧
       Word.toNat (input env).span.length.value = bytes.length ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants tables).map HintReadWrites.produced).Perm
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables).map HintReadWrites.produced).Perm
         (wordWrites (Address.toNat (input env).span.start) bytes) := by
   obtain ⟨node, rest, read, head, next, length, count⟩ :=
     HostHintReadChip.node_effect_of_spec (input env) valid store hints current header ending
@@ -104,7 +104,7 @@ theorem run_of_tables (env : Environment (ZMod p)) (tables : List (Table (ZMod p
         tables.flatMap (·.interactionsWith HintReadWordChip.stateChannel.toRaw)))
     (host : HostState) (store : Store) (current : (input env).previous.Binds store host.io.hints)
     (header : (input env).node.Binds store) (ending : (input env).endStep.word.Binds store)
-    (words : ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants tables,
+    (words : ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables,
       ((HintReadCoverage.rowInput row).step row.1).word.Binds store)
     (running : host.exitCode = none) (policy : HostPolicy) (context : HostReadContext)
     (permissions : ∀ request, WritePermissionProvider.channel.pulledValue request ∈
@@ -115,7 +115,7 @@ theorem run_of_tables (env : Environment (ZMod p)) (tables : List (Table (ZMod p
     (arg2 : context.register 11 = some (Word.toBitVec64 (input env).call.arg2)) :
     ∃ bytes rest, host.io.hints = bytes :: rest ∧ (input env).next.Binds store rest ∧
       host.run policy context = some (HostHintReadChip.execution (input env) host bytes rest) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants tables).map HintReadWrites.produced).Perm
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables).map HintReadWrites.produced).Perm
         (wordWrites (Address.toNat (input env).span.start) bytes) := by
   obtain ⟨bytes, rest, hints, next, length, inventory⟩ :=
     complete_writes env tables valid aligned wordSpecs balanced store host.io.hints current header ending words

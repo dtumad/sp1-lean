@@ -46,7 +46,7 @@ private theorem aligned_push_bounds
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered)
     (rows : List (RowFacts p))
     (alignment : List.Forall₂ AlignedFacts rows (ordered.map (eventFacts witness.data
-      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness)))))) :
+      (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness)))))) :
     ∀ row ∈ rows, ∀ message ∈ row.memPushes, MemoryClockBounds message := by
   have checked := HostLocalCore.localWitness_constraints _ (HostHintQueueBoundary.projected_constraints witness constraints)
   have ordering := source_ordering witness constraints balanced
@@ -142,7 +142,7 @@ theorem source_memory_chronology
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered)
     (rows : List (RowFacts p))
     (alignment : List.Forall₂ AlignedFacts rows (ordered.map (eventFacts witness.data
-      (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables (HostHintQueueBoundary.projected witness))))))
+      (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))))))
     (projection : ∀ loc, pushesAt rows loc = pushesAt (sourceExecutionRows witness) loc ∧
       pullsAt rows loc = pullsAt (sourceExecutionRows witness) loc) :
     LocalCore.MemoryChronology (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) rows := by
@@ -197,7 +197,7 @@ theorem source_ordered_memory_rows (valid : image.Valid)
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered ∧
       List.Forall₂ AlignedFacts rows (ordered.map (eventFacts witness.data
-        (TransitionView.readIndexedRows HintReadCoverage.variants
+        (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))))) ∧
       LocalCore.MemoryChronology (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) rows ∧
       ∀ loc, pushesAt rows loc = pushesAt (sourceExecutionRows witness) loc ∧
@@ -241,7 +241,7 @@ theorem source_memory_refresh_free (valid : image.Valid)
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
         (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) ordered ∧
       List.Forall₂ AlignedFacts rows (ordered.map (eventFacts witness.data
-        (TransitionView.readIndexedRows HintReadCoverage.variants
+        (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))))) ∧
       LocalCore.MemoryChronology (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) rows ∧
       List.Forall₂ (List.Forall₂ PullRewrite) (rows.map rowTouches) touches ∧

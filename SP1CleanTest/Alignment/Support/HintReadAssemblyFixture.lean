@@ -10,6 +10,7 @@ import SP1Clean.Model.Core.HostSnapshot
 The semantic host step supplies the target snapshot. Its three register locations and every
 padded hint word have actual source/final Memory records and target checks. The sixteen-byte
 case needs three RAM words, exercising inactive padding in all six boundary/check tables.
+The twenty-four-byte case pads three nonfinal word consumers to four physical rows.
 This finite export fixture does not assert general generation completeness.
 -/
 

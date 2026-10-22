@@ -263,22 +263,25 @@ theorem word_steps (witness : EnsembleWitness (ensemble image source others reso
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : RecordChannels witness) :
     HintReadCoverage.Steps (wordTables witness) := by
-  intro row member
-  obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
-  obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
-  have component := List.forall₂_zip (wordTables_aligned witness) paired
-  have present := wordTables_mem witness table (List.of_mem_zip paired).2
-  have checked := constraints table present physical physicalMem
-  have bytes := byte_guarantees witness interface constraints balanced.byte table present physical physicalMem
-  have words := word_guarantees witness store authenticated balanced.word table present physical physicalMem
-  rw [← component] at checked bytes words
-  rw [Component.constraintsHold_iff] at checked
-  rw [Component.channelGuarantees_iff] at bytes words
-  simp only [HintReadCoverage.view, Component.rowOperations,
-    HintReadWordChip.circuit] at checked bytes words
-  have valid := word_step_of_channels last (varFromOffset HintReadWordChip.Inputs 0)
-    (size HintReadWordChip.Inputs) (table.environment physical) checked bytes words
-  simpa only [eval_varFromOffset_valueFromOffset, HintReadCoverage.rowInput] using valid
+  constructor
+  · exact HintReadCoverage.rows_activity_binary _ (wordTables_aligned witness)
+      (fun table member => constraints table (wordTables_mem witness table member))
+  · intro row member
+    obtain ⟨member, active⟩ := HintReadCoverage.mem_active_rows.mp member
+    obtain ⟨⟨last, table⟩, paired, mapped⟩ := List.mem_flatMap.mp member
+    obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
+    have component := List.forall₂_zip (wordTables_aligned witness) paired
+    have present := wordTables_mem witness table (List.of_mem_zip paired).2
+    have checked := constraints table present physical physicalMem
+    have bytes := byte_guarantees witness interface constraints balanced.byte table present physical physicalMem
+    have words := word_guarantees witness store authenticated balanced.word table present physical physicalMem
+    rw [← component] at checked bytes words
+    have valid := word_step_of_channels last (varFromOffset (F := ZMod p) HintReadWordChip.RowInput 0).1
+      (size HintReadWordChip.RowInput) (table.environment physical)
+      (HintReadCoverage.active_constraints (last, table.environment physical) active checked)
+      (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active bytes)
+      (HintReadCoverage.active_channelGuarantees (last, table.environment physical) _ active words)
+    rwa [HintReadCoverage.eval_rowInput (last, table.environment physical)] at valid
 
 private theorem word_spec_of_channels (last : Bool) (env : Environment (ZMod p))
     (constraints : (HintReadCoverage.view last).component.operations.ConstraintsHold env)
@@ -286,7 +289,7 @@ private theorem word_spec_of_channels (last : Bool) (env : Environment (ZMod p))
     (memory : (HintReadCoverage.view last).component.operations.ChannelGuarantees Channels.memoryChannel.toRaw env)
     (words : (HintReadCoverage.view last).component.operations.ChannelGuarantees wordChannel.toRaw env) :
     (HintReadCoverage.view last).component.Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
+  apply (Component.weakSoundness (by intro _; trivial) constraints ?_).1
   rw [Operations.guarantees_iff _ _ _ ((HintReadCoverage.view last).component.inChannelsOrGuarantees env)]
   intro channel member
   cases last
