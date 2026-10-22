@@ -955,6 +955,9 @@ def boundaryInputs (initClk initPc finalClk finalPc : ℕ) : SP1PublicIO (ZMod p
   exit_code := 0
   is_execution_shard := 1
   committed_value_digest := Vector.replicate 32 0
+  deferredProofsDigest := Vector.replicate 8 0
+  commitSyscall := 0
+  commitDeferredSyscall := 0
 
 /-- **The verifier row needs no premise**: limbing a natural is what makes every committed limb
 canonical, so `LimbBounds` — the honest-prover contract and the row's whole `Spec` — holds for any

@@ -127,22 +127,28 @@ The characteristic bound comes from the original balanced physical ledger. -/
 theorem calls_perm (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = producer)
     (constraints : table.Constraints) (consumed : List (Message (ZMod p)))
     (balanced : BalancedInteractions
-      (table.interactionsWith channel.toRaw ++ consumed.map channel.pulledValue)) :
+      ((table.interactionsWith channel.toRaw).filter (fun interaction => decide (interaction.mult ≠ 0)) ++
+        consumed.map channel.pulledValue)) :
     (calls table data).Perm consumed := by
   rw [table_values table data component constraints] at balanced
-  apply channel.gated_unit_perm_of_balanced _ _ _ _ _ balanced
-  intro env member
-  obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
-  have binary := binary_of_constraints _ (component ▸ constraints physical present)
-  have cells : input (table.environment physical) = input (Environment.fromArray physical data) :=
-    ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
-  simpa only [cells] using binary
+  have binary : ∀ env ∈ table.table.map (Environment.fromArray · data),
+      (input env).instruction.is_real = 0 ∨ (input env).instruction.is_real = 1 := by
+    intro env member
+    obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
+    have checked := binary_of_constraints _ (component ▸ constraints physical present)
+    have cells : input (table.environment physical) = input (Environment.fromArray physical data) :=
+      ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
+    simpa only [cells] using checked
+  rw [channel.pushedIfValues_filter_nonzero _ _ _ binary] at balanced
+  apply (channel.balanced_unit_iff (calls table data) consumed).mp _ |>.2
+  simpa only [calls, activeRows, List.map_map, Function.comp_def] using balanced
 
 /-- A handler cannot duplicate an event clock when its complete calls balance unique producers. -/
 theorem clocks_nodup (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = producer)
     (constraints : table.Constraints) (consumed : List (Message (ZMod p)))
     (balanced : BalancedInteractions
-      (table.interactionsWith channel.toRaw ++ consumed.map channel.pulledValue))
+      ((table.interactionsWith channel.toRaw).filter (fun interaction => decide (interaction.mult ≠ 0)) ++
+        consumed.map channel.pulledValue))
     (unique : ((calls table data).map clock).Nodup) :
     (consumed.map clock).Nodup :=
   ((calls_perm table data component constraints consumed balanced).map clock).nodup_iff.mp unique

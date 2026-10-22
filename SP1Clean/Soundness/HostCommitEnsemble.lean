@@ -108,7 +108,7 @@ private theorem bank_byte_requirements (index : Index) (env : Environment (ZMod 
     ((view deferred index).component.inChannelsOrRequirements_of_constraints env constraints)
   cases index with
   | none => simp [view, terminalView, HostCommitBoundary.terminal, stateChannel, Channels.byteChannel, circuit_norm]
-  | some slot => simp [view, HostCommitHistory.view, HostCommitChip.circuit,
+  | some slot => simp [view, HostCommitHistory.view, HostCommitChip.circuit, Guarded.circuit, HostCommitChip.activeCircuit,
       stateChannel, HostCallChip.channel, Channels.byteChannel, Channels.publicValuesChannel, circuit_norm]
 
 /-- The bank's Byte guarantees follow from actual ensemble balance and its auxiliary providers. -/
@@ -141,7 +141,7 @@ theorem sound
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (bankTables witness)) ∧
+      path.Perm (TransitionView.readIndexedActiveRows indices (view deferred) (bankTables witness)) ∧
       Walk.IsWalk (edge deferred) (HostCommitBoundary.start (sourceValues deferred source)) (HostCommitBoundary.final witness.publicInput) path ∧
       path.foldlM (execute deferred policy context) source =
         some ((HostCommitBoundary.final witness.publicInput).apply deferred source) := by

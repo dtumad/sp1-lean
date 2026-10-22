@@ -17,6 +17,9 @@ open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueOrder HostQueueCPUOr
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
+/-- Use Clean's field equality when projecting the original physical balance. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+
 local instance projectionLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 def project (message : HostCallChip.Message (ZMod p)) : Option HintQueue.Event :=
@@ -33,7 +36,8 @@ private def ControlCode (code : Word (ZMod p)) : Prop :=
 private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
-    (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
+    (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
+    (active : env receiver.activity = 1) :
     ControlCode (receiver.message env).code := by
   change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
@@ -48,12 +52,14 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
     rw [HostCallReceivers.enter_message]
     exact Or.inr (Or.inl valid.1)
-  · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
-    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+  · rw [HostCallReceivers.commit_activity] at active
+    have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
+    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
     rw [HostCallReceivers.commit_message]
     exact Or.inr (Or.inr (Or.inl valid.1.1))
-  · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
-    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+  · rw [HostCallReceivers.commit_activity] at active
+    have valid := HostCommitBank.commit_spec_of_byte true slot env constraints bytes active
+    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
     rw [HostCallReceivers.commit_message]
     exact Or.inr (Or.inr (Or.inr valid.1.1))
 
@@ -95,6 +101,7 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
     (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
     (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
+    (active : env receiver.activity = 1)
     (host : HostState) (running : host.exitCode = none) (policy : HostPolicy)
     (characteristic : policy.characteristic = p) (context : HostReadContext)
     (observed : context.register 5 = some (Word.toBitVec64 (receiver.message env).code) ∧
@@ -117,13 +124,15 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
     rw [HostCallReceivers.enter_message] at observed ⊢
     exact ⟨_, HostEnterChip.run_of_spec _ valid host running policy context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
-  · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
-    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+  · rw [HostCallReceivers.commit_activity] at active
+    have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
+    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
     rw [HostCallReceivers.commit_message] at observed ⊢
     exact ⟨_, HostCommitChip.run_of_callSpec false slot _ valid.1 host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
-  · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
-    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
+  · rw [HostCallReceivers.commit_activity] at active
+    have valid := HostCommitBank.commit_spec_of_byte true slot env constraints bytes active
+    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
     rw [HostCallReceivers.commit_message] at observed ⊢
     exact ⟨_, HostCommitChip.run_of_callSpec true slot _ valid.1 host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
@@ -148,8 +157,10 @@ private theorem controls_run (receivers : List (HostLocalHandoff.Receiver (p := 
     rw [ReceiverView.messages_cons] at member
     rcases List.mem_append.mp member with first | rest
     · obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp first
+      obtain ⟨physicalMem, active⟩ := List.mem_filter.mp physicalMem
+      have active := of_decide_eq_true active
       apply control_run receiver (registered receiver (List.mem_cons_self ..))
-        (table.environment physical) ?_ ?_ host running policy characteristic context observed
+        (table.environment physical) ?_ ?_ active host running policy characteristic context observed
       · rw [same]
         exact constraints table (List.mem_cons_self ..) physical physicalMem
       · rw [same]
@@ -173,8 +184,10 @@ private theorem controls_projection (receivers : List (HostLocalHandoff.Receiver
     rw [ReceiverView.messages_cons] at member
     rcases List.mem_append.mp member with first | rest
     · obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp first
+      obtain ⟨physicalMem, active⟩ := List.mem_filter.mp physicalMem
+      have active := of_decide_eq_true active
       apply control_projection
-      apply control_code receiver (registered receiver (List.mem_cons_self ..))
+      apply control_code receiver (registered receiver (List.mem_cons_self ..)) _ ?_ ?_ active
       · rw [same]
         exact constraints table (List.mem_cons_self ..) physical physicalMem
       · rw [same]
@@ -202,9 +215,11 @@ private theorem queue_messages (tables : List (Table (ZMod p))) :
     ReceiverView.messages (indices.map queueReceiver) tables =
       (TransitionView.readIndexedRows indices tables).map call := by
   simp only [ReceiverView.messages, TransitionView.readIndexedRows, List.zip_map_left,
-    List.flatMap_map, List.map_flatMap, List.map_map, Function.comp_def]
+    List.flatMap_map, List.filter_flatMap, List.filter_map, List.map_flatMap, List.map_map, Function.comp_def]
   apply List.flatMap_congr
   intro pair _
+  have enabled : (queueReceiver (p := p) pair.1).activity = .const 1 := by cases pair.1 <;> rfl
+  simp only [Prod.map, id_eq, enabled, Expression.eval, decide_true, List.filter_true]
   apply List.map_congr_left
   intro physical _
   exact queue_message pair.1 (pair.2.environment physical)

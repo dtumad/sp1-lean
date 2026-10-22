@@ -39,6 +39,7 @@ quantifiers at these boundaries:
 | Surface | Review question |
 |---|---|
 | [Shard.Executes](../SP1Clean/FormalModel/Shard.lean) | Complete source/target equality, real Sail/host execution, permissions and independently defined resource limits? |
+| [Commitment statement](../SP1Clean/Model/Core/CommitmentStatement.lean) | Every actual declaration agrees with one immutable digest; raw host overwrites remain operational and flags imply no coverage? |
 | [Shard targets](../SP1Clean/Soundness/Shard/Contract.lean) | Raw acceptance on the AIR side, total data-only construction on the semantic side, no hidden readiness premises? |
 | [Chip contracts](../SP1Clean/FormalModel/Contracts/Chips.lean) | Semantic arithmetic and architectural effects rather than copied constraint equations? |
 | [Reader contracts](../SP1Clean/FormalModel/Contracts/Readers.lean) | Live operand/address/clock observations, explicit assumptions and channel requirements? |
@@ -72,9 +73,9 @@ path directly, principally through finite inputs and mutations. Native semantic 
 library-wide universal equivalence with released SP1 AIR is not a current claim. Regressions that record known
 differences are coverage of an open gap, not evidence that the gap has been closed.
 
-ADD additionally has an exact algebraic guard: upstream symbolic degree bounds and a complete
+ADD, ADDI, ADDW, SUB and SUBW additionally have an exact algebraic guard: upstream symbolic degree bounds and a complete
 interpolation grid check row-constraint equivalence, with full affine interaction comparison.
-Its supervisor profile fixes the untrusted-program mode flag to zero; unexpected public-input
+The supervisor profile fixes the untrusted-program mode flag to zero; unexpected public-input
 dependencies fail. It includes arbitrary inactive rows and only substitutes a zero column after both AIRs
 independently enforce it. This decision procedure trusts the Rust checker, evaluators, degree
 bounds and layout/channel adapters; it is not a Lean-kernel or code-generation proof.

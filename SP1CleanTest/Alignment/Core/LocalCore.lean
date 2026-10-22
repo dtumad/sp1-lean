@@ -2,6 +2,7 @@ import SP1Clean.Soundness.LocalCoreGrounding
 import SP1Clean.Soundness.ProtectedLocalCore
 import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Soundness.HostHintQueueBoundary
+import SP1Clean.Native.Operations.CommitmentStatement
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.Core.HostSnapshot
 import SP1Clean.Model.Core.InstructionWrite
@@ -20,6 +21,9 @@ binding with a concrete forged-return example. Same-register accesses and a real
 exercise the grounding interfaces; stopped-source rows are rejected while identities remain valid.
 This is AIR conformance, not an execution theorem.
 -/
+
+-- Local bank and memory preservation checks; complete public-statement binding is
+-- tested by the installed commitment export fixtures.
 
 namespace SP1CleanTest.Core.LocalCore
 
@@ -311,15 +315,19 @@ private def commitRows : List Row :=
     (3, finalRecord 0 5 13 16), (3, finalRecord 6 10 12 0),
     (3, finalRecord 11 11 11 65537), terminal 5 12,
     (57, List.replicate (size HaltChip.Inputs) 0),
-    (58, (toElements commitInstruction).toList), (66, (toElements commitHandler).toList),
+    (58, (toElements commitInstruction).toList), (66, (toElements (M := HostCommitChip.RowInput) (commitHandler, 1)).toList),
     (88, (toElements (commitHandler.next 0)).toList),
     (89, (toElements (HostCommitBoundary.start
       (HostCommitEnsemble.sourceValues true commitSource.host))).toList)]
 
+/-- Explicit fixed declaration fixture; independent of the mutable target bank. -/
+private def commitStatement : CommitmentStatement :=
+  ⟨(Vector.replicate 8 0).set 0 65537, Vector.replicate 8 0, true, false⟩
+
 /-- Separate Memory balance only to identify the cause of a negative fixture. Full acceptance
 below requires both checks. The first still checks every constraint, lookup and other channel. -/
 private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp)
-    (target : HostState) (rows : List Row) : Bool × Bool :=
+    (target : HostState) (rows : List Row) (statement : CommitmentStatement := default) : Bool × Bool :=
   let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage source
     (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) target HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) []
@@ -343,17 +351,21 @@ private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp
       (InitialMemoryLookup.membership source.sail.memory (2 ^ 48) "sp1.native.initial_memory") consumers
         (InitialMemoryLookup.membership_height_lt_uint64 source.sail.memory "sp1.native.initial_memory") ++
     StaticMembership.providerLedger syscallImage.writePermissionTable consumers
-      (WritePermissionProvider.membership_height_lt_uint64 syscallImage)
+      (WritePermissionProvider.membership_height_lt_uint64 syscallImage) ++
+    StaticMembership.payloadLedger (CommitmentDeclaration.table statement)
+      CommitmentDeclaration.channel (fun _ _ _ => trivial) consumers
+      (CommitmentDeclaration.height_bounded statement)
   let balanced (entry : String × List Fp × Fp) :=
     ((ledger.filter (fun other => other.1 == entry.1 && other.2.1 == entry.2.1)).map
       (fun other => other.2.2)).sum == 0
   (evaluated.all Prod.fst && program.1 && decide (ledger.length < SP1Prime) &&
-    ledger.all (fun entry => (assembly.channels.map RawChannel.name).contains entry.1 &&
+    ledger.all (fun entry => ((CommitmentDeclaration.channel (p := SP1Prime)).name ::
+        assembly.channels.map RawChannel.name).contains entry.1 &&
       (entry.1 == "SP1Memory" || balanced entry)),
     ledger.all (fun entry => entry.1 != "SP1Memory" || balanced entry))
 
 private def commitChecks (target : HostState) (rows : List Row) : Bool × Bool :=
-  installedChecks commitSource syscallPublic target rows
+  installedChecks commitSource syscallPublic target rows commitStatement
 
 private def checkCommit (target : HostState) (rows : List Row) : Bool :=
   let checked := commitChecks target rows

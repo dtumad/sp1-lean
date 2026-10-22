@@ -2,6 +2,7 @@ import SP1Clean.Model.Core.SourceExecution
 import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.ExecutionEncoding
 import SP1Clean.Model.Core.ExecutionResources
+import SP1Clean.Model.Core.CommitmentStatement
 
 /-! # Complete-state semantics for the native shard capstone
 
@@ -53,6 +54,15 @@ noncomputable def AdmissibleExecution (limits : ResourceLimits) (characteristic 
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
   Executes characteristic image source target events ∧
     nativeProfile limits characteristic image source target events
+
+/-- A provable execution declares words of one immutable public statement. The operational
+relation remains permissive; conflicting declarations are excluded by statement meaning alone.
+Coverage of every digest word is a separate property of the executed program. -/
+noncomputable def StatementExecution (limits : ResourceLimits) (characteristic : ℕ)
+    (commitments : CommitmentStatement) (image : ProgramImage)
+    (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
+  AdmissibleExecution limits characteristic image source target events ∧
+    commitments.WellFormed characteristic ∧ commitments.Matches events
 
 namespace Executes
 

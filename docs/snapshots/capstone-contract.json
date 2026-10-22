@@ -400,6 +400,13 @@
       "typeFingerprint": "3972626760"
     },
     {
+      "bodyFingerprint": "2081745524",
+      "local": false,
+      "module": "Init.GetElem",
+      "name": "Fin.instGetElemFinVal",
+      "typeFingerprint": "4286370674"
+    },
+    {
       "bodyFingerprint": "2651924279",
       "local": false,
       "module": "Init.Prelude",
@@ -5566,6 +5573,13 @@
       "typeFingerprint": "1495648710"
     },
     {
+      "bodyFingerprint": "2836136925",
+      "local": true,
+      "module": "SP1Clean.FormalModel.Shard",
+      "name": "SP1Clean.FormalModel.Shard.StatementExecution",
+      "typeFingerprint": "2377574239"
+    },
+    {
       "bodyFingerprint": "132112113",
       "local": true,
       "module": "SP1Clean.FormalModel.Shard",
@@ -5909,6 +5923,20 @@
       "typeFingerprint": "3931117990"
     },
     {
+      "bodyFingerprint": "1183364434",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.CoreSyscallEvent.arg1",
+      "typeFingerprint": "292412746"
+    },
+    {
+      "bodyFingerprint": "2016171297",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.CoreSyscallEvent.arg2",
+      "typeFingerprint": "292412746"
+    },
+    {
       "bodyFingerprint": "2617372163",
       "local": true,
       "module": "SP1Clean.Model.Machine.Syscall",
@@ -5921,6 +5949,13 @@
       "module": "SP1Clean.Model.Machine.Syscall",
       "name": "SP1Clean.Machine.CoreSyscallEvent.mk",
       "typeFingerprint": "2316914723"
+    },
+    {
+      "bodyFingerprint": "2771348479",
+      "local": true,
+      "module": "SP1Clean.Model.Machine.Syscall",
+      "name": "SP1Clean.Machine.CoreSyscallEvent.rawCode",
+      "typeFingerprint": "292412746"
     },
     {
       "bodyFingerprint": null,
@@ -6271,6 +6306,97 @@
       "module": "SP1Clean.Model.Core.HostIO",
       "name": "SP1Clean.Model.Core.Bytes",
       "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement",
+      "typeFingerprint": "3931117990"
+    },
+    {
+      "bodyFingerprint": "3206112835",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.Matches",
+      "typeFingerprint": "974893505"
+    },
+    {
+      "bodyFingerprint": "3511357662",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.MatchesDeclaration",
+      "typeFingerprint": "2418050474"
+    },
+    {
+      "bodyFingerprint": "1458735190",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.MatchesEvent",
+      "typeFingerprint": "2060135194"
+    },
+    {
+      "bodyFingerprint": "2774585135",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.MatchesEvent.match_1",
+      "typeFingerprint": "2819375395"
+    },
+    {
+      "bodyFingerprint": "2833044838",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.WellFormed",
+      "typeFingerprint": "716080702"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.WellFormed._proof_2",
+      "typeFingerprint": "1661955002"
+    },
+    {
+      "bodyFingerprint": "1537894050",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.bank",
+      "typeFingerprint": "2241019674"
+    },
+    {
+      "bodyFingerprint": "2736470079",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.commit",
+      "typeFingerprint": "2239707029"
+    },
+    {
+      "bodyFingerprint": "2694720676",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.commitDeferred",
+      "typeFingerprint": "2239707029"
+    },
+    {
+      "bodyFingerprint": "896033562",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.committed",
+      "typeFingerprint": "833711505"
+    },
+    {
+      "bodyFingerprint": "4004449173",
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.deferred",
+      "typeFingerprint": "833711505"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Model.Core.CommitmentStatement",
+      "name": "SP1Clean.Model.Core.CommitmentStatement.mk",
+      "typeFingerprint": "873691307"
     },
     {
       "bodyFingerprint": null,
@@ -8870,32 +8996,32 @@
       "typeFingerprint": "160491160"
     },
     {
-      "bodyFingerprint": "205875545",
+      "bodyFingerprint": "535222665",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.CompilerTarget",
-      "typeFingerprint": "1150903559"
+      "typeFingerprint": "104341138"
     },
     {
-      "bodyFingerprint": "3123309973",
+      "bodyFingerprint": "2038621035",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.Interpretation",
-      "typeFingerprint": "3661882632"
+      "typeFingerprint": "1594562650"
     },
     {
-      "bodyFingerprint": "2191648340",
+      "bodyFingerprint": "1123769164",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.SoundnessTarget",
-      "typeFingerprint": "2069686027"
+      "typeFingerprint": "1432625265"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.statement_iff",
-      "typeFingerprint": "2630778153"
+      "typeFingerprint": "1037514120"
     },
     {
       "bodyFingerprint": "686291405",

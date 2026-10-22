@@ -14,6 +14,9 @@ namespace SP1Clean.Soundness.HostTerminalLedger
 open Circuit Air.Flat Channels Model.Core HostHintReadLocal HostQueueCallProjection
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+
+/-- Use Clean's field equality when projecting the original physical balance. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 local instance terminalLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 /-- Select the complete exit word from a HALT call. -/
@@ -27,10 +30,24 @@ private theorem values_silent (component : Component (ZMod p)) (env : Environmen
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
     InteractionRecovery.interactionsWith_main_eq_nil _ _ _ _ silent, List.map_nil]
 
+private theorem commit_exit_silent (deferred : Bool) (slot : Fin 8) :
+    HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.commit (p := p) deferred slot).component.circuit.channels := by
+  have metadata : (HostCallReceivers.commit (p := p) deferred slot).component.circuit.channelsWithGuarantees =
+      [byteChannel.toRaw, byteChannel.toRaw, CommitmentDeclaration.channel.toRaw,
+        HostCallChip.channel.toRaw, (HostCommitChip.stateChannel deferred).toRaw] := by
+    cases deferred <;> rfl
+  rw [GeneralFormalCircuit.channels, metadata]
+  change _ ∉ _ ++ [CommitmentDeclaration.channel.toRaw, HostCallChip.channel.toRaw,
+    (HostCommitChip.stateChannel deferred).toRaw, publicValuesChannel.toRaw]
+  cases deferred <;> simp [HostExitBoundary.channel, HostCallChip.channel,
+    CommitmentDeclaration.channel, HostCommitChip.stateChannel, byteChannel, publicValuesChannel,
+    circuit_norm]
+
 private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
-    (bytes : receiver.component.operations.ChannelGuarantees byteChannel.toRaw env) :
+    (bytes : receiver.component.operations.ChannelGuarantees byteChannel.toRaw env)
+    (active : env receiver.activity = 1) :
     receiver.component.operations.interactionValuesWith HostExitBoundary.channel.toRaw env =
       ((receipt? (receiver.message env)).toList.map HostExitBoundary.channel.pushedValue) := by
   change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
@@ -63,30 +80,38 @@ private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     have three : (3 : ZMod p).val = 3 :=
       ZMod.val_natCast_of_lt (show (3 : ℕ) < p by have := Fact.out (p := 2 ^ 17 < p); omega)
     simp [receipt?, valid.1, HostEnterChip.codeWord, Word.toBitVec64, Word.toNat, three]
-  · have valid := HostCommitBank.view_spec_of_byte false (some slot) env constraints bytes
-    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
-    have silent : HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.commit (p := p) false slot).component.circuit.channels := by
-      intro used
-      have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-      change false = true at present
-      contradiction
+  · rw [HostCallReceivers.commit_activity] at active
+    have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
+    change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
+    have silent := commit_exit_silent (p := p) false slot
     rw [values_silent _ env silent]
     rw [HostCallReceivers.commit_message]
     have sixteen : (16 : ZMod p).val = 16 :=
       ZMod.val_natCast_of_lt (show (16 : ℕ) < p by have := Fact.out (p := 2 ^ 17 < p); omega)
     simp [receipt?, valid.1.1, HostCommitChip.codeWord, Word.toBitVec64, Word.toNat, sixteen]
-  · have valid := HostCommitBank.view_spec_of_byte true (some slot) env constraints bytes
-    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.Inputs 0 env) at valid
-    have silent : HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.commit (p := p) true slot).component.circuit.channels := by
-      intro used
-      have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-      change false = true at present
-      contradiction
+  · rw [HostCallReceivers.commit_activity] at active
+    have valid := HostCommitBank.commit_spec_of_byte true slot env constraints bytes active
+    change HostCommitChip.Spec true slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
+    have silent := commit_exit_silent (p := p) true slot
     rw [values_silent _ env silent]
     rw [HostCallReceivers.commit_message]
     have twentySix : (26 : ZMod p).val = 26 :=
       ZMod.val_natCast_of_lt (show (26 : ℕ) < p by have := Fact.out (p := 2 ^ 17 < p); omega)
     simp [receipt?, valid.1.1, HostCommitChip.codeWord, Word.toBitVec64, Word.toNat, twentySix]
+
+private theorem inactive_control_silent (receiver : HostLocalHandoff.Receiver (p := p))
+    (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (env : Environment (ZMod p)) (inactive : env receiver.activity ≠ 1) :
+    receiver.component.operations.interactionValuesWith HostExitBoundary.channel.toRaw env = [] := by
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+    (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
+    (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
+  rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
+  · exact False.elim (inactive rfl)
+  · exact False.elim (inactive rfl)
+  · exact values_silent _ env (commit_exit_silent false slot)
+  · exact values_silent _ env (commit_exit_silent true slot)
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem receiver_values (receivers : List (HostLocalHandoff.Receiver (p := p)))
@@ -96,8 +121,11 @@ private theorem receiver_values (receivers : List (HostLocalHandoff.Receiver (p 
     (rowValues : ∀ receiver ∈ receivers, ∀ env,
       receiver.component.operations.ConstraintsHold env →
       receiver.component.operations.ChannelGuarantees byteChannel.toRaw env →
+      env receiver.activity = 1 →
       receiver.component.operations.interactionValuesWith HostExitBoundary.channel.toRaw env =
         ((select (receiver.message env)).toList.map HostExitBoundary.channel.pushedValue))
+    (inactive : ∀ receiver ∈ receivers, ∀ env, env receiver.activity ≠ 1 →
+      receiver.component.operations.interactionValuesWith HostExitBoundary.channel.toRaw env = [])
     (constraints : ∀ table ∈ tables, table.Constraints)
     (bytes : ∀ table ∈ tables, table.ChannelGuarantees byteChannel.toRaw) :
     tables.flatMap (·.interactionsWith HostExitBoundary.channel.toRaw) =
@@ -108,15 +136,21 @@ private theorem receiver_values (receivers : List (HostLocalHandoff.Receiver (p 
       rw [ReceiverView.messages_cons, List.filterMap_append, List.map_append, List.flatMap_cons]
       congr 1
       · simp only [Table.interactionsWith, ReceiverView.tableMessages, List.filterMap_map,
-          List.map_filterMap, Function.comp_def]
+          List.map_filterMap, Function.comp_def, List.filterMap_filter]
         rw [List.filterMap_eq_flatMap_toList]
         apply List.flatMap_congr
-        intro physical member
-        rw [← same, rowValues receiver (List.mem_cons_self ..)]
-        · exact (Option.toList_map ..).symm
-        · rw [same]; exact constraints table (List.mem_cons_self ..) physical member
-        · rw [same]; exact bytes table (List.mem_cons_self ..) physical member
+        intro physical physicalMem
+        rw [← same]
+        by_cases active : table.environment physical receiver.activity = 1
+        · simp only [active, decide_true, ↓reduceIte]
+          rw [rowValues receiver (List.mem_cons_self ..) _
+            (same ▸ constraints table (List.mem_cons_self ..) physical physicalMem)
+            (same ▸ bytes table (List.mem_cons_self ..) physical physicalMem) active]
+          exact (Option.toList_map ..).symm
+        · simp only [active, decide_false, Bool.false_eq_true, ↓reduceIte]
+          exact inactive receiver (List.mem_cons_self ..) _ active
       · exact ih (fun receiver member => rowValues receiver (List.mem_cons_of_mem _ member))
+          (fun receiver member => inactive receiver (List.mem_cons_of_mem _ member))
           (fun table member => constraints table (List.mem_cons_of_mem _ member))
           (fun table member => bytes table (List.mem_cons_of_mem _ member))
 
@@ -138,6 +172,7 @@ private theorem controls_interactions
       simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
         List.map_cons, List.drop_succ_cons, List.drop_zero])
   exact receiver_values _ _ aligned receipt? (fun receiver member => control_values receiver member)
+    (fun receiver member => inactive_control_silent receiver member)
     (fun table present => constraints table (controlTables_mem witness table present))
     (fun table present => byte_guarantees witness interface constraints balanced table
       (controlTables_mem witness table present))

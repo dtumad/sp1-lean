@@ -27,16 +27,19 @@ def wide : Context :=
     exitCode := some 65536
     committed := Vector.ofFn fun index : Fin 8 => BitVec.ofNat 32 (17 + index.val)
     deferred := Vector.ofFn fun index : Fin 8 => BitVec.ofNat 32 (33 + index.val) }
-  { base with source := { base.source with host }, finalHost := host }
+  { base with
+    source := { base.source with host }
+    finalHost := host
+    commitments := ⟨host.committed, host.deferred, false, false⟩ }
 
 /-- No instruction retires, so every public clock/PC limb retains its incoming value. -/
 def header : SP1PublicIO Fp := SP1Clean.Audit.BranchEnsemble.identityHeader
 
-/-- A nonzero digest carrier, chosen to match the bank. The stopped assembly does not enforce
-this equality: bank endpoints are fixed instance parameters, independent of this public field. -/
+/-- Canonical public fields of the independently supplied immutable statement. -/
 def wideHeader : SP1PublicIO Fp :=
-  { header with committed_value_digest := Vector.ofFn fun index : Fin 32 =>
-    if index.val % 4 == 0 then ((17 + index.val / 4 : ℕ) : Fp) else 0 }
+  { header with
+    committed_value_digest := CommitmentBoundary.committed wide.commitments
+    deferredProofsDigest := CommitmentBoundary.deferred wide.commitments }
 
 /-- Changing a stopped code without execution violates the optional terminal boundary. -/
 def changedCode : Context := { wide with finalHost.exitCode := some 0 }

@@ -46,6 +46,9 @@ def publicInput : SP1PublicIO Fp where
   exit_code := 0
   is_execution_shard := 1
   committed_value_digest := Vector.replicate 32 0
+  deferredProofsDigest := Vector.replicate 8 0
+  commitSyscall := 0
+  commitDeferredSyscall := 0
 
 def word (value : ℕ) : Word Fp := bitVecToWord (BitVec.ofNat 64 value)
 

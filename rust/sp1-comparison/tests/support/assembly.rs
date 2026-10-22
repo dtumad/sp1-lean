@@ -1,0 +1,179 @@
+//! Shared full-assembly reference and backend checks. Empty and zero rows stay physical.
+
+use crate::backend;
+use clean_backend::witness_generation::{generate, Program};
+use clean_backend::{prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec};
+use p3_field::{PrimeCharacteristicRing, PrimeField64};
+use p3_koala_bear::KoalaBear as F;
+use p3_matrix::Matrix;
+
+pub fn fields(value: &serde_json::Value) -> Vec<F> {
+    value
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|cell| F::from_u64(cell.as_u64().unwrap()))
+        .collect()
+}
+
+pub fn physical_balance<P: Program<F>>(public: &[F], tables: &[Vec<Vec<F>>]) -> bool {
+    use std::collections::BTreeMap;
+
+    let mut channels = BTreeMap::<String, (usize, BTreeMap<Vec<u64>, F>)>::new();
+    for entry in
+        P::verifier_interactions(public)
+            .into_iter()
+            .chain(tables.iter().enumerate().flat_map(|(component, rows)| {
+                rows.iter()
+                    .flat_map(move |row| P::interactions(component, row))
+            }))
+    {
+        let (count, messages) = channels.entry(entry.channel.to_owned()).or_default();
+        *count += 1;
+        let message = entry
+            .message
+            .iter()
+            .map(PrimeField64::as_canonical_u64)
+            .collect();
+        *messages.entry(message).or_default() += entry.multiplicity;
+    }
+    channels.values().all(|(count, messages)| {
+        (*count as u64) < F::ORDER_U64 && messages.values().all(|value| *value == F::ZERO)
+    })
+}
+
+pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
+    reference: &serde_json::Value,
+    cases: usize,
+) {
+    let inventory = reference["inventory"].as_array().unwrap();
+    assert_eq!(inventory.len(), 95);
+    assert_eq!(P::COMPONENTS, 95);
+    for (index, component) in inventory.iter().enumerate() {
+        assert_eq!(component["name"], P::COMPONENT_NAMES[index]);
+        assert_eq!(component["width"], P::ROW_WIDTHS[index]);
+        assert_eq!(
+            component["fixedWidth"],
+            <P as GeneratedAirSpec>::FIXED_WIDTHS[index]
+        );
+        assert_eq!(component["fixedHeight"], P::FIXED_HEIGHTS[index]);
+    }
+    let samples = reference["cases"].as_array().unwrap();
+    assert_eq!(samples.len(), cases);
+    for case in samples {
+        let public = fields(&case["publicInput"]);
+        assert_eq!(verifier_reference::<P>(&public), case["verifier"]);
+        let private = fields(&case["privateInput"]);
+        let result = generate::<F, P>(&public, &private);
+        if let Some(expected) = case.get("witness") {
+            let witness = result.unwrap();
+            assert_eq!(
+                backend::physical_reference::<P>(&public, &witness.tables),
+                *expected
+            );
+            let constraints = witness.tables.iter().enumerate().all(|(component, rows)| {
+                rows.iter().all(|row| {
+                    P::constraints(component, row)
+                        .into_iter()
+                        .all(|v| v == F::ZERO)
+                })
+            });
+            assert_eq!(
+                constraints && physical_balance::<P>(&public, &witness.tables),
+                case["accepted"].as_bool().unwrap(),
+                "acceptance mismatch: {}",
+                case["name"]
+            );
+            if case["name"] == "active-branch" {
+                assert_eq!(
+                    witness.tables[18],
+                    vec![fields(&reference["compilerBranchRow"])]
+                );
+            }
+            if case["accepted"] == true {
+                let traces = witness.into_traces().unwrap();
+                assert_eq!(traces.len(), 95);
+                for (index, trace) in traces.iter().enumerate() {
+                    assert_eq!(trace.width(), P::WIDTHS[index]);
+                    let fixed_height = P::FIXED_HEIGHTS[index];
+                    if fixed_height != 0 {
+                        assert_eq!(trace.height(), fixed_height);
+                        assert_eq!(backend::fixed_trace::<P>(index).height(), fixed_height);
+                    }
+                }
+            }
+        } else {
+            assert!(!case["accepted"].as_bool().unwrap());
+            assert!(
+                result.is_err(),
+                "mutation unexpectedly generated: {}",
+                case["name"]
+            );
+        }
+    }
+}
+
+pub fn verifier_reference<P: GeneratedAirSpec>(public: &[F]) -> serde_json::Value {
+    serde_json::Value::Array(
+        P::verifier_interactions(public)
+            .into_iter()
+            .map(|entry| {
+                backend::interaction(
+                    entry.channel,
+                    entry.multiplicity.as_canonical_u64(),
+                    entry
+                        .message
+                        .iter()
+                        .map(PrimeField64::as_canonical_u64)
+                        .collect(),
+                    entry.assume_guarantees,
+                )
+            })
+            .collect(),
+    )
+}
+
+pub fn prove_case<P: Program<F> + GeneratedAirSpec>(
+    case: &serde_json::Value,
+) -> (Vec<p3_matrix::dense::RowMajorMatrix<F>>, Vec<F>) {
+    assert_eq!(case["accepted"], true);
+    let public = fields(&case["publicInput"]);
+    let traces = generate::<F, P>(&public, &fields(&case["privateInput"]))
+        .unwrap()
+        .into_traces()
+        .unwrap();
+    accept_traces::<P>(&public, traces.clone());
+    (traces, public)
+}
+
+pub fn accept_traces<P: GeneratedAirSpec>(
+    public: &[F],
+    traces: Vec<p3_matrix::dense::RowMajorMatrix<F>>,
+) {
+    let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
+    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights).unwrap();
+    let config = backend::config_with_log_blowup(4);
+    let (proof, _) = prove_ensemble(&config, &statement, traces, public).unwrap();
+    verify_ensemble(&config, &statement, &proof, public).unwrap();
+}
+
+pub fn reject_traces<P: GeneratedAirSpec>(
+    public: &[F],
+    traces: Vec<p3_matrix::dense::RowMajorMatrix<F>>,
+) {
+    let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
+    let statement = match clean_backend::GeneratedEnsemble::<F, P>::new(&heights) {
+        Ok(statement) => statement,
+        Err(EnsembleShapeError::FixedTraceHeight {
+            expected,
+            actual: 0,
+            ..
+        }) if expected > 0 => return,
+        Err(error) => panic!("unexpected malformed-shape result: {error:?}"),
+    };
+    let config = backend::config_with_log_blowup(4);
+    backend::assert_backend_rejection(|| {
+        let (proof, _) = prove_ensemble(&config, &statement, traces, public).unwrap();
+        verify_ensemble(&config, &statement, &proof, public).is_err()
+    });
+}
