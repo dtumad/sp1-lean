@@ -16,6 +16,24 @@ pub fn fields(value: &serde_json::Value) -> Vec<F> {
         .collect()
 }
 
+/// Encode independently observed clocks/PCs in the native header's exact limb order.
+pub fn check_endpoints(public: &[F], initial: (u64, u64), final_state: (u64, u64)) {
+    let encode = |(clock, pc): (u64, u64)| {
+        [
+            clock & 65535,
+            (clock >> 16) & 255,
+            (clock >> 24) & 255,
+            clock >> 32,
+            pc & 65535,
+            (pc >> 16) & 65535,
+            pc >> 32,
+        ]
+        .map(F::from_u64)
+    };
+    assert_eq!(&public[..7], &encode(initial));
+    assert_eq!(&public[7..14], &encode(final_state));
+}
+
 pub fn physical_balance<P: Program<F>>(public: &[F], tables: &[Vec<Vec<F>>]) -> bool {
     use std::collections::BTreeMap;
 

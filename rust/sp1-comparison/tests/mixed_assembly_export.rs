@@ -181,10 +181,11 @@ fn check_cut<P: Program<F>>(
     } else {
         steps[start + count - 1].next_pc
     };
-    assert_eq!(public[0], F::from_u64(initial_clock));
-    assert_eq!(public[7], F::from_u64(initial_clock + 8 * count as u64));
-    assert_eq!(decode(&public[4..7]), initial_pc);
-    assert_eq!(decode(&public[11..14]), final_pc);
+    check_endpoints(
+        &public,
+        (initial_clock, initial_pc),
+        (initial_clock + 8 * count as u64, final_pc),
+    );
     let mut expected = vec![];
     if count > 0 {
         let first = steps[start].clock;
@@ -317,6 +318,15 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     assert_eq!(record.syscall_events.len(), 8);
     released_host_air(record);
     let first = record.syscall_events[0].0.clk - 8; // first instruction is ADDI x5, x0, 240
+    assert_eq!(record.syscall_events[0].0.pc - 4, 131072);
+    check_endpoints(
+        &public,
+        (9, 131072),
+        (
+            record.public_values.last_timestamp - first + 9,
+            record.public_values.next_pc,
+        ),
+    );
     let expected_results = [length, length, 8, 8, u64::MAX];
     let mut observed = 0;
     for (event, access) in &record.syscall_events {
@@ -432,6 +442,15 @@ fn enter_uses_the_released_constrained_replay() {
         SyscallCode::ENTER_UNCONSTRAINED
     );
     assert_eq!(record.syscall_events[0].1.a.current_record().value, 0);
+    assert_eq!(record.syscall_events[0].0.pc, 131072);
+    check_endpoints(
+        &public,
+        (9, 131072),
+        (
+            record.public_values.last_timestamp - record.syscall_events[0].0.clk + 9,
+            record.public_values.next_pc,
+        ),
+    );
     assert_eq!(record.branch_events.len(), 1);
     assert_eq!(record.branch_events[0].0.next_pc, 131088);
     assert_eq!(executor.registers()[5], 0);
