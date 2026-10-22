@@ -230,3 +230,10 @@ leanOptions.weak.linter.hashCommand = false
 name = "backendGadgets"
 root = "scripts.backendGadgets"
 allowNonModules = true
+
+# Compile the complete export driver once; both deterministic generations call this
+# executable instead of evaluating large witness instances in Lean's interpreter.
+[[lean_exe]]
+name = "ensembleExport"
+root = "scripts.ensembleExportFixture"
+allowNonModules = true

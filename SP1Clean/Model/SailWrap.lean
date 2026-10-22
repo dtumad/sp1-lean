@@ -5,7 +5,7 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Lift
 import Mathlib.Data.ZMod.Basic
 import Batteries.Lean.EStateM
-import LeanRV64D
+import LeanRV64D.Step
 import ToMathlib.General
 import SP1Clean.Model.Register
 set_option linter.unusedSimpArgs false

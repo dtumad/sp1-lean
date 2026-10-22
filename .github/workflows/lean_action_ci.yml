@@ -37,7 +37,7 @@ name: Lean Action CI
 # to lineage. The archive includes alignment and full tests, the most expensive outputs.
 #
 # A second, pin-keyed cache retains native dependency objects missing from Mathlib's download.
-# Only a successful full build saves it, after building backendGadgets. Weekly/manual clean
+# Only a successful full build saves it, after building backendGadgets and ensembleExport. Weekly/manual clean
 # builds discard project outputs once; core and full then share the fresh build directory.
 # Every build uses --wfail --iofail. Measurement: docs/agents/build-profiling.md.
 
@@ -224,7 +224,7 @@ jobs:
         run: timeout 5h lake build --wfail --iofail SP1CoreTest
       - name: Full build (resumable — a cold cache may need one re-run)
         if: env.FULL_BUILD == 'true'
-        run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets
+        run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets ensembleExport
       - name: Full test library (lake build SP1CleanTest)
         if: env.FULL_BUILD == 'true'
         run: timeout 5h lake build --wfail --iofail SP1CleanTest
