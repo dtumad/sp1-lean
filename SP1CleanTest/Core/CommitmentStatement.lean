@@ -1,5 +1,6 @@
 import SP1Clean.Model.Core.CommitmentStatement
 import SP1Clean.Model.Core.HostExecution
+import SP1Clean.Model.SP1Field
 
 /-! # Declaration consistency is distinct from execution and coverage
 
@@ -29,7 +30,7 @@ example : ¬ ({ statement with commit := false }).Matches [declaration false 0 7
 example : ({ statement with committed := statement.committed.set 7 99 }).Matches
     [declaration false 0 7] := by decide
 
-private def policy : HostPolicy := ⟨{ readOnly := fun _ => false }, 2130706433⟩
+private def policy : HostPolicy := ⟨{ readOnly := fun _ => false }, SP1Clean.SP1Prime⟩
 private def context : HostReadContext := ⟨fun _ => none, fun _ => none⟩
 
 /-- An overwritten recording slot remains a successful operational update. -/

@@ -44,8 +44,8 @@ def validate_report(name, result, revision, dirty):
         values = [True, False, False, False, False, True, False, False]
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 94, "uniqueChannels": 30, "registeredChannelOccurrences": 270,
-                    "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2}
+                    "tableCount": 95, "uniqueChannels": 32, "registeredChannelOccurrences": 304,
+                    "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and
                 report["tableRows"] == sum(table["rows"] for table in report["tables"]) and
@@ -71,7 +71,9 @@ def validate_report(name, result, revision, dirty):
     if name != "loadbyte":
         require(report["revision"] == revision and report["dirty"] is dirty,
                 "revision or working-tree status mismatch")
-        require(report["assembly"] == "SP1Clean.Soundness.HostFinalMemory.ensemble",
+        assembly = ("SP1CleanTest.Alignment.InstalledAssembly.assembly" if name == "branch" else
+                    "SP1Clean.Soundness.HostFinalMemory.ensemble")
+        require(report["assembly"] == assembly,
                 "wrong assembly")
     return report
 
