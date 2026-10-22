@@ -100,7 +100,7 @@ theorem stoppedIdentity :
   cases kind <;> native_decide
 
 private def header : SP1PublicIO (ZMod SP1Prime) :=
-  ⟨9, 0, 0, 0, 0, 1, 0, 273, 0, 0, 0, 4, 1, 0, 0, 1, Vector.replicate 32 0⟩
+  ⟨9, 0, 0, 0, 0, 1, 0, 273, 0, 0, 0, 4, 1, 0, 0, 1, Vector.replicate 32 0, Vector.replicate 8 0, 0, 0⟩
 
 /-- The nonempty semantic fixture passes the actual added verifier assertions. -/
 theorem paddedHint_resourceChecks (data : ProverData (ZMod SP1Prime)) :

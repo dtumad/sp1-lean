@@ -58,7 +58,8 @@ private theorem call_interactions (row : Row (p := p)) :
       simp only [circuit_norm]
     have values := (HostCallReceivers.hintLength (p := p) empty).interactions env
     rw [length_component]
-    simpa only [HostCallReceivers.hintLength, evalCall, eval_varFromOffset_valueFromOffset, call] using values
+    simpa only [HostCallReceivers.hintLength, evalCall, eval_varFromOffset_valueFromOffset, call, Expression.eval,
+      Channel.pulledIfValue, Channel.pulledValue] using values
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}

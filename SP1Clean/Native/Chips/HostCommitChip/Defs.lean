@@ -1,4 +1,5 @@
 import SP1Clean.FormalModel.Contracts.HostCommit
+import SP1Clean.FormalModel.Contracts.CommitmentStatement
 import SP1Clean.Native.Operations.ClockOrder
 import SP1Clean.Native.Operations.BoundedWord
 import SP1Clean.Circuits.Gadgets.U16toU8Safe
@@ -7,8 +8,8 @@ import Clean.Gadgets.Equality
 
 /-! # A native commitment call and its mutable bank transition
 
-The bank/slot parameters define sixteen ordinary Clean components. A row has no padding: its
-HostCall pull accounts for one actual instruction. PublicValues pushes preserve the original
+The bank/slot parameters define sixteen Clean components. An active row
+consumes one actual instruction handoff; the formal wrapper guards padding rows. PublicValues pushes preserve the original
 instruction checks while the separate state channel carries the mutable bank history.
 -/
 
@@ -33,6 +34,7 @@ def main (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p)) : Circui
   let _ ← ClockOrder.circuit input.clock
   let _ ← BoundedWord.circuit (bound p deferred) (bound_fits p deferred) ⟨input.call.arg2, input.comparison⟩
   assertion U16toU8OperationSafe.circuit ⟨input.call.arg2, input.bytes, 1⟩
+  CommitmentDeclaration.channel.pull (CommitmentDeclaration.request deferred slot input.call.arg2)
   HostCallChip.channel.pull input.call
   (stateChannel deferred).pull input.previous
   (stateChannel deferred).push (input.next slot)

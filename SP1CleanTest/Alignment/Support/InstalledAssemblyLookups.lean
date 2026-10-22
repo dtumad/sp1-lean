@@ -11,9 +11,9 @@ open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.C
 /-- All installed providers use AIR constraints and channels; no legacy lookup oracle remains. -/
 def fixed (_context : Context) : List (FiniteLookup Fp) := []
 
-/-- Component selection ranges over all 94 installed physical slots. -/
+/-- Component selection in the original 94-slot assembly, before the appended declaration source. -/
 abbrev componentAt (context : Context) (index : Fin 94) : Component Fp :=
-  (assembly context).tables[index.val]'(by change index.val < 94; exact index.isLt)
+  (withoutCommitments context).tables[index.val]'(by rw [without_tables_length]; exact index.isLt)
 
 attribute [local circuit_norm]
   Gadgets.BitwiseByte.circuit
@@ -886,7 +886,7 @@ private theorem lookup_slot_93 (context : Context) :
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
-/-- Each installed component has exactly its listed fixed-table predicates. -/
+/-- Every original component has exactly its listed fixed-table predicates. -/
 theorem lookup_slot (context : Context) (index : Fin 94) :
     (componentAt context index).rowOperations.lookups.map (·.table) = [] := by
   fin_cases index
@@ -988,9 +988,15 @@ theorem lookup_slot (context : Context) (index : Fin 94) :
 /-- Every installed component is lookup-free, including currently unused physical slots. -/
 theorem component_lookups (context : Context) (component : Component Fp)
     (member : component ∈ (assembly context).tables) : component.operations.lookups = [] := by
-  obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
-  rw [Component.lookups_eq]
-  exact List.map_eq_nil_iff.mp (lookup_slot context ⟨index, bound⟩)
+  rw [tables_eq] at member
+  rcases List.mem_append.mp member with original | added
+  · obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp original
+    have small : index < 94 := by simpa only [without_tables_length] using bound
+    rw [Component.lookups_eq]
+    exact List.map_eq_nil_iff.mp (lookup_slot context ⟨index, small⟩)
+  · obtain rfl := List.mem_singleton.mp added
+    simp [CommitmentDeclaration.source, StaticTable.payloadComponent, StaticTable.payloadProvider,
+      Component.lookups_eq, Component.rowOperations, circuit_norm]
 
 /-- The empty lookup inventory covers every installed operation. -/
 theorem lookups_complete (context : Context) (component : Component Fp)

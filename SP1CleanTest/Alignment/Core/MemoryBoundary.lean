@@ -292,6 +292,9 @@ private def bootPublic : SP1PublicIO Fp where
   exit_code := 0
   is_execution_shard := 1
   committed_value_digest := Vector.replicate 32 0
+  deferredProofsDigest := Vector.replicate 8 0
+  commitSyscall := 0
+  commitDeferredSyscall := 0
 
 private def nativeVerifierLedger (pi : SP1PublicIO Fp) :=
   let env := Environment.fromInput pi (fun _ _ => #[])

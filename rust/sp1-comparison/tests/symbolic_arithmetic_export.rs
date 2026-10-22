@@ -1,4 +1,4 @@
-//! Exact ADD conformance by bounded-degree polynomial interpolation.
+//! Exact ADD, ADDI, ADDW, SUB and SUBW conformance by bounded-degree polynomial interpolation.
 //!
 //! Uses the emitted AIR and released SP1 evaluators, with degree bounds from their
 //! upstream symbolic expressions. No expression interpreter or Rust-to-Lean oracle.
@@ -26,12 +26,19 @@ use slop_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, PairBuilder
 use slop_algebra::{AbstractField, Field, PrimeField64 as Sp1PrimeField64};
 use slop_matrix::dense::RowMajorMatrix;
 use slop_uni_stark::{
-    get_symbolic_constraints, Entry, SymbolicExpression, SymbolicVariable as Sp1Variable,
+    get_symbolic_constraints, Entry, SymbolicAirBuilder, SymbolicExpression,
+    SymbolicVariable as Sp1Variable,
 };
 use sp1_core_machine::{
-    adapter::register::r_type::RTypeReader,
+    adapter::register::{alu_type::ALUTypeReader, i_type::ITypeReader, r_type::RTypeReader},
     air::TrivialOperationBuilder,
-    alu::add_sub::add::{AddChip, AddCols},
+    alu::add_sub::{
+        add::{AddChip, AddCols},
+        addi::{AddiChip, AddiCols},
+        addw::{AddwChip, AddwCols},
+        sub::{SubChip, SubCols},
+        subw::{SubwChip, SubwCols},
+    },
     SupervisorMode,
 };
 use sp1_hypercube::{
@@ -41,13 +48,19 @@ use sp1_hypercube::{
 use sp1_primitives::SP1Field as S;
 use std::collections::BTreeSet;
 
-#[allow(dead_code, unused_imports, unused_variables, unused_parens)]
-mod generated {
-    include!(concat!(
-        env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
-        "/add_instruction.rs"
-    ));
+macro_rules! fixture {
+    ($module:ident, $file:literal) => {
+        #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
+        mod $module {
+            include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/", $file));
+        }
+    };
 }
+fixture!(add, "add_instruction.rs");
+fixture!(addi, "addi_instruction.rs");
+fixture!(addw, "addw_instruction.rs");
+fixture!(sub, "sub_instruction.rs");
+fixture!(subw, "subw_instruction.rs");
 #[allow(dead_code)]
 #[path = "support/export.rs"]
 mod support;
@@ -159,13 +172,21 @@ enum Mutation {
     DegreeFour,
 }
 
-fn native_constraints<E: PrimeCharacteristicRing + Clone>(row: &[E], mutation: Mutation) -> Vec<E> {
-    let mut values = generated::Ensemble::constraints(0, row);
+fn native_constraints<P: GeneratedAirSpec, E: PrimeCharacteristicRing + Clone>(
+    row: &[E],
+    mutation: Mutation,
+    zero_constraints: &[usize],
+) -> Vec<E> {
+    let mut values = P::constraints(0, row);
     match mutation {
-        // This is an adversarial control, not a compatibility mapping. If the
-        // generated order changes, its expected missing-zero failure must still occur.
+        // Remove every independently identified affine zero-column assertion.
+        // Discovery uses the real evaluator on a determining affine basis.
         Mutation::DropZero => {
-            values.remove(15);
+            values = values
+                .into_iter()
+                .enumerate()
+                .filter_map(|(index, value)| (!zero_constraints.contains(&index)).then_some(value))
+                .collect();
         }
         Mutation::ActiveOnly => values.push(row[0].clone() - E::ONE),
         Mutation::DegreeFour => values.push(row[0].clone().exp_u64(4)),
@@ -174,18 +195,22 @@ fn native_constraints<E: PrimeCharacteristicRing + Clone>(row: &[E], mutation: M
     values
 }
 
-fn native_interactions<E: PrimeCharacteristicRing + Clone>(
+fn native_interactions<P: GeneratedAirSpec, E: PrimeCharacteristicRing + Clone>(
     row: &[E],
     mutation: Mutation,
 ) -> Vec<clean_backend::witness_generation::Interaction<E>> {
-    let mut values = generated::Ensemble::interactions(0, row);
+    let mut values = P::interactions(0, row);
     if matches!(mutation, Mutation::FlipMultiplicity) {
         values[0].multiplicity = -values[0].multiplicity.clone();
     }
     values
 }
 
-fn sp1_evaluate(row: &[u64], mode: u64) -> support::Sp1Evaluation {
+fn sp1_evaluate<C: Air<support::Sp1Evaluation>>(
+    chip: &C,
+    row: &[u64],
+    mode: u64,
+) -> support::Sp1Evaluation {
     let mut public = vec![S::zero(); SP1_PROOF_NUM_PV_ELTS];
     public[mode_flag()] = S::from_canonical_u64(mode);
     let mut sp1 = support::Sp1Evaluation {
@@ -195,21 +220,26 @@ fn sp1_evaluate(row: &[u64], mode: u64) -> support::Sp1Evaluation {
         ledger: vec![],
         public,
     };
-    AddChip::<SupervisorMode>::default().eval(&mut sp1);
+    chip.eval(&mut sp1);
     sp1
 }
 
-fn evaluate(row: &[u64], mutation: Mutation) -> (Vec<S>, Vec<S>, support::Ledger, support::Ledger) {
-    let sp1 = sp1_evaluate(row, 0);
+fn evaluate<P: GeneratedAirSpec, C: Air<support::Sp1Evaluation>>(
+    chip: &C,
+    row: &[u64],
+    mutation: Mutation,
+    zero_constraints: &[usize],
+) -> (Vec<S>, Vec<S>, support::Ledger, support::Ledger) {
+    let sp1 = sp1_evaluate(chip, row, 0);
     let native = std::iter::once(*row.last().unwrap())
         .chain(row[..row.len() - 1].iter().copied())
         .map(F::from_u64)
         .collect::<Vec<_>>();
-    let constraints = native_constraints(&native, mutation)
+    let constraints = native_constraints::<P, _>(&native, mutation, zero_constraints)
         .into_iter()
         .map(|v| S::from_canonical_u64(v.as_canonical_u64()))
         .collect();
-    let ledger = native_interactions(&native, mutation)
+    let ledger = native_interactions::<P, _>(&native, mutation)
         .into_iter()
         .map(|v| {
             (
@@ -256,17 +286,28 @@ fn normalized(values: &[Vec<S>]) -> BTreeSet<Vec<u64>> {
         .collect()
 }
 
-fn compare(mutation: Mutation) {
-    let chip = AddChip::<SupervisorMode>::default();
-    let width = <AddChip<SupervisorMode> as BaseAir<S>>::width(&chip);
-    assert_eq!(generated::Ensemble::WIDTHS, &[width]);
+fn compare<P, C>(chip: C, zero_column: usize, input_width: usize, mutation: Mutation)
+where
+    P: GeneratedAirSpec + clean_backend::witness_generation::Program<F>,
+    C: Air<support::Sp1Evaluation> + Air<SymbolicAirBuilder<S>> + Air<CheckedInteractions>,
+{
+    let width = <C as BaseAir<S>>::width(&chip);
+    assert!(zero_column < width - 1);
+    assert_eq!(P::PROVER_INPUTS, input_width);
+    // Independent SP1 offsets above define the map. Verify it is a permutation.
+    let mut permutation = std::iter::once(width - 1)
+        .chain(0..width - 1)
+        .collect::<Vec<_>>();
+    permutation.sort_unstable();
+    assert_eq!(permutation, (0..width).collect::<Vec<_>>());
+    assert_eq!(P::WIDTHS, &[width]);
     assert_eq!(
-        generated::Ensemble::FIELD_ORDER,
+        <P as GeneratedAirSpec>::FIELD_ORDER,
         <F as PrimeField64>::ORDER_U64
     );
-    assert_eq!(generated::Ensemble::FIXED_WIDTHS, &[0]);
-    assert_eq!(generated::Ensemble::PUBLIC_VALUES, 0);
-    assert_eq!(generated::Ensemble::VERIFIER_INTERACTIONS, 0);
+    assert_eq!(<P as GeneratedAirSpec>::FIXED_WIDTHS, &[0]);
+    assert_eq!(P::PUBLIC_VALUES, 0);
+    assert_eq!(P::VERIFIER_INTERACTIONS, 0);
     assert_eq!(
         <F as PrimeField64>::ORDER_U64,
         <S as Sp1PrimeField64>::ORDER_U64
@@ -277,7 +318,7 @@ fn compare(mutation: Mutation) {
     }
     // The feature adds a supervisor-mode assertion, not user-mode conformance.
     assert_eq!(
-        sp1_evaluate(&vec![0; width], 1)
+        sp1_evaluate(&chip, &vec![0; width], 1)
             .constraints
             .iter()
             .all(|v| *v == S::zero()),
@@ -291,7 +332,37 @@ fn compare(mutation: Mutation) {
             ))
         })
         .collect::<Vec<_>>();
-    let native = native_constraints(&row, mutation);
+    let original = P::constraints(0, &row);
+    let basis = (0..=width)
+        .map(|point| {
+            let mut values = vec![F::ZERO; width];
+            if point > 0 {
+                values[point - 1] = F::ONE;
+            }
+            P::constraints(0, &values)
+        })
+        .collect::<Vec<_>>();
+    let zero_constraints = original
+        .iter()
+        .enumerate()
+        .filter_map(|(index, expr)| {
+            (expr.degree_multiple() <= 1
+                && basis.iter().enumerate().all(|(point, values)| {
+                    values[index]
+                        == if point == zero_column + 2 {
+                            F::ONE
+                        } else {
+                            F::ZERO
+                        }
+                }))
+            .then_some(index)
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        !zero_constraints.is_empty(),
+        "unmodified native AIR must force its mapped zero column"
+    );
+    let native = native_constraints::<P, _>(&row, mutation, &zero_constraints);
     let degree = sp1
         .iter()
         .map(SymbolicExpression::degree_multiple)
@@ -301,9 +372,9 @@ fn compare(mutation: Mutation) {
     assert!(degree < <S as Sp1PrimeField64>::ORDER_U64 as usize);
     assert!(
         degree <= 3,
-        "pilot grid budget; never silently truncate degree"
+        "arithmetic grid budget; never silently truncate degree"
     );
-    for interaction in native_interactions(&row, mutation) {
+    for interaction in native_interactions::<P, _>(&row, mutation) {
         assert!(interaction.multiplicity.degree_multiple() <= 1);
         assert!(interaction.message.iter().all(|v| v.degree_multiple() <= 1));
     }
@@ -311,8 +382,6 @@ fn compare(mutation: Mutation) {
     let mut interactions = CheckedInteractions::new(width);
     chip.eval(&mut interactions);
     let (sends, receives) = interactions.inner.interactions();
-    let zero_column = std::mem::offset_of!(AddCols<u8, SupervisorMode>, adapter)
-        + std::mem::offset_of!(RTypeReader<u8>, op_a_0);
     let mut left = vec![Vec::new(); sp1.len()];
     let mut right = vec![Vec::new(); native.len()];
     let mut ledger_left: Vec<(String, Vec<Vec<u64>>)> = vec![];
@@ -324,7 +393,7 @@ fn compare(mutation: Mutation) {
             values[point - 1] = 1;
         }
         expected_zero.push(S::from_canonical_u64(values[zero_column]));
-        let (a, b, la, lb) = evaluate(&values, mutation);
+        let (a, b, la, lb) = evaluate::<P, _>(&chip, &values, mutation, &zero_constraints);
         assert_eq!(a.len(), left.len());
         assert_eq!(b.len(), right.len());
         for (target, value) in left.iter_mut().zip(a) {
@@ -370,7 +439,7 @@ fn compare(mutation: Mutation) {
     }
     let mut points = 0usize;
     grid(&mut vec![0; width], 0, degree, zero_column, &mut |values| {
-        let (a, b, _, _) = evaluate(values, mutation);
+        let (a, b, _, _) = evaluate::<P, _>(&chip, values, mutation, &zero_constraints);
         assert_eq!(a.len(), left.len());
         assert_eq!(b.len(), right.len());
         for (target, value) in left.iter_mut().zip(a) {
@@ -397,36 +466,68 @@ fn compare(mutation: Mutation) {
     );
 }
 
+// These offsets come from the pinned release's concrete layouts, never generated metadata.
+fn compare_arithmetic(family: usize, mutation: Mutation) {
+    macro_rules! family {
+        ($module:ident, $chip:ident, $cols:ident, $reader:ident, $operation:ident) => {{
+            type Columns = $cols<u8, SupervisorMode>;
+            let real = std::mem::offset_of!(Columns, is_real);
+            assert_eq!(real + 1, std::mem::size_of::<Columns>());
+            let zero =
+                std::mem::offset_of!(Columns, adapter) + std::mem::offset_of!($reader<u8>, op_a_0);
+            println!("{}: {mutation:?}", stringify!($module));
+            compare::<$module::Ensemble, _>(
+                $chip::<SupervisorMode>::default(),
+                zero,
+                std::mem::offset_of!(Columns, $operation) + 1,
+                mutation,
+            );
+        }};
+    }
+    match family {
+        0 => family!(add, AddChip, AddCols, RTypeReader, add_operation),
+        1 => family!(addi, AddiChip, AddiCols, ITypeReader, add_operation),
+        2 => family!(addw, AddwChip, AddwCols, ALUTypeReader, addw_operation),
+        3 => family!(sub, SubChip, SubCols, RTypeReader, sub_operation),
+        4 => family!(subw, SubwChip, SubwCols, RTypeReader, subw_operation),
+        _ => unreachable!(),
+    }
+}
+
 #[test]
-fn add_constraints_and_interactions_agree_for_all_rows() {
-    compare(Mutation::None);
+fn arithmetic_constraints_and_interactions_agree_for_all_rows() {
+    for family in 0..5 {
+        compare_arithmetic(family, Mutation::None);
+    }
 }
 
 #[test]
 fn interpolation_guard_rejects_constraint_bus_and_domain_changes() {
-    for (mutation, expected) in [
-        (
-            Mutation::DropZero,
-            "native system must independently enforce op_a_0 = 0",
-        ),
-        (Mutation::ActiveOnly, "constraint polynomial systems"),
-        (
-            Mutation::FlipMultiplicity,
-            "complete affine interaction multisets",
-        ),
-        (Mutation::DegreeFour, "pilot grid budget"),
-    ] {
-        let error = std::panic::catch_unwind(|| compare(mutation))
-            .expect_err("adversarial AIR change must be detected");
-        let message = error
-            .downcast_ref::<String>()
-            .map(String::as_str)
-            .or_else(|| error.downcast_ref::<&str>().copied())
-            .unwrap_or("");
-        assert!(
-            message.contains(expected),
-            "{mutation:?}: unexpected failure: {message}"
-        );
+    for family in 0..5 {
+        for (mutation, expected) in [
+            (
+                Mutation::DropZero,
+                "native system must independently enforce op_a_0 = 0",
+            ),
+            (Mutation::ActiveOnly, "constraint polynomial systems"),
+            (
+                Mutation::FlipMultiplicity,
+                "complete affine interaction multisets",
+            ),
+            (Mutation::DegreeFour, "arithmetic grid budget"),
+        ] {
+            let error = std::panic::catch_unwind(|| compare_arithmetic(family, mutation))
+                .expect_err("adversarial AIR change must be detected");
+            let message = error
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| error.downcast_ref::<&str>().copied())
+                .unwrap_or("");
+            assert!(
+                message.contains(expected),
+                "{mutation:?}: unexpected failure: {message}"
+            );
+        }
     }
     // The stock interaction collector supplies zero public values. A symbolic
     // public dependency must be rejected before that can hide it from the check.

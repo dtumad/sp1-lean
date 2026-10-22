@@ -32,14 +32,17 @@ BUILD_TARGETS = [
     "SP1CleanTest.Core.HintSourceExport",
     "SP1CleanTest.Alignment.Support.InstalledAssemblyExport",
     "SP1CleanTest.Alignment.Support.StoppedAssemblyFixture",
-    "SP1CleanTest.Alignment.Support.HintReadAssemblyFixture"
+    "SP1CleanTest.Alignment.Support.HintReadAssemblyFixture",
+    "SP1CleanTest.Alignment.Support.HaltAssemblyFixture",
+    "SP1CleanTest.Alignment.Support.CommitAssemblyFixture",
+    "SP1CleanTest.Alignment.Support.MixedAssemblyExport"
 ]
 RUST_TESTS = {
-    "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
-    "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
+    "clean_export": 17, "instruction_export": 26, "symbolic_arithmetic_export": 2, "system_export": 4,
+    "syscall_export": 7, "host_control_export": 8, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
-    "installed_assembly_export": 13,
+    "installed_assembly_export": 19, "mixed_assembly_export": 6,
 }
 
 
@@ -75,7 +78,15 @@ def artifact_names():
               "installed_hint_word_padding.rs", "installed_hint_word_padding.reference.json"]
     files += [name + suffix
               for name in ["installed_stopped_zero", "installed_stopped_wide",
-                           "installed_stopped_changed", "installed_fabricated_halt"]
+                           "installed_stopped_changed", "installed_fabricated_halt",
+                           "installed_halt_zero", "installed_halt_wide", "installed_halt_max",
+                           "installed_commit_repeat", "installed_deferred_repeat",
+                           "installed_commit_partial_halt", "installed_commit_complete_halt"]
+              for suffix in [".rs", ".reference.json"]]
+    files += [name + suffix
+              for name in ["installed_ordinary", "installed_ordinary_prefix", "installed_ordinary_suffix",
+                           "installed_ordinary_empty", "installed_hints_empty", "installed_hints_tail",
+                           "installed_hints_aligned", "installed_enter"]
               for suffix in [".rs", ".reference.json"]]
     return files
 
@@ -209,7 +220,7 @@ def generate(out, env):
 
 def compare_rust(out, env):
     """Keep the large assembly's compiler cost separate from component optimization."""
-    assembly = {"installed_assembly_export": RUST_TESTS["installed_assembly_export"]}
+    assembly = {name: RUST_TESTS[name] for name in ["installed_assembly_export", "mixed_assembly_export"]}
     components = {name: count for name, count in RUST_TESTS.items() if name not in assembly}
     groups = [
         ("components", components, []),

@@ -85,28 +85,29 @@ theorem receiver_tables
 
 private theorem read_calls (deferred : Bool) (slots : List (Fin 8))
     (tables terminal : List (Table (ZMod p))) (size : slots.length = tables.length) :
-    (TransitionView.readIndexedRows (slots.map some ++ [none]) (tables ++ terminal)).filterMap call? =
+    (TransitionView.readIndexedActiveRows (slots.map some ++ [none]) (view deferred) (tables ++ terminal)).filterMap call? =
       ReceiverView.messages (slots.map (HostCallReceivers.commit deferred)) tables := by
   induction slots generalizing tables with
   | nil =>
       have empty : tables = [] := List.length_eq_zero_iff.mp size.symm
       subst tables
-      cases terminal <;> simp [TransitionView.readIndexedRows, call?, ReceiverView.messages]
+      cases terminal <;> simp [TransitionView.readIndexedActiveRows, TransitionView.readIndexedRows, call?, ReceiverView.messages]
   | cons slot slots ih =>
       cases tables with
       | nil => simp at size
       | cons table tables =>
-          simp only [List.map_cons, List.cons_append, TransitionView.readIndexedRows,
-            List.zip_cons_cons, List.flatMap_cons, List.filterMap_append] at ih ⊢
+          simp only [List.map_cons, List.cons_append, TransitionView.readIndexedActiveRows, TransitionView.readIndexedRows,
+            List.zip_cons_cons, List.flatMap_cons, List.filter_append, List.filterMap_append] at ih ⊢
           rw [ReceiverView.messages_cons, ih tables (by simpa using size)]
-          simp only [List.filterMap_map, Function.comp_def, call?, Option.map_some, List.filterMap_eq_map',
-            ReceiverView.tableMessages, HostCallReceivers.commit_message]
+          simp only [List.filter_map, List.filterMap_map, Function.comp_def, call?, Option.map_some,
+            List.filterMap_eq_map', ReceiverView.tableMessages, HostCallReceivers.commit_message,
+            view, HostCommitHistory.view_activity, HostCallReceivers.commit_activity]
 
 /-- Erasing the bank terminal leaves precisely its eight physical handler tables. -/
 theorem calls_eq_slot_tables (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (channels := channels)) :
-    (TransitionView.readIndexedRows indices (bankTables deferred witness)).filterMap call? =
+    (TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)).filterMap call? =
       ReceiverView.messages (List.ofFn fun slot => HostCallReceivers.commit deferred slot)
         (((HostLocalHandoff.receiverTables (HostHintQueueBoundary.projected witness)).drop
           (if deferred then 11 else 3)).take 8) := by
@@ -266,7 +267,7 @@ theorem ordered_history (deferred : Bool)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices (bankTables deferred witness)) ∧
+      path.Perm (TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)) ∧
       Walk.IsWalk (edge deferred)
         (HostCommitBoundary.start (HostCommitEnsemble.sourceValues deferred source.host))
         (HostCommitBoundary.final (HostCommitEnsemble.sourceValues deferred bankFinal)) path ∧
@@ -301,7 +302,7 @@ theorem ordered_calls (deferred : Bool)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext) :
     ∃ calls : List (HostCallChip.Message (ZMod p)),
-      calls.Perm ((TransitionView.readIndexedRows indices (bankTables deferred witness)).filterMap call?) ∧
+      calls.Perm ((TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)).filterMap call?) ∧
       (calls.map fun call => Semantics.clkNat call.clk_high call.clk_low).Pairwise (· < ·) ∧
       calls.foldlM (executeCall deferred policy context) source.host =
         some ((HostCommitBoundary.final (HostCommitEnsemble.sourceValues (p := p) deferred bankFinal)).apply

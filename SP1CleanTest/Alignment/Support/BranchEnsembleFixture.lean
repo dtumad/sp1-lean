@@ -34,6 +34,7 @@ def context (target : MemorySnapshot) : Context where
   target := target
   finalHints := SP1Clean.HostHintQueueBoundary.initial []
   finalHost := source.host
+  commitments := default
 /-- Public ordinary-step endpoints, not a HALT endpoint claim. -/
 def header : SP1PublicIO Fp where
   init_clk_0_16 := 1
@@ -53,6 +54,9 @@ def header : SP1PublicIO Fp where
   exit_code := 0
   is_execution_shard := 1
   committed_value_digest := Vector.replicate 32 0
+  deferredProofsDigest := Vector.replicate 8 0
+  commitSyscall := 0
+  commitDeferredSyscall := 0
 /-- Empty execution preserves the complete source clock and PC. -/
 def identityHeader : SP1PublicIO Fp :=
   { header with
@@ -151,7 +155,7 @@ def builtTables (target : MemorySnapshot) (seeds : List Seed)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
     (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
     "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program", "sp1.native.write_permission",
-    "sp1.native.hint_node", "sp1.native.hint_word"]
+    "sp1.native.hint_node", "sp1.native.hint_word", "sp1.native.commitment_declaration"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
   SP1CleanTest.StaticMembership.buildTables components inputs ledger data (ProverHint.empty Fp)
     (fun index => by
@@ -166,12 +170,12 @@ theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed)
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
-/-- Building rows never changes the complete 94-table host inventory. -/
+/-- Building rows never changes the complete 95-table host inventory. -/
 theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
-    (builtTables target seeds bounded).length = 94 := by
+    (builtTables target seeds bounded).length = 95 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
-  rfl
+  exact tables_length (context target)
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/
 def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :

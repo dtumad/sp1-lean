@@ -30,6 +30,9 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
+/-- Physical padding adds a Boolean activity cell to the semantic call payload. -/
+abbrev RowInput := ProvablePair Inputs field
+
 def codeWord {R : Type} [NatCast R] [Zero R] (deferred : Bool) : Word R :=
   #v[(if deferred then 26 else 16 : ℕ), 0, 0, 0]
 

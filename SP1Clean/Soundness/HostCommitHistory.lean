@@ -37,21 +37,39 @@ private theorem eval_next (env : Environment (ZMod p)) (input : Var Inputs (ZMod
 
 def view (deferred : Bool) (slot : Fin 8) : TransitionView (stateChannel (p := p) deferred) where
   component := { circuit := HostCommitChip.circuit deferred slot, Assumptions := (HostCommitChip.circuit deferred slot).Assumptions }
+  activity := (varFromOffset RowInput 0).2
   edge env :=
-    let input := valueFromOffset Inputs 0 env
+    let input := (valueFromOffset RowInput 0 env).1
     (input.previous, input.next slot)
+  activity_binary := by
+    intro env valid
+    rw [Guarded.eval_activity, eval_varFromOffset_valueFromOffset]
+    exact valid.1
+  activity_of_constraints := by
+    intro env valid
+    rw [Component.constraintsHold_iff] at valid
+    exact Guarded.activity_of_constraints (activeCircuit deferred slot) inferInstance
+      (varFromOffset RowInput 0) (size RowInput) env valid
   interactions := by
     intro env
-    simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
-      Component.rowOperations, HostCommitChip.circuit]
-    rw [main_state_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed,
-      eval_previous, eval_next, eval_varFromOffset_valueFromOffset]
-    rfl
+    simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
+    change (((circuit deferred slot).main (varFromOffset RowInput 0)).operations
+      (size RowInput)).interactionValuesWith (stateChannel deferred).toRaw env = _
+    rw [guarded_state_values, eval_previous, eval_next]
+    have decoded := eval_varFromOffset_valueFromOffset RowInput 0 env
+    rw [CircuitType.eval_var_provablePair] at decoded
+    have payload := congrArg Prod.fst decoded
+    change Eval.eval env (varFromOffset RowInput 0).1 = (valueFromOffset RowInput 0 env).1 at payload
+    rw [payload]
+
+/-- The physical guard is independent of the selected bank and slot. -/
+theorem view_activity (deferred : Bool) (slot : Fin 8) :
+    (view (p := p) deferred slot).activity = (varFromOffset RowInput 0).2 := by
+  simp only [view]
 
 abbrev Row := Fin 8 × Environment (ZMod p)
 
-def rowInput (row : Row (p := p)) : Inputs (ZMod p) := valueFromOffset Inputs 0 row.2
+def rowInput (row : Row (p := p)) : Inputs (ZMod p) := (valueFromOffset RowInput 0 row.2).1
 
 def edge (row : Row (p := p)) : State (ZMod p) × State (ZMod p) :=
   ((rowInput row).previous, (rowInput row).next row.1)
@@ -87,34 +105,30 @@ private theorem fold_of_walk (deferred : Bool) (policy : HostPolicy)
 private theorem rows_spec (deferred : Bool) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun slot table => (view deferred slot).component = table.component)
       (List.finRange 8) tables) (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ row ∈ TransitionView.readIndexedRows (List.finRange 8) tables,
+    ∀ row ∈ TransitionView.readIndexedActiveRows (List.finRange 8) (view deferred) tables,
       Spec deferred row.1 (rowInput row) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       ((List.finRange 8).map (view deferred)) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  exact TransitionView.readIndexedRows_spec (List.finRange 8) (view deferred) tables alignment valid
+  intro row member
+  have checked := TransitionView.readIndexedActiveRows_spec (List.finRange 8) (view deferred) tables alignment valid row member
+  have active := (TransitionView.mem_readIndexedActiveRows.mp member).2
+  rw [view_activity] at active
+  rw [Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at active
+  exact checked.2 active
 
 private theorem rows_balanced (deferred : Bool) (tables : List (Table (ZMod p)))
     (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun slot table => (view deferred slot).component = table.component)
       (List.finRange 8) tables)
+    (valid : ∀ table ∈ tables, table.Spec)
     (balanced : BalancedInteractions
       ([(stateChannel deferred).pushedValue initial, (stateChannel deferred).pulledValue final] ++
         tables.flatMap (·.interactionsWith (stateChannel deferred).toRaw))) :
-    EndpointBalanced (↑(TransitionView.readIndexedRows (List.finRange 8) tables)) edge initial final := by
-  let rows := TransitionView.readIndexedRows (List.finRange 8) tables
-  have alignment : List.Forall₂ (fun view table => view.component = table.component)
-      ((List.finRange 8).map (view deferred)) tables := by
-    simpa only [List.forall₂_map_left_iff] using aligned
-  have projected := TransitionView.readRows_interactions
-    ((List.finRange 8).map (view deferred)) tables alignment
-  rw [TransitionView.readRows_eq_indexed] at projected
-  simp only [List.flatMap_map] at projected
-  rw [projected] at balanced
-  change BalancedInteractions ((stateChannel deferred).transitionLedger initial final rows edge) at balanced
-  have endpoints := ((stateChannel deferred).transitionLedger_balanced_iff initial final rows edge).mp balanced
-  simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe]
-    using endpoints.2
+    EndpointBalanced (↑(TransitionView.readIndexedActiveRows (List.finRange 8) (view deferred) tables)) edge initial final := by
+  have endpoints := TransitionView.active_endpoints_perm (List.finRange 8) (view deferred)
+    tables initial final (by simpa only [List.forall₂_map_left_iff] using aligned) valid balanced
+  exact Quot.sound endpoints
 
 private theorem strict_of_spec (deferred : Bool) (slot : Fin 8) (input : Inputs (ZMod p))
     (valid : Spec deferred slot input) :
@@ -142,7 +156,7 @@ private theorem history_of_balance (deferred : Bool) (rows : List (Row (p := p))
   intro row member
   exact valid row (perm.mem_iff.mp member)
 
-/-- Balanced physical bank tables execute every row exactly once and produce their final bank.
+/-- Balanced physical bank tables execute every active row exactly once and produce their final bank.
 The endpoint and local-spec premises are explicit integration boundaries. -/
 theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
     (initial final : State (ZMod p))
@@ -155,11 +169,11 @@ theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) (host : HostState) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows (List.finRange 8) tables) ∧
+      path.Perm (TransitionView.readIndexedActiveRows (List.finRange 8) (view deferred) tables) ∧
       Walk.IsWalk edge initial final path ∧
       path.foldlM (execute deferred policy context) (initial.apply deferred host) =
         some (final.apply deferred host) := by
   exact history_of_balance deferred _ initial final (rows_spec deferred tables aligned valid)
-    (rows_balanced deferred tables initial final aligned balanced) policy characteristic context host
+    (rows_balanced deferred tables initial final aligned valid balanced) policy characteristic context host
 
 end SP1Clean.Soundness.HostCommitHistory

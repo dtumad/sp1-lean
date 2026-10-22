@@ -70,6 +70,8 @@ import SP1Clean.FormalModel.Contracts.HintReadWord
 import SP1Clean.FormalModel.Contracts.HintWords
 import SP1Clean.FormalModel.Contracts.HostBuffer32
 import SP1Clean.FormalModel.Contracts.HostCall
+import SP1Clean.FormalModel.Contracts.CommitmentBoundary
+import SP1Clean.FormalModel.Contracts.CommitmentStatement
 import SP1Clean.FormalModel.Contracts.HostCommit
 import SP1Clean.FormalModel.Contracts.HostCommitBoundary
 import SP1Clean.FormalModel.Contracts.HostControl
@@ -137,6 +139,7 @@ import SP1Clean.Model.CleanLedger
 import SP1Clean.Model.Core.AddressRange
 import SP1Clean.Model.Core.BankReplay
 import SP1Clean.Model.Core.Boot
+import SP1Clean.Model.Core.CommitmentStatement
 import SP1Clean.Model.Core.Execution
 import SP1Clean.Model.Core.ExecutionBoot
 import SP1Clean.Model.Core.ExecutionCompatibility
@@ -327,6 +330,8 @@ import SP1Clean.Native.Operations.HintReadSpan
 import SP1Clean.Native.Operations.HintReadStep
 import SP1Clean.Native.Operations.HostBoundary
 import SP1Clean.Native.Operations.HostBuffer32
+import SP1Clean.Native.Operations.CommitmentBoundary
+import SP1Clean.Native.Operations.CommitmentStatement
 import SP1Clean.Native.Operations.HostCommitBoundary
 import SP1Clean.Native.Operations.HostCommitEndpoint
 import SP1Clean.Native.Operations.HostExitBoundary
@@ -451,6 +456,7 @@ import SP1Clean.Proofs.Chips.HostCallChip.Formal
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
+import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
 import SP1Clean.Proofs.Chips.HostCommitChip.Formal
 import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
@@ -576,6 +582,7 @@ import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
 import SP1Clean.Proofs.Operations.AddressDiv8
 import SP1Clean.Proofs.Operations.AddressOperation.Witgen
 import SP1Clean.Proofs.Operations.AddwOperation.Formal
+import SP1Clean.Proofs.Operations.CommitmentStatement
 import SP1Clean.Proofs.Operations.ClockOrderPopulate
 import SP1Clean.Proofs.Operations.DivRemOperation.Compare
 import SP1Clean.Proofs.Operations.DivRemOperation.Core

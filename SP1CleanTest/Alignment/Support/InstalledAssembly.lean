@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostFinalMemory
+import SP1Clean.Soundness.CommitmentEnsemble
 import ToClean.Air.ChannelRegistry
 import ToClean.Air.TableBuild
 
@@ -29,13 +30,53 @@ structure Context where
   finalHints : HostHintQueue.State Fp
   /-- Host endpoint supplying the outgoing banks and optional exit status. -/
   finalHost : HostState
+  /-- Immutable proof statement, independent of partially populated mutable banks. -/
+  commitments : CommitmentStatement
 
 /-- All installed components, source resources and target checks in their canonical order. -/
-def assembly (context : Context) : Ensemble Fp SP1PublicIO :=
+def withoutCommitments (context : Context) : Ensemble Fp SP1PublicIO :=
   HostFinalMemory.ensemble context.image context.source context.target
     context.finalHints context.finalHost HostCallReceivers.available
     (HostHintReadLocal.sourceResources context.source.host.io.hints) []
     (HostFinalMemory.source_unique_names context.image context.source context.target)
+
+/-- The declaration provider has a fresh name in the complete host inventory. -/
+theorem declaration_fresh (context : Context) :
+    (CommitmentDeclaration.source (p := SP1Prime) context.commitments).circuit.name ∉
+      (withoutCommitments context).tables.map (·.circuit.name) := by
+  change "sp1.native.commitment_declaration.source" ∉ _
+  simp only [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
+    HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
+    FinalReceiptEnsemble.install, Ensemble.replaceComponent, HostFinalMemory.base,
+    HostHintQueueBoundary.ensemble, HaltPadding.install, HostHintReadLocal.ensemble,
+    HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install,
+    HostLocalCore.baseEnsemble]
+  simp only [List.map_set, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
+    LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
+    SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
+    MemorySnapshot.registerTable, StaticTable.ofRows, FinalMemoryChecks.checkTables,
+    FinalRegisterValue.membership, HostHintReadLocal.sourceResources,
+    HostHintQueue.source, HostHintQueue.sourceWord, StaticTable.payloadComponent,
+    StaticTable.payloadProvider]
+  exact of_decide_eq_true rfl
+
+/-- Complete production assembly with the verifier-owned commitment statement installed. -/
+def assembly (context : Context) : Ensemble Fp SP1PublicIO :=
+  CommitmentEnsemble.install context.commitments (withoutCommitments context) (declaration_fresh context)
+
+theorem without_tables_length (context : Context) : (withoutCommitments context).tables.length = 94 := by
+  simp only [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
+    HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
+    FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set,
+    HostFinalMemory.base_tables_length]
+  rfl
+
+theorem tables_eq (context : Context) : (assembly context).tables =
+    (withoutCommitments context).tables ++ [CommitmentDeclaration.source context.commitments] := rfl
+
+theorem tables_length (context : Context) : (assembly context).tables.length = 95 := by
+  rw [tables_eq, List.length_append, without_tables_length]
+  rfl
 
 /-- One consumer input at its actual physical table position. -/
 structure Seed where
@@ -60,6 +101,24 @@ def seedValid (tables : List (Component Fp)) (seed : Seed) : Bool :=
   match tables[seed.table]? with
   | none => false
   | some component => component.fixedColumns.isNone && seed.cells.length == component.rowOffset
+
+/-- One complete register/RAM message, with canonical address and value limbs. -/
+def memoryRecord (address clock : ℕ) (value : BitVec 64) : Channels.MemoryMsg Fp :=
+  let key := Address.ofNat (p := SP1Prime) address
+  ⟨0, clock, key[0], key[1], key[2], Target.bitVecToWord value⟩
+
+/-- Ordered source/final register records and exact target checks shared by host fixtures. -/
+def registerSeeds (context : Context) (registers : List (ℕ × ℕ)) : List Seed :=
+  (registers.foldl (fun (acc : ℕ × List Seed) (address, clock) =>
+    let index := BitVec.ofNat 5 address
+    let record := memoryRecord address clock (context.target.read (.reg index))
+    let initial := OrderedSnapshotProvider.populate
+      (SnapshotRegisterProvider.populate context.source.sail.memorySnapshot index) acc.1 address
+    let final := OrderedMemoryProvider.populate record acc.1 address
+    let selected : Fp := if Semantics.MemLoc.reg index ∈ context.source.sail.memorySnapshot.changes context.target then 1 else 0
+    (address + 1, acc.2 ++ [⟨0, (toElements initial).toList⟩, ⟨3, (toElements final).toList⟩,
+      ⟨90, (toElements (M := FinalRegisterCheck.RowInput)
+        ((⟨record, selected⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList⟩])) (0, [])).2
 
 /-- An empty segment still closes both ordered inventories, both banks and public Exit.
 Positions are resolved from actual component names and validated before generation. -/

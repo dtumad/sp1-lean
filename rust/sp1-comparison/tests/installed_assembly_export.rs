@@ -3,8 +3,17 @@ extern crate alloc;
 #[path = "support/backend.rs"]
 mod backend;
 
+#[allow(dead_code)]
+#[path = "support/assembly.rs"]
+mod assembly;
+use assembly::*;
+
 #[path = "support/execution.rs"]
 mod execution;
+
+#[allow(dead_code)]
+#[path = "support/export.rs"]
+mod export_support;
 
 // Pair each built-in export with its native reference; generated helpers can be unused.
 macro_rules! fixture {
@@ -37,6 +46,13 @@ fixture!(changed_stopped, "installed_stopped_changed");
 fixture!(fabricated_halt, "installed_fabricated_halt");
 fixture!(hint_read, "installed_hint_read");
 fixture!(hint_word_padding, "installed_hint_word_padding");
+fixture!(halt_zero, "installed_halt_zero");
+fixture!(halt_wide, "installed_halt_wide");
+fixture!(halt_max, "installed_halt_max");
+fixture!(commit_repeat, "installed_commit_repeat");
+fixture!(deferred_repeat, "installed_deferred_repeat");
+fixture!(commit_partial_halt, "installed_commit_partial_halt");
+fixture!(commit_complete_halt, "installed_commit_complete_halt");
 
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::{prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec};
@@ -44,111 +60,8 @@ use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
 
-fn fields(value: &serde_json::Value) -> Vec<F> {
-    value
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|cell| F::from_u64(cell.as_u64().unwrap()))
-        .collect()
-}
-
 // Keep the physical count bound, including repeated and zero-multiplicity entries.
 // Local assertions alone do not detect a missing consumer on a shared channel.
-fn physical_balance<P: Program<F>>(public: &[F], tables: &[Vec<Vec<F>>]) -> bool {
-    use std::collections::BTreeMap;
-
-    let mut channels = BTreeMap::<String, (usize, BTreeMap<Vec<u64>, F>)>::new();
-    for entry in
-        P::verifier_interactions(public)
-            .into_iter()
-            .chain(tables.iter().enumerate().flat_map(|(component, rows)| {
-                rows.iter()
-                    .flat_map(move |row| P::interactions(component, row))
-            }))
-    {
-        let (count, messages) = channels.entry(entry.channel.to_owned()).or_default();
-        *count += 1;
-        let message = entry
-            .message
-            .iter()
-            .map(PrimeField64::as_canonical_u64)
-            .collect();
-        *messages.entry(message).or_default() += entry.multiplicity;
-    }
-    channels.values().all(|(count, messages)| {
-        (*count as u64) < F::ORDER_U64 && messages.values().all(|value| *value == F::ZERO)
-    })
-}
-
-fn check_reference<P: Program<F> + GeneratedAirSpec>(reference: &serde_json::Value, cases: usize) {
-    let inventory = reference["inventory"].as_array().unwrap();
-    assert_eq!(inventory.len(), 94);
-    assert_eq!(P::COMPONENTS, 94);
-    for (index, component) in inventory.iter().enumerate() {
-        assert_eq!(component["name"], P::COMPONENT_NAMES[index]);
-        assert_eq!(component["width"], P::ROW_WIDTHS[index]);
-        assert_eq!(
-            component["fixedWidth"],
-            <P as GeneratedAirSpec>::FIXED_WIDTHS[index]
-        );
-        assert_eq!(component["fixedHeight"], P::FIXED_HEIGHTS[index]);
-    }
-    let samples = reference["cases"].as_array().unwrap();
-    assert_eq!(samples.len(), cases);
-    for case in samples {
-        let public = fields(&case["publicInput"]);
-        assert_eq!(verifier_reference::<P>(&public), case["verifier"]);
-        let private = fields(&case["privateInput"]);
-        let result = generate::<F, P>(&public, &private);
-        if let Some(expected) = case.get("witness") {
-            let witness = result.unwrap();
-            assert_eq!(
-                backend::physical_reference::<P>(&public, &witness.tables),
-                *expected
-            );
-            let constraints = witness.tables.iter().enumerate().all(|(component, rows)| {
-                rows.iter().all(|row| {
-                    P::constraints(component, row)
-                        .into_iter()
-                        .all(|v| v == F::ZERO)
-                })
-            });
-            assert_eq!(
-                constraints && physical_balance::<P>(&public, &witness.tables),
-                case["accepted"].as_bool().unwrap(),
-                "acceptance mismatch: {}",
-                case["name"]
-            );
-            if case["name"] == "active-branch" {
-                assert_eq!(
-                    witness.tables[18],
-                    vec![fields(&reference["compilerBranchRow"])]
-                );
-            }
-            if case["accepted"] == true {
-                assert!(witness.tables.iter().filter(|rows| rows.is_empty()).count() > 50);
-                let traces = witness.into_traces().unwrap();
-                assert_eq!(traces.len(), 94);
-                for (index, trace) in traces.iter().enumerate() {
-                    assert_eq!(trace.width(), P::WIDTHS[index]);
-                    let fixed_height = P::FIXED_HEIGHTS[index];
-                    if fixed_height != 0 {
-                        assert_eq!(trace.height(), fixed_height);
-                        assert_eq!(backend::fixed_trace::<P>(index).height(), fixed_height);
-                    }
-                }
-            }
-        } else {
-            assert!(!case["accepted"].as_bool().unwrap());
-            assert!(
-                result.is_err(),
-                "mutation unexpectedly generated: {}",
-                case["name"]
-            );
-        }
-    }
-}
 
 #[test]
 fn complete_generated_witness_matches_native_rows_and_ledger() {
@@ -247,7 +160,7 @@ fn complete_assembly_proves_and_binds_public_endpoints() {
         .unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
     let statement = generated::Statement::<F>::new(&heights).unwrap();
-    assert_eq!(statement.component_count(), 94);
+    assert_eq!(statement.component_count(), 95);
     assert_eq!(
         statement.interaction_count() as usize,
         case["witness"]["interactions"].as_array().unwrap().len()
@@ -292,63 +205,6 @@ fn complete_assembly_rejects_a_changed_committed_branch_row() {
     });
 }
 
-fn verifier_reference<P: GeneratedAirSpec>(public: &[F]) -> serde_json::Value {
-    serde_json::Value::Array(
-        P::verifier_interactions(public)
-            .into_iter()
-            .map(|entry| {
-                backend::interaction(
-                    entry.channel,
-                    entry.multiplicity.as_canonical_u64(),
-                    entry
-                        .message
-                        .iter()
-                        .map(PrimeField64::as_canonical_u64)
-                        .collect(),
-                    entry.assume_guarantees,
-                )
-            })
-            .collect(),
-    )
-}
-
-fn prove_case<P: Program<F> + GeneratedAirSpec>(
-    case: &serde_json::Value,
-) -> (Vec<p3_matrix::dense::RowMajorMatrix<F>>, Vec<F>) {
-    assert_eq!(case["accepted"], true);
-    let public = fields(&case["publicInput"]);
-    let traces = generate::<F, P>(&public, &fields(&case["privateInput"]))
-        .unwrap()
-        .into_traces()
-        .unwrap();
-    accept_traces::<P>(&public, traces.clone());
-    (traces, public)
-}
-
-fn accept_traces<P: GeneratedAirSpec>(
-    public: &[F],
-    traces: Vec<p3_matrix::dense::RowMajorMatrix<F>>,
-) {
-    let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights).unwrap();
-    let config = backend::config();
-    let (proof, _) = prove_ensemble(&config, &statement, traces, public).unwrap();
-    verify_ensemble(&config, &statement, &proof, public).unwrap();
-}
-
-fn reject_traces<P: GeneratedAirSpec>(
-    public: &[F],
-    traces: Vec<p3_matrix::dense::RowMajorMatrix<F>>,
-) {
-    let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights).unwrap();
-    let config = backend::config();
-    backend::assert_backend_rejection(|| {
-        let (proof, _) = prove_ensemble(&config, &statement, traces, public).unwrap();
-        verify_ensemble(&config, &statement, &proof, public).is_err()
-    });
-}
-
 fn stopped_receipt<P: GeneratedAirSpec>(public: &[F], word: &[F]) {
     let ledger = P::verifier_interactions(public);
     let receipts = ledger
@@ -379,16 +235,19 @@ fn stopped_generated_witnesses_match_native_rows_and_full_verifiers() {
             .iter()
             .all(|v| *v == F::ZERO));
     }
-    // This carrier is unused without COMMIT. The bank endpoints are instance constants;
-    // acceptance here must not be reported as public digest-to-bank binding.
+    assert_eq!(wide_public.len(), 58);
+    for slot in 0..8 {
+        assert_eq!(wide_public[48 + slot], F::from_u64(33 + slot as u64));
+    }
+    assert_eq!(&wide_public[56..58], &[F::ZERO, F::ZERO]);
+    // Unused slots still belong to the immutable verifier-owned statement.
     let changed_digest = &wide["cases"][2];
-    assert_eq!(changed_digest["name"], "unbound-public-digest-byte");
-    assert_eq!(changed_digest["accepted"], true);
+    assert_eq!(changed_digest["name"], "changed-public-digest-byte");
+    assert_eq!(changed_digest["accepted"], false);
     let mut expected_public = wide_public;
     expected_public[16] = F::from_u64(18);
     assert_eq!(fields(&changed_digest["publicInput"]), expected_public);
-    assert_eq!(changed_digest["verifier"], wide["cases"][0]["verifier"]);
-    assert_eq!(changed_digest["witness"], wide["cases"][0]["witness"]);
+    assert_ne!(changed_digest["verifier"], wide["cases"][0]["verifier"]);
 }
 
 #[test]
@@ -434,12 +293,8 @@ fn prove_stopped_and_check_terminals<P: Program<F> + GeneratedAirSpec>(
     for case in reference["cases"].as_array().unwrap().iter().skip(1) {
         let changed_public = fields(&case["publicInput"]);
         if changed_public != public {
-            if case["accepted"] == true {
-                assert_eq!(case["name"], "unbound-public-digest-byte");
-                accept_traces::<P>(&changed_public, traces.clone());
-            } else {
-                reject_traces::<P>(&changed_public, traces.clone());
-            }
+            assert_eq!(case["accepted"], false);
+            reject_traces::<P>(&changed_public, traces.clone());
         }
     }
     for name in [
@@ -475,7 +330,7 @@ fn stopped_source_rejects_a_valid_active_branch_with_a_fresh_proof_attempt() {
         generated::Ensemble::FIXED_HEIGHTS,
         stopped_zero::Ensemble::FIXED_HEIGHTS
     );
-    for index in 0..94 {
+    for index in 0..95 {
         if generated::Ensemble::FIXED_HEIGHTS[index] != 0 {
             assert_eq!(
                 backend::fixed_trace::<generated::Ensemble>(index).values,
@@ -687,4 +542,351 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
             verify_ensemble(&config, &statement, &proof, &public).is_err()
         });
     }
+}
+
+#[test]
+fn complete_halt_rows_and_public_mutations_match_native_checks() {
+    check_reference::<halt_zero::Ensemble>(&halt_zero::reference(), 8);
+    check_reference::<halt_wide::Ensemble>(&halt_wide::reference(), 8);
+    check_reference::<halt_max::Ensemble>(&halt_max::reference(), 8);
+}
+
+fn halt_matches_released<P: Program<F>>(reference: &serde_json::Value, exit: u64) {
+    use sp1_core_executor::{events::MemoryRecordEnum, Program as Sp1Program, SyscallCode};
+    let case = &reference["cases"][0];
+    let public = fields(&case["publicInput"]);
+    let witness = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    assert!(
+        witness.tables[57].is_empty(),
+        "active HALT must not also emit padding Exit"
+    );
+    assert_eq!(witness.tables[58].len(), 1);
+    assert_eq!(witness.tables[64].len(), 1);
+    let handler = &witness.tables[64][0];
+    let mut instructions = vec![];
+    execution::syscall(&mut instructions, SyscallCode::HALT, exit, 17);
+    let (_, records) = execution::run(Sp1Program::new(instructions, 131072, 131072), &[]);
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].syscall_events.len(), 1);
+    let (event, access) = &records[0].syscall_events[0];
+    assert_eq!(event.syscall_code, SyscallCode::HALT);
+    assert_eq!((event.arg1, event.arg2), (exit, 17));
+    let MemoryRecordEnum::Write(result) = access.a else {
+        panic!("HALT must write x5");
+    };
+    assert_eq!(result.value, 0);
+    assert_eq!(&handler[2..6], &[F::ZERO; 4]);
+    assert_eq!(
+        &handler[6..10],
+        &[
+            F::from_u64(exit & 65535),
+            F::from_u64(exit >> 16),
+            F::ZERO,
+            F::ZERO
+        ]
+    );
+    assert_eq!(
+        &handler[10..14],
+        &[F::from_u64(17), F::ZERO, F::ZERO, F::ZERO]
+    );
+    assert_eq!(&handler[14..22], &[F::ZERO; 8]);
+    assert_eq!(
+        public[14],
+        F::from_u64(u64::from(records[0].public_values.exit_code))
+    );
+    assert_eq!(public[11], F::ONE);
+    assert_eq!(&public[12..14], &[F::ZERO; 2]);
+}
+
+#[test]
+fn complete_halt_effects_match_released_executor_and_public_values() {
+    halt_matches_released::<halt_zero::Ensemble>(&halt_zero::reference(), 0);
+    halt_matches_released::<halt_wide::Ensemble>(&halt_wide::reference(), 65536);
+    halt_matches_released::<halt_max::Ensemble>(&halt_max::reference(), F::ORDER_U64 - 1);
+}
+
+fn halt_proofs<P: Program<F> + GeneratedAirSpec>(reference: &serde_json::Value) {
+    let (traces, public) = prove_case::<P>(&reference["cases"][0]);
+    assert_eq!(traces[57].height(), 0);
+    assert_eq!(traces[64].height(), 1);
+    for case in reference["cases"].as_array().unwrap().iter().skip(1) {
+        reject_traces::<P>(&fields(&case["publicInput"]), traces.clone());
+    }
+    for index in [2, 5, 58, 64, 88, 89] {
+        let mut missing = traces.clone();
+        missing[index].values.clear();
+        reject_traces::<P>(&public, missing);
+    }
+    let empty_reference = empty::reference();
+    let (empty_traces, _) = prove_case::<empty::Ensemble>(&empty_reference["cases"][0]);
+    let mut duplicated_exit = traces;
+    duplicated_exit[57] = empty_traces[57].clone();
+    reject_traces::<P>(&public, duplicated_exit);
+}
+
+#[test]
+fn complete_halt_proves_and_rejects_missing_terminals_and_duplicate_exit() {
+    halt_proofs::<halt_zero::Ensemble>(&halt_zero::reference());
+    halt_proofs::<halt_wide::Ensemble>(&halt_wide::reference());
+    halt_proofs::<halt_max::Ensemble>(&halt_max::reference());
+}
+
+#[test]
+fn complete_commitment_rows_padding_and_public_mutations_match_native() {
+    check_reference::<commit_repeat::Ensemble>(&commit_repeat::reference(), 9);
+    check_reference::<deferred_repeat::Ensemble>(&deferred_repeat::reference(), 9);
+    check_reference::<commit_partial_halt::Ensemble>(&commit_partial_halt::reference(), 9);
+    check_reference::<commit_complete_halt::Ensemble>(&commit_complete_halt::reference(), 9);
+}
+
+fn commitment_execution<P: Program<F> + GeneratedAirSpec>(
+    reference: &serde_json::Value,
+    complete: bool,
+    deferred: bool,
+    stopped: bool,
+) {
+    use slop_air::Air;
+    use slop_algebra::AbstractField;
+    use slop_matrix::Matrix as _;
+    use sp1_core_executor::{
+        ExecutionRecord, Instruction, Opcode, Program as Sp1Program, SyscallCode,
+    };
+    use sp1_core_machine::{syscall::instructions::SyscallInstrsChip, SupervisorMode};
+    use sp1_hypercube::air::MachineAir;
+    use sp1_primitives::SP1Field as S;
+
+    let case = &reference["cases"][0];
+    let public = fields(&case["publicInput"]);
+    let native = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    let mut instructions = vec![];
+    execution::load_constant(&mut instructions, 5, if deferred { 26 } else { 16 });
+    execution::load_constant(&mut instructions, 10, if complete { 0 } else { 7 });
+    execution::load_constant(&mut instructions, 11, 131075);
+    // The prefix establishes the local source. The tested segment starts at the
+    // same PC; clock comparison uses the measured prefix duration, not guessed timing.
+    let base = 131072 - 4 * instructions.len() as u64;
+    let addi = |rd, rs, imm| Instruction::new(Opcode::ADDI, rd, rs, imm, false, true);
+    let ecall = || Instruction::new(Opcode::ECALL, 5, 10, 11, false, false);
+    if complete {
+        for bank in 0..2 {
+            if bank == 1 {
+                instructions.push(addi(5, 0, 26));
+                instructions.push(addi(10, 0, 0));
+            }
+            for slot in 0..8 {
+                instructions.push(ecall());
+                if slot != 7 {
+                    instructions.push(addi(10, 10, 1));
+                }
+            }
+        }
+    } else {
+        instructions.extend([ecall(), ecall(), ecall()]);
+    }
+    // Continuing fixtures are proper local prefixes of this terminating Rust run.
+    instructions.extend([addi(5, 0, 0), addi(10, 0, 0), ecall()]);
+    let (executor, records) = execution::run(Sp1Program::new(instructions, base, base), &[]);
+    assert_eq!(records.len(), 1);
+    let record = &records[0];
+    let count = if complete { 16 } else { 3 };
+    assert_eq!(record.syscall_events.len(), count + 1);
+    let first = record.syscall_events[0].0.clk;
+    assert_eq!(record.syscall_events[0].0.pc, 131072);
+    for bank in 0..2 {
+        for slot in 0..8 {
+            let value = if bank == 0 {
+                record.public_values.committed_value_digest[slot]
+            } else {
+                record.public_values.deferred_proofs_digest[slot]
+            };
+            let flag = if bank == 0 { public[56] } else { public[57] };
+            assert_eq!(
+                P::fixed_row::<F>(94, (8 * bank + slot) as u64),
+                vec![
+                    F::from_u64(bank as u64),
+                    F::from_u64(slot as u64),
+                    F::from_u64(u64::from(value & 65535)),
+                    F::from_u64(u64::from(value >> 16)),
+                    F::ZERO,
+                    F::ZERO,
+                    flag,
+                    F::ONE,
+                ]
+            );
+        }
+    }
+    let mut occurrences = [0usize; 16];
+    for (event, _) in &record.syscall_events[..count] {
+        let bank = usize::from(event.syscall_code == SyscallCode::COMMIT_DEFERRED_PROOFS);
+        assert!(matches!(
+            event.syscall_code,
+            SyscallCode::COMMIT | SyscallCode::COMMIT_DEFERRED_PROOFS
+        ));
+        let slot = event.arg1 as usize;
+        let table = 66 + 8 * bank + slot;
+        let row = &native.tables[table][occurrences[8 * bank + slot]];
+        occurrences[8 * bank + slot] += 1;
+        assert_eq!(row[0], F::ZERO);
+        assert_eq!(row[1], F::from_u64(event.clk - first + 9));
+        assert_eq!(
+            &row[2..6],
+            &[
+                F::from_u64(event.syscall_code as u64),
+                F::ZERO,
+                F::ZERO,
+                F::ZERO
+            ]
+        );
+        assert_eq!(
+            &row[6..10],
+            &[F::from_u64(event.arg1), F::ZERO, F::ZERO, F::ZERO]
+        );
+        assert_eq!(
+            &row[10..14],
+            &[
+                F::from_u64(event.arg2 & 65535),
+                F::from_u64(event.arg2 >> 16),
+                F::ZERO,
+                F::ZERO
+            ]
+        );
+        assert_eq!(row[P::HINT_TABLES[table].width - 1], F::ONE);
+    }
+    for bank in 0..2 {
+        let words = if bank == 0 {
+            record.public_values.committed_value_digest
+        } else {
+            record.public_values.deferred_proofs_digest
+        };
+        let terminal = &native.tables[88 + bank][0];
+        for (slot, value) in words.into_iter().enumerate() {
+            assert_eq!(
+                &terminal[2 + 4 * slot..6 + 4 * slot],
+                &[
+                    F::from_u64(u64::from(value & 65535)),
+                    F::from_u64(u64::from(value >> 16)),
+                    F::ZERO,
+                    F::ZERO
+                ]
+            );
+            if bank == 0 {
+                let bytes = value.to_le_bytes().map(|byte| F::from_u64(u64::from(byte)));
+                assert_eq!(&public[16 + 4 * slot..20 + 4 * slot], &bytes);
+            } else {
+                assert_eq!(public[48 + slot], F::from_u64(u64::from(value)));
+            }
+        }
+    }
+    assert_eq!(
+        public[56],
+        F::from_u64(u64::from(record.public_values.commit_syscall))
+    );
+    assert_eq!(
+        public[57],
+        F::from_u64(u64::from(record.public_values.commit_deferred_syscall))
+    );
+    assert_eq!(native.tables[64].len(), usize::from(stopped));
+    assert_eq!(native.tables[57].len(), usize::from(!stopped));
+    if stopped {
+        assert_eq!(executor.registers()[5], 0);
+    }
+    // Check the released AIR on real released rows and its own shard public values.
+    let chip = SyscallInstrsChip::<SupervisorMode>::default();
+    let trace = chip.generate_trace(record, &mut ExecutionRecord::default());
+    for row in trace.values.chunks(trace.width()) {
+        let mut check = export_support::Sp1Evaluation {
+            row: row.to_vec(),
+            preprocessed: vec![],
+            constraints: vec![],
+            ledger: vec![],
+            public: record.public_values.to_vec::<S>(),
+        };
+        chip.eval(&mut check);
+        assert!(check.constraints.iter().all(|value| *value == S::zero()));
+    }
+}
+
+#[test]
+fn complete_commitment_programs_match_released_events_air_and_statement() {
+    commitment_execution::<commit_repeat::Ensemble>(
+        &commit_repeat::reference(),
+        false,
+        false,
+        false,
+    );
+    commitment_execution::<deferred_repeat::Ensemble>(
+        &deferred_repeat::reference(),
+        false,
+        true,
+        false,
+    );
+    commitment_execution::<commit_partial_halt::Ensemble>(
+        &commit_partial_halt::reference(),
+        false,
+        false,
+        true,
+    );
+    commitment_execution::<commit_complete_halt::Ensemble>(
+        &commit_complete_halt::reference(),
+        true,
+        false,
+        true,
+    );
+}
+
+fn commitment_proofs<P: Program<F> + GeneratedAirSpec>(
+    reference: &serde_json::Value,
+    repeated: Option<usize>,
+) {
+    let (traces, public) = prove_case::<P>(&reference["cases"][0]);
+    for case in reference["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .skip(1)
+        .take(5)
+    {
+        reject_traces::<P>(&fields(&case["publicInput"]), traces.clone());
+    }
+    for table in [88, 89, 94] {
+        let mut missing = traces.clone();
+        missing[table].values.clear();
+        reject_traces::<P>(&public, missing);
+    }
+    // Only the sixteen counts are committed. Fixed payload and eligibility columns
+    // come from the verifier's preprocessing, never from mutable witness columns.
+    assert_eq!(traces[94].width(), 1);
+    for slot in 0..16 {
+        let mut changed = traces.clone();
+        changed[94].values[slot] += F::ONE;
+        reject_traces::<P>(&public, changed);
+    }
+    if let Some(table) = repeated {
+        assert_eq!(traces[table].height(), 4);
+        let activity = P::HINT_TABLES[table].width - 1;
+        assert_eq!(
+            traces[table].values[3 * traces[table].width() + activity],
+            F::ZERO
+        );
+        for row in 0..3 {
+            assert_eq!(
+                traces[table].values[row * traces[table].width() + activity],
+                F::ONE
+            );
+        }
+        for enabled in [F::ONE, F::TWO, -F::ONE] {
+            let mut changed = traces.clone();
+            let column = 3 * changed[table].width() + activity;
+            changed[table].values[column] = enabled;
+            reject_traces::<P>(&public, changed);
+        }
+    }
+}
+
+#[test]
+fn immutable_commitment_assemblies_prove_and_reject_forged_declarations() {
+    commitment_proofs::<commit_repeat::Ensemble>(&commit_repeat::reference(), Some(73));
+    commitment_proofs::<deferred_repeat::Ensemble>(&deferred_repeat::reference(), Some(81));
+    commitment_proofs::<commit_partial_halt::Ensemble>(&commit_partial_halt::reference(), Some(73));
+    commitment_proofs::<commit_complete_halt::Ensemble>(&commit_complete_halt::reference(), None);
 }

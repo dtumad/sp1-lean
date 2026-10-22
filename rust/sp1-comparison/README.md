@@ -25,7 +25,7 @@ the latter do not claim agreement with a released layout sharing that group.
 
 `scripts/check_release_surface.py` checks this record against both Rust inventory snapshots and
 the target revision in provenance. After the full test build, its `--native` option also reads the
-actual installed 94-component assembly; the full audit runs this check. The Cargo inventory tests
+actual installed 95-component assembly; the full audit runs this check. The Cargo inventory tests
 independently authenticate the snapshots against released Rust source. No generated Lean registry
 serves as the Rust reference.
 
@@ -40,7 +40,7 @@ python3 scripts/check_ensemble_export.py
 ```
 
 Component comparisons use release optimization level 1. The runner compiles the large installed
-assembly fixture separately at level 0, with release debug assertions still disabled; this avoids
+assembly test binaries separately at level 0, with release debug assertions still disabled; this avoids
 expensive optimization of repeated complete-assembly instances. Both feature configurations run
 every test, and dependency crates retain their normal release settings. CI logs the export step's
 time and peak memory. These fixture settings do not measure optimized application performance.
@@ -102,9 +102,9 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   shard construction supply the control results, commit events and final banks. The comparison
   covers every slot and value boundary, repeated writes, literal per-call receipts, invalid
   clocks/arguments and source-backed Byte/Range membership. The unadapted components must reject
-  open buses; their ungated rows are not inactive padding. Native receipts authenticate mutable
-  bank history. A separate regression demonstrates that SP1's shard AIR rejects earlier differing
-  writes to a slot even though its executor produces the same final bank.
+  open buses. Guarded commitment rows retain zero-multiplicity padding occurrences; terminals
+  remain real boundary rows. Mutable bank history is separate from the immutable statement.
+  A released-shard regression rejects earlier differing declarations despite operational success.
 
 - Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows and ledgers with native
   constructor references. Released execution supplies repeated length observations, queue pops,
@@ -140,25 +140,36 @@ runners are rejected before either can change the shared inputs. Comparisons cov
   and empty queues. Backend tests reject changed public fields, counts and fixed heights. These
   are native source-queue tests; complete SP1 host execution remains outside their scope.
 
-The installed 94-component assembly is lookup-free. Its active-branch, empty, stopped and 16/24-byte
-HINT_READ fixtures export all components, read consumer inputs through Clean's private hint tables,
-and generate providers with Clean's scheduler. Tests compare every native/Rust row and ledger,
-retain empty table indices and mandatory fixed heights, prove the assembly, and reject changed
-endpoints and committed branch rows. Empty segments retain the complete fixed providers and all
-ordered, bank and Exit terminals; backend tests reject removing each terminal even when the new
-statement declares the smaller table shape. Stopped sources cover zero and wide optional exit
-codes, nonzero commitment banks, and complete verifier occurrences even when generation fails.
-Fresh proof attempts reject altered public endpoints, resumption with an otherwise valid branch,
-changed stopped codes and fabricated HALT receipts. A changed digest carrier remains accepted
-in the stopped case: host-bank endpoints are fixed instance parameters, and this public field
-is unused. The HINT_READ fixtures close physical Memory, hint and cursor ledgers and compare
-final register/RAM values with released execution, including the mandatory final zero word. The
-16-byte case pads three active register/RAM boundary and target-check rows to four; the 24-byte
-case also pads three nonfinal word rows to four. Both word variants accept arbitrary disabled
-cells and reject non-Boolean activity. Missing real transfers/checks and activated padding fail
-backend verification. Acceptance comparisons check local assertions and complete channel balances,
-counting repeated and zero-multiplicity occurrences. These finite cases do not establish
-digest-to-bank binding or general generation completeness; broader active-host coverage remains open.
+The installed 95-component assembly is lookup-free. Branch, empty, stopped, 16/24-byte HINT_READ,
+active HALT, commitment programs and mixed ordinary/host programs use the same physical inventory
+and Clean hint-table inputs.
+Comparisons check every Lean/Rust row and ledger occurrence, fixed heights, empty positions and
+complete balance. Fresh backend proofs test public mutations, missing terminals, fabricated
+receipts, changed provider counts and non-Boolean or activated padding. Fixed declaration columns
+are reconstructed independently from released shard public values; they are not mutable trace cells.
+
+The immutable commitment statement supplies a sixteen-row fixed provider and public assertions.
+The 58-cell header preserves the previous 48 positions and appends deferred words and flags.
+Every active declaration agrees with the statement; final mutable banks record only executed
+updates. Three identical declarations pad to four physical rows. Partial declarations and all
+sixteen slots followed by HALT exercise register aliases, bank histories and target changes.
+Released executor events, final banks, shard public values and syscall AIR supply an independent
+comparison. Zero/wide/maximal field exits cover active HALT without a duplicate padding Exit.
+Stopped segments also reject altered digest carriers. Flags imply neither declaration occurrence
+nor all-slot coverage. A conflicting overwrite remains executable but unprovable for one statement.
+
+HINT_READ cases close Memory, queue and cursor ledgers, including mandatory final zero words and
+three-to-four padding in boundary, target-check and nonfinal transfer rows. Repeated HINT_LEN
+observations surround two overlapping reads with empty, byte-tail and aligned inputs. Independent
+released prefixes check intermediate transfers as well as the final RAM state. ENTER executes its
+real unconstrained/rollback path and compares the constrained replay with the native assembly.
+
+The ordinary fixture combines ADDI, repeated SD/LD and taken/untaken BEQ, with aliased registers.
+Its full run, prefix, suffix and empty endpoint compare complete Memory access occurrences with
+released records, including displaced timestamps after resetting the authenticated local boundary.
+Cuts agree on their public clock/PC endpoints. These finite fixture constructors use the production
+access compiler and semantic host steps; they are neither an interpreter nor a total Sail compiler.
+General generation completeness and WRITE/VERIFY installation remain open.
 
 The experimental Clean pin adds message
 predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
@@ -204,16 +215,21 @@ they do not establish complete ensemble balance.
   SUBW, JAL, JALR, UType, AluX0 and memory components other than LoadByte mutate every row;
   the remaining components use selected boundary rows.
 
-`symbolic_add_export` strengthens ADD's row comparison to an exact algebraic check. Upstream
-symbolic expressions bound total degree by three. Both actual AIR evaluators run on the complete
-6,545-point interpolation grid after each independently enforces `op_a_0 = 0`; their constraint
-systems match up to nonzero scaling, duplicate equations and zero equations. All 21 affine
-interaction occurrences match on zero and every unit vector, including arbitrary inactive-row
-values. The supervisor profile fixes the untrusted-program flag to zero; the `mprotect` AIR's
-rejection of flag one is checked, and unexpected symbolic public dependencies fail. Fault controls
-remove the zero equation, exclude inactive rows, reverse a multiplicity, exceed the degree budget
-and introduce a public interaction. This uses no expression interpreter or new extraction IR, but
-trusts the Rust checker and adapters; it does not prove lowering or complete execution.
+`symbolic_arithmetic_export` checks ADD, ADDI, ADDW, SUB and SUBW algebraically. Upstream symbolic
+expressions bound total degree by three; a complete interpolation grid determines the constraint
+polynomials after each AIR independently enforces its zero-register column. Independent released
+layout offsets define the permutation. Constraint systems agree up to nonzero scaling and
+repeated/zero equations, and every affine interaction occurrence agrees on a determining basis.
+The grids contain 6,545 / 4,960 / 8,436 / 6,545 / 5,984 points respectively. Both configurations
+check the supervisor profile; unexpected degree, public dependencies or expression forms fail.
+Fault controls run for every family. This trusts Rust evaluators, bounds and adapters, without
+an expression interpreter or formal lowering claim.
+
+The remaining instruction families retain finite assurance. In addition to individual column
+mutations, source-evaluator-guided walks change multiple columns and retain alternate accepted
+rows. A second walk holds all prover inputs fixed to exercise alternate valid witnesses where
+available. Every candidate, including rejected ones, compares complete interaction multisets.
+This is broader adversarial coverage, not universal row equivalence.
 
 The same harness compares both installed bump tables, including every padding row and mutations
 of every column with three deltas. MemoryBump covers 24 refresh/bump events and eight padding rows,

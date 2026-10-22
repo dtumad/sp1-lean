@@ -103,7 +103,7 @@ private theorem callClock_nodup_of_receiver (table : Table (ZMod p)) (data : Pro
     ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
   simpa only [ReceiverView.tableMessages, receiver, List.map_map, Function.comp_def, inputs,
     HostCallLedger.clock, HostHintReadPartition.callClock, HostHintReadPartition.clock,
-    HostHintReadChip.Inputs.first] using unique
+    HostHintReadChip.Inputs.first, Expression.eval, decide_true, List.filter_true] using unique
 
 /-- Registration and the actual CPU/HostCall evidence fix the physical handler clocks.
 No Byte balance is required of this proof view. -/
