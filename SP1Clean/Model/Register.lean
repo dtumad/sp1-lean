@@ -2,7 +2,7 @@ import Mathlib.Tactic.FinCases
 import Aesop
 import Mathlib.Tactic.Ring
 import Mathlib.Data.ZMod.Basic
-import LeanRV64D
+import LeanRV64D.Regs
 import ToMathlib.General
 
 /-! # Sail machine state and register-index decoding

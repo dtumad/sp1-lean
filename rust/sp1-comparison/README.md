@@ -45,7 +45,8 @@ expensive optimization of repeated complete-assembly instances. Both feature con
 every test, and dependency crates retain their normal release settings. CI logs the export step's
 time and peak memory. These fixture settings do not measure optimized application performance.
 
-The runner checks two byte-identical generations under `.lake/ensemble-export/`, then refreshes
+The runner builds the `ensembleExport` Lake executable and uses it for two byte-identical
+generations under `.lake/ensemble-export/`, then refreshes
 the owned `compile-inputs/` directory without rewriting unchanged files. Cargo can reuse those
 inputs across runs; fresh artifacts and provenance stay in separate run directories. Concurrent
 runners are rejected before either can change the shared inputs. Comparisons cover these boundaries:

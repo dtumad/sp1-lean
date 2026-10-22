@@ -513,4 +513,5 @@ private def exportEnsembleFixture : IO Unit := do
   IO.FS.writeFile (out / "ram_rows.reference.json") ((Json.mkObj ramRows).compress ++ "\n")
   IO.println "EXPORTED ensemble Rust and Lean reference cases"
 
-#eval exportEnsembleFixture
+/-- Run the same built-in exporter and checked native references as a Lake executable. -/
+def main : IO Unit := exportEnsembleFixture
