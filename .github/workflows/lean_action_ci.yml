@@ -215,7 +215,11 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.NATIVE_CACHE_PATHS }}
-          key: sp1-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          # v2 also retains the native objects required by ensembleExport. The
+          # same-pin v1 fallback reuses existing objects before filling its gaps.
+          key: sp1-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: |
+            sp1-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
       - name: Build (resumable — a cold cache may need one re-run)
         run: timeout 5h lake build --wfail --iofail
       - name: Core tests (lake test = SP1CoreTest, with the warning/info gates)

@@ -40,8 +40,8 @@ python3 scripts/check_ensemble_export.py
 ```
 
 Component comparisons use release optimization level 1. The runner compiles the large installed
-assembly test binaries separately at level 0, with release debug assertions still disabled; this avoids
-expensive optimization of repeated complete-assembly instances. Both feature configurations run
+assembly test binaries one at a time at level 0, with release debug assertions still disabled; this
+bounds peak compiler memory and avoids expensive optimization of repeated complete-assembly instances. Both feature configurations run
 every test, and dependency crates retain their normal release settings. CI logs the export step's
 time and peak memory. These fixture settings do not measure optimized application performance.
 
@@ -158,6 +158,8 @@ Released executor events, final banks, shard public values and syscall AIR suppl
 comparison. Zero/wide/maximal field exits cover active HALT without a duplicate padding Exit.
 Stopped segments also reject altered digest carriers. Flags imply neither declaration occurrence
 nor all-slot coverage. A conflicting overwrite remains executable but unprovable for one statement.
+The padding-only Exit row retains unused clock freedom; tests accept that freedom and reject
+activating its forbidden HALT flag.
 
 HINT_READ cases close Memory, queue and cursor ledgers, including mandatory final zero words and
 three-to-four padding in boundary, target-check and nonfinal transfer rows. Repeated HINT_LEN
