@@ -201,15 +201,18 @@ def generate(out, env):
 
 
 def compare_rust(out, env):
-    """Keep the large assembly's compiler cost separate from component optimization."""
+    """Bound assembly compiler memory separately from component optimization."""
     assembly = {name: RUST_TESTS[name] for name in ["installed_assembly_export", "mixed_assembly_export"]}
     components = {name: count for name, count in RUST_TESTS.items() if name not in assembly}
-    groups = [
-        ("components", components, []),
-        ("assembly", assembly, [
-            "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
-            "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
-        ]),
+    assembly_options = [
+        "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
+        "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
+    ]
+    # Compile one complete assembly binary per invocation while retaining Cargo's
+    # configured job pool. Its dependency outputs are shared across invocations.
+    groups = [("components", components, [])] + [
+        ("assembly-" + test, {test: count}, assembly_options)
+        for test, count in assembly.items()
     ]
     for features, name in [("instruction-export", "rust"),
                            ("instruction-export,mprotect", "rust-mprotect")]:
