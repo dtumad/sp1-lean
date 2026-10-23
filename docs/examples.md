@@ -28,7 +28,8 @@ terminal reject. These cases exercise complete change coverage, not just locally
 
 [BranchEnsembleRoundTrip](../SP1CleanTest/Alignment/Audit/BranchEnsembleRoundTrip.lean) joins
 an official Sail step to canonical projection, event compilation and raw acceptance of the
-actual HostFinalMemory assembly. BEQ x1,x2,+4092 has PC 65536→69628 and clock 1→9.
+actual HostFinalMemory assembly with the immutable commitment statement installed.
+BEQ x1,x2,+4092 has PC 65536→69628 and clock 1→9.
 
 The fixture retains every installed component and all 32 verifier-fixed source-register rows,
 including unused rows at count zero. The JSON report records physical rows, complete interactions

@@ -2,10 +2,10 @@ module
 
 public import ToClean.Air.TransitionView
 
-/-! # Reading unit receivers from physical AIR tables
+/-! # Reading active receivers from physical AIR tables
 
 Clean exposes raw interaction lists but has no adapter from heterogeneous unit receiver
-components to their complete typed message inventory. `ReceiverView` records the row-local
+components to their complete active typed message inventory. `ReceiverView` records the row-local
 ledger equation; `messages_interactions` lifts it over physically aligned tables. The shared
 indexed-row reader retains every occurrence, and the sublist theorem transports global message
 uniqueness to any registered table. These are pure additions for `Clean/Air/FlatComponent.lean`.
@@ -18,29 +18,38 @@ namespace Air.Flat
 variable {F : Type} [FiniteField F]
 variable {Message : TypeMap} [ProvableType Message]
 
-/-- One physical row consumes exactly one complete typed message. -/
+/-- Each active physical row consumes exactly one complete typed message. -/
 structure ReceiverView (channel : Channel F Message) where
   component : Component F
   message : Environment F → Message F
+  /-- Unguarded receivers consume one message per physical row. -/
+  activity : Expression F := .const 1
+  /-- Constraints establish Boolean activity before channel authentication. -/
+  activity_of_constraints : ∀ env, component.operations.ConstraintsHold env →
+      env activity = 0 ∨ env activity = 1 := by
+    intros
+    exact Or.inr rfl
   interactions : ∀ env, component.operations.interactionValuesWith channel.toRaw env =
-    [channel.pulledValue (message env)]
+    [channel.pulledIfValue (env activity) (message env)]
 
 namespace ReceiverView
 
 variable {channel : Channel F Message}
 
 def tableMessages (view : ReceiverView channel) (table : Table F) : List (Message F) :=
-  table.table.map fun physical => view.message (table.environment physical)
+  (table.table.filter fun physical => decide (table.environment physical view.activity = 1)).map
+    fun physical => view.message (table.environment physical)
 
-/-- Read every physical occurrence, preserving the registered component identity. -/
+/-- Select active messages without changing the physical interaction inventory. -/
 def messages (views : List (ReceiverView channel)) (tables : List (Table F)) : List (Message F) :=
-  (TransitionView.readIndexedRows views tables).map fun (view, env) => view.message env
+  ((TransitionView.readIndexedRows views tables).filter fun (view, env) =>
+    decide (env view.activity = 1)).map fun (view, env) => view.message env
 
 theorem messages_cons (view : ReceiverView channel) (views : List (ReceiverView channel))
     (table : Table F) (tables : List (Table F)) :
     messages (view :: views) (table :: tables) = tableMessages view table ++ messages views tables := by
   simp only [messages, TransitionView.readIndexedRows, List.zip_cons_cons, List.flatMap_cons,
-    List.map_append, List.map_map, Function.comp_def, tableMessages]
+    List.filter_append, List.filter_map, List.map_append, List.map_map, Function.comp_def, tableMessages]
 
 /-- Split the physical receiver inventory at a registration boundary. -/
 theorem messages_take_drop (views : List (ReceiverView channel)) (tables : List (Table F)) (n : ℕ) :
@@ -49,7 +58,7 @@ theorem messages_take_drop (views : List (ReceiverView channel)) (tables : List 
   unfold messages TransitionView.readIndexedRows
   conv_lhs => rw [← List.take_append_drop n (views.zip tables)]
   simp only [List.zip_eq_zipWith, List.take_zipWith, List.drop_zipWith,
-    List.flatMap_append, List.map_append]
+    List.flatMap_append, List.filter_append, List.map_append]
 
 theorem aligned_of_map_eq (views : List (ReceiverView channel)) (tables : List (Table F))
     (aligned : views.map (·.component) = tables.map (·.component)) :
@@ -58,13 +67,29 @@ theorem aligned_of_map_eq (views : List (ReceiverView channel)) (tables : List (
     simpa only [List.forall₂_eq_eq_eq] using aligned
   simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using equal
 
-/-- The typed inventory is exactly the complete physical ledger, including multiplicities. -/
-theorem messages_interactions (views : List (ReceiverView channel)) (tables : List (Table F))
+/-- Retain every physical occurrence, including disabled rows at zero multiplicity. -/
+theorem physical_interactions (views : List (ReceiverView channel)) (tables : List (Table F))
     (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables) :
-    tables.flatMap (·.interactionsWith channel.toRaw) = (messages views tables).map channel.pulledValue := by
+    tables.flatMap (·.interactionsWith channel.toRaw) =
+      (TransitionView.readIndexedRows views tables).map fun (view, env) =>
+        channel.pulledIfValue (env view.activity) (view.message env) := by
   rw [TransitionView.readIndexedRows_interactions views (·.component) tables channel.toRaw aligned]
-  simp only [interactions, messages, List.map_map, Function.comp_def]
+  simp only [interactions]
   exact List.flatMap_pure_eq_map _ _
+
+/-- Boolean guards identify the active unit pulls in the complete physical ledger. -/
+theorem messages_interactions (views : List (ReceiverView channel)) (tables : List (Table F))
+    (aligned : List.Forall₂ (fun view table => view.component = table.component) views tables)
+    (constraints : ∀ table ∈ tables, table.Constraints) :
+    ((tables.flatMap (·.interactionsWith channel.toRaw)).filter
+      fun interaction => decide (interaction.mult ≠ 0)) =
+        (messages views tables).map channel.pulledValue := by
+  rw [physical_interactions views tables aligned]
+  rw [channel.pulledIfValues_filter_nonzero]
+  · simp only [messages, List.map_map, Function.comp_def]
+  · intro row member
+    exact row.1.activity_of_constraints row.2
+      (TransitionView.readIndexedRows_constraints views (·.component) tables aligned constraints row member)
 
 /-- An actual unit pull identifies its complete typed message in the receiver inventory. -/
 theorem message_mem_of_pull_mem (views : List (ReceiverView channel)) (tables : List (Table F))
@@ -72,12 +97,15 @@ theorem message_mem_of_pull_mem (views : List (ReceiverView channel)) (tables : 
     (message : Message F)
     (member : channel.pulledValue message ∈ tables.flatMap (·.interactionsWith channel.toRaw)) :
     message ∈ messages views tables := by
-  rw [messages_interactions views tables aligned] at member
-  obtain ⟨other, present, equal⟩ := List.mem_map.mp member
+  rw [physical_interactions views tables aligned] at member
+  obtain ⟨⟨view, env⟩, present, equal⟩ := List.mem_map.mp member
+  have active : env view.activity = 1 := by
+    have multiplicity := congrArg Interaction.mult equal
+    simpa only [Channel.pulledIfValue, Channel.pulledValue, neg_inj] using multiplicity
   have encoded := Vector.toArray_inj.mp (congrArg Interaction.msg equal)
-  have same : other = message := by
+  have same : view.message env = message := by
     simpa only [ProvableType.fromElements_toElements] using congrArg fromElements encoded
-  exact same ▸ present
+  exact List.mem_map.mpr ⟨(view, env), List.mem_filter.mpr ⟨present, by simpa using active⟩, same⟩
 
 /-- A registered receiver's physical occurrences form a sublist of the complete inventory. -/
 theorem tableMessages_sublist (views : List (ReceiverView channel)) (tables : List (Table F))

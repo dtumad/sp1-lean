@@ -65,7 +65,7 @@ name = "instruction_export"
 required-features = ["instruction-export"]
 
 [[test]]
-name = "symbolic_add_export"
+name = "symbolic_arithmetic_export"
 required-features = ["instruction-export"]
 
 [[test]]
@@ -106,4 +106,8 @@ required-features = ["clean-export"]
 
 [[test]]
 name = "installed_assembly_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "mixed_assembly_export"
 required-features = ["instruction-export"]

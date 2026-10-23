@@ -40,7 +40,7 @@ private def runBranchEnsembleExample : IO Unit := do
     (Environment.fromInput header activeWitness.data)
   let report := Json.mkObj [
     ("revision", toJson revision.get!), ("dirty", toJson (status == some "dirty")),
-    ("assembly", toJson "SP1Clean.Soundness.HostFinalMemory.ensemble"),
+    ("assembly", toJson "SP1CleanTest.Alignment.InstalledAssembly.assembly"),
     ("theorem", toJson "SP1Clean.Audit.BranchEnsemble.joined"),
     ("sailEvidence", toJson "official Sail retirement proved by imported theorem; not executed by this runner"),
     ("instruction", toJson s!"BEQ x{event.opA},x{event.opB},+{event.imm}"),

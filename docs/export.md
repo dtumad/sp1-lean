@@ -20,16 +20,19 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- The complete installed 94-table assembly exports through the same path. Active-branch,
-  empty-local-segment, stopped-source and 16/24-byte HINT_READ fixtures supply inputs through
-  Clean hint tables; its scheduler generates the provider rows. Rust compares every row and ledger occurrence,
-  including empty table positions, and exercises proof acceptance and endpoint/row mutations.
-  Empty and stopped segments retain their ordered, bank and Exit terminals. Fresh proof attempts
-  test missing terminals, altered public endpoints, resumed execution and forged optional exits.
-  Stopped cases include a nonzero exit code and banks; zero-multiplicity verifier messages keep
-  their complete payloads. Host banks are fixed instance parameters: a stopped segment can
-  accept a changed public digest carrier, so these cases do not establish digest-to-bank binding.
-  These finite cases do not prove general generation completeness.
+- The complete installed 95-table assembly uses the same exporter and scheduler. Fixtures cover
+  arithmetic/branch/RAM programs and local cuts, empty and stopped segments, repeated HINT_LEN
+  around overlapping empty/aligned/byte-tail HINT_READ calls, constrained ENTER replay, HALT,
+  repeated commitments and partial/full declarations followed by HALT. Comparisons retain every row, empty position,
+  verifier occurrence and physical count. Fresh proofs test endpoints, missing terminals,
+  duplicate Exit, fixed-provider authentication, changed counts and padding. These are finite cases, not a total compiler.
+- A verifier-owned statement fixes all sixteen commitment words and both flags. The public header
+  binds 32 canonical bytes, eight deferred field elements and two flags to that same statement.
+  Every active declaration consumes its fixed payload; conflicting repeats cannot choose a new
+  provider value. Mutable bank histories remain operational records. Partial declarations need
+  not cover all slots, and flags do not prove a call occurred. Stopped segments also bind the
+  statement's public fields. Commitment padding uses Boolean activity while retaining zero
+  physical occurrences; an active HALT supplies Exit exactly once.
 - The complete native opcode alphabet, including unsupported instructions, is compared with every
   constructor and discriminant of the released Rust enum. Lean's derived constructor names and
   native discriminants export as metadata; no Rust source parser or generated Lean enum is needed.
@@ -41,7 +44,7 @@ interpreter or scheduler.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
   mprotect semantics remain outside their scope. Exact cases and counts live in the
   [coverage table](../rust/sp1-comparison/README.md).
-- ADD also has an exact algebraic comparison over arbitrary supervisor rows with untrusted
+- ADD, ADDI, ADDW, SUB and SUBW have an exact algebraic comparison over arbitrary supervisor rows with untrusted
   programs disabled: upstream symbolic degree
   bounds justify a complete interpolation grid, and affine interaction occurrences match
   individually before permutation. Both AIRs must independently enforce the zero-register
@@ -67,10 +70,10 @@ interpreter or scheduler.
 - HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals export
   with Lean row/ledger references. Rust executes real programs through SP1's executor and shard
   builder, then checks native effects, complete receipts and released Byte-table membership.
-  Native commitment receipts describe each update to a mutable bank; SP1's syscall AIR binds
-  each update to the shard's final public digest. Repeated differing writes execute with the
-  same final bank but fail that upstream AIR condition. Both behaviors are tested explicitly;
-  handler-effect agreement does not establish whole-shard AIR equivalence.
+  Local receipts describe mutable bank updates; the enclosing fixed declaration provider binds
+  them to the immutable statement. Repeated differing writes remain valid operational steps but
+  fail both statement agreement and SP1's shard-public AIR condition. Handler-effect agreement
+  alone does not establish whole-shard AIR equivalence.
 - Empty/nonempty HINT_LEN and HINT_READ handlers compare queue updates and word endpoints with
   released execution, including repeated observations, empty hints, mandatory final padding and
   limb carries. Complete 16/24-byte HINT_READ assemblies close physical Memory, hint and cursor
@@ -78,8 +81,9 @@ interpreter or scheduler.
   boundary, target-check or nonfinal word rows pad to four. Both word variants use Boolean
   activity; semantic projections select active rows while physical ledgers retain every occurrence
   and their count bounds. Rust tests accept arbitrary disabled cells and reject non-Boolean
-  activity, missing real checks/transfers and activated padding. Broader active-host coverage and
-  general generation completeness remain open.
+  activity, missing real checks/transfers and activated padding. Repeated queue observations and overlapping reads also compare intermediate transfers with
+  released execution, so the final RAM state cannot mask a bad earlier write. General generation
+  completeness and WRITE/VERIFY installation remain open.
 - Source and target register authentication export their production sparse Memory provider and
   final-receipt consumer with separate fixed membership channels. Rust independently reconstructs
   register values and complete ledgers, including receipt clocks, and tests public binding and
@@ -144,9 +148,9 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 94-component host assembly is lookup-free. Its branch, empty, stopped and 16/24-byte
-HINT_READ exports check complete assembly construction and Rust agreement for those cases. Broader execution
-and host-call cases, general padding, data agreement and completeness remain open. The retired
+The installed 95-component host assembly is lookup-free. Its finite cases cover the boundaries
+listed above. Arbitrary mixed execution, all-eight-call installation, general data agreement and total
+construction remain open. The retired
 instruction-only pipeline did not supply that missing whole-assembly coverage.
 
 The native eight-call syscall profile uses degree-three arithmetic assertions and six shared

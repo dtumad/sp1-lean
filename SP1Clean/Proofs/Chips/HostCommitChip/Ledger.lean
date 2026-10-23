@@ -16,93 +16,26 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem equality_empty (target : RawChannel (ZMod p))
-    (input : Var (ProvablePair Word Word) (ZMod p)) (offset : ℕ) :
-    (FlatOperation.interactions ((Gadgets.Equality.circuit Word).toSubcircuit offset input).ops.toFlat).filter
-      (fun (i : AbstractInteraction (ZMod p)) => decide (i.channel = target)) = [] :=
-  InteractionRecovery.filter_interactions_formalAssertion_eq_nil
-    (Gadgets.Equality.circuit Word) target input List.not_mem_nil List.not_mem_nil
-
-private theorem bytes_empty (target : RawChannel (ZMod p)) (different : target ≠ byteChannel.toRaw)
-    (input : Var U16toU8OperationSafe.Inputs (ZMod p)) (offset : ℕ) :
-    (FlatOperation.interactions (U16toU8OperationSafe.circuit.toSubcircuit offset input).ops.toFlat).filter
-      (fun (i : AbstractInteraction (ZMod p)) => decide (i.channel = target)) = [] := by
-  apply InteractionRecovery.filter_interactions_formalAssertion_eq_nil
-  · simpa [U16toU8OperationSafe.circuit, circuit_norm] using different
-  · exact List.not_mem_nil
-
-/-- The per-call public records, before evaluation. They are intentionally historical values. -/
-def publicInteractions (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p)) :
-    List (AbstractInteraction (ZMod p)) :=
-  if deferred then
-    [(publicValuesChannel.pushed (PublicValueMsg.scalar 147 1)).toRaw,
-     (publicValuesChannel.pushed (PublicValueMsg.atSlot 72 1 slot (input.call.arg2[0] + input.call.arg2[1] * 65536))).toRaw]
-  else
-    (publicValuesChannel.pushed (PublicValueMsg.scalar 145 1)).toRaw :: List.ofFn (fun i : Fin 4 =>
-      (publicValuesChannel.pushed
-        (PublicValueMsg.atSlot (Expression.const ((32 + i.val : ℕ) : ZMod p)) 4 slot
-          (input.digest (Expression.const (256 : ZMod p)⁻¹))[i])).toRaw)
-
-private theorem main_nonbyte (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p))
-    (offset : ℕ) (target : RawChannel (ZMod p)) (different : target ≠ byteChannel.toRaw) :
-    ((main deferred slot input).operations offset).interactionsWith target =
-      ([(HostCallChip.channel.pulled input.call).toRaw,
-        ((stateChannel deferred).pulled input.previous).toRaw,
-        ((stateChannel deferred).pushed (input.next slot)).toRaw] ++
-        publicInteractions deferred slot input).filter (fun i => decide (i.channel = target)) := by
-  have clockEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    ClockOrder.circuit.base target input.clock n
-    (by simp [ClockOrder.circuit, circuit_norm])
-  have boundEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    (BoundedWord.circuit (bound p deferred) (bound_fits p deferred)).base target
-    ⟨input.call.arg2, input.comparison⟩ n
-    (by simpa [BoundedWord.circuit, circuit_norm] using different)
-  cases deferred <;> simp only [main, circuit_norm, List.nil_append]
-  all_goals
-    simp only [Operations.interactionsWith] at clockEmpty boundEmpty ⊢
-    simp only [GeneralFormalCircuit.toSubcircuit_interactions, clockEmpty, boundEmpty,
-      equality_empty, bytes_empty target different, List.nil_append]
-    simp [publicInteractions, circuit_norm, List.ofFn_succ, List.filter_cons]
-
-theorem main_host_interactions (deferred : Bool) (slot : Fin 8)
-    (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main deferred slot input).operations offset).interactionsWith HostCallChip.channel.toRaw =
-      [(HostCallChip.channel.pulled input.call).toRaw] := by
-  rw [main_nonbyte deferred slot input offset _ (by simp [HostCallChip.channel, byteChannel, circuit_norm])]
-  cases deferred <;> simp [publicInteractions, HostCallChip.channel, stateChannel,
-    publicValuesChannel, circuit_norm, List.ofFn_succ]
-
-theorem main_state_interactions (deferred : Bool) (slot : Fin 8)
-    (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main deferred slot input).operations offset).interactionsWith (stateChannel deferred).toRaw =
-      [((stateChannel deferred).pulled input.previous).toRaw,
-       ((stateChannel deferred).pushed (input.next slot)).toRaw] := by
-  rw [main_nonbyte deferred slot input offset _ (by cases deferred <;> simp [stateChannel, byteChannel, circuit_norm])]
-  cases deferred <;> simp [publicInteractions, HostCallChip.channel, stateChannel,
-    publicValuesChannel, circuit_norm, List.ofFn_succ]
-
-theorem main_public_interactions (deferred : Bool) (slot : Fin 8)
-    (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main deferred slot input).operations offset).interactionsWith publicValuesChannel.toRaw =
-      publicInteractions deferred slot input := by
-  rw [main_nonbyte deferred slot input offset _ (by simp [publicValuesChannel, byteChannel, circuit_norm])]
-  cases deferred <;> simp [publicInteractions, HostCallChip.channel, stateChannel,
-    publicValuesChannel, circuit_norm, List.ofFn_succ]
-
-theorem host_values (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p))
+/-- Guarding preserves the complete HostCall occurrence at its physical activity. -/
+theorem guarded_host_values (deferred : Bool) (slot : Fin 8) (input : Var RowInput (ZMod p))
     (offset : ℕ) (env : Environment (ZMod p)) :
-    ((main deferred slot input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
-      [HostCallChip.channel.pulledValue (Eval.eval env input.call)] := by
-  simp only [Operations.interactionValuesWith, main_host_interactions,
-    List.map_cons, List.map_nil, Channel.eval_pulled]
+    (((circuit deferred slot).main input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
+      [HostCallChip.channel.pulledIfValue (env input.2) (Eval.eval env input.1.call)] := by
+  change ((Guarded.main (activeCircuit deferred slot) (guardSupported deferred slot) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, host_values, List.map_cons, List.map_nil,
+    Channel.pulledValue, Channel.pulledIfValue, mul_neg, mul_one]
 
-theorem state_values (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p))
+/-- Both bank-state occurrences survive padding at zero multiplicity. -/
+theorem guarded_state_values (deferred : Bool) (slot : Fin 8) (input : Var RowInput (ZMod p))
     (offset : ℕ) (env : Environment (ZMod p)) :
-    ((main deferred slot input).operations offset).interactionValuesWith (stateChannel deferred).toRaw env =
-      [(stateChannel deferred).pulledValue (Eval.eval env input.previous),
-       (stateChannel deferred).pushedValue (Eval.eval env (input.next slot))] := by
-  simp only [Operations.interactionValuesWith, main_state_interactions,
-    List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed]
+    (((circuit deferred slot).main input).operations offset).interactionValuesWith (stateChannel deferred).toRaw env =
+      [(stateChannel deferred).pulledIfValue (env input.2) (Eval.eval env input.1.previous),
+       (stateChannel deferred).pushedIfValue (env input.2) (Eval.eval env (input.1.next slot))] := by
+  change ((Guarded.main (activeCircuit deferred slot) (guardSupported deferred slot) input).operations offset).interactionValuesWith _ env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [activeCircuit, state_values, List.map_cons, List.map_nil,
+    Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
+    mul_neg, mul_one]
 
 end SP1Clean.HostCommitChip

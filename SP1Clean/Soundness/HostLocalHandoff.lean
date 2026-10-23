@@ -74,7 +74,7 @@ theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source 
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels) :
     witness.interactionsWith HostCallChip.channel.toRaw =
       (HostLocalCore.hostCallTable witness).interactionsWith HostCallChip.channel.toRaw ++
-        (calls witness).map HostCallChip.channel.pulledValue := by
+        (receiverTables witness).flatMap (·.interactionsWith HostCallChip.channel.toRaw) := by
   rw [HostLocalCore.hostCall_interactions]
   have split : receiverTables witness ++ resourceTables witness = HostLocalCore.auxiliaryTables witness :=
     List.take_append_drop _ _
@@ -86,8 +86,7 @@ theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source 
     apply silent table.component
     rw [← resourceTables_components witness]
     exact List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  rw [resourceSilent, List.append_nil, ReceiverView.messages_interactions _ _ (receiverTables_aligned witness)]
-  rfl
+  rw [resourceSilent, List.append_nil]
 
 /-- Complete handler accounting needs only the actual HostCall channel balance. -/
 theorem calls_perm_of_balancedChannel (witness : EnsembleWitness (ensemble image source receivers resources channels names))
@@ -96,8 +95,11 @@ theorem calls_perm_of_balancedChannel (witness : EnsembleWitness (ensemble image
     (HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data).Perm (calls witness) := by
   apply HostCallLedger.calls_perm _ witness.data (HostLocalCore.hostCallTable_component witness)
     (constraints _ (HostLocalCore.hostCallTable_mem witness))
-  rw [← hostCall_interactions witness silent]
-  exact balanced
+  have selected := balanced.filter_nonzero
+  rw [hostCall_interactions witness silent, List.filter_append,
+    ReceiverView.messages_interactions _ _ (receiverTables_aligned witness)
+      (fun table member => constraints table (List.mem_of_mem_drop (List.mem_of_mem_take member)))] at selected
+  exact selected
 
 /-- Every handler occurrence corresponds to exactly one active instruction with the same full call. -/
 theorem calls_perm (witness : EnsembleWitness (ensemble image source receivers resources channels names))

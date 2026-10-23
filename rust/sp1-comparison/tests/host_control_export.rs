@@ -252,6 +252,7 @@ fn commit_input(deferred: bool, message: &[F], previous: &[F]) -> Vec<F> {
             .iter()
             .map(|x| F::from_u64(x.as_canonical_u64() % 256)),
     );
+    input.push(F::ONE);
     input
 }
 fn nonbyte(ledger: Ledger) -> Ledger {
@@ -324,10 +325,13 @@ fn twenty_installed_components_match_lean_rows_and_complete_ledgers() {
         let zero = handler.build(&vec![F::ZERO; handler.input_width]);
         assert_eq!(
             handler.valid(&zero),
-            index >= 18,
-            "terminal zero state is a real row, not inactive padding"
+            index >= 2,
+            "commitment activity disables padding; zero terminal states remain real"
         );
-        assert!((handler.ledger)(&zero).iter().any(|entry| entry.1 != 0));
+        assert_eq!(
+            (handler.ledger)(&zero).iter().any(|entry| entry.1 != 0),
+            index < 2 || index >= 18
+        );
     }
 }
 
@@ -370,7 +374,12 @@ fn all_commit_slots_preserve_released_executor_effects_and_literal_receipts() {
                     assert!(handler.valid(&row));
                     bank[slot] = event.arg2;
                     let next = state(event.clk, &bank);
+                    let mut declaration =
+                        vec![F::from_u64(u64::from(deferred)), F::from_u64(slot as u64)];
+                    declaration.extend(word(event.arg2));
+                    declaration.push(F::ONE);
                     let mut expected = vec![
+                        entry("sp1.native.commitment_declaration", -F::ONE, &declaration),
                         entry("sp1.native.host_call", -F::ONE, &message),
                         entry(channel, -F::ONE, &previous),
                         entry(channel, F::ONE, &next),
@@ -890,4 +899,23 @@ fn malformed_hint_calls_clocks_and_spans_are_rejected() {
         nonbyte((handlers[2].ledger)(&handlers[2].build(&input)))
     );
     assert!((handlers[2].rejects_open)(&changed));
+}
+
+#[test]
+fn commitment_padding_retains_occurrences_without_executing_a_call() {
+    let handlers = handlers();
+    for handler in &handlers[2..18] {
+        let mut input = vec![F::from_u64(42); handler.input_width];
+        let activity = input.len() - 1;
+        input[activity] = F::ZERO;
+        let row = handler.build(&input);
+        assert!(handler.valid(&row));
+        let physical = (handler.ledger)(&row);
+        assert!(!physical.is_empty());
+        assert!(physical.iter().all(|entry| entry.1 == 0));
+        for enabled in [F::ONE, F::from_u64(2), -F::ONE] {
+            input[activity] = enabled;
+            assert!(!handler.valid(&handler.build(&input)));
+        }
+    }
 }

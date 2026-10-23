@@ -10,36 +10,17 @@ import re
 import subprocess
 import sys
 import tempfile
+from time import monotonic
 
 from check_release_surface import CHIPS
-from lean_flags import flags_for, load_lakefile
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD_TARGETS = [
-    "SP1CleanTest.Core.EnsembleExport",
-    "SP1CleanTest.Core.RangeProviderExport",
-    "SP1CleanTest.Core.SystemExport",
-    "SP1CleanTest.Core.SyscallExport",
-    "SP1CleanTest.Core.HostControlExport",
-    "SP1CleanTest.Core.InstructionExport",
-    "SP1CleanTest.Core.ByteProviderExport",
-    "SP1CleanTest.Core.SyscallCodeExport",
-    "SP1CleanTest.Core.SnapshotRegisterExport",
-    "SP1CleanTest.Core.StaticProviderExport",
-    "SP1CleanTest.Core.RamExport",
-    "SP1CleanTest.Core.ProgramExport",
-    "SP1CleanTest.Core.WritePermissionExport",
-    "SP1CleanTest.Core.HintSourceExport",
-    "SP1CleanTest.Alignment.Support.InstalledAssemblyExport",
-    "SP1CleanTest.Alignment.Support.StoppedAssemblyFixture",
-    "SP1CleanTest.Alignment.Support.HintReadAssemblyFixture"
-]
 RUST_TESTS = {
-    "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
-    "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
+    "clean_export": 17, "instruction_export": 26, "symbolic_arithmetic_export": 2, "system_export": 4,
+    "syscall_export": 7, "host_control_export": 8, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
-    "installed_assembly_export": 13,
+    "installed_assembly_export": 19, "mixed_assembly_export": 6,
 }
 
 
@@ -75,7 +56,15 @@ def artifact_names():
               "installed_hint_word_padding.rs", "installed_hint_word_padding.reference.json"]
     files += [name + suffix
               for name in ["installed_stopped_zero", "installed_stopped_wide",
-                           "installed_stopped_changed", "installed_fabricated_halt"]
+                           "installed_stopped_changed", "installed_fabricated_halt",
+                           "installed_halt_zero", "installed_halt_wide", "installed_halt_max",
+                           "installed_commit_repeat", "installed_deferred_repeat",
+                           "installed_commit_partial_halt", "installed_commit_complete_halt"]
+              for suffix in [".rs", ".reference.json"]]
+    files += [name + suffix
+              for name in ["installed_ordinary", "installed_ordinary_prefix", "installed_ordinary_suffix",
+                           "installed_ordinary_empty", "installed_hints_empty", "installed_hints_tail",
+                           "installed_hints_aligned", "installed_enter"]
               for suffix in [".rs", ".reference.json"]]
     return files
 
@@ -162,7 +151,7 @@ def check_rust_log(log, expected=RUST_TESTS):
 
 
 def generate(out, env):
-    build = run_logged(["lake", "build", "--wfail", "--iofail", *BUILD_TARGETS],
+    build = run_logged(["lake", "build", "--wfail", "--iofail", "ensembleExport"],
                        out / "build.log", env)
     if "Build completed successfully" not in build:
         raise RuntimeError(f"Incomplete dependency build; see {out}/build.log")
@@ -175,15 +164,18 @@ def generate(out, env):
         ["git", "-C", str(directory), "status", "--porcelain", "--untracked-files=no"], text=True)
     if revision != clean["rev"] or dirty:
         raise RuntimeError("Clean checkout differs from the pinned emitter/backend")
-    command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
-               "scripts/ensembleExportFixture.lean"]
+    command = [str(ROOT / ".lake/build/bin/ensembleExport")]
+    generation_seconds = []
     for directory in [out, out / "repeat"]:
         directory.mkdir(exist_ok=True)
+        started = monotonic()
         result = subprocess.run(command, env={**env, "ENSEMBLE_EXPORT_OUT": str(directory)},
                                 text=True, capture_output=True)
+        generation_seconds.append(monotonic() - started)
         (directory / "lean.log").write_text(result.stdout + result.stderr)
         if result.returncode or result.stderr or result.stdout != "EXPORTED ensemble Rust and Lean reference cases\n":
             raise RuntimeError(f"Incomplete Lean export; see {directory}/lean.log")
+        print(f"Generated {directory.name} in {generation_seconds[-1]:.2f}s", flush=True)
     names = artifact_names()
     if len(names) != len(set(names)):
         raise ValueError("Duplicate expected export artifact")
@@ -198,6 +190,7 @@ def generate(out, env):
             raise ValueError(f"Nondeterministic ensemble export: {name}")
         hashes[name] = hashlib.sha256(content).hexdigest()
     provenance = {
+        "generationSeconds": generation_seconds,
         "cleanRevision": revision,
         "sp1Revision": json.loads(Path("scripts/provenance.json").read_text())["sp1"]["revision"],
         "sourceRevision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
@@ -208,15 +201,18 @@ def generate(out, env):
 
 
 def compare_rust(out, env):
-    """Keep the large assembly's compiler cost separate from component optimization."""
-    assembly = {"installed_assembly_export": RUST_TESTS["installed_assembly_export"]}
+    """Bound assembly compiler memory separately from component optimization."""
+    assembly = {name: RUST_TESTS[name] for name in ["installed_assembly_export", "mixed_assembly_export"]}
     components = {name: count for name, count in RUST_TESTS.items() if name not in assembly}
-    groups = [
-        ("components", components, []),
-        ("assembly", assembly, [
-            "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
-            "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
-        ]),
+    assembly_options = [
+        "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
+        "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
+    ]
+    # Compile one complete assembly binary per invocation while retaining Cargo's
+    # configured job pool. Its dependency outputs are shared across invocations.
+    groups = [("components", components, [])] + [
+        ("assembly-" + test, {test: count}, assembly_options)
+        for test, count in assembly.items()
     ]
     for features, name in [("instruction-export", "rust"),
                            ("instruction-export,mprotect", "rust-mprotect")]:

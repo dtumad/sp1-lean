@@ -227,5 +227,27 @@ theorem readIndexedActiveRows_keys_nodup {Index Key : Type*} (indices : List Ind
   rw [same, readActiveRows_eq_indexed] at unique
   simpa only [List.map_map, Function.comp_def] using unique
 
+/-- Physical balance, including its original count bound, yields the active endpoint inventory. -/
+theorem active_endpoints_perm {Index : Type*} (indices : List Index)
+    (view : Index → TransitionView channel) (tables : List (Table F))
+    (initial final : Message F)
+    (aligned : List.Forall₂ (fun view table => view.component = table.component) (indices.map view) tables)
+    (valid : ∀ table ∈ tables, table.Spec)
+    (balanced : BalancedInteractions
+      ([channel.pushedValue initial, channel.pulledValue final] ++
+        tables.flatMap (·.interactionsWith channel.toRaw))) :
+    (initial :: (readIndexedActiveRows indices view tables).map fun row => ((view row.1).edge row.2).2).Perm
+      (final :: (readIndexedActiveRows indices view tables).map fun row => ((view row.1).edge row.2).1) := by
+  have projected := readRows_interactions (indices.map view) tables aligned
+  rw [readRows_eq_indexed] at projected
+  simp only [List.flatMap_map] at projected
+  rw [projected] at balanced
+  change BalancedInteractions (channel.gatedTransitionLedger initial final
+    (readIndexedRows indices tables) (fun row => row.2 (view row.1).activity)
+    (fun row => (view row.1).edge row.2)) at balanced
+  exact (channel.gatedTransitionLedger_balanced_iff _ _ _ _ _ (fun row member =>
+    (view row.1).activity_binary row.2
+      (readIndexedRows_spec indices view tables aligned valid row member))).mp balanced |>.2
+
 end TransitionView
 end Air.Flat

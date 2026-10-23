@@ -150,6 +150,7 @@ import SP1Clean.Soundness.HostCallProjection
 import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Soundness.HostCommitEnsemble
+import SP1Clean.Soundness.CommitmentEnsemble
 import SP1Clean.Soundness.HostCommitHistory
 import SP1Clean.Soundness.OrdinaryObservation
 import SP1Clean.Proofs.Completeness.OrdinaryObservation

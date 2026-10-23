@@ -5,12 +5,12 @@ local execution segments**, with complete source and target states and all eight
 host calls. A segment may continue, halt, or be empty; boot-to-HALT is a corollary.
 
 ```text
-nativeEnsemble(context, source, target).Statement(canonicalHeader)
-  ↔ ∃ events, boundedNativeExecution(context, source, target, events)
+nativeEnsemble(context, commitments, source, target).Statement(canonicalHeader)
+  ↔ ∃ events, StatementExecution(context, commitments, source, target, events)
 ```
 
 This is a target, not an instantiated theorem. Its checked definitions are
-[Shard.Executes](../SP1Clean/FormalModel/Shard.lean) and the
+[Shard.StatementExecution](../SP1Clean/FormalModel/Shard.lean) and the
 [soundness/compiler targets](../SP1Clean/Soundness/Shard/Contract.lean).
 [#12](https://github.com/dtumad/sp1-lean/issues/12) owns their remaining obligations.
 
@@ -72,7 +72,16 @@ and fresh allocation history. Popping a hint does not authorize reusing its node
 WRITE must distinguish exact 64-bit descriptor branches from low32 branches and authenticate
 x12, buffer reads, output, hints and hook replies. VERIFY authenticates both 32-byte reads,
 overlap and the request-bound reply interface; it does not prove cryptographic verification.
-Mutable executor commitment banks are distinct from fixed digest checks in the exact Rust AIR.
+The proof statement includes one immutable public-output digest, one deferred-proof digest and
+their rolling flags. Every actual COMMIT or COMMIT_DEFERRED declaration must match its selected
+word and a set flag. Public-output words are u32s; deferred words must be canonical field elements.
+This semantic agreement condition is independent of AIR rows and compiler success.
+
+The operational host still records mutable banks: conflicting writes can execute, but cannot
+satisfy one proof statement. Repeating an identical declaration is allowed. Partial and empty
+segments need not cover every slot, and a set flag does not prove that any call occurred.
+Consequently an incomplete mutable bank is not automatically equal to the full immutable digest.
+Adjacent segments use the same statement; cutting a segment preserves declaration agreement.
 
 ## What is currently proved
 

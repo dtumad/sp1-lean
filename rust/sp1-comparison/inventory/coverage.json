@@ -37,9 +37,9 @@
       "comparisonKind": "sp1-component",
       "comparison": [
         "rust/sp1-comparison/tests/instruction_export.rs",
-        "rust/sp1-comparison/tests/symbolic_add_export.rs"
+        "rust/sp1-comparison/tests/symbolic_arithmetic_export.rs"
       ],
-      "limit": "Supervisor local AIR and open interaction buses; no whole-execution or user-mode agreement. ADD additionally has an exact arbitrary-row algebraic comparison for the supervisor profile with untrusted programs disabled, using upstream degree bounds, complete polynomial interpolation and full affine interaction signatures; unexpected public dependencies fail and the Rust checker/adapters remain trusted."
+      "limit": "Supervisor local AIR and open interaction buses; no whole-execution or user-mode agreement. ADD, ADDI, ADDW, SUB and SUBW additionally have exact arbitrary-row algebraic comparisons for the supervisor profile with untrusted programs disabled, using upstream degree bounds, complete polynomial interpolation and full affine interaction signatures; unexpected public dependencies fail and the Rust checker/adapters remain trusted."
     },
     "bytes": {
       "lean": [
@@ -88,9 +88,10 @@
       "comparison": [
         "rust/sp1-comparison/tests/clean_export.rs",
         "rust/sp1-comparison/tests/ram_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
-      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch, empty and stopped fixtures compare source/target register boundaries, fixed inventories and all table positions; empty and stopped cases reject removal of either ordered boundary terminal. The complete sixteen-byte HINT_READ fixture checks physical RAM writes and final register/RAM values against released execution. Its six ordered boundary/target-check tables pad three active rows to four; backend tests cover arbitrary disabled cells, invalid activity and erased real checks. General ordered-memory execution remains open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
+      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch, empty and stopped fixtures compare source/target register boundaries, fixed inventories and all table positions; empty and stopped cases reject removal of either ordered boundary terminal. The complete sixteen-byte HINT_READ fixture checks physical RAM writes and final register/RAM values against released execution. Its six ordered boundary/target-check tables pad three active rows to four; backend tests cover arbitrary disabled cells, invalid activity and erased real checks. Arithmetic/branch programs with repeated RAM accesses and aliased registers compare full and split local Memory ledgers against released records; overlapping hint reads compare intermediate and final memory. These remain finite cases. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
     },
     "program": {
       "lean": [
@@ -100,7 +101,8 @@
       "comparisonKind": "sp1-component",
       "comparison": [
         "rust/sp1-comparison/tests/program_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
       "limit": "Installed verifier-fixed Program provider. Independent released preprocessing, AIR and count-generation comparison covers a contiguous ROM; native tests cover sparse unordered addresses, unused rows, padding and empty inventory. The complete branch fixture exercises installed fetch generation; the empty segment retains fixed ROM rows with zero demand. User-mode execution remains open."
     },
@@ -120,9 +122,10 @@
         "rust/sp1-comparison/tests/host_control_export.rs",
         "rust/sp1-comparison/tests/write_permission_export.rs",
         "rust/sp1-comparison/tests/hint_source_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. The syscall instruction and installed host-call wrapper compare released supervisor rows, public bindings, shared ledgers and WRITE's register read. Weighted public queries preserve all eight field coefficients. Sixteen inactive-commit bitmaps cover empty/unit/multi-hot/non-Boolean/cancelling weights with public-cell, flag and cached-result mutations; finite tests do not establish arbitrary-row public equivalence. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. All installed host components export in complete branch, empty and stopped assemblies, whose call tables remain empty. Empty and stopped cases require both bank terminals; stopped cases include nonzero banks and reject changed optional exit status, fabricated HALT and resumed execution. HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals compare generated rows/ledgers and released executor effects. Native per-call receipts preserve mutable bank history; a released-shard regression shows that earlier differing writes fail SP1 public-digest AIR despite the same final bank. Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows/ledgers, queue transitions and padded-write endpoints with released execution, including empty hints and limb carries. A complete sixteen-byte HINT_READ assembly closes physical Memory, hint and cursor ledgers, compares final register/RAM values with released execution and rejects malformed activity/target checks. Arbitrary hint lengths still need word-transfer padding; broader active-host generation remains open."
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN and HINT_READ; WRITE and VERIFY_SP1_PROOF installation remains #12. Full-word code checks, weighted public queries and all control/hint handlers compare released supervisor rows, effects and complete ledgers. Complete assemblies cover active HALT, repeated declarations, partial and full commit-to-HALT programs, 16/24-byte HINT_READ, repeated queue observations with overlapping empty/aligned/byte-tail reads, and constrained ENTER replay. The immutable statement fixes sixteen declaration payloads, canonical public bytes/deferred elements and flags; mutable bank histories remain distinct. Repeated identical declarations are valid; conflicting words execute but are outside the proof statement. Guarded commitment and hint-word rows retain inactive physical occurrences. Full-word coverage and call occurrence do not follow from a flag. Native ROM permission tests do not implement runtime mprotect. Arbitrary mixed execution and all-eight-call generation remain open."
     },
     "halt": {
       "lean": [
@@ -131,9 +134,10 @@
       "export": "component",
       "comparisonKind": "native-backend",
       "comparison": [
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
-      "limit": "Complete branch, empty and stopped fixtures export Halt and check its nonhalting padding row and public exit contribution. Empty and stopped segments reject nonzero public exit and removal of the Exit terminal. Stopped optional status is distinct from public exit: zero and wide codes preserve their full zero-multiplicity verifier payloads. Complete active HALT execution remains open."
+      "limit": "The padding Exit component closes continuing, empty and stopped segments. Active HALT fixtures use the real instruction and host handler with zero, wide and maximal field exits, omitting padding Exit. Fresh proofs test missing terminals, duplicate Exit and changed public values. Optional stopped status remains distinct from public exit accounting."
     },
     "unmodeled": {
       "lean": [],
@@ -164,9 +168,10 @@
       "comparisonKind": "native-backend",
       "comparison": [
         "rust/sp1-comparison/tests/clean_export.rs",
-        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+        "rust/sp1-comparison/tests/installed_assembly_export.rs",
+        "rust/sp1-comparison/tests/mixed_assembly_export.rs"
       ],
-      "limit": "The complete native public verifier exports with 94-table branch, empty, stopped and sixteen-byte HINT_READ assemblies. Rust compares every verifier occurrence, including failed generation cases, and attempts fresh proofs with altered public endpoints, missing terminals, resumed execution and invalid optional exits. Host banks are fixed instance parameters; changed public digest bytes remain accepted in stopped segments, so these cases do not establish digest-to-bank binding. The HINT_READ fixture additionally binds final clock and physical target checks. Broader active memory and host cases remain open; no cryptographic SP1 verifier soundness claim."
+      "limit": "The complete 95-table assembly exports arithmetic/branch/RAM programs and local cuts, empty/stopped segments, HALT, repeated/partial/full commitments, HINT_READ/length programs and constrained ENTER replay. Every public verifier occurrence is retained. The 58-cell header binds canonical commitment bytes, deferred words and flags to the fixed declaration provider; stopped segments reject changed digest fields. Fresh proofs test public mutations, missing/fabricated terminals, changed provider counts and padding; fixed declarations are independently checked against released public values. These are finite assembly tests, not total compiler or cryptographic verifier soundness proofs."
     }
   },
   "released": {
@@ -360,22 +365,22 @@
     {"name": "sp1.native.hint_read", "width": 368, "inputWidth": 66, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.host_halt", "width": 94, "inputWidth": 30, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.enter", "width": 22, "inputWidth": 22, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.0", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.1", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.2", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.3", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.4", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.5", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.6", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit.7", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.0", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.1", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.2", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.3", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.4", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.5", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.6", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.commit_deferred.7", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.0", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.1", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.2", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.3", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.4", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.5", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.6", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit.7", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.0", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.1", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.2", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.3", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.4", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.5", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.6", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.commit_deferred.7", "width": 255, "inputWidth": 69, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_len.nonempty", "width": 162, "inputWidth": 40, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_len.empty", "width": 162, "inputWidth": 40, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read_word.next", "width": 297, "inputWidth": 32, "fixedWidth": 0, "group": "host", "lookups": []},
@@ -387,8 +392,9 @@
     {"name": "sp1.native.memory.check.registers.changes", "width": 11, "inputWidth": 11, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.memory.check.ram.changes", "width": 751, "inputWidth": 11, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.target_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
-    {"name": "sp1.native.target_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []}
+    {"name": "sp1.native.target_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []},
+    {"name": "sp1.native.commitment_declaration.source", "width": 9, "inputWidth": 9, "fixedWidth": 8, "group": "host", "lookups": []}
   ],
-  "publicWidth": 48,
+  "publicWidth": 58,
   "verifier": "verifier"
 }

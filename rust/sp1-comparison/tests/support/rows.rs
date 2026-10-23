@@ -114,6 +114,71 @@ pub fn check_mutations<P: Program<NativeField> + GeneratedAirSpec>(
         rejected > 0,
         "the mutation battery must exercise rejected constraints"
     );
+    check_joint_mutations::<P>(trace, indices, map_row, chip);
+}
+
+/// Walk several columns away from released rows, retaining each accepted change.
+/// The released evaluator decides which candidates survive; Clean must agree on
+/// every attempted row and every physical interaction, including rejected rows.
+/// A second walk holds all prover inputs fixed, exposing alternate witnesses
+/// where the released AIR allows them instead of demanding generator uniqueness.
+fn check_joint_mutations<P: Program<NativeField> + GeneratedAirSpec>(
+    trace: &RowMajorMatrix<SP1Field>,
+    indices: &[usize],
+    map_row: fn(&[SP1Field]) -> Vec<NativeField>,
+    chip: &impl Air<Sp1Evaluation>,
+) {
+    let mut accepted = 0;
+    let mut alternate_witnesses = 0;
+    // Bound runtime independently of the trace's number of active events while
+    // retaining both ends (including released padding) of the supplied cases.
+    let cases = [
+        indices[0],
+        indices[indices.len() / 2],
+        *indices.last().unwrap(),
+    ];
+    for index in cases {
+        let original = trace.row_slice(index);
+        let original_native = map_row(&original);
+        for fixed_inputs in [false, true] {
+            let mut current = original.to_vec();
+            for column in (0..trace.width()).rev() {
+                let delta = [1, 65536, <SP1Field as Sp1PrimeField64>::ORDER_U64 - 1][column % 3];
+                let mut candidate = current.clone();
+                candidate[column] += SP1Field::from_canonical_u64(delta);
+                let mapped = map_row(&candidate);
+                if fixed_inputs && mapped[..P::PROVER_INPUTS] != original_native[..P::PROVER_INPUTS]
+                {
+                    continue;
+                }
+                if compare::<P>(
+                    &candidate,
+                    &mapped,
+                    chip,
+                    &format!(
+                        "joint mutation row {index}, column {column}, fixed_inputs={fixed_inputs}"
+                    ),
+                ) {
+                    current = candidate;
+                    accepted += 1;
+                    alternate_witnesses += usize::from(fixed_inputs);
+                }
+            }
+            assert!(compare::<P>(
+                &current,
+                &map_row(&current),
+                chip,
+                "final alternate row"
+            ));
+        }
+    }
+    assert!(
+        accepted > 0,
+        "the joint mutation walk must retain alternate valid rows"
+    );
+    println!(
+        "joint accepted changes={accepted}, unchanged-input witness changes={alternate_witnesses}"
+    );
 }
 
 pub fn check_open_buses<P: Program<NativeField>>(row: &[NativeField]) {
