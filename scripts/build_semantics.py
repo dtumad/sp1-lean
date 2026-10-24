@@ -136,18 +136,19 @@ def read_graph():
     """module -> (path, imports, lines)."""
     graph = {}
     for tree in TREES:
-        root_file = os.path.join(ROOT, tree + ".lean")
+        source_root = os.path.join(ROOT, ".lake/generated/sail") if tree == "LeanRV64D" else ROOT
+        root_file = os.path.join(source_root, tree + ".lean")
         paths = []
         if os.path.exists(root_file):
             paths.append(tree + ".lean")
-        for dp, _, fs in os.walk(os.path.join(ROOT, tree)):
+        for dp, _, fs in os.walk(os.path.join(source_root, tree)):
             for fn in fs:
                 if fn.endswith(".lean"):
-                    paths.append(os.path.relpath(os.path.join(dp, fn), ROOT))
+                    paths.append(os.path.relpath(os.path.join(dp, fn), source_root))
         for path in paths:
             mod = path[:-5].replace("/", ".")
             imports, lines, in_header = [], 0, True
-            with open(os.path.join(ROOT, path), encoding="utf-8", errors="replace") as f:
+            with open(os.path.join(source_root, path), encoding="utf-8", errors="replace") as f:
                 for line in f:
                     lines += 1
                     if not in_header:

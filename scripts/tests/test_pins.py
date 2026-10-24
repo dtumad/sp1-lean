@@ -18,12 +18,17 @@ class PinTests(unittest.TestCase):
         self.root = Path(self.directory.name)
         for name in ("lakefile.toml", "lake-manifest.json", "lean-toolchain",
                      "scripts/provenance.json", "scripts/sail-config/sp1_rv64d_cfg.json",
-                     "rust/sp1-comparison/Cargo.toml", "rust/sp1-comparison/Cargo.lock",
-                     "LeanRV64D.lean"):
+                     "rust/sp1-comparison/Cargo.toml", "rust/sp1-comparison/Cargo.lock"):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(check_pins.ROOT / name, path)
-        shutil.copytree(check_pins.ROOT / "LeanRV64D", self.root / "LeanRV64D")
+        self.model = self.root / check_pins.SAIL_MODEL_DIR
+        (self.model / "LeanRV64D").mkdir(parents=True)
+        (self.model / "LeanRV64D.lean").write_text("module\npublic import LeanRV64D.Defs\n")
+        (self.model / "LeanRV64D/Defs.lean").write_text("module\n@[expose] public def sample := 1\n")
+        digest, count = check_pins.tree_hash(self.model)
+        self.edit_json("scripts/provenance.json", lambda data: data["sail"].update(
+            generatedTreeSha256=digest, generatedFiles=count))
 
     def edit_json(self, name, change):
         path = self.root / name
@@ -50,9 +55,14 @@ class PinTests(unittest.TestCase):
         self.assertTrue(any("git pin" in e for e in check_pins.check(self.root)))
 
     def test_generated_drift(self):
-        with (self.root / "LeanRV64D.lean").open("a") as output:
+        with (self.model / "LeanRV64D.lean").open("a") as output:
             output.write("\n-- unreviewed generated edit\n")
         self.assertTrue(any("generated Sail tree" in e for e in check_pins.check(self.root)))
+
+    def test_unprepared_clone_only_passes_explicit_source_check(self):
+        shutil.rmtree(self.model)
+        self.assertEqual(check_pins.check(self.root, source_only=True), [])
+        self.assertTrue(any("prepare_sail.py" in e for e in check_pins.check(self.root)))
 
     def test_widened_rvfi_workaround(self):
         path = self.root / "lakefile.toml"

@@ -99,7 +99,11 @@ echo ">>> lean: $("$LEAN_BIN" --version 2>/dev/null | head -1)"
 LISTFILE="$(mktemp)"
 trap 'rm -f "$LISTFILE" "$LISTFILE.f"' EXIT
 for tree in $TREES; do
-  [ -d "$tree" ] && find "$tree" -name '*.lean'
+  if [ "$tree" = LeanRV64D ]; then
+    find .lake/generated/sail/LeanRV64D -name '*.lean'
+  elif [ -d "$tree" ]; then
+    find "$tree" -name '*.lean'
+  fi
 done | sort > "$LISTFILE"
 if [ -n "$PREFIX" ]; then
   grep "^$PREFIX" "$LISTFILE" > "$LISTFILE.f"; mv "$LISTFILE.f" "$LISTFILE"
@@ -120,7 +124,8 @@ while IFS= read -r f; do
   count=$((count + 1))
 
   # dotted module name, e.g. SP1Clean/Math/Word.lean -> SP1Clean.Math.Word
-  module="${f%.lean}"
+  module="${f#.lake/generated/sail/}"
+  module="${module%.lean}"
   module="${module//\//.}"
   log="$OUTDIR/${module}.log"
   timefile="$(mktemp)"
@@ -128,7 +133,7 @@ while IFS= read -r f; do
   # A library's own options replace the package's (Lake: the library wins on a key).
   case "$f" in
     SP1CleanTest/*) flags=("${TEST_FLAGS[@]}") ;;
-    LeanRV64D/*|LeanRV64D.lean) flags=("${MODEL_FLAGS[@]}") ;;
+    .lake/generated/sail/LeanRV64D/*|.lake/generated/sail/LeanRV64D.lean) flags=("${MODEL_FLAGS[@]}") ;;
     *) flags=("${PACKAGE_FLAGS[@]}") ;;
   esac
 

@@ -20,6 +20,7 @@ readiness restrictions. They do not establish that capstone.
 ## Use and explore
 
 ```sh
+python3 scripts/prepare_sail.py
 lake build --wfail --iofail
 lake test
 lake build --wfail --iofail SP1Clean SP1CleanTest
