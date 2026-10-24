@@ -120,9 +120,9 @@ EXCLUDES=(-x README.md -x report.py -x build_log.txt -x .github -x .gitignore -x
 
 verdict=0
 diff_against() { # rev label
-  [ -d ref ] || git clone --quiet https://github.com/opencompl/sail-riscv-lean ref
-  git -C ref cat-file -e "$1^{commit}" 2>/dev/null || git -C ref fetch --quiet origin "$1"
-  git -C ref checkout --quiet "$1"
+  [ -d ref ] || git clone --quiet https://github.com/opencompl/sail-riscv-lean ref || return 1
+  git -C ref cat-file -e "$1^{commit}" 2>/dev/null || git -C ref fetch --quiet origin "$1" || return 1
+  git -C ref checkout --quiet "$1" || return 1
   echo "=== diff vs $2 ($1) ==="
   if diff -ru "${EXCLUDES[@]}" ref "$OUT"; then
     echo "=== IDENTICAL vs $2 ==="
