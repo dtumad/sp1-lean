@@ -39,17 +39,29 @@ pinned to the same revision as the Lean emitter and compared with SP1:
 python3 scripts/check_ensemble_export.py
 ```
 
-Component comparisons use release optimization level 1. The runner compiles the large installed
-assembly test binaries one at a time at level 0, with release debug assertions still disabled; this
-bounds peak compiler memory and avoids expensive optimization of repeated complete-assembly instances. Both feature configurations run
-every test, and dependency crates retain their normal release settings. CI logs the export step's
-time and peak memory. These fixture settings do not measure optimized application performance.
+Component comparisons use release optimization level 1. Assembly comparisons use level 0,
+with release debug assertions disabled; dependency crates retain their normal release settings.
+The assembly binaries are split by fixture family to bound compilation memory. Both feature
+configurations run every test. These settings do not measure optimized application performance.
 
-The runner builds the `ensembleExport` Lake executable and uses it for two byte-identical
-generations under `.lake/ensemble-export/`, then refreshes
-the owned `compile-inputs/` directory without rewriting unchanged files. Cargo can reuse those
-inputs across runs; fresh artifacts and provenance stay in separate run directories. Concurrent
-runners are rejected before either can change the shared inputs. Comparisons cover these boundaries:
+The runner builds `ensembleExport` once, generates two fresh inventories and checks every byte
+before Rust consumes either. Source contents, pins, the compiled driver and generated artifacts
+are hashed at each hand-off. Local runs preserve identical `compile-inputs/` files so Cargo can
+reuse them; a lock prevents overlapping runs from replacing those inputs.
+
+CI uses the same `prepare`, `generate`, `verify` and `rust` stages. Two generation jobs share the
+compiled driver. Verified artifacts are uploaded before compilation, then fixture families run
+on separate runners with bounded concurrency. Each subprocess has timing evidence; Linux also
+records peak memory through GNU time. `build-full` requires every stage, including both Cargo
+configurations, to pass. For a partial Rust rerun against an already verified inventory:
+
+```sh
+python3 scripts/check_ensemble_export.py rust \
+  --inputs .lake/ensemble-export/verified --output .lake/ensemble-export/results \
+  --group assembly_halt_export --configuration mprotect
+```
+
+Comparisons cover these boundaries:
 
 - The fixed-membership ensemble uses verifier-fixed columns and Clean's scheduler. Generated cells
   match Lean; backend proofs accept both allowed values and reject forged membership, changed public

@@ -195,3 +195,49 @@ pub fn reject_traces<P: GeneratedAirSpec>(
         verify_ensemble(&config, &statement, &proof, public).is_err()
     });
 }
+
+pub fn malformed<P: Program<F> + GeneratedAirSpec>(
+    reference: &serde_json::Value,
+    consumers: &[usize],
+) {
+    eprintln!("assembly {}", std::any::type_name::<P>());
+    let (traces, public) = prove_case::<P>(&reference["cases"][0]);
+    for column in [0, 7, 11, 14, 31, 56] {
+        eprintln!("changed public column {column}");
+        let mut changed = public.clone();
+        changed[column] += F::ONE;
+        reject_traces::<P>(&changed, traces.clone());
+    }
+    for table in consumers.iter().copied().chain([2, 5, 88, 89, 94]) {
+        eprintln!("missing table {table}");
+        assert!(traces[table].height() > 0);
+        let mut missing = traces.clone();
+        missing[table].values.clear();
+        reject_traces::<P>(&public, missing);
+    }
+    for table in [6, 59, 92, 94] {
+        eprintln!("changed provider count {table}");
+        let mut wrong_count = traces.clone();
+        wrong_count[table].values[0] += F::ONE;
+        reject_traces::<P>(&public, wrong_count);
+    }
+    for &table in consumers {
+        let column = if table == 57 {
+            // HaltPaddingChip fixes is_real (the last input) to zero. Its first
+            // clock cell is deliberately free, so changing it must remain valid.
+            assert_eq!(P::HINT_TABLES[table].width, 25);
+            assert_eq!(traces[table].values[24], F::ZERO);
+            eprintln!("allowed unused clock change in padding Exit");
+            let mut padding = traces.clone();
+            padding[table].values[0] += F::ONE;
+            accept_traces::<P>(&public, padding);
+            24
+        } else {
+            0
+        };
+        eprintln!("changed column {column} of table {table}");
+        let mut changed = traces.clone();
+        changed[table].values[column] += F::ONE;
+        reject_traces::<P>(&public, changed);
+    }
+}

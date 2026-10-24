@@ -25,9 +25,9 @@ name: Lean Action CI
 #    saved nothing and the next run started from the entry before it). A poisoned entry is purged
 #    with the `Cache cleanup` workflow's `delete_key` input, or by bumping `SP1_CACHE_VERSION`.
 #
-# One runner builds the core and, when requested, the full alignment/test closure, then runs
-# lint once and all export/backend/trust gates. `build-full` preserves the full-check status
-# name and reports the result of that runner; it does not restore or rebuild anything.
+# One runner builds Lean and runs lint/backend/trust gates once. Two export jobs use its
+# compiled driver; a comparison job verifies their source/pin identity and every artifact hash.
+# Rust fixture families then compile on separate runners. `build-full` requires every stage.
 # Full checks run on every PR, main push, weekly schedule and alignment/clean dispatch.
 # A core-only dispatch or ci-testing push still builds/tests/lints just the core.
 #
@@ -58,6 +58,12 @@ on:
         description: "also run full alignment, tests, lint and trust checks"
         type: boolean
         default: false
+
+# Cancel the entire obsolete PR validation graph, including downstream matrix jobs.
+# Main keeps its resumable build: one running validation and one pending per ref.
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Bump to invalidate every cache entry (toolchain and manifest changes already rekey; a change to
@@ -124,10 +130,6 @@ jobs:
     # Below GitHub's 6-hour job limit; individual builds have a 5-hour timeout. Cache saving
     # runs after ordinary build failures, but a cancelled/timed-out job is never saved.
     timeout-minutes: 350
-    # PR pushes supersede each other; `main` queues (one running + one pending per group).
-    concurrency:
-      group: core-${{ github.ref }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     permissions:
       actions: write
       contents: read
@@ -161,6 +163,7 @@ jobs:
       - name: Compute cache keys and pick the entry to restore
         id: key
         run: |
+          mkdir -p .lake/ci
           prefix="sp1-${SP1_CACHE_VERSION}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}"
           echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
           kind=core
@@ -168,12 +171,12 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             pr="${{ github.event.pull_request.number }}"
             echo "key=${prefix}-${kind}-pr${pr}-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
-            git rev-list --first-parent -n 30 HEAD^1 > lineage.txt
-            python3 scripts/ci/cache_pick.py --mode pr --pr "$pr" --prefix "$prefix" --lineage lineage.txt >> "$GITHUB_OUTPUT"
+            git rev-list --first-parent -n 30 HEAD^1 > .lake/ci/lineage.txt
+            python3 scripts/ci/cache_pick.py --mode pr --pr "$pr" --prefix "$prefix" --lineage .lake/ci/lineage.txt >> "$GITHUB_OUTPUT"
           else
             echo "key=${prefix}-${kind}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
-            git rev-list --first-parent -n 30 HEAD > lineage.txt
-            python3 scripts/ci/cache_pick.py --mode main --prefix "$prefix" --lineage lineage.txt >> "$GITHUB_OUTPUT"
+            git rev-list --first-parent -n 30 HEAD > .lake/ci/lineage.txt
+            python3 scripts/ci/cache_pick.py --mode main --prefix "$prefix" --lineage .lake/ci/lineage.txt >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
       - name: Hand-off from the merged PR (pushes to main)
@@ -228,10 +231,20 @@ jobs:
         run: timeout 5h lake build --wfail --iofail SP1CoreTest
       - name: Full build (resumable — a cold cache may need one re-run)
         if: env.FULL_BUILD == 'true'
-        run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets ensembleExport
+        run: timeout 5h lake --no-cache build --wfail --iofail SP1Clean ToClean ToMathlib ToPolyFun backendGadgets
       - name: Full test library (lake build SP1CleanTest)
         if: env.FULL_BUILD == 'true'
         run: timeout 5h lake build --wfail --iofail SP1CleanTest
+      - name: Build and authenticate the ensemble exporter
+        run: python3 scripts/check_ensemble_export.py prepare --output .lake/ensemble-export/driver
+      - name: Upload compiled exporter
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensemble-driver-${{ github.run_id }}
+          overwrite: true
+          path: .lake/ensemble-export/driver/
+          if-no-files-found: error
+          retention-days: 3
       - name: Save native dependency objects
         if: success() && env.FULL_BUILD == 'true' && steps.native-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -250,26 +263,6 @@ jobs:
       - name: Environment linters (core-only runs)
         if: env.FULL_BUILD != 'true'
         run: lake exe runLinter --no-build SP1Clean.Core ToClean ToMathlib ToPolyFun
-      - uses: dtolnay/rust-toolchain@1.95.0
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            rust/sp1-comparison
-          key: clean-export
-      - name: Built-in ensemble export and Rust backend comparison
-        id: ensemble
-        run: /usr/bin/time -v python3 scripts/check_ensemble_export.py
-      - name: Upload ensemble export artifacts
-        if: always() && steps.ensemble.outcome != 'skipped'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ensemble-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            .lake/ensemble-export/
-            !.lake/ensemble-export/compile-inputs/
-            !.lake/ensemble-export/inputs.lock
-          if-no-files-found: error
-          retention-days: 14
       - name: Library examples and adversarial witnesses
         if: env.FULL_BUILD == 'true'
         id: examples
@@ -342,9 +335,124 @@ jobs:
           python3 scripts/ci/cache_gc.py --repo "${{ github.repository }}" --prefix "${{ steps.key.outputs.prefix }}" \
             --only-ref "refs/pull/${{ github.event.pull_request.number }}/merge" --apply
 
-  build-full:
-    # Keep the status check name stable. A failed/cancelled/skipped build cannot pass this gate.
+  # Hand-off names are stable across attempts: rerunning only failed jobs must be able
+  # to consume successful producers from an earlier attempt of this same source revision.
+  export-generate:
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        generation: [first, second]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ensemble-driver-${{ github.run_id }}
+          path: .lake/ensemble-export/driver/
+      - name: Generate fresh AIR, witnesses and references
+        env:
+          LEAN_NUM_THREADS: "3"
+        run: >-
+          python3 scripts/check_ensemble_export.py generate
+          --driver .lake/ensemble-export/driver
+          --output .lake/ensemble-export/${{ matrix.generation }}
+      - name: Preserve generation and resource evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensemble-${{ matrix.generation }}-${{ github.run_id }}
+          overwrite: true
+          path: .lake/ensemble-export/${{ matrix.generation }}/
+          if-no-files-found: error
+          retention-days: 3
+
+  export-verify:
+    needs: export-generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ensemble-first-${{ github.run_id }}
+          path: .lake/ensemble-export/first/
+      - uses: actions/download-artifact@v4
+        with:
+          name: ensemble-second-${{ github.run_id }}
+          path: .lake/ensemble-export/second/
+      - name: Verify provenance and deterministic inventory
+        run: >-
+          python3 scripts/check_ensemble_export.py verify
+          --first .lake/ensemble-export/first --second .lake/ensemble-export/second
+          --output .lake/ensemble-export/verified
+      - name: Publish verified Cargo inputs before compilation
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensemble-verified-${{ github.run_id }}
+          overwrite: true
+          path: .lake/ensemble-export/verified/
+          if-no-files-found: error
+          retention-days: 14
+
+  export-rust:
+    needs: export-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        configuration: [default, mprotect]
+        group:
+          - components
+          - assembly_boundaries_export
+          - assembly_stopped_export
+          - assembly_hint_read_export
+          - assembly_halt_export
+          - assembly_commitments_export
+          - assembly_ordinary_export
+          - assembly_hints_export
+          - assembly_enter_export
+    env:
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ensemble-verified-${{ github.run_id }}
+          path: .lake/ensemble-export/verified/
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/sp1-comparison
+          # Dependencies share a cache; only the component job writes each feature key.
+          key: clean-export-${{ matrix.configuration }}
+          save-if: ${{ matrix.group == 'components' }}
+      - name: Compile and compare one fixture family
+        run: >-
+          python3 scripts/check_ensemble_export.py rust
+          --inputs .lake/ensemble-export/verified --output .lake/ensemble-export/results
+          --group ${{ matrix.group }} --configuration ${{ matrix.configuration }}
+      - name: Preserve comparison and resource evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensemble-rust-${{ matrix.group }}-${{ matrix.configuration }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/ensemble-export/results/
+          if-no-files-found: error
+          retention-days: 14
+
+  build-full:
+    # Missing, failed, cancelled and skipped prerequisite jobs must all fail this gate.
+    needs: [guards, build, export-generate, export-verify, export-rust]
     if: >-
       always() && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -355,8 +463,8 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
+      - uses: actions/checkout@v4
       - name: Full validation passed
         env:
-          BUILD_RESULT: ${{ needs.build.result }}
-          FULL_BUILD: ${{ needs.build.outputs.full-build }}
-        run: test "$BUILD_RESULT" = success && test "$FULL_BUILD" = true
+          REQUIRED_JOBS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/check_full_validation.py
