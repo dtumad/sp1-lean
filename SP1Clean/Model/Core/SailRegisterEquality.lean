@@ -1,4 +1,6 @@
-import SP1Clean.Model.Register
+module
+
+public import SP1Clean.Model.Register
 
 /-! # Exact executable comparison of the complete Sail register file
 
@@ -7,6 +9,8 @@ that equality lawful. These instances close that gap for the types used by `Regi
 The resulting finite-map comparison includes platform registers, nextPC, retirement bookkeeping,
 and absent keys; it does not identify states merely because their integer registers agree.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

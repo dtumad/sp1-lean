@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Completeness.EventBuckets
-import SP1Clean.Soundness.StateCanon
-import SP1Clean.FormalModel.TraceGen.Bump
-import SP1Clean.Model.InteractionProjection
+module
+
+public import SP1Clean.Proofs.Completeness.EventBuckets
+public import SP1Clean.Soundness.StateCanon
+public import SP1Clean.FormalModel.TraceGen.Bump
+public import SP1Clean.Model.InteractionProjection
 
 /-!
 # Canonical State inventories
@@ -23,6 +25,8 @@ No channel balance or AIR witness is used in the construction. The separate `Sta
 adapter connects these projections to built tables. Keeping the semantic inventory below assembly
 lets the native compiler derive physical capacity from the existing execution limit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

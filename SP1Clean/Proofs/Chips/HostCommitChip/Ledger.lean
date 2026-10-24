@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.HostCommitChip.Formal
+module
+
+public import SP1Clean.Proofs.Chips.HostCommitChip.Formal
 
 /-! # Commitment calls on the actual Clean ledger
 
@@ -6,6 +8,8 @@ Each row consumes one instruction handoff, replaces one bank state, and supplies
 instruction's historical PublicValues entries. Byte checks remain internal subcircuits.
 These projections do not supply the bank's initial/final endpoints or prove global balance.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitChip
 

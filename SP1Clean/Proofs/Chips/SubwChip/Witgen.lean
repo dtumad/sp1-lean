@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.SubwChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.SubwChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.SubwChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -7,6 +9,8 @@ Subw on the witgen bridge (see `AddChip/Witgen.lean` for the programme note). Sa
 as Addw — the W-result's two low limbs (`valueIR`) and its sign bit (`msbIR`) — and, since Subw's
 adapter is the R-type reader rather than the ALU-type one, the operand lemmas it projects through are
 Sub's rather than Addw's. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwChip
 

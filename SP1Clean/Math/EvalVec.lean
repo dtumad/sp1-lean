@@ -1,6 +1,8 @@
-import Clean.Circuit.Basic
-import Clean.Utils.Field
-import Mathlib.Tactic.IntervalCases
+module
+
+public import Clean.Circuit.Basic
+public import Clean.Utils.Field
+public import Mathlib.Tactic.IntervalCases
 
 /-! # `vec4_eval` — folding a length-4 `#v` of pointwise evaluations back to `Vector.map`
 
@@ -11,6 +13,8 @@ chip `Formal` proofs (Add/Addi/Addw/Sub/Subw, Mul/Lt/Bitwise, ShiftLeft/ShiftRig
 UType), `AddressOperation`, and the DivRem completeness `Driver`, so it
 lives here in `Math` rather than being re-declared per file. Generic over a prime field `ZMod p`
 (`Expression.eval` needs the `Field` instance, which the primality `Fact` supplies). -/
+
+@[expose] public section
 
 namespace SP1Clean
 

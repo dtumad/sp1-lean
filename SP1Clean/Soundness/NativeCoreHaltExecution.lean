@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreTrajectory
-import SP1Clean.Soundness.HaltGrounding
+module
+
+public import SP1Clean.Soundness.NativeCoreTrajectory
+public import SP1Clean.Soundness.HaltGrounding
 
 /-! # Native grounding with the trajectory and HALT derived internally
 
@@ -8,6 +10,8 @@ event executor, these close its step and frame facts. The remaining semantic pre
 preservation and the supplied host's agreement with active syscall rows. No instruction cases,
 trajectory successor equations, or HALT execution facts remain caller obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

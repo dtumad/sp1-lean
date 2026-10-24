@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Model.SP1Field
 
 /-! # The native HALT range agrees with the pinned instruction range
 
@@ -8,6 +10,8 @@ interpreted over another field. The native handler instead matches its host poli
 field's characteristic. These ranges agree at `SP1Prime`, the intended full-core specialization;
 generic component proofs alone do not establish whole-core completeness for arbitrary fields.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

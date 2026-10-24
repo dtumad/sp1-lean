@@ -1,4 +1,6 @@
-import Clean.Utils.Tactics.CircuitProofStart
+module
+
+public meta import Clean.Utils.Tactics.CircuitProofStart
 
 /-! # Proof-start variants for large circuits
 
@@ -6,6 +8,8 @@ import Clean.Utils.Tactics.CircuitProofStart
 destructures input structs before unfolding a large monadic `main`.  This avoids repeatedly scanning
 the fully expanded Shift-chip constraint tree while producing the same local names and hypotheses.
 It is intentionally a narrow proof-elaboration optimization, not a second circuit semantics. -/
+
+public meta section
 
 open Lean Elab Tactic
 

@@ -1,7 +1,9 @@
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Model.Semantics.SailControlFrame
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Proofs.Sail.InstructionDecode
+module
+
+public import SP1Clean.Model.Semantics.SailControlExecute
+public import SP1Clean.Model.Semantics.SailControlFrame
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Normally retiring control flow without circuit rows
 
@@ -10,6 +12,8 @@ from the Sail execute lemma, and applies the independent normal-retirement frame
 No successor instruction is present for outgoing jumps. Native evaluation checks only finite
 source data and operands; the retirement and preservation proofs run through the Lean kernel.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ControlFrame
 

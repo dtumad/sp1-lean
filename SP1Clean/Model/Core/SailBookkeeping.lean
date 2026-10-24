@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionReplay
+module
+
+public import SP1Clean.Model.Core.ExecutionReplay
 
 /-! # Retirement observations of the existing Sail state
 
@@ -7,6 +9,8 @@ counter. Its enable bit reads the official machine-mode filter and inhibit field
 preserve these fields. The observation fold below only records retirement bookkeeping; it does
 not execute instructions or define another machine state.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

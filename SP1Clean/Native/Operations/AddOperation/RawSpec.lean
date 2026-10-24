@@ -1,6 +1,8 @@
-import SP1Clean.Math.Word
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Math.Word
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.IntervalCases
 
 /-! # `AddOperation` — the arithmetic core (`RawSpec` + carry-chain lemmas)
 
@@ -8,6 +10,8 @@ The structural carry-bool + limb-range form `RawSpec`, and the two native carry-
 (`addSemantics_of_carries` / `carries_of_addSemantics`) the gadget's soundness/completeness route
 through. Uses only the local `limb_lift`/`val_65536_*` foundations. The `FormalAssertion` contract
 lives in `Proofs/Operations/AddOperation/Formal.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddOperation
 

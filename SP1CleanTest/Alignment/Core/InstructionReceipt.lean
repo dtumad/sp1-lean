@@ -1,10 +1,12 @@
-import SP1Clean.Soundness.OrdinaryStateReceipt
-import SP1Clean.Soundness.HostOrdinaryReceipts
-import SP1CleanTest.Alignment.Support.LocalCoreFixture
-import SP1CleanTest.Core.NonVacuityReal
-import SP1Clean.Native.Operations.OrdinaryObservation
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Soundness.OrdinaryStateReceipt
+public import SP1Clean.Soundness.HostOrdinaryReceipts
+public import SP1CleanTest.Alignment.Support.LocalCoreFixture
+public import SP1CleanTest.Core.NonVacuityReal
+public import SP1Clean.Native.Operations.OrdinaryObservation
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
 
 /-! # Actual ordinary receipt programs
 
@@ -13,6 +15,8 @@ target and JALR's low-bit masking. Every old assertion/lookup and ledger is pres
 generic theorems. These regressions inspect the added raw occurrences and reject forged
 successors, missing/duplicate receipts and attempts to count a padding row as an instruction.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Core.InstructionReceipt
 

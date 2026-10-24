@@ -1,11 +1,15 @@
-import SP1CleanTest.Alignment.Support.HostFinalMemoryFixture
-import Lean.Data.Json
+module
+
+public import SP1CleanTest.Alignment.Support.HostFinalMemoryFixture
+public import Lean.Data.Json
 
 /-! # Executable ADD and rejection walkthrough
 
 Run through `python3 scripts/check_examples.py add`. JSON is deterministic fixture evidence from the
 actual AIR interpreter; it is not a proof certificate or a full execution-equivalence claim.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Examples.AddEnsemble
 

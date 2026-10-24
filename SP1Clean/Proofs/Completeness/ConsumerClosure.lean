@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Completeness.ChipLedger
-import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
-import SP1Clean.Soundness.TypedProgram
+module
+
+public import SP1Clean.Proofs.Completeness.ChipLedger
+public import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
+public import SP1Clean.Soundness.TypedProgram
 
 /-!
 # Closing the consumer-side provider obligations
@@ -16,6 +18,8 @@ interaction polarity, and the repository does not yet have a registry-wide Byte 
 analogous to `supportedChip_programEmissionShape`.  Naming just that residual fact avoids making a
 caller resupply the already-derived Program half.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

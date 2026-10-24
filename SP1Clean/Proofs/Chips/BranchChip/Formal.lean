@@ -1,11 +1,15 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Proofs.Chips.BranchChip.Core
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Proofs.Chips.BranchChip.Core
 
 /-! # `SP1Clean.BranchChip` — circuit packaging and audited channel exposure
 
 Perf: the former 2M/4M budgets on the two channel-law theorems were ~50–100× over; both floor
 at ≤40000. -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

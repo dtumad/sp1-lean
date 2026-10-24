@@ -1,5 +1,7 @@
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Model.Machine.EventExecution
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Canonical proof-free Core shard data
 
@@ -11,6 +13,8 @@ then reconstructs the one `EventExecutionTrace` checked by the semantic relation
 
 This is deliberately below every AIR representation.  Native Clean tables and extracted Rust rows
 are two compilers for this data, not fields of its validity predicate. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

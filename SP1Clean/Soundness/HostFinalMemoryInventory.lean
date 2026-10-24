@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostFinalMemoryTransport
-import SP1Clean.Soundness.HostLocalCoreMemory
+module
+
+public import SP1Clean.Soundness.HostFinalMemoryTransport
+public import SP1Clean.Soundness.HostLocalCoreMemory
 
 /-! # One final inventory for target checks and execution grounding
 
@@ -8,6 +10,8 @@ rows, even though their selected inventories derive different data maps. Their e
 through `FinalMemoryEnsemble.records`; neither path supplies a second semantic inventory or an
 independently trusted decoder.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.CoreMemoryBalance
-import SP1Clean.Soundness.LocalCoreFinalBoundary
-import SP1Clean.Soundness.LocalCoreSourceGrounding
+module
+
+public import SP1Clean.Soundness.CoreMemoryBalance
+public import SP1Clean.Soundness.LocalCoreFinalBoundary
+public import SP1Clean.Soundness.LocalCoreSourceGrounding
 
 /-! # Actual Memory balance of a local shard with a complete source
 
@@ -10,6 +12,8 @@ Constraints force unit signed multiplicities; count-bounded Clean balance then g
 per-location equation with unique authenticated boundary records. No Memory guarantee or
 execution-order premise is used to establish this equation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

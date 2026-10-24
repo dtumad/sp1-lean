@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionFrame
+module
+
+public import SP1Clean.Model.Core.ExecutionFrame
 
 /-! # Architectural preservation by concrete host execution
 
@@ -7,6 +9,8 @@ and the Sail configuration survive, and the checked memory policy protects every
 These compatibility statements consume the circuit-independent proofs in `Model/Core/ExecutionFrame`,
 which also prove preservation for whole mixed paths.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

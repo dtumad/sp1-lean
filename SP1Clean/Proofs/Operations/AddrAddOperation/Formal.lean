@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.AddrAddOperation.RawSpec
-import SP1Clean.Native.Operations.AddrAddOperation.Populate
-import SP1Clean.Native.Operations.AddrAddOperation.Defs
+module
+
+public import SP1Clean.Native.Operations.AddrAddOperation.RawSpec
+public import SP1Clean.Native.Operations.AddrAddOperation.Populate
+public import SP1Clean.Native.Operations.AddrAddOperation.Defs
 
 /-! # `AddrAddOperation` — the `FormalAssertion` (soundness / completeness / contract)
 
@@ -10,6 +12,8 @@ SP1's `AddrAddOperation::eval` (48-bit/3-limb address add) as a Clean `FormalAss
 carry runs against `0`: its booleanity proves the address-fits fact in soundness, while completeness
 recovers the same fact from the semantic `Spec`. The arithmetic core lives in `RawSpec`, the native
 circuit (`main`/`elaborated`) in `Defs`, and the `populate` witness in `Populate`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddrAddOperation
 

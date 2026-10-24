@@ -1,11 +1,15 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.AddiChip.Defs
-import SP1Clean.FormalModel.Contracts.ChipAssumptions
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.AddiChip.Defs
+public import SP1Clean.FormalModel.Contracts.ChipAssumptions
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.AddiChip` — contract: `Assumptions` / soundness / completeness / `circuit` -/
+
+@[expose] public section
 
 namespace SP1Clean.AddiChip
 

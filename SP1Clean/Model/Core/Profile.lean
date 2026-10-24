@@ -1,5 +1,7 @@
-import SP1Clean.Model.Machine.Syscall
-import SP1Clean.Model.Core.NativeLayout
+module
+
+public import SP1Clean.Model.Machine.Syscall
+public import SP1Clean.Model.Core.NativeLayout
 
 /-! # Native execution profile
 
@@ -7,6 +9,8 @@ Shared semantic restrictions for execution and physical witnesses. These contrac
 of Rust extraction and table layouts. Release provenance belongs to scripts/provenance.json;
 Rust comparisons check agreement on this restricted domain, not a formal lowering theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.Profile
 

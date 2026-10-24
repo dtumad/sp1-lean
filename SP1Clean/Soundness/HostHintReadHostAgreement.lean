@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadBankAgreement
-import SP1Clean.Model.Core.HostReplay
+module
+
+public import SP1Clean.Soundness.HostHintReadBankAgreement
+public import SP1Clean.Model.Core.HostReplay
 
 /-! # Complete host reconstruction on the installed local execution
 
@@ -9,6 +11,8 @@ are preserved from the source. Terminal status comes from actual HALT events, re
 semantic difference between running and exit zero. Binding a caller's complete outgoing snapshot
 and the public Exit bus remains separate; no restriction is added to the all-eight-call target.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

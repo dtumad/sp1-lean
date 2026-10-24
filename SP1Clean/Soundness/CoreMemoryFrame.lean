@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.CoreRowBalance
-import SP1Clean.Soundness.CoreRowTransport
+module
+
+public import SP1Clean.Soundness.CoreRowBalance
+public import SP1Clean.Soundness.CoreRowTransport
 
 /-! # Locations absent from a complete Memory frontier
 
@@ -8,6 +10,8 @@ record, neither can the source. Strict access/refresh clocks then exclude a clos
 interior records. Thus every actual push belongs to the final frontier's support, independently
 of values or successful execution. This uses the original ledger, before refresh elimination.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

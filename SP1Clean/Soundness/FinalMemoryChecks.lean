@@ -1,10 +1,12 @@
-import SP1Clean.Soundness.FinalMemoryReceipts
-import SP1Clean.Soundness.FinalMemoryChangeCoverage
-import SP1Clean.Native.Operations.FinalRegisterCheck
-import SP1Clean.Native.Operations.FinalRamCheck
-import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
-import ToClean.Air.TableSlot
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.Soundness.FinalMemoryReceipts
+public import SP1Clean.Soundness.FinalMemoryChangeCoverage
+public import SP1Clean.Native.Operations.FinalRegisterCheck
+public import SP1Clean.Native.Operations.FinalRamCheck
+public import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
+public import ToClean.Air.TableSlot
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Physical assembly of complete target Memory checks
 
@@ -17,6 +19,8 @@ providers retain every register and normalized RAM interval, independently of sp
 `FinalMemoryEnsemble.records` remains the decoder of the final inventory. Forgetting the closed
 verifier below is only a physical proof view: no full balance is asserted for that view.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalMemoryChecks
 

@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.LoadX0Chip` — from trace events to a valid AIR table
 
@@ -20,6 +22,8 @@ Two things are genuinely new, and both come from `x0`.
    lowest). `MemoryEvent.IsLoad` carries exactly that pairing — which of the seven, and the
    alignment RISC-V requires of it — and the proof splits on it once.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

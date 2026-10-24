@@ -1,12 +1,14 @@
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Bits
-import Clean.Gadgets.Boolean
-import Clean.Utils.Tactics
-import Clean.Utils.Tactics.ProvableStructDeriving
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Bits
+public import Clean.Gadgets.Boolean
+public import Clean.Utils.Tactics
+public import Clean.Utils.Tactics.ProvableStructDeriving
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # The in-circuit Program-ROM provider (push side of SP1's preprocessed program/decode chip)
 
@@ -27,6 +29,8 @@ discharges the push's `Requirements` (`ProgramMsg.RowSpec` of the pushed message
 fetches put immediates in those slots), so they are pushed through unchecked.
 
 The byte-bus sibling is `Proofs/Chips/ByteChip/ByteChip.lean` (`U8Range.circuit`). -/
+
+@[expose] public section
 
 namespace SP1Clean.ProgramProviderChip
 

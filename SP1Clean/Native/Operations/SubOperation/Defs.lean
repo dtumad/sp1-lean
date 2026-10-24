@@ -1,9 +1,11 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Local subtraction gadget circuit
 
@@ -11,6 +13,8 @@ The native gadget checks a base-2^16 two's-complement carry chain and range-chec
 limbs. Its bundled contract specifies word subtraction. Rust comparisons test assembled
 instruction rows with adapters for their physical layouts.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SubOperation
 

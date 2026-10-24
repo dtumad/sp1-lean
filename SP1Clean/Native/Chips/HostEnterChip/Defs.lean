@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Contracts.HostControl
-import Clean.Gadgets.Equality
+module
+
+public import SP1Clean.FormalModel.Contracts.HostControl
+public import Clean.Gadgets.Equality
 
 /-! # Constrained-replay ENTER_UNCONSTRAINED
 
 Consume the full instruction handoff with the canonical code and zero return. Arguments are
 unused by this call and stay unrestricted. All fields are supplied by the matched instruction.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostEnterChip
 

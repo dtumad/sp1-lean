@@ -1,16 +1,18 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Euclid
-import SP1Clean.Proofs.Chips.DivRemChip.Soundness
-import SP1Clean.Proofs.Chips.DivRemChip.Assembly
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.OwnComplete
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CompareComplete
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CoreComplete
-import SP1Clean.Math.EvalVec
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.BytePulls
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Euclid
+public import SP1Clean.Proofs.Chips.DivRemChip.Soundness
+public import SP1Clean.Proofs.Chips.DivRemChip.Assembly
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.OwnComplete
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CompareComplete
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CoreComplete
+public import SP1Clean.Math.EvalVec
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.BytePulls
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
 
 /-! # `DivRemChip` — completeness driver (relocated from `Formal.lean`)
 
@@ -31,6 +33,8 @@ U16MSB use struct literals), so bumping `ProvableType.eval_fromElements` to top 
 *before* `eval_eq_eval` (`@[circuit_norm ↓ high]`) can decompose it — selectively, touching only these
 five cols. Each pin then closes by `simp only [toElements_fromElements, getElem_map/mapRange,
 circuit_norm]`. The circuit and its witness layout remain unchanged. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

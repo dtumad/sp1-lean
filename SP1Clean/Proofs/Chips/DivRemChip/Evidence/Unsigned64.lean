@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Cases
-import SP1Clean.Proofs.Chips.DivRemChip.Assembly
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Cases
+public import SP1Clean.Proofs.Chips.DivRemChip.Assembly
 
 /-! # `DivRemChip` — unsigned 64-bit evidence extraction
 
@@ -8,6 +10,8 @@ This is the circuit-independent `DIVU`/`REMU` family proof. It consumes the fold
 `DivRemCore.CoreSpec` and `DivRemCompare.CompareSpec`, decodes the selected row's exact Rust
 assertion tail once, and produces the Euclidean evidence consumed by `Cases.Unsigned64Evidence`.
 No circuit offsets or witness-layout reductions cross this boundary. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

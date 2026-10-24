@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
-import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
-import SP1Clean.Soundness.RankedGrounding
-import ToClean.Air.TransitionView
+module
+
+public import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
+public import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
+public import SP1Clean.Soundness.RankedGrounding
+public import ToClean.Air.TransitionView
 
 /-! # Ordered mutable commitment histories from physical bank tables
 
@@ -11,6 +13,8 @@ that history through the independent host interpreter gives the final bank and f
 host state. The enclosing machine must authenticate the endpoints, discharge local table specs,
 and balance the instruction handoffs; these are not conclusions of this subsystem theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostCommitHistory
 

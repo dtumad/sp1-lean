@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Soundness
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Soundness
 
 /-! # `DivRemChip` populate value bundles — constraint shapes
 
@@ -10,6 +12,8 @@ witnesses: the one-hot flag destructor `flags_cases`, the operand-tie forms E20�
 placement E184–E219 (`populateA`), and the definitional scal/misc cell forms
 (E13/E15/E17/E19/E96/E99/E103). Everything is stated on the populate functions themselves —
 no `env`, no `Expression` — so the completeness proof can `rw` these into constraint goals. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

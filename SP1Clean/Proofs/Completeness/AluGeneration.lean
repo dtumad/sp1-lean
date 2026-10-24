@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.TraceGen.SailAlu
-import SP1Clean.Proofs.Completeness.Assembly
+module
+
+public import SP1Clean.FormalModel.TraceGen.SailAlu
+public import SP1Clean.Proofs.Completeness.Assembly
 
 /-! # ALU execution events satisfy generated chip constraints
 
@@ -12,6 +14,8 @@ The execution bridge keeps its domain explicit: a supplied decoder, a preserved 
 and nonzero destination routing. Register widths follow from Sail's types, and the generator
 maintains the clock and timestamp invariants.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

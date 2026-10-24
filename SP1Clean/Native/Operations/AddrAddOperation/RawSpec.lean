@@ -1,7 +1,9 @@
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Types.AddrAddOperation
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.AddrAddOperation
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.IntervalCases
 
 /-! # `AddrAddOperation` — the arithmetic core (`RawSpec` + carry-chain lemmas)
 
@@ -12,6 +14,8 @@ runs against `0` (the result keeps only 48 bits); its booleanity is exactly what
 side condition supplies in the backward direction. The hand-maintained native circuit (`Inputs` + `main` +
 `elaborated`) lives in `Defs`; the `populate` witness lives in `Populate`; the
 `FormalAssertion` contract (`Assumptions`/`Spec`/soundness/completeness/`circuit`) in `Formal`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddrAddOperation
 

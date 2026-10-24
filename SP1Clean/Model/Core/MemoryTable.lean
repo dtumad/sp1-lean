@@ -1,7 +1,9 @@
-import SP1Clean.Model.Core.MemoryIntervals
-import SP1Clean.Model.Semantics.Decode
-import ToClean.Circuit.StaticTable
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.Core.MemoryIntervals
+public import SP1Clean.Model.Semantics.Decode
+public import ToClean.Circuit.StaticTable
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Concrete field rows for the native initial-memory lookup
 
@@ -9,6 +11,8 @@ The interval table is fixed by the sparse image. Its endpoints use full four-lim
 exclusive endpoint `2^48` is representable without field or address truncation. The static-table
 predicate is literal membership in these encoded rows; its semantic consequences are proved here.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

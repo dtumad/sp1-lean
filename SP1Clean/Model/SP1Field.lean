@@ -1,6 +1,8 @@
-import Mathlib.Tactic.NormNum.Prime
-import Mathlib.NumberTheory.LucasPrimality
-import Mathlib.Tactic.ReduceModChar
+module
+
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.NumberTheory.LucasPrimality
+public import Mathlib.Tactic.ReduceModChar
 
 /-! # SP1's pinned base field
 
@@ -9,6 +11,8 @@ relations, generated-trace conformance, and eventual verifier adapters all insta
 at KoalaBear.  This module owns that single shared characteristic and its kernel-checked size facts;
 higher layers must use `SP1Prime` directly rather than introduce local aliases.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

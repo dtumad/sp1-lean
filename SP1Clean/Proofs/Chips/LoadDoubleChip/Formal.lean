@@ -1,7 +1,9 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.LoadDoubleChip.Defs
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.LoadDoubleChip.Defs
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.LoadDoubleChip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
@@ -9,6 +11,8 @@ Split from the monolithic chip file: `main` + the `ElaboratedCircuit` instance l
 sibling `Defs` module, the Sail bridge (where present) in `Bridge`. This module holds the
 prover/verifier `Assumptions`, any local `Spec`/helper lemmas, the soundness/completeness
 proofs, and the bundled `circuit`. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadDoubleChip
 

@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReaderImmutable
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReaderImmutable
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `StoreDouble` chip row as a `GeneralFormalCircuit`
 
@@ -26,6 +28,8 @@ value, with the bus's cross-row offline-memory meaning derived by `Soundness/Typ
 Unlike LoadDouble there is **no** chip-level `op_a_0 = 0` gate —
 op_a is a source read, and the `op_a_0` zeroing of the *read* `x0` value lives inside the immutable
 reader's `Spec`. -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreDoubleChip
 

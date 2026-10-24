@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.ResourceBoundary
-import ToClean.Air.PublicVerifier
+module
+
+public import SP1Clean.FormalModel.Contracts.ResourceBoundary
+public import ToClean.Air.PublicVerifier
 
 /-! # Native resource-boundary verifier circuit
 
@@ -8,6 +10,8 @@ constant assertions. Two additional equations bind the target clock to the real 
 The assertion circuit adds no cells or rows. Its verifier adapter enforces the three assertions
 with six interactions on a fresh channel, preserving every existing channel ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ResourceBoundary
 open Circuit Air.Flat Model.Core

@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.Boot
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Model.Core.Boot
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Native memory-boundary records
 
@@ -8,6 +10,8 @@ to the native boot state. Address canonicality and zero time are conclusions of 
 not assumptions supplied by a trace consumer. Final records share the canonical address contract;
 their last-access meaning and both inventories' uniqueness are global balance arguments.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryBoundary
 

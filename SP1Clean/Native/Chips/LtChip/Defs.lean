@@ -1,13 +1,15 @@
-import SP1Clean.Semantics.Specs.Chips.Lt
-import SP1Clean.Circuits.Gadgets.LtSigned
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ALUTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Semantics.Specs.Chips.Lt
+public import SP1Clean.Circuits.Gadgets.LtSigned
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ALUTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native less-than instruction circuit
 
@@ -15,6 +17,8 @@ Committed SLT/SLTU selectors determine activity, comparison mode and the fetched
 Clean's witness IR constructs the ten comparison cells. Bundled CPU, ALU and register-write
 circuits supply the reader contracts and State, Memory and Program interactions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.LtChip
 

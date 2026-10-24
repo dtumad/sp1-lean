@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.ProviderBindings
-import SP1Clean.Soundness.TypedSelectors
+module
+
+public import SP1Clean.Soundness.ProviderBindings
+public import SP1Clean.Soundness.TypedSelectors
 
 /-! # Typed Program fetches emitted by instruction rows
 
@@ -7,6 +9,8 @@ The Program bus is structural in the Clean circuit: instruction rows pull one de
 preprocessed Program table pushes matching rows.  This module keeps that exact typed interaction and
 grounds it against the program named by the statement; no `LookupAccess` projection is introduced.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

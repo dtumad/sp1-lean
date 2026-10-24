@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.OrderedMemoryEnsemble
-import SP1Clean.Proofs.Chips.OrderedInitialProvider
+module
+
+public import SP1Clean.Soundness.OrderedMemoryEnsemble
+public import SP1Clean.Proofs.Chips.OrderedInitialProvider
 
 /-! # Native initialization tables with fixed control endpoints
 
@@ -11,6 +13,8 @@ and Byte interactions, but may not contribute to this private ordering channel.
 This ensemble is an initialization subsystem for the native core. Integrating its authenticated
 records into the instruction grounding argument remains separate from its inventory theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.InitialMemoryEnsemble
 

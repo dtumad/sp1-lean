@@ -1,19 +1,21 @@
-import SP1Clean.Soundness.WitnessDecode
-import SP1Clean.Model.BalanceBridge
-import SP1Clean.Model.InteractionProjection
-import SP1Clean.Model.ProviderTableId
-import SP1Clean.Proofs.Chips.ByteChip.ByteChip
-import SP1Clean.Proofs.Chips.ByteChip.RangeChip
-import SP1Clean.Proofs.Chips.ProgramProviderChip
-import SP1Clean.Proofs.Chips.MemoryProviderChip
-import SP1Clean.Proofs.Chips.MemoryFinalizeChip
-import SP1Clean.Proofs.Chips.StateBumpChip.Formal
-import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
-import SP1Clean.Proofs.Chips.HaltChip.Formal
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import SP1Clean.FormalModel.Contracts.PublicValues
-import ToClean.Circuit.VerifierInteractions
-import Clean.Air.FlatEnsemble
+module
+
+public import SP1Clean.Soundness.WitnessDecode
+public import SP1Clean.Model.BalanceBridge
+public import SP1Clean.Model.InteractionProjection
+public import SP1Clean.Model.ProviderTableId
+public import SP1Clean.Proofs.Chips.ByteChip.ByteChip
+public import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+public import SP1Clean.Proofs.Chips.ProgramProviderChip
+public import SP1Clean.Proofs.Chips.MemoryProviderChip
+public import SP1Clean.Proofs.Chips.MemoryFinalizeChip
+public import SP1Clean.Proofs.Chips.StateBumpChip.Formal
+public import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
+public import SP1Clean.Proofs.Chips.HaltChip.Formal
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+public import SP1Clean.FormalModel.Contracts.PublicValues
+public import ToClean.Circuit.VerifierInteractions
+public import Clean.Air.FlatEnsemble
 
 /-! # The supported native SP1 machine as a plain Clean `Ensemble`
 
@@ -35,6 +37,8 @@ ordered execution and per-location memory history in addition to Clean's channel
 `SupportedCoreNativeRelation` supplies the semantic program/provider binding and restricts the
 syscall table to inactive rows. These are separate from `Ensemble.Statement`; neither follows
 from constraints and balance alone. Memory timestamp bounds are derived by the grounding proof. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

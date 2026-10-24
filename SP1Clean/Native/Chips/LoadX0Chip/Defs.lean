@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReaderImmutable
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReaderImmutable
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `LoadX0` chip row as a `GeneralFormalCircuit`
 
@@ -27,6 +29,8 @@ written). The opcode fed to the reader is the weighted selector sum
 The chip `Spec` is the composition of the sub-circuits' own `Spec`s + the proven selector binaries / the
 `is_real`-binary fact + the three per-width alignment equations + the two `op_a_0` forcing gates (which
 pin `op_a_0 = is_real`, i.e. `op_a = x0` on real rows). Output is the extracted `Columns`. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadX0Chip
 

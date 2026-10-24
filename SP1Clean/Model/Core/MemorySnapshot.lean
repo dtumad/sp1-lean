@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.Boot
-import SP1Clean.Model.Core.MemoryEquality
+module
+
+public import SP1Clean.Model.Core.Boot
+public import SP1Clean.Model.Core.MemoryEquality
 
 /-! # Finite register and RAM snapshots at a local execution boundary
 
@@ -9,6 +11,8 @@ state. It is a representation relation, not an AIR premise or equality of comple
 PC, platform registers, Sail bookkeeping, host state, and clock are deliberately outside this type.
 Those still belong to `ExecutionState` and must agree at a composed execution boundary.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

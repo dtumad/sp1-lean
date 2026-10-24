@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.HintNodeAllocate
-import SP1Clean.Proofs.Operations.HintQueueCursor
+module
+
+public import SP1Clean.Proofs.Operations.HintNodeAllocate
+public import SP1Clean.Proofs.Operations.HintQueueCursor
 
 /-! # Fresh node construction and byte-exact persistent extension
 
@@ -8,6 +10,8 @@ allocation appends a real node to the semantic store and preserves all historica
 bytes must come from the enclosing authenticated host effect; matching their length alone is
 not a byte-authentication theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

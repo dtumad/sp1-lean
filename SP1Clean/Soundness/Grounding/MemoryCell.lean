@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Math.ByteWord
+module
+
+public import SP1Clean.Soundness.GroundingAdapter
+public import SP1Clean.Math.ByteWord
 
 /-! # Aligned RAM-cell updates
 
@@ -16,6 +18,8 @@ The definition is deliberately independent of any concrete load/store chip.  Sub
 prove `RamCellUpdate` from their existing read-modify-write equations; SD proves it from its full
 word write.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

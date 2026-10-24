@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.FinalMemoryCheckSoundness
-import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Model.SP1Field
-import SP1CleanTest.Core.StaticMembership
+module
+
+public import SP1Clean.Soundness.FinalMemoryCheckSoundness
+public import SP1Clean.Soundness.FinishedChannels
+public import SP1Clean.Model.SP1Field
+public import SP1CleanTest.Core.StaticMembership
 
 /-! # Complete outgoing Memory assembly regression
 
@@ -10,6 +12,8 @@ providers. Every channel is registered and balanced, including Memory and final 
 auxiliary Memory provider supplies zero-clock records: this checks the boundary subsystem, not
 an execution from the source snapshot. Mixed execution grounding authenticates those records.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryChecks
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.Grounding.MemoryCell
-import SP1Clean.Soundness.Grounding.ITypeChips
-import SP1Clean.Soundness.TypedTimeContracts
+module
+
+public import SP1Clean.Soundness.Grounding.MemoryCell
+public import SP1Clean.Soundness.Grounding.ITypeChips
+public import SP1Clean.Soundness.TypedTimeContracts
 
 /-! # Load/store grounding over the generic RAM-access projection
 
@@ -18,6 +20,8 @@ Concrete chip sections below authenticate these abstractions against each chip's
 `interactionsWith_memory_eq` theorem. No generated operation circuit or operation-level
 faithfulness anchor enters this boundary.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

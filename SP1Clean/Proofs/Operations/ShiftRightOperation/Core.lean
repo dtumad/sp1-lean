@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.ShiftRightOperation.Core
-import ToClean.Circuit.InteractionRecovery
-import Clean.Utils.Tactics
+module
+
+public import SP1Clean.Native.Operations.ShiftRightOperation.Core
+public import ToClean.Circuit.InteractionRecovery
+public import Clean.Utils.Tactics
 
 /-! # `ShiftRightCore` — proof boundary for the inline ShiftRight assertions
 
@@ -9,6 +11,8 @@ contract is `ShiftRightChip.CoreSpec`; parent chip proofs consume that one propo
 repeatedly normalizing the tail.  The five leading gate constraints remain in the parent so the
 combined gate is available to Clean's shallow channel-law proof.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightCore
 

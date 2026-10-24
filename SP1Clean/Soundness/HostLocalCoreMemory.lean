@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCoreLedger
-import SP1Clean.Soundness.LocalCoreMemory
+module
+
+public import SP1Clean.Soundness.HostLocalCoreLedger
+public import SP1Clean.Soundness.LocalCoreMemory
 
 /-! # Memory accounting with physical host accesses retained
 
@@ -7,6 +9,8 @@ The host extension keeps the two boundary inventories unchanged. Its interior is
 the actual tables, including the wrapper's x12 accesses and every appended host RAM row.
 No Memory balance is projected to the smaller instruction-only assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

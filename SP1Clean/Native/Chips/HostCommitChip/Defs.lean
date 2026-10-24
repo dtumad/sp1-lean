@@ -1,10 +1,12 @@
-import SP1Clean.FormalModel.Contracts.HostCommit
-import SP1Clean.FormalModel.Contracts.CommitmentStatement
-import SP1Clean.Native.Operations.ClockOrder
-import SP1Clean.Native.Operations.BoundedWord
-import SP1Clean.Circuits.Gadgets.U16toU8Safe
-import ToClean.Circuit.InteractionRecovery
-import Clean.Gadgets.Equality
+module
+
+public import SP1Clean.FormalModel.Contracts.HostCommit
+public import SP1Clean.FormalModel.Contracts.CommitmentStatement
+public import SP1Clean.Native.Operations.ClockOrder
+public import SP1Clean.Native.Operations.BoundedWord
+public import SP1Clean.Circuits.Gadgets.U16toU8Safe
+public import ToClean.Circuit.InteractionRecovery
+public import Clean.Gadgets.Equality
 
 /-! # A native commitment call and its mutable bank transition
 
@@ -12,6 +14,8 @@ The bank/slot parameters define sixteen Clean components. An active row
 consumes one actual instruction handoff; the formal wrapper guards padding rows. PublicValues pushes preserve the original
 instruction checks while the separate state channel carries the mutable bank history.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitChip
 

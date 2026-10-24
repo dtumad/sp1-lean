@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.ClockOrder
-import Clean.Gadgets.IsZeroField
-import Clean.Gadgets.Bits
+module
+
+public import SP1Clean.FormalModel.Contracts.ClockOrder
+public import Clean.Gadgets.IsZeroField
+public import Clean.Gadgets.Bits
 
 /-! # A bounded native clock comparison
 
@@ -8,6 +10,8 @@ The circuit checks both clock limbs and compares the low limbs exactly when the 
 agree. Otherwise it compares the high limbs. The bounded subtraction cannot wrap in the field.
 All selectors and bit witnesses are computed by the composed Clean gadgets.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ClockOrder
 

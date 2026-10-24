@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintQueueBoundary
-import SP1Clean.Soundness.FinalMemoryChecks
+module
+
+public import SP1Clean.Soundness.HostHintQueueBoundary
+public import SP1Clean.Soundness.FinalMemoryChecks
 
 /-! # Complete target Memory checks in the physical host assembly
 
@@ -9,6 +11,8 @@ existing circuits and typed physical slots. Receipt projection preserves every r
 data; selecting a smaller inventory requires separate constraint and channel transport.
 Grounding and complete endpoint agreement consume the channel facts separately.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

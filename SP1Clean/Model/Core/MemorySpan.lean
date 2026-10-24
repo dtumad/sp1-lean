@@ -1,6 +1,8 @@
-import Mathlib.Data.List.Range
-import Mathlib.Data.List.Dedup
-import SP1Clean.Model.Core.NativeLayout
+module
+
+public import Mathlib.Data.List.Range
+public import Mathlib.Data.List.Dedup
+public import SP1Clean.Model.Core.NativeLayout
 
 /-! # Native byte intervals at the Memory bus's cell granularity
 
@@ -9,6 +11,8 @@ by aligned eight-byte cells; an empty span has no cells. Unions retain one occur
 so overlapping host buffers do not introduce simultaneous duplicate accesses. This is a native
 semantic footprint, not the exact Rust executor's untraced physical read inventory.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

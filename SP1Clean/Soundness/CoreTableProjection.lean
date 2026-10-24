@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.SP1Ensemble
-import SP1Clean.Soundness.CoreExecutionRow
-import SP1Clean.Soundness.MemoryFrontier
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import SP1Clean.Soundness.CoreExecutionRow
+public import SP1Clean.Soundness.MemoryFrontier
 
 /-! # Shared physical ledger projections
 
@@ -8,6 +10,8 @@ These component and list lemmas retain physical occurrences and shared prover da
 of the enclosing ensemble's source policy. Both boot and local adapters use them; ordering itself
 remains the common `StateChronology` argument.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

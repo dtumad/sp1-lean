@@ -1,4 +1,6 @@
-import SP1Clean.Native.Chips.HostHintReadChip.Defs
+module
+
+public import SP1Clean.Native.Chips.HostHintReadChip.Defs
 
 /-! # Soundness and completeness of HINT_READ coordination
 
@@ -6,6 +8,8 @@ The handler's semantic contract relates the complete call and queue transition t
 padded endpoints. The span constructor supplies its quotient columns; all other completeness
 conditions are semantic. Node and final-word contents still need ledger authentication.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintReadChip
 

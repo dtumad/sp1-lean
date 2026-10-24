@@ -1,7 +1,9 @@
-import SP1Clean.Native.Operations.HostBoundary
-import SP1Clean.Soundness.HostHintReadLocalQueue
-import SP1Clean.Soundness.HostCommitEnsemble
-import SP1Clean.Soundness.HaltPadding
+module
+
+public import SP1Clean.Native.Operations.HostBoundary
+public import SP1Clean.Soundness.HostHintReadLocalQueue
+public import SP1Clean.Soundness.HostCommitEnsemble
+public import SP1Clean.Soundness.HaltPadding
 
 /-! # Installing queue and commitment-bank boundaries in the local verifier
 
@@ -13,6 +15,8 @@ The final cursor, outgoing bank words, and optional exit are instance parameters
 `bankFinal` remain unused. Active HALT uses the syscall handler; the legacy table is padding only.
 Complete outgoing snapshot agreement and dynamic allocation history remain separate proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintQueueBoundary
 

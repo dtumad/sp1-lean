@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.GroundingInternal
+module
+
+public import SP1Clean.Soundness.GroundingInternal
 
 /-! # From the halted grounding certificate to the eventful halting trace
 
@@ -9,6 +11,8 @@ The terminal transition is honest host semantics: `ExecutableSyscallHandler.halt
 machine at `haltPc` on the exact canonical `HALT` code, and every event field is an architectural
 observation of the reached pre-halt state (the halt row's pulled operands, grounded by the timed
 memory walk). -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

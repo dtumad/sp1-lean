@@ -1,9 +1,11 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.OwnComplete
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.OwnComplete
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
 
 /-! # `DivRemChip` — honest arithmetic-core completeness
 
@@ -12,6 +14,8 @@ value-level contracts used by `DivRemCore.CoreSpec`.  A parent chip proof suppli
 witness pins dumped by the populate closure; it never unfolds a generated Mul struct in a theorem
 type.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip.CoreComplete
 

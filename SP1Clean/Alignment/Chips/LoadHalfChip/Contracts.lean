@@ -1,7 +1,11 @@
-import SP1Clean.Alignment.Chips.LoadHalfChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.LoadHalfChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # LoadHalf — physical routing contract -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

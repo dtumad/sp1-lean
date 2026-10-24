@@ -1,7 +1,9 @@
-import SP1Clean.Native.Operations.OrderedBoundaryVerifier
-import SP1Clean.Soundness.RankedGrounding
-import ToClean.Air.TransitionView
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Native.Operations.OrderedBoundaryVerifier
+public import SP1Clean.Soundness.RankedGrounding
+public import ToClean.Air.TransitionView
+public import ToClean.Air.TableBuild
 
 /-! # Ordered inventories from the actual Clean ensemble ledger
 
@@ -14,6 +16,8 @@ This is the shared initialization/finalization inventory construction. Local spe
 are supplied by the enclosing ensemble's table-soundness phase; no provider uniqueness or
 endpoint-permutation premise is accepted here.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.OrderedBoundaryEnsemble
 

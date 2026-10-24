@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadFinalMemory
-import SP1Clean.Model.Core.MemoryFinalCheck
+module
+
+public import SP1Clean.Soundness.HostHintReadFinalMemory
+public import SP1Clean.Model.Core.MemoryFinalCheck
 
 /-! # Finite outgoing-memory checks against the installed CPU replay
 
@@ -12,6 +14,8 @@ The check still has to be enforced by the native boundary circuits. These are im
 lemmas for that binding, not an added caller premise of the released execution theorem, and not
 a complete outgoing Sail/host snapshot certificate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

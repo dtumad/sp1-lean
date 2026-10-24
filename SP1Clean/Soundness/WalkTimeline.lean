@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.DurationTime
-import SP1Clean.Soundness.GenericWalk
+module
+
+public import SP1Clean.Model.Semantics.DurationTime
+public import SP1Clean.Soundness.GenericWalk
 
 /-! # The timeline determined by a State walk
 
@@ -7,6 +9,8 @@ A structurally valid row has a positive natural clock gap. Prefix-summing those 
 a total timeline and makes every row advance to its actual successor index. This is independent
 of instruction decoding, event interpretation, and the trajectory subsequently grounded.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.TimedGrounding
 

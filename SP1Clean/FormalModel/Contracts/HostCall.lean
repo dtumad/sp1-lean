@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.CoreSyscall
-import SP1Clean.FormalModel.Contracts.RegisterRead
+module
+
+public import SP1Clean.FormalModel.Contracts.CoreSyscall
+public import SP1Clean.FormalModel.Contracts.RegisterRead
 
 /-! # Instruction-authenticated native host calls
 
@@ -8,6 +10,8 @@ WRITE additionally reads x12 at event time plus one; other calls emit zero in th
 and perform no extra register access. This interface binds the host tables to instruction rows;
 the host tables must still establish the returned value and stateful effects.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCallChip
 

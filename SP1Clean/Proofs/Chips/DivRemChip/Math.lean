@@ -1,6 +1,8 @@
-import SP1Clean.Math.Word
-import SP1Clean.Semantics.ISA.RV64
-import Mathlib.Tactic.Linarith
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Semantics.ISA.RV64
+public import Mathlib.Tactic.Linarith
 
 /-! # `DivRemChip` — native divide/remainder arithmetic
 
@@ -14,6 +16,8 @@ by the chip soundness — the Euclidean identity `b = c·quotient + remainder` (
 `MulOperation`s + `carry`/`c_times_quotient` columns), the remainder range (`remainder < c` when
 `c ≠ 0`, from `remainder_lt_operation`), and the divide-by-zero branch (`c = 0 → quotient`
 all-ones `∧ remainder = b`, from `is_c_0`). The signed and word variants follow in §§2–3. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

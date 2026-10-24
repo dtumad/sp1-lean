@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for StoreHalf (SH)
 
@@ -11,6 +13,8 @@ import SP1Clean.Proofs.Sail.Advance
 emulation: write `nextPC = pc + 4` and the two little-endian bytes of `rs2[15:0]` into
 `mem[addr … addr+1]`, via `SailMem.run_vmem_write_of_width_2`. The chip's 8-byte read-modify-write
 `store_value` bus representation is a separate trace-level concern. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.StoreHalfSail

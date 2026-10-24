@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.SubChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.SubChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.SubChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -11,6 +13,8 @@ Sub composes the same six operations as Add in the same order, so the proof is t
 only difference is that its single witnessed value is the two's-complement sum
 `SubOperation.populateIR`, whose complement limbs are `Expression` arithmetic over the operands and
 so carry no extra environment dependence. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubChip
 

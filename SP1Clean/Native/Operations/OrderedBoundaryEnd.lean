@@ -1,4 +1,6 @@
-import SP1Clean.Native.Operations.OrderedBoundary
+module
+
+public import SP1Clean.Native.Operations.OrderedBoundary
 
 /-! # Closing an ordered boundary inventory
 
@@ -6,6 +8,8 @@ The final key is fixed in the circuit. One terminal row connects the last occupi
 the same construction accepts an empty inventory by connecting the start directly to the end.
 Multiplicity and uniqueness of this terminal row are consequences of global control balance.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedBoundaryEnd
 

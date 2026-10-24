@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.RowView
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Soundness.RowEffectDefs
+module
+
+public import SP1Clean.Soundness.RowView
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Soundness.RowEffectDefs
 
 /-! # `ChipKind` / `ChipRow` — the heterogeneous trace row, dispatched by *value*
 
@@ -20,6 +22,8 @@ auto-generalizing `p` from a `variable` block breaks inference of the dependent 
 `view.is_real` is the **input** selector (`inp.is_real`): the chip commits it into the `is_real` column and
 gates every bus emission by it, and it is exactly what the chip `Spec`'s gated identity and the Sail bridge
 key on — so the bus gating, the semantic clause, and the Sail step all reference one selector. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Soundness

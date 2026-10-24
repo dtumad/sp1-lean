@@ -1,6 +1,8 @@
-import SP1Clean.Model.FinalMemoryChange
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Math.WordEquality
+module
+
+public import SP1Clean.Model.FinalMemoryChange
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.Math.WordEquality
 
 /-! # Selected contributions to the complete target-change inventory
 
@@ -8,6 +10,8 @@ Each input refers to a full final record. Its Boolean selector contributes zero 
 of the record's tagged location. Target-check wrappers compose this operation after validation
 of the same record; selection cannot substitute another address or omit the validation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalMemoryChange
 

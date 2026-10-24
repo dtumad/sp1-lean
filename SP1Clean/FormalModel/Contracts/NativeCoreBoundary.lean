@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Core.ProgramImage
-import SP1Clean.Model.Semantics.Decode
+module
+
+public import SP1Clean.FormalModel.Contracts.PublicValues
+public import SP1Clean.Model.Core.ProgramImage
+public import SP1Clean.Model.Semantics.Decode
 
 /-! # Public boot boundary of the image-authenticated native core
 
@@ -8,6 +10,8 @@ The native verifier fixes the initial clock to one and the initial PC to the che
 entry point. The existing public-limb contract supplies canonical encodings of both endpoints.
 These are constraints of the native verifier, not a caller-supplied loader or commitment premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SP1PublicIO
 

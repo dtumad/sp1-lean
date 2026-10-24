@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.ImageContent
-import SP1Clean.Soundness.MemoryFrontier
+module
+
+public import SP1Clean.Model.Semantics.ImageContent
+public import SP1Clean.Soundness.MemoryFrontier
 
 /-! # The populated native Memory boundary
 
@@ -24,6 +26,8 @@ sweep is named follow-up work), so the boundary this file populates is the canon
 genesis-backed portion.  The cell's `finalClock` is the refresh-eliminated last-write time (the
 committed record's own timestamp is not shard-bounded natively — the MemoryBump table does not tie
 its refreshed clock to the public final clock). -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

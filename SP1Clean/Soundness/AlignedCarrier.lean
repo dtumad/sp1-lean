@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.TimedGrounding
+module
+
+public import SP1Clean.Soundness.TimedGrounding
 
 /-! # The aligned `RowFacts` carrier (Phase B1)
 
@@ -17,6 +19,8 @@ then follow generically here.
 
 The constructor is location-generic; register-only callers retain a compatibility wrapper while
 load/store rows use the RAM read window directly. -/
+
+@[expose] public section
 
 open SP1Clean.Soundness.TimedGrounding
 open SP1Clean.Semantics

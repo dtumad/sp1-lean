@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.InstructionWritePolicy
-import SP1Clean.Soundness.HostHintReadTrajectory
-import SP1Clean.Soundness.HostLocalCoreRom
-import SP1Clean.Soundness.CoreInstructionExecution
+module
+
+public import SP1Clean.Soundness.InstructionWritePolicy
+public import SP1Clean.Soundness.HostHintReadTrajectory
+public import SP1Clean.Soundness.HostLocalCoreRom
+public import SP1Clean.Soundness.CoreInstructionExecution
 
 /-! # Ordinary execution on the complete instruction and hint carrier
 
@@ -10,6 +12,8 @@ added RAM rows at its clock. Byte and Program guarantees supply the registered c
 and the extended permission ledger protects ROM. The resulting step/frame facts use the same
 paired Sail/host replay as the hint handlers, with all instruction cases internal to the registry.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

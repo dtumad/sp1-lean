@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.ProtectedStoreFootprints
-import SP1Clean.Soundness.LocalCoreDecode
+module
+
+public import SP1Clean.Soundness.ProtectedStoreFootprints
+public import SP1Clean.Soundness.LocalCoreDecode
 
 /-! # ROM write exclusion for every decoded local instruction
 
@@ -7,6 +9,8 @@ Decoder provenance identifies the same physical row in the protected witness. St
 proofs apply to those rows; the other instruction views have no memory write. Instruction cases
 and table positions remain inside this transport, leaving one uniform semantic footprint theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 

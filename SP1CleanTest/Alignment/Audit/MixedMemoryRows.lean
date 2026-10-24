@@ -1,11 +1,15 @@
-import SP1Clean.Soundness.CoreRowBalance
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Soundness.CoreRowBalance
+public import SP1Clean.Model.SP1Field
 
 /-! # Mixed read-time regression
 
 The Memory transport must accept syscall rows without imposing the ordinary carrier's
 all-reads-at-start restriction. This kernel-checked regression distinguishes those two interfaces.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.MixedMemoryRows
 

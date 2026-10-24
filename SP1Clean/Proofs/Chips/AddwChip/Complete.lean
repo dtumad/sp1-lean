@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.AddwChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.AddwChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.AddwChip` — from trace events to a valid AIR table (the ALU-type template)
 
@@ -22,6 +24,8 @@ arbitrarily, so the changed gate costs nothing, and the branch is resolved once 
 `imm_c = 0` for register ADDW, or `is_real = 1 ∧ imm_c = 1` for ADDIW. The shared builder proves
 the immediate-copy gates and the row-dependent op_c timestamp contract once, so this table theorem
 covers both dispatches without an external `immC = 0` cap. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwChip
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.RowView
-import SP1Clean.Model.Semantics.GuestProgram
-import SP1Clean.Model.Semantics.Decode
+module
+
+public import SP1Clean.Soundness.RowView
+public import SP1Clean.Model.Semantics.GuestProgram
+public import SP1Clean.Model.Semantics.Decode
 
 /-! # The refinement invariant and per-row effect (`RowView`-level, below `ChipRow`)
 
@@ -16,6 +18,8 @@ without an import cycle through the registry. `SailStep`/`RomLoaded`/`SailConfig
 grounding contracts, `Soundness/GroundingAdapter.lean` / `Soundness/ChipContracts.lean`.) Namespace
 `SP1Clean.Soundness.Target` is unchanged (decoupled from path), so every `RefinesAt`/`RowEffect`/
 `rcvPcOf`/… reference resolves as before. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Soundness.Target

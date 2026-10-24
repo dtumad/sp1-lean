@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.StoreHalfChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ SH on the witgen bridge (see `StoreWordChip/Witgen.lean` for the store family's 
 StoreWord, the only witnessed cells are the four the composed `AddressOperation` produces; the
 difference is that a half-word store hands it **two** committed offset bits (address bits 1 and 2)
 rather than one. -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreHalfChip
 

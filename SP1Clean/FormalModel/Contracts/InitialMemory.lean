@@ -1,11 +1,15 @@
-import SP1Clean.Model.Core.Memory
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Model.Core.Memory
+public import SP1Clean.Math.Word
 
 /-! # Initial-memory byte-read contract
 
 A bounded address determines one byte in the supplied sparse memory. Interval endpoints and
 comparison columns belong to the circuit implementation, below this input/output contract.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialMemoryLookup
 

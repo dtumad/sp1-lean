@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.OrdinaryStateReceipt
-import SP1Clean.Proofs.Chips.ProtectedStore
+module
+
+public import SP1Clean.Soundness.OrdinaryStateReceipt
+public import SP1Clean.Proofs.Chips.ProtectedStore
 
 /-! # Ordinary receipts retain the installed store protection
 
@@ -8,6 +10,8 @@ Every other instruction composes the original registered circuit. The symbolic p
 decoder are exactly those of `OrdinaryStateReceipt`; no execution or row inventory is duplicated.
 This is the producer registry for mixed installation, not a new whole-chip Rust anchor.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedOrdinaryReceipt
 

@@ -1,7 +1,9 @@
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Mathlib.Data.ZMod.Basic
+module
+
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Mathlib.Data.ZMod.Basic
 
 /-! # `assertZeros` — batched zero-asserts + their `circuit_norm` normalization lemmas
 
@@ -15,6 +17,8 @@ Relocated verbatim from `Proofs/Chips/DivRemChip/Defs.lean` (which now imports t
 the `DivRemCore` assertion gadget (`Native/Operations/DivRemOperation/Core.lean`) can emit the same
 tail without importing the whole chip skeleton. Namespace stays `SP1Clean.DivRemChip`, so every
 existing fully-qualified reference is unchanged. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

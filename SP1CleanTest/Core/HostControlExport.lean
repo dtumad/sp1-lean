@@ -1,12 +1,14 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Semantics.ReleasePolicy
-import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
-import SP1Clean.Native.Operations.HostCommitBoundary
-import ToClean.Air.TableBuild
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Semantics.ReleasePolicy
+public import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+public import SP1Clean.Native.Operations.HostCommitBoundary
+public import ToClean.Air.TableBuild
 
 /-! # Built-in exports of native control, commitment and hint handlers
 
@@ -15,6 +17,8 @@ compares active effects against released execution and retains the separate per-
 and shard-public contracts. Commitment rows have Boolean activity for padding; terminals
 and the other control handlers remain actual events.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostControlExport
 

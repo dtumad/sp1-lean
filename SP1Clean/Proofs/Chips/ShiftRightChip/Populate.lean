@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
+module
+
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
 
 /-! # `ShiftRightChip` — native witness generation (`populate`)
 
@@ -15,6 +17,8 @@ variant selectors are committed inputs (one-hot on real rows, all-zero on paddin
 All-zero inputs reproduce SP1's `padded_row_template`: `v_01 = 16`, `v_012 = 256`,
 `v_0123 = 65536`, with every other witness zero. Both the legacy row comparison and the
 built-in Rust export tests check this padding against SP1. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip
 

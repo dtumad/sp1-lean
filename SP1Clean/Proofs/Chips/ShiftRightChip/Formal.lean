@@ -1,12 +1,14 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srl
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sra
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srlw
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sraw
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srl
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sra
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srlw
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sraw
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.ShiftRightChip` — contract: soundness / completeness / `circuit`
 
@@ -24,6 +26,8 @@ so the sub-theorems' raw `h_holds`/`h_input`/`h_assumptions` binders match direc
 **Completeness** uses the input-determined witness IR and its value-level evaluation laws.
 The witness bounds discharge channel requirements. Both the legacy witness comparison and
 the built-in Rust export tests compare generated rows against SP1. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip
 

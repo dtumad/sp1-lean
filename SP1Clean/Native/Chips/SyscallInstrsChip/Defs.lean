@@ -1,14 +1,16 @@
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Circuits.Gadgets.IsZero
-import SP1Clean.Circuits.Gadgets.U16Compare
-import SP1Clean.Circuits.Gadgets.U16toU8Safe
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Circuits.Gadgets.IsZero
+public import SP1Clean.Circuits.Gadgets.U16Compare
+public import SP1Clean.Circuits.Gadgets.U16toU8Safe
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `SyscallInstrs` row as a native circuit
 
@@ -36,6 +38,8 @@ Deliberately *not* here: the exit hand-off's padding push. `HaltChip` pushes a z
 rows because its table is exactly one row, which is what balanced the verifier's ungated pull. A
 syscall table has many rows, so that accounting is redesigned when this chip joins the ensemble;
 this file emits only the faithful `is_halt`-gated push. -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

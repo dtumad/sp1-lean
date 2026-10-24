@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.NativeCoreBoundaries
+module
+
+public import SP1Clean.Soundness.NativeCoreBoundaries
 
 /-! # Structural finalization from the combined native AIR
 
@@ -6,6 +8,8 @@ The final inventory consumes Memory records without assuming their values or clo
 Its canonical addresses and unique locations follow from Byte closure and its private ordering
 ledger. These are the boundary facts needed before timed Memory grounding can establish currency.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

@@ -1,17 +1,19 @@
-import SP1Clean.Soundness.TypedTimeContracts
-import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
-import SP1Clean.Alignment.Chips.LtChip.Contracts
-import SP1Clean.Alignment.Chips.ShiftLeftChip.Contracts
-import SP1Clean.Alignment.Chips.ShiftRightChip.Contracts
-import SP1Clean.Proofs.Chips.BranchChip.Contracts
-import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
-import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
-import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
-import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
-import SP1Clean.Alignment.Chips.MulChip.Contracts
-import SP1Clean.Alignment.Chips.DivRemChip.Contracts
-import SP1Clean.Alignment.Chips.UTypeChip.Bridge
-import SP1Clean.Alignment.Chips.AluX0Chip.Bridge
+module
+
+public import SP1Clean.Soundness.TypedTimeContracts
+public import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
+public import SP1Clean.Alignment.Chips.LtChip.Contracts
+public import SP1Clean.Alignment.Chips.ShiftLeftChip.Contracts
+public import SP1Clean.Alignment.Chips.ShiftRightChip.Contracts
+public import SP1Clean.Proofs.Chips.BranchChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
+public import SP1Clean.Alignment.Chips.MulChip.Contracts
+public import SP1Clean.Alignment.Chips.DivRemChip.Contracts
+public import SP1Clean.Alignment.Chips.UTypeChip.Bridge
+public import SP1Clean.Alignment.Chips.AluX0Chip.Bridge
 
 /-! # The fetch discriminant: no supported instruction row pins the `ECALL` opcode
 
@@ -27,6 +29,8 @@ literal opcode in their `rowView` and need no constraint at all; the flag chips 
 their selector one-hot/booleanity gates (each chip's `physicalViewOpcode_ne_ecall`, proved beside
 its other row-level constraint extractions), and `AluX0` from its Byte-table dynamic-opcode range
 (`opcode < 29`) — the one case that consumes the Byte-channel guarantee premise. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

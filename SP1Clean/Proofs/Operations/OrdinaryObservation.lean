@@ -1,12 +1,16 @@
-import SP1Clean.Native.Operations.OrdinaryObservation
-import ToClean.Circuit.InteractionRecovery
-import Clean.Air.FlatComponent
+module
+
+public import SP1Clean.Native.Operations.OrdinaryObservation
+public import ToClean.Circuit.InteractionRecovery
+public import Clean.Air.FlatComponent
 
 /-! # Exact ordinary observation ledgers
 
 The receipt pull and observation transition are read from the actual composed program. Its
 four Byte pulls remain separate obligations, discharged in the enclosing physical assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrdinaryObservation
 

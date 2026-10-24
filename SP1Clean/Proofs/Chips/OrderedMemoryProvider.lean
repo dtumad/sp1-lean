@@ -1,9 +1,11 @@
-import ToClean.Circuit.Guarded
-import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
-import SP1Clean.Native.Operations.OrderedBoundary
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Core.MemoryTable
+module
+
+public import ToClean.Circuit.Guarded
+public import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
+public import SP1Clean.Native.Operations.OrderedBoundary
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Model.Core.MemoryTable
 
 /-! # Canonical memory records with checked ordering
 
@@ -11,6 +13,8 @@ The same wrapper serves initialization and finalization. It preserves the provid
 record contract and constrains the control key to the canonical address plus one. The sentinel
 zero therefore precedes x0, and the increment cannot wrap for canonical 48-bit locations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedMemoryProvider
 

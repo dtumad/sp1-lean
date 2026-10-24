@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.InstructionWrite
+module
+
+public import SP1Clean.Model.Core.ExecutionReplay
+public import SP1Clean.Model.Core.InstructionWrite
 
 /-! # Ordinary write permission along the shared execution path
 
@@ -12,6 +14,8 @@ remain obligations of that path, so a failed prefix cannot make an invalid execu
 Empty paths impose no write obligation, including identities at halted states. Composition uses
 the complete intermediate state, preserving changes to base registers made before a shard cut.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.ExecutionPath
 

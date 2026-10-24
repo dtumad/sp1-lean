@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.HaltChip.Formal
-import ToClean.Circuit.SubcircuitProjection
-import ToClean.Air.EnsembleProjection
+module
+
+public import SP1Clean.Proofs.Chips.HaltChip.Formal
+public import ToClean.Circuit.SubcircuitProjection
+public import ToClean.Air.EnsembleProjection
 
 /-! # Legacy Exit padding in the mixed host assembly
 
@@ -8,6 +10,8 @@ Active HALT uses the full syscall instruction and host handler. Until the old pu
 participation rule is replaced, this component retains only the legacy table's padding rows.
 The wrapper preserves every old interaction and adds one zero-selector constraint.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HaltPaddingChip
 

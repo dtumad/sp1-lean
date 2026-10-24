@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.HostHintReadHostAgreement
-import SP1Clean.Soundness.HostHintReadBookkeeping
-import SP1Clean.Soundness.HostHintReadExit
-import SP1Clean.Soundness.HostHintReadTerminalAgreement
-import SP1Clean.Soundness.CoreMemoryFrame
+module
+
+public import SP1Clean.Soundness.HostHintReadHostAgreement
+public import SP1Clean.Soundness.HostHintReadBookkeeping
+public import SP1Clean.Soundness.HostHintReadExit
+public import SP1Clean.Soundness.HostHintReadTerminalAgreement
+public import SP1Clean.Soundness.CoreMemoryFrame
 
 /-! # Complete native Memory observations at the outgoing boundary
 
@@ -15,6 +17,8 @@ also preserved. The semantic tape determines all three retirement/nextPC slots, 
 halted endpoint has the public Exit value. The actual optional terminal status agrees with the
 verifier's supplied endpoint. Complete supplied-snapshot equality remains open.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

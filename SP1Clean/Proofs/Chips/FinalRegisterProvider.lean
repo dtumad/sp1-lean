@@ -1,11 +1,13 @@
-import ToClean.Circuit.Guarded
-import ToClean.Gadgets.LookupProjection
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Circuit.EmittedInteraction
-import SP1Clean.Model.Channels
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics
+module
+
+public import ToClean.Circuit.Guarded
+public import ToClean.Gadgets.LookupProjection
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Circuit.EmittedInteraction
+public import SP1Clean.Model.Channels
+public import Clean.Gadgets.Bits
+public import Clean.Utils.Tactics
 
 /-! # Canonical register finalization
 
@@ -13,6 +15,8 @@ Each physical row consumes one final Memory record. Its address must be a five-b
 the higher address limbs must vanish. The negative emission assumes no Memory guarantee, so the
 shared ordering wrapper can establish uniqueness before values and clocks are grounded globally.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRegisterProvider
 

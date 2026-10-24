@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostHintReadMemoryEffect
+module
+
+public import SP1Clean.Soundness.HostHintReadMemoryEffect
 
 /-! # Installed syscall execution on the complete carrier
 
@@ -8,6 +10,8 @@ the actual host at that prefix. Both feed the same timed step/frame assembly, so
 or per-call semantic premise escapes the final SyscallInstrs statement. WRITE and VERIFY handlers
 and complete outgoing snapshot authentication remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

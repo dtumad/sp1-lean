@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostLocalHandoff
-import SP1Clean.Soundness.HostCallReceivers
-import SP1Clean.Soundness.HostHintReadPartition
+module
+
+public import SP1Clean.Soundness.HostLocalHandoff
+public import SP1Clean.Soundness.HostCallReceivers
+public import SP1Clean.Soundness.HostHintReadPartition
 
 /-! # HINT_READ handler uniqueness from the instruction handoff
 
@@ -9,6 +11,8 @@ handlers and the other handlers' unit pulls transfers instruction-clock uniquene
 CPU theorem supplies producer uniqueness once the wrapper is projected onto its actual syscall
 table. No caller supplies handler uniqueness or independently balanced per-call cursor tables.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadHandoff
 

@@ -1,9 +1,11 @@
-import SP1Clean.Proofs.Completeness.SemanticAccess
-import SP1Clean.Proofs.Chips.BranchChip.Complete
-import SP1Clean.Alignment.Chips.BranchChip.Bridge
-import SP1Clean.Model.SP1Field
-import Clean.Air.WitnessGeneration
-import ToClean.Air.EnsembleBuild
+module
+
+public import SP1Clean.Proofs.Completeness.SemanticAccess
+public import SP1Clean.Proofs.Chips.BranchChip.Complete
+public import SP1Clean.Alignment.Chips.BranchChip.Bridge
+public import SP1Clean.Model.SP1Field
+public import Clean.Air.WitnessGeneration
+public import ToClean.Air.EnsembleBuild
 
 /-! # A decoded branch, its official Sail step, and its compiler-built local circuit
 
@@ -13,6 +15,8 @@ witness builder. The canonical projection is identified with that compiler input
 normally retiring official Sail transition. Acceptance means one local Branch table's constraints;
 no provider construction, channel balance, or complete shard relation is claimed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.BranchCompilerRoundTrip
 

@@ -1,5 +1,7 @@
-import ToPolyFun.Dynamical.Labeled
-import SP1Clean.FormalModel.Shard
+module
+
+public import ToPolyFun.Dynamical.Labeled
+public import SP1Clean.FormalModel.Shard
 /-! # The SP1 shard as a PolyFun labeled machine
 
 `sp1Machine` bundles the existing PolyFun view of a checked image's complete-state execution step
@@ -10,6 +12,8 @@ generic realization statement applies to the shard contract with no new executio
 `Executes` is source validity plus a write-permitted machine trace between the realized snapshots
 (`executes_iff`).
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FormalModel.Shard
 

@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Completeness.NativeStateAgreement
-import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
-import SP1Clean.Proofs.Completeness.NativeBoundaryAgreement
-import SP1Clean.Soundness.AIRCompleteness
+module
+
+public import SP1Clean.Proofs.Completeness.NativeStateAgreement
+public import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
+public import SP1Clean.Proofs.Completeness.NativeBoundaryAgreement
+public import SP1Clean.Soundness.AIRCompleteness
 
 /-!
 # Native ensemble completeness
@@ -11,6 +13,8 @@ stratum and closes the last Clean-specific fact: simultaneous balance of all sev
 channels.  Keeping it here preserves the architecture's `machine → assembly → machine
 completeness` direction; the proof-independent trace map remains available below this capstone.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

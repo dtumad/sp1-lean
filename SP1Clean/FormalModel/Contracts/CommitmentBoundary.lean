@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.CommitmentStatement
-import SP1Clean.FormalModel.Contracts.PublicValues
+module
+
+public import SP1Clean.FormalModel.Contracts.CommitmentStatement
+public import SP1Clean.FormalModel.Contracts.PublicValues
 
 /-! # Canonical public encoding of the immutable commitment statement
 
@@ -7,6 +9,8 @@ Public-output words use four little-endian bytes. Deferred words are canonical f
 `WellFormed` rules out reduction modulo the characteristic. The named-field adapter leaves the
 rest of SP1's shard record, including previous commitments and cross-shard fields, explicit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CommitmentBoundary
 

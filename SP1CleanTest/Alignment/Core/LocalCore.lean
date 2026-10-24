@@ -1,14 +1,16 @@
-import SP1Clean.Soundness.LocalCoreGrounding
-import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Soundness.ProtectedOrdinaryReceipt
-import SP1Clean.Soundness.HostHintQueueBoundary
-import SP1Clean.Native.Operations.CommitmentStatement
-import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.Core.InstructionWrite
-import SP1CleanTest.Alignment.Support.LocalCoreFixture
-import ToClean.Air.FiniteLookup
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Soundness.LocalCoreGrounding
+public import SP1Clean.Soundness.ProtectedLocalCore
+public import SP1Clean.Soundness.ProtectedOrdinaryReceipt
+public import SP1Clean.Soundness.HostHintQueueBoundary
+public import SP1Clean.Native.Operations.CommitmentStatement
+public import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+public import SP1Clean.Model.Core.HostSnapshot
+public import SP1Clean.Model.Core.InstructionWrite
+public import SP1CleanTest.Alignment.Support.LocalCoreFixture
+public import ToClean.Air.FiniteLookup
+public import Clean.Circuit.WitnessExport
 
 /-! # Complete local-assembly constraint and ledger regression
 
@@ -21,6 +23,8 @@ binding with a concrete forged-return example. Same-register accesses and a real
 exercise the grounding interfaces; stopped-source rows are rejected while identities remain valid.
 This is AIR conformance, not an execution theorem.
 -/
+
+@[expose] public section
 
 -- Local bank and memory preservation checks; complete public-statement binding is
 -- tested by the installed commitment export fixtures.

@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.FinalMemoryReceipts
-import SP1Clean.Native.Operations.FinalRegisterValue
-import SP1Clean.Native.Operations.FinalRamValue
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Soundness.FinalMemoryReceipts
+public import SP1Clean.Native.Operations.FinalRegisterValue
+public import SP1Clean.Native.Operations.FinalRamValue
+public import SP1Clean.Model.SP1Field
 
 /-! # Physical finalizer receipt installation
 
@@ -10,6 +12,8 @@ installs receipts on the same arrays and reads Clean's canonical interaction led
 two receipt balances are claimed here; execution Memory balance and target-check Byte closure
 belong to the enclosing machine.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryReceipts
 

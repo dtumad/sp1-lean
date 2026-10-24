@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.FormalModel.Contracts.PublicValues
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Public encoding of a complete local source
 
@@ -11,6 +13,8 @@ limb checks and the source's 48-bit ranges make these equalities canonical, with
 A stopped source also requires unchanged clock endpoints. The full outgoing snapshot and
 host-effect accounting remain separate integration work.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SP1PublicIO
 

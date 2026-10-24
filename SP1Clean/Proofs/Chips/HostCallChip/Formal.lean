@@ -1,4 +1,6 @@
-import SP1Clean.Native.Chips.HostCallChip.Defs
+module
+
+public import SP1Clean.Native.Chips.HostCallChip.Defs
 
 /-! # Soundness and completeness of the instruction-to-host boundary
 
@@ -6,6 +8,8 @@ The instruction's CPU contract supplies the extra read's clock discipline. Full-
 determines its gate, including on padding, so the host can neither omit WRITE's x12 observation
 nor create extra register reads for another call.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCallChip
 

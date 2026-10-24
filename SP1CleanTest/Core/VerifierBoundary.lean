@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.HostExitBoundary
-import ToClean.Air.Footprint
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Native.Operations.HostExitBoundary
+public import ToClean.Air.Footprint
+public import ToClean.Air.TableBuild
 
 /-! # Public verifier boundary regressions
 
@@ -8,6 +10,8 @@ A stopped source cannot change its exit word, even when the receipt selector is 
 the boundary preserves the committed table and its canonical data. The disabled receipt remains
 an occurrence, and the assertion contributes its own pull/push pair.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.VerifierBoundary
 open Circuit Air.Flat

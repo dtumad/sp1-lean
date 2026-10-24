@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Alignment.Chips.SubwChip.Contracts
-import SP1Clean.Alignment.Chips.DivRemChip.Contracts
+module
+
+public import SP1Clean.Soundness.GroundingAdapter
+public import SP1Clean.Alignment.Chips.SubwChip.Contracts
+public import SP1Clean.Alignment.Chips.DivRemChip.Contracts
 
 /-! # Canonical R-type grounding instances
 
@@ -10,6 +12,8 @@ Memory shape.  The family constructor (`RTypeChipGroundingData.toContracts`) liv
 this module extends the family without making those central modules normalize
 every concrete chip circuit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

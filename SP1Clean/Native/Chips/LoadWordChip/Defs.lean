@@ -1,16 +1,18 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReader
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReader
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `LoadWord` chip row as a `GeneralFormalCircuit`
 
@@ -32,6 +34,8 @@ drives the sign extension. Two selectors `is_lw` / `is_lwu` replace the single `
 The chip `Spec` composes the sub-circuits' `Spec`s + the selection equations + the `op_a != x0` gate +
 the selector binaries; the load meaning (`rd =` extended `selected_word`) is carried by `ITypeReader`'s
 write value. The cross-row offline-memory meaning is derived by `Soundness/TypedMemory.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadWordChip
 

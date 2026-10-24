@@ -1,10 +1,14 @@
-import SP1Clean.Proofs.Operations.HintReadStep
+module
+
+public import SP1Clean.Proofs.Operations.HintReadStep
 
 /-! # Constructing successive hint word rows
 
 The constructor preserves the authenticated word and current address. It computes exact
 successors under explicit nonwrapping bounds; permitted padded spans derive these bounds later.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadStep
 

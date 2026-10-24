@@ -1,10 +1,14 @@
-import SP1Clean.Soundness.SP1Ensemble
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
 
 /-! # Selector binary facts from physical chip constraints
 
 The active-row selector is structural AIR data, not execution semantics.  This module derives it from
 the shallow top-level gate of each actual Clean chip, independently of the chip's semantic `Spec`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

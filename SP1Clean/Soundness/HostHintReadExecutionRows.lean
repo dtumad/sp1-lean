@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.HostLocalCoreRows
-import SP1Clean.Soundness.HostHintReadCPUMemory
-import SP1Clean.Soundness.HostQueueCallProjection
-import SP1Clean.Soundness.HostLocalCoreProgram
+module
+
+public import SP1Clean.Soundness.HostLocalCoreRows
+public import SP1Clean.Soundness.HostHintReadCPUMemory
+public import SP1Clean.Soundness.HostQueueCallProjection
+public import SP1Clean.Soundness.HostLocalCoreProgram
 
 /-! # CPU execution rows with their installed hint Memory effects
 
@@ -10,6 +12,8 @@ the two installed ledgers. The present source registry derives absence of WRITE,
 x12 pair is disabled; this is a proved property of that registry, not an inactivity premise or
 a restriction on the eventual eight-call capstone. Future WRITE installation must retain that pair.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

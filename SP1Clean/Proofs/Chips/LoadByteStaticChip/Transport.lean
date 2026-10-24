@@ -1,7 +1,11 @@
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.FixedTable
+module
+
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.FixedTable
 
 /-! # Exact constraint and occurrence transport for the LoadByte replacement -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteStaticChip
 

@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.LoadX0Chip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ The `rd = x0` form of all seven loads on the witgen bridge (see `LoadWordChip/Wi
 memory-family programme note). The row discards the loaded value, so it commits no selection and no
 sign bit at all — just the seven variant selectors and the three offset bits — and the only
 witnessed cells are, once again, the four the composed `AddressOperation` produces. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadX0Chip
 

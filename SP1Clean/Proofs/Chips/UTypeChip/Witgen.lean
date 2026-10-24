@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.UTypeChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.UTypeChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.UTypeChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ payloads of different kinds: the addend `is_auipc · pc`, witnessed as a bare li
 result word, witnessed through `AddOperation.populateIR`. Both depend on the same three pieces of the
 input row — the `is_auipc` selector, the program counter, and the immediate — so a single set of
 agreement facts serves both. -/
+
+@[expose] public section
 
 namespace SP1Clean.UTypeChip
 

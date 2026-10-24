@@ -1,10 +1,14 @@
-import SP1Clean.Model.Core.HostIO
+module
+
+public import SP1Clean.Model.Core.HostIO
 
 /-! # Executable regressions for the native host I/O contract
 
 These exercise observable bytes and rejected calls, including SP1's final-word behavior at the
 eight-byte boundary. They do not substitute for syscall AIR grounding or Rust conformance.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core
 

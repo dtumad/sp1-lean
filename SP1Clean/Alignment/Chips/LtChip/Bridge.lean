@@ -1,8 +1,10 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.LtChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.LtChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for the unified `Lt` chip (SLT + SLTU) + `ChipKind`
 
@@ -10,6 +12,8 @@ import SP1Clean.Proofs.Sail.Advance
 `correct_sltu_native` and `correct_slt_native` (both proven and axiom-clean) route the chip's
 semantic RV64 `sltu`/`slt` facts into the respective Sail executions. `lt_chip_reaches_sail` proves
 the flag-dispatched conjunction from the chip `Spec`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.LtSail

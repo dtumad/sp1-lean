@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.TouchChains
+module
+
+public import SP1Clean.Soundness.TouchChains
 
 /-! # Timed grounding for the ordinary memory slice
 
@@ -56,6 +58,8 @@ Current scope, kept explicit rather than hidden behind a full-machine name:
   to the public initial clock) feeds `stateBalance_remaining_ge_eight`'s `t + 8` gap — the one fact
   the link derivation consumes — and `LiveOK`'s frontier-time bound (`timeNat m ≤ t` per `some`
   record) is re-established from each chain's last-push bound (`≤ t + 4 < t + 8`). -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.TimedGrounding
 

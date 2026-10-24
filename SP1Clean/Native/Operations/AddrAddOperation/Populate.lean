@@ -1,8 +1,10 @@
-import Mathlib.Tactic.IntervalCases
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Types.AddrAddOperation
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import Mathlib.Tactic.IntervalCases
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.AddrAddOperation
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `AddrAddOperation` — `populate` (the witness generator)
 
@@ -10,6 +12,8 @@ SP1's `AddrAddOperation::populate` ported natively; `spec_populate` proves the r
 Witness-conformance anchor: `SP1CleanTest/WitnessTests/AddrAddOperationWitness.lean`.
 Circuit hand-maintained in the sibling `Defs.lean`, arithmetic core in `RawSpec`,
 `FormalAssertion` in `Formal`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddrAddOperation
 

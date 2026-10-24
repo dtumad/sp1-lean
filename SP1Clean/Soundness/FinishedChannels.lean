@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import ToClean.Air.ChannelClosure
 
 /-! # Finished structural channels from actual ensemble balance
 
@@ -7,6 +9,8 @@ Byte and Program requirements follow from each component's raw constraints. Clea
 consistency therefore closes every table's pull guarantees, independently of table positions.
 These are structural lookup facts; committed-ROM membership remains a stronger global theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

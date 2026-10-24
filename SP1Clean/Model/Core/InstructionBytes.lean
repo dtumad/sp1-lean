@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.GuestProgram
+module
+
+public import SP1Clean.Model.Semantics.GuestProgram
 
 /-! # Committed instruction words in byte memory
 
@@ -6,6 +8,8 @@ The check reads all four little-endian bytes through a partial memory observatio
 snapshots and Sail memory use the same check; an absent byte is not a zero byte. This is byte
 agreement, not a replacement for Sail fetch/decode or a proof of whole-path ROM preservation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.InstructionBytes
 

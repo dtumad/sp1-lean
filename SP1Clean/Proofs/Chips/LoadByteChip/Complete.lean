@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.LoadByteChip` — from trace events to a valid AIR table
 
@@ -15,6 +17,8 @@ The signedness contract follows the AIR's two branches exactly: on `LB`, the MSB
 not claim that this zero is the byte's high bit. Thus unsigned loads of bytes `≥ 128` are ordinary
 complete rows. `highBitLbuEvent` below is the concrete `0xff` regression for that case.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

@@ -1,8 +1,10 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Proofs.Chips.SnapshotRamProvider
-import SP1Clean.Native.Operations.FinalRamValue
-import ToClean.Air.EnsembleCheck
-import ToClean.Air.TableBuild
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Proofs.Chips.SnapshotRamProvider
+public import SP1Clean.Native.Operations.FinalRamValue
+public import ToClean.Air.EnsembleCheck
+public import ToClean.Air.TableBuild
 
 /-! # Built-in Rust export of RAM rows and fixed interval membership
 
@@ -10,6 +12,8 @@ Clean owns witness execution, fixed rows, scheduling and lowering. The closed me
 checks the production interval provider. Component fixtures retain their external Byte and Memory
 interactions; Rust checks those separately. They do not establish full-ensemble generation.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.RamExport
 

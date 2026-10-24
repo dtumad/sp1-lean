@@ -1,12 +1,16 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.AluX0Chip.Defs
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.AluX0Chip.Defs
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.AluX0Chip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
 Verifier-side `Assumptions` are trivial (`True`) — soundness derives `is_real` binary and the
 reader contract purely from the in-circuit gates. -/
+
+@[expose] public section
 
 namespace SP1Clean.AluX0Chip
 

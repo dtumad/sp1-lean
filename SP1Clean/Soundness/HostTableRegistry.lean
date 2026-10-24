@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintQueueBoundary
-import ToClean.Air.TableSlot
+module
+
+public import SP1Clean.Soundness.HostHintQueueBoundary
+public import ToClean.Air.TableSlot
 
 /-! # Registered positions of native host component blocks
 
@@ -8,6 +10,8 @@ actual receiver or terminal component and remain valid when resource blocks are 
 The installed reference accounts for the protected CPU prefix and its HALT replacement once;
 consumers read original tables through `TableSlot`, without maintaining their own offsets.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostTableRegistry
 

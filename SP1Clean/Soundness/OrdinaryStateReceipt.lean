@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.TypedState
-import SP1Clean.Soundness.EnsembleChannels
-import SP1Clean.Native.Operations.InstructionReceipt
-import ToClean.Air.ComponentReplacement
+module
+
+public import SP1Clean.Soundness.TypedState
+public import SP1Clean.Soundness.EnsembleChannels
+public import SP1Clean.Native.Operations.InstructionReceipt
+public import ToClean.Air.ComponentReplacement
 
 /-! # Receipts reuse the registered ordinary State emissions
 
@@ -9,6 +11,8 @@ The neutral instruction identity selects only symbolic wiring in the original ph
 There is no instruction evaluator, alternative decoder, or new execution inventory here.
 The evaluated receipt is identified with the existing `statePushMessage` projection below.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.OrdinaryStateReceipt
 

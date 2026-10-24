@@ -1,15 +1,17 @@
-import SP1CleanTest.Alignment.Support.BoundaryFixture
-import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
-import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import SP1Clean.Proofs.Completeness.InstructionEvent
-import SP1Clean.Proofs.Completeness.Providers
-import SP1Clean.FormalModel.TraceGen.Inputs
-import SP1Clean.Model.Semantics.SailArithmeticExecute
+module
+
+public import SP1CleanTest.Alignment.Support.BoundaryFixture
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
+public import SP1Clean.Proofs.Chips.HostCallChip.Populate
+public import SP1Clean.Model.Core.HostSnapshot
+public import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+public import SP1Clean.Proofs.Completeness.InstructionEvent
+public import SP1Clean.Proofs.Completeness.Providers
+public import SP1Clean.FormalModel.TraceGen.Inputs
+public import SP1Clean.Model.Semantics.SailArithmeticExecute
 
 /-! # Shared host-program fixture construction
 
@@ -18,6 +20,8 @@ The production access compiler supplies ordinary timestamps, and the host RAM co
 its documented event-clock role. Clean owns witness scheduling, fixed providers and padding.
 This finite constructor does not replace the complete Sail execution relation or its open compiler.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.HostProgram
 

@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Math
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Math
+public import SP1Clean.Math.Word
 
 /-! # `DivRemChip` — soundness bridge lemmas
 
 Carry-chain → ℕ/Int reassembly lemmas bridging the chip's composed sub-circuit `Spec`s + `ownAsserts`
 to the pure-arithmetic consumers in `Math.lean`. Kept separate so each bridge lemma is independently
 checkable and `Formal.lean` reads as a thin assembly. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

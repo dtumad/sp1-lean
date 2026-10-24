@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Air.ChannelClosure
 
 /-! # The physical ledgers of native control handlers
 
@@ -9,6 +11,8 @@ Each handler consumes exactly one full HostCall message. HALT additionally uses 
 neither handler emits Memory, State, Exit, or PublicValues records. Local semantic contracts
 follow from raw constraints and, for HALT, the enclosing ensemble's Byte guarantees.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

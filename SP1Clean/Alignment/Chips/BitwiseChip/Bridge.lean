@@ -1,8 +1,10 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Circuits.Gadgets.Bitwise
-import SP1Clean.Proofs.Chips.BitwiseChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Circuits.Gadgets.Bitwise
+public import SP1Clean.Proofs.Chips.BitwiseChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for Bitwise (+ `ChipKind` registration)
 
@@ -10,6 +12,8 @@ import SP1Clean.Proofs.Sail.Advance
 emulation given the semantic fact and register/PC reads. `SailWrap.execute_RTYPE_pure` already
 maps `.AND/.OR/.XOR → &&&/|||/^^^`. Six `bitwise_chip_reaches_sail_*` end-to-end lemmas
 (register + immediate forms) compose `BitwiseChip.Spec`'s opcode-gated conjuncts into the bridge. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.BitwiseSail

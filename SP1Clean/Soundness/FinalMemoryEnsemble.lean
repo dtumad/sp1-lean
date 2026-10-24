@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.OrderedMemoryEnsemble
-import ToClean.Air.ChannelClosure
-import ToClean.Air.ComponentOutput
-import SP1Clean.Proofs.Chips.OrderedFinalProvider
+module
+
+public import SP1Clean.Soundness.OrderedMemoryEnsemble
+public import ToClean.Air.ChannelClosure
+public import ToClean.Air.ComponentOutput
+public import SP1Clean.Proofs.Chips.OrderedFinalProvider
 
 /-! # Native final-memory inventory
 
@@ -10,6 +12,8 @@ provider row consumes one canonical Memory record; padding retains zero-multipli
 occurrences. The shared inventory proof excludes repeated active locations across both tables. Connecting this
 inventory to the timed machine establishes that these are the final values; that claim is not a local finalizer assumption.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalMemoryEnsemble
 

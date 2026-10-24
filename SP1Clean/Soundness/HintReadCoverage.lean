@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
-import SP1Clean.Soundness.RankedGrounding
-import ToClean.Air.TransitionView
-import ToClean.Air.MessageFilter
+module
+
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
+public import SP1Clean.Soundness.RankedGrounding
+public import ToClean.Air.TransitionView
+public import ToClean.Air.MessageFilter
 
 /-! # Complete successive hint word coverage from physical table balance
 
@@ -10,6 +12,8 @@ index successors yield an exhaustive path with precisely the consecutive index i
 The cursor retains the clock and node throughout. Endpoint authentication, immutable word
 binding, and installation in the mixed ensemble are separate integration obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HintReadCoverage
 

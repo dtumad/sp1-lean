@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionSnapshot
+module
+
+public import SP1Clean.Model.Core.ExecutionSnapshot
 
 /-! # Finite checks of invariant Sail fields at the outgoing boundary
 
@@ -8,6 +10,8 @@ key presence, and checks the supplied target is initialized. Mutable GPR values 
 the complete Memory check. PC/clock and dynamic nextPC/retirement observations have separate
 native bindings; this check alone does not assert complete outgoing state equality.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.SailSnapshot
 

@@ -1,8 +1,10 @@
-import SP1Clean.Model.InstructionRouting
-import SP1Clean.Model.ProgramChip
-import SP1Clean.Model.Semantics.GuestProgram
-import SP1Clean.Model.SailDecode
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Model.InstructionRouting
+public import SP1Clean.Model.ProgramChip
+public import SP1Clean.Model.Semantics.GuestProgram
+public import SP1Clean.Model.SailDecode
+public import SP1Clean.Math.Word
 
 /-! # Decode core — LeanRV64D `instruction` → committed Program-bus columns (`Model/Semantics/`)
 
@@ -15,6 +17,8 @@ construction. The hoist/evidence layer (`decodedInROMg`, the per-family hoists, 
 program shapes) stays in `Soundness/Decode.lean`, which imports this core. Namespace
 `SP1Clean.Soundness.Target` is unchanged (decoupled from path), so every
 `instrToProgramRow`/`decodedInROM` reference resolves as before. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Soundness.Target

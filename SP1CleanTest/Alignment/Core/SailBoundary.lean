@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostSailBoundary
-import SP1CleanTest.Alignment.Support.LocalCoreFixture
+module
+
+public import SP1Clean.Soundness.HostSailBoundary
+public import SP1CleanTest.Alignment.Support.LocalCoreFixture
 
 /-! # Target Sail fields checked by the real verifier subcircuit
 
@@ -7,6 +9,8 @@ The ADD fixture supplies a complete initialized source. These checks execute the
 assertions, including its actual public-field equations. Missing zero-valued GPRs are kept distinct
 from their Memory projection, and range tests precede field conversion.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Core.SailBoundary
 

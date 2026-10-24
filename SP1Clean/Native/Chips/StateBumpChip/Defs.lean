@@ -1,10 +1,12 @@
-import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.SystemChips
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The StateBump system table as a Clean circuit (W3, external report Finding 2)
 
@@ -21,6 +23,8 @@ contracts carry the instruction-row clock discipline a bump row does not satisfy
 cells are inputs (`localLength = 0`); the row struct and semantic `Spec` live on the audit surface
 in `FormalModel/Contracts/SystemChips.lean`, the soundness/completeness proofs in
 `Proofs/Chips/StateBumpChip/Formal.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.StateBumpChip
 

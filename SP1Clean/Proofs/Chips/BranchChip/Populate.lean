@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.BranchChip.Defs
-import SP1Clean.Proofs.Chips.BranchChip.Decision
+module
+
+public import SP1Clean.Native.Chips.BranchChip.Defs
+public import SP1Clean.Proofs.Chips.BranchChip.Decision
 
 /-! # Computed branch decisions
 
 The existing signed-comparison certificate determines the branch bit. Binary selectors
 and bounded operands suffice; callers provide neither a decision hint nor its validity.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

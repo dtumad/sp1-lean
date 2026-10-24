@@ -1,7 +1,11 @@
-import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
-import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
+module
+
+public import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
 
 /-! # Authenticated finite checking of the complete branch host assembly -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.BranchEnsemble
 

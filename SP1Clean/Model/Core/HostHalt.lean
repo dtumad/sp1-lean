@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionReplay
+module
+
+public import SP1Clean.Model.Core.ExecutionReplay
 
 /-! # Canonical HALT on the complete machine state
 
@@ -6,6 +8,8 @@ HALT observes actual x5/x10/x11, checks the canonical exit range, parks PC, and 
 in the evolving host. Writing the zero syscall result back to an already-zero x5 is proved to
 preserve the literal Sail register map, not merely its integer-register observations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

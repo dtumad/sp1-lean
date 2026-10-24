@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadLocalRecords
-import SP1Clean.Soundness.HostQueueOrder
+module
+
+public import SP1Clean.Soundness.HostHintReadLocalRecords
+public import SP1Clean.Soundness.HostQueueOrder
 
 /-! # The complete installed queue-state ledger
 
@@ -9,6 +11,8 @@ remaining contribution comes from the actual extra resource tables; these must e
 implement authenticated endpoints and allocations. In particular the fixed node/word source
 registration alone has no queue endpoints and admits no active queue-handler rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 

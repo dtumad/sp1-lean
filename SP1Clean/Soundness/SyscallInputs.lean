@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.SystemMemoryRows
-import SP1Clean.Soundness.TypedTimeContracts
+module
+
+public import SP1Clean.Soundness.SystemMemoryRows
+public import SP1Clean.Soundness.TypedTimeContracts
 
 /-! # Component-local syscall inputs
 
@@ -8,6 +10,8 @@ Memory pulls receive their value and clock bounds from the grounding engine's in
 These lemmas apply to any table carrying the syscall component, independently of ensemble layout.
 They do not supply host effects or restrict the complete syscall register to a supported code.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

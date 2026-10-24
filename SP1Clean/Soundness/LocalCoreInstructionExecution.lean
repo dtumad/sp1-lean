@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreTrajectory
-import SP1Clean.Soundness.CoreInstructionExecution
+module
+
+public import SP1Clean.Soundness.LocalCoreTrajectory
+public import SP1Clean.Soundness.CoreInstructionExecution
 
 /-! # Ordinary instruction facts on the stateful local trajectory
 
@@ -9,6 +11,8 @@ paired replay's terminal-PC invariant proves that the host is still running. The
 make ordinary replay agree with Sail exactly where grounding needs it. All 25 instruction cases
 remain in the registered chip contracts. ROM protection and the host rows' effects remain open.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

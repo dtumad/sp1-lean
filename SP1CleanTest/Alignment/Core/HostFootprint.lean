@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostFootprint
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Soundness.HostFootprint
+public import SP1Clean.Model.SP1Field
 
 /-! # Host byte-slice and aligned-word footprint regressions
 
@@ -7,6 +9,8 @@ Check real dispatcher footprints and Sail memory effects, including the distinct
 defined word observation and equality of failed optional reads. These semantic checks do not
 claim that the pending host AIR tables authenticate an execution.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostFootprint
 

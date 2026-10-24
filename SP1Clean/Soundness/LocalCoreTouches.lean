@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.LocalCoreOrder
-import SP1Clean.Soundness.LocalCoreRowBalance
-import SP1Clean.Soundness.CoreTouches
+module
+
+public import SP1Clean.Soundness.LocalCoreOrder
+public import SP1Clean.Soundness.LocalCoreRowBalance
+public import SP1Clean.Soundness.CoreTouches
 
 /-! # Aligned touches of the local shard assembly
 
@@ -10,6 +12,8 @@ changing its State edge, fetch, or complete Memory multiset. Prior-record timest
 conditional in this local interface; `LocalCoreMemoryOrder` discharges them from Memory balance
 and eliminates the actual refresh rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

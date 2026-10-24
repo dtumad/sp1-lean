@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCoreLedger
-import ToClean.Air.Authentication
+module
+
+public import SP1Clean.Soundness.HostLocalCoreLedger
+public import ToClean.Air.Authentication
 
 /-! # Authentication on fresh host protocols
 
@@ -8,6 +10,8 @@ silence. Only the actual appended tables can source its records. Their component
 proofs and the original count-bounded balance authenticate all unit pulls, without any caller
 ledger equality or physical-table alignment premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

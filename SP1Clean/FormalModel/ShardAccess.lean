@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.Model.Core.ExecutionAccess
+module
+
+public import SP1Clean.FormalModel.ShardPreservation
+public import SP1Clean.Model.Core.ExecutionAccess
 
 /-! # Access projection at every admissible ordinary occurrence
 
@@ -7,6 +9,8 @@ Both source and target of each instruction are the actual complete path states. 
 ROM and byte availability are derived independently from Sail/host preservation. The conclusion
 uses the same transition view and access plan consumed by the deterministic compiler.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FormalModel.Shard
 open Model.Core Machine Semantics

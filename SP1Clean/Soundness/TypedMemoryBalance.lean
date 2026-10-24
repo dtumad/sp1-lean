@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.TypedMemorySelectors
-import SP1Clean.Soundness.ProviderBindings
-import SP1Clean.Soundness.BumpDecode
+module
+
+public import SP1Clean.Soundness.TypedMemorySelectors
+public import SP1Clean.Soundness.ProviderBindings
+public import SP1Clean.Soundness.BumpDecode
 
 /-! # The per-`MemLoc` Memory-channel balance
 
@@ -42,6 +44,8 @@ closed**:
    `optMS (live)`/`optMS (finM)` frontier-Option packaging) landed in `Soundness/MemoryFrontier.lean`
    (`memoryFrontierBalance`).
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

@@ -1,5 +1,7 @@
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Types.LtOperationUnsigned
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.LtOperationUnsigned
 
 /-! # Strictly ordered boundary keys
 
@@ -7,6 +9,8 @@ Boundary providers use a separate structural channel to connect their keys. The 
 strict integer ordering; balance then forces an exhaustive chain with unique keys. Neither
 reachability nor uniqueness is a channel guarantee.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedBoundary
 

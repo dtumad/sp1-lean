@@ -1,14 +1,18 @@
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.SP1Field
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Model.SP1Field
+public import Clean.Circuit.WitnessExport
 
 /-! # Executed host RAM access regressions
 
 Run the actual witness program, assertions, and Byte and Memory pull guarantees. These local
 tests retain both ledgers; they do not assert whole-ensemble balance or host-call authorization.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostRamAccess
 

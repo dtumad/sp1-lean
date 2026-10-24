@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.HostSail
-import SP1Clean.Model.Core.HostTerminal
-import SP1Clean.Model.Machine.EventExecution
+module
+
+public import SP1Clean.Model.Core.HostSail
+public import SP1Clean.Model.Core.HostTerminal
+public import SP1Clean.Model.Machine.EventExecution
 
 /-! # Stateful local execution of the native core
 
@@ -15,6 +17,8 @@ there are no transitions out of a stopped state. Padding and provider/refresh ro
 semantic steps. Supported decoding, ROM-write exclusion, and shard resource limits belong to the
 native profile layered over this execution relation; no AIR correctness is asserted here.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

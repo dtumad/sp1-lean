@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.CoreTouches
-import SP1Clean.Soundness.MixedRowTransport
-import SP1Clean.Soundness.WalkTimeline
+module
+
+public import SP1Clean.Soundness.CoreTouches
+public import SP1Clean.Soundness.MixedRowTransport
+public import SP1Clean.Soundness.WalkTimeline
 
 /-! # Shared semantic transport through alignment and refresh rewriting
 
@@ -9,6 +11,8 @@ reads inside their pre-effect windows. Only equal-value prior records at the sam
 earlier time may replace the original pulls. These lemmas carry arbitrary trajectory step/frame
 facts through the structural transformation; they do not assert host execution.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

@@ -1,8 +1,10 @@
-import SP1Clean.FormalModel.Contracts.WritePermission
-import SP1Clean.Native.Operations.AddressOrder
-import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
-import ToClean.Air.StaticProvider
-import ToClean.Circuit.Guarded
+module
+
+public import SP1Clean.FormalModel.Contracts.WritePermission
+public import SP1Clean.Native.Operations.AddressOrder
+public import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
+public import ToClean.Air.StaticProvider
+public import ToClean.Circuit.Guarded
 
 /-! # A native permission provider for ordinary and host memory writes
 
@@ -12,6 +14,8 @@ verifier-fixed provider through Clean's existing channel interface.
 The deterministic constructor succeeds exactly for writable native addresses; all remaining local
 cells come from Clean's exportable zero-test and bit-decomposition witness programs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.WritePermissionProvider
 

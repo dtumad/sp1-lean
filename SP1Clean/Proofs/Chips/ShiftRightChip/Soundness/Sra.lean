@@ -1,12 +1,16 @@
-import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
-import SP1Clean.Proofs.Chips.ShiftRightChip.Math
-import SP1Clean.Proofs.Chips.ShiftRightChip.Flags
-import SP1Clean.Proofs.CircuitProofStart
+module
+
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Math
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Flags
+public import SP1Clean.Proofs.CircuitProofStart
 
 /-! # `ShiftRightChip` — sra conjunct soundness (split for parallel compilation)
 
 Arithmetic right-shift (SRA) conjunct, proved as a standalone `GeneralFormalCircuit.Soundness`
 over a single-conjunct local `Spec`. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip.SoundSra
 

@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.AddwOperation.Formal
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ALUTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Proofs.Operations.AddwOperation.Formal
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ALUTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The native ADDW chip row as a `GeneralFormalCircuit`
 
@@ -20,6 +22,8 @@ Rust is stated only by the whole-chip reconfiguration.
 W-instruction: result is 2 limbs + sign bit (`addw_operation.value`/`addw_operation.msb.msb`); the
 64-bit `op_a` write is the sign-extended word `[v0, v1, msb·65535, msb·65535]`. Adapter is the
 immediate-capable `ALUTypeReader` (unlike SUBW's `RTypeReader`); Program-bus opcode is `19`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwChip
 

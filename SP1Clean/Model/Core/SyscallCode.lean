@@ -1,4 +1,6 @@
-import Mathlib.Data.BitVec
+module
+
+public import Mathlib.Data.BitVec
 
 /-! # The native core's guest-runtime syscall profile
 
@@ -8,6 +10,8 @@ SP1 v6.10.0 (`d83ed91f96701209613720708f36ffce0e98ed33`),
 casts x5 to u32, whereas this profile requires the complete 64-bit register to be canonical.
 Membership says which call is allowed, not that its host effects have been verified.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

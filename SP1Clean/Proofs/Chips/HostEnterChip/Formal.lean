@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.HostEnterChip.Defs
-import Clean.Utils.Tactics
+module
+
+public import SP1Clean.Native.Chips.HostEnterChip.Defs
+public import Clean.Utils.Tactics
 
 /-! # The zero-effect native control handler
 
 The handler checks the canonical call and zero result with no witness cells. The same semantic
 contract supplies local completeness, and no constructor needs auxiliary comparison columns.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostEnterChip
 

@@ -1,17 +1,21 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Circuits.Gadgets.U16MSB
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `SubwOperation` native circuit
 
 The proof-oriented Clean implementation, composed with the native MSB gadget. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwOperation
 

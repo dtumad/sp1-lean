@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostCallLedger
-import SP1Clean.Soundness.LocalCoreEventUniqueness
+module
+
+public import SP1Clean.Soundness.HostCallLedger
+public import SP1Clean.Soundness.LocalCoreEventUniqueness
 
 /-! # Instruction clock uniqueness at the host handoff
 
@@ -8,6 +10,8 @@ The primary theorem consumes only State balance and Byte guarantees; the older c
 corollary remains available. `HostLocalCore` installs the wrapper and proves this physical
 projection internally, retaining all host RAM effects in the extended Memory ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

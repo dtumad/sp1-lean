@@ -1,9 +1,11 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Local addition gadget circuit
 
@@ -11,6 +13,8 @@ The native gadget checks a base-2^16 carry chain and range-checks four result li
 Its bundled contract specifies word addition. Rust comparisons test assembled instruction rows
 with adapters for their physical layouts.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddOperation
 

@@ -1,6 +1,8 @@
-import Mathlib.Data.ZMod.Basic
-import SP1Clean.Model.InteractionBus
-import SP1Clean.Math.Word
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import SP1Clean.Model.InteractionBus
+public import SP1Clean.Math.Word
 
 /-! # The `MemoryProvider` receiver — the closed Memory bus's init/finalize boundary
 
@@ -25,6 +27,8 @@ argument (per-shard init/final states chained through public values, address-dis
 Septic cumulative sum) is a separate multi-shard layer: it instantiates this `MemoryProvider` per shard
 and chains the boundaries. The single-shard model deliberately captures neither disjointness nor the
 global sum. -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryGlobalChip
 

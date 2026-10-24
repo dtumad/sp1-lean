@@ -1,9 +1,11 @@
-import SP1CleanTest.Core.HintSourceExport
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Operations.HintReadSpanPopulate
-import SP1Clean.Proofs.Operations.HintReadSpanLedger
-import SP1Clean.Native.Operations.HintQueueWordSource
+module
+
+public import SP1CleanTest.Core.HintSourceExport
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Proofs.Operations.HintReadSpanPopulate
+public import SP1Clean.Proofs.Operations.HintReadSpanLedger
+public import SP1Clean.Native.Operations.HintQueueWordSource
 
 /-! # Exact padded counts, carries, and the final native RAM cell
 
@@ -11,6 +13,8 @@ Run the actual span circuit and its witness program, including every Byte reques
 retain a mathematical one-past endpoint at `2^48` and reject omission of the padding word. The
 word-request fixtures exercise source contents; the complete AIR consumer walk is still pending.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HintReadSpan
 

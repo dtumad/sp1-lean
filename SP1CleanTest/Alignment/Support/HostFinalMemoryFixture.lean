@@ -1,12 +1,16 @@
-import SP1Clean.Soundness.HostFinalMemory
-import SP1CleanTest.Alignment.Support.LocalCoreFixture
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Soundness.HostFinalMemory
+public import SP1CleanTest.Alignment.Support.LocalCoreFixture
+public import ToClean.Air.TableBuild
 
 /-! # Shared complete-memory fixture
 
 The walkthrough and regression theorems share the physical assembly, rows, and evaluator.
 The public verifier runs separately at the data derived from the actual physical tables.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Core.HostFinalMemory.Fixture
 

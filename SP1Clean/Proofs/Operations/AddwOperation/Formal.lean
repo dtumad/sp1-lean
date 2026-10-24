@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.AddwOperation.RawSpec
-import SP1Clean.Native.Operations.AddwOperation.Populate
-import SP1Clean.Native.Operations.AddwOperation.Defs
+module
+
+public import SP1Clean.Native.Operations.AddwOperation.RawSpec
+public import SP1Clean.Native.Operations.AddwOperation.Populate
+public import SP1Clean.Native.Operations.AddwOperation.Defs
 
 /-! # `AddwOperation` — the `FormalAssertion` (Spec / soundness / completeness / contract)
 
@@ -8,6 +10,8 @@ SP1's `AddwOperation::eval` as a Clean `FormalAssertion`. Composes `U16MSBOperat
 result limb `value[1]`, pulls two limb ranges from the byte bus, asserts the two gated carries.
 Soundness routes through `addwSemantics_of_carries`; completeness through `carries_of_addwSemantics`.
 `Spec`/`spec_populate` live here (not in `FormalModel/Contracts/Operations.lean`) to avoid an import cycle. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwOperation
 

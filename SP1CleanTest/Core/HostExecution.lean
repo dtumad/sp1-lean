@@ -1,12 +1,16 @@
-import SP1Clean.Model.Core.HostSail
-import SP1Clean.Model.Core.HostReplay
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Model.Core.HostSail
+public import SP1Clean.Model.Core.HostReplay
+public import SP1Clean.Model.SP1Field
 
 /-! # Stateful native host execution regressions
 
 Exercise the public dispatcher and actual Sail memory/register adapter. These are executable
 semantic regressions, not Rust trace conformance or evidence that the host effects are AIR-bound.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostExecution
 

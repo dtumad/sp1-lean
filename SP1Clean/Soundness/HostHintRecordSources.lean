@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.HostHintReadHandoff
-import SP1Clean.Native.Operations.HintQueueWordSource
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.SP1Field
-import ToClean.Air.Authentication
+module
+
+public import SP1Clean.Soundness.HostHintReadHandoff
+public import SP1Clean.Native.Operations.HintQueueWordSource
+public import SP1Clean.Model.Core.ExecutionResources
+public import SP1Clean.Model.SP1Field
+public import ToClean.Air.Authentication
 
 /-! # Immutable hint-record source contracts
 
@@ -12,6 +14,8 @@ of their own. Dynamic allocation providers use the physical-table authentication
 which can consume prior grounding facts rather than demanding a proof from raw constraints
 alone. Neither current queue heads nor RAM predecessor currency is assumed here.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintRecordSources
 

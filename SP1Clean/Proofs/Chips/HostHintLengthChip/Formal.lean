@@ -1,5 +1,7 @@
-import SP1Clean.Native.Chips.HostHintLengthChip.Defs
-import Clean.Utils.Tactics
+module
+
+public import SP1Clean.Native.Chips.HostHintLengthChip.Defs
+public import Clean.Utils.Tactics
 
 /-! # Soundness and completeness of the current-head HINT_LEN handler
 
@@ -7,6 +9,8 @@ Local node guarantees supply representation bounds, while the explicit node bind
 semantic bridge remains an assembly obligation. The complete handler contract supplies local
 completeness; no prover-supplied zero selector or clock comparison is trusted.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintLengthChip
 

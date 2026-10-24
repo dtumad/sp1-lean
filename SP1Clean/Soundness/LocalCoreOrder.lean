@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreState
-import SP1Clean.Soundness.StateChronology
+module
+
+public import SP1Clean.Soundness.LocalCoreState
+public import SP1Clean.Soundness.StateChronology
 
 /-! # Clock ordering of the local shard assembly
 
@@ -7,6 +9,8 @@ Raw constraints and channel balance order every active ordinary, HALT, and sysca
 the public endpoints. The physical StateBump rows supply canonicalization, and cancel internally.
 The order retains every occurrence, including arbitrarily interleaved syscall rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

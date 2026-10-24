@@ -1,14 +1,16 @@
-import ToClean.Gadgets.LookupProjection
-import ToClean.Gadgets.BitwiseByte
-import SP1Clean.Model.Channels
-import SP1Clean.Math.Bitwise
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Bits
-import Clean.Gadgets.Boolean
-import Clean.Utils.Tactics
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import ToClean.Gadgets.LookupProjection
+public import ToClean.Gadgets.BitwiseByte
+public import SP1Clean.Model.Channels
+public import SP1Clean.Math.Bitwise
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Bits
+public import Clean.Gadgets.Boolean
+public import Clean.Utils.Tactics
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The in-circuit `ByteChip` provider (push side of SP1's byte-op table)
 
@@ -36,6 +38,8 @@ and whose soundness discharges the push's `Requirements` (`ByteRowSpec` of the p
 
 Each opcode lives in its own sub-namespace so its `main`/`Spec`/`circuit` stay independent. The
 `RangeChip` (opcode 6, variable width) is a separate, harder chip and is *not* built here. -/
+
+@[expose] public section
 
 namespace SP1Clean.ByteChip
 

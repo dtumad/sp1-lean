@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Circuits.Types.MemoryAccess
+module
+
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.Circuits.Types.MemoryAccess
 
 /-! # One authenticated host RAM word access
 
@@ -7,6 +9,8 @@ The access belongs to the event clock carried by its coordination message and up
 aligned guest RAM cell at that clock plus one. Read-only host consumers request equal old and
 new words. Which cells a call needs and which writes it permits are separate host-table facts.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamAccessChip
 

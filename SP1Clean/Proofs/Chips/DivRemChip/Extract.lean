@@ -1,9 +1,11 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Soundness
-import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
-import SP1Clean.Circuits.Gadgets.IsZeroWord
-import SP1Clean.Circuits.Gadgets.IsEqualWord
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.Channels
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Soundness
+public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
+public import SP1Clean.Circuits.Gadgets.IsZeroWord
+public import SP1Clean.Circuits.Gadgets.IsEqualWord
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.Channels
 
 /-! # `DivRemChip` — constraint-extraction helpers
 
@@ -20,6 +22,8 @@ compiles fast (no heavy `circuit_norm` reduction).
 Perf note: the two `fromElements` projection lemmas below each carried a 4000000-heartbeat ceiling.
 Measured (control at 1 heartbeat = 2 real timeouts; both then clean at 40000), so the plain default
 carries ≥5× headroom and both ceilings were removed — they were ~100× over their floor. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

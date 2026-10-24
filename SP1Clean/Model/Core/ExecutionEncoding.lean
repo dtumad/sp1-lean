@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.ExecutionWritePolicy
-import SP1Clean.Model.Core.NativeLayout
+module
+
+public import SP1Clean.Model.Core.ExecutionWritePolicy
+public import SP1Clean.Model.Core.NativeLayout
 
 /-! # Native instruction and timestamp representability
 
@@ -9,6 +11,8 @@ The active clock phase comes from the native CPUState circuit's thirteen-bit ran
 `(clk_0_16 - 1) / 8`, used by ordinary and host rows alike. It implies the local access window.
 Unused endpoints, including stopped identities, have no active-window or fetch obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 open Machine Soundness.Target LeanRV64D.Defs Semantics

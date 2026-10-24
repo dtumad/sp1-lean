@@ -1,5 +1,7 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1CleanTest.Core.EnsembleCheck
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1CleanTest.Core.EnsembleCheck
 
 /-! # Built-in Rust export of fixed membership and a public boundary
 
@@ -7,6 +9,8 @@ The legacy lookup fixture's allowed values become verifier-fixed columns. Clean 
 Rust rendering and witness scheduling. The finite checker independently checks the generated
 physical rows and the separate public verifier; generation is not a completeness theorem.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.EnsembleExport
 

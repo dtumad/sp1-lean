@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.CoreExecutionRow
-import SP1Clean.Soundness.RefreshWiring
+module
+
+public import SP1Clean.Soundness.CoreExecutionRow
+public import SP1Clean.Soundness.RefreshWiring
 
 /-! # Memory alignment and refresh elimination independent of source policy
 
@@ -8,6 +10,8 @@ mixed read times. Refresh elimination consumes a proved frontier equation and st
 chronology, retaining each row, read time, pushed record, and final value/location. Boot and local
 assemblies derive these inputs from their own physical ledgers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

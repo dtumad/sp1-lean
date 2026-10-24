@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.OrderedBoundaryEnsemble
-import SP1Clean.Proofs.Chips.OrderedMemoryProvider
-import SP1Clean.Native.Operations.OrderedBoundaryEnd
-import ToMathlib.ListFilterMap
+module
+
+public import SP1Clean.Soundness.OrderedBoundaryEnsemble
+public import SP1Clean.Proofs.Chips.OrderedMemoryProvider
+public import SP1Clean.Native.Operations.OrderedBoundaryEnd
+public import ToMathlib.ListFilterMap
 
 /-! # Ordered native memory inventories
 
@@ -9,6 +11,8 @@ Initialization and finalization share fixed endpoints, physical transition views
 location-uniqueness argument. An inventory registers its actual components and record decoder once;
 its local correctness fields are proofs about those components, not assumptions on a witness.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.OrderedMemoryEnsemble
 

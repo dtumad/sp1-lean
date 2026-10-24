@@ -1,5 +1,7 @@
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.InteractionBus
+module
+
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.InteractionBus
 
 /-! # The `ByteChip` receiver — discharging byte membership from bus balance
 
@@ -14,6 +16,8 @@ the **`ByteRowSpec` predicate**, not the `7 · 2^16`-row enumeration (the `decid
 already sidesteps): a `ByteProvider` is any contribution list whose every entry sits at the val-projected
 key of some `ByteRowSpec` row. The key fact that makes this work is that a byte key is the *full*
 `ZMod.val`-projection of all four fields, so (val injective) **the key determines the row**. -/
+
+@[expose] public section
 
 namespace SP1Clean.ByteChip
 

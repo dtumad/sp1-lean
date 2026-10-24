@@ -1,8 +1,10 @@
-import SP1Clean.Native.Operations.DivRemOperation.Core
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
-import SP1Clean.Proofs.Chips.DivRemChip.Extract
-import SP1Clean.Proofs.CircuitProofStart
+module
+
+public import SP1Clean.Native.Operations.DivRemOperation.Core
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
+public import SP1Clean.Proofs.Chips.DivRemChip.Extract
+public import SP1Clean.Proofs.CircuitProofStart
 
 /-! # `DivRemCore` — the `FormalAssertion` bundle (soundness / completeness / contract)
 
@@ -15,6 +17,8 @@ transport), and the 32 gated byte-pull guarantees onto the matching `CoreSpec` c
 the selection block (`is_real`/flag binariness, one-hot, `SelectionSpec`) from the gate equations
 inside the own-assert tail via the `OwnAsserts.lean` membership lemmas — and completeness feeds
 each constraint back from the same conjuncts. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemCore
 

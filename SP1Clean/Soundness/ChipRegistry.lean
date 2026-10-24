@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.SupportedMachine
+module
+
+public import SP1Clean.Soundness.SupportedMachine
 
 /-! # `ChipRegistry` — the auditable list of every capstone-wired chip
 
@@ -32,6 +34,8 @@ registry and everything downstream (`sp1Tables`, the capstone, `Coverage`) are s
 Every chip's `circuit` has complete soundness and completeness proofs. The compiled-library trust
 policy and source guards in `scripts/run_audit.sh` reject `sorryAx` and unknown axioms; permitted
 logical, Sail and native-bitvector dependencies are described in `docs/assurance.md`. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

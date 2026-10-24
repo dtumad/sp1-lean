@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.SyscallGrounding
-import SP1Clean.Soundness.TypedTimeContracts
+module
+
+public import SP1Clean.Soundness.SyscallGrounding
+public import SP1Clean.Soundness.TypedTimeContracts
 
 /-! # Shared register-touch alignment for HALT and syscalls
 
@@ -7,6 +9,8 @@ Both system rows use x5/x10/x11 at offsets 4/3/2. The x5 push may write a new wo
 pushes are read-backs. Timestamp ordering is conditional only on the prior record's low-clock
 bound, to be supplied by Memory grounding, and never on the system row's full semantic contract.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.SystemTouches
 

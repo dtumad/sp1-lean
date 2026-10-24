@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.AddiChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.AddiChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.AddiChip` — from trace events to a valid AIR table (the I-type template)
 
@@ -22,6 +24,8 @@ What changes from the R-type template, and what does not:
 
 All ten bullets are single citations. `Branch`, `Jalr` and the nine memory chips read the same
 adapter, so they inherit this shape. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddiChip
 

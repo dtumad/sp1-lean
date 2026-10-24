@@ -1,13 +1,17 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed64
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned64
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed32
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned32
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed64
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned64
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed32
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned32
 
 /-! # `DivRemChip` — uniform row evidence assembly
 
 The four family proofs deliberately stop at quotient/remainder evidence. This file is the small,
 auditable top layer that identifies the row's selected case, invokes exactly one family proof, and
 uses the Rust row's output-routing constraints to produce `Cases.RowEvidence`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

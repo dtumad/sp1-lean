@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.AddressDiv8
-import Clean.Gadgets.Bits
+module
+
+public import SP1Clean.FormalModel.Contracts.AddressDiv8
+public import Clean.Gadgets.Bits
 
 /-! # A native quotient/remainder circuit for eight-byte words
 
@@ -7,6 +9,8 @@ Each limb splits into a thirteen-bit partial quotient and a three-bit remainder.
 the neighboring pieces gives the full quotient; no lookup channel or division witness oracle
 is needed. The constructor supplies the partial quotients and Clean computes every range bit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddressDiv8
 

@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.AddiChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.AddiChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Addi — circuit-grounding contracts
 
@@ -7,6 +9,8 @@ Small structural facts crossing Addi's completed Clean circuit boundary.  Arithm
 in `AddiChip.Spec`; these lemmas expose only state/adapter passthrough and the physical non-`x0`
 routing assertion used by whole-machine grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

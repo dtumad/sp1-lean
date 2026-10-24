@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Completeness.CanonicalClosure
+module
+
+public import SP1Clean.Proofs.Completeness.CanonicalClosure
 
 /-!
 # Canonical closure row validity
@@ -7,6 +9,8 @@ This module isolates the row-local validity argument for the canonical Byte, Ran
 providers.  It is deliberately independent of the registry-wide consumer-polarity argument, so a
 deterministic trace assembler only pays for the `DemandServable` contract it actually consumes.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

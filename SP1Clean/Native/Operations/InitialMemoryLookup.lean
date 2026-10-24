@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.InitialMemory
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
-import ToClean.Air.StaticProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.InitialMemory
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
+public import ToClean.Air.StaticProvider
 
 /-! # Address-based initial-memory byte reads
 
@@ -9,6 +11,8 @@ The circuit accepts one address word and returns its authenticated byte. Clean's
 IR selects the fixed interval and constructs both comparison rows internally. Completeness needs
 only the semantic address bound; callers supply no interval or comparison columns.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialMemoryLookup
 

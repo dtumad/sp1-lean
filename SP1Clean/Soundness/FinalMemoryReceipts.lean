@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Soundness.FinalReceiptEnsemble
+module
+
+public import SP1Clean.Soundness.FinalMemoryEnsemble
+public import SP1Clean.Soundness.FinalReceiptEnsemble
 
 /-! # Receipt-bearing native finalizers
 
@@ -10,6 +12,8 @@ original `FinalMemoryEnsemble` remains the sole decoder of the combined final in
 Auxiliary target-value consumers close the two new channels. Installing their Byte closure
 and the complete change-coverage verifier is a separate obligation of the enclosing machine.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalMemoryReceipts
 

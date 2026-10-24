@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.MemorySnapshot
+module
+
+public import SP1Clean.Model.Core.MemorySnapshot
 
 /-! # Finite comparison against a complete outgoing memory snapshot
 
@@ -11,6 +13,8 @@ This is executable boundary data validation, independent of execution and of the
 The enclosing AIR must derive the check from its fixed lookups and complete final-record ledger;
 the check is not an additional semantic conjunct in the AIR statement.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.MemorySnapshot
 

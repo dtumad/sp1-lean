@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+module
+
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
 
 /-! # The actual host-access interaction ledger
 
@@ -6,6 +8,8 @@ The composed circuit retains exactly its prior/new Memory pair and one call-faci
 These equations concern Clean's evaluated operations, so later ensemble transport cannot
 substitute an unrelated footprint or discard the host's accesses.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamAccessChip
 

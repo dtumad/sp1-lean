@@ -1,12 +1,16 @@
-import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
-import Clean.Air.Balance
+module
+
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
+public import Clean.Air.Balance
 
 /-! # Physical and logical ledgers of host reads
 
 One prior/new Memory pair survives composition. The lower-level coordination pair cancels
 internally; exactly one unit-weight read message remains.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamReadChip
 

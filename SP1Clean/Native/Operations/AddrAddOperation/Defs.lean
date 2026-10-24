@@ -1,16 +1,20 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import SP1Clean.FormalModel.Contracts.Operations
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.FormalModel.Contracts.Operations
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `AddrAddOperation` native circuit
 
 The proof-oriented Clean implementation of 48-bit address addition. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddrAddOperation
 

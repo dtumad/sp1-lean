@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.StoreWordChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.StoreWordChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.StoreWordChip` — from trace events to a valid AIR table (the store template)
 
@@ -32,6 +34,8 @@ real-row-gated in `AddressOperation.Assumptions` and in all nine memory-chip pro
 below remains the unpadded core; a full-chip zero-row inhabitance theorem and ensemble-height
 padding construction remain separate work.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

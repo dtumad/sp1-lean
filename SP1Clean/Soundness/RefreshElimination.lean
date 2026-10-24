@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.RankedGrounding
+module
+
+public import SP1Clean.Soundness.RankedGrounding
 
 /-! # Refresh elimination: a balanced touch multiset can drop its refresh edges (W3 D3)
 
@@ -26,6 +28,8 @@ The exported `∃ m', … time m' ≤ time m …` shape is exactly the form W2 b
 `memoryFinalizeTruth`, so running this engine changes no exported statement. The SP1 instantiation
 (the per-location filtered memory balance, the MemoryBump rows as `R`) is W3 phase-5 wiring;
 nothing here mentions messages, chips, or fields. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.RefreshElimination
 

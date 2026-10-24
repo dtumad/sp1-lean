@@ -1,5 +1,7 @@
-import ToClean.Air.StaticProvider
-import ToClean.Air.TableBuild
+module
+
+public import ToClean.Air.StaticProvider
+public import ToClean.Air.TableBuild
 
 /-! # Physical static-membership fixtures
 
@@ -8,6 +10,8 @@ consumer ledger; the fixed messages and every physical row come from the compone
 fixed-column program. Actual circuit generation and interaction evaluation remain Clean's.
 These fixtures do not implement the production channel scheduler.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.StaticMembership
 

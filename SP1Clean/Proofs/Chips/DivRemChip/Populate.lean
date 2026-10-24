@@ -1,11 +1,13 @@
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Circuits.Gadgets.U16Compare
-import SP1Clean.Circuits.Gadgets.Mul.Witness
-import SP1Clean.Circuits.Gadgets.IsZeroWord
-import SP1Clean.Circuits.Gadgets.IsEqualWord
-import SP1Clean.Circuits.Gadgets.LtUnsigned
-import SP1Clean.Native.Operations.AddOperation.Populate
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Circuits.Gadgets.U16Compare
+public import SP1Clean.Circuits.Gadgets.Mul.Witness
+public import SP1Clean.Circuits.Gadgets.IsZeroWord
+public import SP1Clean.Circuits.Gadgets.IsEqualWord
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
+public import SP1Clean.Native.Operations.AddOperation.Populate
 
 /-! # `DivRemChip` — native witness generation (`populate`)
 
@@ -29,6 +31,8 @@ Blocks SP1 populates **conditionally** are gated the same way here (zero off-gat
 the two `AddOperation` negation words (only when the matching `abs_*_alu_event` fires), and the
 `LtOperationUnsigned` block (only when the remainder-check multiplicity is `1`). `is_c_0` is
 populated **ungated** (SP1 calls `is_c_0.populate` on padding rows too). -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

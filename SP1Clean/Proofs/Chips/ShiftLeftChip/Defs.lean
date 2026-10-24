@@ -1,16 +1,18 @@
-import SP1Clean.Semantics.Specs.Chips.ShiftLeft
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
-import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ALUTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Semantics.Specs.Chips.ShiftLeft
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
+public import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ALUTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The ShiftLeft chip row as a GeneralFormalCircuit
 
@@ -22,6 +24,8 @@ The circuit composes CPU, ALU reader, register-write and shift assertions. Opcod
 explicit inputs, activity is their sum, and Clean's witness IR generates the shift columns.
 Released Rust comparisons check complete rows, assertions and interactions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftChip
 

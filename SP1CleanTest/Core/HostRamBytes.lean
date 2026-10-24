@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Operations.HostRamBytes
-import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Proofs.Operations.HostRamBytes
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
 
 /-! # Host-word byte decoding and read-ledger regressions
 
@@ -9,6 +11,8 @@ Execute the bundled decoder and constrain its actual output. Joint provider/cons
 retain complete read keys and the single physical Memory pair. Span queries remain fixtures;
 these tests do not claim that a host call has selected the complete buffer footprint.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostRamBytes
 

@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.AccessSchedule
-import SP1Clean.Proofs.Completeness.Providers
+module
+
+public import SP1Clean.Model.Semantics.AccessSchedule
+public import SP1Clean.Proofs.Completeness.Providers
 
 /-!
 # Canonical Memory-boundary histories
@@ -25,6 +27,8 @@ previous timestamp zero, and every later pull is exactly the preceding push.  A 
 `AccessSchedule` makes the execution compiler and this boundary construction share the scheduler's
 single access representation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Shard
-import SP1Clean.Model.Core.Boot
+module
+
+public import SP1Clean.FormalModel.Shard
+public import SP1Clean.Model.Core.Boot
 
 /-! # The native shard contract requires actual ordinary write permission
 
@@ -7,6 +9,8 @@ The source is valid, and SW would write exactly the instruction word already pre
 Every nonempty execution beginning with that ordinary event is rejected by the native contract,
 even under an unrestricted resource profile. Empty identities remain admissible.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ExecutionWritePolicy
 

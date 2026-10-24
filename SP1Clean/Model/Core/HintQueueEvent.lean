@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.HostQueue
+module
+
+public import SP1Clean.Model.Core.HostQueue
 
 /-! # Byte-level replay of queue observations and updates
 
@@ -7,6 +9,8 @@ Prepends include complete bytes and retain their order, covering guest WRITE and
 This is a projection of the existing host interpreter, not a second host execution relation:
 `HostState.hintEvent_sound` derives its replay from every successful interpreter call.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

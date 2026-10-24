@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Contracts.HostCommit
+module
+
+public import SP1Clean.FormalModel.Contracts.HostCommit
 
 /-! # Native commitment-bank endpoints
 
@@ -7,6 +9,8 @@ not a claim about the last commitment before the shard. A terminal row preserves
 clock `2^48`, outside every ordinary bank row's bounded clock. The verifier can therefore bind
 public final values without exposing the last commitment timestamp as a public field.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitBoundary
 

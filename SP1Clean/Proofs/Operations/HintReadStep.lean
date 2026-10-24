@@ -1,4 +1,6 @@
-import SP1Clean.Native.Operations.HintReadStep
+module
+
+public import SP1Clean.Native.Operations.HintReadStep
 
 /-! # Successive hint word semantics and completeness
 
@@ -6,6 +8,8 @@ The adder contracts establish natural-number successors, excluding disconnected 
 word-index rank. Completeness requires only the semantic row contract; no arithmetic columns
 are supplied by a proof argument.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadStep
 

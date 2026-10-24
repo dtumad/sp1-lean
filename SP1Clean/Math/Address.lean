@@ -1,10 +1,14 @@
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Math.Word
 
 /-! # Three-limb unsigned addresses
 
 The canonical encoding uses three little-endian 16-bit limbs. The conversion theorem makes its
 48-bit domain explicit; callers must establish the bound before using the encoded address.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Address
 

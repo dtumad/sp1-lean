@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
-import SP1Clean.Math.Address
+module
+
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
+public import SP1Clean.Math.Address
 
 /-! # Exact natural sums from the existing bounded address adder
 
@@ -7,6 +9,8 @@ The adder's final carry excludes 48-bit overflow. Once the semantic operands rul
 wrap, its result is the ordinary sum. The converse constructs the adder contract directly from
 a canonical sum, keeping host consumers independent of its limb-level constraint decomposition.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddrAddOperation
 

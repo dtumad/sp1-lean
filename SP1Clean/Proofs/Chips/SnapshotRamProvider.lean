@@ -1,8 +1,10 @@
-import ToClean.Circuit.Guarded
-import SP1Clean.FormalModel.Contracts.SnapshotMemory
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Native.Operations.InitialMemoryRead
-import SP1Clean.Native.Operations.AddressOperation
+module
+
+public import ToClean.Circuit.Guarded
+public import SP1Clean.FormalModel.Contracts.SnapshotMemory
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Native.Operations.InitialMemoryRead
+public import SP1Clean.Native.Operations.AddressOperation
 
 /-! # Source RAM values authenticated by an arbitrary finite snapshot
 
@@ -11,6 +13,8 @@ an aligned, non-reserved SP1 RAM address. The resulting zero-time record is push
 the instruction chips' Memory bus. This provider has no activity selector: an empty table needs
 no padding, and each present row supplies exactly one initial record.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SnapshotRamProvider
 

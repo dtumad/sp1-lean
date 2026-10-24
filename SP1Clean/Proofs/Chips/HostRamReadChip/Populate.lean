@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Model.Core.MemorySpan
+module
+
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
+public import SP1Clean.Model.Core.MemorySpan
 
 /-! # Constructing host RAM reads
 
@@ -8,6 +10,8 @@ The constructor preserves the prior word and computes every timestamp column. A 
 uses its distinct physical cells directly; the supplying Memory history remains responsible
 for the prior record at each cell.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamReadChip
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import ToClean.Air.TableBuild
 
 /-! # Constraint transport for the native instruction/provider inventory
 
@@ -10,6 +12,8 @@ from the committed tables.
 This says nothing about data-dependent channel guarantees, semantic commitment bindings or
 arbitrary ensembles with dynamic lookups; those require their own agreement proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

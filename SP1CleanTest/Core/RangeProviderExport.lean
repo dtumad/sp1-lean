@@ -1,5 +1,7 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Proofs.Chips.ByteChip.RangeChip
 
 /-! # Built-in export of the installed fixed-width Range family
 
@@ -7,6 +9,8 @@ These seventeen production providers prove membership through bit decomposition.
 their generated rows and messages with every row of SP1's verifier-fixed Range table and its AIR.
 The physical layouts differ; the comparison leaves the external Byte bus open.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.RangeProviderExport
 

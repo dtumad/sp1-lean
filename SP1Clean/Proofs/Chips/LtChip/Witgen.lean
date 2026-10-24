@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.LtChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.LtChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # Computable less-than witnesses
 
 The ten comparison columns depend only on the operand and selector inputs. Witness generation
 uses Clean's existing IR and does not read external hints or earlier witness cells.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.LtChip
 

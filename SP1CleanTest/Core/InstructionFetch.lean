@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.InstructionFetch
-import SP1Clean.FormalModel.ShardPreservation
+module
+
+public import SP1Clean.Model.Core.InstructionFetch
+public import SP1Clean.FormalModel.ShardPreservation
 
 /-! # Authenticated ordinary fetch and boundaries without a successor instruction
 
@@ -7,6 +9,8 @@ The checked boundary authenticates an ordinary JALR word in actual Sail memory. 
 of its four bytes fails source validation. A valid empty segment can nevertheless have a PC
 outside the finite ROM: source validity does not invent a fetch obligation at an unused boundary.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.InstructionFetch
 

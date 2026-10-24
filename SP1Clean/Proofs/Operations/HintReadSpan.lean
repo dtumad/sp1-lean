@@ -1,4 +1,6 @@
-import SP1Clean.Native.Operations.HintReadSpan
+module
+
+public import SP1Clean.Native.Operations.HintReadSpan
 
 /-! # Sound and complete padded HINT_READ endpoints
 
@@ -6,6 +8,8 @@ The final carry forbids address wrap while permitting a mathematical one-past en
 to `2^48`. Alignment makes the last bounded address a complete in-window word. The exact
 positive count includes final padding; actual row coverage is the consumer ledger's next task.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadSpan
 

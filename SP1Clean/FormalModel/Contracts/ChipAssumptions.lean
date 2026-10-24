@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Contracts.Chips
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
 
 /-! # Chip prover-side contracts — `Assumptions` / `ProverAssumptions` (audit surface)
 
@@ -21,6 +23,8 @@ two structural reasons (also recorded in `docs/architecture.md` § deliberate la
   `Native/Chips/<X>Chip/Defs.lean`, so their `Assumptions` cannot move here without inverting
   the FormalModel → Native layering. They follow when the "Spec homing" backlog item
   (`docs/roadmap.md`) moves those contract blocks onto this surface. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddChip
 

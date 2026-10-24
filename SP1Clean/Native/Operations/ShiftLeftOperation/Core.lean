@@ -1,7 +1,9 @@
-import SP1Clean.Circuits.Types.ShiftLeftChip
-import Clean.Circuit.Basic
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Circuits.Types.ShiftLeftChip
+public import Clean.Circuit.Basic
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `ShiftLeftCore` — the ShiftLeft chip's assertion cluster
 
@@ -10,6 +12,8 @@ This zero-witness `FormalAssertion` boundary emits the tail represented by
 chip level so Clean's shallow channel-law proof can see the byte-interaction selector. This is a
 proof-oriented gadget over the whole committed row, not a claimed upstream Rust operation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftChip
 

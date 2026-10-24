@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.HintQueueBoundary
-import SP1Clean.Native.Operations.HostCommitEndpoint
-import SP1Clean.Native.Operations.HostExitBoundary
+module
+
+public import SP1Clean.Native.Operations.HintQueueBoundary
+public import SP1Clean.Native.Operations.HostCommitEndpoint
+public import SP1Clean.Native.Operations.HostExitBoundary
 
 /-! # Native verifier boundaries for hints, commitment banks, and terminal status
 
@@ -9,6 +11,8 @@ target values are statement parameters, while the bank terminals remain physical
 Clean's public verifier preserves every boundary interaction and enforces the two raw assertions
 through a separate check channel. It allocates no physical rows or private witness cells.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostBoundary
 

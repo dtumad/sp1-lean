@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.HintQueue
-import SP1Clean.FormalModel.Contracts.HintReadSpan
-import SP1Clean.FormalModel.Contracts.HintReadWord
+module
+
+public import SP1Clean.FormalModel.Contracts.HintQueue
+public import SP1Clean.FormalModel.Contracts.HintReadSpan
+public import SP1Clean.FormalModel.Contracts.HintReadWord
 
 /-! # HINT_READ call, queue, and complete word endpoints
 
@@ -9,6 +11,8 @@ word cursor starts at zero and ends at the checked padded count and last written
 The queue moves to the node's tail without resetting the allocation frontier. Actual node/word
 binding and complete RAM execution follow from the enclosing source, cursor, and Memory ledgers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintReadChip
 

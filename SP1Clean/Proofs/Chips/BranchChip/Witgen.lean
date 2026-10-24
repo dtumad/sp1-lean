@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.BranchChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.BranchChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # Computable branch witnesses
 
 Clean generates the comparison from the operands and selectors, then the branch decision,
 then the selected next PC. Every same-row read uses an earlier witness cell.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

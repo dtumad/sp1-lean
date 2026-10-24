@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.TraceGen.Events
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.FormalModel.TraceGen.Events
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-!
 # The trace layer's clock literals are the machine model's constants
@@ -20,6 +22,8 @@ This matters at exactly one seam. A generator producing events from a Sail execu
 clocks through `clockAt` and `microValue`; the events it emits owe `WellFormed`, which is stated in
 literals. These lemmas are what let one discharge the other.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

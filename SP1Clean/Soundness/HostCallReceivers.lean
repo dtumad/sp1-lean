@@ -1,8 +1,10 @@
-import SP1Clean.Proofs.Chips.HostControlLedger
-import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
-import ToClean.Air.ReceiverView
-import SP1Clean.Soundness.HostLocalCore
+module
+
+public import SP1Clean.Proofs.Chips.HostControlLedger
+public import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
+public import ToClean.Air.ReceiverView
+public import SP1Clean.Soundness.HostLocalCore
 
 /-! # Unit receiver views for native host handlers
 
@@ -10,6 +12,8 @@ Each view reads the complete HostCall directly from its own physical row. Its le
 proved from the existing handler circuit, so a heterogeneous installed registry can account
 for every call without per-witness equations. WRITE and VERIFY handlers remain unimplemented.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostCallReceivers
 

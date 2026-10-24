@@ -1,5 +1,7 @@
-import SP1Clean.Model.Machine.Schedule
-import SP1Clean.Model.Semantics.GuestProgram
+module
+
+public import SP1Clean.Model.Machine.Schedule
+public import SP1Clean.Model.Semantics.GuestProgram
 
 /-! # Raw SP1 syscall events
 
@@ -12,6 +14,8 @@ an enumerated syscall type.
 An event contains the instruction-row observations.  `SyscallTransition` combines the laws enforced
 by that row with an explicit handler relation, which owns effects that are not determined by the
 instruction AIR (hint data, precompile memory effects, host I/O, and so on). -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

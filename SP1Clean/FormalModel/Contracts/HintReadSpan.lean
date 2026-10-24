@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Contracts.AddressDiv8
+module
+
+public import SP1Clean.FormalModel.Contracts.AddressDiv8
 
 /-! # Exact word count and final cell for HINT_READ
 
@@ -6,6 +8,8 @@ The last written cell remains a 48-bit address even when the write ends exactly 
 The count includes mandatory padding for empty and aligned hints. This contract fixes the
 endpoints a complete word consumer must connect; it does not assert ledger coverage or permission.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadSpan
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreBoundaries
-import SP1Clean.Soundness.NativeCoreFinalBoundary
+module
+
+public import SP1Clean.Soundness.LocalCoreBoundaries
+public import SP1Clean.Soundness.NativeCoreFinalBoundary
 
 /-! # Structural finalization from the local-shard AIR
 
@@ -8,6 +10,8 @@ Its canonical addresses and unique locations follow from this assembly's own Byt
 private ordering ledger. The source prefix and public verifier are projected without changing rows.
 These are the boundary facts needed before timed Memory grounding can establish currency.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

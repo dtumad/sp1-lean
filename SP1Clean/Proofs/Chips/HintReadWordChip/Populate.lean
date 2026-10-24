@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
-import SP1Clean.Proofs.Operations.HintReadStepPopulate
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Proofs.Operations.HintReadSpanPopulate
+module
+
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
+public import SP1Clean.Proofs.Operations.HintReadStepPopulate
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
+public import SP1Clean.Proofs.Operations.HintReadSpanPopulate
 
 /-! # Constructing physical hint word consumers
 
@@ -9,6 +11,8 @@ The constructor retains the physical RAM transfer, node, and index, and computes
 cursor. Its completeness domain consists of the existing RAM constructor domain and exact
 index/address bounds, which a complete permitted span supplies.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadWordChip
 

@@ -1,9 +1,11 @@
-import SP1Clean.Math.Word
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Semantics.Specs.U16toU8Safe
-import SP1Clean.Circuits.Types.IsZeroOperation
-import SP1Clean.Circuits.Types.U16CompareOperation
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Semantics.Specs.U16toU8Safe
+public import SP1Clean.Circuits.Types.IsZeroOperation
+public import SP1Clean.Circuits.Types.U16CompareOperation
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # System-table chip contract: the `SyscallInstrs` row
 
@@ -41,6 +43,8 @@ Column map, with the upstream indices each field occupies:
 The five selectors are `IsZeroOperation` blocks on the identifier byte, at SP1's canonical codes:
 `0` HALT, `3` `ENTER_UNCONSTRAINED`, `16` `COMMIT`, `26` `COMMIT_DEFERRED_PROOFS`, `240` `HINT_LEN`.
 Every other identifier is a *generic* syscall, dispatched over the syscall bus. -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.SP1Ensemble
-import SP1Clean.Soundness.BumpDecode
-import SP1Clean.Soundness.RankedGrounding
-import SP1Clean.Soundness.TypedSelectors
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import SP1Clean.Soundness.BumpDecode
+public import SP1Clean.Soundness.RankedGrounding
+public import SP1Clean.Soundness.TypedSelectors
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Typed State transitions emitted by instruction rows
 
@@ -10,6 +12,8 @@ The State edge of a row is read from the actual Clean interaction pair.  `RowVie
 semantic projection consumed by the existing Sail bridge; the lemmas in this module identify that
 projection with the emitted messages.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

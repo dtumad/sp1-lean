@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.OrderedMemoryEnsemble
-import ToClean.Air.ChannelClosure
-import ToClean.Air.ComponentOutput
-import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
+module
+
+public import SP1Clean.Soundness.OrderedMemoryEnsemble
+public import ToClean.Air.ChannelClosure
+public import ToClean.Air.ComponentOutput
+public import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 
 /-! # Physical source inventory for an arbitrary local snapshot
 
@@ -10,6 +12,8 @@ closes their private address-order chain. The shared ordered-inventory theorems 
 locations and the exact Memory ledger; no separate lookup list or witness-selected interpretation
 is introduced. Complete machine-state binding and source-time admissibility belong to grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.SnapshotMemoryEnsemble
 

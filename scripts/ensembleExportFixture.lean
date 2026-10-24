@@ -1,29 +1,33 @@
-import SP1CleanTest.Core.EnsembleExport
-import SP1CleanTest.Core.SyscallCodeExport
-import SP1CleanTest.Core.InstructionExport
-import SP1CleanTest.Core.ByteProviderExport
-import SP1CleanTest.Core.RangeProviderExport
-import SP1CleanTest.Core.SystemExport
-import SP1CleanTest.Core.SyscallExport
-import SP1CleanTest.Core.HostControlExport
-import SP1CleanTest.Core.SnapshotRegisterExport
-import SP1CleanTest.Core.StaticProviderExport
-import SP1CleanTest.Core.RamExport
-import SP1CleanTest.Core.ProgramExport
-import SP1CleanTest.Core.HintSourceExport
-import SP1CleanTest.Core.WritePermissionExport
-import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
-import SP1CleanTest.Alignment.Support.StoppedAssemblyFixture
-import SP1CleanTest.Alignment.Support.HintReadAssemblyFixture
-import SP1CleanTest.Alignment.Support.HaltAssemblyFixture
-import SP1CleanTest.Alignment.Support.CommitAssemblyFixture
-import SP1CleanTest.Alignment.Support.MixedAssemblyExport
+module
+
+public import SP1CleanTest.Core.EnsembleExport
+public import SP1CleanTest.Core.SyscallCodeExport
+public import SP1CleanTest.Core.InstructionExport
+public import SP1CleanTest.Core.ByteProviderExport
+public import SP1CleanTest.Core.RangeProviderExport
+public import SP1CleanTest.Core.SystemExport
+public import SP1CleanTest.Core.SyscallExport
+public import SP1CleanTest.Core.HostControlExport
+public import SP1CleanTest.Core.SnapshotRegisterExport
+public import SP1CleanTest.Core.StaticProviderExport
+public import SP1CleanTest.Core.RamExport
+public import SP1CleanTest.Core.ProgramExport
+public import SP1CleanTest.Core.HintSourceExport
+public import SP1CleanTest.Core.WritePermissionExport
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
+public import SP1CleanTest.Alignment.Support.StoppedAssemblyFixture
+public import SP1CleanTest.Alignment.Support.HintReadAssemblyFixture
+public import SP1CleanTest.Alignment.Support.HaltAssemblyFixture
+public import SP1CleanTest.Alignment.Support.CommitAssemblyFixture
+public import SP1CleanTest.Alignment.Support.MixedAssemblyExport
 
 /-! # Clean's built-in whole-ensemble Rust export fixture
 
 Generated sources and Lean reference rows stay under the ignored .lake/ensemble-export tree.
 The comparison script regenerates twice, checks the completion marker and compiles the output.
 -/
+
+@[expose] public section
 
 open Lean SP1CleanTest.Core.EnsembleExport SP1CleanTest.Alignment.InstalledAssemblyReference
 

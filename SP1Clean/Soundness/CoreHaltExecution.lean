@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HaltGrounding
-import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.HostHalt
+module
+
+public import SP1Clean.Soundness.HaltGrounding
+public import SP1Clean.Soundness.CoreExecutionEvents
+public import SP1Clean.Model.Core.HostHalt
 
 /-! # HALT from grounded observations
 
@@ -8,6 +10,8 @@ The legacy HALT row's asserted code and exit range, together with the engine's i
 currency, determine an actual transition of the complete stateful host. This common argument
 does not choose a trajectory, reset the host, or use a row's result as an oracle.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

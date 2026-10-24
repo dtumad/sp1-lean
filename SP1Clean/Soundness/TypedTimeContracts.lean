@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.TypedTime
-import SP1Clean.Soundness.StatePcClass
-import SP1Clean.Soundness.StateCanon
-import SP1Clean.Soundness.GoodnessFilter
+module
+
+public import SP1Clean.Soundness.TypedTime
+public import SP1Clean.Soundness.StatePcClass
+public import SP1Clean.Soundness.StateCanon
+public import SP1Clean.Soundness.GoodnessFilter
 
 /-! # CPUState clock contracts for the supported instruction chips
 
@@ -10,6 +12,8 @@ are deliberately chip-level and syntactic: arithmetic gadgets may be reorganized
 the chip retains a CPU reader fed by the State columns and active-row selector exposed in its
 `RowView`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

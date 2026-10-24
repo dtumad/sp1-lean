@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.LoadByteChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for LoadByte (LB / LBU)
 
@@ -14,6 +16,8 @@ emulation (write `nextPC = pc + 4` and the extended byte into `rd`), via
 `lb_chip_reaches_sail` discharges the `extend_value` equation: `selected_byte` and sign bit `msb`
 extend to `#v[selected_byte + 65280·msb, 65535·msb, 65535·msb, 65535·msb]` — the sign fills bits
 8–63, so the low limb already carries `65280·msb`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.LoadByteSail

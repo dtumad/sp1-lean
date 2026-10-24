@@ -1,7 +1,9 @@
-import SP1Clean.Native.Operations.WritePermission
-import SP1CleanTest.Core.ComponentExport
-import ToClean.Air.EnsembleCheck
-import ToClean.Gadgets.LookupProjection
+module
+
+public import SP1Clean.Native.Operations.WritePermission
+public import SP1CleanTest.Core.ComponentExport
+public import ToClean.Air.EnsembleCheck
+public import ToClean.Gadgets.LookupProjection
 
 /-! # Closed export of native byte-write permissions
 
@@ -11,6 +13,8 @@ circuit selects and authenticates each interval internally, with no private inte
 inputs. The fourth row is disabled padding, retaining both zero-multiplicity channel occurrences.
 The policy is native ROM exclusion, not SP1's runtime mprotect state machine.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.WritePermissionExport
 

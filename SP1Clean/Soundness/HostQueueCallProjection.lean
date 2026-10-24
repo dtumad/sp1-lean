@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.HostQueueCPUOrder
-import SP1Clean.Soundness.HostCommitBank
-import SP1Clean.Model.Core.QueueReplay
-import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+module
+
+public import SP1Clean.Soundness.HostQueueCPUOrder
+public import SP1Clean.Soundness.HostCommitBank
+public import SP1Clean.Model.Core.QueueReplay
+public import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
+public import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 
 /-! # Queue actions in the complete installed HostCall inventory
 
@@ -10,6 +12,8 @@ The installed control handlers preserve the hint queue and exclude WRITE. The re
 receivers are exactly HINT_READ and the two HINT_LEN variants. Their physical rows determine
 the semantic queue actions, including the natural read length rather than its modular image.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostQueueCallProjection
 

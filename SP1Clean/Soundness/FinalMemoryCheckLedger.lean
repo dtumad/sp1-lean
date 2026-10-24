@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.FinalMemoryChecks
+module
+
+public import SP1Clean.Soundness.FinalMemoryChecks
 
 /-! # Exact ledgers of the installed target Memory validators
 
@@ -6,6 +8,8 @@ All inventories below are decoded from registered physical tables. Activity-weig
 complete final records; changed-location interactions retain zero multiplicities. Auxiliary
 silence is a static interface of the installed components, never a witness premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalMemoryChecks
 

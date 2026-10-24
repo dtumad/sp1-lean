@@ -1,7 +1,9 @@
-import SP1Clean.Math.Word
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Native.Operations.SubOperation.Populate
-import Clean.Circuit.Basic
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Native.Operations.SubOperation.Populate
+public import Clean.Circuit.Basic
 
 /-! # `SubwOperation` — `populate` (the witness generator, borrow-form analog of `AddwOperation`)
 
@@ -9,6 +11,8 @@ SP1's `SubwOperation::populate` ported natively: the low two u16 limbs of `(a-b)
 two's-complement borrow form (`subwValueWitness`, carry init `1`, complement `65535 - b[i]`) and bit 15
 of the high result limb (`subwMsbWitness`), packaged into the native `Columns` struct.
 The composing `SubwChip` witnesses the columns with this; `spec_populate` lives in `Formal`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwOperation
 

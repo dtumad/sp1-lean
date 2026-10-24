@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
-import SP1Clean.Proofs.Completeness.NativeProgramAgreement
+module
+
+public import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
+public import SP1Clean.Proofs.Completeness.NativeProgramAgreement
 
 /-!
 # Native compiler agreement with the semantic boundary
@@ -11,6 +13,8 @@ initial state and public endpoints to construct `SemanticBoundaryBinding`.
 Keeping the join outside either bus-specific module makes the separation explicit and gives the
 native completeness capstone one direct semantic-boundary dependency.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

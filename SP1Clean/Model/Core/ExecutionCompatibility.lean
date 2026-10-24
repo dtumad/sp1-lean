@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.HostHalt
-import SP1Clean.Model.Machine.Shard
-import SP1Clean.Model.Semantics.EventTime
+module
+
+public import SP1Clean.Model.Core.HostHalt
+public import SP1Clean.Model.Machine.Shard
+public import SP1Clean.Model.Semantics.EventTime
 
 /-! # Whole-path compatibility for the ordinary/HALT fragment
 
@@ -9,6 +11,8 @@ complete host and clock. On the ordinary/HALT fragment their Sail projections ag
 HALT's literal register-map effect. No equivalence with an arbitrary fixed host is claimed for
 mixed calls. Normal retirement and the complete host endpoint remain properties of `ExecutionPath`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 open SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Defs

@@ -1,7 +1,9 @@
-import Mathlib.Tactic.IntervalCases
-import SP1Clean.Math.Word
-import SP1Clean.FormalModel.Contracts.Operations
-import Clean.Circuit.Basic
+module
+
+public import Mathlib.Tactic.IntervalCases
+public import SP1Clean.Math.Word
+public import SP1Clean.FormalModel.Contracts.Operations
+public import Clean.Circuit.Basic
 
 /-! # `AddwOperation` — `populate` (the witness generator)
 
@@ -11,6 +13,8 @@ SP1's `AddwOperation::populate` ported natively: the low two u16 limbs of `(a+b)
 composing `AddwChip` witnesses the columns with this. `spec_populate` lives in `Formal` (it references
 `Spec`, which — to avoid an import cycle through the composed `U16MSBOperation.Formal` — also lives in
 `Formal`). Only `a[0..1]`/`b[0..1]` are read; the high limbs are ignored, matching ADDW. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwOperation
 

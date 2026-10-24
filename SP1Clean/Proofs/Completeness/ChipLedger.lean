@@ -1,8 +1,10 @@
-import SP1Clean.Model.CleanLedger
-import SP1Clean.Soundness.EnsembleChannels
-import SP1Clean.Soundness.TypedState
-import SP1Clean.Soundness.TypedMemoryBalance
-import SP1Clean.Proofs.Completeness.ClosureRealization
+module
+
+public import SP1Clean.Model.CleanLedger
+public import SP1Clean.Soundness.EnsembleChannels
+public import SP1Clean.Soundness.TypedState
+public import SP1Clean.Soundness.TypedMemoryBalance
+public import SP1Clean.Proofs.Completeness.ClosureRealization
 
 /-! # State and Memory ledgers of generated traces
 
@@ -14,6 +16,8 @@ then discharge the existing balance contracts, retaining the public boundary and
 The current compiler emits no active HALT or syscall rows. Their padding/silence proofs below
 are properties of this compiler, not restrictions on the chip semantics or the full mixed target.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

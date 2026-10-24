@@ -1,4 +1,6 @@
-import SP1CleanTest.Alignment.Support.InstalledAssembly
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssembly
 
 /-! # Generation inputs cannot supply uncommitted program metadata
 
@@ -7,6 +9,8 @@ canonical data therefore cannot inherit that entry from witness-generation input
 applies to every witness of this inventory, independently of generation or semantic validity.
 Program-binding consumers must use an authenticated boundary.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.CanonicalAssembly
 

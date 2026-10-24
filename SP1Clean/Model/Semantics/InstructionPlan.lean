@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.AccessPlan
-import SP1Clean.Model.Semantics.Decode
+module
+
+public import SP1Clean.Model.Semantics.AccessPlan
+public import SP1Clean.Model.Semantics.Decode
 
 /-!
 # Semantic instruction access-plan extraction
@@ -20,6 +22,8 @@ No clock, timestamp, opcode copy, chip row, event record, or execution relation 
 Facts connecting the target values to an official Sail step belong to the later compiler proof; the
 transparent `InstructionPlanReady` predicate exposes exactly when this pure extractor succeeds.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

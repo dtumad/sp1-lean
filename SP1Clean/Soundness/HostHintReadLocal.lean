@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostHintReadHandoff
+module
+
+public import SP1Clean.Soundness.HostHintReadHandoff
 
 /-! # HINT_READ cursor accounting in the installed local AIR
 
@@ -8,6 +10,8 @@ are statically silent on this private word cursor. The extended ensemble's own b
 supplies the shared cursor ledger and every selected call's balance. Queue authentication and
 Memory currency remain separate semantic obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 

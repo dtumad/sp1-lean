@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.ProtectedLocalCoreRom
-import SP1Clean.Soundness.LocalCoreHaltExecution
+module
+
+public import SP1Clean.Soundness.ProtectedLocalCoreRom
+public import SP1Clean.Soundness.LocalCoreHaltExecution
 
 /-! # Local grounding derives ordinary ROM preservation from the protected AIR
 
@@ -8,6 +10,8 @@ ordering, and byte permissions for every ordinary store. Its registered row effe
 internally. HALT still uses the actual stateful host transition. Active SyscallInstrs effects remain
 the explicit semantic obligation; this is not yet a full outgoing-snapshot execution theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 

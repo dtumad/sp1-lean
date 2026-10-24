@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.ResourceBoundary
-import SP1Clean.FormalModel.ShardResources
-import SP1Clean.Soundness.HostHintReadExecutionPath
+module
+
+public import SP1Clean.Native.Operations.ResourceBoundary
+public import SP1Clean.FormalModel.ShardResources
+public import SP1Clean.Soundness.HostHintReadExecutionPath
 
 /-! # Enforced endpoint resources for the installed mixed assembly
 
@@ -13,6 +15,8 @@ Endpoint occupancy here concerns the supplied snapshots. Authenticating the comp
 snapshot and intermediate peaks remains A4; WRITE/VERIFY and their request/allocation ledgers
 remain A5. This intermediate assembly does not instantiate the full Shard soundness target.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ResourceEnsemble
 open Circuit Air.Flat Model.Core Machine Semantics

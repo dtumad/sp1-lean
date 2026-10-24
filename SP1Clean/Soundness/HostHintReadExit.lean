@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadHostAgreement
-import SP1Clean.Soundness.LocalCoreExit
+module
+
+public import SP1Clean.Soundness.HostHintReadHostAgreement
+public import SP1Clean.Soundness.LocalCoreExit
 
 /-! # Public Exit values on the installed complete execution
 
@@ -9,6 +11,8 @@ HALT therefore binds the public field to the concrete host's canonical 32-bit ex
 HALT-zero remain distinct in the path. `HostHintReadTerminalAgreement` connects the separate
 terminal receipt's supplied optional status to this same execution.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

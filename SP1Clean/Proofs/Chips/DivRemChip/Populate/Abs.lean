@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Circuits.Gadgets.LtUnsigned
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 /-! # `DivRemChip` populate value bundles — divide-by-zero, absolute values, `max(|c|,1)`, range
 
@@ -32,6 +34,8 @@ Statement deviations from the working notes: `isC0_one_quotient` and the divisor
 divisor-zero test through the matching `cComp_zero_iff_*` bridge); `maxAbs_limb0`/`maxAbs_limbk`
 need only `hC` (no flag facts). The alu-event definitional forms (E286/E288) are already covered
 by `Shapes.populateMisc_0/1` (`rfl`-lemmas), so no `alu_event_defs` is added here. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

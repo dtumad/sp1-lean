@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.CommitmentBoundary
-import Clean.Gadgets.Equality
-import ToClean.Air.PublicVerifier
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.FormalModel.Contracts.CommitmentBoundary
+public import Clean.Gadgets.Equality
+public import ToClean.Air.PublicVerifier
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Public encoding of an immutable commitment statement
 
@@ -9,6 +11,8 @@ The verifier binds the digest bytes, deferred field elements and rolling flags t
 instance that fixes the declaration provider. Canonical deferred words are checked even when
 there are no calls. No equation identifies an incomplete mutable bank with a full digest.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CommitmentBoundary
 

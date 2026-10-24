@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.SailFetch
+module
+
+public import SP1Clean.Model.Semantics.SailFetch
 
 /-! # Normal retirement and its complete Sail bookkeeping effects
 
@@ -6,6 +8,8 @@ These circuit-independent lemmas compose an actual execute-stage result with off
 They preserve initialization and expose PC, GPR, memory, other-register, runtime, and retirement
 observations. Instruction-family frame laws supply the execute-stage result separately.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Advance

@@ -1,13 +1,15 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ALUTypeReaderImmutable
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ALUTypeReaderImmutable
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `AluX0` chip row as a `GeneralFormalCircuit`
 
@@ -15,6 +17,8 @@ Fast path for ALU instructions writing to `x0` (result discarded). Validates pro
 and advances state only; a single dynamic `opcode` column (range-checked `< 29`) covers every ALU opcode.
 Composes `CPUState` and `ALUTypeReaderImmutable` (op_a reads writing 0 to `x0`, op_c gated by
 `is_real - imm_c`), plus the LTU byte-range **pull** and `op_a_0 = is_real` forcing gates. -/
+
+@[expose] public section
 
 namespace SP1Clean.AluX0Chip
 

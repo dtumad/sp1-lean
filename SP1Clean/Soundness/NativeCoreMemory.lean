@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.CoreMemoryBalance
-import SP1Clean.Soundness.GenericWalk
+module
+
+public import SP1Clean.Soundness.CoreMemoryBalance
+public import SP1Clean.Soundness.GenericWalk
 
 /-! # Actual Memory balance of the authenticated native core
 
@@ -9,6 +11,8 @@ Constraints force unit signed multiplicities; count-bounded Clean balance then g
 per-location equation with unique authenticated boundary records. No Memory guarantee or
 execution-order premise is used to establish this equation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

@@ -1,8 +1,12 @@
-import SP1Clean.Model.Core.ResourceUsage
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.Model.Core.MemorySupport
+module
+
+public import SP1Clean.Model.Core.ResourceUsage
+public import SP1Clean.Model.Core.ExecutionEncoding
+public import SP1Clean.Model.Core.MemorySupport
 
 /-! # Resource edges independent of witness construction -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ResourceUsage
 open SP1Clean.Model.Core LeanRV64D.Defs

@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for LoadDouble (LD)
 
@@ -24,6 +26,8 @@ memory bytes as direct hypotheses (in the full system these come from the reader
 `Word.toBitVec64` of the loaded word (`byteConcat8_toNat_eq_Word_toNat`), so the
 `extend_value` (zero-extend, width 8 → 64 with no extension) leaves it and the
 `wX_bits` writes on both sides match. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.LoadSail

@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.Model.Semantics.AccessSchedule
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.FormalModel.Contracts.SystemChips
+public import SP1Clean.Model.Semantics.AccessSchedule
 
 /-!
 # Trace generation — the two system-table bump rows
@@ -27,6 +29,8 @@ state at the crossing, nothing more.
 bump row pulls is up to a whole window past `2 ^ 24`, so its cast has to stay non-wrapping. That is
 the same bound the grounding engine and the completeness assembly already carry.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

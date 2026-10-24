@@ -1,10 +1,12 @@
-import SP1CleanTest.Core.HintSourceExport
-import SP1CleanTest.Core.HostChecks
-import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
-import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
-import SP1Clean.Native.Operations.HintQueueWordSource
-import SP1Clean.Native.Operations.WritePermission
-import SP1CleanTest.Core.StaticMembership
+module
+
+public import SP1CleanTest.Core.HintSourceExport
+public import SP1CleanTest.Core.HostChecks
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
+public import SP1Clean.Native.Operations.HintQueueWordSource
+public import SP1Clean.Native.Operations.WritePermission
+public import SP1CleanTest.Core.StaticMembership
 
 /-! # Shared executable fixtures for hint transfers
 
@@ -12,6 +14,8 @@ These helpers run the actual word, source, and permission circuits and compare t
 non-Byte ledgers. Semantic Memory boundary fixtures are independent of the consumer row values.
 The handler battery replaces the fixture cursor endpoints with the real handler's interactions.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HintReadFixtures
 

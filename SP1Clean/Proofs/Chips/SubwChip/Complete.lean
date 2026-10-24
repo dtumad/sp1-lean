@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.SubwChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.SubwChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.SubwChip` — from trace events to a valid AIR table
 
@@ -14,6 +16,8 @@ identical to `SubChip`'s.
 
 Every one of the eleven bullets is a single citation — ten of a shared lemma from
 `FormalModel/TraceGen/Readers.lean`, one of `Or.inr rfl`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwChip
 

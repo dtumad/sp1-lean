@@ -1,11 +1,13 @@
-import ToClean.Gadgets.LookupProjection
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import ToClean.Gadgets.LookupProjection
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Bits
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The in-circuit `RangeChip` provider (push side of SP1's variable-width range table)
 
@@ -36,6 +38,8 @@ harder construction; the indexed family has the same message-level coverage whil
 bit-decomposition circuits.
 
 Sibling: `Proofs/Chips/ByteChip/ByteChip.lean` (the `ByteChip` provider, opcodes 0..5 over `(b,c)`). -/
+
+@[expose] public section
 
 namespace SP1Clean.RangeChip
 

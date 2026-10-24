@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.TraceGen.ClockBridge
+module
+
+public import SP1Clean.FormalModel.TraceGen.ClockBridge
 
 /-!
 # The generator's shadow bookkeeping
@@ -26,6 +28,8 @@ The RAM half is carried but unused by the ALU families, which touch no memory. I
 memory chips slot in without restructuring, and so `Bounded` states the invariant over the whole
 location space rather than over a subset that would have to be widened later.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

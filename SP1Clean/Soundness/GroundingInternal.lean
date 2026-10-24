@@ -1,19 +1,21 @@
-import SP1Clean.FormalModel.Execution
-import SP1Clean.Model.Semantics.ProgramCommitment
-import SP1Clean.Soundness.RankedGrounding
-import SP1Clean.Soundness.SP1Ensemble
-import SP1Clean.Soundness.ProviderBindings
-import SP1Clean.Soundness.TimedGrounding
-import SP1Clean.Soundness.GenericWalk
-import SP1Clean.Soundness.LocalExecution
-import SP1Clean.Soundness.MemoryBoundaryTruth
-import SP1Clean.Soundness.RowSoundness
-import SP1Clean.Soundness.TypedProgram
-import SP1Clean.Soundness.TypedTimeContracts
-import SP1Clean.Soundness.ChipContracts
-import SP1Clean.Soundness.FetchDiscriminant
-import SP1Clean.Soundness.ExitAccounting
-import SP1Clean.Soundness.RefreshWiring
+module
+
+public import SP1Clean.FormalModel.Execution
+public import SP1Clean.Model.Semantics.ProgramCommitment
+public import SP1Clean.Soundness.RankedGrounding
+public import SP1Clean.Soundness.SP1Ensemble
+public import SP1Clean.Soundness.ProviderBindings
+public import SP1Clean.Soundness.TimedGrounding
+public import SP1Clean.Soundness.GenericWalk
+public import SP1Clean.Soundness.LocalExecution
+public import SP1Clean.Soundness.MemoryBoundaryTruth
+public import SP1Clean.Soundness.RowSoundness
+public import SP1Clean.Soundness.TypedProgram
+public import SP1Clean.Soundness.TypedTimeContracts
+public import SP1Clean.Soundness.ChipContracts
+public import SP1Clean.Soundness.FetchDiscriminant
+public import SP1Clean.Soundness.ExitAccounting
+public import SP1Clean.Soundness.RefreshWiring
 
 /-! # The timed-grounding interior
 
@@ -27,6 +29,8 @@ Everything here is **proof-layer shape, not audit surface**: `SupportedCoreGroun
 its `finalStateTruth`/`memoryFinalizeTruth` fields are the consumer-facing content that
 `Soundness/AIR.lean`'s public `supported_core_native_grounding` re-exports.  The public relations
 and capstones live in `Soundness/AIR.lean`; read that file first. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

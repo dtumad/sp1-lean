@@ -1,7 +1,9 @@
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Types.MemoryAccess
-import SP1Clean.FormalModel.Contracts.Readers
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.MemoryAccess
+public import SP1Clean.FormalModel.Contracts.Readers
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # System-table chip contracts: StateBump and MemoryBump (W3, external report Finding 2)
 
@@ -29,6 +31,8 @@ consequences — `canon (pull) = canon (push)` for the state trail, the lexicogr
 increase for the memory refresh — are **conditional on the pulled side being in range** (a pulled
 limb can a priori be the huge representative `p - 1`), which is exactly what the W3 goodness-filter
 pass establishes globally; they are derived where consumed (`Soundness/`), never claimed here. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

@@ -1,5 +1,7 @@
-import SP1Clean.Native.Operations.InitialMemoryRead
-import SP1CleanTest.Core.InitialMemoryLookup
+module
+
+public import SP1Clean.Native.Operations.InitialMemoryRead
+public import SP1CleanTest.Core.InitialMemoryLookup
 
 /-! # Whole-word initial-memory AIR regressions
 
@@ -7,6 +9,8 @@ The checked words cross sparse-image gaps and a 16-bit address-limb boundary. In
 routing is tested against the actual flattened addition constraints, even though each byte row
 individually authenticates a real initial-memory byte.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.InitialMemoryRead
 

@@ -1,21 +1,23 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Circuits.Gadgets.Mul
-import SP1Clean.Proofs.Operations.DivRemOperation.Compare
-import SP1Clean.Proofs.Operations.DivRemOperation.Core
-import SP1Clean.Circuits.Gadgets.DivRem.Assertions
-import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
-import SP1Clean.Proofs.Chips.DivRemChip.Populate
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
-import ToClean.Circuit.WitnessCombinator
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import SP1Clean.Circuits.Types.DivRem
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Circuits.Gadgets.Mul
+public import SP1Clean.Proofs.Operations.DivRemOperation.Compare
+public import SP1Clean.Proofs.Operations.DivRemOperation.Core
+public import SP1Clean.Circuits.Gadgets.DivRem.Assertions
+public import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
+public import ToClean.Circuit.WitnessCombinator
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Types.DivRem
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `DivRem` chip row as a `GeneralFormalCircuit`
 
@@ -47,7 +49,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
 /-- Operand `isU64` contract; lives in `Defs` (not `Formal`) so `Soundness/<Op>.lean` split files can
-import it without a cycle. -/
+public import it without a cycle. -/
+
+@[expose] public section
+
 def Assumptions (input : Inputs (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
   Word.isU64 input.op_b_val ∧ Word.isU64 input.op_c_val
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostBankCPUReplay
-import SP1Clean.Soundness.HostHintReadExecutionPath
+module
+
+public import SP1Clean.Soundness.HostBankCPUReplay
+public import SP1Clean.Soundness.HostHintReadExecutionPath
 
 /-! # Final commitment banks of the actual local execution
 
@@ -8,6 +10,8 @@ mixed AIR. No bank/CPU order, successful execution, or final-bank equality is a 
 This strengthens the installed source-hint theorem; complete outgoing snapshot and Exit binding,
 WRITE/VERIFY installation, and constructive completeness remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

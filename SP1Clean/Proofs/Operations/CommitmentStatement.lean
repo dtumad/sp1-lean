@@ -1,4 +1,6 @@
-import SP1Clean.Native.Operations.CommitmentStatement
+module
+
+public import SP1Clean.Native.Operations.CommitmentStatement
 
 /-! # Fixed declarations imply semantic statement agreement
 
@@ -6,6 +8,8 @@ Membership is supplied by the fixed declaration provider and the complete balanc
 This bridge decodes that authenticated payload into the independent execution-event contract;
 it does not assume that the mutable final bank contains every statement word.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CommitmentDeclaration
 

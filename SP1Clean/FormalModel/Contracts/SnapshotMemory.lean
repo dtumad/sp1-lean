@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Model.Core.MemorySnapshot
+module
+
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.Model.Core.MemorySnapshot
 
 /-! # Authenticated source records for arbitrary local snapshots
 
@@ -7,6 +9,8 @@ Zero is the local ledger's source-record time. These records authenticate values
 finite snapshot; they do not claim that a continuation's last access occurred at global time zero.
 Transport to timed grounding and complete endpoint authentication remain ensemble-level work.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryBoundary
 

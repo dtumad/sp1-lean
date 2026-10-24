@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Contracts.HintWords
+module
+
+public import SP1Clean.FormalModel.Contracts.HintWords
 
 /-! # One successive padded hint word
 
@@ -6,6 +8,8 @@ The word index advances by exactly one without wrap. Nonfinal rows advance the a
 eight; the final row retains its last written address so a write may end at `2^48`. Word
 authenticity and complete row coverage are derived from the enclosing ledgers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadStep
 

@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for LoadX0 (loads into x0)
 
@@ -17,6 +19,8 @@ Unlike the regular Load bridges, this needs **no** sign/zero-extension or byte-c
 the read merely has to succeed (via `run_vmem_read_of_width_N'`), after which the `extend_value` and the
 `wX_bits (.Regidx 0#5)` write collapse to nothing. Four width-core lemmas (1/2/4/8 bytes, each generic in
 `is_unsigned`) feed the seven per-opcode theorems `correct_loadX0_{lb,lbu,lh,lhu,lw,lwu,ld}`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.LoadX0Sail

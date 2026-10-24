@@ -1,8 +1,10 @@
-import SP1Clean.Model.Core.HostFootprint
-import SP1Clean.Model.Core.HostSail
-import SP1Clean.Math.ByteWord
-import SP1Clean.Soundness.Grounding.MemoryCell
-import SP1Clean.Proofs.Operations.HostRamBytes
+module
+
+public import SP1Clean.Model.Core.HostFootprint
+public import SP1Clean.Model.Core.HostSail
+public import SP1Clean.Math.ByteWord
+public import SP1Clean.Soundness.Grounding.MemoryCell
+public import SP1Clean.Proofs.Operations.HostRamBytes
 
 /-! # Host execution from authenticated Memory-bus words
 
@@ -12,6 +14,8 @@ their constituent bytes. A separate frame theorem proves that applying the host 
 every RAM cell outside its computed footprint. These are local semantic bridges for the pending
 host AIR tables, not a construction of those tables or their balanced ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

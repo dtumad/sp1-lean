@@ -1,5 +1,7 @@
-import Mathlib.Tactic.DeriveFintype
-import Mathlib.Data.Fintype.Basic
+module
+
+public import Mathlib.Tactic.DeriveFintype
+public import Mathlib.Data.Fintype.Basic
 
 /-! # `Opcode` — the RISC-V instruction alphabet (a faithful mirror of SP1's `Opcode`)
 
@@ -12,6 +14,8 @@ The discriminant is exactly the value each chip commits on the Program bus
 (`Trace.RowView.opcode`, e.g. Add commits `0`, Jal `46`, StoreByte `36`), so `Opcode.toNat` is the
 bridge from this enum to the in-circuit opcode column — and, transitively, to the chip's Sail op
 (each covered opcode's chip reaches its `spec_<op>` via `ChipKind.advance`). -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

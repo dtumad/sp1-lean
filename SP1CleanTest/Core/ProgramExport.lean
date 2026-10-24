@@ -1,8 +1,10 @@
-import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
-import SP1CleanTest.Core.ComponentExport
-import ToClean.Air.EnsembleCheck
-import ToClean.Air.MessageIndex
-import ToClean.Circuit.VerifierInteractions
+module
+
+public import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
+public import SP1CleanTest.Core.ComponentExport
+public import ToClean.Air.EnsembleCheck
+public import ToClean.Air.MessageIndex
+public import ToClean.Circuit.VerifierInteractions
 
 /-! # Program preprocessing and count export
 
@@ -11,6 +13,8 @@ instructions and an empty inventory exercise unused rows, repeated requests and 
 padding. Rust compares them with SP1's independent preprocessing, AIR and count generation.
 The same built-in scheduler also handles a sparse, unordered ROM with colliding low PC limbs.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ProgramExport
 

@@ -1,16 +1,18 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReader
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReader
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `LoadByte` chip row as a `GeneralFormalCircuit`
 
@@ -24,6 +26,8 @@ U8-range-checked via an inline `ByteOpcode.U8Range` pair) and its sign bit `msb`
 
 Unlike `LoadWord`/`LoadHalf` (which compose `U16MSBOperation` as a sub-gadget), SP1 inlines the byte-bus
 lookups, so this chip emits them directly via `byteChannel.pullIf` (witnessing nothing). -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteChip
 

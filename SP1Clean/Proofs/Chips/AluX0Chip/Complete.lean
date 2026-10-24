@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.AluX0Chip` — from trace events to a valid AIR table
 
@@ -27,6 +29,8 @@ Nothing else is new: five of the six `ProverAssumptions` bullets are one citatio
 sixth is the built `opcode` column's cast. The chip witnesses **no** cells at all (`Witgen.lean`),
 so the built row is literally its input.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

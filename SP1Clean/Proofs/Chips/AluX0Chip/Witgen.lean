@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.AluX0Chip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.AluX0Chip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.AluX0Chip` — honest witness generation (`ComputableWitnesses`)
 
@@ -12,6 +14,8 @@ arithmetic gadget to run and no result word to generate.
 
 The obligation is therefore one dispatch per composed subcircuit (the `CPUState` reader and the
 `ALUTypeReaderImmutable` adapter, both `localLength 0` assertions), with nothing in between. -/
+
+@[expose] public section
 
 namespace SP1Clean.AluX0Chip
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Alignment.Chips.AddiChip.Contracts
-import SP1Clean.Native.Readers.ITypeReaderImmutable
+module
+
+public import SP1Clean.Soundness.GroundingAdapter
+public import SP1Clean.Alignment.Chips.AddiChip.Contracts
+public import SP1Clean.Native.Readers.ITypeReaderImmutable
 
 /-! # Canonical I-type grounding
 
@@ -8,6 +10,8 @@ The register-plus-immediate chips share a four-message Memory shape: destination
 source-B prior pull/read-back at `+3`, and destination write at `+4`.  This file states that shape
 once, builds its timed wiring/aligned carrier, and instantiates it for Addi.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

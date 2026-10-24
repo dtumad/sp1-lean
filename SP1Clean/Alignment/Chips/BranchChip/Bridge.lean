@@ -1,8 +1,10 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.BranchChip.Formal
-import SP1Clean.Alignment.Chips.JalChip.Bridge
-import SP1Clean.Soundness.ChipRow
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.BranchChip.Formal
+public import SP1Clean.Alignment.Chips.JalChip.Bridge
+public import SP1Clean.Soundness.ChipRow
 
 /-! # Native Sail bridge for BRANCH (+ `ChipKind` registration)
 
@@ -10,6 +12,8 @@ import SP1Clean.Soundness.ChipRow
 condition resolving `next_pc`. The taken arm's `jump_to` retires via `jump_to_of_mod4_eq_zero`; both arms
 land `nextPC ← next_pc_word`. `branch_chip_reaches_sail` is the six-way BEQ/BNE/BLT/BGE/BLTU/BGEU
 conjunction. The whole chain is axiom-clean. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.BranchSail

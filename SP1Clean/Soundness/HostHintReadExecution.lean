@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostHintReadInstructionExecution
-import SP1Clean.Soundness.HostHintReadSyscallExecution
-import SP1Clean.Soundness.LocalCoreHaltExecution
+module
+
+public import SP1Clean.Soundness.HostHintReadInstructionExecution
+public import SP1Clean.Soundness.HostHintReadSyscallExecution
+public import SP1Clean.Soundness.LocalCoreHaltExecution
 
 /-! # Closed grounding for the installed instruction, control, and hint assembly
 
@@ -11,6 +13,8 @@ grounding stage: `HostHintReadExecutionPath` derives the installed assembly's lo
 soundness. Complete outgoing snapshot authentication, the full eight-call compiler, and the final
 local-execution equivalence remain separate capstone obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

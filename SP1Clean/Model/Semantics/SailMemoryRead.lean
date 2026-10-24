@@ -1,10 +1,14 @@
-import SP1Clean.Model.Semantics.SailReadOnly
+module
+
+public import SP1Clean.Model.Semantics.SailReadOnly
 
 /-! # Read-only stages of ordinary Sail memory accesses
 
 Physical checks, split loads and effective-address checks preserve the complete state, including
 fault results. The split loop is handled at arbitrary fuel, without assuming aligned addresses.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailMem
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions

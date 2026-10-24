@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HostRamRead
-import SP1Clean.Math.ByteWord
+module
+
+public import SP1Clean.FormalModel.Contracts.HostRamRead
+public import SP1Clean.Math.ByteWord
 
 /-! # Byte contents of a host RAM read
 
@@ -7,6 +9,8 @@ The read channel supplies one bounded aligned word. This consumer returns its ei
 little-endian bytes. The cell's global currency comes from matching the read to the physical
 Memory ledger; the byte decoder neither changes its address nor emits another Memory access.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamBytes
 

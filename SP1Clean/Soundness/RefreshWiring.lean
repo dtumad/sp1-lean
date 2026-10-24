@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.ChipContracts
+module
+
+public import SP1Clean.Soundness.ChipContracts
 
 /-! # Wiring the refresh elimination onto the walk's per-row carrier (W3)
 
@@ -21,6 +23,8 @@ The module additionally supplies:
   *pull* — the two facts `memoryBump_isRefresh` receives as premises.
 
 Nothing here mentions chips or circuits: every input is an abstract row/touch list. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

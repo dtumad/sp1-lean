@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HostCallChip.Ledger
-import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
-import ToClean.Air.UnitBalance
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Proofs.Chips.HostCallChip.Ledger
+public import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
+public import ToClean.Air.UnitBalance
+public import ToClean.Air.TableBuild
 
 /-! # Exact instruction-to-handler inventory
 
@@ -10,6 +12,8 @@ derived from its raw constraints; padding contributes zero. A balanced handoff t
 pulls therefore identifies their complete messages with the actual active instruction inventory.
 `HostLocalHandoff` instantiates this algebra over the installed ensemble and its physical receiver registry.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostCallLedger
 

@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.HostCommitBoundary
-import SP1Clean.Soundness.HostCommitHistory
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Native.Operations.HostCommitBoundary
+public import SP1Clean.Soundness.HostCommitHistory
+public import ToClean.Air.ChannelClosure
 
 /-! # Publicly bounded native commitment histories
 
@@ -10,6 +12,8 @@ same ranked-balance argument binds the supplied initial bank to public final wor
 there are no calls. The execution fold retains physical row identities and ignores only the
 proved terminal no-op. Local contracts follow from constraints and Byte guarantees.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostCommitBank
 

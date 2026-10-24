@@ -1,10 +1,14 @@
-import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyExport
 
 /-! # Shared native reference encoding for installed export fixtures
 
 This serializes the existing witness and checker results; Clean still owns generation,
 constraints, interactions and Rust emission. Retain empty tables and zero occurrences.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssemblyReference
 

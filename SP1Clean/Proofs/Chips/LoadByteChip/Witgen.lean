@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.LoadByteChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.LoadByteChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -9,6 +11,8 @@ The widest row of the family — three committed offset bits, the selected limb,
 selected byte and the sign bit — but every one of those is an *input* column, so once again the only
 witnessed cells are the four the composed `AddressOperation` produces. The two byte-bus pulls in
 `main` witness nothing. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteChip
 

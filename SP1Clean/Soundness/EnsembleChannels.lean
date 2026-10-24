@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.TableBuild
-import ToClean.Air.EnsembleBuild
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import ToClean.Air.TableBuild
+public import ToClean.Air.EnsembleBuild
 
 /-!
 # Every table speaks only on the ensemble's channels
@@ -21,6 +23,8 @@ channelsWithRequirements`, the guarantee half goes through the chip's own `elabo
 StoreByte — get theirs computed rather than declared), and the requirement half is a literal field.
 Both are definitional, so the whole sweep is `rfl` plus `circuit_norm`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

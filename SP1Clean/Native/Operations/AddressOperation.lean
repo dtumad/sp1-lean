@@ -1,17 +1,19 @@
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.EvalVec
-import SP1Clean.Math.Word
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.Channels
-import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
-import SP1Clean.Circuits.Types.AddressOperation
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Math.EvalVec
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.Channels
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
+public import SP1Clean.Circuits.Types.AddressOperation
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Bits
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `AddressOperation` as a Clean-native witnessed `GeneralFormalCircuit`
 
@@ -29,6 +31,8 @@ Measured elaboration floors (ladder against a 1-heartbeat control): `metadata_of
 (5k, 10k], `soundness` (5k, 10k], `completeness` (30k, 40k]. All three formerly carried a
 4000000-heartbeat ceiling — 100-800x over — and now run at the plain default with >=5x
 headroom. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddressOperation
 

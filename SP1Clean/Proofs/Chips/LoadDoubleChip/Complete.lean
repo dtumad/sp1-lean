@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.LoadDoubleChip` — from trace events to a valid AIR table
 
@@ -9,6 +11,8 @@ programme and padding-contract note). The shortest chip of the family: an
 8-byte load selects nothing and extends nothing, so the row's only committed columns beyond the
 three shared blocks are the single `is_real` selector. Every one of the eleven conjuncts is a
 citation. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

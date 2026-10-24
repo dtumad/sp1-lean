@@ -1,10 +1,14 @@
-import SP1Clean.Native.Readers.RegisterRead
+module
+
+public import SP1Clean.Native.Readers.RegisterRead
 
 /-! # Register read Memory projection
 
 The timestamp checks use only Byte. The actual Memory ledger is the gated prior/read-back pair,
 with the same register key and word on both sides.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RegisterRead
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.SP1Ensemble
-import SP1CleanTest.Core.ComponentExport
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import SP1CleanTest.Core.ComponentExport
 
 /-! # Generation routes for the installed Byte and Range providers
 
@@ -7,6 +9,8 @@ Clean selects the provider by the complete Byte opcode and, for Range, its width
 native inventory supplies component identities; physical table order is independent of opcode
 order. This module only configures Clean's existing scheduler, using the installed circuits.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.ProviderGeneration
 

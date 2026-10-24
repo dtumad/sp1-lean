@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostFinalMemoryTransport
-import SP1Clean.Soundness.HostFinalMemoryInventory
+module
+
+public import SP1Clean.Soundness.HostFinalMemoryTransport
+public import SP1Clean.Soundness.HostFinalMemoryInventory
 
 /-! # Complete target Memory comparison from raw host acceptance
 
@@ -8,6 +10,8 @@ The existing boundary theorem then checks the complete target, including every l
 outside the physical final inventory. No endpoint certificate or witness-selected change
 inventory is a premise. Full mixed Sail/host endpoint reconstruction remains a later consumer.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

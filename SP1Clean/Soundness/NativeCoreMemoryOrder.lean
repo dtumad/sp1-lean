@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreTouches
-import SP1Clean.Soundness.CoreMemoryChronology
+module
+
+public import SP1Clean.Soundness.NativeCoreTouches
+public import SP1Clean.Soundness.CoreMemoryChronology
 
 /-! # Prior-record bounds and refresh chronology of the native core
 
@@ -9,6 +11,8 @@ Byte-checked limbs. The exact Memory balance transfers those bounds to every con
 including refresh priors and the final frontier. This closes the timestamp-comparison premises
 without assuming Memory truth, and supplies refresh elimination with its complete chronology.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

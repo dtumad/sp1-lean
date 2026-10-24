@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.JalChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.JalChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.JalChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ neither addend is a plain operand projection: the jump target is `pc ++ 0` plus 
 immediate, and the link value is `pc ++ 0` plus the literal `4`. So the input agreement is projected
 onto the program counter and the immediate, and the constant limbs need nothing — which is the
 general shape for any chip whose witness operands are *built* rather than read. -/
+
+@[expose] public section
 
 namespace SP1Clean.JalChip
 

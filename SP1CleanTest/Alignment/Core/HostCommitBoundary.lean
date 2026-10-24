@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.HostCommitEnsemble
-import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Model.SP1Field
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Soundness.HostCommitEnsemble
+public import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+public import SP1Clean.Model.SP1Field
+public import Clean.Circuit.WitnessExport
 
 /-! # Physical commitment-bank boundary regressions
 
@@ -10,6 +12,8 @@ at the data derived from the committed rows, retaining zero-multiplicity occurre
 checks cover every emitted channel. Active histories check all assertions and Byte meanings, then bank-channel
 balance; authenticating their HostCall inputs remains the enclosing machine's responsibility.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostCommitBoundary
 

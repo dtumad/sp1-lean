@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Contracts.HintQueue
+module
+
+public import SP1Clean.FormalModel.Contracts.HintQueue
 
 /-! # Queue cursors bound to complete persistent stores
 
@@ -6,6 +8,8 @@ The frontier records every allocated node, including unreachable historical node
 compiler cursors use the actual store size; empty queues do not reset that size. The private
 state channel itself carries no semantic binding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintQueue
 

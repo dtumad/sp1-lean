@@ -1,8 +1,10 @@
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Model.Semantics.SailArithmeticExecute
-import SP1Clean.Soundness.RowEffectDefs
-import SP1Clean.Semantics.ISA.RV64
-import SP1Clean.Model.SailPure
+module
+
+public import SP1Clean.Model.Semantics.SailControlExecute
+public import SP1Clean.Model.Semantics.SailArithmeticExecute
+public import SP1Clean.Soundness.RowEffectDefs
+public import SP1Clean.Semantics.ISA.RV64
+public import SP1Clean.Model.SailPure
 
 /-! # Phase 4 — the uniform per-chip `advance` (Sail-step obligation)
 
@@ -13,6 +15,8 @@ into each chip's Sail-step obligation (`ChipKind.advance`, `Soundness/ChipRow.le
 The load-bearing goal is **uniformity**: one `sp1Effect` (a function of the committed `RowView`), one
 generic `advance_write_core` proof, and thin per-chip adapters — replacing the 25 bespoke per-chip
 Sail-step predicates so the audit surface is a single statement. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Advance

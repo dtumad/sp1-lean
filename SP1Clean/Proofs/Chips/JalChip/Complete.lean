@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Arith
-import SP1Clean.Proofs.Chips.JalChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Arith
+public import SP1Clean.Proofs.Chips.JalChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.JalChip` — from trace events to a valid AIR table
 
@@ -24,6 +26,8 @@ explicit and named, not smuggled into `JTypeEvent.WellFormed`.
 The bridge from those `ℕ` facts to the witnessed words is `TraceGen.populate_pcWord`: SP1's
 limb-wise addition at two built words is the built word of the plain sum, so each of the three
 obligations becomes one `wordOfNat` lemma. -/
+
+@[expose] public section
 
 namespace SP1Clean.JalChip
 

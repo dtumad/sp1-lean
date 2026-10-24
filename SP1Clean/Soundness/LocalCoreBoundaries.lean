@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreEnsemble
-import SP1Clean.Soundness.NativeCoreBoundaries
+module
+
+public import SP1Clean.Soundness.LocalCoreEnsemble
+public import SP1Clean.Soundness.NativeCoreBoundaries
 
 /-! # Source-boundary facts from the actual local-shard AIR
 
@@ -8,6 +10,8 @@ the verifier to the source ordering channel. Raw constraints and the assembly's 
 source-value authentication, distinct locations, the exact Memory ledger, and canonical public
 endpoints. No provider-specification or source-memory-truth premise is accepted by these results.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

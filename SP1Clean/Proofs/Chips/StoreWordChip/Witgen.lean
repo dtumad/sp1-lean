@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.StoreWordChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.StoreWordChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.StoreWordChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -15,6 +17,8 @@ four, and `FlatOperation.forAll_witnessCongr_of_generalSubcircuit` composes it; 
 is that the child's input row is assembled from the parent's. Every other composed block — the
 state reader, the memory primitive, the immutable I-type reader, and the four merge gates —
 witnesses nothing and is dispatched by `localLength` alone. -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreWordChip
 

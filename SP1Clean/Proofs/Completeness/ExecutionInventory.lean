@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Completeness.ExecutionCompiler
-import SP1Clean.Proofs.Completeness.MemoryHistory
-import SP1Clean.Proofs.Completeness.StateInventory
+module
+
+public import SP1Clean.Proofs.Completeness.ExecutionCompiler
+public import SP1Clean.Proofs.Completeness.MemoryHistory
+public import SP1Clean.Proofs.Completeness.StateInventory
 
 /-! # Native compiler inventories and capacity
 
@@ -10,6 +12,8 @@ each role may add one refresh. These structural facts and the existing ordinary 
 that the resulting native inventories fit Clean's row-count type. No physical readiness premise
 is added to the execution domain. Provider recounting and fixed-table padding need separate bounds.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

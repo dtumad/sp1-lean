@@ -1,4 +1,6 @@
-import SP1Clean.Native.Chips.CoreSyscallChip.Defs
+module
+
+public import SP1Clean.Native.Chips.CoreSyscallChip.Defs
 
 /-! # Soundness and completeness of the native syscall instruction boundary
 
@@ -6,6 +8,8 @@ The contract combines instruction semantics with the enforced eight-code profile
 full-register restriction is stricter than the released executor's truncating dispatch.
 Rust comparisons test the instruction and profile boundaries separately.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CoreSyscallChip
 

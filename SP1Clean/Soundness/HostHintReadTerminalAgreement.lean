@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.HostTerminalLedger
-import SP1Clean.Soundness.HostHintReadTerminalProjection
-import SP1Clean.Soundness.HostHintReadExecutionPath
-import SP1Clean.Model.Core.HostReplay
+module
+
+public import SP1Clean.Soundness.HostTerminalLedger
+public import SP1Clean.Soundness.HostHintReadTerminalProjection
+public import SP1Clean.Soundness.HostHintReadExecutionPath
+public import SP1Clean.Model.Core.HostReplay
 
 /-! # Optional terminal status agrees with the actual CPU replay
 
@@ -9,6 +11,8 @@ Full HostCall accounting connects terminal receipts to the carrier's syscall eve
 padding contributes no event. The existing path supplies exactly the optional status checked
 by the verifier, including running identities, stopped identities, and HALT with exit zero.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

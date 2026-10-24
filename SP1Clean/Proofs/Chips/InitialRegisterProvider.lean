@@ -1,10 +1,12 @@
-import ToClean.Circuit.Guarded
-import ToClean.Gadgets.LookupProjection
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Model.Channels
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics
+module
+
+public import ToClean.Circuit.Guarded
+public import ToClean.Gadgets.LookupProjection
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Model.Channels
+public import Clean.Gadgets.Bits
+public import Clean.Utils.Tactics
 
 /-! # Canonical zero-register initialization
 
@@ -12,6 +14,8 @@ Each row checks a five-bit register index and emits its zero-time, zero-value Me
 The value and clock are circuit constants, so a witness cannot choose its own initial registers.
 Each present row has multiplicity one; global boundary ordering supplies uniqueness.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialRegisterProvider
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.Decode
-import SP1CleanTest.Core.NonVacuityReal
+module
+
+public import SP1Clean.Soundness.Decode
+public import SP1CleanTest.Core.NonVacuityReal
 
 /-! # Independent-audit regression: one committed-window ADD row
 
@@ -15,6 +17,8 @@ witness was retired during the Sail-v5 migration and restored 2026-08 at full fa
 the 18 examples in `Soundness/Decode.lean` on top of `Model/SailDecode.lean`'s decode battery. The
 exact interaction list below makes the provider/boundary content of a real row visible.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.OneAddNativePremises
 

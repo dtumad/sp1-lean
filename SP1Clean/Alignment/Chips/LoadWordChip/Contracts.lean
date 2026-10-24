@@ -1,7 +1,11 @@
-import SP1Clean.Alignment.Chips.LoadWordChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.LoadWordChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # LoadWord — physical routing contract -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

@@ -1,11 +1,13 @@
-import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.SystemChips
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The Halt table row as a native circuit
 
@@ -23,6 +25,8 @@ the native table's public Exit accounting. Whole-row identity with the dispatche
 
 (`main` + `ElaboratedCircuit` here; soundness/completeness/`circuit` in
 `Proofs/Chips/HaltChip/Formal.lean`.) -/
+
+@[expose] public section
 
 namespace SP1Clean.HaltChip
 

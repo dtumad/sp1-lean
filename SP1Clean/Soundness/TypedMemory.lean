@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.TypedState
-import SP1Clean.Soundness.TypedProgram
-import SP1Clean.Soundness.TimedGrounding
+module
+
+public import SP1Clean.Soundness.TypedState
+public import SP1Clean.Soundness.TypedProgram
+public import SP1Clean.Soundness.TimedGrounding
 
 /-! # Typed Memory records for deterministically decoded rows
 
@@ -18,6 +20,8 @@ uniform currency point for all prior records. Later schedule generalization may 
 `RowFacts` carrier, but it must continue to derive these records from the circuit's emitted interaction
 list rather than duplicating it.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

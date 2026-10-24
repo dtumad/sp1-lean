@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.MulChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.MulChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # Mul trace construction
 
@@ -11,6 +13,8 @@ and `mulFlags_spec` proves the selector contract for all five multiply variants.
 Padding supplies zero operands and selectors. Both real and padding rows use the ordinary
 table builder; witness generation needs no external hints. Events writing `x0` route to AluX0.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

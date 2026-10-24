@@ -1,30 +1,32 @@
-import SP1Clean.Model.InstructionRouting
-import SP1Clean.Alignment.Chips.AddChip.Bridge
-import SP1Clean.Alignment.Chips.AddiChip.Bridge
-import SP1Clean.Alignment.Chips.AddwChip.Bridge
-import SP1Clean.Alignment.Chips.SubChip.Bridge
-import SP1Clean.Alignment.Chips.SubwChip.Bridge
-import SP1Clean.Alignment.Chips.BitwiseChip.Bridge
-import SP1Clean.Alignment.Chips.LtChip.Bridge
-import SP1Clean.Alignment.Chips.ShiftLeftChip.Bridge
-import SP1Clean.Alignment.Chips.ShiftRightChip.Bridge
-import SP1Clean.Alignment.Chips.JalChip.Bridge
-import SP1Clean.Alignment.Chips.JalrChip.Bridge
-import SP1Clean.Alignment.Chips.BranchChip.Bridge
-import SP1Clean.Alignment.Chips.UTypeChip.Bridge
-import SP1Clean.Alignment.Chips.LoadByteChip.Bridge
-import SP1Clean.Alignment.Chips.LoadHalfChip.Bridge
-import SP1Clean.Alignment.Chips.LoadWordChip.Bridge
-import SP1Clean.Alignment.Chips.LoadDoubleChip.Bridge
-import SP1Clean.Alignment.Chips.LoadX0Chip.Bridge
-import SP1Clean.Alignment.Chips.StoreByteChip.Bridge
-import SP1Clean.Alignment.Chips.StoreHalfChip.Bridge
-import SP1Clean.Alignment.Chips.StoreWordChip.Bridge
-import SP1Clean.Alignment.Chips.StoreDoubleChip.Bridge
-import SP1Clean.Alignment.Chips.MulChip.Bridge
-import SP1Clean.Alignment.Chips.DivRemChip.Bridge
-import SP1Clean.Alignment.Chips.AluX0Chip.Bridge
-import Clean.Air.FlatComponent
+module
+
+public import SP1Clean.Model.InstructionRouting
+public import SP1Clean.Alignment.Chips.AddChip.Bridge
+public import SP1Clean.Alignment.Chips.AddiChip.Bridge
+public import SP1Clean.Alignment.Chips.AddwChip.Bridge
+public import SP1Clean.Alignment.Chips.SubChip.Bridge
+public import SP1Clean.Alignment.Chips.SubwChip.Bridge
+public import SP1Clean.Alignment.Chips.BitwiseChip.Bridge
+public import SP1Clean.Alignment.Chips.LtChip.Bridge
+public import SP1Clean.Alignment.Chips.ShiftLeftChip.Bridge
+public import SP1Clean.Alignment.Chips.ShiftRightChip.Bridge
+public import SP1Clean.Alignment.Chips.JalChip.Bridge
+public import SP1Clean.Alignment.Chips.JalrChip.Bridge
+public import SP1Clean.Alignment.Chips.BranchChip.Bridge
+public import SP1Clean.Alignment.Chips.UTypeChip.Bridge
+public import SP1Clean.Alignment.Chips.LoadByteChip.Bridge
+public import SP1Clean.Alignment.Chips.LoadHalfChip.Bridge
+public import SP1Clean.Alignment.Chips.LoadWordChip.Bridge
+public import SP1Clean.Alignment.Chips.LoadDoubleChip.Bridge
+public import SP1Clean.Alignment.Chips.LoadX0Chip.Bridge
+public import SP1Clean.Alignment.Chips.StoreByteChip.Bridge
+public import SP1Clean.Alignment.Chips.StoreHalfChip.Bridge
+public import SP1Clean.Alignment.Chips.StoreWordChip.Bridge
+public import SP1Clean.Alignment.Chips.StoreDoubleChip.Bridge
+public import SP1Clean.Alignment.Chips.MulChip.Bridge
+public import SP1Clean.Alignment.Chips.DivRemChip.Bridge
+public import SP1Clean.Alignment.Chips.AluX0Chip.Bridge
+public import Clean.Air.FlatComponent
 
 /-! # The supported native-machine descriptor
 
@@ -36,6 +38,8 @@ once, in the pure `Model.InstructionRouting` table indexed by that same identity
 Released-Rust agreement is tested separately; no formal code-generation theorem is claimed. Provider and
 boundary tables remain separate from instruction identities; this module does not turn the
 supported subset into a monolithic full-machine descriptor. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

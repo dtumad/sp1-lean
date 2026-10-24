@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.LoadX0Chip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.LoadX0Chip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # LoadX0 — physical routing contract
 
@@ -8,6 +10,8 @@ native assertion system: every active row is routed to `x0`. The proof projects 
 `is_real * (op_a_0 - 1) === 0` assertion from the folded `main`; it does not obtain routing from
 the semantic `Spec` or a trace-generator convention.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

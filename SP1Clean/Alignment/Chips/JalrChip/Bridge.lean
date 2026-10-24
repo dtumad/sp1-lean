@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Model.SailMemory
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.JalrChip.Formal
-import SP1Clean.Alignment.Chips.JalChip.Bridge
-import SP1Clean.Soundness.ChipRow
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.JalrChip.Formal
+public import SP1Clean.Alignment.Chips.JalChip.Bridge
+public import SP1Clean.Soundness.ChipRow
 
 /-! # Native Sail bridge for JALR (+ `ChipKind` registration)
 
@@ -11,6 +13,8 @@ import SP1Clean.Soundness.ChipRow
 LSB-clearing. Key non-obvious moves: `update_elp_state` is a no-op (`update_elp_state_of_isInitialized`);
 `jump_to (BitVec.update target 0 0#1)` retires via `jump_to_of_mod4_eq_zero` (LSB-clearing guarantees
 4-byte alignment). `JalrChip.kind.view` threads `next_pc = add_operation.value[0] - lsb` (LSB-cleared). -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.JalrSail

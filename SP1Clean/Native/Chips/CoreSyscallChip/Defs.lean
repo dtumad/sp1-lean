@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import SP1Clean.Native.Operations.SyscallCodeGuard
+module
+
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+public import SP1Clean.Native.Operations.SyscallCodeGuard
 
 /-! # The native core syscall instruction circuit
 
@@ -8,6 +10,8 @@ The guard adds six shared witness cells and low-degree assertions, with no chann
 still a separate circuit boundary: this instruction row alone does not authenticate WRITE's x12
 and RAM reads or HINT_READ's writes.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CoreSyscallChip
 

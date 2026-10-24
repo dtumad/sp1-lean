@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HostCall
-import SP1Clean.FormalModel.Contracts.BoundedWord
+module
+
+public import SP1Clean.FormalModel.Contracts.HostCall
+public import SP1Clean.FormalModel.Contracts.BoundedWord
 
 /-! # Native terminal and constrained-replay control calls
 
@@ -8,6 +10,8 @@ consumes the instruction handoff; the instruction itself remains the sole Exit s
 ENTER_UNCONSTRAINED returns zero and has no host or memory effect in constrained replay.
 Neither contract imposes a restriction on unused guest arguments.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHaltChip
 

@@ -1,5 +1,7 @@
-import Mathlib.Data.Nat.Basic
-import Lean.Elab.Tactic.Omega
+module
+
+public import Mathlib.Data.Nat.Basic
+public import Lean.Elab.Tactic.Omega
 
 /-! # Numeric address ranges
 
@@ -7,6 +9,8 @@ A range is data, not a memory store or an execution model. Bytes use a half-open
 spans also admit an empty request at the upper endpoint, matching the host read policy.
 Natural arithmetic checks the entire span before any narrowing to an architectural word.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.HostHintRecordSources
-import SP1Clean.Soundness.HostHintReadLocal
-import SP1Clean.Soundness.HostLocalCoreAuthentication
-import SP1Clean.Native.Operations.HostCommitBoundary
+module
+
+public import SP1Clean.Soundness.HostHintRecordSources
+public import SP1Clean.Soundness.HostHintReadLocal
+public import SP1Clean.Soundness.HostLocalCoreAuthentication
+public import SP1Clean.Native.Operations.HostCommitBoundary
 
 /-! # Record authentication in the installed HINT_READ assembly
 
@@ -12,6 +14,8 @@ therefore establishes both local channel guarantees and immutable contents for e
 record. The store here may include future allocations; `HostHintReadLocalExecution` restricts
 bindings to the current frontier using current-head truth and the actual cursor path.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 

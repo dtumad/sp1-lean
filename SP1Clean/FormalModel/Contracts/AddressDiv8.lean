@@ -1,5 +1,7 @@
-import SP1Clean.Math.Address
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Address
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Division into eight-byte words inside the native address domain
 
@@ -7,6 +9,8 @@ The semantic output is the quotient, remainder, and rounded-down byte length. Ca
 and output bounds are conclusions of the circuit, so consumers can use ordinary natural-number
 division without field aliases. The three partial quotients are computed constructor columns.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddressDiv8
 

@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Shard
-import SP1Clean.Model.Core.ExecutionFrame
-import SP1Clean.Model.Core.ExecutionMemory
+module
+
+public import SP1Clean.FormalModel.Shard
+public import SP1Clean.Model.Core.ExecutionFrame
+public import SP1Clean.Model.Core.ExecutionMemory
 
 /-! # ROM preservation and official fetch for the shard's semantic domain
 
@@ -9,6 +11,8 @@ ordinary write permission supply every premise of the mixed-path induction. No r
 AIR witness or extra intermediate-state invariant is required. The final boundary may lie outside
 ROM, and an empty identity, including a stopped one, needs no fetch.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FormalModel.Shard.Executes
 open Model.Core Machine Soundness.Target LeanRV64D.Defs LeanRV64D.Functions

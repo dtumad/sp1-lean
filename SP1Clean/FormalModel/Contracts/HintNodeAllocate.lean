@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HintQueue
-import SP1Clean.FormalModel.Contracts.Operations
+module
+
+public import SP1Clean.FormalModel.Contracts.HintQueue
+public import SP1Clean.FormalModel.Contracts.Operations
 
 /-! # Fresh persistent hint-node allocation
 
@@ -7,6 +9,8 @@ One append consumes the next unused identity, links to the current head, and adv
 head and allocation frontier. Popping a head never releases an identity. This is an internal
 queue operation; the host handler must separately authenticate the allocated bytes and its call.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

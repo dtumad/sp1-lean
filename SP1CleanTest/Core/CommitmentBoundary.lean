@@ -1,13 +1,17 @@
-import SP1Clean.Model.SP1Field
-import SP1Clean.Native.Operations.CommitmentBoundary
-import SP1Clean.Native.Operations.CommitmentStatement
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Model.SP1Field
+public import SP1Clean.Native.Operations.CommitmentBoundary
+public import SP1Clean.Native.Operations.CommitmentStatement
+public import ToClean.Air.TableBuild
 
 /-! # Canonical commitment fields and fixed-provider rows
 
 These checks exercise the u32/public-byte distinction, deferred-field boundaries and the
 complete sixteen-row provider. Agreement does not imply that any slot was actually declared.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.CommitmentBoundary
 

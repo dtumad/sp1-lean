@@ -1,13 +1,17 @@
-import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
-import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
 
 /-! # Host-buffer read regressions
 
 Run compiled provider rows against a WRITE span's requested cells. Physical Memory accesses
 remain unique. Authenticating the span through an installed host-call table remains separate.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostRamRead
 

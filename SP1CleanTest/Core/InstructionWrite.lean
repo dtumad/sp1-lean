@@ -1,12 +1,16 @@
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.Core.ProgramImage
+module
+
+public import SP1Clean.Model.Core.InstructionWrite
+public import SP1Clean.Model.Core.InstructionDecode
+public import SP1Clean.Model.Core.ProgramImage
 
 /-! # Ordinary write-policy regressions
 
 The same byte-precise policy covers SB/SH/SW/SD, signed offsets, non-store instructions and
 invalid observations. Whole-AIR same-value ROM-write rejection is tested in `Alignment/Core/LocalCore`.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.InstructionWrite
 

@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.OrdinaryObservation
-import SP1Clean.Proofs.Completeness.ProviderWitgen
+module
+
+public import SP1Clean.Proofs.Operations.OrdinaryObservation
+public import SP1Clean.Proofs.Completeness.ProviderWitgen
 
 /-! # Constructing physical ordinary observation rows
 
@@ -7,6 +9,8 @@ The standard Clean table builder uses the same local population and witness IR a
 Computability is proved here, rather than supplied as a compiler-readiness premise. Clock order
 is a semantic input condition for this subsystem; the mixed compiler derives it from execution.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

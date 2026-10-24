@@ -1,10 +1,12 @@
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
-import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
+public import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+public import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
+public import SP1Clean.Proofs.Chips.HostCallChip.Populate
+public import SP1Clean.Model.SP1Field
 
 /-! # Executed mutable commitment regressions
 
@@ -12,6 +14,8 @@ Evaluate complete witness programs and all local checks. Joint instruction/provi
 actual HostCall and PublicValues messages, including distinct overwrites of the same slot. Bank
 endpoints are explicit test fixtures; global endpoint authentication remains an ensemble obligation.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostCommit
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.StoreWritePolicy
-import SP1Clean.Soundness.WitnessDecode
+module
+
+public import SP1Clean.Soundness.StoreWritePolicy
+public import SP1Clean.Soundness.WitnessDecode
 
 /-! # Write permission for the supported instruction registry
 
@@ -7,6 +9,8 @@ Committed decoding rules out stores for every non-store opcode. The four store f
 their exact decoded byte intervals with the intervals authorized by the native permission ledger.
 The result concerns incoming Sail operands, including stores that leave memory unchanged.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

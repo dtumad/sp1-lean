@@ -1,7 +1,9 @@
-import ToClean.Circuit.SubcircuitProjection
-import Clean.Air.FlatComponent
-import SP1Clean.Native.Chips.HaltChip.Defs
-import Clean.Utils.Tactics
+module
+
+public import ToClean.Circuit.SubcircuitProjection
+public import Clean.Air.FlatComponent
+public import SP1Clean.Native.Chips.HaltChip.Defs
+public import Clean.Utils.Tactics
 
 /-! # Halt table: soundness, completeness, and the bundled circuit
 
@@ -13,6 +15,8 @@ asserts and the three Memory read-prior pull guarantees; the read-back pushes' a
 requirements are discharged from the paired pulls plus the `CPUState`-derived clock discipline.
 Completeness replays the same facts from `ProverAssumptions := Spec` (an all-zero padding row
 satisfies it: selector `0`, every gated conjunct vacuous). -/
+
+@[expose] public section
 
 namespace SP1Clean.HaltChip
 

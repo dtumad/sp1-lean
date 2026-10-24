@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.MemorySupport
-import Mathlib.Data.Finset.Sort
+module
+
+public import SP1Clean.Model.Core.MemorySupport
+public import Mathlib.Data.Finset.Sort
 
 /-! # Canonical sparse memory for fixed-table construction
 
@@ -8,6 +10,8 @@ size reflects live bytes, independently of duplicate writes, explicit zeros and 
 history. Normalization preserves every read below the supplied limit and enumerates only the
 already finite nonzero support; it never traverses the architectural address space.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.ByteMemory
 

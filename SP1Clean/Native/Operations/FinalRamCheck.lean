@@ -1,7 +1,9 @@
-import ToClean.Circuit.Guarded
-import SP1Clean.FormalModel.Contracts.FinalRamCheck
-import SP1Clean.Native.Operations.FinalMemoryChange
-import SP1Clean.Native.Operations.FinalRamValue
+module
+
+public import ToClean.Circuit.Guarded
+public import SP1Clean.FormalModel.Contracts.FinalRamCheck
+public import SP1Clean.Native.Operations.FinalMemoryChange
+public import SP1Clean.Native.Operations.FinalRamValue
 
 /-! # Target RAM validation with selected change coverage
 
@@ -9,6 +11,8 @@ The existing eight-byte checker authenticates the whole target word. The selecto
 only that record's RAM key; it cannot disable target checks or choose a different location.
 A separate Boolean activity field guards the entire row for physical padding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRamCheck
 

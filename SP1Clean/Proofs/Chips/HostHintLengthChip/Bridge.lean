@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Model.Core.HostQueue
+module
+
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
+public import SP1Clean.Model.Core.HostQueue
 
 /-! # Current-queue HINT_LEN semantics
 
@@ -7,6 +9,8 @@ The node binding and current-head representation remain explicit assembly premis
 with the local handler contract they determine the entire host call: the exact return, unchanged
 host state, and no guest-memory write. Neither premise is a channel payload guarantee.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintLengthChip
 

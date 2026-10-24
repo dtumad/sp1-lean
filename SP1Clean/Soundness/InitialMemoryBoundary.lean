@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.OrderedInitialProvider
-import SP1Clean.Soundness.RankedGrounding
+module
+
+public import SP1Clean.Proofs.Chips.OrderedInitialProvider
+public import SP1Clean.Soundness.RankedGrounding
 
 /-! # Ordered initial records cannot duplicate a memory location
 
@@ -8,6 +10,8 @@ The only global input here is endpoint balance on those control keys. Strict ord
 both duplicate keys and disconnected cycles, even when rows have different payloads or values.
 The machine ensemble must still derive this balance from its actual interaction ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.InitialMemoryBoundary
 

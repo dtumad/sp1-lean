@@ -1,12 +1,16 @@
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Operations.OrdinaryObservation
+module
+
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Proofs.Operations.OrdinaryObservation
 
 /-! # Executed ordinary retirement observations
 
 These fixtures evaluate the actual composed program, including its Byte obligations. Explicit
 observation endpoints test the subsystem ledger, without claiming their mixed-ensemble binding.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.OrdinaryObservation
 

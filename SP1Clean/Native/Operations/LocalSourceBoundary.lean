@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
-import ToClean.Air.PublicVerifier
+module
+
+public import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
+public import ToClean.Air.PublicVerifier
 
 /-! # Public checks for a complete local source
 
@@ -8,6 +10,8 @@ contract, bind the incoming PC and clock, and preserve the clock when stopped. T
 public-verifier adapter installs these checks through sixteen fresh-channel occurrences, with
 no physical table. State limb bounds and ordered Memory boundaries belong to the assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.LocalSourceBoundary
 

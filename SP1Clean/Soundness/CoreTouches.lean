@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.CoreRowBalance
-import SP1Clean.Soundness.SystemTouches
-import SP1Clean.Soundness.ChipContracts
-import SP1Clean.Soundness.FetchDiscriminant
+module
+
+public import SP1Clean.Soundness.CoreRowBalance
+public import SP1Clean.Soundness.SystemTouches
+public import SP1Clean.Soundness.ChipContracts
+public import SP1Clean.Soundness.FetchDiscriminant
 
 /-! # Shared local Memory-touch alignment
 
@@ -10,6 +12,8 @@ Alignment preserves complete Memory multisets, State edges, and fetches. Receive
 remain explicit until the enclosing assembly derives them from balance. No host execution or
 initial-state semantics is assumed by these component-level alignment lemmas.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

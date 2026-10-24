@@ -1,7 +1,9 @@
-import ToClean.Air.ComponentOutput
-import SP1Clean.Soundness.ChipRegistry
-import SP1Clean.Soundness.TypedInteractions
-import Clean.Air.FlatComponent
+module
+
+public import ToClean.Air.ComponentOutput
+public import SP1Clean.Soundness.ChipRegistry
+public import SP1Clean.Soundness.TypedInteractions
+public import Clean.Air.FlatComponent
 
 /-! # Deterministic decoding of heterogeneous chip tables
 
@@ -13,6 +15,8 @@ about the resulting rows to later grounding lemmas.
 The typed circuit retained by `SupportedChip` is the key invariant: a decoded row is built directly
 from that circuit's `Input` and `Output`, so no cast from an unrelated flat `Component` is involved.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.ChipContracts
-import SP1Clean.Soundness.SyscallGrounding
-import SP1Clean.Soundness.SyscallInputs
+module
+
+public import SP1Clean.Soundness.ChipContracts
+public import SP1Clean.Soundness.SyscallGrounding
+public import SP1Clean.Soundness.SyscallInputs
 
 /-! # Wiring a syscall row into the walk
 
@@ -16,6 +18,8 @@ output. `DecodedInstructionRow.memoryChannelGuarantees_of_pullCurrency` is the i
 version. `SyscallInputs` provides the component-local syscall implementation; this file keeps
 the legacy assembly specializations. The mixed native carrier derives HALT separately through
 `HaltGrounding`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for StoreDouble (SD)
 
@@ -11,6 +13,8 @@ import SP1Clean.Proofs.Sail.Advance
 SP1 chip emulation (`sp1_sd`: write `nextPC = pc + 4` and the eight little-endian bytes of
 `rs2` into `mem[addr … addr+7]`), via `SailMem.run_vmem_write_of_width_8`. Caller supplies
 register/PC reads and alignment / fits / non-reserved-address facts. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.StoreSail

@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Circuits.Types.ALUTypeReader
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Circuits.Types.ALUTypeReader
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `ALUTypeReader` reader — the ALU register-adapter (immediate-capable op_c) as a `GeneralFormalCircuit`
 
@@ -30,6 +32,8 @@ gates, and pulls/pushes the Program + Memory buses (deriving the structural `Row
 `isU64 ∧ ClkBound` guarantees from its pulls — the W11 polarity flips). The cross-block values
 (`clk_low`, the four `op_a_write_value` limbs `wv*`) stay
 inputs; the `is_real` binary gate stays on the chip. Released-SP1 agreement is tested through the consuming instruction exports. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.ALUTypeReader
 

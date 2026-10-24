@@ -1,10 +1,14 @@
-import SP1Clean.Model.Channels
+module
+
+public import SP1Clean.Model.Channels
 
 /-! # Complete native terminal receipts
 
 This channel distinguishes a real HALT from legacy zero-valued Exit padding. Its payload is
 the complete exit word; the local boundary decides whether a receipt is required.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostExitBoundary
 

@@ -1,608 +1,610 @@
-import SP1Clean.Circuits.Types.BranchChip
-import SP1Clean.Semantics.Specs.Chips.Branch
-import SP1Clean.Proofs.Chips.BranchChip.Populate
-import SP1Clean.Circuits.Types.ShiftRightChip
-import SP1Clean.Semantics.Specs.Chips.ShiftRight
-import SP1Clean.Circuits.Types.ShiftLeftChip
-import SP1Clean.Semantics.Specs.Chips.ShiftLeft
-import SP1Clean.Circuits.Types.LtChip
-import SP1Clean.Semantics.Specs.Chips.Lt
-import SP1Clean.Circuits.Types.BitwiseChip
-import SP1Clean.Semantics.Specs.Chips.Bitwise
-import SP1Clean.Circuits.Gadgets.Bitwise.Witness
-import SP1Clean.Semantics.Specs.Bitwise
-import SP1Clean.Semantics.Specs.BitwiseBytes
-import SP1Clean.Circuits.Types.Bitwise
-import SP1Clean.Semantics.Specs.IsEqualWord
-import SP1Clean.Semantics.Specs.IsZeroWord
-import SP1Clean.Semantics.Specs.IsZero
-import SP1Clean.Semantics.Specs.LtUnsigned
-import SP1Clean.Semantics.Specs.LtSigned
-import SP1Clean.Semantics.Specs.U16Compare
-import SP1Clean.Semantics.Specs.U16MSB
-import SP1Clean.Circuits.Types.ALUTypeReader
-import SP1Clean.Circuits.Types.AddOperation
-import SP1Clean.Circuits.Types.AddrAddOperation
-import SP1Clean.Circuits.Types.AddressOperation
-import SP1Clean.Circuits.Types.CPUState
-import SP1Clean.Circuits.Types.ITypeReader
-import SP1Clean.Circuits.Types.IsEqualWordOperation
-import SP1Clean.Circuits.Types.IsZeroOperation
-import SP1Clean.Circuits.Types.IsZeroWordOperation
-import SP1Clean.Circuits.Types.JTypeReader
-import SP1Clean.Circuits.Types.LtOperationSigned
-import SP1Clean.Circuits.Types.LtOperationUnsigned
-import SP1Clean.Circuits.Types.MemoryAccess
-import SP1Clean.Circuits.Types.Mul
-import SP1Clean.Circuits.Types.MulOperation
-import SP1Clean.Circuits.Types.RTypeReader
-import SP1Clean.Circuits.Types.RegisterAccess
-import SP1Clean.Circuits.Types.U16CompareOperation
-import SP1Clean.Circuits.Types.U16MSBOperation
-import SP1Clean.Circuits.Types.U16toU8Operation
-import SP1Clean.FormalModel.Contracts.AddressDiv8
-import SP1Clean.FormalModel.Contracts.AddressOrder
-import SP1Clean.FormalModel.Contracts.BoundedWord
-import SP1Clean.FormalModel.Contracts.ChipAssumptions
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.FormalModel.Contracts.ClockOrder
-import SP1Clean.FormalModel.Contracts.OrdinaryObservation
-import SP1Clean.FormalModel.Contracts.Commit
-import SP1Clean.FormalModel.Contracts.CoreSyscall
-import SP1Clean.Semantics.Specs.Chips.Mul
-import SP1Clean.Semantics.Specs.Mul
-import SP1Clean.Semantics.Specs.U16toU8Safe
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
-import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
-import SP1Clean.Circuits.Types.DivRem
-import SP1Clean.FormalModel.Contracts.FinalRam
-import SP1Clean.FormalModel.Contracts.FinalRamValue
-import SP1Clean.FormalModel.Contracts.FinalRamCheck
-import SP1Clean.FormalModel.Contracts.FinalMemoryChange
-import SP1Clean.FormalModel.Contracts.FinalRegisterValue
-import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
-import SP1Clean.FormalModel.Contracts.HintNodeAllocate
-import SP1Clean.FormalModel.Contracts.HintQueue
-import SP1Clean.FormalModel.Contracts.HintReadSpan
-import SP1Clean.FormalModel.Contracts.HintReadStep
-import SP1Clean.FormalModel.Contracts.HintReadWord
-import SP1Clean.FormalModel.Contracts.HintWords
-import SP1Clean.FormalModel.Contracts.HostCall
-import SP1Clean.FormalModel.Contracts.CommitmentBoundary
-import SP1Clean.FormalModel.Contracts.CommitmentStatement
-import SP1Clean.FormalModel.Contracts.HostCommit
-import SP1Clean.FormalModel.Contracts.HostCommitBoundary
-import SP1Clean.FormalModel.Contracts.HostControl
-import SP1Clean.FormalModel.Contracts.HostHintRead
-import SP1Clean.FormalModel.Contracts.HostRamAccess
-import SP1Clean.FormalModel.Contracts.HostRamBytes
-import SP1Clean.FormalModel.Contracts.HostRamRead
-import SP1Clean.FormalModel.Contracts.InitialMemory
-import SP1Clean.FormalModel.Contracts.InitialMemoryRead
-import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.FormalModel.Contracts.OrderedBoundary
-import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
-import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
-import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.FormalModel.Contracts.RegisterRead
-import SP1Clean.FormalModel.Contracts.ResourceBoundary
-import SP1Clean.FormalModel.Contracts.SailBoundary
-import SP1Clean.FormalModel.Contracts.SnapshotMemory
-import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
-import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.FormalModel.Contracts.WritePermission
-import SP1Clean.FormalModel.CoreShard
-import SP1Clean.FormalModel.EventExecution
-import SP1Clean.FormalModel.Execution
-import SP1Clean.FormalModel.Relations
-import SP1Clean.FormalModel.Shard
-import SP1Clean.FormalModel.ShardMachine
-import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.FormalModel.ShardAccess
-import SP1Clean.FormalModel.ShardResources
-import SP1Clean.FormalModel.SupportedShard
-import SP1Clean.FormalModel.Trace.Witness
-import SP1Clean.FormalModel.TraceGen.AluGenerator
-import SP1Clean.FormalModel.TraceGen.Arith
-import SP1Clean.FormalModel.TraceGen.Bump
-import SP1Clean.FormalModel.TraceGen.ClockBridge
-import SP1Clean.FormalModel.TraceGen.Events
-import SP1Clean.FormalModel.TraceGen.GenState
-import SP1Clean.FormalModel.TraceGen.Inputs
-import SP1Clean.FormalModel.TraceGen.InstructionRegistry
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.FormalModel.TraceGen.SailAlu
-import SP1Clean.FormalModel.Verifier
-import SP1Clean.Math.Address
-import SP1Clean.Math.Bitwise
-import SP1Clean.Math.ByteWord
-import SP1Clean.Math.EvalVec
-import SP1Clean.Math.Gate
-import SP1Clean.Math.HWord
-import SP1Clean.Math.MulCarryChain
-import SP1Clean.Math.ShiftBounds
-import SP1Clean.Math.Word
-import SP1Clean.Math.WordEquality
-import SP1Clean.Model.BalanceBridge
-import SP1Clean.Model.BusMessages
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.ByteProvider
-import SP1Clean.Model.Channels
-import SP1Clean.Model.CleanLedger
-import SP1Clean.Model.Core.AddressRange
-import SP1Clean.Model.Core.BankReplay
-import SP1Clean.Model.Core.Boot
-import SP1Clean.Model.Core.CommitmentStatement
-import SP1Clean.Model.Core.Execution
-import SP1Clean.Model.Core.ExecutionBoot
-import SP1Clean.Model.Core.ExecutionCompatibility
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.Model.Core.ExecutionMemory
-import SP1Clean.Model.Core.ExecutionAccess
-import SP1Clean.Model.Core.ExecutionFrame
-import SP1Clean.Model.Core.ExecutionPath
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.Core.ExecutionSnapshot
-import SP1Clean.Model.Core.ExecutionWritePolicy
-import SP1Clean.Model.Core.HintQueue
-import SP1Clean.Model.Core.HintQueueEvent
-import SP1Clean.Model.Core.HintQueueRecords
-import SP1Clean.Model.Core.HintQueueWordRecords
-import SP1Clean.Model.Core.HintQueueWords
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.Core.HostExecutionLaws
-import SP1Clean.Model.Core.HostFootprint
-import SP1Clean.Model.Core.HostHalt
-import SP1Clean.Model.Core.HostIO
-import SP1Clean.Model.Core.HostQueue
-import SP1Clean.Model.Core.HostReadWords
-import SP1Clean.Model.Core.HostReplay
-import SP1Clean.Model.Core.HostSail
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.Core.HostTerminal
-import SP1Clean.Model.Core.InstructionBytes
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.Core.InstructionFetch
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.Memory
-import SP1Clean.Model.Core.MemoryEquality
-import SP1Clean.Model.Core.MemoryFinalCheck
-import SP1Clean.Model.Core.SailFinalCheck
-import SP1Clean.Model.Core.MemoryIntervals
-import SP1Clean.Model.Core.MemoryNormalization
-import SP1Clean.Model.Core.MemorySnapshot
-import SP1Clean.Model.Core.MemorySpan
-import SP1Clean.Model.Core.MemorySupport
-import SP1Clean.Model.Core.MemoryTable
-import SP1Clean.Model.Core.MemoryWord
-import SP1Clean.Model.Core.NativeLayout
-import SP1Clean.Model.Core.Profile
-import SP1Clean.Model.Core.ProgramImage
-import SP1Clean.Model.Core.ProgramTable
-import SP1Clean.Model.Core.QueueReplay
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.Core.ResourceLimits
-import SP1Clean.Model.Core.ResourceUsage
-import SP1Clean.Model.Core.SailBookkeeping
-import SP1Clean.Model.Core.SailMemory
-import SP1Clean.Model.Core.SailRegisterEquality
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Core.SourceSnapshot
-import SP1Clean.Model.Core.SyscallCode
-import SP1Clean.Model.Core.SyscallEncoding
-import SP1Clean.Model.Core.WritePermission
-import SP1Clean.Model.FinalMemoryValue
-import SP1Clean.Model.FinalMemoryChange
-import SP1Clean.Model.HostExit
-import SP1Clean.Model.InstructionChipId
-import SP1Clean.Model.InstructionRouting
-import SP1Clean.Model.InteractionBus
-import SP1Clean.Model.InteractionProjection
-import SP1Clean.Model.Machine.Boot
-import SP1Clean.Model.Machine.ConfiguredState
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Machine.Execution
-import SP1Clean.Model.Machine.Schedule
-import SP1Clean.Model.Machine.Shard
-import SP1Clean.Model.Machine.Syscall
-import SP1Clean.Model.MemoryClock
-import SP1Clean.Model.Opcode
-import SP1Clean.Model.ProgramChip
-import SP1Clean.Model.ProviderTableId
-import SP1Clean.Semantics.ISA.RV64
-import SP1Clean.Semantics.ReleasePolicy
-import SP1Clean.Model.Register
-import SP1Clean.Model.SP1Constraint
-import SP1Clean.Model.SP1Field
-import SP1Clean.Model.SailDecode
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailPure
-import SP1Clean.Model.SailWrap
-import SP1Clean.Model.Semantics.AccessPlan
-import SP1Clean.Model.Semantics.AccessSchedule
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Semantics.DurationTime
-import SP1Clean.Model.Semantics.EventTime
-import SP1Clean.Model.Semantics.EventTruth
-import SP1Clean.Model.Semantics.GenericTruth
-import SP1Clean.Model.Semantics.GuestProgram
-import SP1Clean.Model.Semantics.ImageContent
-import SP1Clean.Model.Semantics.InstructionPlan
-import SP1Clean.Model.Semantics.MicroTime
-import SP1Clean.Model.Semantics.ProgramCommitment
-import SP1Clean.Model.Semantics.SailArithmeticExecute
-import SP1Clean.Model.Semantics.SailArithmeticFrame
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Model.Semantics.SailControlFrame
-import SP1Clean.Model.Semantics.SailExecuteFrame
-import SP1Clean.Model.Semantics.SailFetch
-import SP1Clean.Model.Semantics.SailInstructionFrame
-import SP1Clean.Model.Semantics.SailLoadFrame
-import SP1Clean.Model.Semantics.SailMemoryRead
-import SP1Clean.Model.Semantics.SailMemorySplit
-import SP1Clean.Model.Semantics.SailMemoryWrite
-import SP1Clean.Model.Semantics.SailReadOnly
-import SP1Clean.Model.Semantics.SailRetirement
-import SP1Clean.Model.Semantics.SailStepReduction
-import SP1Clean.Model.Semantics.SailStoreFrame
-import SP1Clean.Model.Semantics.TransitionDecode
-import SP1Clean.Model.Semantics.TransitionView
-import SP1Clean.Model.Semantics.Truth
-import SP1Clean.Native.Chips.AddChip.Defs
-import SP1Clean.Native.Chips.AddiChip.Defs
-import SP1Clean.Native.Chips.AddwChip.Defs
-import SP1Clean.Native.Chips.AluX0Chip.Defs
-import SP1Clean.Native.Chips.BitwiseChip.Defs
-import SP1Clean.Native.Chips.BranchChip.Defs
-import SP1Clean.Native.Chips.CoreSyscallChip.Defs
-import SP1Clean.Native.Chips.HaltChip.Defs
-import SP1Clean.Native.Chips.HaltPaddingChip
-import SP1Clean.Native.Chips.HintReadWordChip.Defs
-import SP1Clean.Native.Chips.HostCallChip.Defs
-import SP1Clean.Native.Chips.HostCommitChip.Defs
-import SP1Clean.Native.Chips.HostEnterChip.Defs
-import SP1Clean.Native.Chips.HostHaltChip.Defs
-import SP1Clean.Native.Chips.HostHintLengthChip.Defs
-import SP1Clean.Native.Chips.HostHintReadChip.Defs
-import SP1Clean.Native.Chips.HostRamAccessChip.Defs
-import SP1Clean.Native.Chips.HostRamReadChip.Defs
-import SP1Clean.Native.Chips.JalChip.Defs
-import SP1Clean.Native.Chips.JalrChip.Defs
-import SP1Clean.Native.Chips.LoadByteChip.Defs
-import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
-import SP1Clean.Native.Chips.LoadDoubleChip.Defs
-import SP1Clean.Native.Chips.LoadHalfChip.Defs
-import SP1Clean.Native.Chips.LoadWordChip.Defs
-import SP1Clean.Native.Chips.LoadX0Chip.Defs
-import SP1Clean.Native.Chips.LtChip.Defs
-import SP1Clean.Native.Chips.MemoryBumpChip.Defs
-import SP1Clean.Native.Chips.MulChip.Defs
-import SP1Clean.Native.Chips.StateBumpChip.Defs
-import SP1Clean.Native.Chips.StoreByteChip.Defs
-import SP1Clean.Native.Chips.StoreDoubleChip.Defs
-import SP1Clean.Native.Chips.StoreHalfChip.Defs
-import SP1Clean.Native.Chips.StoreWordChip.Defs
-import SP1Clean.Native.Chips.SubChip.Defs
-import SP1Clean.Native.Chips.SubwChip.Defs
-import SP1Clean.Native.Chips.SyscallInstrsChip.Arms
-import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
-import SP1Clean.Native.Chips.UTypeChip.Defs
-import SP1Clean.Native.Operations.AddOperation.Defs
-import SP1Clean.Native.Operations.AddOperation.Populate
-import SP1Clean.Native.Operations.AddOperation.RawSpec
-import SP1Clean.Native.Operations.AddrAddOperation.Defs
-import SP1Clean.Native.Operations.AddrAddOperation.Populate
-import SP1Clean.Native.Operations.AddrAddOperation.RawSpec
-import SP1Clean.Native.Operations.AddressDiv8
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Native.Operations.AddressOrder
-import SP1Clean.Native.Operations.AddwOperation.Defs
-import SP1Clean.Native.Operations.AddwOperation.Populate
-import SP1Clean.Native.Operations.AddwOperation.RawSpec
-import SP1Clean.Circuits.Gadgets.BitwiseBytes
-import SP1Clean.Circuits.Gadgets.Bitwise
-import SP1Clean.Native.Operations.BoundedWord
-import SP1Clean.Native.Operations.ClockOrder
-import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
-import SP1Clean.Native.Operations.DivRemOperation.Compare
-import SP1Clean.Native.Operations.DivRemOperation.Core
-import SP1Clean.Circuits.Gadgets.DivRem.Assertions
-import SP1Clean.Native.Operations.FinalMemoryReceipt
-import SP1Clean.Native.Operations.FinalRamValue
-import SP1Clean.Native.Operations.FinalRamCheck
-import SP1Clean.Native.Operations.FinalMemoryChange
-import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
-import SP1Clean.Native.Operations.FinalRegisterValue
-import SP1Clean.Native.Operations.FinalRegisterCheck
-import SP1Clean.Native.Operations.HintNodeAllocate
-import SP1Clean.Native.Operations.HintQueueBoundary
-import SP1Clean.Native.Operations.HintQueueSource
-import SP1Clean.Native.Operations.HintQueueWordSource
-import SP1Clean.Native.Operations.HintReadSpan
-import SP1Clean.Native.Operations.HintReadStep
-import SP1Clean.Native.Operations.HostBoundary
-import SP1Clean.Native.Operations.CommitmentBoundary
-import SP1Clean.Native.Operations.CommitmentStatement
-import SP1Clean.Native.Operations.HostCommitBoundary
-import SP1Clean.Native.Operations.HostCommitEndpoint
-import SP1Clean.Native.Operations.HostExitBoundary
-import SP1Clean.Native.Operations.HostRamBytes
-import SP1Clean.Native.Operations.InitialMemoryLookup
-import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
-import SP1Clean.Native.Operations.InitialMemoryRead
-import SP1Clean.Circuits.Gadgets.IsEqualWord
-import SP1Clean.Circuits.Gadgets.IsZero
-import SP1Clean.Circuits.Gadgets.IsZeroWord
-import SP1Clean.Circuits.Gadgets.LtSigned
-import SP1Clean.Circuits.Gadgets.LtUnsigned
-import SP1Clean.Native.Operations.LocalSourceBoundary
-import SP1Clean.Circuits.Gadgets.Mul
-import SP1Clean.Circuits.Gadgets.Mul.Constraints
-import SP1Clean.Circuits.Gadgets.Mul.Witness
-import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
-import SP1Clean.Native.Operations.OrderedBoundary
-import SP1Clean.Native.Operations.OrderedBoundaryEnd
-import SP1Clean.Native.Operations.OrderedBoundaryVerifier
-import SP1Clean.Native.Operations.ResourceBoundary
-import SP1Clean.Native.Operations.SailBoundary
-import SP1Clean.Native.Operations.InstructionReceipt
-import SP1Clean.Native.Operations.OrdinaryObservation
-import SP1Clean.Proofs.Operations.OrdinaryObservation
-import SP1Clean.Native.Operations.ShiftLeftOperation.Core
-import SP1Clean.Native.Operations.ShiftRightOperation.Core
-import SP1Clean.Native.Operations.SubOperation.Defs
-import SP1Clean.Native.Operations.SubOperation.Populate
-import SP1Clean.Native.Operations.SubOperation.RawSpec
-import SP1Clean.Native.Operations.SubwOperation.Defs
-import SP1Clean.Native.Operations.SubwOperation.Populate
-import SP1Clean.Native.Operations.SubwOperation.RawSpec
-import SP1Clean.Native.Operations.SyscallCodeGuard
-import SP1Clean.Circuits.Gadgets.U16Compare
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Circuits.Gadgets.U16toU8Safe
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Native.Operations.WritePermission
-import SP1Clean.Native.Readers.ALUTypeReader
-import SP1Clean.Native.Readers.ALUTypeReaderImmutable
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReader
-import SP1Clean.Native.Readers.ITypeReaderImmutable
-import SP1Clean.Native.Readers.JTypeReader
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Native.Readers.RegisterAccessTimestamp
-import SP1Clean.Native.Readers.RegisterRead
-import SP1Clean.Native.Readers.RegisterReadLedger
-import SP1Clean.Native.Readers.RegisterReadPopulate
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Proofs.Chips.AddChip.Complete
-import SP1Clean.Proofs.Chips.AddChip.Formal
-import SP1Clean.Proofs.Chips.AddChip.Witgen
-import SP1Clean.Proofs.Chips.AddiChip.Complete
-import SP1Clean.Proofs.Chips.AddiChip.Formal
-import SP1Clean.Proofs.Chips.AddiChip.Witgen
-import SP1Clean.Proofs.Chips.AddwChip.Complete
-import SP1Clean.Proofs.Chips.AddwChip.Formal
-import SP1Clean.Proofs.Chips.AddwChip.Witgen
-import SP1Clean.Proofs.Chips.AluX0Chip.Complete
-import SP1Clean.Proofs.Chips.AluX0Chip.Formal
-import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
-import SP1Clean.Proofs.Chips.BitwiseChip.Complete
-import SP1Clean.Proofs.Chips.BitwiseChip.Formal
-import SP1Clean.Proofs.Chips.BitwiseChip.Witgen
-import SP1Clean.Proofs.Chips.BranchChip.Complete
-import SP1Clean.Proofs.Chips.BranchChip.Contracts
-import SP1Clean.Proofs.Chips.BranchChip.Core
-import SP1Clean.Proofs.Chips.BranchChip.Decision
-import SP1Clean.Proofs.Chips.BranchChip.Formal
-import SP1Clean.Proofs.Chips.BranchChip.Witgen
-import SP1Clean.Proofs.Chips.ByteChip.ByteChip
-import SP1Clean.Proofs.Chips.ByteChip.Provider
-import SP1Clean.Proofs.Chips.ByteChip.RangeChip
-import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
-import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Proofs.Chips.DivRemChip.Assembly
-import SP1Clean.Proofs.Chips.DivRemChip.Cases
-import SP1Clean.Proofs.Chips.DivRemChip.Complete
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.BytePulls
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CompareComplete
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CoreComplete
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.Driver
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.OwnComplete
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed32
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed64
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.SignedCommon
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned32
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned64
-import SP1Clean.Proofs.Chips.DivRemChip.Extract
-import SP1Clean.Proofs.Chips.DivRemChip.Formal
-import SP1Clean.Proofs.Chips.DivRemChip.Math
-import SP1Clean.Proofs.Chips.DivRemChip.Populate
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Abs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Congr
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Euclid
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.IR
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRCtq
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRWord
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
-import SP1Clean.Proofs.Chips.DivRemChip.Soundness
-import SP1Clean.Proofs.Chips.DivRemChip.Witgen
-import SP1Clean.Proofs.Chips.FinalRamProvider
-import SP1Clean.Proofs.Chips.FinalRegisterProvider
-import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
-import SP1Clean.Proofs.Chips.HaltChip.Formal
-import SP1Clean.Proofs.Chips.HaltChip.Witgen
-import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
-import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
-import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
-import SP1Clean.Proofs.Chips.HostCallChip.Formal
-import SP1Clean.Proofs.Chips.HostCallChip.Ledger
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
-import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
-import SP1Clean.Proofs.Chips.HostCommitChip.Formal
-import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
-import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Proofs.Chips.HostControlCompatibility
-import SP1Clean.Proofs.Chips.HostControlLedger
-import SP1Clean.Proofs.Chips.HostControlPopulate
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
-import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
-import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
-import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
-import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
-import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
-import SP1Clean.Proofs.Chips.InitialRamProvider
-import SP1Clean.Proofs.Chips.InitialRegisterProvider
-import SP1Clean.Proofs.Chips.JalChip.Complete
-import SP1Clean.Proofs.Chips.JalChip.Formal
-import SP1Clean.Proofs.Chips.JalChip.Witgen
-import SP1Clean.Proofs.Chips.JalrChip.Complete
-import SP1Clean.Proofs.Chips.JalrChip.Formal
-import SP1Clean.Proofs.Chips.JalrChip.Witgen
-import SP1Clean.Proofs.Chips.LoadByteChip.Complete
-import SP1Clean.Proofs.Chips.LoadByteChip.Formal
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Formal
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.FixedTable
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Transport
-import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Witgen
-import SP1Clean.Proofs.Chips.LoadHalfChip.Complete
-import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
-import SP1Clean.Proofs.Chips.LoadHalfChip.Witgen
-import SP1Clean.Proofs.Chips.LoadWordChip.Complete
-import SP1Clean.Proofs.Chips.LoadWordChip.Formal
-import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
-import SP1Clean.Proofs.Chips.LoadX0Chip.Complete
-import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
-import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
-import SP1Clean.Proofs.Chips.LtChip.Complete
-import SP1Clean.Proofs.Chips.LtChip.Formal
-import SP1Clean.Proofs.Chips.LtChip.Witgen
-import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
-import SP1Clean.Proofs.Chips.MemoryFinalizeChip
-import SP1Clean.Proofs.Chips.MemoryProvider
-import SP1Clean.Proofs.Chips.MemoryProviderChip
-import SP1Clean.Proofs.Chips.MulChip.Complete
-import SP1Clean.Proofs.Chips.MulChip.Formal
-import SP1Clean.Proofs.Chips.MulChip.Structural
-import SP1Clean.Proofs.Chips.MulChip.Witgen
-import SP1Clean.Proofs.Chips.OrderedFinalProvider
-import SP1Clean.Proofs.Chips.OrderedInitialProvider
-import SP1Clean.Proofs.Chips.OrderedMemoryProvider
-import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
-import SP1Clean.Proofs.Chips.ProgramProviderChip
-import SP1Clean.Proofs.Chips.ProtectedStore
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Defs
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Soundness.Sll
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Soundness.Sllw
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
-import SP1Clean.Proofs.Chips.ShiftRightChip.Complete
-import SP1Clean.Proofs.Chips.ShiftRightChip.Core
-import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
-import SP1Clean.Proofs.Chips.ShiftRightChip.Dispatch
-import SP1Clean.Proofs.Chips.ShiftRightChip.Flags
-import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
-import SP1Clean.Proofs.Chips.ShiftRightChip.Math
-import SP1Clean.Proofs.Chips.ShiftRightChip.Populate
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sra
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sraw
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srl
-import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srlw
-import SP1Clean.Proofs.Chips.ShiftRightChip.Witgen
-import SP1Clean.Proofs.Chips.SnapshotRamProvider
-import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
-import SP1Clean.Proofs.Chips.StateBumpChip.Formal
-import SP1Clean.Proofs.Chips.StoreByteChip.Complete
-import SP1Clean.Proofs.Chips.StoreByteChip.Formal
-import SP1Clean.Proofs.Chips.StoreByteChip.Witgen
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Witgen
-import SP1Clean.Proofs.Chips.StoreHalfChip.Complete
-import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
-import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
-import SP1Clean.Proofs.Chips.StoreWordChip.Complete
-import SP1Clean.Proofs.Chips.StoreWordChip.Formal
-import SP1Clean.Proofs.Chips.StoreWordChip.Witgen
-import SP1Clean.Proofs.Chips.SubChip.Complete
-import SP1Clean.Proofs.Chips.SubChip.Formal
-import SP1Clean.Proofs.Chips.SubChip.Witgen
-import SP1Clean.Proofs.Chips.SubwChip.Complete
-import SP1Clean.Proofs.Chips.SubwChip.Formal
-import SP1Clean.Proofs.Chips.SubwChip.Witgen
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Ledger
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
-import SP1Clean.Proofs.Chips.UTypeChip.Complete
-import SP1Clean.Proofs.Chips.UTypeChip.Formal
-import SP1Clean.Proofs.Chips.UTypeChip.Witgen
-import SP1Clean.Proofs.CircuitProofStart
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Proofs.Operations.AddrAddOperation.Address
-import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
-import SP1Clean.Proofs.Operations.AddressDiv8
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import SP1Clean.Proofs.Operations.AddwOperation.Formal
-import SP1Clean.Proofs.Operations.CommitmentStatement
-import SP1Clean.Proofs.Operations.ClockOrderPopulate
-import SP1Clean.Proofs.Operations.DivRemOperation.Compare
-import SP1Clean.Proofs.Operations.DivRemOperation.Core
-import SP1Clean.Proofs.Operations.HintNodeAllocate
-import SP1Clean.Proofs.Operations.HintNodeAllocateLedger
-import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
-import SP1Clean.Proofs.Operations.HintNodeWords
-import SP1Clean.Proofs.Operations.HintQueueCursor
-import SP1Clean.Proofs.Operations.HintQueuePrepend
-import SP1Clean.Proofs.Operations.HintReadSpan
-import SP1Clean.Proofs.Operations.HintReadSpanLedger
-import SP1Clean.Proofs.Operations.HintReadSpanNode
-import SP1Clean.Proofs.Operations.HintReadSpanPopulate
-import SP1Clean.Proofs.Operations.HintReadStep
-import SP1Clean.Proofs.Operations.HintReadStepLedger
-import SP1Clean.Proofs.Operations.HintReadStepPopulate
-import SP1Clean.Proofs.Operations.HostRamBytes
-import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
-import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
-import SP1Clean.Proofs.Operations.SubOperation.Formal
-import SP1Clean.Proofs.Operations.SubwOperation.Formal
-import SP1Clean.Soundness.RowView
+module
+
+public import SP1Clean.Circuits.Types.BranchChip
+public import SP1Clean.Semantics.Specs.Chips.Branch
+public import SP1Clean.Proofs.Chips.BranchChip.Populate
+public import SP1Clean.Circuits.Types.ShiftRightChip
+public import SP1Clean.Semantics.Specs.Chips.ShiftRight
+public import SP1Clean.Circuits.Types.ShiftLeftChip
+public import SP1Clean.Semantics.Specs.Chips.ShiftLeft
+public import SP1Clean.Circuits.Types.LtChip
+public import SP1Clean.Semantics.Specs.Chips.Lt
+public import SP1Clean.Circuits.Types.BitwiseChip
+public import SP1Clean.Semantics.Specs.Chips.Bitwise
+public import SP1Clean.Circuits.Gadgets.Bitwise.Witness
+public import SP1Clean.Semantics.Specs.Bitwise
+public import SP1Clean.Semantics.Specs.BitwiseBytes
+public import SP1Clean.Circuits.Types.Bitwise
+public import SP1Clean.Semantics.Specs.IsEqualWord
+public import SP1Clean.Semantics.Specs.IsZeroWord
+public import SP1Clean.Semantics.Specs.IsZero
+public import SP1Clean.Semantics.Specs.LtUnsigned
+public import SP1Clean.Semantics.Specs.LtSigned
+public import SP1Clean.Semantics.Specs.U16Compare
+public import SP1Clean.Semantics.Specs.U16MSB
+public import SP1Clean.Circuits.Types.ALUTypeReader
+public import SP1Clean.Circuits.Types.AddOperation
+public import SP1Clean.Circuits.Types.AddrAddOperation
+public import SP1Clean.Circuits.Types.AddressOperation
+public import SP1Clean.Circuits.Types.CPUState
+public import SP1Clean.Circuits.Types.ITypeReader
+public import SP1Clean.Circuits.Types.IsEqualWordOperation
+public import SP1Clean.Circuits.Types.IsZeroOperation
+public import SP1Clean.Circuits.Types.IsZeroWordOperation
+public import SP1Clean.Circuits.Types.JTypeReader
+public import SP1Clean.Circuits.Types.LtOperationSigned
+public import SP1Clean.Circuits.Types.LtOperationUnsigned
+public import SP1Clean.Circuits.Types.MemoryAccess
+public import SP1Clean.Circuits.Types.Mul
+public import SP1Clean.Circuits.Types.MulOperation
+public import SP1Clean.Circuits.Types.RTypeReader
+public import SP1Clean.Circuits.Types.RegisterAccess
+public import SP1Clean.Circuits.Types.U16CompareOperation
+public import SP1Clean.Circuits.Types.U16MSBOperation
+public import SP1Clean.Circuits.Types.U16toU8Operation
+public import SP1Clean.FormalModel.Contracts.AddressDiv8
+public import SP1Clean.FormalModel.Contracts.AddressOrder
+public import SP1Clean.FormalModel.Contracts.BoundedWord
+public import SP1Clean.FormalModel.Contracts.ChipAssumptions
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.FormalModel.Contracts.ClockOrder
+public import SP1Clean.FormalModel.Contracts.OrdinaryObservation
+public import SP1Clean.FormalModel.Contracts.Commit
+public import SP1Clean.FormalModel.Contracts.CoreSyscall
+public import SP1Clean.Semantics.Specs.Chips.Mul
+public import SP1Clean.Semantics.Specs.Mul
+public import SP1Clean.Semantics.Specs.U16toU8Safe
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
+public import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
+public import SP1Clean.Circuits.Types.DivRem
+public import SP1Clean.FormalModel.Contracts.FinalRam
+public import SP1Clean.FormalModel.Contracts.FinalRamValue
+public import SP1Clean.FormalModel.Contracts.FinalRamCheck
+public import SP1Clean.FormalModel.Contracts.FinalMemoryChange
+public import SP1Clean.FormalModel.Contracts.FinalRegisterValue
+public import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
+public import SP1Clean.FormalModel.Contracts.HintNodeAllocate
+public import SP1Clean.FormalModel.Contracts.HintQueue
+public import SP1Clean.FormalModel.Contracts.HintReadSpan
+public import SP1Clean.FormalModel.Contracts.HintReadStep
+public import SP1Clean.FormalModel.Contracts.HintReadWord
+public import SP1Clean.FormalModel.Contracts.HintWords
+public import SP1Clean.FormalModel.Contracts.HostCall
+public import SP1Clean.FormalModel.Contracts.CommitmentBoundary
+public import SP1Clean.FormalModel.Contracts.CommitmentStatement
+public import SP1Clean.FormalModel.Contracts.HostCommit
+public import SP1Clean.FormalModel.Contracts.HostCommitBoundary
+public import SP1Clean.FormalModel.Contracts.HostControl
+public import SP1Clean.FormalModel.Contracts.HostHintRead
+public import SP1Clean.FormalModel.Contracts.HostRamAccess
+public import SP1Clean.FormalModel.Contracts.HostRamBytes
+public import SP1Clean.FormalModel.Contracts.HostRamRead
+public import SP1Clean.FormalModel.Contracts.InitialMemory
+public import SP1Clean.FormalModel.Contracts.InitialMemoryRead
+public import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.FormalModel.Contracts.OrderedBoundary
+public import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
+public import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
+public import SP1Clean.FormalModel.Contracts.PublicValues
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.FormalModel.Contracts.RegisterRead
+public import SP1Clean.FormalModel.Contracts.ResourceBoundary
+public import SP1Clean.FormalModel.Contracts.SailBoundary
+public import SP1Clean.FormalModel.Contracts.SnapshotMemory
+public import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
+public import SP1Clean.FormalModel.Contracts.SystemChips
+public import SP1Clean.FormalModel.Contracts.WritePermission
+public import SP1Clean.FormalModel.CoreShard
+public import SP1Clean.FormalModel.EventExecution
+public import SP1Clean.FormalModel.Execution
+public import SP1Clean.FormalModel.Relations
+public import SP1Clean.FormalModel.Shard
+public import SP1Clean.FormalModel.ShardMachine
+public import SP1Clean.FormalModel.ShardPreservation
+public import SP1Clean.FormalModel.ShardAccess
+public import SP1Clean.FormalModel.ShardResources
+public import SP1Clean.FormalModel.SupportedShard
+public import SP1Clean.FormalModel.Trace.Witness
+public import SP1Clean.FormalModel.TraceGen.AluGenerator
+public import SP1Clean.FormalModel.TraceGen.Arith
+public import SP1Clean.FormalModel.TraceGen.Bump
+public import SP1Clean.FormalModel.TraceGen.ClockBridge
+public import SP1Clean.FormalModel.TraceGen.Events
+public import SP1Clean.FormalModel.TraceGen.GenState
+public import SP1Clean.FormalModel.TraceGen.Inputs
+public import SP1Clean.FormalModel.TraceGen.InstructionRegistry
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.FormalModel.TraceGen.SailAlu
+public import SP1Clean.FormalModel.Verifier
+public import SP1Clean.Math.Address
+public import SP1Clean.Math.Bitwise
+public import SP1Clean.Math.ByteWord
+public import SP1Clean.Math.EvalVec
+public import SP1Clean.Math.Gate
+public import SP1Clean.Math.HWord
+public import SP1Clean.Math.MulCarryChain
+public import SP1Clean.Math.ShiftBounds
+public import SP1Clean.Math.Word
+public import SP1Clean.Math.WordEquality
+public import SP1Clean.Model.BalanceBridge
+public import SP1Clean.Model.BusMessages
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.ByteProvider
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.CleanLedger
+public import SP1Clean.Model.Core.AddressRange
+public import SP1Clean.Model.Core.BankReplay
+public import SP1Clean.Model.Core.Boot
+public import SP1Clean.Model.Core.CommitmentStatement
+public import SP1Clean.Model.Core.Execution
+public import SP1Clean.Model.Core.ExecutionBoot
+public import SP1Clean.Model.Core.ExecutionCompatibility
+public import SP1Clean.Model.Core.ExecutionEncoding
+public import SP1Clean.Model.Core.ExecutionMemory
+public import SP1Clean.Model.Core.ExecutionAccess
+public import SP1Clean.Model.Core.ExecutionFrame
+public import SP1Clean.Model.Core.ExecutionPath
+public import SP1Clean.Model.Core.ExecutionReplay
+public import SP1Clean.Model.Core.ExecutionResources
+public import SP1Clean.Model.Core.ExecutionSnapshot
+public import SP1Clean.Model.Core.ExecutionWritePolicy
+public import SP1Clean.Model.Core.HintQueue
+public import SP1Clean.Model.Core.HintQueueEvent
+public import SP1Clean.Model.Core.HintQueueRecords
+public import SP1Clean.Model.Core.HintQueueWordRecords
+public import SP1Clean.Model.Core.HintQueueWords
+public import SP1Clean.Model.Core.HostExecution
+public import SP1Clean.Model.Core.HostExecutionLaws
+public import SP1Clean.Model.Core.HostFootprint
+public import SP1Clean.Model.Core.HostHalt
+public import SP1Clean.Model.Core.HostIO
+public import SP1Clean.Model.Core.HostQueue
+public import SP1Clean.Model.Core.HostReadWords
+public import SP1Clean.Model.Core.HostReplay
+public import SP1Clean.Model.Core.HostSail
+public import SP1Clean.Model.Core.HostSnapshot
+public import SP1Clean.Model.Core.HostTerminal
+public import SP1Clean.Model.Core.InstructionBytes
+public import SP1Clean.Model.Core.InstructionDecode
+public import SP1Clean.Model.Core.InstructionFetch
+public import SP1Clean.Model.Core.InstructionWrite
+public import SP1Clean.Model.Core.Memory
+public import SP1Clean.Model.Core.MemoryEquality
+public import SP1Clean.Model.Core.MemoryFinalCheck
+public import SP1Clean.Model.Core.SailFinalCheck
+public import SP1Clean.Model.Core.MemoryIntervals
+public import SP1Clean.Model.Core.MemoryNormalization
+public import SP1Clean.Model.Core.MemorySnapshot
+public import SP1Clean.Model.Core.MemorySpan
+public import SP1Clean.Model.Core.MemorySupport
+public import SP1Clean.Model.Core.MemoryTable
+public import SP1Clean.Model.Core.MemoryWord
+public import SP1Clean.Model.Core.NativeLayout
+public import SP1Clean.Model.Core.Profile
+public import SP1Clean.Model.Core.ProgramImage
+public import SP1Clean.Model.Core.ProgramTable
+public import SP1Clean.Model.Core.QueueReplay
+public import SP1Clean.Model.Core.RegisterSnapshotTable
+public import SP1Clean.Model.Core.ResourceLimits
+public import SP1Clean.Model.Core.ResourceUsage
+public import SP1Clean.Model.Core.SailBookkeeping
+public import SP1Clean.Model.Core.SailMemory
+public import SP1Clean.Model.Core.SailRegisterEquality
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Model.Core.SourceSnapshot
+public import SP1Clean.Model.Core.SyscallCode
+public import SP1Clean.Model.Core.SyscallEncoding
+public import SP1Clean.Model.Core.WritePermission
+public import SP1Clean.Model.FinalMemoryValue
+public import SP1Clean.Model.FinalMemoryChange
+public import SP1Clean.Model.HostExit
+public import SP1Clean.Model.InstructionChipId
+public import SP1Clean.Model.InstructionRouting
+public import SP1Clean.Model.InteractionBus
+public import SP1Clean.Model.InteractionProjection
+public import SP1Clean.Model.Machine.Boot
+public import SP1Clean.Model.Machine.ConfiguredState
+public import SP1Clean.Model.Machine.EventExecution
+public import SP1Clean.Model.Machine.Execution
+public import SP1Clean.Model.Machine.Schedule
+public import SP1Clean.Model.Machine.Shard
+public import SP1Clean.Model.Machine.Syscall
+public import SP1Clean.Model.MemoryClock
+public import SP1Clean.Model.Opcode
+public import SP1Clean.Model.ProgramChip
+public import SP1Clean.Model.ProviderTableId
+public import SP1Clean.Semantics.ISA.RV64
+public import SP1Clean.Semantics.ReleasePolicy
+public import SP1Clean.Model.Register
+public import SP1Clean.Model.SP1Constraint
+public import SP1Clean.Model.SP1Field
+public import SP1Clean.Model.SailDecode
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailPure
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Model.Semantics.AccessPlan
+public import SP1Clean.Model.Semantics.AccessSchedule
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Model.Semantics.DurationTime
+public import SP1Clean.Model.Semantics.EventTime
+public import SP1Clean.Model.Semantics.EventTruth
+public import SP1Clean.Model.Semantics.GenericTruth
+public import SP1Clean.Model.Semantics.GuestProgram
+public import SP1Clean.Model.Semantics.ImageContent
+public import SP1Clean.Model.Semantics.InstructionPlan
+public import SP1Clean.Model.Semantics.MicroTime
+public import SP1Clean.Model.Semantics.ProgramCommitment
+public import SP1Clean.Model.Semantics.SailArithmeticExecute
+public import SP1Clean.Model.Semantics.SailArithmeticFrame
+public import SP1Clean.Model.Semantics.SailControlExecute
+public import SP1Clean.Model.Semantics.SailControlFrame
+public import SP1Clean.Model.Semantics.SailExecuteFrame
+public import SP1Clean.Model.Semantics.SailFetch
+public import SP1Clean.Model.Semantics.SailInstructionFrame
+public import SP1Clean.Model.Semantics.SailLoadFrame
+public import SP1Clean.Model.Semantics.SailMemoryRead
+public import SP1Clean.Model.Semantics.SailMemorySplit
+public import SP1Clean.Model.Semantics.SailMemoryWrite
+public import SP1Clean.Model.Semantics.SailReadOnly
+public import SP1Clean.Model.Semantics.SailRetirement
+public import SP1Clean.Model.Semantics.SailStepReduction
+public import SP1Clean.Model.Semantics.SailStoreFrame
+public import SP1Clean.Model.Semantics.TransitionDecode
+public import SP1Clean.Model.Semantics.TransitionView
+public import SP1Clean.Model.Semantics.Truth
+public import SP1Clean.Native.Chips.AddChip.Defs
+public import SP1Clean.Native.Chips.AddiChip.Defs
+public import SP1Clean.Native.Chips.AddwChip.Defs
+public import SP1Clean.Native.Chips.AluX0Chip.Defs
+public import SP1Clean.Native.Chips.BitwiseChip.Defs
+public import SP1Clean.Native.Chips.BranchChip.Defs
+public import SP1Clean.Native.Chips.CoreSyscallChip.Defs
+public import SP1Clean.Native.Chips.HaltChip.Defs
+public import SP1Clean.Native.Chips.HaltPaddingChip
+public import SP1Clean.Native.Chips.HintReadWordChip.Defs
+public import SP1Clean.Native.Chips.HostCallChip.Defs
+public import SP1Clean.Native.Chips.HostCommitChip.Defs
+public import SP1Clean.Native.Chips.HostEnterChip.Defs
+public import SP1Clean.Native.Chips.HostHaltChip.Defs
+public import SP1Clean.Native.Chips.HostHintLengthChip.Defs
+public import SP1Clean.Native.Chips.HostHintReadChip.Defs
+public import SP1Clean.Native.Chips.HostRamAccessChip.Defs
+public import SP1Clean.Native.Chips.HostRamReadChip.Defs
+public import SP1Clean.Native.Chips.JalChip.Defs
+public import SP1Clean.Native.Chips.JalrChip.Defs
+public import SP1Clean.Native.Chips.LoadByteChip.Defs
+public import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
+public import SP1Clean.Native.Chips.LoadDoubleChip.Defs
+public import SP1Clean.Native.Chips.LoadHalfChip.Defs
+public import SP1Clean.Native.Chips.LoadWordChip.Defs
+public import SP1Clean.Native.Chips.LoadX0Chip.Defs
+public import SP1Clean.Native.Chips.LtChip.Defs
+public import SP1Clean.Native.Chips.MemoryBumpChip.Defs
+public import SP1Clean.Native.Chips.MulChip.Defs
+public import SP1Clean.Native.Chips.StateBumpChip.Defs
+public import SP1Clean.Native.Chips.StoreByteChip.Defs
+public import SP1Clean.Native.Chips.StoreDoubleChip.Defs
+public import SP1Clean.Native.Chips.StoreHalfChip.Defs
+public import SP1Clean.Native.Chips.StoreWordChip.Defs
+public import SP1Clean.Native.Chips.SubChip.Defs
+public import SP1Clean.Native.Chips.SubwChip.Defs
+public import SP1Clean.Native.Chips.SyscallInstrsChip.Arms
+public import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
+public import SP1Clean.Native.Chips.UTypeChip.Defs
+public import SP1Clean.Native.Operations.AddOperation.Defs
+public import SP1Clean.Native.Operations.AddOperation.Populate
+public import SP1Clean.Native.Operations.AddOperation.RawSpec
+public import SP1Clean.Native.Operations.AddrAddOperation.Defs
+public import SP1Clean.Native.Operations.AddrAddOperation.Populate
+public import SP1Clean.Native.Operations.AddrAddOperation.RawSpec
+public import SP1Clean.Native.Operations.AddressDiv8
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Native.Operations.AddressOrder
+public import SP1Clean.Native.Operations.AddwOperation.Defs
+public import SP1Clean.Native.Operations.AddwOperation.Populate
+public import SP1Clean.Native.Operations.AddwOperation.RawSpec
+public import SP1Clean.Circuits.Gadgets.BitwiseBytes
+public import SP1Clean.Circuits.Gadgets.Bitwise
+public import SP1Clean.Native.Operations.BoundedWord
+public import SP1Clean.Native.Operations.ClockOrder
+public import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
+public import SP1Clean.Native.Operations.DivRemOperation.Compare
+public import SP1Clean.Native.Operations.DivRemOperation.Core
+public import SP1Clean.Circuits.Gadgets.DivRem.Assertions
+public import SP1Clean.Native.Operations.FinalMemoryReceipt
+public import SP1Clean.Native.Operations.FinalRamValue
+public import SP1Clean.Native.Operations.FinalRamCheck
+public import SP1Clean.Native.Operations.FinalMemoryChange
+public import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
+public import SP1Clean.Native.Operations.FinalRegisterValue
+public import SP1Clean.Native.Operations.FinalRegisterCheck
+public import SP1Clean.Native.Operations.HintNodeAllocate
+public import SP1Clean.Native.Operations.HintQueueBoundary
+public import SP1Clean.Native.Operations.HintQueueSource
+public import SP1Clean.Native.Operations.HintQueueWordSource
+public import SP1Clean.Native.Operations.HintReadSpan
+public import SP1Clean.Native.Operations.HintReadStep
+public import SP1Clean.Native.Operations.HostBoundary
+public import SP1Clean.Native.Operations.CommitmentBoundary
+public import SP1Clean.Native.Operations.CommitmentStatement
+public import SP1Clean.Native.Operations.HostCommitBoundary
+public import SP1Clean.Native.Operations.HostCommitEndpoint
+public import SP1Clean.Native.Operations.HostExitBoundary
+public import SP1Clean.Native.Operations.HostRamBytes
+public import SP1Clean.Native.Operations.InitialMemoryLookup
+public import SP1Clean.Native.Operations.InitialMemoryLookup.Witness
+public import SP1Clean.Native.Operations.InitialMemoryRead
+public import SP1Clean.Circuits.Gadgets.IsEqualWord
+public import SP1Clean.Circuits.Gadgets.IsZero
+public import SP1Clean.Circuits.Gadgets.IsZeroWord
+public import SP1Clean.Circuits.Gadgets.LtSigned
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
+public import SP1Clean.Native.Operations.LocalSourceBoundary
+public import SP1Clean.Circuits.Gadgets.Mul
+public import SP1Clean.Circuits.Gadgets.Mul.Constraints
+public import SP1Clean.Circuits.Gadgets.Mul.Witness
+public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
+public import SP1Clean.Native.Operations.OrderedBoundary
+public import SP1Clean.Native.Operations.OrderedBoundaryEnd
+public import SP1Clean.Native.Operations.OrderedBoundaryVerifier
+public import SP1Clean.Native.Operations.ResourceBoundary
+public import SP1Clean.Native.Operations.SailBoundary
+public import SP1Clean.Native.Operations.InstructionReceipt
+public import SP1Clean.Native.Operations.OrdinaryObservation
+public import SP1Clean.Proofs.Operations.OrdinaryObservation
+public import SP1Clean.Native.Operations.ShiftLeftOperation.Core
+public import SP1Clean.Native.Operations.ShiftRightOperation.Core
+public import SP1Clean.Native.Operations.SubOperation.Defs
+public import SP1Clean.Native.Operations.SubOperation.Populate
+public import SP1Clean.Native.Operations.SubOperation.RawSpec
+public import SP1Clean.Native.Operations.SubwOperation.Defs
+public import SP1Clean.Native.Operations.SubwOperation.Populate
+public import SP1Clean.Native.Operations.SubwOperation.RawSpec
+public import SP1Clean.Native.Operations.SyscallCodeGuard
+public import SP1Clean.Circuits.Gadgets.U16Compare
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Circuits.Gadgets.U16toU8Safe
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Native.Operations.WritePermission
+public import SP1Clean.Native.Readers.ALUTypeReader
+public import SP1Clean.Native.Readers.ALUTypeReaderImmutable
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReader
+public import SP1Clean.Native.Readers.ITypeReaderImmutable
+public import SP1Clean.Native.Readers.JTypeReader
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Native.Readers.RegisterAccessTimestamp
+public import SP1Clean.Native.Readers.RegisterRead
+public import SP1Clean.Native.Readers.RegisterReadLedger
+public import SP1Clean.Native.Readers.RegisterReadPopulate
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Proofs.Chips.AddChip.Complete
+public import SP1Clean.Proofs.Chips.AddChip.Formal
+public import SP1Clean.Proofs.Chips.AddChip.Witgen
+public import SP1Clean.Proofs.Chips.AddiChip.Complete
+public import SP1Clean.Proofs.Chips.AddiChip.Formal
+public import SP1Clean.Proofs.Chips.AddiChip.Witgen
+public import SP1Clean.Proofs.Chips.AddwChip.Complete
+public import SP1Clean.Proofs.Chips.AddwChip.Formal
+public import SP1Clean.Proofs.Chips.AddwChip.Witgen
+public import SP1Clean.Proofs.Chips.AluX0Chip.Complete
+public import SP1Clean.Proofs.Chips.AluX0Chip.Formal
+public import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
+public import SP1Clean.Proofs.Chips.BitwiseChip.Complete
+public import SP1Clean.Proofs.Chips.BitwiseChip.Formal
+public import SP1Clean.Proofs.Chips.BitwiseChip.Witgen
+public import SP1Clean.Proofs.Chips.BranchChip.Complete
+public import SP1Clean.Proofs.Chips.BranchChip.Contracts
+public import SP1Clean.Proofs.Chips.BranchChip.Core
+public import SP1Clean.Proofs.Chips.BranchChip.Decision
+public import SP1Clean.Proofs.Chips.BranchChip.Formal
+public import SP1Clean.Proofs.Chips.BranchChip.Witgen
+public import SP1Clean.Proofs.Chips.ByteChip.ByteChip
+public import SP1Clean.Proofs.Chips.ByteChip.Provider
+public import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+public import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
+public import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
+public import SP1Clean.Proofs.Chips.DivRemChip.Assembly
+public import SP1Clean.Proofs.Chips.DivRemChip.Cases
+public import SP1Clean.Proofs.Chips.DivRemChip.Complete
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.BytePulls
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CompareComplete
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.CoreComplete
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.Driver
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.OwnComplete
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed32
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Signed64
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.SignedCommon
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned32
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.Unsigned64
+public import SP1Clean.Proofs.Chips.DivRemChip.Extract
+public import SP1Clean.Proofs.Chips.DivRemChip.Formal
+public import SP1Clean.Proofs.Chips.DivRemChip.Math
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Abs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Congr
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Euclid
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.IR
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRCtq
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRWord
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
+public import SP1Clean.Proofs.Chips.DivRemChip.Soundness
+public import SP1Clean.Proofs.Chips.DivRemChip.Witgen
+public import SP1Clean.Proofs.Chips.FinalRamProvider
+public import SP1Clean.Proofs.Chips.FinalRegisterProvider
+public import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
+public import SP1Clean.Proofs.Chips.HaltChip.Formal
+public import SP1Clean.Proofs.Chips.HaltChip.Witgen
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Ledger
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
+public import SP1Clean.Proofs.Chips.HostCallChip.Formal
+public import SP1Clean.Proofs.Chips.HostCallChip.Ledger
+public import SP1Clean.Proofs.Chips.HostCallChip.Populate
+public import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
+public import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
+public import SP1Clean.Proofs.Chips.HostCommitChip.Formal
+public import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
+public import SP1Clean.Proofs.Chips.HostCommitChip.Populate
+public import SP1Clean.Proofs.Chips.HostControlCompatibility
+public import SP1Clean.Proofs.Chips.HostControlLedger
+public import SP1Clean.Proofs.Chips.HostControlPopulate
+public import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+public import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+public import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
+public import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
+public import SP1Clean.Proofs.Chips.InitialRamProvider
+public import SP1Clean.Proofs.Chips.InitialRegisterProvider
+public import SP1Clean.Proofs.Chips.JalChip.Complete
+public import SP1Clean.Proofs.Chips.JalChip.Formal
+public import SP1Clean.Proofs.Chips.JalChip.Witgen
+public import SP1Clean.Proofs.Chips.JalrChip.Complete
+public import SP1Clean.Proofs.Chips.JalrChip.Formal
+public import SP1Clean.Proofs.Chips.JalrChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadByteChip.Complete
+public import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Formal
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.FixedTable
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Transport
+public import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Complete
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadWordChip.Complete
+public import SP1Clean.Proofs.Chips.LoadWordChip.Formal
+public import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Complete
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
+public import SP1Clean.Proofs.Chips.LtChip.Complete
+public import SP1Clean.Proofs.Chips.LtChip.Formal
+public import SP1Clean.Proofs.Chips.LtChip.Witgen
+public import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
+public import SP1Clean.Proofs.Chips.MemoryFinalizeChip
+public import SP1Clean.Proofs.Chips.MemoryProvider
+public import SP1Clean.Proofs.Chips.MemoryProviderChip
+public import SP1Clean.Proofs.Chips.MulChip.Complete
+public import SP1Clean.Proofs.Chips.MulChip.Formal
+public import SP1Clean.Proofs.Chips.MulChip.Structural
+public import SP1Clean.Proofs.Chips.MulChip.Witgen
+public import SP1Clean.Proofs.Chips.OrderedFinalProvider
+public import SP1Clean.Proofs.Chips.OrderedInitialProvider
+public import SP1Clean.Proofs.Chips.OrderedMemoryProvider
+public import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
+public import SP1Clean.Proofs.Chips.ProgramProviderChip
+public import SP1Clean.Proofs.Chips.ProtectedStore
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Defs
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Soundness.Sll
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Soundness.Sllw
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Complete
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Core
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Dispatch
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Flags
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Math
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Populate
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sra
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Sraw
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srl
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Soundness.Srlw
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Witgen
+public import SP1Clean.Proofs.Chips.SnapshotRamProvider
+public import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
+public import SP1Clean.Proofs.Chips.StateBumpChip.Formal
+public import SP1Clean.Proofs.Chips.StoreByteChip.Complete
+public import SP1Clean.Proofs.Chips.StoreByteChip.Formal
+public import SP1Clean.Proofs.Chips.StoreByteChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Complete
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreWordChip.Complete
+public import SP1Clean.Proofs.Chips.StoreWordChip.Formal
+public import SP1Clean.Proofs.Chips.StoreWordChip.Witgen
+public import SP1Clean.Proofs.Chips.SubChip.Complete
+public import SP1Clean.Proofs.Chips.SubChip.Formal
+public import SP1Clean.Proofs.Chips.SubChip.Witgen
+public import SP1Clean.Proofs.Chips.SubwChip.Complete
+public import SP1Clean.Proofs.Chips.SubwChip.Formal
+public import SP1Clean.Proofs.Chips.SubwChip.Witgen
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Ledger
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
+public import SP1Clean.Proofs.Chips.UTypeChip.Complete
+public import SP1Clean.Proofs.Chips.UTypeChip.Formal
+public import SP1Clean.Proofs.Chips.UTypeChip.Witgen
+public import SP1Clean.Proofs.CircuitProofStart
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Address
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
+public import SP1Clean.Proofs.Operations.AddressDiv8
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import SP1Clean.Proofs.Operations.AddwOperation.Formal
+public import SP1Clean.Proofs.Operations.CommitmentStatement
+public import SP1Clean.Proofs.Operations.ClockOrderPopulate
+public import SP1Clean.Proofs.Operations.DivRemOperation.Compare
+public import SP1Clean.Proofs.Operations.DivRemOperation.Core
+public import SP1Clean.Proofs.Operations.HintNodeAllocate
+public import SP1Clean.Proofs.Operations.HintNodeAllocateLedger
+public import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
+public import SP1Clean.Proofs.Operations.HintNodeWords
+public import SP1Clean.Proofs.Operations.HintQueueCursor
+public import SP1Clean.Proofs.Operations.HintQueuePrepend
+public import SP1Clean.Proofs.Operations.HintReadSpan
+public import SP1Clean.Proofs.Operations.HintReadSpanLedger
+public import SP1Clean.Proofs.Operations.HintReadSpanNode
+public import SP1Clean.Proofs.Operations.HintReadSpanPopulate
+public import SP1Clean.Proofs.Operations.HintReadStep
+public import SP1Clean.Proofs.Operations.HintReadStepLedger
+public import SP1Clean.Proofs.Operations.HintReadStepPopulate
+public import SP1Clean.Proofs.Operations.HostRamBytes
+public import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
+public import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
+public import SP1Clean.Proofs.Operations.SubOperation.Formal
+public import SP1Clean.Proofs.Operations.SubwOperation.Formal
+public import SP1Clean.Soundness.RowView
 
 /-! # The core index
 

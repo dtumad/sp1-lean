@@ -1,4 +1,6 @@
-import SP1Clean.Native.Operations.AddressDiv8
+module
+
+public import SP1Clean.Native.Operations.AddressDiv8
 
 /-! # Exact natural division and a total bounded constructor
 
@@ -6,6 +8,8 @@ Local thirteen/three-bit splits rule out every field wrap and imply canonical 48
 All output meanings follow from their Euclidean decompositions. Conversely, any bounded input
 word computes the partial-quotient columns required by the circuit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddressDiv8
 

@@ -1,12 +1,14 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.Channels
-import SP1Clean.Circuits.Types.RTypeReader
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Types.RTypeReader
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `RegisterAccessTimestamp` reader — one operand's timestamp columns as a Clean `FormalCircuit`
 
@@ -39,6 +41,8 @@ sub-circuit emits no lookup for them. `Readers/RegisterAccessCols.lean` wraps th
 and `RTypeReader` composes that 3× — factoring the register-access columns into sub-circuits is the
 idiomatic fix for the inline-22-column `circuit_proof_start` cost (each sub-circuit is a `circuit_norm`
 black box, à la `Clean/Gadgets/Keccak/KeccakRound.lean`). -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RegisterAccessTimestamp
 

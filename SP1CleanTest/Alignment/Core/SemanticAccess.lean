@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.SemanticAccess
-import SP1Clean.Model.Machine.ConfiguredState
+module
+
+public import SP1Clean.Proofs.Completeness.SemanticAccess
+public import SP1Clean.Model.Machine.ConfiguredState
 
 /-! # Canonical memory access and refresh regressions
 
@@ -7,6 +9,8 @@ These finite projection fixtures exercise aliases and `x0` across a refresh boun
 the extractor/scheduler, not a second execution relation; the existing active Sail/JAL anchor
 separately consumes the universal compiler-totality theorem.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.SemanticAccess
 open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target SP1Clean.TraceGen LeanRV64D.Defs

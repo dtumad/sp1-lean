@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.LoadHalfChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ LH/LHU on the witgen bridge (see `LoadWordChip/Witgen.lean` for the memory-famil
 Same shape as LoadWord: the row's only witnessed cells are the four produced by the composed
 `AddressOperation`, and the parent obligation is that the gadget's input row — here carrying **two**
 committed offset bits rather than one — is a function of this row's input cells. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadHalfChip
 

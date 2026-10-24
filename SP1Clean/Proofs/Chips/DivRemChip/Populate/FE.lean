@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRCtq
-import ToClean.Circuit.WitgenEval
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRCtq
+public import ToClean.Circuit.WitgenEval
 
 /-! # `DivRemChip` — the per-site witness-IR payloads (A7c)
 
@@ -14,6 +16,8 @@ The dispatch calculus is `Populate/IR.lean`, the word bridges `Populate/IRWord.l
 128-bit product block `Populate/IRCtq.lean`; the sub-operation struct twins live beside their
 operations (`MulOperation.populateFEW`, `AddOperation.populateFW`,
 `IsZeroWordOperation.populateFE`, `IsEqualWordOperation.populateFE`). -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadExecutionRows
-import SP1Clean.Soundness.LocalCoreMemoryOrder
+module
+
+public import SP1Clean.Soundness.HostHintReadExecutionRows
+public import SP1Clean.Soundness.LocalCoreMemoryOrder
 
 /-! # Clock bounds and refresh chronology with host RAM accesses retained
 
@@ -7,6 +9,8 @@ The complete source/push/final/pull balance transfers produced-clock bounds to e
 record. The original State walk supplies time windows, while the enlarged CPU rows retain all
 host RAM touches. No Memory balance is projected to the smaller instruction-only assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

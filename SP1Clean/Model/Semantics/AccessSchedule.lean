@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.AccessPlan
+module
+
+public import SP1Clean.Model.Semantics.AccessPlan
 
 /-!
 # Canonical scheduling for an instruction access plan
@@ -18,6 +20,8 @@ instruction touch overwrites the same location with its position timestamp.
 this substrate layer.  `FormalModel/TraceGen/Bump.lean` remains responsible for turning it into a
 physical MemoryBump row and proving the row contract.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.LocalCoreEnsemble
-import SP1Clean.Proofs.Chips.ProtectedStore
-import SP1Clean.Native.Operations.WritePermission
+module
+
+public import SP1Clean.Soundness.LocalCoreEnsemble
+public import SP1Clean.Proofs.Chips.ProtectedStore
+public import SP1Clean.Native.Operations.WritePermission
 
 /-! # Local AIR with explicit ROM write protection
 
@@ -9,6 +11,8 @@ against a verifier-fixed interval-membership provider. The complete source verif
 assembly intended for the capstone. `ProtectedLocalCoreExecution` derives ordinary ROM preservation
 from its additional ledger; active host effects and complete execution reconstruction remain open.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 

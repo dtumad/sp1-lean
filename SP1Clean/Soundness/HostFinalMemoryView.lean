@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostFinalMemoryByte
-import SP1Clean.Soundness.FinalMemoryCheckSoundness
+module
+
+public import SP1Clean.Soundness.HostFinalMemoryByte
+public import SP1Clean.Soundness.FinalMemoryCheckSoundness
 
 /-! # The installed Memory boundary as a physical proof view
 
@@ -7,6 +9,8 @@ The seven tables below are selected from the actual host witness. They reuse the
 boundary assembly, contracts and decoder. Byte guarantees are inherited from the enclosing
 ledger. Its canonical data is derived from these seven tables; Byte predicates transport separately. This view need not have balanced Byte or Memory channels.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

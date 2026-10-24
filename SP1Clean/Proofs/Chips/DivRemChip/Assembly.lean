@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Extract
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Extract
 
 /-! # `DivRemChip` — per-family soundness assembly
 
@@ -6,6 +8,8 @@ One "core" lemma per RV64 division family: consumes the carry-chain limb equatio
 `MulOperation` product words, the `isU64`s, the remainder range, and the divide-by-zero /
 overflow branches, and concludes the family's quotient + remainder RV64 identity pair. Stated
 over loose Words; `Formal.lean` does the offset bookkeeping and routes `.1`/`.2` to `cols.a`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

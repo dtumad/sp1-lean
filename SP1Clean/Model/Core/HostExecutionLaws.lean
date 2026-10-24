@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.HostExecution
-import ToMathlib.ListMapMOption
+module
+
+public import SP1Clean.Model.Core.HostExecution
+public import ToMathlib.ListMapMOption
 
 /-! # Authentic observations and memory effects of host execution
 
@@ -7,6 +9,8 @@ Successful execution binds the full syscall code and all observed operands to th
 read interface. Byte reads are characterized pointwise, including empty intervals. Memory-write
 protection concerns the complete returned write, so HINT_READ padding is included.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

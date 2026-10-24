@@ -1,6 +1,8 @@
-import SP1Clean.Model.Semantics.InstructionPlan
-import SP1Clean.Model.Core.Memory
-import SP1Clean.Model.Core.MemorySpan
+module
+
+public import SP1Clean.Model.Semantics.InstructionPlan
+public import SP1Clean.Model.Core.Memory
+public import SP1Clean.Model.Core.MemorySpan
 
 /-! # Ordinary instruction write permissions
 
@@ -13,6 +15,8 @@ This is the ordinary supported-instruction policy component. It rejects unsuppor
 invalid widths and missing base registers. It does not check fetch, alignment, address bounds,
 normal retirement or resources. `ExecutionWritePolicy` lifts it to occurrences in the existing path.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.InstructionWrite
 

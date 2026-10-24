@@ -1,7 +1,11 @@
-import SP1Clean.Model.Core.MemoryIntervals
-import SP1Clean.Model.Core.SailMemory
+module
+
+public import SP1Clean.Model.Core.MemoryIntervals
+public import SP1Clean.Model.Core.SailMemory
 
 /-! # Sparse memory lookup and Sail-map regressions -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.MemoryIntervals
 

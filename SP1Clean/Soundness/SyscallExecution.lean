@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.SyscallTrail
-import SP1Clean.Soundness.SyscallWiring
-import SP1Clean.Soundness.RefreshWiring
+module
+
+public import SP1Clean.Soundness.SyscallTrail
+public import SP1Clean.Soundness.SyscallWiring
+public import SP1Clean.Soundness.RefreshWiring
 
 /-!
 # The mixed walk drives the row-generic execution engine
@@ -23,6 +25,8 @@ it there — and recovering it is arm-split: an ordinary row needs `¬ AboutToEx
 row needs the opposite plus its own `SyscallTransition`.  It is a hypothesis, discharged per arm by
 the caller.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

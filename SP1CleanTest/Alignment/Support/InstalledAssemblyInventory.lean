@@ -1,11 +1,15 @@
-import SP1CleanTest.Alignment.Support.InstalledAssemblyChannels
-import SP1CleanTest.Alignment.Support.InstalledAssemblyLookups
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyChannels
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyLookups
 
 /-! # Authenticated checking for the complete installed assembly
 
 The context changes instance data while this one checked inventory retains every physical
 table, fixed lookup obligation and raw channel, including the public verifier.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 

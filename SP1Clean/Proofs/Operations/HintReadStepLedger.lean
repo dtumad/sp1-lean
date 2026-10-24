@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Operations.HintReadStep
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.Proofs.Operations.HintReadStep
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # The successive word operation's actual ledger
 
 The only non-Byte interaction is one complete immutable word pull, including its end marker.
 This equation is used by the physical consumer; no separately supplied word-request list is used.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadStep
 

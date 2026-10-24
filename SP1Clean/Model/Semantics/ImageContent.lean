@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # The committed image as cell content
 
@@ -11,6 +13,8 @@ The file sits beside `Model/Machine/Boot.lean`'s loader contract but below the m
 (`MicroTime` imports `Machine.Execution`, so the cell decoders cannot live in `Boot.lean`
 itself).  Like `GuestProgram.lean`, the namespace records the intended `Target` vocabulary rather
 than the directory. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

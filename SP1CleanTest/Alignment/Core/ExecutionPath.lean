@@ -1,10 +1,12 @@
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.ExecutionCompatibility
-import SP1Clean.Model.Core.ExecutionWritePolicy
-import SP1Clean.Model.Core.SailBookkeeping
-import SP1Clean.Model.Core.QueueReplay
-import SP1Clean.Model.SP1Field
-import SP1CleanTest.Alignment.Audit.ActiveNativeCompleteness
+module
+
+public import SP1Clean.Model.Core.ExecutionReplay
+public import SP1Clean.Model.Core.ExecutionCompatibility
+public import SP1Clean.Model.Core.ExecutionWritePolicy
+public import SP1Clean.Model.Core.SailBookkeeping
+public import SP1Clean.Model.Core.QueueReplay
+public import SP1Clean.Model.SP1Field
+public import SP1CleanTest.Alignment.Audit.ActiveNativeCompleteness
 
 /-! # Native local-path and terminal-boundary regressions
 
@@ -12,6 +14,8 @@ Two committed ECALLs execute ENTER followed by HALT from a non-boot clock, prese
 incoming host state and RAM. Each call is a separate semantic shard, and their joined path is the
 same two-step execution. These test the semantic interface, not an AIR witness.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ExecutionPath
 

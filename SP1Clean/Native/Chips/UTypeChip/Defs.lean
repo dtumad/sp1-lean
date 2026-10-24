@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.JTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.JTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The U-type chip row (`LUI` / `AUIPC`) as a `GeneralFormalCircuit`
 
@@ -16,6 +18,8 @@ Witnesses the addend (`is_auipc · pc`, 0 for LUI) and the add result; composes 
 `next_pc = pc + 4`), `AddOperation` (gate `is_real - op_a_0`), and `JTypeReader` (opcode
 `is_auipc·48 + (1-is_auipc)·49`). The addend is pinned per-limb by `addend[i] = is_auipc * pc[i]`.
 Implements SP1's `UType` `eval` (`crates/core/machine/src/utype/mod.rs`). -/
+
+@[expose] public section
 
 namespace SP1Clean.UTypeChip
 

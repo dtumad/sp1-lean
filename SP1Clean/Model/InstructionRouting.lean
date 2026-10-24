@@ -1,5 +1,7 @@
-import SP1Clean.Model.InstructionChipId
-import SP1Clean.Model.Opcode
+module
+
+public import SP1Clean.Model.InstructionChipId
+public import SP1Clean.Model.Opcode
 
 /-!
 # Pure instruction-chip routing
@@ -12,6 +14,8 @@ circuits, dependent chip rows, Sail proofs, or provider tables.  The circuit-bea
 Provider and boundary tables intentionally have no entry here: they are not selected by decoded
 instruction opcode and must keep a separate identity vocabulary.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

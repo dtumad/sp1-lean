@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.TraceGen.Inputs
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.FormalModel.TraceGen.Inputs
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Trace generation — the reader contracts of a built row
 
@@ -32,6 +34,8 @@ consequences of how the builder splits a clock, and that is the whole point of t
 and `registerAccessCols_spec` wants that to be the cast of the `ℕ` clock `clk % 2^24 + 4`. The
 three `registerAccessCols_spec_op{A,B,C}` corollaries package that bridge at the three
 `MemoryAccessPosition` offsets, so a chip cites them and nothing else. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

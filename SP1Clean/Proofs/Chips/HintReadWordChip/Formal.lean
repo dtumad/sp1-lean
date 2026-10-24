@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.HintReadWordChip.Defs
-import ToClean.Circuit.Guarded
+module
+
+public import SP1Clean.Native.Chips.HintReadWordChip.Defs
+public import ToClean.Circuit.Guarded
 
 /-! # Soundness and completeness of physical hint word transfers
 
 The complete row means a bounded physical RAM transfer and one successive immutable hint
 word. Permission and content authenticity remain balance-derived facts, never channel guarantees.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadWordChip
 

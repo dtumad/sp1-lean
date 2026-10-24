@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Specs.Chips.Branch
-import SP1Clean.Math.Gate
+module
+
+public import SP1Clean.Semantics.Specs.Chips.Branch
+public import SP1Clean.Math.Gate
 
 /-! # `SP1Clean.BranchChip` — the six-way decision dispatch (shared field lemmas)
 
@@ -22,6 +24,8 @@ The flag↔index convention matches `Defs.lean`'s `main` and `Semantics/Specs/Ch
 selector is `is_signed = is_blt + is_bge = b2 + b3`; `is_eq = 1 - sum` where `sum` is the four
 `u16_flags`; and
 `decision = b0·(1-sum) + b1·(1-(1-sum)) + (b3+b5)·(1-bit) + (b2+b4)·bit`. -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

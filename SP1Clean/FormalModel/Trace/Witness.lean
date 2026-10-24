@@ -1,4 +1,6 @@
-import SP1Clean.Model.Machine.ConfiguredState
+module
+
+public import SP1Clean.Model.Machine.ConfiguredState
 
 /-! # Initial-state non-vacuity examples
 
@@ -6,6 +8,8 @@ These concrete examples exhibit the loader relation over an empty program and a 
 real instruction and data bytes. The reusable register initializer lives in
 `Model/Machine/ConfiguredState.lean`; the checked finite-image loader builds on the same state.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Soundness.Target

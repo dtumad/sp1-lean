@@ -1,11 +1,15 @@
-import SP1Clean.Alignment.Chips.AddwChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.AddwChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Addw — circuit-grounding contracts
 
 Small folded facts exposing Addw's state/adapter passthrough and its physical non-`x0` routing
 assertion.  These are structural circuit facts; arithmetic meaning remains in `AddwChip.Spec`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

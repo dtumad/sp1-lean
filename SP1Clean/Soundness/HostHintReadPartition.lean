@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadWrites
-import ToClean.Air.MessageFilter
+module
+
+public import SP1Clean.Soundness.HostHintReadWrites
+public import ToClean.Air.MessageFilter
 
 /-! # Per-call HINT_READ tables from one shared cursor ledger
 
@@ -11,6 +13,8 @@ handlers at the same event. No row order or independently balanced per-call witn
 Selected tables are evaluated at the original shared data; selection does not preserve the data
 that a new ensemble would derive from the selected rows alone.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadPartition
 

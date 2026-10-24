@@ -1,9 +1,11 @@
-import SP1CleanTest.Alignment.Support.BoundaryFixture
-import SP1Clean.Proofs.Completeness.InstructionEvent
-import SP1Clean.Proofs.Completeness.Providers
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
-import SP1Clean.Proofs.Chips.BranchChip.Complete
+module
+
+public import SP1CleanTest.Alignment.Support.BoundaryFixture
+public import SP1Clean.Proofs.Completeness.InstructionEvent
+public import SP1Clean.Proofs.Completeness.Providers
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
+public import SP1Clean.Proofs.Chips.BranchChip.Complete
 
 /-! # Arithmetic, repeated RAM accesses and branches in one assembly
 
@@ -12,6 +14,8 @@ its access scheduler. Rust independently executes the encoded program. These fix
 implement an interpreter or assert a general Sail retirement theorem. Sparse RAM is materialized
 only at the observed cell for the existing access-plan projection, never as the full 48-bit map.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.OrdinaryAssembly
 

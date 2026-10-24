@@ -1,13 +1,17 @@
-import SP1Clean.Proofs.Chips.BranchChip.Contracts
-import SP1Clean.Proofs.Chips.BranchChip.Populate
-import SP1Clean.Proofs.CircuitProofStart
-import SP1Clean.Native.Operations.AddOperation.RawSpec
+module
+
+public import SP1Clean.Proofs.Chips.BranchChip.Contracts
+public import SP1Clean.Proofs.Chips.BranchChip.Populate
+public import SP1Clean.Proofs.CircuitProofStart
+public import SP1Clean.Native.Operations.AddOperation.RawSpec
 
 /-! # Exact Branch circuit proof
 
 Soundness and honest-witness completeness for the native Branch circuit whose local columns,
 constraints, and interactions match pinned SP1 v6.4.0.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

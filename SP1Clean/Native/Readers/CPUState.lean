@@ -1,13 +1,15 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Circuits.Types.CPUState
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Circuits.Types.CPUState
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `CPUState` reader — SP1's `CPUState::eval` as a Clean `FormalAssertion`
 
@@ -29,6 +31,8 @@ The `Spec` is the two clock byte bounds (`is_real`-gated): **soundness derives t
 **completeness consumes them** to discharge the pulls. The composing chip witnesses `cols` with a
 padding-safe clock (`clk_0_16 = 1`, `clk_16_24 = 0`), establishing the bounds. Cross-row execution is
 derived from the typed State interactions by the ranked grounding layer. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.CPUState
 

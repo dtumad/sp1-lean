@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.TypedInteractions
-import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Soundness.StateCanon
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Ledger
-import SP1Clean.Soundness.SyscallRowSemantics
+module
+
+public import SP1Clean.Soundness.TypedInteractions
+public import SP1Clean.Soundness.FinishedChannels
+public import SP1Clean.Soundness.StateCanon
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Ledger
+public import SP1Clean.Soundness.SyscallRowSemantics
 
 /-! # Typed decoders for system tables
 
@@ -18,6 +20,8 @@ State balance (StateBump) and the refresh-eliminated Memory balance (MemoryBump)
 semantic `Spec`s are extracted by `Table.weakSoundness`: the bump circuits' `Assumptions` are
 `True` and their byte-pull guarantees are grounded by `sp1_finishedChannel_guarantees` — the W3
 partition re-cut that placed the bump tables on the byte bus's consumer side. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

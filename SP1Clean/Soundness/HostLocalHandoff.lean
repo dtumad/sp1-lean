@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCoreLedger
-import ToClean.Air.ReceiverView
+module
+
+public import SP1Clean.Soundness.HostLocalCoreLedger
+public import ToClean.Air.ReceiverView
 
 /-! # Complete instruction-to-handler accounting in the installed local AIR
 
@@ -9,6 +11,8 @@ then determines every consumed call. Constraints and the ensemble's own balance 
 permutation with active instruction calls, and CPU chronology gives each handler unique clocks.
 No independent witness projection, ledger equation, or handler inventory is a caller premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalHandoff
 

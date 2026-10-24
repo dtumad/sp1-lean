@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.SubwOperation.Formal
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Proofs.Operations.SubwOperation.Formal
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The native SUBW chip row as a `GeneralFormalCircuit`
 
@@ -21,6 +23,8 @@ W-instruction: result is 2 limbs + sign bit (`subw_operation.value`/`subw_operat
 64-bit `op_a` write is the sign-extended word `[v0, v1, msb·65535, msb·65535]`. Adapter is the
 `RTypeReader` (unlike ADDW's `ALUTypeReader`); Program-bus opcode `20`. SUBW is **not commutative**:
 operand order `op_b_val - op_c_val` must match `execute_RTYPEW rs2 rs1 rd .SUBW`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwChip
 

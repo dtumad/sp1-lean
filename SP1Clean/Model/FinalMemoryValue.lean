@@ -1,4 +1,6 @@
-import SP1Clean.Model.Channels
+module
+
+public import SP1Clean.Model.Channels
 
 /-! # Final-record handoff to target snapshot checks
 
@@ -6,6 +8,8 @@ Ordered finalizers publish their complete records here. Register and RAM receipt
 channels, so a RAM value cannot be authenticated through the register table at an overlapping
 numeric address. These are accounting channels; they assert no value or historical truth.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalMemoryValue
 

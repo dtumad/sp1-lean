@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.MicroTime
-import Mathlib.Algebra.BigOperators.Group.List.Basic
+module
+
+public import SP1Clean.Model.Semantics.MicroTime
+public import Mathlib.Algebra.BigOperators.Group.List.Basic
 
 /-! # Timelines for finite lists of execution widths
 
@@ -7,6 +9,8 @@ A mixed execution list determines its clock by prefix-summing row widths. Past t
 clock advances by eight solely to totalize the timeline. This construction needs no instruction
 or host-event interpretation; each physical row's duration can be justified separately.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics.Timeline
 

@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.LoadByteChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.LoadByteChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # LoadByte — physical routing contract
 
@@ -8,6 +10,8 @@ complete native assertion system: ordinary LB/LBU rows are routed away from `x0`
 projects the literal `op_a_0 === 0` assertion from the folded `main`; it does not obtain routing
 from the semantic `Spec` or from a trace-generator convention.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

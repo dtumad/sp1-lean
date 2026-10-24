@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
-import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+module
+
+public import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
+public import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 
 /-! # Semantic preservation at the alternative LoadByte consumer
 
 The alternative uses the existing input, row, assumptions and semantic specification.
 The proof consumes its two fixed lookups and preserves the original circuit's contract.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteStaticChip
 

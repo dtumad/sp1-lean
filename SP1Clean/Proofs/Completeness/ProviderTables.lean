@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Completeness.ProviderInteractions
+module
+
+public import SP1Clean.Proofs.Completeness.ProviderInteractions
 
 /-!
 # Tier 2 of the provider closure: a whole provider table's ledger
@@ -21,6 +23,8 @@ well-formedness bounds that make the operand cells round-trip. The `Multiplicity
 the trace-generator capacity contract, not a circuit constraint — a provider row cannot see its own
 aggregate count's magnitude.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

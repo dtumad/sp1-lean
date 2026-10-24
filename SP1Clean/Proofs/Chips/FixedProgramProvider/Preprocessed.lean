@@ -1,9 +1,11 @@
-import SP1Clean.Model.Core.ProgramTable
-import SP1Clean.Model.Channels
-import ToClean.Air.FixedPrefix
-import ToClean.Air.FixedRows
-import ToClean.Air.ChannelClosure
-import Mathlib.Data.Nat.Log
+module
+
+public import SP1Clean.Model.Core.ProgramTable
+public import SP1Clean.Model.Channels
+public import ToClean.Air.FixedPrefix
+public import ToClean.Air.FixedRows
+public import ToClean.Air.ChannelClosure
+public import Mathlib.Data.Nat.Log
 
 /-! # Verifier-fixed Program instructions with prover-owned counts
 
@@ -17,6 +19,8 @@ no instructions; the existing loader validity predicate proves that this case is
 for every admitted image. The native and local assemblies install this component directly; counted fetches are
 authenticated through its fixed prefix and the complete Program channel balance.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FixedProgramProvider.Preprocessed
 

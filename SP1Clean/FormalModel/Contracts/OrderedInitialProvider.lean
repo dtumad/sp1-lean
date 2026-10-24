@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 
 /-! # Authenticated initial records with ordered address keys
 
 The payload remains private to the chosen register or RAM provider. Both expose the same public
 contract on their control link and Memory record, allowing one uniqueness theorem for a mixed table.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedInitialProvider
 

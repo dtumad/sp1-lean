@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Soundness.TimeExtraction
-import SP1Clean.Soundness.TypedState
-import SP1Clean.Native.Readers.MemoryAccess
+module
+
+public import SP1Clean.Soundness.FinishedChannels
+public import SP1Clean.Soundness.TimeExtraction
+public import SP1Clean.Soundness.TypedState
+public import SP1Clean.Native.Readers.MemoryAccess
 
 /-! # Row-local clock facts from the actual chip interactions
 
@@ -9,6 +11,8 @@ This module connects the generic no-wraparound arithmetic in `TimeExtraction` to
 rows.  The contract is intentionally chip-level: it assumes the Byte-channel guarantees on the
 chip's actual flattened operations and concludes the exact time step denoted by its State edge.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

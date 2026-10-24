@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.AddwChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.AddwChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.AddwChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -7,6 +9,8 @@ Addw on the witgen bridge (see `AddChip/Witgen.lean` for the programme note). Th
 with **two** witnessed payloads rather than one: the W-result's two low limbs (`valueIR`) and its
 sign bit (`msbIR`). Both read the same two operand words, so both discharge from the same input
 agreement. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwChip
 

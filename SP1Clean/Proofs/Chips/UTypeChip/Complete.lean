@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.UTypeChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.UTypeChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.UTypeChip` — from trace events to a valid AIR table (the J-type template)
 
@@ -30,6 +32,8 @@ Two things are genuinely new here, and both are about the immediate.
 The opcode routing, destination form, `is_auipc` split, and decode relation are all properties of
 the UType-specific event boundary and builder, rather than residual table assumptions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.UTypeChip
 

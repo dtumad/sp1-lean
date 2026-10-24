@@ -1,10 +1,14 @@
-import SP1Clean.FormalModel.Contracts.ClockOrder
+module
+
+public import SP1Clean.FormalModel.Contracts.ClockOrder
 
 /-! # Clock comparisons from natural event times
 
 Splitting bounded natural clocks into high/low limbs supplies the complete semantic comparison
 contract. Queue handlers share this construction; no comparison columns are supplied by callers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ClockOrder
 

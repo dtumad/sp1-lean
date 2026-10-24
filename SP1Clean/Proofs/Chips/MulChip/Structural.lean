@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.MulChip.Defs
-import SP1Clean.Proofs.CircuitProofStart
+module
+
+public import SP1Clean.Native.Chips.MulChip.Defs
+public import SP1Clean.Proofs.CircuitProofStart
 
 /-! # Structural metadata for the MUL chip
 
 This module isolates the subcircuit-list normalization needed by the public circuit bundle.  It is
 kept out of the semantic proof so changes to witness elaboration do not force Lean to revisit MUL's
 expensive arithmetic completeness theorem while developing channel metadata. -/
+
+@[expose] public section
 
 namespace SP1Clean.MulChip
 

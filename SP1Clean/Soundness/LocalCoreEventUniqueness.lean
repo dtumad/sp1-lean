@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.LocalCoreOrder
+module
+
+public import SP1Clean.Soundness.LocalCoreOrder
 
 /-! # Unique event clocks from the actual local State ledger
 
@@ -6,6 +8,8 @@ Every active ordinary, HALT, and syscall occurrence belongs to the exhaustive St
 strictly advances its clock. Their incoming clocks are therefore distinct. Padding is absent
 from this inventory by the physical decoder, not by an additional execution premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

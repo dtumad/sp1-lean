@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.AIRCompleteness
-import SP1CleanTest.Alignment.Audit.JointNonVacuity
+module
+
+public import SP1Clean.Soundness.AIRCompleteness
+public import SP1CleanTest.Alignment.Audit.JointNonVacuity
 
 /-! # Generated boundary-only non-vacuity
 
@@ -12,6 +14,8 @@ The complete generated-trace hypothesis bundle is satisfied, yielding a native w
 honest zero-step local execution. `ActiveTraceNonVacuity` covers an active JAL event; arbitrary
 mixed-execution completeness remains a separate obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.TraceNonVacuity
 

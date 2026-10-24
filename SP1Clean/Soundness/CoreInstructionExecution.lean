@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.SyscallWiring
+module
+
+public import SP1Clean.Soundness.SyscallWiring
 
 /-! # Ordinary replay guards from committed decoding
 
@@ -6,6 +8,8 @@ An instruction-chip Program row is a supported official Sail decode. It therefor
 outside the reserved HALT address and cannot decode ECALL. These state-local facts discharge the
 ordinary replay guard without assuming an execution step or inspecting instruction cases.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

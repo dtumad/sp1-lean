@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.LoadDoubleChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ LD on the witgen bridge (see `LoadWordChip/Witgen.lean` for the memory-family pr
 simplest row of the family: no sub-word selection and no sign bit, so the only witnessed cells are
 the four the composed `AddressOperation` produces, and the offset bits it is passed are all literal
 zero (LD is 8-byte aligned). -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadDoubleChip
 

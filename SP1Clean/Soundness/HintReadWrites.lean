@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HintReadCoverage
-import SP1Clean.Model.Core.HintQueueWordRecords
+module
+
+public import SP1Clean.Soundness.HintReadCoverage
+public import SP1Clean.Model.Core.HintQueueWordRecords
 
 /-! # Exact physical word writes from authenticated hint coverage
 
@@ -8,6 +10,8 @@ consumer. The last cursor retains its final written address, so its vertex invar
 clipped index. The public inventory states complete address/value agreement without exposing
 the internal nonfinal/final split. Word bindings and per-call table balance remain explicit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HintReadWrites
 

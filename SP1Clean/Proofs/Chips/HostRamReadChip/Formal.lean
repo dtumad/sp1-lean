@@ -1,10 +1,14 @@
-import SP1Clean.Native.Chips.HostRamReadChip.Defs
+module
+
+public import SP1Clean.Native.Chips.HostRamReadChip.Defs
 
 /-! # Soundness and completeness of host reads
 
 The subcircuit establishes the physical RAM access. Whole-word equality rules out writes,
 and the read channel supplies exactly one consumer.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamReadChip
 

@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Math.Word
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.IntervalCases
 
 /-! # `SubwOperation` — the arithmetic core (`RawSpec` + the sign-extension keystones)
 
@@ -9,6 +11,8 @@ The borrow-form carry-bool + low-limb-range `RawSpec` (two-limb subtract chain, 
 complement `65535 - b[i]`), the forward `subwSemantics_of_carries`, and the converse
 `carries_of_subwSemantics` — the borrow-form analog of `AddwOperation`. Mirrors
 `sp1/crates/core/machine/src/operations/subw.rs`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwOperation
 

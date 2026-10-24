@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.DivRemChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.DivRemChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # DivRem trace construction
 
@@ -13,6 +15,8 @@ Padding uses SP1's "0 divided by 1" DIVU template: zero supplied selectors, a di
 one, and zero activity. The table theorems cover both real events and this padding, including
 the ungated arithmetic constraints and channel guarantees. No external hint supplies selectors.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

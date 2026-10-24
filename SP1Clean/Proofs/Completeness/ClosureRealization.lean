@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.Closure
-import SP1Clean.Soundness.EnsembleChannels
+module
+
+public import SP1Clean.Proofs.Completeness.Closure
+public import SP1Clean.Soundness.EnsembleChannels
 
 /-! # Realizing preprocessed-provider demand
 
@@ -13,6 +15,8 @@ supply a key claiming `3 AND 3 = 5`. `CountsFit` bounds centered recovery of fie
 These local contracts support Byte/Program cancellation. State, Memory, Exit, host calls and
 program-commitment authentication remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

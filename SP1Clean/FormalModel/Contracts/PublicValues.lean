@@ -1,5 +1,7 @@
-import Clean.Utils.Tactics.ProvableStructDeriving
-import ToClean.Circuit.StructEvalLemmas
+module
+
+public import Clean.Utils.Tactics.ProvableStructDeriving
+public import ToClean.Circuit.StructEvalLemmas
 
 /-! # Public values on the formal-model audit surface
 
@@ -20,6 +22,8 @@ is the boot-to-halt shard-composition theorem — the reserved `sp1_execution_so
 (`docs/roadmap.md`, after the exact-AIR bundle closes).  They are deliberately declared now so
 the cross-shard statement shape is fixed and auditable before that proof exists; a reference
 census will find them unreferenced in-tree, which is this design choice, not dead code. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

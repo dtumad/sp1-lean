@@ -1,29 +1,31 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Proofs.Chips.AddChip.Formal
-import SP1Clean.Proofs.Chips.AddiChip.Formal
-import SP1Clean.Proofs.Chips.AddwChip.Formal
-import SP1Clean.Proofs.Chips.SubChip.Formal
-import SP1Clean.Proofs.Chips.SubwChip.Formal
-import SP1Clean.Proofs.Chips.BitwiseChip.Formal
-import SP1Clean.Proofs.Chips.LtChip.Formal
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
-import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
-import SP1Clean.Proofs.Chips.JalChip.Formal
-import SP1Clean.Proofs.Chips.JalrChip.Formal
-import SP1Clean.Proofs.Chips.BranchChip.Formal
-import SP1Clean.Proofs.Chips.UTypeChip.Formal
-import SP1Clean.Proofs.Chips.LoadByteChip.Formal
-import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
-import SP1Clean.Proofs.Chips.LoadWordChip.Formal
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
-import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
-import SP1Clean.Proofs.Chips.StoreByteChip.Formal
-import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
-import SP1Clean.Proofs.Chips.StoreWordChip.Formal
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
-import SP1Clean.Proofs.Chips.MulChip.Formal
-import SP1Clean.Proofs.Chips.DivRemChip.Complete
-import SP1Clean.Proofs.Chips.AluX0Chip.Formal
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Proofs.Chips.AddChip.Formal
+public import SP1Clean.Proofs.Chips.AddiChip.Formal
+public import SP1Clean.Proofs.Chips.AddwChip.Formal
+public import SP1Clean.Proofs.Chips.SubChip.Formal
+public import SP1Clean.Proofs.Chips.SubwChip.Formal
+public import SP1Clean.Proofs.Chips.BitwiseChip.Formal
+public import SP1Clean.Proofs.Chips.LtChip.Formal
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
+public import SP1Clean.Proofs.Chips.JalChip.Formal
+public import SP1Clean.Proofs.Chips.JalrChip.Formal
+public import SP1Clean.Proofs.Chips.BranchChip.Formal
+public import SP1Clean.Proofs.Chips.UTypeChip.Formal
+public import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
+public import SP1Clean.Proofs.Chips.LoadWordChip.Formal
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
+public import SP1Clean.Proofs.Chips.StoreByteChip.Formal
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
+public import SP1Clean.Proofs.Chips.StoreWordChip.Formal
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
+public import SP1Clean.Proofs.Chips.MulChip.Formal
+public import SP1Clean.Proofs.Chips.DivRemChip.Complete
+public import SP1Clean.Proofs.Chips.AluX0Chip.Formal
 
 /-! # Instruction-local Rust export
 
@@ -31,6 +33,8 @@ Export production instruction components through Clean's built-in lowering and R
 Each surrounding singleton has no providers: its channels remain open, so it is a row-level
 comparison fixture, not an executable SP1 ensemble or a proof of global balance.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.InstructionExport
 

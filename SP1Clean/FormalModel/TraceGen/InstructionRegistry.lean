@@ -1,5 +1,7 @@
-import SP1Clean.Model.InstructionChipId
-import SP1Clean.FormalModel.TraceGen.Events
+module
+
+public import SP1Clean.Model.InstructionChipId
+public import SP1Clean.FormalModel.TraceGen.Events
 
 /-! # Semantic events indexed by the native instruction registry
 
@@ -7,6 +9,8 @@ Each instruction identity selects its field-free event type and semantic validit
 The chronological compiler and physical table assembly share these families. They do not depend
 on table construction, witness capacity or extracted Rust columns.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InstructionChipId
 

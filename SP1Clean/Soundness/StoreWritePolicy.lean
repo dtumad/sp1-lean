@@ -1,9 +1,11 @@
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Soundness.RomWriteProtection
-import SP1Clean.Alignment.Chips.StoreByteChip.Bridge
-import SP1Clean.Alignment.Chips.StoreHalfChip.Bridge
-import SP1Clean.Alignment.Chips.StoreWordChip.Bridge
-import SP1Clean.Alignment.Chips.StoreDoubleChip.Bridge
+module
+
+public import SP1Clean.Model.Core.InstructionWrite
+public import SP1Clean.Soundness.RomWriteProtection
+public import SP1Clean.Alignment.Chips.StoreByteChip.Bridge
+public import SP1Clean.Alignment.Chips.StoreHalfChip.Bridge
+public import SP1Clean.Alignment.Chips.StoreWordChip.Bridge
+public import SP1Clean.Alignment.Chips.StoreDoubleChip.Bridge
 
 /-! # Store permissions at the decoded Sail operands
 
@@ -12,6 +14,8 @@ that interval with the independently computed instruction footprint, using the c
 live base-register observation and address arithmetic. No target-memory difference is inspected,
 so a same-value write cannot disappear from the permission obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.Target
 

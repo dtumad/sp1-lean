@@ -1,6 +1,8 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.Semantics.GuestProgram
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.Semantics.GuestProgram
 
 /-! # Official Sail fetch, dispatch, and retirement reduction
 
@@ -17,6 +19,8 @@ state-tracking `.run s` toolkit already proven in `Model/SailWrap.lean` (`run_re
 concrete-decode walk technique in `Model/SailDecode.lean`.
 
 This file is built bottom-up, one verified stage lemma at a time. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.TryStepReduction

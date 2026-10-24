@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostQueueCallProjection
-import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Soundness.HaltGrounding
+module
+
+public import SP1Clean.Soundness.HostQueueCallProjection
+public import SP1Clean.Soundness.CoreExecutionEvents
+public import SP1Clean.Soundness.HaltGrounding
 
 /-! # Host queue contents at an actual CPU prefix
 
@@ -9,6 +11,8 @@ Strict CPU and queue order then identify their prefixes. Successful paired repla
 prefix determines the current host hints; the queue history supplies the matching frontier.
 Replay success remains the induction hypothesis, not an assumed success of the current call.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostQueueCPUReplay
 

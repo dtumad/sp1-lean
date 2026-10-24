@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate
 
 /-! # `DivRemChip` — the witness-IR calculus (A7a)
 
@@ -8,6 +10,8 @@ magnitude (`bvAbs`), signed division/remainder in `BitVec.toNat_sdiv/srem`'s exa
 shape, and the width-32 embedded family (values `< 2^32` inside the u64 sort, with explicit
 `% 2^32` wraps). Each builder carries one `toNat` lemma against its `BitVec` twin. Deliberately
 **not** `@[circuit_norm]`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

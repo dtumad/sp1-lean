@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.AddiChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.AddiChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.AddiChip` — honest witness generation (`ComputableWitnesses`)
 
 Addi on the witgen bridge (see `AddChip/Witgen.lean` for the programme note). Same single witnessed
 value as Add — `AddOperation.populateIR` over the operand words — but read through the I-type
 reader, so `op_b_val` is the register read and `op_c_val` is the immediate. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddiChip
 

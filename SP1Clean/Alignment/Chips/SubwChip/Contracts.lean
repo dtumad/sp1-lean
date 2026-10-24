@@ -1,11 +1,15 @@
-import SP1Clean.Alignment.Chips.SubwChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.SubwChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Subw — circuit-grounding contracts
 
 Structural facts crossing the completed SUBW circuit boundary: adapter passthrough and the physical
 non-`x0` routing assertion.  Arithmetic meaning remains in `SubwChip.Spec`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

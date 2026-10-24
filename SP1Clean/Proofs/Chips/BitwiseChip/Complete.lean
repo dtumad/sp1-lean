@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.BitwiseChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.BitwiseChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # Bitwise trace construction
 
@@ -8,6 +10,8 @@ Each event supplies its three selectors as circuit inputs. Their sum is activity
 SP1's physical row. Register and immediate operands use the same ALU adapter contract.
 Padding supplies zero operands and selectors; the ordinary table builder needs no hints.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

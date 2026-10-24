@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Operations.HintNodeAllocate
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Proofs.Operations.HintNodeAllocate
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Air.ChannelClosure
 
 /-! # Allocation uses only the existing Byte ledger
 
@@ -8,6 +10,8 @@ All queue-clock, HostCall, and node-publication interactions belong to the enclo
 This checked arithmetic operation contributes only the address adder's three range requests.
 Its local contract follows from raw constraints and the enclosing ensemble's Byte guarantees.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

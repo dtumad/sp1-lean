@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.SnapshotRamProvider
-import Clean.Circuit.StructuralLemmas
+module
+
+public import SP1Clean.Proofs.Chips.SnapshotRamProvider
+public import Clean.Circuit.StructuralLemmas
 
 /-! # Boot specialization of the snapshot RAM provider
 
 The circuit and constructor are shared with arbitrary local snapshots. Only the semantic contract
 is specialized here, using the proved realization of the native image's initial Sail state.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialRamProvider
 

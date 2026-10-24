@@ -1,14 +1,18 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.AddwChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.AddwChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for ADDW (+ `ChipKind` registration)
 
 `correct_addw_native` proves the RISC-V Sail `ADDW` execution agrees with the SP1 chip emulation
 given the chip's semantic fact `a_val = sext32→64 (op_b + op_c)` and the register/PC reads.
 `addw_pure_eq` relates the Sail pure part to `signExtend 64 (setWidth 32 (b + c))`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.AddwSail

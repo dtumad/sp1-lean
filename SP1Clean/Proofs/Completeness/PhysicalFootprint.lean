@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Completeness.Assembly
-import ToClean.Air.Footprint
-import SP1Clean.Model.Core.ResourceLimits
+module
+
+public import SP1Clean.Proofs.Completeness.Assembly
+public import ToClean.Air.Footprint
+public import SP1Clean.Model.Core.ResourceLimits
 
 /-! # Exact construction costs of the retained native compiler
 
@@ -10,6 +12,8 @@ constructor. Actual circuit interaction widths then give an exact cost for every
 equivalence replaces hand-picked channel counts, without promoting a sufficient estimate to an
 acceptance condition. The mixed A4/A5/A6 construction must supply its own full inventory.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.SupportedCoreTraceWitness
 open Air.Flat TraceGen Model.Core

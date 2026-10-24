@@ -1,8 +1,10 @@
-import SP1Clean.Model.Core.HintQueue
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Math.Address
-import ToClean.Circuit.StaticTable
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.Core.HintQueue
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Math.Address
+public import ToClean.Circuit.StaticTable
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Field records for immutable hint nodes
 
@@ -12,6 +14,8 @@ matching HINT_LEN's return convention. A record's local bounds do not authentica
 the complete source hint list, independently of witness data, and fails closed on oversized
 node inventories. New allocations require a separate authenticated provider.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.HintQueue
 

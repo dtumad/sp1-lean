@@ -1,13 +1,15 @@
-import SP1Clean.Semantics.Specs.Chips.Mul
-import SP1Clean.Circuits.Gadgets.Mul
-import ToClean.Circuit.WitnessCombinator
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
+module
+
+public import SP1Clean.Semantics.Specs.Chips.Mul
+public import SP1Clean.Circuits.Gadgets.Mul
+public import ToClean.Circuit.WitnessCombinator
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
 
 /-! # The `Mul` chip row as a `GeneralFormalCircuit`
 
@@ -19,6 +21,8 @@ gated by the flag-sum `is_real = is_mul + … + is_mulw` (`alu/mul/mod.rs:234`).
 The chip's own `AssertSpec` tail is the five variant-flag booleans, their sum-bound, and `op_a_0 = 0`;
 `InteractSpec` is `True` — all byte-range pulls live inside `MulOperation`. Carries `Fact (2^24 < p)`
 (the `MulOperation` column-sum bound). Soundness and completeness are proven. -/
+
+@[expose] public section
 
 namespace SP1Clean.MulChip
 

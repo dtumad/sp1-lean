@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
-import ToMathlib.BitVec
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
+public import ToMathlib.BitVec
 
 /-! # Native Sail bridge for the `ShiftRight` chip (SRL/SRA/SRLW/SRAW) + `ChipKind`
 
@@ -17,6 +19,8 @@ result register `rd`); the RISC-V Sail spec differs by variant — `spec_srl` (`
 **register read-backs** `adapter.op_b_memory.prev_value` (rs1) / `adapter.op_c_memory.prev_value`
 (rs2) — SP1's shift chip inlines the register-read decomposition — so `h_rs1`/`h_rs2` read those
 adapter columns. `advance` is the four-way flag-dispatched transition. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.ShiftRightSail

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.SystemMemoryRows
-import SP1Clean.Soundness.SystemTouches
+module
+
+public import SP1Clean.Soundness.SystemMemoryRows
+public import SP1Clean.Soundness.SystemTouches
 
 /-! # HALT step and frame facts
 
@@ -7,6 +9,8 @@ HALT parks the PC and preserves every register and RAM cell. Its three Memory pu
 the incoming register values at the constrained access clocks. This proof works over any trajectory
 with that successor and does not execute ECALL through Sail or assume global Memory truth.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

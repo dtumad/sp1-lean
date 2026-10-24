@@ -1,15 +1,19 @@
-import SP1CleanTest.Alignment.Audit.BranchCompilerRoundTrip
-import SP1CleanTest.Alignment.Support.InstalledAssembly
-import ToClean.Air.EnsembleBuild
-import ToClean.Air.FiniteLookup
-import ToClean.Air.ChannelRegistry
-import SP1CleanTest.Core.StaticMembership
+module
+
+public import SP1CleanTest.Alignment.Audit.BranchCompilerRoundTrip
+public import SP1CleanTest.Alignment.Support.InstalledAssembly
+public import ToClean.Air.EnsembleBuild
+public import ToClean.Air.FiniteLookup
+public import ToClean.Air.ChannelRegistry
+public import SP1CleanTest.Core.StaticMembership
 
 /-! # Compiler-derived branch witness for the complete local host assembly
 
 The only instruction input is extracted from `BranchCompilerRoundTrip.compiled`.
 Boundary records and preprocessing rows are derived from its actual physical interactions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.BranchEnsemble
 

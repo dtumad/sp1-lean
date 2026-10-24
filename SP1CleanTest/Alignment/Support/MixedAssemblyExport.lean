@@ -1,13 +1,17 @@
-import SP1CleanTest.Alignment.Support.InstalledAssemblyReference
-import SP1CleanTest.Alignment.Support.OrdinaryAssemblyFixture
-import SP1CleanTest.Alignment.Support.HintProgramFixture
-import SP1CleanTest.Alignment.Support.EnterAssemblyFixture
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyReference
+public import SP1CleanTest.Alignment.Support.OrdinaryAssemblyFixture
+public import SP1CleanTest.Alignment.Support.HintProgramFixture
+public import SP1CleanTest.Alignment.Support.EnterAssemblyFixture
 
 /-! # Finite mixed-program export instances
 
 Ordinary local cuts, repeated queue observations and constrained ENTER replay use the same
 installed inventory and native reference format. Rust independently executes their programs.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.MixedAssemblyExport
 

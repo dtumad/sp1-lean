@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Completeness.ProviderWitgen
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Proofs.Completeness.ProviderWitgen
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Soundness.SP1Ensemble
+public import ToClean.Air.TableBuild
 
 /-! # From provider occurrences to valid AIR tables
 
@@ -57,6 +59,8 @@ Memory init/finalize deliberately expose only a `Bool` selector. Their circuits 
 `m * (m - 1) = 0` gate needed by the field-to-integer memory-balance proof, while the builders now
 reach both the active (`1`) and padding (`0`) branches.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Shard
-import SP1Clean.FormalModel.Contracts.ResourceBoundary
+module
+
+public import SP1Clean.FormalModel.Shard
+public import SP1Clean.FormalModel.Contracts.ResourceBoundary
 
 /-! # Numeric monotonicity and composition of the fixed shard resource domain
 
 These laws reuse the complete path and its resource observer. Append requires an explicit
 combined numeric budget: two individually legal shards need not fit one shard's work ceiling.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FormalModel.Shard
 open Model.Core Machine

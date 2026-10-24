@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.AddressRange
+module
+
+public import SP1Clean.Model.Core.AddressRange
 
 /-! # The native SP1 range instance
 
@@ -6,6 +8,8 @@ These bounds match the pinned SP1 platform and current native encodings. The Sai
 contains bytes below the guest window too; guest access permission and memory-map presence are
 different notions. Changing this instance requires new Sail/encoding agreement, not only new data.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.NativeLayout
 

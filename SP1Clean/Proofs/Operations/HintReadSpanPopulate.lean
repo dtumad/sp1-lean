@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.HintReadSpan
-import SP1Clean.Model.Core.HintQueueWords
+module
+
+public import SP1Clean.Proofs.Operations.HintReadSpan
+public import SP1Clean.Model.Core.HintQueueWords
 
 /-! # Semantic construction of complete padded span endpoints
 
@@ -7,6 +9,8 @@ The constructor preserves its input address and length words. An aligned permitt
 supplies its entire completeness domain; the final padding word is counted for every length.
 These endpoints still need a balance-derived consumer walk to authenticate actual row coverage.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadSpan
 

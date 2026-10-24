@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.Truth
-import SP1Clean.Model.Semantics.EventTime
+module
+
+public import SP1Clean.Model.Semantics.Truth
+public import SP1Clean.Model.Semantics.EventTime
 
 /-! # Shard-local truth against the event transcript
 
@@ -19,6 +21,8 @@ reaches the state; the event form additionally pins which transcript did it. Tha
 stronger statement, which is the right direction — the grounding engine consumes truth, so a
 stronger hypothesis is free, and the converse would be a claim that the transcript is the only
 route, which nothing needs and nothing proves. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.LoadWordChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.LoadWordChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for LoadWord (LW / LWU)
 
@@ -17,6 +19,8 @@ the read to the written word. The width-4 analogue of `correct_load_double_nativ
 `lw_chip_reaches_sail` then discharges the `extend_value` equation from the `LoadWordChip` columns: the
 selected 32-bit half `selected_word` and its high bit `msb` extend (sign for `LW`, zero for `LWU`) to the
 written word `#v[selected_word[0], selected_word[1], 65535·msb, 65535·msb]`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.LoadWordSail

@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Native.Operations.HintQueueSource
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
+public import SP1Clean.Native.Operations.HintQueueSource
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Air.ChannelClosure
 
 /-! # HINT_LEN and source nodes on the physical Clean ledger
 
@@ -10,6 +12,8 @@ consumes one node precisely in the nonempty case. The fixed source provider auth
 node from raw lookup constraints. Head chronology and authorization of later allocations remain
 responsibilities of the enclosing assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

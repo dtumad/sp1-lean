@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Circuits.Types.JTypeReader
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Circuits.Types.JTypeReader
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `JTypeReader` reader — the J-type register-adapter per-row checks as a Clean `GeneralFormalCircuit`
 
@@ -27,6 +29,8 @@ The genuine per-row constraints are the single `RegisterAccessCols` timestamp ch
 two selector gates emitted upstream for `is_real`/`is_trusted`. In particular, there is no standalone
 `op_a_0` boolean assertion: upstream derives that fact from the Program row on trusted rows.
 The `.program`/`.memory` interactions' meaning is the trace-level multiset balance. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.JTypeReader
 

@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Model.Core.NativeLayout
+module
+
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.Model.Core.NativeLayout
 
 /-! # RAM-specific finalization
 
@@ -7,6 +9,8 @@ The RAM finalizer checks the native guest window. Its contract retains this dist
 through the ordering and receipt wrappers, so an authenticated target byte read denotes a
 RAM observation in the existing complete snapshot. Values and clocks remain global facts.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryBoundary
 

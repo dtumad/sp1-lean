@@ -1,6 +1,8 @@
-import ToClean.Air.Realizes
-import SP1Clean.FormalModel.ShardMachine
-import SP1Clean.Soundness.Shard.Contract
+module
+
+public import ToClean.Air.Realizes
+public import SP1Clean.FormalModel.ShardMachine
+public import SP1Clean.Soundness.Shard.Contract
 
 /-! # The shard targets as a machine realization
 
@@ -12,6 +14,8 @@ nothing is proved twice and no second
 carrier is introduced: the machine is PolyFun's `Labeled` bundle of the existing `executionSystem`.
 Both targets remain unfilled; this file fixes their generic shape.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.Shard
 

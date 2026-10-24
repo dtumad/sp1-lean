@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Semantics.SailFetch
+module
+
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Model.Semantics.SailFetch
 
 /-! # The native platform fixes four-byte instruction alignment
 
@@ -7,6 +9,8 @@ The generated Sail model supports C/Zca. Finite source validation must therefore
 source with `misa.C = 1`, even when all committed instructions are full-width and `misa.M = 1`.
 This platform condition applies to empty/stopped boundaries as well as active segments.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.NativePlatform
 

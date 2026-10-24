@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.ProgramProviderChip
-import SP1Clean.Proofs.Chips.MemoryProviderChip
-import SP1Clean.Proofs.Chips.MemoryFinalizeChip
-import Clean.Air.OrderedChannel
+module
+
+public import SP1Clean.Proofs.Chips.ProgramProviderChip
+public import SP1Clean.Proofs.Chips.MemoryProviderChip
+public import SP1Clean.Proofs.Chips.MemoryFinalizeChip
+public import Clean.Air.OrderedChannel
 
 /-! # Provider composition through Clean's ordered channels
 
@@ -10,6 +12,8 @@ can consume the finished Memory channel. These small constructions exercise the 
 `SoundEnsemble` interface, including distinct canonical table names. Whole-machine grounding is
 proved by the library's complete ensemble; these examples supply no additional execution premise.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.ProviderEnsemble
 open Circuit Air.Flat SP1Clean SP1Clean.Channels

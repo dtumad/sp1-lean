@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostQueueCallProjection
-import SP1Clean.Soundness.HostHintReadBanks
-import ToClean.Air.UnitBalance
+module
+
+public import SP1Clean.Soundness.HostQueueCallProjection
+public import SP1Clean.Soundness.HostHintReadBanks
+public import ToClean.Air.UnitBalance
 
 /-! # Terminal receipts in the installed host ledger
 
@@ -8,6 +10,8 @@ The canonical ledger authenticates the optional outgoing exit. Only the HALT rec
 produces a receipt; its full call remains tied to the instruction inventory by HostCall balance.
 Disabled endpoint pulls remain in the original interaction-count bound.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostTerminalLedger
 

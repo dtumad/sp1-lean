@@ -1,7 +1,9 @@
-import SP1Clean.Model.Core.MemorySnapshot
-import SP1Clean.FormalModel.Contracts.InitialMemoryRead
-import SP1Clean.FormalModel.Contracts.FinalRam
-import SP1Clean.Model.FinalMemoryValue
+module
+
+public import SP1Clean.Model.Core.MemorySnapshot
+public import SP1Clean.FormalModel.Contracts.InitialMemoryRead
+public import SP1Clean.FormalModel.Contracts.FinalRam
+public import SP1Clean.Model.FinalMemoryValue
 
 /-! # Complete outgoing RAM values
 
@@ -9,6 +11,8 @@ The checker authenticates eight target bytes at the record's encoded address. Th
 RAM finalizer owns alignment and the RAM address domain; its full-record handoff retains those
 facts. This operation neither consumes the Memory bus nor invents a second final inventory.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRamValue
 

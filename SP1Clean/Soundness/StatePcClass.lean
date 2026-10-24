@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.TypedTime
-import SP1Clean.Soundness.RowSoundness
+module
+
+public import SP1Clean.Soundness.TypedTime
+public import SP1Clean.Soundness.RowSoundness
 
 /-! # Per-row pc-limb classification of decoded State edges
 
@@ -15,6 +17,8 @@ The registry-wide theorem `witness_realDecodedRows_pcClass` derives this classif
 active canonically decoded row from physical constraints and channel balance alone — no chip
 `Assumptions`, Memory currency, or grounding position is involved, so it is available to the W3
 StateBump goodness-filter pass before the timed walk is constructed. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Completeness.Providers
+module
+
+public import SP1Clean.Proofs.Completeness.Providers
 
 /-! # The interaction ledger: from a signed row ledger to channel balance
 
@@ -46,6 +48,8 @@ The four whole-machine channel closures (the State telescope, the per-address me
 byte/program per-occurrence matchings) are the *consumers* of this bridge and belong to the shard
 assembly (W5). What this module fixes is the shape they have to produce: a permutation between
 pushed and pulled message lists, per channel, plus a count bound. -/
+
+@[expose] public section
 
 namespace SP1Clean.Ledger
 

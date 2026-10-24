@@ -1,7 +1,9 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
-import Clean.Utils.Tactics
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
+public import Clean.Utils.Tactics
 
 /-! # `SyscallInstrs` soundness and completeness
 
@@ -13,6 +15,8 @@ because SP1's bound is one: the `U16CompareOperation` decides whether `a0`'s lim
 below `0x7F00`, and when it is not, the two conditionals force limb 1 to *equal* the bound and
 limb 0 to vanish. Both branches keep the word's reduction under KoalaBear's modulus, which is what
 makes the committed exit code decode back to `a0`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

@@ -1,9 +1,11 @@
-import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.SP1Field
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Proofs.Sail.InstructionDecode
+module
+
+public import SP1Clean.FormalModel.ShardPreservation
+public import SP1Clean.Model.Core.ExecutionResources
+public import SP1Clean.Model.Core.HostSnapshot
+public import SP1Clean.Model.SP1Field
+public import SP1Clean.Model.Semantics.SailControlExecute
+public import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # ROM and fetch on mixed semantic paths
 
@@ -13,6 +15,8 @@ ROM, including the held endpoint; every executed position has an official Sail f
 fixtures construct semantic steps without circuit rows. Native evaluation checks finite input
 and host-interpreter data, never dense Sail memory or ordinary execution.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ExecutionRom
 open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target SP1Clean.Machine

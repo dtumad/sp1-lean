@@ -1,11 +1,15 @@
-import SP1Clean.Model.Core.MemoryEquality
-import Mathlib.Data.Finset.Card
+module
+
+public import SP1Clean.Model.Core.MemoryEquality
+public import Mathlib.Data.Finset.Card
 
 /-! # Canonical sparse boundary size
 
 Only live nonzero bytes in the represented address domain contribute. Duplicate writes,
 shadowed values, explicit zeros and out-of-domain history do not increase the count.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.ByteMemory
 

@@ -1,14 +1,18 @@
-import SP1Clean.FormalModel.Contracts.FinalRamValue
-import SP1Clean.Native.Operations.InitialMemoryRead
-import Clean.Gadgets.Equality
-import SP1Clean.Math.WordEquality
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.FormalModel.Contracts.FinalRamValue
+public import SP1Clean.Native.Operations.InitialMemoryRead
+public import Clean.Gadgets.Equality
+public import SP1Clean.Math.WordEquality
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # Target RAM authentication through the shared byte-read circuit
 
 All eight target bytes are checked, including unchanged bytes in a partially written word.
 The fixed target table has a distinct export name from the incoming memory table.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRamValue
 

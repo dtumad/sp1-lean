@@ -1,4 +1,6 @@
-import SP1CleanTest.TraceGenTests.Conformance
+module
+
+public import SP1CleanTest.TraceGenTests.Conformance
 
 /-! # Event → input-column mirrors for the trace-generation conformance layer.
 
@@ -31,6 +33,8 @@ Flattening order matches the `ProvableStruct` derivations field-for-field (`Form
 `Inputs` = `is_real ++ state ++ adapter`; `Circuits/Types/CPUState.lean`; `Circuits/Types/RTypeReader.lean`;
 `Circuits/Types/ALUTypeReader.lean`), which in turn mirror SP1's `repr(C)` column structs. Everything is
 computable and axiom-clean. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGenTests
 

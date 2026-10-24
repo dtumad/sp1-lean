@@ -1,9 +1,11 @@
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The in-circuit Memory-boundary finalizer (pull side of SP1's memory init/finalize chips)
 
@@ -22,6 +24,8 @@ A pull *receives* the channel guarantee (`MemoryMsg.isU64`) and owes nothing, so
 `channelsWithRequirements = []` and the local `Spec` is `True` — the finalize row's meaning (its key
 really is the last access of its address chain) is a bus-balance fact established at the capstone
 (`Soundness/ProviderBindings.lean`), not a per-row constraint. -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryFinalizeChip
 

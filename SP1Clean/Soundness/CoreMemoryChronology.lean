@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.CoreTouches
+module
+
+public import SP1Clean.Soundness.CoreTouches
 
 /-! # Shared Memory clock bounds and physical refresh chronology
 
@@ -6,6 +8,8 @@ Natural-time ranking, both 24-bit record bounds, and the MemoryBump comparison a
 of source values and initialization policy. Assemblies obtain consumed-record bounds from their
 own source/push/refresh balance before applying the physical refresh comparison.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

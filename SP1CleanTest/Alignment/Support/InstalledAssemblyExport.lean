@@ -1,7 +1,9 @@
-import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
-import SP1CleanTest.Alignment.Support.ProviderGeneration
-import SP1CleanTest.Core.ProgramExport
-import SP1CleanTest.Core.WritePermissionExport
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
+public import SP1CleanTest.Alignment.Support.ProviderGeneration
+public import SP1CleanTest.Core.ProgramExport
+public import SP1CleanTest.Core.WritePermissionExport
 
 /-! # Export fixture for the complete installed native assembly
 
@@ -12,6 +14,8 @@ use Clean's named hint tables, so the same exported program also runs on mutated
 This finite comparison fixture does not claim general generation completeness or lowering
 correctness; its production components retain their native semantic proofs.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssemblyExport
 

@@ -1,8 +1,12 @@
-import ToClean.Gadgets.LookupProjection
-import SP1CleanTest.Alignment.Support.InstalledAssembly
-import ToClean.Air.EnsembleCheck
+module
+
+public import ToClean.Gadgets.LookupProjection
+public import SP1CleanTest.Alignment.Support.InstalledAssembly
+public import ToClean.Air.EnsembleCheck
 
 /-! # Lookup-free complete installed assembly -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 

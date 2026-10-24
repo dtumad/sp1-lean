@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.ProtectedStorePermissions
-import SP1Clean.Soundness.ProtectedLocalCoreProjection
-import SP1Clean.Soundness.LocalCoreChannels
+module
+
+public import SP1Clean.Soundness.ProtectedStorePermissions
+public import SP1Clean.Soundness.ProtectedLocalCoreProjection
+public import SP1Clean.Soundness.LocalCoreChannels
 
 /-! # Authenticated byte permissions in the complete protected local AIR
 
@@ -9,6 +11,8 @@ the four store wrappers emit gated pulls; source, final, instruction and system 
 public verifier, otherwise remain silent. Consequently raw constraints and the ensemble's own count-bounded balance
 authenticate every active permission request, with no separate provider-validity premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 

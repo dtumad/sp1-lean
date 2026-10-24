@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.SailDecode
+module
+
+public import SP1Clean.Model.Core.InstructionDecode
+public import SP1Clean.Model.SailDecode
 
 /-! # Symbolic reduction of the pinned Sail instruction decoder
 
@@ -8,6 +10,8 @@ or monadic scrutinee, keeping untaken continuations opaque. Bit-field guards use
 arithmetic and propositional reasoning; configured CSR reads use the existing Sail lemmas.
 No tactic executes the generated model through the native compiler.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailDecode.Symbolic
 

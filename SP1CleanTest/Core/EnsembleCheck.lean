@@ -1,8 +1,10 @@
-import ToClean.Air.EnsembleCheck
-import ToClean.Air.TableBuild
-import SP1Clean.Model.SP1Field
-import ToClean.Air.PublicVerifier
-import Clean.Utils.Tactics
+module
+
+public import ToClean.Air.EnsembleCheck
+public import ToClean.Air.TableBuild
+public import SP1Clean.Model.SP1Field
+public import ToClean.Air.PublicVerifier
+public import Clean.Utils.Tactics
 
 /-! # Regression checks for finite ensemble acceptance
 
@@ -10,6 +12,8 @@ The same physical witness is checked against the raw statement theorem. Mutation
 fixed membership, public boundary balance, and occurrence counts; disabled interactions still
 consume capacity. These computations use the test library's existing compiler trust boundary.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.EnsembleCheck
 

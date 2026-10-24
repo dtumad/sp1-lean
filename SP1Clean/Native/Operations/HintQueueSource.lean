@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HintQueue
-import ToClean.Air.StaticProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.HintQueue
+public import ToClean.Air.StaticProvider
 
 /-! # Verifier-fixed initial hint nodes
 
@@ -7,6 +9,8 @@ The complete source queue determines the node fields. Only multiplicities are pr
 unused nodes, padding and repeated physical occurrences remain in the authenticated inventory.
 Later allocations require their own providers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintQueue
 

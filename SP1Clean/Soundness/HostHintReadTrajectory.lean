@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostHintReadGrounding
-import SP1Clean.Soundness.CoreExecutionTrajectory
-import SP1Clean.Soundness.HostQueueCurrent
+module
+
+public import SP1Clean.Soundness.HostHintReadGrounding
+public import SP1Clean.Soundness.CoreExecutionTrajectory
+public import SP1Clean.Soundness.HostQueueCurrent
 
 /-! # Hint dispatch on the complete carrier's Sail/host replay
 
@@ -11,6 +13,8 @@ currency. No preceding-replay or running-host premise is supplied to these dispa
 The successor and timed step/frame proofs consume these results in `HostHintReadMemoryEffect`.
 Complete outgoing snapshot agreement remains a whole-shard obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

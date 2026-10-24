@@ -1,8 +1,12 @@
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Formal
-import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Formal
+public import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # The unchanged executable witness of the fixed-byte LoadByte alternative -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteStaticChip
 

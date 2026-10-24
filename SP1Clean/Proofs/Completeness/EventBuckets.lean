@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.TraceGen.InstructionRegistry
+module
+
+public import SP1Clean.FormalModel.TraceGen.InstructionRegistry
 
 /-!
 # Chronological events and registry-indexed table buckets
@@ -14,6 +16,8 @@ second routing table and no proof obligation saying two independently maintained
 agree.  The lemmas below expose the exact membership and length properties needed by the compiler
 and footprint arguments.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

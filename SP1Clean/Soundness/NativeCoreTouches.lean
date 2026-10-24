@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.NativeCoreOrder
-import SP1Clean.Soundness.NativeCoreRowBalance
-import SP1Clean.Soundness.CoreTouches
+module
+
+public import SP1Clean.Soundness.NativeCoreOrder
+public import SP1Clean.Soundness.NativeCoreRowBalance
+public import SP1Clean.Soundness.CoreTouches
 
 /-! # Aligned touches of the authenticated native core
 
@@ -10,6 +12,8 @@ changing its State edge, fetch, or complete Memory multiset. Prior-record timest
 conditional in this local interface; `NativeCoreMemoryOrder` discharges them from Memory balance
 and eliminates the actual refresh rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

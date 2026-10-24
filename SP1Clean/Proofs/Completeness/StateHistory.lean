@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.StateInventory
-import SP1Clean.Proofs.Completeness.ChipLedger
+module
+
+public import SP1Clean.Proofs.Completeness.StateInventory
+public import SP1Clean.Proofs.Completeness.ChipLedger
 
 /-! # State inventory agreement with physical tables
 
@@ -7,6 +9,8 @@ import SP1Clean.Proofs.Completeness.ChipLedger
 agreement with the actual instruction and StateBump rows and derives the complete State-ledger
 hand-off. It does not add a second execution representation or assume channel balance.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

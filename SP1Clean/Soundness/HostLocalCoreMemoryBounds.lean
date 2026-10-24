@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCoreRows
-import SP1Clean.Soundness.LocalCoreTouches
+module
+
+public import SP1Clean.Soundness.HostLocalCoreRows
+public import SP1Clean.Soundness.LocalCoreTouches
 
 /-! # Low-clock bounds from the full host Memory ledger
 
@@ -8,6 +10,8 @@ The wrapper's extra x12 push uses the same CPU clock checks. Auxiliary pushes re
 physical ledger and supply their own local clock bounds. Full record conservation then transfers
 these bounds to predecessors; no instruction-only Memory balance is asserted.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

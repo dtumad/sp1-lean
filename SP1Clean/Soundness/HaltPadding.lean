@@ -1,5 +1,7 @@
-import SP1Clean.Native.Chips.HaltPaddingChip
-import ToClean.Air.ComponentReplacement
+module
+
+public import SP1Clean.Native.Chips.HaltPaddingChip
+public import ToClean.Air.ComponentReplacement
 
 /-! # Installing the padding-only legacy HALT table
 
@@ -7,6 +9,8 @@ The typed slot identifies the legacy HALT component before adding its zero-selec
 Projection retains every physical row, channel and public input. Its complete canonical data
 is unchanged because the wrapper retains the original table name and input layout.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HaltPadding
 

@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.HostCommitBoundary
-import Clean.Gadgets.Bits
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Circuit.VerifierInteractions
+module
+
+public import SP1Clean.FormalModel.Contracts.HostCommitBoundary
+public import Clean.Gadgets.Bits
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Circuit.VerifierInteractions
 
 /-! # Fixed endpoints for a mutable native bank
 
@@ -9,6 +11,8 @@ A zero-witness verifier fixes the supplied source words and public final words. 
 keeps the last ordinary timestamp private, checks its bounds, and preserves all eight words.
 No semantic truth is asserted by the bank channel.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitBoundary
 

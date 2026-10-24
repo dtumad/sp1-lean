@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.HostRamAccess
-import SP1Clean.Proofs.Chips.FinalRamProvider
-import SP1Clean.Native.Readers.MemoryAccess
+module
+
+public import SP1Clean.FormalModel.Contracts.HostRamAccess
+public import SP1Clean.Proofs.Chips.FinalRamProvider
+public import SP1Clean.Native.Readers.MemoryAccess
 
 /-! # A native host RAM access circuit
 
@@ -9,6 +11,8 @@ bounds and the CPU low-clock discipline; the new word is range checked before it
 Each row also publishes the exact call-facing old/new word record. There is no padding gate:
 the later call tables must account for every row through the coordination channel.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamAccessChip
 

@@ -1,16 +1,20 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.UTypeChip.Defs
-import SP1Clean.FormalModel.Contracts.ChipAssumptions
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.UTypeChip.Defs
+public import SP1Clean.FormalModel.Contracts.ChipAssumptions
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.UTypeChip` — soundness / completeness / `circuit`
 
 The chip `Spec` (J-type reader sub-`Spec` + `is_real`/`is_auipc`-binary + `RV64.lui`/`RV64.auipc`
 identities) lives in `FormalModel/Contracts/Chips.lean`; `Assumptions`/`ProverAssumptions` in
 `FormalModel/Contracts/ChipAssumptions.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.UTypeChip
 

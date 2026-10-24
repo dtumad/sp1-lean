@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.FinalMemoryChange
-import ToClean.Air.UnitBalance
+module
+
+public import SP1Clean.FormalModel.Contracts.FinalMemoryChange
+public import ToClean.Air.UnitBalance
 
 /-! # Complete Memory comparison from final-record and change ledgers
 
@@ -9,6 +11,8 @@ semantic location. Count-bounded change-channel balance then covers the verifier
 change inventory. Consequently untouched target changes cannot disappear from the final list.
 The assembly must derive these inventories and local facts from its physical tables.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalMemoryChangeCoverage
 

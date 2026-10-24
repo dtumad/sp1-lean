@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.CommitmentStatement
-import SP1Clean.Model.Semantics.Decode
-import ToClean.Circuit.StaticTable
+module
+
+public import SP1Clean.Model.Core.CommitmentStatement
+public import SP1Clean.Model.Semantics.Decode
+public import ToClean.Circuit.StaticTable
 
 /-! # Immutable commitment declarations
 
@@ -9,6 +11,8 @@ The channel is independent of a particular statement; its sole provider fixes al
 from verifier-owned instance data. Membership authenticates each actual declaration without
 requiring every slot to occur, or inferring occurrence from a flag.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CommitmentDeclaration
 

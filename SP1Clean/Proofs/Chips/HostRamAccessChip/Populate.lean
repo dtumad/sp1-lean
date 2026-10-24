@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
-import SP1Clean.Model.MemoryClock
+module
+
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+public import SP1Clean.Model.MemoryClock
 
 /-! # Constructing the host RAM timestamp witness
 
@@ -7,6 +9,8 @@ The caller supplies the prior Memory record and the event clock. The constructor
 comparison selector and both gap limbs. Its domain consists of bounded words, an aligned guest
 address, a canonical event clock, and strict time order; no timestamp-column equations are assumed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamAccessChip
 

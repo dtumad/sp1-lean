@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostCommitChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+module
+
+public import SP1Clean.Proofs.Chips.HostCommitChip.Formal
+public import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # Native commitment rows implement mutable host slots
 
@@ -7,6 +9,8 @@ Decode the bank carried by the state ledger and compare with the independent hos
 The complete host effect changes only the selected slot; previously committed values may differ
 from the new one. The state and instruction ledgers still need assembly into the mixed machine.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitChip
 

@@ -1,9 +1,11 @@
-import SP1Clean.Math.Word
-import SP1Clean.Math.HWord
-import SP1Clean.Math.Bitwise
-import SP1Clean.Math.ShiftBounds
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Math.HWord
+public import SP1Clean.Math.Bitwise
+public import SP1Clean.Math.ShiftBounds
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Native shift-left arithmetic core
 
@@ -17,6 +19,8 @@ per-declaration ceilings (14 × 4M, 2 × 800k) were ladder-measured against the 
 the costliest declaration (`sll_assembly`) has its floor in `(25k, 50k]`, so the default carries ≥ 4×
 headroom. Do not re-add a ceiling without a measurement — the cost driver here is `nlinarith`, and the
 fix is a `ShiftBounds` lemma applied symbolically, not a bigger budget. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftCore
 

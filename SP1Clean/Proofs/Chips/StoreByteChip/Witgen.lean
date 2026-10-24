@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.StoreByteChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.StoreByteChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.StoreByteChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -9,6 +11,8 @@ row of the family — three offset bits, the old limb and its low byte, the regi
 signed increment and the merged word are all committed input columns — and therefore still a row
 whose *only* witnessed cells are the four the composed `AddressOperation` produces. The two inline
 byte-bus pulls and the nine gates witness nothing. -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreByteChip
 

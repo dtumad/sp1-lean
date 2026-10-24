@@ -1,5 +1,7 @@
-import SP1Clean.Model.Machine.Boot
-import Clean.Circuit.Expression
+module
+
+public import SP1Clean.Model.Machine.Boot
+public import Clean.Circuit.Expression
 
 /-! # Legacy program-data encoding
 
@@ -18,6 +20,8 @@ The reserved keys are:
 entries. `StatementFor` additionally requires a canonical encoding and exact recovery of the
 source program. Keep the codec until generation inputs and fixtures use semantic objects directly;
 its representability predicate `Encodable` remains part of the semantic program domain. -/
+
+@[expose] public section
 
 namespace SP1Clean.Commit
 

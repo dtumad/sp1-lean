@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Circuits.Types.ALUTypeReader
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Circuits.Types.ALUTypeReader
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `ALUTypeReaderImmutable` reader — the ALU register-adapter with op_a a **read**
 
@@ -22,6 +24,8 @@ The op_b/op_c reads and the `imm_c` immediate machinery (op_c gated `is_real - i
 A `GeneralFormalCircuit` (output `unit`) over the chip-owned `cols` adapter block, pulling/pushing the
 Program + Memory buses (deriving the structural `RowSpec` and `isU64 ∧ ClkBound` guarantees from its
 pulls). Released instruction comparisons exercise the immutable adapter through AluX0. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.ALUTypeReaderImmutable
 

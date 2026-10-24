@@ -1,7 +1,11 @@
-import SP1Clean.FormalModel.Contracts.FinalMemoryChange
-import SP1Clean.FormalModel.Contracts.FinalRegisterValue
+module
+
+public import SP1Clean.FormalModel.Contracts.FinalMemoryChange
+public import SP1Clean.FormalModel.Contracts.FinalRegisterValue
 
 /-! # A validated final register and its optional change contribution -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRegisterCheck
 

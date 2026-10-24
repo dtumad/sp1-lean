@@ -1,10 +1,12 @@
-import SP1Clean.Proofs.Completeness.Assembly
-import SP1Clean.Proofs.Completeness.Ledger
-import SP1Clean.Proofs.Completeness.ClosureRealization
-import SP1Clean.Proofs.Completeness.CanonicalClosure
-import SP1Clean.Proofs.Completeness.ChipLedger
-import SP1Clean.Model.BalanceBridge
-import SP1Clean.Soundness.AIR
+module
+
+public import SP1Clean.Proofs.Completeness.Assembly
+public import SP1Clean.Proofs.Completeness.Ledger
+public import SP1Clean.Proofs.Completeness.ClosureRealization
+public import SP1Clean.Proofs.Completeness.CanonicalClosure
+public import SP1Clean.Proofs.Completeness.ChipLedger
+public import SP1Clean.Model.BalanceBridge
+public import SP1Clean.Soundness.AIR
 
 /-! # Generated-trace assembly completeness
 
@@ -21,6 +23,8 @@ constructor's syscall table is empty. Every channel retains Clean's occurrence b
 This is an assembly theorem, not a compiler from arbitrary Sail executions. The complete mixed
 execution domain and authenticated boundary obligations remain separate semantic work.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

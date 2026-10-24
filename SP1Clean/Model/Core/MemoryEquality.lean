@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.Memory
+module
+
+public import SP1Clean.Model.Core.Memory
 
 /-! # Executable extensional equality of sparse memory
 
@@ -6,6 +8,8 @@ Comparing update-history lists is too strict, while comparing only a trace's acc
 is too weak. It suffices to compare reads at the union of both histories' keys: every omitted
 address has value zero on both sides. The check is finite even for the 48-bit native window.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.ByteMemory
 

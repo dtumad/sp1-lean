@@ -1,9 +1,11 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Abs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.SubSpecs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Abs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
 
 /-! # `DivRemChip` — honest comparison-view completeness
 
@@ -12,6 +14,8 @@ large chip theorem. `honestInputs` is the value-level view produced by the DivRe
 functions; `honestSpec` proves its fifteen folded sub-operation contracts. The parent proof only
 has to show that the witness cells evaluate to this view.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip.CompareComplete
 

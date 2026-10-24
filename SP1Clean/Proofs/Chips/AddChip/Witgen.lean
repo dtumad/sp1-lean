@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.AddChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.AddChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.AddChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -21,6 +23,8 @@ be true for a stronger reason: `ProverEnvironment.AgreesBelow` did not constrain
 the IR's `FExpr.hintGet` node was unprovable. Fixed by stating the obligation at
 `ProverEnvironment.AgreesBelowWithData`, which carries `data` and `hint` — so the remaining argument is about `.native` closures, not about hints per se, and the
 W4 pilot chooses between the two hint encodings on their merits.) -/
+
+@[expose] public section
 
 namespace SP1Clean.AddChip
 

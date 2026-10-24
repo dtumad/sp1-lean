@@ -1,6 +1,10 @@
-import SP1Clean.Model.Core.Boot
+module
+
+public import SP1Clean.Model.Core.Boot
 
 /-! # Finite program-image validation regressions -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ProgramImage
 

@@ -1,6 +1,8 @@
-import SP1Clean.Model.Machine.Boot
-import SP1Clean.Model.Core.Memory
-import SP1Clean.Model.Core.NativeLayout
+module
+
+public import SP1Clean.Model.Machine.Boot
+public import SP1Clean.Model.Core.Memory
+public import SP1Clean.Model.Core.NativeLayout
 
 /-! # Checked finite program images
 
@@ -9,6 +11,8 @@ checker constructs the existing `GuestProgram` and proves its loader-facing well
 This checks the finite image contract, not instruction support or ELF/digest authentication.
 Instruction decoding remains a separate check before an image can instantiate the native ensemble.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

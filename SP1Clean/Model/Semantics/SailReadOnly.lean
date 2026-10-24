@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.SailExecuteFrame
+module
+
+public import SP1Clean.Model.Semantics.SailExecuteFrame
 
 /-! # State frames for Sail reads and early returns
 
@@ -6,6 +8,8 @@ These partial-correctness lemmas concern the actual Sail state monad. They inclu
 from `SailME` and bounded loops; an unsuccessful underlying Sail action cannot yield a successful
 composite action. No totality or memory-presence premise is needed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailFrame
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs

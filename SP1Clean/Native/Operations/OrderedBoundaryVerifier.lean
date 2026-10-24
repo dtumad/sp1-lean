@@ -1,5 +1,7 @@
-import SP1Clean.Native.Operations.OrderedBoundary
-import ToClean.Circuit.VerifierInteractions
+module
+
+public import SP1Clean.Native.Operations.OrderedBoundary
+public import ToClean.Circuit.VerifierInteractions
 
 /-! # Fixed endpoints for an ordered inventory
 
@@ -7,6 +9,8 @@ The verifier contributes exactly one initial push and one final pull. Both messa
 circuit constants, so neither the public input nor the witness can select the endpoints.
 It has no witness cells and composes into an ensemble's verifier.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedBoundaryVerifier
 

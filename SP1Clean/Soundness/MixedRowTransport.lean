@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.RefreshWiring
-import SP1Clean.Soundness.GenericWalk
+module
+
+public import SP1Clean.Soundness.RefreshWiring
+public import SP1Clean.Soundness.GenericWalk
 
 /-! # Semantic transport for mixed execution rows
 
@@ -9,6 +11,8 @@ the location's pre-effect read window. It transports step/frame facts over any t
 survives refresh elimination and canonical State re-limbing. It does not identify the historical
 truth of a rewritten prior record with that of the original record: only operand currency moves.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.TimedGrounding
 

@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.BoundedWord
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Circuits.Gadgets.LtUnsigned
-import SP1Clean.Model.Semantics.Decode
+module
+
+public import SP1Clean.FormalModel.Contracts.BoundedWord
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
+public import SP1Clean.Model.Semantics.Decode
 
 /-! # A native unsigned constant-bound check
 
@@ -9,6 +11,8 @@ Compose the word range check and the existing unsigned comparator. The constant 
 a full word, so bounds larger than the field characteristic do not become reduced field values.
 The constructor computes comparison columns from the semantic input word.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.BoundedWord
 

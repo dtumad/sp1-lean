@@ -1,11 +1,13 @@
-import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Soundness.EnsembleChannels
-import SP1Clean.Soundness.InitialMemoryEnsemble
-import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
-import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
-import ToClean.Air.VerifierChannel
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.Soundness.FinishedChannels
+public import SP1Clean.Soundness.EnsembleChannels
+public import SP1Clean.Soundness.InitialMemoryEnsemble
+public import SP1Clean.Soundness.FinalMemoryEnsemble
+public import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
+public import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
+public import ToClean.Air.VerifierChannel
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Image-authenticated native core assembly
 
@@ -16,6 +18,8 @@ ten occurrences and no additional physical table. Byte/Program closure uses the 
 Connecting this assembly to mixed-row timed grounding and the complete host environment remains separate work;
 this module does not claim an execution theorem for the assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

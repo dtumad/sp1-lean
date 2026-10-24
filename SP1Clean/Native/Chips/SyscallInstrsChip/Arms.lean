@@ -1,9 +1,11 @@
-import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
-import SP1Clean.Circuits.Gadgets.U16Compare
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
+public import SP1Clean.Circuits.Gadgets.U16Compare
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Bundled syscall instruction arms
 
@@ -12,6 +14,8 @@ structural obligations small while preserving its constraints and interactions.
 Contracts live in `FormalModel/Contracts/SyscallInstrsChip.lean`; proofs live in
 `Proofs/Chips/SyscallInstrsChip/`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
+module
+
+public import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
 
 /-! # Official Sail decoding of the supported integer encoding families
 
@@ -6,6 +8,8 @@ Every lemma leaves the instruction word, operand fields, and configured Sail sta
 The whole-parser agreement theorem consumes these internal encoding cases; Program providers
 and machine-theorem callers do not need to dispatch on them.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailDecode.Symbolic
 

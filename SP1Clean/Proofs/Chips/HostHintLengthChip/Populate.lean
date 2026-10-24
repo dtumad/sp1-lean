@@ -1,8 +1,10 @@
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Model.Core.HostQueue
-import SP1Clean.Proofs.Operations.HintQueueCursor
-import SP1Clean.Proofs.Chips.HostControlPopulate
-import SP1Clean.Proofs.Operations.ClockOrderPopulate
+module
+
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
+public import SP1Clean.Model.Core.HostQueue
+public import SP1Clean.Proofs.Operations.HintQueueCursor
+public import SP1Clean.Proofs.Chips.HostControlPopulate
+public import SP1Clean.Proofs.Operations.ClockOrderPopulate
 
 /-! # HINT_LEN rows from successful host execution
 
@@ -10,6 +12,8 @@ The constructor selects the empty/nonempty component and reads the actual immuta
 Successful dispatch supplies the return; only the explicit pointer and strictly increasing
 48-bit queue-clock bounds remain compiler-domain conditions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintLengthChip
 

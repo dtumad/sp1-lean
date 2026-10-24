@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.IR
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.IR
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
 
 /-! # `DivRemChip` — witness-IR word bridges (A7b)
 
@@ -10,6 +12,8 @@ the `wordOfBits` twin), the computational-operand dispatches (`bCompU`/`cCompU` 
 (`quotCompBitsU`/`remCompBitsU`). Each builder carries one eval lemma against its value-layer
 twin; the `toBitVec64` characterisations of `bComp`/`cComp` are proved here as the value-side
 handles those evals rest on. Deliberately **not** `@[circuit_norm]`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

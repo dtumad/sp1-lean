@@ -1,8 +1,10 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Model.SP1Field
-import ToClean.Air.StaticProvider
-import ToClean.Air.EnsembleCheck
-import ToClean.Circuit.StaticTable
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Model.SP1Field
+public import ToClean.Air.StaticProvider
+public import ToClean.Air.EnsembleCheck
+public import ToClean.Circuit.StaticTable
 
 /-! # Built-in export of empty, padded and duplicate membership tables
 
@@ -10,6 +12,8 @@ Use the production ToClean provider and Clean's scheduler directly. Independent 
 every original row and every inactive occurrence. Rust supplies separate fixed-row expectations
 and backend mutations; these fixtures do not assert scheduler completeness or a lowering proof.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.StaticProviderExport
 

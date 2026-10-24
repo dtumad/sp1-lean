@@ -1,7 +1,9 @@
-import SP1Clean.Circuits.Types.ShiftRightChip
-import Clean.Circuit.Basic
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Circuits.Types.ShiftRightChip
+public import Clean.Circuit.Basic
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `ShiftRightCore` — the ShiftRight chip's inline assertion cluster
 
@@ -12,6 +14,8 @@ gate.  This is a proof-oriented gadget over the whole committed `ShiftRightChip.
 that upstream SP1 has a corresponding Rust operation.  Virtual subcircuit elaboration preserves the
 original operation order.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip
 

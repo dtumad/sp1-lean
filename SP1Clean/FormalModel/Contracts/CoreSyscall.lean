@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.SyscallEncoding
-import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
+module
+
+public import SP1Clean.Model.Core.SyscallEncoding
+public import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 
 /-! # Native syscall profile contracts
 
@@ -7,6 +9,8 @@ The profile guard proves that an active row's entire syscall register is a bound
 encoding of one of the eight selected calls. Padding has no code restriction. The whole-chip
 contract retains the upstream instruction-row laws and adds this native restriction explicitly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallCodeGuard
 

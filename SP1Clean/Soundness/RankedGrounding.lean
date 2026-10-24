@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.Walk
-import Mathlib.Algebra.BigOperators.Group.Multiset.Basic
-import Mathlib.Algebra.Order.BigOperators.Group.Multiset
+module
+
+public import SP1Clean.Soundness.Walk
+public import Mathlib.Algebra.BigOperators.Group.Multiset.Basic
+public import Mathlib.Algebra.Order.BigOperators.Group.Multiset
 
 /-! # Ranked balance gives an exhaustive trail
 
@@ -17,6 +19,8 @@ The production grounding engine must prove the two premises from the actual witn
 
 It then receives an exhaustive ordered trace.  Operand currency and the per-chip step theorem are a
 separate induction over that trace. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.RankedGrounding
 

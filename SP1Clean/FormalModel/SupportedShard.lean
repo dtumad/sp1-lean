@@ -1,8 +1,10 @@
-import SP1Clean.FormalModel.CoreShard
-import SP1Clean.FormalModel.Execution
-import SP1Clean.Model.Core.Profile
-import SP1Clean.Model.Semantics.TransitionView
-import SP1Clean.Model.Semantics.ProgramCommitment
+module
+
+public import SP1Clean.FormalModel.CoreShard
+public import SP1Clean.FormalModel.Execution
+public import SP1Clean.Model.Core.Profile
+public import SP1Clean.Model.Semantics.TransitionView
+public import SP1Clean.Model.Semantics.ProgramCommitment
 
 /-!
 # Exact semantic relation for the native ordinary-instruction shard
@@ -13,6 +15,8 @@ field-valued instruction event.  Soundness and completeness consume the same pro
 `Machine.CoreShardSemanticWitness`; its event transcript evaluates to an ordinary official-Sail
 segment whose every fetched instruction routes through the supported profile.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

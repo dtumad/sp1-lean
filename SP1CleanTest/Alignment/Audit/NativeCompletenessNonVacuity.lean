@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.NativeCompleteness
-import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
-import SP1Clean.Proofs.Completeness.NativeProgramAgreement
-import SP1CleanTest.Alignment.Audit.TraceNonVacuity
+module
+
+public import SP1Clean.Soundness.NativeCompleteness
+public import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
+public import SP1Clean.Proofs.Completeness.NativeProgramAgreement
+public import SP1CleanTest.Alignment.Audit.TraceNonVacuity
 
 /-!
 # Non-vacuity of deterministic native completeness
@@ -16,6 +18,8 @@ jointly satisfiable.
 official Sail transition and checks that its deterministic compiler result is the circuit-built
 JAL event used by the active AIR witness.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

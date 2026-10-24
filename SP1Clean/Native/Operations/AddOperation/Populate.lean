@@ -1,13 +1,15 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
-import ToClean.Circuit.IteDecide
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
+public import ToClean.Circuit.IteDecide
 
 /-! # `AddOperation` — `populate` (the witness generator)
 
@@ -24,6 +26,8 @@ Two forms of the same algorithm live here:
 
 `populateIR` is deliberately **not** `@[circuit_norm]`: chip proofs keep their witness obligation
 folded at this boundary (the repo's opacity doctrine), and only `populateIR_eval` crosses it. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddOperation
 

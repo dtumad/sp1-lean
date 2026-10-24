@@ -1,15 +1,17 @@
-import SP1Clean.Circuits.Gadgets.IsEqualWord
-import SP1Clean.Circuits.Gadgets.IsZeroWord
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Circuits.Gadgets.LtUnsigned
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Circuits.Gadgets.IsEqualWord
+public import SP1Clean.Circuits.Gadgets.IsZeroWord
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `DivRemCompare` — the DivRem chip's comparison/sign assertion cluster
 
@@ -35,6 +37,8 @@ The assertion arguments are verbatim from the corresponding assertion blocks of
 `DivRemChip.Columns` field per the chip's cols assembly. The semantic contract is
 `DivRemCompare.CompareSpec` (`Circuits/Gadgets/DivRem/CompareContract.lean`); the `FormalAssertion` bundle is
 `Proofs/Operations/DivRemOperation/Compare.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemCompare
 

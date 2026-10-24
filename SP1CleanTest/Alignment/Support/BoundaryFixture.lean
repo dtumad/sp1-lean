@@ -1,5 +1,7 @@
-import SP1CleanTest.Alignment.Support.InstalledAssembly
-import SP1Clean.Model.Semantics.AccessSchedule
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssembly
+public import SP1Clean.Model.Semantics.AccessSchedule
 
 /-! # Shared finite memory-boundary inputs
 
@@ -7,6 +9,8 @@ The canonical frontier supplies last-access clocks. Source and target snapshots 
 values, and the production target constructors select the canonical change inventory. This helper
 only constructs consumer inputs; Clean owns all witness generation and provider scheduling.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 

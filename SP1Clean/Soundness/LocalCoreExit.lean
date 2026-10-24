@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.LocalCoreRows
-import SP1Clean.Soundness.ExitAccounting
-import ToClean.Air.UnitBalance
+module
+
+public import SP1Clean.Soundness.LocalCoreRows
+public import SP1Clean.Soundness.ExitAccounting
+public import ToClean.Air.UnitBalance
 
 /-! # Exit accounting from the local shard's complete physical ledger
 
@@ -9,6 +11,8 @@ consumes the public code once. Disabled interactions remain in the original coun
 generic unit-balance theorem then identifies every active emission with that code. A legacy
 padding row still emits zero, so this value alone does not authenticate terminal status.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

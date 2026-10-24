@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
-import SP1Clean.Model.Semantics.Truth
-import SP1Clean.Proofs.Sail.InstructionDecode
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
+public import SP1Clean.Model.Semantics.Truth
+public import SP1Clean.Proofs.Sail.InstructionDecode
+public import ToClean.Air.ChannelClosure
 
 /-! # Authentic Program rows from fixed AIR constraints
 
@@ -9,6 +11,8 @@ The checked image computes the complete fixed table. Its circuit contract and th
 Sail decoder theorem establish actual ROM meaning, independently of prover data and lookup
 multiplicity. This bridge needs no decoder certificate or semantic provider-validity premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FixedProgramProvider.Preprocessed
 

@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.HintQueueRecords
-import SP1Clean.FormalModel.Contracts.HostCall
-import SP1Clean.FormalModel.Contracts.ClockOrder
+module
+
+public import SP1Clean.Model.Core.HintQueueRecords
+public import SP1Clean.FormalModel.Contracts.HostCall
+public import SP1Clean.FormalModel.Contracts.ClockOrder
 
 /-! # Queue-head and node interfaces for native host calls
 
@@ -9,6 +11,8 @@ representation bounds and descending links; actual byte identity and current-hea
 be derived from the source/allocation and state ledgers. HINT_LEN preserves the head and allocation frontier while
 advancing its private queue clock. Its two component variants hide empty/nonempty routing.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintQueue
 

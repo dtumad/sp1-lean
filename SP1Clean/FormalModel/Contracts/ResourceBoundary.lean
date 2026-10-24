@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
-import SP1Clean.Model.Core.ExecutionResources
+module
+
+public import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
+public import SP1Clean.Model.Core.ExecutionResources
 
 /-! # Resource checks on fixed complete boundaries
 
@@ -7,6 +9,8 @@ These are necessary endpoint conditions of the semantic profile. They do not ass
 supplied target is the actual complete outgoing state, or bound intermediate peak occupancy.
 Those conclusions require the complete boundary and event inventories.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ResourceBoundary
 open Model.Core

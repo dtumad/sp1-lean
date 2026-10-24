@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostFinalMemory
+module
+
+public import SP1Clean.Soundness.HostFinalMemory
 
 /-! # Byte closure of the actual host/target assembly
 
@@ -6,6 +8,8 @@ Target RAM checks share the existing provider ledger. Their local contracts are 
 before projecting to the earlier host proof views. The only interface parameter describes
 the installed resource circuits; no witness validity, target agreement or grounding is assumed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

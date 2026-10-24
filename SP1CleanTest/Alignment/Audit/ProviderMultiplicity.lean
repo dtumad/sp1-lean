@@ -1,8 +1,10 @@
-import SP1Clean.Proofs.Completeness.Providers
-import SP1Clean.Proofs.Completeness.Ledger
-import SP1Clean.Model.BalanceBridge
-import SP1CleanTest.Alignment.Audit.JointNonVacuity
-import SP1CleanTest.TraceGenTests.Conformance
+module
+
+public import SP1Clean.Proofs.Completeness.Providers
+public import SP1Clean.Proofs.Completeness.Ledger
+public import SP1Clean.Model.BalanceBridge
+public import SP1CleanTest.Alignment.Audit.JointNonVacuity
+public import SP1CleanTest.TraceGenTests.Conformance
 
 /-! # Provider multiplicity witness-generation regressions
 
@@ -21,6 +23,8 @@ unconstrained input arrays. `native_decide` is confined to this test library and
 finite evaluated interaction lists. This battery does not select the source-backed preprocessing
 demand inventory used by exact transport; that remains an explicit integration input and contract.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.ProviderMultiplicity
 

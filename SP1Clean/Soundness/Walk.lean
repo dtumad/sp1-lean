@@ -1,7 +1,9 @@
-import Mathlib.Data.Multiset.Basic
-import Mathlib.Data.Multiset.Filter
-import Mathlib.Data.Multiset.AddSub
-import Mathlib.Tactic.Linarith
+module
+
+public import Mathlib.Data.Multiset.Basic
+public import Mathlib.Data.Multiset.Filter
+public import Mathlib.Data.Multiset.AddSub
+public import Mathlib.Tactic.Linarith
 
 /-! # Walks and balance ⇒ trail: the abstract multigraph core
 
@@ -25,6 +27,8 @@ exactly the **degree balance**
 conditions: the whole-program transition path is forced by balance alone. The proof is a clean
 strong induction on the edge multiset: take an out-edge of the source, erase it, observe the
 remainder is balanced with the source shifted one step along, recurse. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

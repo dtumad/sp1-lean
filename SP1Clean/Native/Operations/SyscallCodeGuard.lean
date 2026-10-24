@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.CoreSyscall
-import ToClean.Circuit.SubcircuitProjection
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics
+module
+
+public import SP1Clean.FormalModel.Contracts.CoreSyscall
+public import ToClean.Circuit.SubcircuitProjection
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics
 
 /-! # Canonical native syscall words without a lookup
 
@@ -10,6 +12,8 @@ constraint at degree at most three, and active rows must have zero upper limbs. 
 leaves padding unconstrained. Clean supplies witness generation and Rust lowering directly;
 there is no fixed provider or channel assumption at this boundary.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallCodeGuard
 

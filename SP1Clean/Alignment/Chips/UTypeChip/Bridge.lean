@@ -1,15 +1,19 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.UTypeChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
-import Clean.Air.FlatComponent
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.UTypeChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
+public import Clean.Air.FlatComponent
 
 /-! # Native Sail bridge for U-type (`LUI` / `AUIPC`) (+ `ChipKind` registration)
 
 `correct_utype_{lui,auipc}_native` prove `execute_UTYPE ≡ sp1_utype` given the chip's semantic fact (the
 committed result is `RV64.lui imm` / `RV64.auipc imm pc`). The Sail `sign_extend (imm ++ 0#12)` is
 definitionally `RV64.lui imm`. The 20-bit immediate `imm` is the column-derived `UTypeChip.immOf`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.UTypeSail

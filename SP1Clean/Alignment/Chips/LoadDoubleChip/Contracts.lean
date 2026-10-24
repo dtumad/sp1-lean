@@ -1,7 +1,11 @@
-import SP1Clean.Alignment.Chips.LoadDoubleChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.LoadDoubleChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # LoadDouble — physical routing contract -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

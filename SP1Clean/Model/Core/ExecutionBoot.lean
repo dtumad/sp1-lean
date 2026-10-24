@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.ExecutionPath
-import SP1Clean.Model.Core.Boot
+module
+
+public import SP1Clean.Model.Core.ExecutionPath
+public import SP1Clean.Model.Core.Boot
 
 /-! # Boot and HALT as endpoint conditions on local paths
 
@@ -9,6 +11,8 @@ Joining local segments and then fixing these endpoints gives the boot-to-HALT co
 changing the transition relation. These are semantic composition theorems; authenticating the
 boundaries of separate AIR witnesses remains an obligation of the native capstone.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

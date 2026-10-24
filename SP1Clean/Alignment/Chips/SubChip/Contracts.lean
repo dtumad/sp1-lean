@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.SubChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.SubChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Sub — circuit-grounding contracts
 
@@ -7,6 +9,8 @@ Small structural facts that cross Sub's completed Clean circuit boundary.  Arith
 in `SubChip.Spec`; these lemmas expose only the input/output adapter passthrough and the physical
 non-`x0` routing assertion used by the whole-machine grounding layer.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

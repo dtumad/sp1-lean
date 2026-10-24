@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.LocalCoreMemory
-import SP1Clean.Soundness.LocalCoreDecode
-import SP1Clean.Soundness.CoreTableProjection
+module
+
+public import SP1Clean.Soundness.LocalCoreMemory
+public import SP1Clean.Soundness.LocalCoreDecode
+public import SP1Clean.Soundness.CoreTableProjection
 
 /-! # Physical mixed rows of the local shard assembly
 
@@ -10,6 +12,8 @@ only disabled rows and Memory-silent providers, retaining every active HALT and 
 This module establishes the row-level balance needed before refresh elimination and timed walking;
 it does not assert an execution order or host semantics.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

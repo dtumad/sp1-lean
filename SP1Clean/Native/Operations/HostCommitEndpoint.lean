@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.HostCommitBoundary
-import ToClean.Air.VerifierExtension
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.Native.Operations.HostCommitBoundary
+public import ToClean.Air.VerifierExtension
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Verifier-owned local commitment-bank endpoints
 
@@ -8,6 +10,8 @@ Both banks' incoming and outgoing words are fixed by the enclosing statement. Th
 wrapper invokes the existing bank verifier once; its singleton representation retains exactly
 those two interactions. The bank terminal remains a physical table with a private last timestamp.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitEndpoint
 

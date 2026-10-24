@@ -1,7 +1,9 @@
-import SP1Clean.Model.Opcode
-import SP1Clean.Model.SailDecode
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.FormalModel.Trace.Witness
+module
+
+public import SP1Clean.Model.Opcode
+public import SP1Clean.Model.SailDecode
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.FormalModel.Trace.Witness
 
 /-! # Decode-witness substrate: the ∀s → ∃I∀s hoists and the concrete-program shapes
 
@@ -25,6 +27,8 @@ The frozen Eulerian-walk consumers that used to live here (`DecodeOperandsBound`
 the `TargetObligations` wiring) were retired with `Soundness/TargetVm.lean` (2026-08): the live
 capstone derives the program-decode truth globally in `supportedCore_orderedRows_programDecoded`
 (`Soundness/AIR.lean`) and consumes these hoists through the grounding contracts. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Soundness.Target

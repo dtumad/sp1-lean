@@ -1,10 +1,14 @@
-import SP1Clean.Native.Chips.HostHaltChip.Defs
+module
+
+public import SP1Clean.Native.Chips.HostHaltChip.Defs
 
 /-! # Soundness, completeness, and construction of native HALT handlers
 
 The complete exit bound is semantic. Comparison columns are computed by the constructor and
 used only by local completeness; no external Exit value or handler-success fact is assumed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHaltChip
 

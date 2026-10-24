@@ -1,4 +1,6 @@
-import SP1Clean.Model.SailWrap
+module
+
+public import SP1Clean.Model.SailWrap
 
 /-! # Reducing the official Sail decoder `ext_decode` — the per-family decode witnesses
 
@@ -42,6 +44,8 @@ instruction words: in the non-vacuity witnesses `RomLoaded` ties the fetched wor
 concrete words. A *symbolic*-register `ext_decode_RTYPE` would need `bv_decide` per cascade branch,
 which is costly and unnecessary for this scope, so it is deliberately not pursued; the general
 `∀ prog` statement instead keeps `decodedInROM` a Program-channel contract discharged per row. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.SailDecode

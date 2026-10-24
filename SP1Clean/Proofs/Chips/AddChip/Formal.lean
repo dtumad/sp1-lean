@@ -1,15 +1,19 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.AddChip.Defs
-import SP1Clean.FormalModel.Contracts.ChipAssumptions
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.AddChip.Defs
+public import SP1Clean.FormalModel.Contracts.ChipAssumptions
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.AddChip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
 This is the canonical "template" chip for the porting recipe (`docs/agents/porting-recipe.md`). When
 golfing / cleaning proofs here or in any sibling chip, follow `docs/agents/proof-patterns.md` §
 "Golf & cleanup discipline". -/
+
+@[expose] public section
 
 namespace SP1Clean.AddChip
 

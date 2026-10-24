@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.TypedMemoryBalance
-import SP1Clean.Soundness.SyscallGrounding
+module
+
+public import SP1Clean.Soundness.TypedMemoryBalance
+public import SP1Clean.Soundness.SyscallGrounding
 
 /-! # System rows as exact Memory access pairs
 
@@ -8,6 +10,8 @@ on an ensemble's table positions or boundary assumptions. Selecting active rows 
 entire produced/consumed message lists, including repetitions. HALT and syscall rows contribute
 three register touches; MemoryBump contributes one refresh pair.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

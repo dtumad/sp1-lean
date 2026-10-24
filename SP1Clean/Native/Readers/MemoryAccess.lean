@@ -1,12 +1,14 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.Channels
-import SP1Clean.Circuits.Types.MemoryAccess
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Types.MemoryAccess
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `MemoryAccess` primitive — one true-address memory read/write as a Clean `GeneralFormalCircuit`
 
@@ -25,6 +27,8 @@ SP1's Rust *sends* the prior (`+`) and *receives* the new (`−`), matched up to
 multiplicity negation used by the Rust comparison adapters.
 The bus's cross-row meaning (offline-memory, last-write-wins) is derived by
 `Soundness/TypedMemory.lean`; this primitive supplies the per-row monotonicity + emission. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.MemoryAccess
 

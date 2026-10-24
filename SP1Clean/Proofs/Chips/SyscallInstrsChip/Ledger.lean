@@ -1,10 +1,14 @@
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+module
+
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
 
 /-! # Syscall row interactions
 
 The native circuit's complete interaction list and its channel projections. Semantic consumers
 use these lemmas without depending on extracted Rust column types or faithfulness proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip.Ledger
 

@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.BitwiseChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.BitwiseChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Bitwise — circuit-grounding contracts
 
@@ -7,6 +9,8 @@ Folded structural facts used by whole-machine grounding.  Arithmetic meaning rem
 `BitwiseChip.Spec`; this file only projects the retained reader, adapter/state passthrough, and the
 chip-owned selector/routing constraints from the physical circuit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

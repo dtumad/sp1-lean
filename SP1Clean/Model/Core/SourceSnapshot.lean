@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.MemorySnapshot
-import SP1Clean.Model.Core.ProgramTable
+module
+
+public import SP1Clean.Model.Core.MemorySnapshot
+public import SP1Clean.Model.Core.ProgramTable
 
 /-! # Finite validation of local source data
 
@@ -8,6 +10,8 @@ shard does not touch. Data memory may have changed since boot. The check also va
 program and every decoded instruction, and rules out a nonzero x0. It never enumerates the address
 space or requires an execution witness. Full Sail/host endpoint representation is separate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

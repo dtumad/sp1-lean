@@ -1,5 +1,7 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.SP1Field
 
 /-! # Shared scaffolding for the circuit-as-trace-generator layer (`TraceGenTests/`).
 
@@ -11,6 +13,8 @@ actual `MachineAir::generate_trace` rows and Clean's built-in Rust witness machi
 The chips are field-generic over `ZMod p`; the anchors run at SP1's **concrete field**
 (KoalaBear), where SP1's prover actually runs, so this file discharges the chips' `Fact`
 assumptions once at that prime. The generic generators stay axiom-clean. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGenTests
 

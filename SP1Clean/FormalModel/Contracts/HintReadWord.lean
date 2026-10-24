@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HintReadStep
-import SP1Clean.FormalModel.Contracts.HostRamAccess
+module
+
+public import SP1Clean.FormalModel.Contracts.HintReadStep
+public import SP1Clean.FormalModel.Contracts.HostRamAccess
 
 /-! # A call-bound hint word transfer
 
@@ -7,6 +9,8 @@ The private cursor retains the event clock, immutable node identity, next word i
 address. Each row writes exactly its authenticated word and advances that cursor. The final
 row leaves the last address in the cursor; the count still advances past the final index.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadWordChip
 

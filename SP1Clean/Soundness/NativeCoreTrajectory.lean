@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreInstructionExecution
-import SP1Clean.Soundness.CoreExecutionTrajectory
+module
+
+public import SP1Clean.Soundness.NativeCoreInstructionExecution
+public import SP1Clean.Soundness.CoreExecutionTrajectory
 
 /-! # Executing the native AIR's ordered events
 
@@ -9,6 +11,8 @@ The State walk identifies each event's exact list position, so ordinary successo
 conclusions rather than caller premises. The HALT wrapper fixes the zero-code host behavior;
 agreement of other host effects with the AIR remains a separate obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

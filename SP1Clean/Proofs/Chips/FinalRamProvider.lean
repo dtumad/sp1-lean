@@ -1,9 +1,11 @@
-import ToClean.Circuit.Guarded
-import SP1Clean.FormalModel.Contracts.FinalRam
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Circuit.EmittedInteraction
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Native.Operations.AddressOperation
+module
+
+public import ToClean.Circuit.Guarded
+public import SP1Clean.FormalModel.Contracts.FinalRam
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Circuit.EmittedInteraction
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Native.Operations.AddressOperation
 
 /-! # Canonical RAM finalization
 
@@ -11,6 +13,8 @@ The final record is pulled verbatim after checking its 48-bit address and eight-
 The address gadget excludes SP1's reserved low region. The negative Memory emission assumes no
 channel guarantee: values, timestamps, and last-access meaning follow from global grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRamProvider
 

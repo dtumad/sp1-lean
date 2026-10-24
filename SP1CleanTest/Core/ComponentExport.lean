@@ -1,12 +1,16 @@
-import Clean.Backends.Plonky3.Print
-import SP1Clean.Model.Channels
-import SP1Clean.Model.SP1Field
+module
+
+public import Clean.Backends.Plonky3.Print
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.SP1Field
 
 /-! # Shared component-local export fixtures
 
 Use Clean's built-in lowering, Rust emitter and preallocation for a production component.
 External channels stay open: row comparisons do not establish ensemble balance.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ComponentExport
 

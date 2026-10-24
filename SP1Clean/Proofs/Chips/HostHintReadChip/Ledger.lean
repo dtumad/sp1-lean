@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
-import SP1Clean.Proofs.Operations.HintReadSpanLedger
-import SP1Clean.Proofs.Operations.HintReadStepLedger
+module
+
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
+public import SP1Clean.Proofs.Operations.HintReadSpanLedger
+public import SP1Clean.Proofs.Operations.HintReadStepLedger
 
 /-! # Physical HINT_READ coordination ledger
 
@@ -8,6 +10,8 @@ The handler consumes one instruction call, current queue token, node, and authen
 word. It emits the popped queue token and the two complete word-walk endpoints. RAM updates
 and byte permissions belong exclusively to the physical word consumers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintReadChip
 

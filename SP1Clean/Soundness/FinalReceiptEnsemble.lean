@@ -1,7 +1,9 @@
-import SP1Clean.Native.Operations.FinalMemoryReceipt
-import ToClean.Air.ComponentReplacement
-import ToClean.Air.Footprint
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.Native.Operations.FinalMemoryReceipt
+public import ToClean.Air.ComponentReplacement
+public import ToClean.Air.Footprint
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # Publishing the physical final inventory
 
@@ -12,6 +14,8 @@ Projection therefore preserves canonical data and every old channel when the rec
 This is an installation adapter, not an endpoint theorem. The enclosing assembly must install
 receipt consumers and include their Byte demand in its channel-closure proof.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalReceiptEnsemble
 

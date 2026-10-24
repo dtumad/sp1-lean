@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostLocalCorePermissions
-import SP1Clean.Soundness.HostLocalCoreMemory
-import SP1Clean.Soundness.ProtectedLocalCoreRom
+module
+
+public import SP1Clean.Soundness.HostLocalCorePermissions
+public import SP1Clean.Soundness.HostLocalCoreMemory
+public import SP1Clean.Soundness.ProtectedLocalCoreRom
 
 /-! # Ordinary ROM protection with host RAM effects installed
 
@@ -8,6 +10,8 @@ The decoded instructions retain their physical rows in the extended assembly. It
 ledger authenticates their byte requests, even when host tables consume additional permissions.
 The store footprints and instruction case split reuse the existing protected-core proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

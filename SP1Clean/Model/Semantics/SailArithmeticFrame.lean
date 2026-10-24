@@ -1,5 +1,7 @@
-import SP1Clean.Model.Semantics.SailArithmeticExecute
-import SP1Clean.Model.Semantics.SailExecuteFrame
+module
+
+public import SP1Clean.Model.Semantics.SailArithmeticExecute
+public import SP1Clean.Model.Semantics.SailExecuteFrame
 
 /-! # Circuit-independent arithmetic retirement and memory frames
 
@@ -8,6 +10,8 @@ platform configuration and entire memory map, including x0. The existing officia
 lemmas supply the values; no native chip row or arithmetic constraints enter these statements.
 Memory and control-flow instruction families require separate semantic proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions

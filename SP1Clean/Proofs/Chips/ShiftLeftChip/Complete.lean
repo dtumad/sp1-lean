@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # Shift-left event and table construction
 
@@ -8,6 +10,8 @@ Event opcodes supply the committed SLL/SLLW selectors. Register and immediate op
 share the ALU adapter contract; padding supplies zero selectors and operands. Clean's
 ordinary table builder needs no per-row hints.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

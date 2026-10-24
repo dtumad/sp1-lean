@@ -1,19 +1,21 @@
-import SP1Clean.Soundness.HostHintReadPartition
-import SP1Clean.Soundness.HostHintReadLocalPermissions
-import SP1Clean.Soundness.HostHintReadLocalRecords
-import SP1Clean.Soundness.HostHintReadLocalExecution
-import SP1Clean.Soundness.HostHintReadLocalQueue
-import SP1Clean.Soundness.HostHintQueueBoundary
-import SP1Clean.Soundness.HostHintQueueHistory
-import SP1Clean.Soundness.HostQueueCPUOrder
-import SP1Clean.Soundness.HostQueueCPUReplay
-import SP1Clean.Soundness.HostHintReadCPUMemory
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import ToClean.Air.EnsembleBuild
-import SP1CleanTest.Core.HintReadFixtures
-import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
-import ToClean.Air.TableBuild
-import SP1CleanTest.Core.StaticMembership
+module
+
+public import SP1Clean.Soundness.HostHintReadPartition
+public import SP1Clean.Soundness.HostHintReadLocalPermissions
+public import SP1Clean.Soundness.HostHintReadLocalRecords
+public import SP1Clean.Soundness.HostHintReadLocalExecution
+public import SP1Clean.Soundness.HostHintReadLocalQueue
+public import SP1Clean.Soundness.HostHintQueueBoundary
+public import SP1Clean.Soundness.HostHintQueueHistory
+public import SP1Clean.Soundness.HostQueueCPUOrder
+public import SP1Clean.Soundness.HostQueueCPUReplay
+public import SP1Clean.Soundness.HostHintReadCPUMemory
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+public import ToClean.Air.EnsembleBuild
+public import SP1CleanTest.Core.HintReadFixtures
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+public import ToClean.Air.TableBuild
+public import SP1CleanTest.Core.StaticMembership
 
 /-! # Executed shared HINT_READ table selection
 
@@ -23,6 +25,8 @@ back to the independent padded-write inventory. Installed permission and record-
 check their actual whole-witness ledgers and fixed columns. These remain subsystem regressions:
 the other channels and complete mixed execution are not claimed satisfied by these fixtures.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostHintReadPartition
 

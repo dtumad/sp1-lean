@@ -1,6 +1,8 @@
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.HostExit
-import ToClean.Air.VerifierExtension
+module
+
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Model.HostExit
+public import ToClean.Air.VerifierExtension
 
 /-! # Optional terminal status at a local host boundary
 
@@ -8,6 +10,8 @@ A running-to-stopped boundary consumes one complete exit word. HALT handlers sup
 receipt; padding supplies none. A stopped source must retain its exact optional exit code.
 The endpoint circuit has no witness cells and does not infer status from the numeric code.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostExitBoundary
 

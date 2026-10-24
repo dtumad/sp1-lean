@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.CoreRowTransport
-import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.ExecutionReplay
+module
+
+public import SP1Clean.Soundness.CoreRowTransport
+public import SP1Clean.Soundness.CoreExecutionEvents
+public import SP1Clean.Model.Core.ExecutionReplay
 
 /-! # Stateful replay shared by complete execution carriers
 
@@ -9,6 +11,8 @@ state; alignment and additional host Memory touches leave the tape unchanged. Th
 agrees with the semantic event timeline, including the administrative extension beyond the tape.
 These identities do not assume that replay succeeds.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

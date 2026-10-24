@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.ResourceEnsemble
-import ToClean.Air.Footprint
+module
+
+public import SP1Clean.Soundness.ResourceEnsemble
+public import ToClean.Air.Footprint
 
 /-! # Physical resource consumers for the installed native assembly
 
@@ -8,6 +10,8 @@ all physical rows and adds exactly six occurrences on its fresh assertion channe
 supplies every registered channel's native field-count ceiling. Tighter independent ceilings and
 full mixed construction demand remain A4/A5/A6 obligations; they are not capstone caller premises.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ResourceEnsemble
 open Circuit Air.Flat Model.Core Machine

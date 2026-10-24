@@ -1,13 +1,18 @@
-import Mathlib.Tactic.FinCases
-import Aesop
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Lift
-import Mathlib.Data.ZMod.Basic
-import Batteries.Lean.EStateM
-import LeanRV64D.Step
-import ToMathlib.General
-import SP1Clean.Model.Register
+module
+
+public import Mathlib.Tactic.FinCases
+public import Aesop
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Lift
+public import Mathlib.Data.ZMod.Basic
+public import Batteries.Lean.EStateM
+public import LeanRV64D.Step
+public import ToMathlib.General
+public import SP1Clean.Model.Register
+
+@[expose] public section
+
 set_option linter.unusedSimpArgs false
 
 /-! # The Sail-monad wrapper layer

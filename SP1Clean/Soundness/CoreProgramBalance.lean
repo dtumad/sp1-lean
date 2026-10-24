@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreFinalBoundary
-import SP1Clean.Soundness.TypedProgram
+module
+
+public import SP1Clean.Soundness.NativeCoreFinalBoundary
+public import SP1Clean.Soundness.TypedProgram
 
 /-! # Shared Program authentication for native core assemblies
 
@@ -7,6 +9,8 @@ The fixed image table authenticates every active Program fetch. All other native
 silent or emit gated unit pulls. Clean's actual count-bounded balance therefore authenticates each
 active fetch, independently of table order and of State/Memory grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

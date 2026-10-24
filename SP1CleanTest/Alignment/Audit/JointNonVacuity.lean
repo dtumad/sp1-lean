@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.AIR
-import SP1Clean.FormalModel.Trace.Witness
-import SP1Clean.Proofs.Sail.Advance
-import SP1Clean.Model.SailDecode
-import SP1CleanTest.TraceGenTests.Conformance
+module
+
+public import SP1Clean.Soundness.AIR
+public import SP1Clean.FormalModel.Trace.Witness
+public import SP1Clean.Proofs.Sail.Advance
+public import SP1Clean.Model.SailDecode
+public import SP1CleanTest.TraceGenTests.Conformance
 
 /-! # Joint non-vacuity of the supported-core relation
 
@@ -20,6 +22,8 @@ This establishes a zero-step local execution. `ActiveTraceNonVacuity` separately
 JAL event, and `TraceNonVacuity` checks construction through the trace generator. General mixed
 execution completeness remains the capstone obligation.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

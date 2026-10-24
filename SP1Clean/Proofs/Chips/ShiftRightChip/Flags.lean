@@ -1,4 +1,6 @@
-import SP1Clean.Model.Channels
+module
+
+public import SP1Clean.Model.Channels
 
 /-! # `SP1Clean.ShiftRightChip` — binary-flag selectors & byte-channel padding (shared field lemmas)
 
@@ -11,6 +13,8 @@ All of these are stated over **plain `ZMod p` field elements** / a single byte-t
 `Environment`/circuit context — so the case analysis is elaborated **once, in a small context** instead
 of inside the giant `circuit_proof_start` chip goal (the `BranchChip/Decision.lean` convention). Split
 out of `Formal.lean` so the soundness/completeness proofs read against named lemmas. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip
 

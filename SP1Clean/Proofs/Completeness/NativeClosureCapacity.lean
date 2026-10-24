@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Completeness.NativeBaseTrace
-import SP1Clean.Proofs.Completeness.CanonicalClosure
-import SP1Clean.Proofs.Completeness.PhysicalFootprint
+module
+
+public import SP1Clean.Proofs.Completeness.NativeBaseTrace
+public import SP1Clean.Proofs.Completeness.CanonicalClosure
+public import SP1Clean.Proofs.Completeness.PhysicalFootprint
 
 /-! # Physical capacity of native provider closure
 
@@ -12,6 +14,8 @@ channel and physical resource accounting remains in `PhysicalFootprint`.
 Normalize circuit interaction counts separately so large instruction families do not consume
 one shared elaboration budget. The public theorem takes no readiness or footprint premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

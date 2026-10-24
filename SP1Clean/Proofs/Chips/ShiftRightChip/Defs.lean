@@ -1,19 +1,21 @@
-import SP1Clean.Semantics.Specs.Chips.ShiftRight
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
-import SP1Clean.Proofs.Chips.ShiftRightChip.Core
-import SP1Clean.Proofs.Chips.ShiftRightChip.Populate
-import SP1Clean.Proofs.Chips.ShiftRightChip.Dispatch
-import SP1Clean.Proofs.Chips.ShiftRightChip.Math
-import SP1Clean.Proofs.Chips.ShiftRightChip.Flags
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ALUTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Semantics.Specs.Chips.ShiftRight
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Proofs.Operations.ShiftRightOperation.Core
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Core
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Populate
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Dispatch
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Math
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Flags
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ALUTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The ShiftRight chip row as a GeneralFormalCircuit
 
@@ -25,6 +27,8 @@ The circuit composes native readers and MSB gadgets with Clean-generated witness
 proofs retain selector, padding and bounded-input obligations. Released Rust comparisons exercise
 the actual SP1 row layout, assertions and interaction ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip
 

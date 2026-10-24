@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+module
+
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+public import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # Control-handler rows from successful host execution
 
@@ -9,6 +11,8 @@ successful dispatch itself discharges the complete handler-domain predicates and
 HALT comparison columns. No row contract is supplied to these completeness adapters.
 The enclosing event compiler must still match this handoff to its instruction row.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostControl
 

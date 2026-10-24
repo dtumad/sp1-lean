@@ -1,10 +1,14 @@
-import SP1Clean.Soundness.SystemMemoryRows
+module
+
+public import SP1Clean.Soundness.SystemMemoryRows
 
 /-! # Exact State pairs at physical system tables
 
 These projections retain active row occurrences and remove only zero-multiplicity pairs. They
 depend on the component carried by a physical table, independently of any ensemble layout.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

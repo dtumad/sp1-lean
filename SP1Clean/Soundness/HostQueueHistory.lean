@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.HintQueueHistory
-import SP1Clean.Soundness.HostQueueOrder
-import SP1Clean.Soundness.HostHintReadLocalExecution
-import SP1Clean.Soundness.HostHintReadLocalQueue
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
+module
+
+public import SP1Clean.Soundness.HintQueueHistory
+public import SP1Clean.Soundness.HostQueueOrder
+public import SP1Clean.Soundness.HostHintReadLocalExecution
+public import SP1Clean.Soundness.HostHintReadLocalQueue
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
 
 /-! # Current queue truth for the implemented physical handlers
 
@@ -11,6 +13,8 @@ later persistent inventory restrict to the current frontier before each step. Th
 engine allows growing stores; the currently implemented handlers preserve the allocation inventory.
 WRITE/hook allocations need their own authenticated local advance and ordering proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostQueueHistory
 

@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-!
 # Field-free instruction access plans
@@ -18,6 +20,8 @@ The plan deliberately carries no clock, previous timestamp, opcode, chip identit
 write flag, field limb, or Sail state.  Those remain owned by the semantic transition and physical
 row on the two sides of this shared projection.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

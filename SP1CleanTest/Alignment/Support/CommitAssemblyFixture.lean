@@ -1,4 +1,6 @@
-import SP1CleanTest.Alignment.Support.HostProgramFixture
+module
+
+public import SP1CleanTest.Alignment.Support.HostProgramFixture
 
 /-! # Complete commitment programs
 
@@ -6,6 +8,8 @@ Repeated and full-bank declarations share the semantic host dispatcher, access c
 physical boundary construction with the other finite host programs. Statement words are chosen
 independently of the mutable banks. This does not establish general compiler completeness.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.CommitAssembly
 open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness

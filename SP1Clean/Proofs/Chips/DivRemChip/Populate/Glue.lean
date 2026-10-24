@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Circuits.Gadgets.Mul
-import SP1Clean.Math.WordEquality
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+public import SP1Clean.Circuits.Gadgets.Mul
+public import SP1Clean.Math.WordEquality
 
 /-! # `DivRemChip` populate value bundles — the `c_times_quotient` ↔ `MulOperation` glue
 
@@ -10,6 +12,8 @@ limbs, viewed as words, are exactly the low/high 64-bit slices of the 128-bit pr
 `quotient_comp · c` (`ctqLo_eq_*`/`ctqHi_eq_*`), and `MulOperation.semantic_populate` pins the
 populated product struct's `resultWord` to the same slices — so the per-limb glue follows from
 limb-uniqueness of `isU64` words (`word_eq_of_toBitVec64_eq`). -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

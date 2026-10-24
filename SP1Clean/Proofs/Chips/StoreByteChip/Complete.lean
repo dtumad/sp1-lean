@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.StoreByteChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.StoreByteChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.StoreByteChip` — from trace events to a valid AIR table
 
@@ -24,6 +26,8 @@ Everything else is the shared sub-word substrate: the same `memLimbIndex` limb t
 same `storeLimb` merge, and the same `storeLimb_cases` four-way split serving both the `mem_limb`
 selection gates and the read-modify-write gates.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

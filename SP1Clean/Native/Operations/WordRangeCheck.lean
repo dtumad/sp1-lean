@@ -1,9 +1,11 @@
-import ToClean.Gadgets.LookupProjection
-import SP1Clean.Math.Word
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Gadgets.Bits
-import Clean.Utils.Tactics
+module
+
+public import ToClean.Gadgets.LookupProjection
+public import SP1Clean.Math.Word
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Gadgets.Bits
+public import Clean.Utils.Tactics
 
 /-! # `WordRangeCheck` — the whole-`Word` 16-bit range check as a Clean `FormalAssertion`
 
@@ -19,6 +21,8 @@ re-assembling four per-limb bounds via `Word.isU64_of_cases`.
 the payload to the tautology `isU64 → isU64` and starve the consumer. Completeness still has the limb
 bounds — a `FormalAssertion`'s completeness receives the `Spec` (the prover must satisfy
 `Assumptions ∧ Spec` to use an assertion), which is exactly `Word.isU64 w`. -/
+
+@[expose] public section
 
 namespace SP1Clean.WordRangeCheck
 

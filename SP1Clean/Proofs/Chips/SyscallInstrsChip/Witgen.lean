@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+public import ToClean.Air.TableBuild
 
 /-! # `SyscallInstrs` table: component and (for now empty) witness generation
 
@@ -18,6 +20,8 @@ facts below are vacuous rather than proved against a concrete row. When the comp
 real syscall events (the phase that also retires `HaltChip`), `Occurrence .syscallInstrs` stops
 being `Empty`, this map becomes a real row builder, and these theorems acquire a
 `ComputableWitnesses` obligation that an empty table does not have. -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

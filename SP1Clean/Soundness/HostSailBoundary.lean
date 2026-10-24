@@ -1,5 +1,7 @@
-import SP1Clean.Native.Operations.SailBoundary
-import SP1Clean.Soundness.HostFinalMemorySoundness
+module
+
+public import SP1Clean.Native.Operations.SailBoundary
+public import SP1Clean.Soundness.HostFinalMemorySoundness
 
 /-! # Install the supplied Sail frame above the complete Memory boundary
 
@@ -8,6 +10,8 @@ come from one complete supplied snapshot. The added public circuit preserves the
 ledger. Dynamic nextPC/retirement binding and complete host agreement remain open; this assembly
 does not yet fill the end-to-end shard target.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostSailBoundary
 

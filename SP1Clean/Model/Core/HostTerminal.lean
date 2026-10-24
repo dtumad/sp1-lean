@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.HostExecutionLaws
+module
+
+public import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # HALT is the only host transition that creates terminal status
 
@@ -7,6 +9,8 @@ outputs, requests, or commitment banks. A final exit flag in a local path theref
 actual HALT rather than an unrelated host effect. The whole-machine no-resumption theorem also
 guards ordinary Sail steps; stopping only the host dispatcher would not suffice.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

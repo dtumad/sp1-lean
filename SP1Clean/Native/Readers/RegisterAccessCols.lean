@@ -1,13 +1,15 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.Channels
-import SP1Clean.Circuits.Types.RTypeReader
-import SP1Clean.Native.Readers.RegisterAccessTimestamp
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Types.RTypeReader
+public import SP1Clean.Native.Readers.RegisterAccessTimestamp
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native register-access reader — one operand's columns as composed Clean `FormalAssertion`s
 
@@ -37,6 +39,8 @@ columns from it (`prev_low := clk_target - 1`, `diff := 0`, so the scaled numera
 is what makes completeness hold for every `clk_target`. The `.memory` interactions themselves receive
 their cross-row meaning from timed typed-memory grounding, so these
 sub-circuits emit no lookup for them. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers
 

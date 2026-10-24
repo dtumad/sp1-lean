@@ -1,10 +1,14 @@
-import SP1Clean.Native.Readers.RegisterRead
+module
+
+public import SP1Clean.Native.Readers.RegisterRead
 
 /-! # Register reads from an ordered prior record
 
 Compute the timestamp gap's low limb from semantic clocks. A later access in the same high-clock
 block, a bounded target clock, and a bounded old word suffice for the reader's completeness.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RegisterRead
 

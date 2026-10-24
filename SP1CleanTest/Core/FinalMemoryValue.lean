@@ -1,13 +1,15 @@
-import SP1Clean.Native.Operations.FinalRegisterValue
-import SP1Clean.Native.Operations.FinalRamValue
-import SP1Clean.Native.Operations.FinalMemoryReceipt
-import SP1Clean.Native.Operations.FinalRegisterCheck
-import SP1Clean.Native.Operations.FinalRamCheck
-import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
-import SP1Clean.Proofs.Chips.OrderedFinalProvider
-import SP1Clean.Model.SP1Field
-import Clean.Circuit.WitnessExport
-import SP1CleanTest.Core.StaticMembership
+module
+
+public import SP1Clean.Native.Operations.FinalRegisterValue
+public import SP1Clean.Native.Operations.FinalRamValue
+public import SP1Clean.Native.Operations.FinalMemoryReceipt
+public import SP1Clean.Native.Operations.FinalRegisterCheck
+public import SP1Clean.Native.Operations.FinalRamCheck
+public import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
+public import SP1Clean.Proofs.Chips.OrderedFinalProvider
+public import SP1Clean.Model.SP1Field
+public import Clean.Circuit.WitnessExport
+public import SP1CleanTest.Core.StaticMembership
 
 /-! # Native target-value checks and complete-record handoff
 
@@ -16,6 +18,8 @@ lookups, and Byte semantics.
 Receipt balance includes clocks and all value limbs. The original Memory and ordering ledgers
 remain available to the enclosing machine; this fixture does not claim a complete mixed AIR.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.FinalMemoryValue
 

@@ -1,7 +1,9 @@
-import SP1CleanTest.Core.HintSourceExport
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Native.Operations.HintQueueSource
+module
+
+public import SP1CleanTest.Core.HintSourceExport
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Native.Operations.HintQueueSource
 
 /-! # Byte-authenticated source hints and complete padded requests
 
@@ -9,6 +11,8 @@ Evaluate actual fixed-column providers and fixture consumers on the node/word le
 tests expose missing words, content changes, and the need for separate length authentication.
 The fixture consumer is not the full HINT_READ handler or a mixed-AIR integration claim.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HintQueueWords
 

@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.TraceGen.AluGenerator
-import SP1Clean.Model.Semantics.GuestProgram
+module
+
+public import SP1Clean.FormalModel.TraceGen.AluGenerator
+public import SP1Clean.Model.Semantics.GuestProgram
 
 /-!
 # Reading ALU steps off a Sail execution
@@ -28,6 +30,8 @@ carries whatever program restriction those witnesses impose; keeping the decoder
 that restriction lands in the caller's statement, where it can be read, instead of being baked into
 the generator.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

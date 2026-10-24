@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.WritePermission
-import ToClean.Air.ChannelClosure
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.Native.Operations.WritePermission
+public import ToClean.Air.ChannelClosure
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # Byte permission authentication from a structural ledger
 
@@ -9,6 +11,8 @@ then authenticates every unit pull, provided the public verifier and every other
 zero or unit-negative permission interactions. This separates the generic matching argument from the concrete assembly's
 exhaustive source classification and from the store's byte-footprint proof.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.WritePermission
 

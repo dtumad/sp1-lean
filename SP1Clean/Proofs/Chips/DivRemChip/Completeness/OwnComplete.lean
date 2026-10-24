@@ -1,11 +1,13 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Circuits.Gadgets.DivRem.Assertions
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Abs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Euclid
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Circuits.Gadgets.DivRem.Assertions
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Abs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Euclid
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Signs
 
 /-! # `DivRemChip` — the own-asserts completeness lemma (factored for parallel compilation)
 
@@ -20,6 +22,8 @@ per-column **eval pins** (`Expression.eval env colsV.<field> = <populate value>`
 `case own` glue supplies them from the completeness proof's own pins (`h_env_*`/`h_input`). Each of the
 121 conjuncts is dispatched to its already-proven value lemma in `Populate/{Abs,Bounds,Shapes,Signs,
 Glue,Euclid}.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

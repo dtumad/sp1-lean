@@ -1,14 +1,18 @@
-import SP1CleanTest.Alignment.Audit.OneAddNativePremises
-import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Model.Core.SyscallEncoding
-import ToClean.Air.FiniteLookup
-import SP1CleanTest.Core.StaticMembership
+module
+
+public import SP1CleanTest.Alignment.Audit.OneAddNativePremises
+public import SP1Clean.Soundness.ProtectedLocalCore
+public import SP1Clean.Model.Core.SyscallEncoding
+public import ToClean.Air.FiniteLookup
+public import SP1CleanTest.Core.StaticMembership
 
 /-! # Shared ADD fixture and actual AIR evaluator
 
 Test support for local-core regressions, host extensions, and the talk runner. All assertions,
 fixed lookups, and interaction messages come from the actual component programs.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.LocalCore.Fixture
 

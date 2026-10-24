@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.AIR
+module
+
+public import SP1Clean.Soundness.AIR
 
 /-! # The single-shard boot→halt corollary
 
@@ -21,6 +23,8 @@ What this is *not*: a multi-shard theorem.  It applies to a single shard that bo
 The reserved multi-shard vocabulary (`EventShardLayout`, `LastExecutionHalts`,
 `SP1ExecutionRelation`) composes shards along an authenticated ledger and is a separate,
 recursion-dependent target. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

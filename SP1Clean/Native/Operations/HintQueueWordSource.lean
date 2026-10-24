@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HintWords
-import ToClean.Air.StaticProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.HintWords
+public import ToClean.Air.StaticProvider
 
 /-! # Verifier-fixed source words for immutable hints
 
@@ -8,6 +10,8 @@ queue. Counts are prover-owned. Physically oversized source inventories fail clo
 whole; the native hint-count and byte-count ceilings preserve the entire admitted inventory.
 Allocation providers and complete consumer coverage remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintQueue
 

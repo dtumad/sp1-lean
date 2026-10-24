@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import SP1Clean.Model.Machine.Shard
+module
+
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+public import SP1Clean.Model.Machine.Shard
 
 /-! # What a syscall row means
 
@@ -26,6 +28,8 @@ from the row or from successful Rust dispatch. In particular, the cast ignores t
 codes are below 256, so canonicality requires membership in that list and zero higher bytes. This
 restriction preserves the current `IsCanonicalCode`/`SP1Halted` meaning without adding assertions
 absent from the Rust row. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

@@ -1,5 +1,9 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+
+@[expose] public section
 
 set_option linter.style.longLine false
 set_option linter.unusedSimpArgs false

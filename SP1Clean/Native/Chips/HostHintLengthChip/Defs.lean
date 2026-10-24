@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.HintQueue
-import SP1Clean.Native.Operations.ClockOrder
-import Clean.Gadgets.Equality
+module
+
+public import SP1Clean.FormalModel.Contracts.HintQueue
+public import SP1Clean.Native.Operations.ClockOrder
+public import Clean.Gadgets.Equality
 
 /-! # HINT_LEN observes the current persistent queue head
 
@@ -8,6 +10,8 @@ Each row consumes one full instruction handoff and replaces a clocked queue stat
 head. The nonempty variant consumes that head's immutable node record; the empty variant requires
 zero head and the all-ones return. Every auxiliary clock witness is computed by Clean subcircuits.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintLengthChip
 

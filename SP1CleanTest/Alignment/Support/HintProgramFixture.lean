@@ -1,4 +1,6 @@
-import SP1CleanTest.Alignment.Support.HostProgramFixture
+module
+
+public import SP1CleanTest.Alignment.Support.HostProgramFixture
 
 /-! # Complete queue observations and overlapping padded reads
 
@@ -6,6 +8,8 @@ Two persistent hints are observed before and after consumption. Reads reuse the 
 so the final value cannot stand in for either earlier transfer. Empty, aligned and byte-tail hints
 share this program and its production constructors; the final HINT_LEN observes an empty queue.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.HintProgram
 

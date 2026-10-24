@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.HostQueue
-import SP1Clean.Model.Core.BankReplay
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Model.Core.HostQueue
+public import SP1Clean.Model.Core.BankReplay
+public import SP1Clean.Model.SP1Field
 
 /-! # Stateful queue compilation regressions
 
@@ -8,6 +10,8 @@ Actual host dispatch drives the queue compiler through guest prepends, request-b
 responses, observations, and padded hint reads. These tests check changing lengths and complete
 bytes; they do not claim the queue inventory is already authenticated by the mixed AIR.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostQueue
 

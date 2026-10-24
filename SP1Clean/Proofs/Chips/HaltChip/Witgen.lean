@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.HaltChip.Formal
-import ToClean.Gadgets.ComputableWitnesses
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Proofs.Chips.HaltChip.Formal
+public import ToClean.Gadgets.ComputableWitnesses
+public import ToClean.Air.TableBuild
 
 /-! # Halt table: component, padding row, and honest witness generation
 
@@ -13,6 +15,8 @@ Every shard's halt table carries **exactly one** row: the padding row on ordinar
 `1 - is_real` Exit push of `⟨0⟩` is what balances the state-boundary verifier's ungated
 `⟨exit_code⟩` pull and forces `exit_code = 0`), or the one real ECALL witness row on halting
 shards. -/
+
+@[expose] public section
 
 namespace SP1Clean.HaltChip
 

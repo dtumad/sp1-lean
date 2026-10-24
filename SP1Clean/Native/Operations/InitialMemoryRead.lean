@@ -1,8 +1,10 @@
-import SP1Clean.FormalModel.Contracts.InitialMemoryRead
-import SP1Clean.Native.Operations.InitialMemoryLookup
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Math.EvalVec
-import ToClean.Circuit.WitnessCombinator
+module
+
+public import SP1Clean.FormalModel.Contracts.InitialMemoryRead
+public import SP1Clean.Native.Operations.InitialMemoryLookup
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Math.EvalVec
+public import ToClean.Circuit.WitnessCombinator
 
 /-! # Address-based initial-memory word reads
 
@@ -10,6 +12,8 @@ The first byte is read directly. Seven witnessed additions locate the remaining 
 authenticated by the bundled byte-read circuit. Callers supply only the base address; the
 complete eight-byte footprint is the semantic completeness condition.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialMemoryRead
 

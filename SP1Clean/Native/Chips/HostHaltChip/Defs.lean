@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.HostControl
-import SP1Clean.Native.Operations.BoundedWord
-import SP1Clean.Model.HostExit
-import Clean.Gadgets.Equality
+module
+
+public import SP1Clean.FormalModel.Contracts.HostControl
+public import SP1Clean.Native.Operations.BoundedWord
+public import SP1Clean.Model.HostExit
+public import Clean.Gadgets.Equality
 
 /-! # The native HALT host consumer
 
@@ -9,6 +11,8 @@ One row consumes one full instruction handoff and checks its canonical exit argu
 no padding. The instruction emits the public Exit value; this handler separately emits the
 complete terminal receipt that authenticates optional outgoing status.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHaltChip
 

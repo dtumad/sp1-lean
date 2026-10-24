@@ -1,12 +1,16 @@
-import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Full-register syscall authentication from raw native AIR
 
 The code guard requires no channel currency. Its conclusion can therefore be recovered before
 Memory grounding, independently of the remaining host-effect obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CoreSyscallChip
 

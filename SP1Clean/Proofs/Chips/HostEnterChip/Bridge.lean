@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+module
+
+public import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+public import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # ENTER_UNCONSTRAINED is a zero-effect constrained-replay step
 
@@ -7,6 +9,8 @@ The complete dispatch theorem authenticates the canonical code, both unused gues
 and the zero return. No host field or guest memory changes, and an already halted host cannot
 dispatch this call. Unconstrained execution is deliberately outside this native profile.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostEnterChip
 

@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.SupportedShard
-import SP1Clean.Model.Semantics.TransitionDecode
-import SP1Clean.Proofs.Completeness.InstructionEvent
+module
+
+public import SP1Clean.FormalModel.SupportedShard
+public import SP1Clean.Model.Semantics.TransitionDecode
+public import SP1Clean.Proofs.Completeness.InstructionEvent
 
 /-!
 # Chronological ordinary-execution compiler
@@ -17,6 +19,8 @@ representable native image.  `Execution.NativeCompilerReady` is the transparent 
 validity predicate: it refers only to the unique result of this function and never to an AIR
 witness, a Clean row, or an existential trace generator.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

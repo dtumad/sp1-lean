@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.Truth
+module
+
+public import SP1Clean.Model.Semantics.Truth
 
 /-! # Intra-row same-key touch chains — the SP-6 port
 
@@ -43,6 +45,8 @@ Production deviations from the spike, beyond re-typing: the memory-side frontier
 folds the spike's `finM ::ₘ Q` into one unconstrained multiset `R`; the head-pull forcing lives in
 `chainLinks_of_balance` (not `chainForcing_step`) since `head_lt` is no longer certified — exactly
 the D4/D5 resolution. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.TimedGrounding
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Alignment.Chips.JalChip.Bridge
-import SP1Clean.Alignment.Chips.UTypeChip.Bridge
+module
+
+public import SP1Clean.Soundness.GroundingAdapter
+public import SP1Clean.Alignment.Chips.JalChip.Bridge
+public import SP1Clean.Alignment.Chips.UTypeChip.Bridge
 
 /-! # Canonical J-type grounding
 
@@ -10,6 +12,8 @@ JAL and U-type rows share SP1's one-access `JTypeReader`: a destination prior pu
 than a syntactic copy of the prior-value column.  The generic `RowWiring` x0 arm records precisely
 that upstream behavior.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

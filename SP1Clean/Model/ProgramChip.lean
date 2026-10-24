@@ -1,6 +1,8 @@
-import Mathlib.Data.ZMod.Basic
-import SP1Clean.Model.InteractionBus
-import SP1Clean.Math.Word
+module
+
+public import Mathlib.Data.ZMod.Basic
+public import SP1Clean.Model.InteractionBus
+public import SP1Clean.Math.Word
 
 /-! # The `ProgramChip` receiver — discharging instruction-fetch membership from bus balance
 
@@ -20,6 +22,8 @@ receiver is characterized by a membership **predicate** (`inROM`), not the ROM e
 program row. The key fact that makes the membership transfer work is that the Program-bus key is the *full*
 `ZMod.val`-projection of every meaningful instruction field, so (val injective) **the key determines the
 row** — identical to the byte argument. -/
+
+@[expose] public section
 
 namespace SP1Clean.ProgramChip
 

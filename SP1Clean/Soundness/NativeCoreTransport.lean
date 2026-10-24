@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreMemoryOrder
-import SP1Clean.Soundness.CoreRowTransport
+module
+
+public import SP1Clean.Soundness.NativeCoreMemoryOrder
+public import SP1Clean.Soundness.CoreRowTransport
 
 /-! # The native mixed carrier after refresh elimination
 
@@ -9,6 +11,8 @@ semantic step/frame transport are derived from the checked image and raw constra
 The carrier is an instance of the same `ExecutionCarrier` used by the local and host assemblies.
 The original rows' actual execution facts remain the next semantic obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

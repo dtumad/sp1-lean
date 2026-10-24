@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.LoadWordChip` — from trace events to a valid AIR table (the memory template)
 
@@ -34,6 +36,8 @@ The event-level table API below is intentionally still the unpadded core, and th
 claim a full-chip zero-row inhabitance theorem. A future ensemble-height builder must construct and
 prove the complete chip padding row while choosing its table height.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Soundness.LocalExecution
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Soundness.FinishedChannels
+public import SP1Clean.Soundness.LocalExecution
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # The decoded-row circuit soundness boundary
 
@@ -16,6 +18,8 @@ separates what global grounding must still supply:
 The resulting API prevents the capstone from assuming `ChipRow.chipSpec` directly or rebuilding a
 second operation-level semantics beside the chip circuit.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

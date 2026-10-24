@@ -1,18 +1,20 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReader
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReader
 -- for `eval_registerAccessCols`, a lemma about the shared `Circuits.Types.RegisterAccessCols` struct
 -- that happens to live in the R-type reader's namespace (cf. `AddiChip/Defs.lean`).
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The JALR chip row as a `GeneralFormalCircuit`
 
@@ -21,6 +23,8 @@ the jump base is the rs1 register value and the low bit is cleared before the ju
 witness + binary gate). Composes two `AddOperation` gadgets (jump `rs1 + op_c_imm` + link `pc + 4`),
 `CPUState` (LSB-cleared `next_pc`), `ITypeReader`, and a 4-byte alignment range check. Implements
 SP1's `Jalr` `air.rs:eval`. -/
+
+@[expose] public section
 
 namespace SP1Clean.JalrChip
 

@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Completeness.NativeTraceCompiler
+module
+
+public import SP1Clean.Proofs.Completeness.NativeTraceCompiler
 
 /-!
 # Native compiler agreement with the built State tables
@@ -8,6 +10,8 @@ chronological compiler remains field-free; the lemmas here identify its records 
 actually produced by `SupportedCoreTraceWitness` and show that canonical Byte/Range/Program
 closure does not disturb either instruction rows or the StateBump suffix.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

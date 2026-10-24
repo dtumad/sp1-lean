@@ -1,6 +1,8 @@
-import SP1Clean.Native.Chips.BranchChip.Defs
-import SP1Clean.Soundness.RowView
-import Clean.Circuit.Extensions
+module
+
+public import SP1Clean.Native.Chips.BranchChip.Defs
+public import SP1Clean.Soundness.RowView
+public import Clean.Circuit.Extensions
 
 /-! # Branch chip proof assumptions
 
@@ -8,6 +10,8 @@ The verifier-side operand assumptions and honest-prover witness contract for the
 row. These live separately from the circuit proof so `Formal.lean` remains a small packaging and
 channel-exposure surface.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

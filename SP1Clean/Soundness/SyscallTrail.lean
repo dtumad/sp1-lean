@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.SyscallGrounding
+module
+
+public import SP1Clean.Soundness.SyscallGrounding
 
 /-! # The trail, once a syscall row can sit in the middle of it
 
@@ -23,6 +25,8 @@ carrying a per-row duration, which is exactly what `walkG` was parameterized for
 bounds the halt push's pc limbs on the *pulled* side only, because the halt push's pc is literally
 `(1, 0, 0)` and is handled by hand. A mid-shard syscall row pushes a real 48-bit `pc + 4`, so it
 needs genuine limb bounds on both sides or `canonState` stops preserving `pcBits`. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

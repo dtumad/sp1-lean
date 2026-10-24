@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.OrderedBoundary
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Circuits.Gadgets.LtUnsigned
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.FormalModel.Contracts.OrderedBoundary
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # A constrained ordered boundary link
 
@@ -9,6 +11,8 @@ Every row pulls its predecessor key and pushes its own key, both with unit multi
 range checks and an unsigned comparison establish strict natural-number order. The channel
 name is an ensemble parameter, allowing independent initialization and finalization chains.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedBoundary
 

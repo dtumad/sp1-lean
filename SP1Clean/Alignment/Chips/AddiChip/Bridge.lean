@@ -1,8 +1,10 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.AddiChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.AddiChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for Addi
 
@@ -11,6 +13,8 @@ emulation (`sp1_addi`: write `nextPC = pc + 4` and the result register), given t
 semantic `a_val = op_b + signExtend(imm)` and the rs1/PC reads. `execute_ITYPE`'s `.ADDI` arm
 is `wX_bits rd (rX_bits rs1 + signExtend imm)`, closed by `simp` with the auto
 `run_rX_bits`/`run_wX_bits` lemmas. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.AddiSail

@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.FinalRegisterValue
-import SP1Clean.Math.WordEquality
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Air.StaticProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.FinalRegisterValue
+public import SP1Clean.Math.WordEquality
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Air.StaticProvider
 
 /-! # Fixed target-register authentication
 
@@ -9,6 +11,8 @@ The source and target use separate membership channels. Every sparse row consume
 final record, including its clock, and authenticates its value through the target's verifier-fixed
 register provider. The separate provider retains all 32 rows, including unused registers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRegisterValue
 

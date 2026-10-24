@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.TimedGrounding
-import SP1Clean.Soundness.Walk
-import SP1Clean.Model.Semantics.GenericTruth
-import SP1Clean.Model.Semantics.EventTime
+module
+
+public import SP1Clean.Soundness.TimedGrounding
+public import SP1Clean.Soundness.Walk
+public import SP1Clean.Model.Semantics.GenericTruth
+public import SP1Clean.Model.Semantics.EventTime
 
 /-! # The grounding walk over an arbitrary trajectory
 
@@ -24,6 +26,8 @@ This file states the walk once over `Semantics.Trajectory` and derives the two i
 
 The three predicate bridges that `GenericTruth.lean` could not state — its import does not reach
 `FrameFactT`/`LiveOKT`/`GroundedT` — are here, beside the walk that consumes them. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.TimedGrounding
 

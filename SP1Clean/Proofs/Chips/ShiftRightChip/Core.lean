@@ -1,15 +1,17 @@
-import SP1Clean.Math.Word
-import SP1Clean.Math.ShiftBounds
-import SP1Clean.Math.HWord
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.NormNum.Prime
-import Mathlib.Tactic.Positivity
-import Mathlib.Tactic.FieldSimp
-import Mathlib.Tactic.Set
-import Mathlib.Tactic.Use
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Math.ShiftBounds
+public import SP1Clean.Math.HWord
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.NormNum
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Tactic.Positivity
+public import Mathlib.Tactic.FieldSimp
+public import Mathlib.Tactic.Set
+public import Mathlib.Tactic.Use
 
 /-! # ShiftRight native arithmetic — the SRL math layer
 
@@ -20,6 +22,8 @@ Carries the **SRL** chain: `is_mod_64`, `cancel_mul_65536(_zero)`, `cb_sum_val_e
 `bool_mul_65535_lt`, the four `srl_within_byte_shift*` division identities, and the four
 `srl_close_su16_*_case` wrappers (`(toBitVec64 limb_result).toNat = (toBitVec64 b).toNat / 2^shamt`).
 The SRA/SRLW/SRAW chains (needing the `HWord` 32-bit half-word and the sign-fill identities) follow. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightMath
 open SP1Clean

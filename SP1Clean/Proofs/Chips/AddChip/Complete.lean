@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.AddChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Proofs.Chips.AddChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.AddChip` — from trace events to a valid AIR table (the completeness pilot)
 
@@ -24,6 +26,8 @@ The chain, and where each link lives:
 Rolling the next chip of the family into this layer is steps 2 and 3 only: a three-field `def`
 beside `toAddInputs`, and a copy of `proverAssumptions_of_event` with its chip's conjunct list.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddChip
 

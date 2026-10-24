@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostQueueHistory
-import SP1Clean.Soundness.HostHintQueueBoundary
+module
+
+public import SP1Clean.Soundness.HostQueueHistory
+public import SP1Clean.Soundness.HostHintQueueBoundary
 
 /-! # Byte-exact queue replay from the installed AIR
 
@@ -9,6 +11,8 @@ length words and exact consumed lengths, and the final cursor decodes to the rep
 bytes. Agreement with a separately claimed outgoing snapshot, WRITE/hook allocation edges, and
 the mixed CPU/Memory execution remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintQueueHistory
 

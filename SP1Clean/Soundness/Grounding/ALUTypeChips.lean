@@ -1,9 +1,11 @@
-import SP1Clean.Soundness.Grounding.ITypeChips
-import SP1Clean.Alignment.Chips.AddwChip.Contracts
-import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
-import SP1Clean.Alignment.Chips.LtChip.Contracts
-import SP1Clean.Alignment.Chips.ShiftLeftChip.Contracts
-import SP1Clean.Alignment.Chips.ShiftRightChip.Contracts
+module
+
+public import SP1Clean.Soundness.Grounding.ITypeChips
+public import SP1Clean.Alignment.Chips.AddwChip.Contracts
+public import SP1Clean.Alignment.Chips.BitwiseChip.Contracts
+public import SP1Clean.Alignment.Chips.LtChip.Contracts
+public import SP1Clean.Alignment.Chips.ShiftLeftChip.Contracts
+public import SP1Clean.Alignment.Chips.ShiftRightChip.Contracts
 
 /-! # Canonical immediate-capable ALU grounding
 
@@ -12,6 +14,8 @@ Memory pull/read-back pair is present exactly on the register form (`imm_c = 0`)
 immediate form (`imm_c = 1`).  This module states that physical shape once and reduces the two cases
 to the already-audited R-type and I-type timed wiring.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

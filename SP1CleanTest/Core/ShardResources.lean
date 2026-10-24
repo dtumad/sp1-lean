@@ -1,12 +1,16 @@
-import SP1Clean.FormalModel.ShardResources
-import SP1Clean.Model.SP1Field
-import SP1Clean.Native.Operations.ResourceBoundary
+module
+
+public import SP1Clean.FormalModel.ShardResources
+public import SP1Clean.Model.SP1Field
+public import SP1Clean.Native.Operations.ResourceBoundary
 
 /-! # A nonempty bounded complete-state shard
 
 The source clock is a continuing phase-one clock. A real padded HINT_READ reaches the supplied
 full finite target; lowering the tick or byte ceiling rejects this same semantic tape.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ShardResources
 open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D.Defs

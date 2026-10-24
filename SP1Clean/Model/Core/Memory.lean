@@ -1,4 +1,6 @@
-import Mathlib.Data.BitVec
+module
+
+public import Mathlib.Data.BitVec
 
 /-! # Sparse byte memory for executable Core inputs and host effects
 
@@ -7,6 +9,8 @@ as zero. Addresses are natural numbers so interval checks take place before narr
 architectural address width. The execution profile supplies the address-window and ROM checks;
 the memory operations themselves have no silent wraparound.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

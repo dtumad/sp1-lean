@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.WritePermissionBalance
-import SP1Clean.Proofs.Chips.ProtectedStore
-import SP1Clean.Soundness.TypedSelectors
+module
+
+public import SP1Clean.Soundness.WritePermissionBalance
+public import SP1Clean.Proofs.Chips.ProtectedStore
+public import SP1Clean.Soundness.TypedSelectors
 
 /-! # Permission requests of the four store components
 
@@ -8,6 +10,8 @@ The emitted requests use the original chip's computed address and real-row selec
 instruction circuits are silent on the new channel. Their selector constraints therefore make
 all added contributions either zero or unit pulls; padding cannot manufacture a provider.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.WritePermission
 

@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Relations
-import SP1Clean.Model.Machine.Shard
+module
+
+public import SP1Clean.FormalModel.Relations
+public import SP1Clean.Model.Machine.Shard
 
 /-! # Shared legacy ordinary/exact-Core shard relation
 
@@ -13,6 +15,8 @@ The common legacy clauses here fix deterministic event evaluation, official Sail
 clock/PC endpoints, code loading, configuration, and a finite canonical Memory boundary.
 Specializations add their profile facts through `CoreShardContract` without replacing those
 common clauses. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.HostIO
+module
+
+public import SP1Clean.Model.Core.HostIO
 
 /-! # Persistent, byte-exact hint queues
 
@@ -8,6 +10,8 @@ head, prepend guest or hook hints, and pop a consumed hint without copying its u
 No hash or trusted content oracle identifies bytes. Field encodings, resource bounds, and AIR
 authentication of the node inventory remain separate from this executable representation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.HintQueue
 

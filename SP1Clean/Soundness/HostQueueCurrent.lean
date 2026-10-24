@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostQueueCPUReplay
-import SP1Clean.Soundness.HostLocalCoreProgram
-import SP1Clean.Soundness.HostHintReadLocalMemory
+module
+
+public import SP1Clean.Soundness.HostQueueCPUReplay
+public import SP1Clean.Soundness.HostLocalCoreProgram
+public import SP1Clean.Soundness.HostHintReadLocalMemory
 
 /-! # Current host hints derived from installed queue history
 
@@ -9,6 +11,8 @@ determines the current host queue. The installed queue AIR binds that same queue
 frontier. No independent current-head or byte-content premise is supplied by the caller.
 Memory currency and execution of the current call remain the mixed grounding obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostQueueCurrent
 

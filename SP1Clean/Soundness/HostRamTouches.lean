@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
-import SP1Clean.Soundness.TypedTime
-import SP1Clean.Soundness.TypedInteractions
-import SP1Clean.Soundness.TouchChains
+module
+
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+public import SP1Clean.Soundness.TypedTime
+public import SP1Clean.Soundness.TypedInteractions
+public import SP1Clean.Soundness.TouchChains
 
 /-! # Host RAM touches before value grounding
 
@@ -11,6 +13,8 @@ prior Memory values. Prior low-clock bounds remain conditional until the complet
 transfers them from produced records. These are the facts needed to include host writes in
 mixed grounding; their value truth is a later conclusion of that walk.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostRamTouches
 

@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
-import SP1Clean.Proofs.Chips.DivRemChip.Soundness
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+public import SP1Clean.Proofs.Chips.DivRemChip.Soundness
 
 /-! # `DivRemChip` populate value bundles — the overflow block and the remainder-sign conditions
 
@@ -19,6 +21,8 @@ Value-level facts about the populate functions feeding two own-assert groups:
 
 The flag hypotheses are taken in the class-trichotomy form `FlagClasses` (signed-64 / signed-word
 / unsigned), derivable from per-flag booleans + the one-hot sum via `flagClassTrichotomy`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

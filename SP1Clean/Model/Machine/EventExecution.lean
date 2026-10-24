@@ -1,5 +1,7 @@
-import PolyFun.PFunctor.Dynamical.Run
-import SP1Clean.Model.Machine.Syscall
+module
+
+public import PolyFun.PFunctor.Dynamical.Run
+public import SP1Clean.Model.Machine.Syscall
 
 /-! # Eventful SP1 execution
 
@@ -13,6 +15,8 @@ Directions of the dependent PolyFun interface are exactly proved next steps.  Fo
 public witness type is instead the proof-free `EventExecutionTrace`; its validity predicate checks
 the same steps.  This separation lets an AIR postprocessor decode trace data without inspecting a
 proof of AIR validity.  A certified PolyFun `Prefix` remains the convenient internal theorem view. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

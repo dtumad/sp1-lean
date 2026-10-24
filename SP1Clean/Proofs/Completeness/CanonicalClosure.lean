@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.ClosureRealization
-import SP1Clean.Proofs.Completeness.FieldClosure
+module
+
+public import SP1Clean.Proofs.Completeness.ClosureRealization
+public import SP1Clean.Proofs.Completeness.FieldClosure
 
 /-!
 # Canonical preprocessed-provider closure
@@ -18,6 +20,8 @@ Generation inputs remain fixed, but canonical prover data is derived again from 
 physical rows. Only the literal interaction ledger is invariant; data-dependent semantic
 predicates require their own authenticated-table or named-key agreement proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

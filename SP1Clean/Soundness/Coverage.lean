@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.ChipRegistry
-import SP1Clean.Model.Opcode
+module
+
+public import SP1Clean.Soundness.ChipRegistry
+public import SP1Clean.Model.Opcode
 
 /-! # `Coverage` — the one auditable instruction → chip → Sail table
 
@@ -26,6 +28,8 @@ the in-row `adapter.imm_c` *column*, not by routing. So `imm_c` is deliberately 
 ALU chips each cover **both** forms — the register form (gated on the rs2 read) and the immediate form
 (gated on the program-bus decode `op_c_val = sign_extend imm`), so routing covers SLTI/…/ADDIW as well as
 their register forms. (`ShiftLeft`/`ShiftRight` model `imm_c` in-circuit; `ADDI` has its own `AddiChip`.) -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

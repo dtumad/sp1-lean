@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Native.Readers.MemoryAccess
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Native.Readers.MemoryAccess
 
 /-! # Trace generation — the RAM access block's contract
 
@@ -22,6 +24,8 @@ zeroed across a window boundary), so its difference is always a low-half differe
 commits both halves plus a `compare_low` selector and really does subtract high limbs. That is the
 whole reason `MemoryEvent.WellFormed` carries `clk_lt` and the register families' records carry no
 clock bound at all. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

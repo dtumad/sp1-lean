@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
-import SP1Clean.Proofs.Operations.HintReadStepLedger
-import Clean.Air.Balance
+module
+
+public import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
+public import SP1Clean.Proofs.Operations.HintReadStepLedger
+public import Clean.Air.Balance
 
 /-! # Physical hint word ledgers
 
@@ -10,6 +12,8 @@ and an exact cursor edge. Disabled physical rows retain each occurrence at zero 
 The internal access-coordination pair cancels for every environment.
 The coverage proof consumes these equations for actual circuit operations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadWordChip
 

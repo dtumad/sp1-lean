@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.HostFinalMemory
-import SP1Clean.Soundness.CommitmentEnsemble
-import ToClean.Air.ChannelRegistry
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Soundness.HostFinalMemory
+public import SP1Clean.Soundness.CommitmentEnsemble
+public import ToClean.Air.ChannelRegistry
+public import ToClean.Air.TableBuild
 
 /-! # Shared complete installed assembly for export comparisons
 
@@ -10,6 +12,8 @@ uses the same production assembly and physical registry; changing a source from 
 stopped does not replace it with a smaller circuit. This fixture context does not claim the
 remaining complete Sail/host target equality or mixed compiler theorem.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 

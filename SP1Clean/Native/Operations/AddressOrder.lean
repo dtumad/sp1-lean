@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.AddressOrder
-import Clean.Gadgets.IsZeroField
-import Clean.Gadgets.Bits
+module
+
+public import SP1Clean.FormalModel.Contracts.AddressOrder
+public import Clean.Gadgets.IsZeroField
+public import Clean.Gadgets.Bits
 
 /-! # An inclusive address comparison without lookup-channel traffic
 
@@ -9,6 +11,8 @@ nonnegative difference. Input bounds rule out field wrap. All twenty auxiliary c
 by Clean's standard zero-test and bit-decomposition witness programs. Fixed-table providers can
 therefore compare endpoints without adding demands to the instruction ensemble's Byte ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.AddressOrder
 

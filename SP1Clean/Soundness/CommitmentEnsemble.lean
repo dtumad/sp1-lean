@@ -1,5 +1,7 @@
-import SP1Clean.Native.Operations.CommitmentStatement
-import SP1Clean.Native.Operations.CommitmentBoundary
+module
+
+public import SP1Clean.Native.Operations.CommitmentStatement
+public import SP1Clean.Native.Operations.CommitmentBoundary
 
 /-! # Installing the immutable commitment statement
 
@@ -7,6 +9,8 @@ The fixed declaration provider and public assertions share one verifier-owned st
 Existing physical positions are preserved. The new table uses Clean's ordinary preprocessed
 payload provider; neither the prover's mutable bank nor per-call PublicValues echoes select it.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.CommitmentEnsemble
 

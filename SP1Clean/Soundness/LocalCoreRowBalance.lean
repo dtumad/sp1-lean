@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreRows
-import SP1Clean.Soundness.CoreRowBalance
+module
+
+public import SP1Clean.Soundness.LocalCoreRows
+public import SP1Clean.Soundness.CoreRowBalance
 
 /-! # Memory balance through mixed-row alignment and refresh elimination
 
@@ -14,6 +16,8 @@ chronology obligations form the reusable interface discharged by `LocalCoreMemor
 is the exact refresh-free Memory equation for the generic timed walk, without an inactivity or
 semantic-boundary assumption.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

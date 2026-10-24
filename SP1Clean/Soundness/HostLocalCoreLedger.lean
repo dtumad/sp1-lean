@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCore
-import SP1Clean.Soundness.LocalCoreChannels
+module
+
+public import SP1Clean.Soundness.HostLocalCore
+public import SP1Clean.Soundness.LocalCoreChannels
 
 /-! # New private protocols on the complete host-enabled local ledger
 
@@ -9,6 +11,8 @@ Their silence follows from the local channel inventory and the protected store p
 Only the physical syscall wrapper and appended auxiliary tables can contribute. This exact
 ledger split preserves padding and the original characteristic count bound.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

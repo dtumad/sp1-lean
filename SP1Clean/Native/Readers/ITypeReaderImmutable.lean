@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Circuits.Types.ITypeReader
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Circuits.Types.ITypeReader
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `ITypeReaderImmutable` reader — the store-adapter per-row checks as a Clean `GeneralFormalCircuit`
 
@@ -18,6 +20,8 @@ The register adapter for **stores** (and any I-type op where `op_a` is a source 
 `op_a_0` zeroing gates pin the *read* value of `x0` to `0` (`op_a_0 * prev_value_i = 0`), and there is
 no `wv*` write value. As upstream, `op_a_0` booleanity comes from the Program row rather than a
 standalone reader assertion. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.ITypeReaderImmutable
 

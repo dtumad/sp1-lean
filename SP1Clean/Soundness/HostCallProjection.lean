@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.HostCallLedger
-import ToClean.Circuit.SubcircuitProjection
-import ToClean.Air.EnsembleProjection
-import ToClean.Air.ExpressionScope
+module
+
+public import SP1Clean.Soundness.HostCallLedger
+public import ToClean.Circuit.SubcircuitProjection
+public import ToClean.Air.EnsembleProjection
+public import ToClean.Air.ExpressionScope
 
 /-! # The host wrapper retains instruction constraints and State chronology
 
@@ -10,6 +12,8 @@ cells, so the wrapper's extra input fields do not shift any original observation
 project, the State ledger is unchanged, and original Byte interactions are retained.
 Memory interactions deliberately do not project: WRITE adds an x12 read-back pair.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostCallProjection
 

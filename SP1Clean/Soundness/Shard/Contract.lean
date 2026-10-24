@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Shard
-import ToClean.Air.CompleteEnsemble
+module
+
+public import SP1Clean.FormalModel.Shard
+public import ToClean.Air.CompleteEnsemble
 
 /-! # End-to-end proof targets for the native shard
 
@@ -15,6 +17,8 @@ In particular the current source-hint assembly's PC/clock/frontier theorem does 
 `SoundnessTarget`. No queue cursor, bank path, instruction split, or grounding certificate occurs
 in the intended public execution relation. Faithfulness to the pinned Rust AIR is separate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.Shard
 

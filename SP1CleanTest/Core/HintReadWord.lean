@@ -1,5 +1,7 @@
-import Clean.Circuit.WitnessExport
-import SP1CleanTest.Core.HintReadFixtures
+module
+
+public import Clean.Circuit.WitnessExport
+public import SP1CleanTest.Core.HintReadFixtures
 /-! # Executed physical hint word coverage
 
 Run the real consumer, fixed source-word lookup, and fixed writable-interval provider. Boundary
@@ -7,6 +9,8 @@ fixtures supply a call's cursor endpoints and Memory records from the independen
 Their complete non-Byte ledgers must balance; Byte guarantees are checked on every actual pull.
 This exercises the word subsystem, not instruction/queue authorization or mixed-AIR installation.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HintReadWord
 

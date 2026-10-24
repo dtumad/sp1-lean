@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.HostExecutionLaws
-import SP1Clean.Model.Core.MemorySpan
-import SP1Clean.Math.ByteWord
+module
+
+public import SP1Clean.Model.Core.HostExecutionLaws
+public import SP1Clean.Model.Core.MemorySpan
+public import SP1Clean.Math.ByteWord
 
 /-! # Host byte reads from defined word observations
 
@@ -8,6 +10,8 @@ An observation gives all eight bytes of a word at an explicit natural address. I
 satisfied by an absent optional read. Buffer consumers use this interface after Memory grounding
 has authenticated their cells, without depending on the Sail memory implementation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.HostReadContext
 

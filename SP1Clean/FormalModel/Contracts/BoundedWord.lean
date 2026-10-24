@@ -1,11 +1,15 @@
-import SP1Clean.Math.Word
-import SP1Clean.Circuits.Types.LtOperationUnsigned
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Circuits.Types.LtOperationUnsigned
 
 /-! # A word below a fixed natural bound
 
 The comparison columns are internal completeness data. The semantic boundary is a genuine
 64-bit word whose natural value is strictly below the circuit's constant bound.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.BoundedWord
 

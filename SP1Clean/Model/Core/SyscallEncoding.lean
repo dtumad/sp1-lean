@@ -1,12 +1,16 @@
-import SP1Clean.Model.Core.SyscallCode
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Math.WordEquality
+module
+
+public import SP1Clean.Model.Core.SyscallCode
+public import SP1Clean.Model.Semantics.Decode
+public import SP1Clean.Math.WordEquality
 
 /-! # Canonical field encoding of the native syscall profile
 
 The four-limb representation preserves the complete register, including zero upper limbs.
 Membership in the encoded semantic inventory is independent of prover data or a lookup mechanism.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.SyscallKind
 

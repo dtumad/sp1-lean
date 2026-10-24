@@ -1,12 +1,16 @@
-import SP1Clean.Native.Operations.ShiftLeftOperation.Core
-import ToClean.Circuit.InteractionRecovery
-import Clean.Utils.Tactics
+module
+
+public import SP1Clean.Native.Operations.ShiftLeftOperation.Core
+public import ToClean.Circuit.InteractionRecovery
+public import Clean.Utils.Tactics
 
 /-! # `ShiftLeftCore` — proof boundary for ShiftLeft's assertion tail
 
 The native circuit emits the chip-local constraint tail. Its folded public contract is
 `ShiftLeftChip.CoreSpec`, so parent proofs need not repeatedly normalize the full assertion list.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftCore
 

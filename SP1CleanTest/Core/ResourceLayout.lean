@@ -1,12 +1,16 @@
-import SP1Clean.Model.Core.ResourceLimits
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.Core.MemorySpan
+module
+
+public import SP1Clean.Model.Core.ResourceLimits
+public import SP1Clean.Model.Core.HostExecution
+public import SP1Clean.Model.Core.MemorySpan
 
 /-! # Range consumers at boundary and cell-cover edges
 
 These use a non-SP1 range to check that the host interpreter and span arithmetic consume the
 shared data. They do not claim that an arbitrary range is realized by the pinned Sail platform.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ResourceLayout
 open SP1Clean.Model.Core

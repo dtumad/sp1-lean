@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.HintQueueCursor
-import ToClean.Air.VerifierExtension
+module
+
+public import SP1Clean.Proofs.Operations.HintQueueCursor
+public import ToClean.Air.VerifierExtension
 
 /-! # Verifier-owned hint queue endpoints
 
@@ -8,6 +10,8 @@ frontier. The final cursor is fixed by the ensemble instance. This circuit ancho
 path when installed in the verifier; it does not identify the final cursor's reachable bytes
 with an outgoing snapshot. That semantic binding requires the ordered allocation/head history.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintQueueBoundary
 

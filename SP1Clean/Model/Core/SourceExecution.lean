@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.ExecutionSnapshot
-import SP1Clean.Model.Core.SourceSnapshot
+module
+
+public import SP1Clean.Model.Core.ExecutionSnapshot
+public import SP1Clean.Model.Core.SourceSnapshot
 
 /-! # Checking a complete local source state
 
@@ -8,6 +10,8 @@ and endpoint ranges are checked before grounding. The check permits a stopped ho
 empty terminal segment remains an identity. The enclosing local verifier separately requires equal
 clock endpoints for stopped sources; strict State progress then excludes active AIR rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

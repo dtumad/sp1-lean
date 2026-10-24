@@ -1,12 +1,14 @@
-import SP1Clean.Proofs.Chips.ByteChip.ByteChip
-import SP1Clean.Proofs.Chips.ByteChip.RangeChip
-import SP1Clean.Proofs.Chips.ProgramProviderChip
-import SP1Clean.Proofs.Chips.MemoryProviderChip
-import SP1Clean.Proofs.Chips.MemoryFinalizeChip
-import SP1Clean.Proofs.Chips.StateBumpChip.Formal
-import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
-import SP1Clean.Proofs.Chips.HaltChip.Witgen
-import ToClean.Gadgets.ComputableWitnesses
+module
+
+public import SP1Clean.Proofs.Chips.ByteChip.ByteChip
+public import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+public import SP1Clean.Proofs.Chips.ProgramProviderChip
+public import SP1Clean.Proofs.Chips.MemoryProviderChip
+public import SP1Clean.Proofs.Chips.MemoryFinalizeChip
+public import SP1Clean.Proofs.Chips.StateBumpChip.Formal
+public import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
+public import SP1Clean.Proofs.Chips.HaltChip.Witgen
+public import ToClean.Gadgets.ComputableWitnesses
 
 /-! # Honest witness generation for the provider/boundary tables
 
@@ -43,6 +45,8 @@ or an aggregate field count. Memory init/finalize keep their upstream boolean se
 honest input builders expose both `0` and `1`. `ComputableWitnesses` consequently proves only the
 derived cells (bit decompositions and byte-operation results), not a hidden policy about table-row
 multiplicity. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

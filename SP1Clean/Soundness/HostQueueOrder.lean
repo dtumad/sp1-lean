@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadCoverage
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
+module
+
+public import SP1Clean.Soundness.HostHintReadCoverage
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
 
 /-! # Queue chronology from the physical HINT_LEN and HINT_READ tables
 
@@ -10,6 +12,8 @@ only when all three tables are empty. Source-record providers do not supply queu
 The path retains head/frontier continuity; semantic queue truth and future allocating handlers
 must be connected by the enclosing execution argument.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostQueueOrder
 

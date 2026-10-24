@@ -1,6 +1,8 @@
-import SP1Clean.Math.Word
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Math.Word
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.IntervalCases
 
 /-! # `SubOperation` — the arithmetic core (`RawSpec` + borrow-chain lemmas)
 
@@ -17,6 +19,8 @@ The arithmetic routes the 16-bit complement `bbar := 65535 - b[i]` (a genuine 16
 `val_compl_65535`) through `limb_lift`; the BitVec subtraction goal is converted to addition up front with
 `BitVec.eq_sub_iff_add_eq`. The witnessed circuit (`populate` + `main`/`elaborated`) and its `FormalAssertion`
 contract live in the sibling `Defs`/`Formal` modules. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubOperation
 

@@ -1,10 +1,14 @@
-import SP1Clean.Model.Core.MemoryFinalCheck
+module
+
+public import SP1Clean.Model.Core.MemoryFinalCheck
 
 /-! # Complete finite Memory endpoint checks
 
 These exercise the data-only boundary check, not an installed AIR verifier. It must accept
 equivalent sparse histories while rejecting both forged final values and unrecorded changes.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.MemoryFinalCheck
 

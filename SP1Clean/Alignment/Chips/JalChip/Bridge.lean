@@ -1,14 +1,18 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.JalChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.JalChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for JAL (+ `ChipKind` registration)
 
 `correct_jal_native` proves the RISC-V `execute_JAL` execution agrees with `sp1_jal` given the chip's
 jump/link semantic facts and 4-byte alignment. `JalChip.kind.view` threads a **data-dependent**
 `next_pc = add_operation.value` — `RowView.next_pc` is computed data, not `pc + 4`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.JalSail

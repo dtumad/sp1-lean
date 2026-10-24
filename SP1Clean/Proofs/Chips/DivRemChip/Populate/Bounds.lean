@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate
 
 /-! # `DivRemChip` populate value bundles — limb bounds
 
@@ -7,6 +9,8 @@ byte-range pulls and `isU64` obligations: every `wordOfNat`/`wordOfBits` limb is
 construction, the eight `populateCtq` limbs are u16 residues, the eight `populateCarry` entries
 are boolean (the chain adds two u16s and a boolean carry), and the `U16MSBOperation.populate_msb`
 cells are boolean on u16 limbs. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

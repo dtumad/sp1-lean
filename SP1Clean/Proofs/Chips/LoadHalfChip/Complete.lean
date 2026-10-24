@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.LoadHalfChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.LoadHalfChip` — from trace events to a valid AIR table
 
@@ -12,6 +14,8 @@ the RAM cell's **four** u16 limbs, so the row commits two offset bits (address b
 the four selection gates carry a two-factor guard each. All of that is the family's shared
 `memLimb_cases` (`FormalModel/TraceGen/Memory.lean`) — the byte load selects the same limb with the
 same two bits — so the whole selection is one citation and four `simp only`s. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

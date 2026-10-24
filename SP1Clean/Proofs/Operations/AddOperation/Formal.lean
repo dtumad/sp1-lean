@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.AddOperation.RawSpec
-import SP1Clean.Native.Operations.AddOperation.Populate
-import SP1Clean.Native.Operations.AddOperation.Defs
+module
+
+public import SP1Clean.Native.Operations.AddOperation.RawSpec
+public import SP1Clean.Native.Operations.AddOperation.Populate
+public import SP1Clean.Native.Operations.AddOperation.Defs
 
 /-! # `AddOperation` — the `FormalAssertion` (soundness / completeness / contract)
 
@@ -8,6 +10,8 @@ The local addition gadget as a Clean `FormalAssertion`. Soundness/completeness r
 `RawSpec`'s `addSemantics_of_carries`/`carries_of_addSemantics`; `populate_spec` lets the composing
 chip discharge its `assertion`-side obligation. Arithmetic core in `RawSpec`, circuit in `Defs`, and
 witness in `Populate`; no Rust operation artifact is part of this proof. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddOperation
 

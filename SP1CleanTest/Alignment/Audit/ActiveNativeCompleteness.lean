@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCompleteness
-import SP1CleanTest.Alignment.Audit.ActiveTraceNonVacuity
+module
+
+public import SP1Clean.Soundness.NativeCompleteness
+public import SP1CleanTest.Alignment.Audit.ActiveTraceNonVacuity
 
 /-!
 # Active deterministic native-completeness audit
@@ -13,6 +15,8 @@ The definitions are deliberately shared with the existing active AIR anchor.  A 
 step, semantic projector, event compiler, or JAL trace schema must therefore continue to agree on
 one concrete non-padding row.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 open LeanRV64D.Functions

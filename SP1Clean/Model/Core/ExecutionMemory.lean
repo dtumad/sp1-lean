@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.ExecutionFrame
-import SP1Clean.Model.Core.ExecutionSnapshot
-import SP1Clean.Model.Core.ExecutionEncoding
+module
+
+public import SP1Clean.Model.Core.ExecutionFrame
+public import SP1Clean.Model.Core.ExecutionSnapshot
+public import SP1Clean.Model.Core.ExecutionEncoding
 
 /-! # Memory presence throughout the independent execution path
 
@@ -8,6 +10,8 @@ The complete snapshot materializes every byte below the native Sail limit. Actua
 and concrete host writes never delete a byte. These facts establish memory availability at every
 cut without using an AIR witness or the final-memory grounding conclusion.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 open Machine Soundness.Target

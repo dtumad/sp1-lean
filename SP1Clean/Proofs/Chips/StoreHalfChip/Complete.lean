@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.StoreHalfChip` — from trace events to a valid AIR table
 
@@ -13,6 +15,8 @@ four read-modify-write gates carry a two-factor coefficient each. That is the fa
 `storeLimb` / `storeLimb_cases` (`FormalModel/TraceGen/Memory.lean`) — the byte store overwrites the
 same limb with the same two bits — so the whole merge is one citation and a uniform four-way split.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

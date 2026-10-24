@@ -1,9 +1,11 @@
-import SP1Clean.Proofs.Chips.OrderedInitialProvider
-import SP1CleanTest.Core.InitialMemoryLookup
-import SP1Clean.Soundness.InitialMemoryEnsemble
-import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Soundness.NativeCoreBoundaries
-import SP1Clean.Soundness.LocalCoreBoundaries
+module
+
+public import SP1Clean.Proofs.Chips.OrderedInitialProvider
+public import SP1CleanTest.Core.InitialMemoryLookup
+public import SP1Clean.Soundness.InitialMemoryEnsemble
+public import SP1Clean.Soundness.FinalMemoryEnsemble
+public import SP1Clean.Soundness.NativeCoreBoundaries
+public import SP1Clean.Soundness.LocalCoreBoundaries
 
 /-! # Initial/final records and ordered-key AIR regressions
 
@@ -11,6 +13,8 @@ These checks execute the actual witness programs, evaluate every assertion and i
 lookup, and validate every nonzero Byte interaction against the byte-op semantics. Memory and
 ordering interactions are retained for the separate whole-ensemble balance argument.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.MemoryBoundary
 

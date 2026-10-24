@@ -1,8 +1,10 @@
-import SP1Clean.FormalModel.Contracts.HintReadWord
-import SP1Clean.FormalModel.Contracts.WritePermission
-import SP1Clean.Proofs.Operations.HintReadStep
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
-import Clean.Circuit.Loops
+module
+
+public import SP1Clean.FormalModel.Contracts.HintReadWord
+public import SP1Clean.FormalModel.Contracts.WritePermission
+public import SP1Clean.Proofs.Operations.HintReadStep
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+public import Clean.Circuit.Loops
 
 /-! # A physical padded hint word consumer
 
@@ -10,6 +12,8 @@ The two bundled subcircuits connect the actual Memory update to the immutable wo
 successor. Every written byte, including padding, requests writable permission. The RAM access's
 coordination pair cancels internally; the private cursor accounts for the entire row inventory.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadWordChip
 

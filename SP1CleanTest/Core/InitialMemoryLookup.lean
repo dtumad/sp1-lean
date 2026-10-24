@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.InitialMemoryLookup
-import SP1Clean.Model.SP1Field
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Native.Operations.InitialMemoryLookup
+public import SP1Clean.Model.SP1Field
+public import Clean.Circuit.WitnessExport
 
 /-! # Initial-memory AIR regressions
 
@@ -8,6 +10,8 @@ These checks run the circuit's witness program and evaluate its actual flattened
 membership pulls. Interaction balance belongs to the ensemble tests. The negative cases distinguish
 fixed-row authentication from address containment: either can fail while the other still holds.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.InitialMemoryLookup
 

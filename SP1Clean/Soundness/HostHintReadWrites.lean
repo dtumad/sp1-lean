@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadCoverage
-import SP1Clean.Soundness.HintReadWriteLedger
+module
+
+public import SP1Clean.Soundness.HostHintReadCoverage
+public import SP1Clean.Soundness.HintReadWriteLedger
 
 /-! # Complete HINT_READ execution and physical write agreement
 
@@ -10,6 +12,8 @@ permission authentication, and incoming register observations remain explicit in
 The Memory ledger projection and readback theorem identify the actual transfers; global Memory
 grounding must still authenticate their predecessors and prove the complete outgoing state.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadWrites
 

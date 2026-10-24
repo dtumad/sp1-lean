@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
-import SP1Clean.Proofs.Operations.HintReadSpanNode
-import SP1Clean.Model.Core.HostExecutionLaws
+module
+
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
+public import SP1Clean.Proofs.Operations.HintReadSpanNode
+public import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # HINT_READ reaches the concrete host interpreter
 
@@ -9,6 +11,8 @@ queue pop, and complete padded write. Actual writable permission and register ob
 remain explicit until the enclosing AIR derives them. No per-instruction or word case split is
 part of the host execution statement.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintReadChip
 

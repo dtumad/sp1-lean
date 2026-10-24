@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostHintReadTrajectory
-import SP1Clean.Soundness.HostFootprint
-import SP1Clean.Soundness.HostExecutionEffect
+module
+
+public import SP1Clean.Soundness.HostHintReadTrajectory
+public import SP1Clean.Soundness.HostFootprint
+public import SP1Clean.Soundness.HostExecutionEffect
 
 /-! # Hint execution and complete grounding effects
 
@@ -12,6 +14,8 @@ HINT_LEN observes the actual queue and has a proved empty added-word footprint. 
 the timed grounding argument, retaining the instruction's registers and all host RAM accesses.
 Complete outgoing snapshot agreement remains a separate whole-shard obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.HostExecutionLaws
-import SP1Clean.Model.Core.MemorySpan
+module
+
+public import SP1Clean.Model.Core.HostExecutionLaws
+public import SP1Clean.Model.Core.MemorySpan
 
 /-! # The complete native host observation and write footprint
 
@@ -12,6 +14,8 @@ This is the semantic contract for host AIR accesses. It does not supply those AI
 timestamps, or a balance proof. Its minimal empty-byte cover deliberately makes no claim to match
 Rust's untraced read inventory (an unaligned zero-length WRITE can still read an aligned word).
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

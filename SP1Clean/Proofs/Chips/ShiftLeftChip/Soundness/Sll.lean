@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Defs
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
-import SP1Clean.Proofs.CircuitProofStart
+module
+
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Defs
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Core
+public import SP1Clean.Proofs.CircuitProofStart
 
 /-! # `ShiftLeftChip` — sll conjunct soundness (split out for parallel compilation)
 
@@ -9,6 +11,8 @@ single-conjunct local `Spec`. Re-running `circuit_proof_start` regenerates the m
 (unfolding the local `Spec` and `Assumptions`), so the shared `have a1_bound_cond` setup, the SLL branch,
 and the channel-requirement tail are verbatim slices of the monolith. Kept in a child namespace with the
 local `Spec` named exactly `Spec` (so `circuit_proof_start` reduces it). -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftChip.SoundSll
 

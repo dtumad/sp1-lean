@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.FinalMemoryCheckLedger
+module
+
+public import SP1Clean.Soundness.FinalMemoryCheckLedger
 
 /-! # Complete outgoing Memory comparison from raw boundary acceptance
 
@@ -8,6 +10,8 @@ ledger covers the complete complement. The result is the existing finite `checkF
 Connecting this boundary subsystem to mixed execution grounding remains an assembly transport,
 not a new semantics or an additional caller certificate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.FinalMemoryChecks
 

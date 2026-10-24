@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.SyscallRowSemantics
-import SP1Clean.Soundness.GenericWalk
-import SP1Clean.Soundness.GroundingAdapter
+module
+
+public import SP1Clean.Soundness.SyscallRowSemantics
+public import SP1Clean.Soundness.GenericWalk
+public import SP1Clean.Soundness.GroundingAdapter
 
 /-! # Grounding a syscall row
 
@@ -27,6 +29,8 @@ thirteen inline codes are the boundary of this work.
 *Alignment.* Every duration is a multiple of eight (`264 = 8·33`), so a mid-shard syscall row leaves
 every later row's `align8` residue untouched. That is what lets the alignment machinery transfer
 with a hypothesis change rather than a redesign. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

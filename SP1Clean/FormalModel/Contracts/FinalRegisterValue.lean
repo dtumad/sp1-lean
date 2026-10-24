@@ -1,11 +1,15 @@
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.FinalMemoryValue
+module
+
+public import SP1Clean.Model.Core.RegisterSnapshotTable
+public import SP1Clean.Model.FinalMemoryValue
 
 /-! # Complete outgoing register values
 
 The final record's decoded register and all value limbs agree with the supplied target snapshot.
 Its clock is preserved by the full-record handoff and is grounded by the enclosing Memory proof.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRegisterValue
 

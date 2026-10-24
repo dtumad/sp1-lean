@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionReplay
+module
+
+public import SP1Clean.Model.Core.ExecutionReplay
 
 /-! # Complete host fields along a local execution
 
@@ -7,6 +9,8 @@ WRITE preserve public output, hook replies, requests, stdout, and stderr. This f
 is explicit here and must be derived from a physical receiver inventory before using it for AIR
 soundness; it is not a restriction on the intended eight-call capstone.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

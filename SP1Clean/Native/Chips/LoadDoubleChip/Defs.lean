@@ -1,15 +1,17 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReader
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReader
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `LoadDouble` chip row as a `GeneralFormalCircuit`
 
@@ -25,6 +27,8 @@ the `op_a != x0` gate; the load *meaning* (`rd = memory_access.prev_value`) is c
 sub-`Spec` (its write value is the loaded word). The bus's cross-row offline-memory meaning
 (`prev_value = actual memory contents at the address`) is derived by
 `Soundness/TypedMemory.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadDoubleChip
 

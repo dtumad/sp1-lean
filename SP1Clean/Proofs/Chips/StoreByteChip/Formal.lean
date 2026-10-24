@@ -1,12 +1,16 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.StoreByteChip.Defs
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.StoreByteChip.Defs
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.StoreByteChip` — `Assumptions` / soundness / completeness / `circuit`
 
 `Assumptions`, soundness, completeness, and the bundled `circuit`. (`main` + `ElaboratedCircuit`
 in `Defs`; Sail bridge in `Bridge`.) -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreByteChip
 

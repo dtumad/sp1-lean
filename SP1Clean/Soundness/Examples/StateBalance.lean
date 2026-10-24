@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.RankedGrounding
+module
+
+public import SP1Clean.Soundness.RankedGrounding
 
 /-! # A balanced State ledger with a disconnected cycle
 
@@ -7,6 +9,8 @@ but no walk from 0 to 2 uses all four edges. No natural rank can strictly increa
 the cycle. This is a counterexample to State balance alone, not an accepted SP1 AIR witness.
 The production ranked-grounding theorem supplies the missing exhaustiveness argument.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.StateBalanceExample
 

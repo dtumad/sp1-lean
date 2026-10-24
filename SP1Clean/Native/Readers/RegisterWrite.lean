@@ -1,10 +1,12 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native register-write assertion
 
@@ -15,6 +17,8 @@ assumption about a result that has not yet been computed.
 The Memory message is `⟨clk_high, clk_low, op_a, 0, 0, value⟩` with multiplicity `is_real`.
 The chip passes its write-access clock (`recombined_clk + 4`) as `clk_low`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RegisterWrite
 

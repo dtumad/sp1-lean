@@ -1,10 +1,12 @@
-import SP1CleanTest.Core.HintSourceExport
-import Clean.Circuit.WitnessExport
-import SP1CleanTest.Core.HintReadFixtures
-import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
-import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
-import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
-import SP1Clean.Native.Operations.HintQueueSource
+module
+
+public import SP1CleanTest.Core.HintSourceExport
+public import Clean.Circuit.WitnessExport
+public import SP1CleanTest.Core.HintReadFixtures
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
+public import SP1Clean.Native.Operations.HintQueueSource
 
 /-! # Executed HINT_READ handler and complete word transfers
 
@@ -13,6 +15,8 @@ permission providers. The subsystem's entire non-Byte ledger balances against se
 and RAM boundaries; Byte guarantees are checked directly. The instruction's other channels
 remain external. These tests do not assert installation in the mixed shard ensemble.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostHintRead
 

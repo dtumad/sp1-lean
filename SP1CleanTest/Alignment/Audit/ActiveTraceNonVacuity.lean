@@ -1,4 +1,6 @@
-import SP1CleanTest.Alignment.Audit.TraceNonVacuity
+module
+
+public import SP1CleanTest.Alignment.Audit.TraceNonVacuity
 
 /-! # Active whole-ensemble trace non-vacuity
 
@@ -16,6 +18,8 @@ consumed by soundness.  The explicit active-row counts prevent this regression f
 collapsing back to the boundary-only case. `Audit/ActiveNativeCompleteness.lean` additionally ties
 this exact event to an official Sail step and the deterministic execution compiler.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.ActiveTraceNonVacuity
 

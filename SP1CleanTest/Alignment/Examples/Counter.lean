@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.Examples.Counter
-import ToClean.Air.FiniteLookup
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Soundness.Examples.Counter
+public import ToClean.Air.FiniteLookup
+public import Clean.Circuit.WitnessExport
 
 /-! # Executable checks of the complete counter example
 
@@ -8,6 +10,8 @@ The checks evaluate the actual physical witness, assertions, fixed lookups, and 
 State ledger. The universal acceptance equivalence lives in the production module; these
 finite regression checks use the separate test/compiler trust boundary.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Examples.Counter
 

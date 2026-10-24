@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Operations.HintReadSpan
-import ToClean.Circuit.InteractionRecovery
-import ToClean.Air.ChannelClosure
+module
+
+public import SP1Clean.Proofs.Operations.HintReadSpan
+public import ToClean.Circuit.InteractionRecovery
+public import ToClean.Air.ChannelClosure
 
 /-! # The checked span's exact external assumptions
 
@@ -8,6 +10,8 @@ Only the existing Byte range provider is needed by the address additions. The sp
 Memory, hint, or host-call traffic of its own; a consumer must use its endpoints to build and
 verify complete word coverage on those ledgers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadSpan
 

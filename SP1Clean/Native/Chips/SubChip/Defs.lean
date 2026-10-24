@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.SubOperation.Formal
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Proofs.Operations.SubOperation.Formal
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The native Sub chip row as a `GeneralFormalCircuit`
 
@@ -17,6 +19,8 @@ subcircuits/assertions, gates `is_real`, and returns the native `Columns` struct
 buses). Its relationship to Rust is stated only by the whole-chip reconfiguration. SUB is **not
 commutative**: operand order `op_b_val - op_c_val` (= `rX(rs1) - rX(rs2)`) must
 match the Sail bridge's `execute_RTYPE rs2 rs1 rd .SUB`. Program-bus opcode `2`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubChip
 

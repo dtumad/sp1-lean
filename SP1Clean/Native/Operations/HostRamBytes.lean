@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.HostRamBytes
-import SP1Clean.Circuits.Gadgets.U16toU8Safe
+module
+
+public import SP1Clean.FormalModel.Contracts.HostRamBytes
+public import SP1Clean.Circuits.Gadgets.U16toU8Safe
 
 /-! # A byte-decoding consumer of host RAM reads
 
@@ -7,6 +9,8 @@ Compose the existing safe limb-to-byte decoder and consume exactly the supplied 
 Its low-byte columns are computed by the constructor; the high bytes are circuit expressions.
 There are no extra physical Memory accesses or witness-program cells.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamBytes
 

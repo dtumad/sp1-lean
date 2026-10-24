@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreTransport
-import SP1Clean.Soundness.WalkTimeline
+module
+
+public import SP1Clean.Soundness.NativeCoreTransport
+public import SP1Clean.Soundness.WalkTimeline
 
 /-! # Native grounding from the remaining execution facts
 
@@ -8,6 +10,8 @@ Boot truth, the genesis frontier, all structural row facts, and both balances ar
 `ground_of_steps` leaves only the original mixed rows' semantic step/frame facts as premises.
 It is a grounding combinator, not an unconditional native execution or host-correctness theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

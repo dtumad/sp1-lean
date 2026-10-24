@@ -1,4 +1,6 @@
-import Mathlib.Data.Set.Basic
+module
+
+public import Mathlib.Data.Set.Basic
 
 /-! # Witness relations and their languages
 
@@ -14,6 +16,8 @@ the composition lemmas (`Sound.trans`, `FunctionalRefinement.trans`,
 `language_eq_fst_image`), and the choice-based `Sound.extract`/`Sound.extract_valid` are
 deliberately declared ahead of that integration (`docs/roadmap.md`), so a reference census
 finding them unreferenced in-tree is expected. -/
+
+@[expose] public section
 
 namespace SP1Clean.WitnessRelation
 

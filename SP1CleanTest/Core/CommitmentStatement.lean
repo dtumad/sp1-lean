@@ -1,12 +1,16 @@
-import SP1Clean.Model.Core.CommitmentStatement
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Model.Core.CommitmentStatement
+public import SP1Clean.Model.Core.HostExecution
+public import SP1Clean.Model.SP1Field
 
 /-! # Declaration consistency is distinct from execution and coverage
 
 These cases exercise the immutable statement meaning, including repeated declarations,
 partial coverage, flags and conflicting writes that the operational host still executes.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.CommitmentStatement
 

@@ -1,13 +1,17 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Math.Word
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.IntervalCases
 
 /-! # `AddwOperation` — the arithmetic core (`RawSpec` + carry-chain lemmas)
 
 Two-limb carry-bool + range form `RawSpec`; `addwSemantics_of_carries` (forward) and
 `carries_of_addwSemantics` (backward) are the soundness/completeness keystones, applying
 `toBitVec64_signExtend_word`. Faithful to `sp1/crates/core/machine/src/operations/addw.rs`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwOperation
 

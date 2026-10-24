@@ -1,10 +1,14 @@
-import SP1Clean.Native.Chips.HostRamAccessChip.Defs
+module
+
+public import SP1Clean.Native.Chips.HostRamAccessChip.Defs
 
 /-! # Soundness and completeness of a host RAM access
 
 The bounded timestamp proof rules out field underflow locally, including a change of high
 clock component. No caller supplies a previous-record high-clock bound to soundness.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamAccessChip
 

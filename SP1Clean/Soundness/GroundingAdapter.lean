@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.RowSoundness
-import SP1Clean.Soundness.TypedTimeContracts
-import SP1Clean.Soundness.AlignedCarrier
-import SP1Clean.Alignment.Chips.AddChip.Contracts
+module
+
+public import SP1Clean.Soundness.RowSoundness
+public import SP1Clean.Soundness.TypedTimeContracts
+public import SP1Clean.Soundness.AlignedCarrier
+public import SP1Clean.Alignment.Chips.AddChip.Contracts
 
 /-! # The grounding adapter — `ChipKind.advance` → the timed-engine per-row records
 
@@ -24,6 +26,8 @@ consumed/produced Memory lists).  Add is the concrete anchor: its exact Memory e
 evaluated from `AddChip.exposedMemoryInteractions`. (The former Add-specific `addRow_engineFacts`
 end-to-end validation instance was retired with the D0 conditional-feed refactor; the generic
 `ChipGroundingContracts.engineFacts` supersedes it.) -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

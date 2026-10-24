@@ -1,8 +1,10 @@
-import SP1Clean.Math.Word
-import ToMathlib.General
-import SP1Clean.Model.ByteTable
-import SP1Clean.Math.ShiftBounds
-import SP1Clean.Circuits.Gadgets.U16MSB
+module
+
+public import SP1Clean.Math.Word
+public import ToMathlib.General
+public import SP1Clean.Model.ByteTable
+public import SP1Clean.Math.ShiftBounds
+public import SP1Clean.Circuits.Gadgets.U16MSB
 
 /-! # `ShiftLeftChip` — native witness generation (`populate`)
 
@@ -16,6 +18,8 @@ constraints' placement formula). The variant flags are explicit inputs; the witn
 The value functions below specify the generators; the witness IR uses Clean's built-in
 representation and evaluation. All-zero inputs reproduce SP1's padding template:
 `v_01 = v_012 = v_0123 = 1`, with every other witness zero. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftChip
 

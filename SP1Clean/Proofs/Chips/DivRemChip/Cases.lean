@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Proofs.Chips.DivRemChip.Math
+module
+
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Proofs.Chips.DivRemChip.Math
 
 /-! # `DivRemChip` — isolated arithmetic case proofs
 
@@ -15,6 +17,8 @@ share all arithmetic and differ only in the final `RoutedEvidence` equality sele
 pair.  Signed exceptional cases are explicit constructors, so divide-by-zero and overflow cannot be
 silently hidden in side assumptions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip.Cases
 

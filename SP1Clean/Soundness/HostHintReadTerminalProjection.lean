@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Soundness.HostQueueCPUReplay
+module
+
+public import SP1Clean.Soundness.HostHintReadBanks
+public import SP1Clean.Soundness.HostQueueCPUReplay
 
 /-! # Legacy padding has no event in the installed CPU inventory
 
@@ -7,6 +9,8 @@ The strengthened physical component projects to the original execution carrier w
 its zero-selector assertion. Thus every HALT event in the mixed assembly comes from the full
 syscall wrapper and participates in HostCall accounting.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadTerminal
 

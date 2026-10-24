@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for LoadHalf (LH / LHU)
 
@@ -14,6 +16,8 @@ emulation (write `nextPC = pc + 4` and the extended half into `rd`), via
 `lh_chip_reaches_sail` discharges the `extend_value` equation: `selected_half` and its high bit
 `msb` extend (sign for `LH`, zero for `LHU`) to `#v[selected_half, 65535·msb, 65535·msb,
 65535·msb]`. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.LoadHalfSail

@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreTrajectory
-import SP1Clean.Soundness.SyscallInputs
+module
+
+public import SP1Clean.Soundness.NativeCoreTrajectory
+public import SP1Clean.Soundness.SyscallInputs
 
 /-! # Semantic syscall events in the native core
 
@@ -11,6 +13,8 @@ This is a post-grounding bridge. It does not prove the host step/frame facts, en
 full syscall codes, or model host RAM writes. Those remain required before unconditional native
 boot-to-HALT soundness can be claimed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

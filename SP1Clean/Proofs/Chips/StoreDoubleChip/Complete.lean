@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Memory
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Memory
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.StoreDoubleChip` — from trace events to a valid AIR table
 
@@ -13,6 +15,8 @@ write is the whole 8-byte `rs2` word, so there is no `store_value` column and no
 citation: the address facts from `MemoryEvent.WellFormedStore` and the row's `Aligned 8`, the state
 and RAM blocks from the shared reader lemmas, and the adapter from `iTypeReaderImmutable_spec`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

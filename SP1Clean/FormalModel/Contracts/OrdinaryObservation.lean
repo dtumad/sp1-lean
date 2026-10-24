@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.ClockOrder
-import SP1Clean.Model.BusMessages
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.FormalModel.Contracts.ClockOrder
+public import SP1Clean.Model.BusMessages
+public import SP1Clean.Math.Word
 
 /-! # Ordered observations of ordinary instruction retirement
 
@@ -9,6 +11,8 @@ successor State message. Ordering uses its source clock (subtracting the ordinar
 so a successor crossing the low-limb window remains admissible. PC limbs are retained exactly
 as emitted; this contract does not impose a new canonical representation on the State bus.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrdinaryObservation
 

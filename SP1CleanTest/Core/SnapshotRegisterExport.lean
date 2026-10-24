@@ -1,8 +1,10 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
-import SP1Clean.Native.Operations.FinalRegisterValue
-import SP1Clean.Model.SP1Field
-import ToClean.Air.EnsembleCheck
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
+public import SP1Clean.Native.Operations.FinalRegisterValue
+public import SP1Clean.Model.SP1Field
+public import ToClean.Air.EnsembleCheck
 
 /-! # Built-in export of source and target register authentication
 
@@ -11,6 +13,8 @@ separate verifier-fixed membership tables. Clean owns row allocation, multiplici
 ensemble checks unused fixed rows without introducing a padding row on the sparse Memory bus.
 The nonzero local snapshot is independent of SP1's boot-only register initialization.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.SnapshotRegisterExport
 

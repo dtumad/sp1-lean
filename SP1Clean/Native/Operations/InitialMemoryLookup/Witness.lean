@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.MemoryTable
-import SP1Clean.Circuits.Gadgets.LtUnsigned
+module
+
+public import SP1Clean.Model.Core.MemoryTable
+public import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 /-! # Exportable witnesses for address-based memory reads
 
@@ -8,6 +10,8 @@ expressions. Four-limb comparisons retain the exclusive endpoint `2^48` and avoi
 field value to a machine integer. A built-in vector loop emits the interval's nine fields from
 one search expression. Evaluation is related to the existing semantic interval search.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialMemoryLookup
 

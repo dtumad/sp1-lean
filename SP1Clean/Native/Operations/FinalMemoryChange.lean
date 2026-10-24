@@ -1,12 +1,16 @@
-import SP1Clean.FormalModel.Contracts.FinalMemoryChange
-import Clean.Gadgets.Boolean
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.FormalModel.Contracts.FinalMemoryChange
+public import Clean.Gadgets.Boolean
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # Boolean selection of a validated final location
 
 This operation is composed inside target-value checkers, with the same complete record. It
 publishes one tagged key when selected and retains the disabled physical interaction otherwise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalMemoryChange
 

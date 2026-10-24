@@ -1,14 +1,18 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.AddwChip.Defs
-import SP1Clean.FormalModel.Contracts.ChipAssumptions
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.AddwChip.Defs
+public import SP1Clean.FormalModel.Contracts.ChipAssumptions
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.AddwChip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
 `Spec` (ALUTypeReader.Spec ∧ binary ∧ gated `RV64.addw`) + `Assumptions`/`ProverAssumptions` in
 `FormalModel/Contracts/`. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddwChip
 

@@ -1,15 +1,17 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReaderImmutable
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReaderImmutable
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `StoreByte` chip row as a `GeneralFormalCircuit`
 
@@ -20,6 +22,8 @@ the old value), `offset_bit[0]` the low/high byte within it. The new byte is `rs
 `ByteOpcode.U8Range` pairs splitting `op_a_memory.prev_value[0]` / `mem_limb`). The `increment` is the
 signed delta applied to the selected limb (`reg_low - mem_low` for the low byte, `256·(reg_low - mem_high)`
 for the high byte), and `store_value` adds it to the `offset_bit[1..2]`-selected limb, leaving the others. -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreByteChip
 

@@ -1,9 +1,11 @@
-import SP1Clean.Circuits.Types.RTypeReader
-import SP1Clean.Circuits.Types.ALUTypeReader
-import SP1Clean.Circuits.Types.JTypeReader
-import SP1Clean.Circuits.Types.ITypeReader
-import SP1Clean.Circuits.Types.CPUState
-import SP1Clean.Model.ProgramChip
+module
+
+public import SP1Clean.Circuits.Types.RTypeReader
+public import SP1Clean.Circuits.Types.ALUTypeReader
+public import SP1Clean.Circuits.Types.JTypeReader
+public import SP1Clean.Circuits.Types.ITypeReader
+public import SP1Clean.Circuits.Types.CPUState
+public import SP1Clean.Model.ProgramChip
 
 /-! # Row-view adapter infrastructure (the chip-agnostic trace row)
 
@@ -18,6 +20,8 @@ bundles that adapter with the CPUState, the committed `next_pc`, the `is_real` s
 write value, and the Program-bus opcode. Each chip maps its `(inputs, cols)` to a `RowView` in its
 `ChipKind.view` (`Soundness/ChipRow.lean`). The live normalized access vocabulary is kept beside the
 view below: `StateAccess`/`stateAccess` and `ProgramAccess`/`programAccess`/`ProgramAccess.toRow`. -/
+
+@[expose] public section
 
 namespace SP1Clean.Trace
 

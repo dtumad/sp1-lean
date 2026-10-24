@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+module
+
+public import SP1Clean.Proofs.Chips.HostHaltChip.Formal
+public import SP1Clean.Model.Core.HostExecutionLaws
 
 /-! # HALT handlers reach the independent host interpreter
 
@@ -8,6 +10,8 @@ The result records the canonical exit and no memory write. Every later host disp
 Matching the observations and locating the terminal instruction in the State walk are still
 whole-machine responsibilities.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHaltChip
 

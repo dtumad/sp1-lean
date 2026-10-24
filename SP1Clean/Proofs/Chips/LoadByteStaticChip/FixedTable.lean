@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
-import ToClean.Air.FiniteLookup
+module
+
+public import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
+public import ToClean.Air.FiniteLookup
 
 /-! # Authentication of the upstream fixed byte table
 
 These lemmas realize the existing `Gadgets.ByteTable`; no new table predicate is introduced.
 Its finite contents and membership are independent of prover-supplied table data.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteStaticChip
 

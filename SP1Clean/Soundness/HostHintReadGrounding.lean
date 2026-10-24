@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadMemoryOrder
-import SP1Clean.Soundness.LocalCoreTransport
+module
+
+public import SP1Clean.Soundness.HostHintReadMemoryOrder
+public import SP1Clean.Soundness.LocalCoreTransport
 
 /-! # Grounding carrier for complete CPU and hint RAM footprints
 
@@ -7,6 +9,8 @@ The actual host AIR supplies read windows, prior bounds, canonical State endpoin
 refresh-free Memory balance. The shared execution carrier retains each event's full footprint;
 its semantic premises concern those events, independently of alignment and refresh details.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

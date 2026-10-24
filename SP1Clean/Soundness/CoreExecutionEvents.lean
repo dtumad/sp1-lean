@@ -1,7 +1,9 @@
-import SP1Clean.Soundness.CoreExecutionRow
-import SP1Clean.Soundness.SyscallRowSemantics
-import SP1Clean.Soundness.WalkTimeline
-import SP1Clean.Soundness.MixedRowTransport
+module
+
+public import SP1Clean.Soundness.CoreExecutionRow
+public import SP1Clean.Soundness.SyscallRowSemantics
+public import SP1Clean.Soundness.WalkTimeline
+public import SP1Clean.Soundness.MixedRowTransport
 
 /-! # Event labels and positions independent of source policy
 
@@ -9,6 +11,8 @@ Both core assemblies read the same complete event labels from their physical row
 alignment theorem identifies an occurrence from its derived clock, including repeated row values.
 Labels describe claims to be checked by stateful replay; decoding a result does not authenticate it.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

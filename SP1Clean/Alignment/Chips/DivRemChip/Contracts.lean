@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.DivRemChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.DivRemChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # DivRem — circuit-grounding contracts
 
@@ -8,6 +10,8 @@ and its arithmetic evidence stay opaque: this module exposes only the retained R
 adapter passthrough, and the physical `op_a_0 = 0` routing assertion needed by whole-machine
 grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

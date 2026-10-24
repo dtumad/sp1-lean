@@ -1,7 +1,9 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.StateBumpChip.Defs
-import Clean.Utils.Tactics
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.StateBumpChip.Defs
+public import Clean.Utils.Tactics
 
 /-! # StateBump: soundness, completeness, and the bundled circuit (W3, report Finding 2)
 
@@ -11,6 +13,8 @@ pull `Guarantees` and the clock-carry equations from the gated asserts. Complete
 same facts from `ProverAssumptions := Spec` (an all-zero padding row satisfies it: both selectors
 `0`, the cascade with zero borrows, the gated tail vacuous). The State bus carries `Guarantees :=
 True`, so the pull/push pair owes nothing on either side. -/
+
+@[expose] public section
 
 namespace SP1Clean.StateBumpChip
 

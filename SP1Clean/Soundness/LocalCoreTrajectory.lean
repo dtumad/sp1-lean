@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreGrounding
-import SP1Clean.Soundness.CoreExecutionTrajectory
+module
+
+public import SP1Clean.Soundness.LocalCoreGrounding
+public import SP1Clean.Soundness.CoreExecutionTrajectory
 
 /-! # Stateful replay of the local AIR's ordered events
 
@@ -9,6 +11,8 @@ projection is the trajectory used by grounding. Success is not assumed here: a f
 may make replay fail even when the current AIR accepts it. Successful replay has the exact derived
 clock at every covered position; the extension past the tape contributes no semantic steps.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.MulChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
-import SP1Clean.Proofs.Sail.RV64Bridge
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.MulChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
+public import SP1Clean.Proofs.Sail.RV64Bridge
 
 /-! # Native Sail bridge for the `Mul` chip (MUL/MULH/MULHU/MULHSU/MULW) + `ChipKind`
 
@@ -23,6 +25,8 @@ The chip `Spec` sources operands from **inputs** `op_b_val` (rs1) / `op_c_val` (
 the RV64 signature `f rs2_val rs1_val`. `advance` is the five-way flag-dispatched transition.
 `Mul` carries `Fact (2 ^ 24 < p)`; `Fact (2 ^ 17 < p)` follows via the global
 `instFact_2_17_of_2_24` instance (`Math/Word.lean`). -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.MulSail

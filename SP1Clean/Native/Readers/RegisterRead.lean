@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.RegisterRead
-import SP1Clean.Model.MemoryClock
-import SP1Clean.Native.Readers.RegisterAccessCols
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.FormalModel.Contracts.RegisterRead
+public import SP1Clean.Model.MemoryClock
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # A composed register read and unchanged Memory write-back
 
@@ -9,6 +11,8 @@ The timestamp subcircuit supplies the two gap bounds. The Memory pull supplies t
 and previous low-clock bound; together they establish strict natural time order. The same
 received word discharges the push requirement, without a word-bound assumption from the caller.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RegisterRead
 

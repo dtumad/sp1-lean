@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostCommitBank
-import ToClean.Air.EnsembleBuild
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Soundness.HostCommitBank
+public import ToClean.Air.EnsembleBuild
+public import ToClean.Air.TableBuild
 
 /-! # A commitment bank bound by its actual Clean verifier
 
@@ -12,6 +14,8 @@ The soundness theorem derives local specs and endpoint balance from constraints 
 balanced ledger. Its auxiliary premises are static circuit-interface/provider proofs, not
 witness-specific semantic boundary facts. Installation in the mixed machine remains separate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostCommitEnsemble
 

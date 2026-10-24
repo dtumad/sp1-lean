@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.MulChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.MulChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # Computable multiplication witnesses
 
 The 45-cell arithmetic witness depends on the operands and selectors in the input row. The
 four result limbs additionally read the earlier product cells. No external hint is required.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.MulChip
 

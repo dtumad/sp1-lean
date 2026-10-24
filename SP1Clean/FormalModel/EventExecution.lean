@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Execution
-import SP1Clean.Model.Core.Profile
-import SP1Clean.Model.Semantics.EventTime
+module
+
+public import SP1Clean.FormalModel.Execution
+public import SP1Clean.Model.Core.Profile
+public import SP1Clean.Model.Semantics.EventTime
 
 /-! # What the ensemble certifies, when a shard can also make a syscall
 
@@ -27,6 +29,8 @@ Three changes ride along, each already justified against SP1:
   does not make.
 * **The halting arm gains the canonicity premise** (D9), because `SP1Halted` wants the exact Rust
   `SyscallCode::HALT` in `t0` and the AIR only sees byte 0. -/
+
+@[expose] public section
 
 namespace SP1Clean.Execution
 

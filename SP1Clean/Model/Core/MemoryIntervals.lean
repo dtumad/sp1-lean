@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.MemoryNormalization
+module
+
+public import SP1Clean.Model.Core.MemoryNormalization
 
 /-! # Finite interval tables for sparse initial memory
 
@@ -10,6 +12,8 @@ memory enumeration is required.
 
 Empty intervals are harmless: they contain no address and need no special padding semantics.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

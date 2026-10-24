@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostHintReadExecutionPath
+module
+
+public import SP1Clean.Soundness.HostHintReadExecutionPath
 
 /-! # Protected instruction memory throughout the installed mixed replay
 
@@ -8,6 +10,8 @@ ROM preservation at every prefix, and actual Sail fetch agreement at every execu
 The final boundary has no next-fetch obligation. Existing preservation statements are retained;
 resource bounds and complete outgoing-boundary authentication remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

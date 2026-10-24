@@ -1,5 +1,7 @@
-import SP1Clean.Model.InteractionBus
-import SP1Clean.Model.Channels
+module
+
+public import SP1Clean.Model.InteractionBus
+public import SP1Clean.Model.Channels
 
 /-! # Evaluating an emitted interaction to a trace-level `LookupAccess`
 
@@ -12,6 +14,8 @@ The one subtlety is the **signed multiplicity**: a receive's emitted multiplicit
 `ZMod p` to `p - is_real.val` (for `is_real = 1`, that's `p - 1`), which must map to `-1 : ℤ`. `signedVal`
 takes the centered representative; `signedVal_is_real`/`signedVal_neg_is_real` pin it to `±is_real.val` for
 the binary `is_real` the buses gate by. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

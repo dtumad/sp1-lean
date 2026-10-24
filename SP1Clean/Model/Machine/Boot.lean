@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.GuestProgram
+module
+
+public import SP1Clean.Model.Semantics.GuestProgram
 
 /-! # Auditable SP1 boot contract
 
@@ -10,6 +12,8 @@ universally quantified execution statement into a vacuous theorem.
 This file records the missing, loader-facing conditions without pretending to implement an ELF
 loader.  The concrete loader belongs at the Rust/ELF bridge; the native machine consumes its result
 through `Machine.SP1MachineModel`. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.Target.GuestProgram
 

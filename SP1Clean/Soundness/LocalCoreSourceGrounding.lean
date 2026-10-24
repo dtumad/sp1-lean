@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.LocalCoreBoundaries
-import SP1Clean.Soundness.GenericWalk
-import SP1Clean.Soundness.TypedState
+module
+
+public import SP1Clean.Soundness.LocalCoreBoundaries
+public import SP1Clean.Soundness.GenericWalk
+public import SP1Clean.Soundness.TypedState
 
 /-! # Grounding genesis from the checked complete local source
 
@@ -10,6 +12,8 @@ generic timed engine on any trajectory beginning at that source, including a con
 nonzero clock. A source record's zero timestamp is a local seed, not a claim about its last access
 in an earlier shard. The mixed execution walk and complete outgoing boundary remain separate work.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

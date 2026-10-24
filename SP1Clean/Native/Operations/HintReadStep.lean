@@ -1,13 +1,17 @@
-import SP1Clean.FormalModel.Contracts.HintReadStep
-import SP1Clean.Proofs.Operations.AddrAddOperation.Address
-import SP1Clean.Native.Operations.WordRangeCheck
-import Clean.Gadgets.Equality
+module
+
+public import SP1Clean.FormalModel.Contracts.HintReadStep
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Address
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import Clean.Gadgets.Equality
 
 /-! # Checked successor and address for a hint word consumer
 
 All arithmetic crosses existing Clean proof boundaries. The immutable word pull includes its
 end marker. The final variant retains the current cell instead of encoding a one-past address.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadStep
 

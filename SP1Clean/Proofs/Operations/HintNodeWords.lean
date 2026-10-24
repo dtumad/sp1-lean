@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
-import SP1Clean.Model.Core.HintQueueWordRecords
+module
+
+public import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
+public import SP1Clean.Model.Core.HintQueueWordRecords
 
 /-! # Allocated word contents share the checked fresh node identity
 
@@ -8,6 +10,8 @@ both its metadata and the generated word rows in the same persistent store. The 
 retain the allocation's exact field identity. This is a semantic construction bridge, not an
 authorization for arbitrary witness bytes or a replacement for the host's byte-source ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

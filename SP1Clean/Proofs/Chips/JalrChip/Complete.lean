@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Arith
-import SP1Clean.Proofs.Chips.JalrChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Arith
+public import SP1Clean.Proofs.Chips.JalrChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # `SP1Clean.JalrChip` — from trace events to a valid AIR table
 
@@ -20,6 +22,8 @@ As for `Jal`, the three target obligations are facts about *where the executor j
 every other user of the shared `ITypeReader` record (an `Addi` sum is an arbitrary 64-bit value, a
 load's is an address but not an aligned instruction address), so they are an explicit named
 hypothesis rather than a `WellFormed` conjunct. -/
+
+@[expose] public section
 
 namespace SP1Clean.JalrChip
 

@@ -1,5 +1,7 @@
-import Mathlib.Data.List.FinRange
-import SP1Clean.Model.InstructionChipId
+module
+
+public import Mathlib.Data.List.FinRange
+public import SP1Clean.Model.InstructionChipId
 
 /-!
 # Stable identities for native provider and boundary tables
@@ -11,6 +13,8 @@ ensemble without importing Clean components or proof-layer provider implementati
 The seventeen Range tables are indexed rather than copied into seventeen constructors. This keeps
 their width in the identity and makes completeness/provider registries total by construction.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

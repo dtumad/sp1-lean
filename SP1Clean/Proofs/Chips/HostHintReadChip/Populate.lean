@@ -1,8 +1,10 @@
-import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
-import SP1Clean.Proofs.Operations.HintReadSpanPopulate
-import SP1Clean.Proofs.Chips.HostControlPopulate
-import SP1Clean.Proofs.Operations.HintQueueCursor
-import SP1Clean.Proofs.Operations.ClockOrderPopulate
+module
+
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
+public import SP1Clean.Proofs.Operations.HintReadSpanPopulate
+public import SP1Clean.Proofs.Chips.HostControlPopulate
+public import SP1Clean.Proofs.Operations.HintQueueCursor
+public import SP1Clean.Proofs.Operations.ClockOrderPopulate
 
 /-! # HINT_READ rows from successful semantic calls
 
@@ -10,6 +12,8 @@ The constructor reads the actual current node and its final padded word. Success
 derives the exact length, alignment, and complete span bounds. Only store capacity and bounded
 strict event-clock order remain resource conditions of the enclosing compiler.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintReadChip
 

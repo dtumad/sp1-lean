@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Arith
-import SP1Clean.Proofs.Chips.BranchChip.Witgen
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.Arith
+public import SP1Clean.Proofs.Chips.BranchChip.Witgen
+public import ToClean.Air.TableBuild
 
 /-! # Branch event and table construction
 
@@ -8,6 +10,8 @@ Event opcodes supply the six committed selectors. Clean generates the comparison
 bit and next PC without per-row hints. `WellFormedBranch` permits reading `x0`; `BranchTargets`
 bounds both candidate PCs and aligns the selected target.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

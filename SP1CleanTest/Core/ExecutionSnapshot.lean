@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Model.Core.HostSnapshot
+public import SP1Clean.Model.SP1Field
 
 /-! # Complete finite-boundary and host-execution regressions
 
@@ -7,6 +9,8 @@ The comparisons reject changes outside the GPR/RAM projection, including nextPC,
 bookkeeping, runtime output, and host state. The active finite interpreter performs a padded
 HINT_READ and preserves those full-state fields. No dense Sail memory is evaluated by a test.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ExecutionSnapshot
 

@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Relations
+module
+
+public import SP1Clean.FormalModel.Relations
 
 /-! # The proof-system boundary
 
@@ -19,6 +21,8 @@ not a sufficient extraction API.
 
 Everything here (`PerfectExtraction` and its `refine`/`refineFunctional` lemmas) is reserved
 API for that ArkLib adapter — unreferenced in-tree by design until it exists. -/
+
+@[expose] public section
 
 namespace SP1Clean.VerifierBoundary
 

@@ -1,7 +1,9 @@
-import SP1Clean.Model.Channels
-import SP1Clean.Model.InteractionProjection
-import Clean.Air.FlatEnsemble
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.InteractionProjection
+public import Clean.Air.FlatEnsemble
+public import ToClean.Air.TableBuild
 
 /-! # Typed views of evaluated Clean interactions
 
@@ -11,6 +13,8 @@ message type from the channel.  It is deliberately an adapter over Clean's value
 representation: erasing the wrapper gives `Operations.interactionValuesWith` definitionally up to
 the list's membership proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

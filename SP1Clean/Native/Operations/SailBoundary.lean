@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.SailBoundary
-import ToClean.Air.PublicVerifier
+module
+
+public import SP1Clean.FormalModel.Contracts.SailBoundary
+public import ToClean.Air.PublicVerifier
 
 /-! # Native verifier checks for the supplied Sail frame and endpoints
 
@@ -7,6 +9,8 @@ Snapshot data supplies a finite invariant-field check. Five field equations bind
 public endpoint to that same target. The circuit has no witness cells. Its verifier adapter adds
 twelve interactions on a fresh channel and preserves every existing channel ledger.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailBoundary
 

@@ -1,7 +1,9 @@
-import SP1Clean.Model.Semantics.SailInstructionFrame
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Proofs.Sail.Advance
-import SP1Clean.Proofs.Sail.InstructionDecode
+module
+
+public import SP1Clean.Model.Semantics.SailInstructionFrame
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Proofs.Sail.Advance
+public import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Independent memory preservation regressions
 
@@ -10,6 +12,8 @@ common independent frame theorem then preserves protected bytes without a circui
 split anchors exercise the real misaligned splitter; policy anchors reject a protected last byte
 and same-value ROM stores. Native evaluation is confined to finite source data and permissions.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.MemoryFrame
 open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target

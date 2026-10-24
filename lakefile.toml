@@ -13,8 +13,7 @@ defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 # CPU-seconds in contention (cold build 32.4 min at 4 × 4 vs 26.9 min at 3 × 2, 2026-09-21 matrix,
 # fork issue #39). Two threads keep most of the async benefit for a single heavy module built alone.
 moreLeanArgs = ["--tstack=400000", "-j2"]
-# `allowNonModules` is set per library below (the `SP1Clean/` and test trees are non-module until
-# their migration), not package-wide, so the three module-mode `To*` libraries are enforced.
+# All handwritten libraries, generated Sail and both exporter executables require module mode.
 
 # `lake lint` driver — Batteries' `runLinter` (what Mathlib, cslib and PolyFun use): every default
 # environment linter (`docBlame`, `defsWithUnderscore`, `unusedArguments`, `simpNF`, …) over the
@@ -184,15 +183,13 @@ moreLeancArgs = ["-fbracket-depth=500"]
 [[lean_lib]]
 name = "SP1Core"
 roots = ["SP1Clean.Core"]
-# Non-module tree importing module-mode libraries (Clean main, `To*`): allowed until the
-# `SP1Clean/` migration.
-allowNonModules = true
+requiresModuleSystem = true
 
 # Umbrella: `SP1Clean.lean` imports `SP1Clean.Core` plus the machine/alignment strata;
 # `lake build SP1Clean` is the full CI build.
 [[lean_lib]]
 name = "SP1Clean"
-allowNonModules = true
+requiresModuleSystem = true
 
 # Test libraries (glob libraries, no root index). `SP1CoreTest` (the `lake test` driver) is the
 # subset whose import closure stays inside the core; `SP1CleanTest` is the whole tree, alignment
@@ -205,14 +202,14 @@ allowNonModules = true
 [[lean_lib]]
 name = "SP1CoreTest"
 globs = ["SP1CleanTest.Core.+", "SP1CleanTest.TraceGenTests.+"]
-allowNonModules = true
+requiresModuleSystem = true
 leanOptions.weak.linter.style.nativeDecide = false
 leanOptions.weak.linter.hashCommand = false
 
 [[lean_lib]]
 name = "SP1CleanTest"
 globs = ["SP1CleanTest.+"]
-allowNonModules = true
+requiresModuleSystem = true
 leanOptions.weak.linter.style.nativeDecide = false
 leanOptions.weak.linter.hashCommand = false
 
@@ -221,11 +218,11 @@ leanOptions.weak.linter.hashCommand = false
 [[lean_exe]]
 name = "backendGadgets"
 root = "scripts.backendGadgets"
-allowNonModules = true
+requiresModuleSystem = true
 
 # Compile the complete export driver once; both deterministic generations call this
 # executable instead of evaluating large witness instances in Lean's interpreter.
 [[lean_exe]]
 name = "ensembleExport"
 root = "scripts.ensembleExportFixture"
-allowNonModules = true
+requiresModuleSystem = true

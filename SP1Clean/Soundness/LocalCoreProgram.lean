@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreBoundaries
-import SP1Clean.Soundness.CoreProgramBalance
+module
+
+public import SP1Clean.Soundness.LocalCoreBoundaries
+public import SP1Clean.Soundness.CoreProgramBalance
 
 /-! # Committed Program fetches in local shards
 
@@ -7,6 +9,8 @@ Source and final providers cannot contribute to Program balance. The common exec
 one possible producer, the fixed decoded image. Count-bounded balance therefore authenticates
 all active ordinary, HALT, and syscall fetches independently of execution ordering and host effects.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

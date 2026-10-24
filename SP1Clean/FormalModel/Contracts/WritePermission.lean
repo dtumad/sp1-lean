@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.WritePermission
-import Clean.Circuit.Channel
+module
+
+public import SP1Clean.Model.Core.WritePermission
+public import Clean.Circuit.Channel
 
 /-! # Byte-level write permission contract
 
@@ -7,6 +9,8 @@ The provider contract is a local property of the program's fixed ROM, independen
 or memory values. The channel is structural: global balance must match each active write's byte
 requests with fixed-table providers. Instruction rows need no local permission premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.WritePermissionProvider
 

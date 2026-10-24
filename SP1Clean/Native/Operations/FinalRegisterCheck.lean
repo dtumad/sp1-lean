@@ -1,7 +1,9 @@
-import ToClean.Circuit.Guarded
-import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
-import SP1Clean.Native.Operations.FinalMemoryChange
-import SP1Clean.Native.Operations.FinalRegisterValue
+module
+
+public import ToClean.Circuit.Guarded
+public import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
+public import SP1Clean.Native.Operations.FinalMemoryChange
+public import SP1Clean.Native.Operations.FinalRegisterValue
 
 /-! # Target register validation with selected change coverage
 
@@ -9,6 +11,8 @@ Both subcircuits use the same complete record. Every active row consumes its fin
 and checks its target value, even when it contributes no changed-location key. Boolean activity
 disables the entire row for padding without dropping any physical interaction.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRegisterCheck
 

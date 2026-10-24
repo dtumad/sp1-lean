@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.ShiftRightChip.Core
-import SP1Clean.Math.Gate
-import SP1Clean.Semantics.ISA.RV64
+module
+
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Core
+public import SP1Clean.Math.Gate
+public import SP1Clean.Semantics.ISA.RV64
 
 /-! # `SP1Clean.ShiftRightChip` — bitvec/word goal-shape converters (native arithmetic)
 
@@ -17,6 +19,8 @@ we isolate that unfold into abstract-`BitVec` bridges
 (`srl_toNat`/`sra_toNat_{false,true}`, kernel-checked once over variables) and mask every `2^N` power
 to a concrete literal — the `ShiftLeftChip` discipline. All lemmas are kernel-clean and axiom-clean
 (`#print axioms` = `[propext, Classical.choice, Quot.sound]`). -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightChip
 

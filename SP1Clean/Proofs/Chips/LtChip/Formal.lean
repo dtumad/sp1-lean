@@ -1,11 +1,15 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.LtChip.Defs
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
-import ToClean.Circuit.WitgenEval
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.LtChip.Defs
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
+public import ToClean.Circuit.WitgenEval
 
 /-! # `SP1Clean.LtChip` — contract: `Assumptions` / soundness / completeness / `circuit` -/
+
+@[expose] public section
 
 namespace SP1Clean.LtChip
 

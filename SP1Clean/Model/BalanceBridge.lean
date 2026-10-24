@@ -1,7 +1,9 @@
-import SP1Clean.Model.InteractionBus
-import SP1Clean.Model.InteractionProjection
-import Clean.Air.Balance
-import Mathlib.Data.ZMod.Basic
+module
+
+public import SP1Clean.Model.InteractionBus
+public import SP1Clean.Model.InteractionProjection
+public import Clean.Air.Balance
+public import Mathlib.Data.ZMod.Basic
 
 /-! # The field ⇒ ℤ balance bridge
 
@@ -25,6 +27,8 @@ the message (`ZMod.val` + `Array.toList` injectivity), so each `LookupKey`'s ℤ
 `isConsistentBalanced_of_balancedInteractions` (the roadmap-W1a core). The remaining input — the
 witness ↔ access-list correspondence itself — is the decode seam
 (`Soundness/WitnessDecode.lean`). -/
+
+@[expose] public section
 
 namespace SP1Clean.LookupAccessList
 

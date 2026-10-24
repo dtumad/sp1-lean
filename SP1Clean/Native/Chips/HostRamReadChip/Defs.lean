@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Contracts.HostRamRead
-import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
+module
+
+public import SP1Clean.FormalModel.Contracts.HostRamRead
+public import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
 
 /-! # Read-only host RAM provider
 
 The underlying access's coordination push is consumed internally. One unit push serves the
 logical read, preserving the physical interaction count used by the balance argument.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamReadChip
 

@@ -1,17 +1,19 @@
-import SP1Clean.Semantics.Specs.Chips.Branch
-import SP1Clean.Native.Operations.AddOperation.Populate
-import SP1Clean.Circuits.Gadgets.LtSigned
-import ToClean.Circuit.WitnessCombinator
-import SP1Clean.Native.Readers.RTypeReader
-import SP1Clean.Native.Readers.ITypeReader
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReaderImmutable
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Semantics.Specs.Chips.Branch
+public import SP1Clean.Native.Operations.AddOperation.Populate
+public import SP1Clean.Circuits.Gadgets.LtSigned
+public import ToClean.Circuit.WitnessCombinator
+public import SP1Clean.Native.Readers.RTypeReader
+public import SP1Clean.Native.Readers.ITypeReader
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReaderImmutable
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The BRANCH chip row as a `GeneralFormalCircuit`
 
@@ -22,6 +24,8 @@ SP1's eight inline gated carry equations for the two possible PC additions exact
 is used only as proof-oriented witness-generation mathematics; it is not a Branch AIR subcircuit and
 does not contribute interactions. The six opcode flags sum to `is_real` (one-hot); the branch opcode
 is threaded via `ProverHint`. Implements pinned SP1 v6.4.0's `Branch` `air.rs::eval`. -/
+
+@[expose] public section
 
 namespace SP1Clean.BranchChip
 

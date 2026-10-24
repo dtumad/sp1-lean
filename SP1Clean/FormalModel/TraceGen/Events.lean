@@ -1,4 +1,6 @@
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Math.Word
 
 /-! # Trace generation — the semantic events of the register-adapter families
 
@@ -56,6 +58,8 @@ pinned semantic revision): `crates/core/executor/src/lib.rs` — `pub const CLK_
 accesses are timestamped. `Model/Semantics/MicroTime.lean` names the same two constants for the
 grounding engine (`ordinaryClkInc`, `regEffectOffset`); this layer keeps the offsets as literals
 so that it does not have to import the Sail-dependent semantics substrate. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

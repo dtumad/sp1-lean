@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreInstructionExecution
-import SP1Clean.Soundness.CoreHaltExecution
+module
+
+public import SP1Clean.Soundness.LocalCoreInstructionExecution
+public import SP1Clean.Soundness.CoreHaltExecution
 
 /-! # Stateful HALT grounding for local shards
 
@@ -8,6 +10,8 @@ currency then determine the complete host transition on the carrier's paired rep
 the HALT step/frame obligation without a boot assumption or a caller-supplied HALT successor.
 ROM preservation and active SyscallInstrs effects remain explicit obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

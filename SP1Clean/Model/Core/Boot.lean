@@ -1,7 +1,9 @@
-import SP1Clean.Model.Core.ProgramImage
-import SP1Clean.Model.Core.MemoryWord
-import SP1Clean.Model.Machine.ConfiguredState
-import SP1Clean.Model.Semantics.ProgramCommitment
+module
+
+public import SP1Clean.Model.Core.ProgramImage
+public import SP1Clean.Model.Core.MemoryWord
+public import SP1Clean.Model.Machine.ConfiguredState
+public import SP1Clean.Model.Semantics.ProgramCommitment
 
 /-! # Boot from a checked finite image
 
@@ -14,6 +16,8 @@ The full Sail memory is a semantic realization, not an executable loader used by
 The compiler and host operations consume `initialMemory`, the sparse executable representation;
 `initialSailState_memory` is their bridge to the official Sail memory map.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.ProgramImage
 

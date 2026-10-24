@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreFinalBoundary
-import SP1Clean.Soundness.MemoryFrontier
+module
+
+public import SP1Clean.Soundness.NativeCoreFinalBoundary
+public import SP1Clean.Soundness.MemoryFrontier
 
 /-! # Shared Memory balance rules for the native core
 
@@ -8,6 +10,8 @@ boot and local assemblies. Boolean boundary activities reduce count-bounded Clea
 record permutation and per-location optional-frontier equation. No execution or value-currency
 premise enters these algebraic rules.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

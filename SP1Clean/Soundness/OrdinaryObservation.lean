@@ -1,8 +1,10 @@
-import SP1Clean.Proofs.Operations.OrdinaryObservation
-import SP1Clean.Soundness.RankedGrounding
-import SP1Clean.Soundness.OrdinaryStateReceipt
-import SP1Clean.Model.Core.SailBookkeeping
-import ToClean.Air.TransitionView
+module
+
+public import SP1Clean.Proofs.Operations.OrdinaryObservation
+public import SP1Clean.Soundness.RankedGrounding
+public import SP1Clean.Soundness.OrdinaryStateReceipt
+public import SP1Clean.Model.Core.SailBookkeeping
+public import ToClean.Air.TransitionView
 
 /-! # Exhaustive ordinary observation histories
 
@@ -11,6 +13,8 @@ cycles and derives the complete retirement count and final raw successor PC. The
 results: the mixed ensemble must derive Byte guarantees, balance the producer receipts and
 authenticate the initial/final observation states. No second execution relation is introduced.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.OrdinaryObservation
 

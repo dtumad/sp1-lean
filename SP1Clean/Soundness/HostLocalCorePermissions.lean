@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCore
-import SP1Clean.Soundness.ProtectedLocalCorePermissions
+module
+
+public import SP1Clean.Soundness.HostLocalCore
+public import SP1Clean.Soundness.ProtectedLocalCorePermissions
 
 /-! # Byte permission authentication with host effects installed
 
@@ -8,6 +10,8 @@ therefore remains exhaustive when appended components prove that they emit only 
 padding on this channel. The extended ensemble's own balance authenticates every requested byte;
 no projection of its Memory or permission balance is used.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

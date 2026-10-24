@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreMemoryOrder
-import SP1Clean.Soundness.CoreRowTransport
+module
+
+public import SP1Clean.Soundness.LocalCoreMemoryOrder
+public import SP1Clean.Soundness.CoreRowTransport
 
 /-! # The local mixed carrier after refresh elimination
 
@@ -8,6 +10,8 @@ Memory records, and uses canonical State endpoints. Its complete structural row 
 semantic step/frame transport are derived from the checked image and raw constraints/balance.
 The original rows' actual execution facts remain the next semantic obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

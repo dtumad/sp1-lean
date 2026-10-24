@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Machine.Syscall
+module
+
+public import SP1Clean.FormalModel.Contracts.PublicValues
+public import SP1Clean.Model.Machine.Syscall
 
 /-! # Commit-event contracts for shard and whole-execution semantics
 
@@ -16,6 +18,8 @@ therefore separates two predicates:
 These predicates depend only on public values and semantic syscall events. They do not depend
 on a circuit implementation, extracted AIR profile or witness decoder. No rolling-flag transition
 is used as provenance. -/
+
+@[expose] public section
 
 namespace SP1Clean.CoreAIR
 

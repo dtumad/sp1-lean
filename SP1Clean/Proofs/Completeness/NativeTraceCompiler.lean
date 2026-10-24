@@ -1,9 +1,11 @@
-import SP1Clean.Proofs.Completeness.NativeClosureCapacity
-import SP1Clean.Proofs.Completeness.StateHistory
-import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
-import SP1Clean.Proofs.Completeness.ConsumerClosure
-import SP1Clean.Proofs.Completeness.PhysicalFootprint
-import SP1Clean.Soundness.AIR
+module
+
+public import SP1Clean.Proofs.Completeness.NativeClosureCapacity
+public import SP1Clean.Proofs.Completeness.StateHistory
+public import SP1Clean.Proofs.Completeness.CanonicalClosureWellFormed
+public import SP1Clean.Proofs.Completeness.ConsumerClosure
+public import SP1Clean.Proofs.Completeness.PhysicalFootprint
+public import SP1Clean.Soundness.AIR
 
 /-!
 # Deterministic native ensemble trace compiler
@@ -24,6 +26,8 @@ remaining compiler-to-built-row representation facts and the two field-free chro
 does not contain channel balance, table constraints, or an existential AIR witness: those are
 derived below.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

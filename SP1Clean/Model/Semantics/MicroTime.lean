@@ -1,5 +1,7 @@
-import SP1Clean.Model.Machine.Execution
-import SP1Clean.Model.BusMessages
+module
+
+public import SP1Clean.Model.Machine.Execution
+public import SP1Clean.Model.BusMessages
 
 /-! # Ordinary-window micro-time
 
@@ -23,6 +25,8 @@ definitions here remain an explicitly scoped compatibility layer until timed gro
   (`Option`-valued past a failing step), with the bridge to the relational `SailChain`.
 - `microValue` — the location's content at a micro-time `τ`: the pre- or post-state of window `k`'s
   step according to the effect-time convention. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

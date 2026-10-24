@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreEnsemble
-import ToClean.Air.EnsembleBuild
+module
+
+public import SP1Clean.Soundness.NativeCoreEnsemble
+public import ToClean.Air.EnsembleBuild
 
 /-! # Authenticated boundaries from the combined native AIR
 
@@ -7,6 +9,8 @@ The initialization projection retains the physical tables and shared prover data
 Only its verifier is restricted to the private ordering channel. Local provider specifications
 come from raw constraints and the combined Byte ledger, not caller-supplied semantic facts.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

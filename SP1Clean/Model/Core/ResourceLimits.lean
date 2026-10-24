@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.NativeLayout
+module
+
+public import SP1Clean.Model.Core.NativeLayout
 
 /-! # Numeric limits for the bounded native facade
 
@@ -7,6 +9,8 @@ of this data. In particular, individual count ceilings do not establish that the
 physical expansion fits: the capacity proof must include providers, refreshes and boundaries.
 There is no predicate-valued field and no compiler or witness in this interface.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.SyscallCodeGuard
-import SP1CleanTest.Core.ComponentExport
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Native.Operations.SyscallCodeGuard
+public import SP1CleanTest.Core.ComponentExport
+public import ToClean.Air.TableBuild
 
 /-! # Built-in Rust export of the native syscall guard
 
@@ -9,6 +11,8 @@ selects the eight supported calls from SP1's pinned enum, exhausts the low 16-bi
 checks upper-limb aliases, padding and witness tampering. This checks the native profile, not the
 separate host effects or SP1's more permissive truncation of the syscall register.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.SyscallCodeExport
 

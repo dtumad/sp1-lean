@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.HintQueueWordRecords
+module
+
+public import SP1Clean.Model.Core.HintQueueWordRecords
 
 /-! # Immutable hint-word coordination
 
@@ -6,6 +8,8 @@ The channel carries the node identity, word position, full value, and final-word
 local representation validity. Source and authorized-allocation providers must establish actual
 byte binding; complete consumers must request every required word, including final padding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintQueue
 

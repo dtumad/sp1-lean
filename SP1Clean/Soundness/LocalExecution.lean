@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.ChipRegistry
-import SP1Clean.FormalModel.SupportedShard
-import SP1Clean.Model.Semantics.MicroTime
-import SP1Clean.Model.Semantics.GenericTruth
-import SP1Clean.Soundness.Walk
+module
+
+public import SP1Clean.Soundness.ChipRegistry
+public import SP1Clean.FormalModel.SupportedShard
+public import SP1Clean.Model.Semantics.MicroTime
+public import SP1Clean.Model.Semantics.GenericTruth
+public import SP1Clean.Soundness.Walk
 
 /-! # Ordered grounded rows produce a local Sail execution
 
@@ -11,6 +13,8 @@ contain row-local facts—registered chip, `Spec`, committed decode, current ope
 `advanceReady`—but no next state or execution witness.  Each next state is constructed by the chip's
 verified `advance` theorem.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

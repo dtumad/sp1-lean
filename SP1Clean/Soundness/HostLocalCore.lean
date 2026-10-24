@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.ProtectedLocalCoreProjection
-import SP1Clean.Soundness.HostCallProjection
-import SP1Clean.Soundness.HostCallOrder
+module
+
+public import SP1Clean.Soundness.ProtectedLocalCoreProjection
+public import SP1Clean.Soundness.HostCallProjection
+public import SP1Clean.Soundness.HostCallOrder
 
 /-! # Local AIR with the instruction-to-host wrapper installed
 
@@ -11,6 +13,8 @@ independently of their Memory effects and of changes to canonical data.
 Auxiliary Byte requirements and State silence are static component-interface obligations.
 Complete host execution, source-record authentication, and outgoing Memory currency remain open.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

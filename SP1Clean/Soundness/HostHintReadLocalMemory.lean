@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostHintQueueBoundary
-import SP1Clean.Soundness.HostLocalCoreMemoryBounds
-import SP1Clean.Soundness.HostRamTouches
+module
+
+public import SP1Clean.Soundness.HostHintQueueBoundary
+public import SP1Clean.Soundness.HostLocalCoreMemoryBounds
+public import SP1Clean.Soundness.HostRamTouches
 
 /-! # Full Memory balance of the installed hint handlers
 
@@ -9,6 +11,8 @@ its actual AIR constraints and balance. The word consumers and wrapper accesses 
 ledger. Source and pushed-record clock bounds transfer through that permutation to every prior
 record, proving strict order for installed word writes. Predecessor value currency remains open.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 

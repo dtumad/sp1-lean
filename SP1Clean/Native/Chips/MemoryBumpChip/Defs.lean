@@ -1,10 +1,12 @@
-import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.SystemChips
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The MemoryBump system table as a Clean circuit (W3, external report Finding 2)
 
@@ -23,6 +25,8 @@ low clock can sit at `2^24 - 1`). The columns still reuse the shared `MemoryAcce
 the shape matches the load/store chips cell-for-cell. All fifteen cells are inputs
 (`localLength = 0`); the row struct and semantic `Spec` live in
 `FormalModel/Contracts/SystemChips.lean`, the proofs in `Proofs/Chips/MemoryBumpChip/Formal.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryBumpChip
 

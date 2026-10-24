@@ -1,12 +1,16 @@
-import SP1Clean.Math.ByteWord
-import SP1Clean.Model.Core.SailMemory
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Math.ByteWord
+public import SP1Clean.Model.Core.SailMemory
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Sparse byte memory at the memory bus's word granularity
 
 `readWord` is executable on sparse memory. Its value is exactly the existing Sail-side
 `ramWord64?` interpretation whenever all eight bytes lie in the realized address window.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.ByteMemory
 

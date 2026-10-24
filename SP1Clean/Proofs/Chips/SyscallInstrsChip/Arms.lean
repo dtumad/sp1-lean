@@ -1,11 +1,15 @@
-import SP1Clean.Native.Chips.SyscallInstrsChip.Arms
-import Clean.Utils.Tactics
+module
+
+public import SP1Clean.Native.Chips.SyscallInstrsChip.Arms
+public import Clean.Utils.Tactics
 
 /-! # The `SyscallInstrs` arms' soundness and completeness
 
 One bundled `FormalAssertion` per arm. Each proof sees only the constraints of its own arm, which
 is the whole point of the decomposition — see the module docstring of
 `Native/Chips/SyscallInstrsChip/Arms.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.SyscallInstrsChip
 

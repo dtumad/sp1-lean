@@ -1,12 +1,14 @@
-import SP1Clean.FormalModel.Contracts.Operations
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Operations
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `SubOperation` — `populate` (the witness generator)
 
@@ -18,6 +20,8 @@ Circuit in `Defs`, arithmetic core in `RawSpec`, `FormalAssertion` in `Formal`.
 at the *field-expression* level (`(65535 - b[i]).val`) because the u64 sort has no subtraction; under
 the `isU64` bound the field complement's value is exactly the ℕ complement, which `populateIR_eval`
 proves. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubOperation
 

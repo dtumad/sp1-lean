@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.HintNodeAllocate
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Native.Operations.AddressOrder
-import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
+module
+
+public import SP1Clean.FormalModel.Contracts.HintNodeAllocate
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Native.Operations.AddressOrder
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Formal
 
 /-! # A checked append to the persistent hint store
 
@@ -10,6 +12,8 @@ new pointer is exactly the old allocation frontier plus one; it cannot reuse a p
 The operation does not publish node contents or alter the queue ledger by itself: its enclosing
 host handler must authorize the bytes and assemble its full before/after call transition.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

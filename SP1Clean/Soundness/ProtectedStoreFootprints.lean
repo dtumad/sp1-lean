@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.ProtectedLocalCorePermissions
-import SP1Clean.Soundness.RomWriteProtection
+module
+
+public import SP1Clean.Soundness.ProtectedLocalCorePermissions
+public import SP1Clean.Soundness.RomWriteProtection
 
 /-! # Actual store footprints are permitted by the local AIR
 
@@ -8,6 +10,8 @@ symbolic byte offsets therefore authenticates every byte in `MemWrite.covers`, i
 writes beside ROM. These physical-row lemmas supply bounded byte authorization and `RowWritePermitted` without a semantic
 permission hypothesis or any assumption about unrelated Sail steps.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 

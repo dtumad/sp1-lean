@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostTableRegistry
+module
+
+public import SP1Clean.Soundness.HostTableRegistry
 
 /-! # Commitment histories in the installed local machine
 
@@ -7,6 +9,8 @@ All other physical contributions on that bank's private channel are excluded by 
 metadata. Verifier-owned endpoints therefore let the existing bank history theorem apply
 without an auxiliary balance, provider, or semantic boundary premise.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadBanks
 

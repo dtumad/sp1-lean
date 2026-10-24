@@ -1,5 +1,7 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Proofs.Chips.HostCallChip.Formal
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Proofs.Chips.HostCallChip.Formal
 
 /-! # Built-in export of the syscall instruction and installed host handoff
 
@@ -8,6 +10,8 @@ native Exit/PublicValues messages; the comparison checks their bindings separate
 shared buses. The core guard and host handoff add the native eight-call profile and WRITE's x12
 read. Exporting these components does not establish the separate host handlers' effects.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.SyscallExport
 

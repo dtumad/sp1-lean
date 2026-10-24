@@ -1,7 +1,9 @@
-import Clean.Air.Balance
-import Mathlib.Algebra.BigOperators.Group.List.Lemmas
-import Mathlib.Data.List.Dedup
-import Mathlib.Data.ZMod.Basic
+module
+
+public import Clean.Air.Balance
+public import Mathlib.Algebra.BigOperators.Group.List.Lemmas
+public import Mathlib.Data.List.Dedup
+public import Mathlib.Data.ZMod.Basic
 
 /-! # Field-native closure for aggregate lookup providers
 
@@ -21,6 +23,8 @@ representation.  The semantic message type is merely a convenient index for cons
 channel interactions.  Field balance does not require its concrete encoding to be injective;
 `aggregateProviders_messages_nodup` records the stronger, canonical-footprint fact when it is.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FieldClosure
 

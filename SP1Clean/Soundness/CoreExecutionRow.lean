@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.SystemMemoryRows
-import SP1Clean.Soundness.SystemStateRows
-import SP1Clean.Soundness.StateChronology
+module
+
+public import SP1Clean.Soundness.SystemMemoryRows
+public import SP1Clean.Soundness.SystemStateRows
+public import SP1Clean.Soundness.StateChronology
 
 /-! # Shared execution-row semantics for native core assemblies
 
@@ -9,6 +11,8 @@ state policy. This module fixes its Memory facts, complete State edges, event wi
 system-row progress lemmas. Ledger projections and ordering reuse this same carrier for boot and
 local assemblies. Host effect correctness is a separate obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

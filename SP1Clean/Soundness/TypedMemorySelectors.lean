@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.TypedSelectors
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Soundness.TypedSelectors
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Memory multiplicities are gated by the physical row selector
 
@@ -11,6 +13,8 @@ its negation, or zero.
 This module states that fact at the whole-chip boundary.  Registry cases are proved from each chip's
 exact `interactionsWith_memory_eq` theorem; no hand-written lookup shadow or semantic execution
 assumption is involved. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

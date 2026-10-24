@@ -1,5 +1,7 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Proofs.Chips.ByteChip.ByteChip
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Proofs.Chips.ByteChip.ByteChip
 
 /-! # Built-in export of all six native byte providers
 
@@ -7,6 +9,8 @@ SP1 authenticates a preprocessed byte table. These native providers instead prov
 with polynomial constraints. Rust comparisons check the emitted messages against SP1's actual
 preprocessed table and AIR; the physical row layouts intentionally differ.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ByteProviderExport
 

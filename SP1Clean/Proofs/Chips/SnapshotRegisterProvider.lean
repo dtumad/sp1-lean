@@ -1,11 +1,13 @@
-import ToClean.Circuit.Guarded
-import ToClean.Circuit.SubcircuitProjection
-import ToClean.Air.StaticProvider
-import SP1Clean.FormalModel.Contracts.SnapshotMemory
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import Clean.Utils.Tactics
+module
+
+public import ToClean.Circuit.Guarded
+public import ToClean.Circuit.SubcircuitProjection
+public import ToClean.Air.StaticProvider
+public import SP1Clean.FormalModel.Contracts.SnapshotMemory
+public import SP1Clean.Model.Core.RegisterSnapshotTable
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import Clean.Utils.Tactics
 
 /-! # Register source records for an arbitrary local snapshot
 
@@ -14,6 +16,8 @@ membership provider, then emits one zero-time Memory record. The private members
 authenticates the incoming value. No activity selector is needed: absent Memory-provider rows
 are represented by an empty table; the separate fixed provider retains all 32 register rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SnapshotRegisterProvider
 

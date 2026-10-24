@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.RankedGrounding
+module
+
+public import SP1Clean.Soundness.RankedGrounding
 
 /-! # The goodness filter: a balanced graph over a good boundary has only good vertices (W3 D2)
 
@@ -28,6 +30,8 @@ keeping `RankedGrounding` itself byte-identical (W3 D1):
 The SP1 instantiation — `Good m := m.clk_high.val < 2^24 ∧ …`, the canonicalization, and the
 per-chip preservation facts — is the W3 phase-3 wiring; nothing here mentions messages, chips, or
 fields. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.GoodnessFilter
 

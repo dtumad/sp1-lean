@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreEnsemble
-import SP1Clean.Soundness.EnsembleChannels
+module
+
+public import SP1Clean.Soundness.LocalCoreEnsemble
+public import SP1Clean.Soundness.EnsembleChannels
 
 /-! # Physical channel inventory of the local assembly
 
@@ -7,6 +9,8 @@ Every physical source, final, instruction, and system component speaks only on a
 local channel. Extensions can therefore prove silence on a new private channel uniformly,
 without repeating the table inventory for each host protocol.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

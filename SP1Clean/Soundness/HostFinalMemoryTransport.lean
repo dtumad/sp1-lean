@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostFinalMemoryLedger
+module
+
+public import SP1Clean.Soundness.HostFinalMemoryLedger
 
 /-! # Exact channel transport to the installed target Memory checks
 
@@ -6,6 +8,8 @@ Only the seven registered boundary tables and the fixed verifier demand use thes
 protocols. The projection retains every occurrence, including disabled selection entries,
 so it transports both integer balance and the original count bounds.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

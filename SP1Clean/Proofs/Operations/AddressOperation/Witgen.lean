@@ -1,5 +1,7 @@
-import SP1Clean.Native.Operations.AddressOperation
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Native.Operations.AddressOperation
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.AddressOperation` — honest witness generation (`ComputableWitnesses`)
 
@@ -16,6 +18,8 @@ Two witness steps, one of each kind the obligation admits:
   sub-circuit witnessed three positions earlier**. That is the case `ComputableWitnesses` is stated
   to permit (a generator may read the environment below its own offset), so it is discharged from
   the environment-agreement hypothesis, exactly as `JalrChip`'s alignment bit is. -/
+
+@[expose] public section
 
 namespace SP1Clean.AddressOperation
 

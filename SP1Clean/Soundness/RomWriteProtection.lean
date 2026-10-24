@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.RowEffectDefs
-import SP1Clean.FormalModel.Contracts.WritePermission
+module
+
+public import SP1Clean.Soundness.RowEffectDefs
+public import SP1Clean.FormalModel.Contracts.WritePermission
 
 /-! # ROM preservation from the actual byte footprint
 
@@ -7,6 +9,8 @@ The chip bridge already proves that a store frames every byte outside its commit
 Permission for those written bytes therefore preserves instruction memory, including code sharing
 an eight-byte RAM cell with writable data. No property of unrelated interpreter steps is needed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.Target
 

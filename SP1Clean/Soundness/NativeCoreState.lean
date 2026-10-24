@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreRows
-import SP1Clean.Soundness.SystemStateRows
+module
+
+public import SP1Clean.Soundness.NativeCoreRows
+public import SP1Clean.Soundness.SystemStateRows
 
 /-! # Physical State ledger of the authenticated native core
 
@@ -7,6 +9,8 @@ The mixed event inventory and the actual StateBump rows account for all State in
 Initialization, finalization, and lookup providers are State-silent. The verifier contributes
 exactly the public final pull and initial push, so balance authenticates both endpoints.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

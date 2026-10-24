@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
 
 /-! # `DivRemChip` — witness-payload environment-locality (A7f)
 
@@ -17,6 +19,8 @@ All congruences, no bounds. Two proof shapes:
   `Witgen.getElem_eval_toElements` instantiated explicitly (its `size` side-condition is not
   simp-dischargeable) and close by `if_congr` + `exact`, since the struct-eval terms match
   only up to instance paths. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

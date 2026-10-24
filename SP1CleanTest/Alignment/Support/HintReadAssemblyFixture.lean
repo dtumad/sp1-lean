@@ -1,5 +1,7 @@
-import SP1CleanTest.Alignment.Support.HostProgramFixture
-import SP1CleanTest.Core.HintReadFixtures
+module
+
+public import SP1CleanTest.Alignment.Support.HostProgramFixture
+public import SP1CleanTest.Core.HintReadFixtures
 
 /-! # Complete active HINT_READ assembly fixture
 
@@ -7,6 +9,8 @@ The shared constructor records the complete source/target and every padded word.
 case pads three RAM boundary/check rows to four; the twenty-four-byte case pads three nonfinal
 word consumers. All scheduling and padding use Clean's built-in machinery.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.HintReadAssembly
 open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness

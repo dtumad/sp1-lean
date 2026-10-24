@@ -1,14 +1,16 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Circuits.Types.RTypeReader
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Native.Readers.RegisterAccessCols
+public import SP1Clean.Circuits.Types.RTypeReader
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Native `RTypeReader` reader — the register-adapter per-row checks as a Clean `GeneralFormalCircuit`
 
@@ -38,6 +40,8 @@ CPUState block) and the four `op_a_write_value` limbs (`wv0..wv3`, the ALU resul
 zeroing gates). Each operand's `RegisterAccessCols.circuit` receives its access clock
 `clk_low + 4/3/2`; the chip's witness closure computes the timestamp columns from it, which is what
 makes completeness hold for any `clk_low`. The `is_real` binary gate stays on the chip. -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RTypeReader
 

@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.TypedMemoryBalance
+module
+
+public import SP1Clean.Soundness.TypedMemoryBalance
 
 /-! # Memory frontiers for the timed grounding walk
 
@@ -12,6 +14,8 @@ legacy SP1-assembly adapter. The authenticated native and local assemblies deriv
 facts separately; this algebraic transport does not discharge those semantic obligations.
 The initial provider's value and clock contract establish the walk's `LiveOK` invariant.
 -/
+@[expose] public section
+
 namespace SP1Clean.Soundness
 
 open Air.Flat Circuit

@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionSnapshot
+module
+
+public import SP1Clean.Model.Core.ExecutionSnapshot
 
 /-! # Executing host effects on complete finite snapshots
 
@@ -7,6 +9,8 @@ realization. Applying a returned write preserves all other Sail/runtime fields a
 actual host result. The commuting theorem covers the complete padded write and exact state,
 including bookkeeping; the native memory-policy window is explicit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

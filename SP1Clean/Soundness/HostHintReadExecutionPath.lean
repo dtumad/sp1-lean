@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.ExecutionWritePolicy
-import SP1Clean.Model.Core.ExecutionCompatibility
-import SP1Clean.Soundness.HostHintReadExecution
+module
+
+public import SP1Clean.Model.Core.ExecutionWritePolicy
+public import SP1Clean.Model.Core.ExecutionCompatibility
+public import SP1Clean.Soundness.HostHintReadExecution
 
 /-! # Local execution soundness for the installed instruction, control, and hint AIR
 
@@ -12,6 +14,8 @@ Empty segments remain identity paths; inactive padding contributes no execution 
 This is the installed source-hint assembly's soundness theorem. Complete outgoing snapshot and
 Exit-bus binding, WRITE/VERIFY handlers, and constructive completeness remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

@@ -1,8 +1,10 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for the `ShiftLeft` chip (SLL + SLLW) + `ChipKind`
 
@@ -13,6 +15,8 @@ logical left shift) vs `spec_sllw` (`ropw.SLLW`, the low-32 left shift sign-exte
 `correct_sll_native`/`correct_sllw_native` route the chip's RV64 `sll`/`sllw` facts into the Sail
 `SLL`/`SLLW` via `execute_RTYPE_pure_sll = RV64.sll` / `execute_RTYPEW_pure_sllw = RV64.sllw`.
 `advance` dispatches the SLL/SLLW cases; `shiftleft_chip_reaches_sail` remains the semantic helper. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.ShiftLeftSail

@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.DivRemChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.RV64Bridge
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.DivRemChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.RV64Bridge
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for the `DivRem` chip (DIV/DIVU/REM/REMU/DIVW/DIVUW/REMW/REMUW) + `ChipKind`
 
@@ -22,6 +24,8 @@ algebra lives in those dep lemmas.
 The chip `Spec` sources operands from **inputs** `op_b_val` (rs1) / `op_c_val` (rs2), matching
 the RV64 signature `f rs2_val rs1_val`. `advance` is the eight-way flag-dispatched transition.
 `DivRem` carries `Fact (2 ^ 24 < p)`; the bridge derives `Fact (2 ^ 17 < p)` locally. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.DivRemSail

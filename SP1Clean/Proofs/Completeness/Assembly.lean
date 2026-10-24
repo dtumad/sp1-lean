@@ -1,35 +1,37 @@
-import SP1Clean.FormalModel.TraceGen.InstructionRegistry
-import SP1Clean.Proofs.Completeness.Providers
-import SP1Clean.Soundness.EnsembleChannels
-import SP1Clean.Soundness.EnsembleLookups
-import SP1Clean.FormalModel.TraceGen.Bump
-import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
-import SP1Clean.Proofs.Chips.AddChip.Complete
-import SP1Clean.Proofs.Chips.AddiChip.Complete
-import SP1Clean.Proofs.Chips.AddwChip.Complete
-import SP1Clean.Proofs.Chips.SubChip.Complete
-import SP1Clean.Proofs.Chips.SubwChip.Complete
-import SP1Clean.Proofs.Chips.BitwiseChip.Complete
-import SP1Clean.Proofs.Chips.LtChip.Complete
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
-import SP1Clean.Proofs.Chips.ShiftRightChip.Complete
-import SP1Clean.Proofs.Chips.JalChip.Complete
-import SP1Clean.Proofs.Chips.JalrChip.Complete
-import SP1Clean.Proofs.Chips.BranchChip.Complete
-import SP1Clean.Proofs.Chips.UTypeChip.Complete
-import SP1Clean.Proofs.Chips.LoadByteChip.Complete
-import SP1Clean.Proofs.Chips.LoadHalfChip.Complete
-import SP1Clean.Proofs.Chips.LoadWordChip.Complete
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
-import SP1Clean.Proofs.Chips.LoadX0Chip.Complete
-import SP1Clean.Proofs.Chips.StoreByteChip.Complete
-import SP1Clean.Proofs.Chips.StoreHalfChip.Complete
-import SP1Clean.Proofs.Chips.StoreWordChip.Complete
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
-import SP1Clean.Proofs.Chips.MulChip.Complete
-import SP1Clean.Proofs.Chips.DivRemChip.Complete
-import SP1Clean.Proofs.Chips.AluX0Chip.Complete
-import ToClean.Air.EnsembleBuild
+module
+
+public import SP1Clean.FormalModel.TraceGen.InstructionRegistry
+public import SP1Clean.Proofs.Completeness.Providers
+public import SP1Clean.Soundness.EnsembleChannels
+public import SP1Clean.Soundness.EnsembleLookups
+public import SP1Clean.FormalModel.TraceGen.Bump
+public import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
+public import SP1Clean.Proofs.Chips.AddChip.Complete
+public import SP1Clean.Proofs.Chips.AddiChip.Complete
+public import SP1Clean.Proofs.Chips.AddwChip.Complete
+public import SP1Clean.Proofs.Chips.SubChip.Complete
+public import SP1Clean.Proofs.Chips.SubwChip.Complete
+public import SP1Clean.Proofs.Chips.BitwiseChip.Complete
+public import SP1Clean.Proofs.Chips.LtChip.Complete
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Complete
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Complete
+public import SP1Clean.Proofs.Chips.JalChip.Complete
+public import SP1Clean.Proofs.Chips.JalrChip.Complete
+public import SP1Clean.Proofs.Chips.BranchChip.Complete
+public import SP1Clean.Proofs.Chips.UTypeChip.Complete
+public import SP1Clean.Proofs.Chips.LoadByteChip.Complete
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Complete
+public import SP1Clean.Proofs.Chips.LoadWordChip.Complete
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Complete
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Complete
+public import SP1Clean.Proofs.Chips.StoreByteChip.Complete
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Complete
+public import SP1Clean.Proofs.Chips.StoreWordChip.Complete
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Complete
+public import SP1Clean.Proofs.Chips.MulChip.Complete
+public import SP1Clean.Proofs.Chips.DivRemChip.Complete
+public import SP1Clean.Proofs.Chips.AluX0Chip.Complete
+public import ToClean.Air.EnsembleBuild
 
 /-! # Assembling a shard's physical AIR witness
 
@@ -47,6 +49,8 @@ multiplicities remain explicit, preserving repeated keys, zero-count entries and
 selectors. The trace record lives beside the completeness proofs because its provider occurrence
 types depend on chip input types.
 -/
+
+@[expose] public section
 
 /-! ## Completeness-side realizations of the neutral table identities
 

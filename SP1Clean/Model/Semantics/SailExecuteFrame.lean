@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.SailRetirement
+module
+
+public import SP1Clean.Model.Semantics.SailRetirement
 
 /-! # Circuit-independent execute and retirement frames
 
@@ -6,6 +8,8 @@ Shared configuration frames and the official retirement composition. The inversi
 recovers an actual normally retiring execute stage without assuming total success of that stage.
 Instruction families discharge its direct-execution and preservation obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions

@@ -1,10 +1,12 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Cases
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence
-import SP1Clean.Proofs.Chips.DivRemChip.Completeness.Driver
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Cases
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence
+public import SP1Clean.Proofs.Chips.DivRemChip.Completeness.Driver
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.DivRemChip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
@@ -18,6 +20,8 @@ Whole-chip conformance is the single explicit `contractSoundness` seam below. Th
 per-op circuit proofs were retired; their reusable arithmetic was retained in `Math.lean`, `Soundness.lean`,
 and `Assembly.lean`, while `Cases.lean` is now the isolated proof-development interface. Completeness
 is proved in `Completeness/Driver.lean` (relocated there for proof isolation, not deferred). -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

@@ -1,4 +1,6 @@
-import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
+module
+
+public import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
 
 /-! # Stopped-source instances of the complete installed assembly
 
@@ -7,6 +9,8 @@ Optional terminal status and the two host banks remain independent instance fiel
 segment contributes zero to the numeric public Exit value even when its incoming host has a
 nonzero stopped code. All physical components and boundary terminals remain installed.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.StoppedAssembly
 

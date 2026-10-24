@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HintReadWrites
+module
+
+public import SP1Clean.Soundness.HintReadWrites
 
 /-! # Actual Memory and byte-permission ledgers of complete hint consumers
 
@@ -6,6 +8,8 @@ These projections retain every physical consumer occurrence. They connect the se
 inventory to the real Memory pull/push pairs and all eight requested byte permissions per row;
 they do not supply predecessor currency or permission-provider authentication themselves.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HintReadWriteLedger
 

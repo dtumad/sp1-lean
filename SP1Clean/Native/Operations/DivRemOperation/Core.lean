@@ -1,12 +1,14 @@
-import SP1Clean.Circuits.Gadgets.Mul
-import SP1Clean.Circuits.Gadgets.DivRem.Assertions
-import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
-import SP1Clean.Circuits.Types.DivRem
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Circuits.Gadgets.Mul
+public import SP1Clean.Circuits.Gadgets.DivRem.Assertions
+public import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
+public import SP1Clean.Circuits.Types.DivRem
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # `DivRemCore` — the DivRem chip's product/own-assert/byte-range assertion cluster
 
@@ -31,6 +33,8 @@ The emission order and every argument are verbatim from the corresponding emissi
 field per the chip's cols assembly. The semantic contract is `DivRemCore.CoreSpec`
 (`Circuits/Gadgets/DivRem/CoreContract.lean`); the `FormalAssertion` bundle is
 `Proofs/Operations/DivRemOperation/Core.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemCore
 

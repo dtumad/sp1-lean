@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # One register read with unchanged read-back
 
 The caller binds the register index and access clock. The reader authenticates a bounded word
 and strict prior/access time order, emitting that same word at both timestamps.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Readers.RegisterRead
 

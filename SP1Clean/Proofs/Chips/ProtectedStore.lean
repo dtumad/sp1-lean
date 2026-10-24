@@ -1,11 +1,13 @@
-import SP1Clean.Proofs.Chips.StoreByteChip.Formal
-import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
-import SP1Clean.Proofs.Chips.StoreWordChip.Formal
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
-import SP1Clean.FormalModel.Contracts.WritePermission
-import Clean.Circuit.Loops
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.Proofs.Chips.StoreByteChip.Formal
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
+public import SP1Clean.Proofs.Chips.StoreWordChip.Formal
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
+public import SP1Clean.FormalModel.Contracts.WritePermission
+public import Clean.Circuit.Loops
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Native store rows with byte-permission requests
 
@@ -14,6 +16,8 @@ Output, witnesses, arithmetic and existing channels are retained. Permission fol
 fixed provider and balance. Rust instruction comparisons cover the underlying chip; separate
 permission-provider comparisons test the added native boundary.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ProtectedStore
 

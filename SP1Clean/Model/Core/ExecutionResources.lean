@@ -1,7 +1,9 @@
-import SP1Clean.Model.Core.ResourceUsage
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.MemorySupport
+module
+
+public import SP1Clean.Model.Core.ResourceUsage
+public import SP1Clean.Model.Core.HostSnapshot
+public import SP1Clean.Model.Core.ExecutionReplay
+public import SP1Clean.Model.Core.MemorySupport
 
 /-! # Resource observation of the complete execution replay
 
@@ -9,6 +11,8 @@ This observer calls the existing replay step. It adds no transition relation and
 choices of intermediate states. Failed tapes have a total observation, but are excluded by
 `ExecutionPath`; all composition and event-cost conclusions below use that existing relation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 open Machine Soundness.Target

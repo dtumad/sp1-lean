@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Soundness.LocalCoreLookups
-import ToClean.Air.ComponentReplacement
+module
+
+public import SP1Clean.Soundness.ProtectedLocalCore
+public import SP1Clean.Soundness.LocalCoreLookups
+public import ToClean.Air.ComponentReplacement
 
 /-! # The protected local AIR retains the original execution witness
 
@@ -10,6 +12,8 @@ interaction list are preserved. Fixed lookup predicates survive changes to canon
 Thus all previously proved local ordering and grounding results apply to this projection without
 additional validity or balance premises.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 

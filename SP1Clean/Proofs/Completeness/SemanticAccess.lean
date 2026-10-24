@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.ShardAccess
-import SP1Clean.Proofs.Completeness.InstructionEvent
+module
+
+public import SP1Clean.FormalModel.ShardAccess
+public import SP1Clean.Proofs.Completeness.InstructionEvent
 
 /-! # Canonical ordinary compilation from the complete shard semantics
 
@@ -9,6 +11,8 @@ frontier. Its invariant is preserved for the next row, rather than becoming a ca
 This removes extractor readiness. The five R-type adapter tables also have derived event validity
 below; the remaining families and full mixed-table assembly remain separate compiler obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 open Model.Core Machine Semantics FormalModel.Shard

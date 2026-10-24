@@ -1,4 +1,6 @@
-import SP1CleanTest.Alignment.Support.BranchEnsembleInventory
+module
+
+public import SP1CleanTest.Alignment.Support.BranchEnsembleInventory
 
 /-! # One official branch step and an accepted complete local host-ensemble witness
 
@@ -6,6 +8,8 @@ This is a concrete witness, not a generic completeness or final capstone theorem
 official Sail retirement, canonical semantic projection, compiler payload, physical Branch row,
 providers, fixed lookup meanings, complete target Memory and every registered channel meet here.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Audit.BranchEnsemble
 

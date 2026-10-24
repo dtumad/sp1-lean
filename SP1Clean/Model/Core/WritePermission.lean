@@ -1,8 +1,10 @@
-import SP1Clean.Model.Core.ProgramImage
-import SP1Clean.Model.Core.MemoryIntervals
-import SP1Clean.Math.Address
-import ToClean.Circuit.StaticTable
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.Core.ProgramImage
+public import SP1Clean.Model.Core.MemoryIntervals
+public import SP1Clean.Math.Address
+public import ToClean.Circuit.StaticTable
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Finite write permissions derived from the committed ROM
 
@@ -10,6 +12,8 @@ Nonempty zero-valued intervals of the ROM mask cover exactly the writable 48-bit
 Inclusive endpoints fit three limbs even at the last native byte. The concrete fixed table
 contains these endpoints, so its interpretation cannot be chosen by a witness producer.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

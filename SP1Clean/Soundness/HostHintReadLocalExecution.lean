@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadLocalRecords
-import SP1Clean.Soundness.HostHintReadLocalPermissions
+module
+
+public import SP1Clean.Soundness.HostHintReadLocalRecords
+public import SP1Clean.Soundness.HostHintReadLocalPermissions
 
 /-! # HINT_READ execution from authenticated installed records
 
@@ -9,6 +11,8 @@ frontier. The execution theorem therefore derives node/word bindings and local s
 current queue history, immutable allocation authentication, Memory representation guarantees,
 and current register observations remain explicit inputs to mixed grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 

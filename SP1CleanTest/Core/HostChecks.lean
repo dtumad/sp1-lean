@@ -1,7 +1,9 @@
-import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.SP1Field
-import SP1Clean.Math.Address
-import ToClean.Air.FiniteLookup
+module
+
+public import SP1Clean.Proofs.Chips.HostCallChip.Populate
+public import SP1Clean.Model.SP1Field
+public import SP1Clean.Math.Address
+public import ToClean.Air.FiniteLookup
 
 /-! # Executing native host-circuit regressions
 
@@ -10,6 +12,8 @@ Memory and host-read guarantees are checked directly; Program messages must be t
 at the supplied address (default `2^16`). Structural-channel messages are retained for each test's ledger assertions.
 These fixture checks do not assert whole-machine balance or authentic boot-memory contents.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostChecks
 

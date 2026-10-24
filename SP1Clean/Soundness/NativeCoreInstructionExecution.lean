@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.NativeCoreGrounding
-import SP1Clean.Soundness.SyscallWiring
+module
+
+public import SP1Clean.Soundness.NativeCoreGrounding
+public import SP1Clean.Soundness.SyscallWiring
 
 /-! # Ordinary execution facts for the authenticated native core
 
@@ -8,6 +10,8 @@ Byte/Program guarantees. Incoming Memory currency supplies their remaining circu
 The carrier derives the eight-tick successor position internally. The remaining semantic boundary
 is the chosen trajectory's ordinary Sail transition, ROM preservation, and HALT/host execution.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.LoadWordChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.LoadWordChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.LoadWordChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -16,6 +18,8 @@ own honest-witness theorem (`AddressOperation.computableWitnesses`) discharges i
 the child's input row is assembled from the parent's, which is four `congrArg`s. Every other
 composed block — the two readers, the memory primitive, the MSB gadget, the register write, and the
 eight equality gates — witnesses nothing and is dispatched by `localLength` alone. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadWordChip
 

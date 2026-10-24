@@ -1,10 +1,14 @@
-import SP1Clean.Model.Semantics.SailRetirement
+module
+
+public import SP1Clean.Model.Semantics.SailRetirement
 
 /-! # Official Sail control-flow execute stages
 
 Circuit-independent execute results for JAL, JALR and BTYPE. The existing chip bridges consume
 these same lemmas, while semantic fixtures and frame proofs can use them without chip rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions

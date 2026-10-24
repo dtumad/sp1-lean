@@ -1,12 +1,16 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Cases
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.SignedCommon
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Cases
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.SignedCommon
 
 /-! # `DivRemChip` — signed low-32 evidence extraction
 
 This is the circuit-independent `DIVW`/`REMW` family proof. It consumes the folded whole-row
 contracts, proves that the arithmetic operands and results are sign extensions of their low halves,
 and makes the overflow, division-by-zero, and normal signed Euclidean cases explicit. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

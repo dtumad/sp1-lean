@@ -1,12 +1,14 @@
-import SP1Clean.Model.Channels
-import SP1Clean.Native.Operations.WordRangeCheck
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Bits
-import Clean.Gadgets.Boolean
-import Clean.Utils.Tactics
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.Channels
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Bits
+public import Clean.Gadgets.Boolean
+public import Clean.Utils.Tactics
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The in-circuit Memory-boundary provider (push side of SP1's memory init/finalize chips)
 
@@ -31,6 +33,8 @@ fields (`addr0..2`) remain part of the key but unconstrained (the boundary recor
 `initSpec` validity is the `MemoryProvider` predicate's job, `Proofs/Chips/MemoryProvider.lean`).
 
 The Program-bus sibling is `Proofs/Chips/ProgramProviderChip.lean`; the byte-bus one `Chips/ByteChip`. -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryProviderChip
 

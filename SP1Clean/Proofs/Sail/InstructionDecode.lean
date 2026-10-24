@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Sail.InstructionDecode.Families
+module
+
+public import SP1Clean.Proofs.Sail.InstructionDecode.Families
 
 /-! # Agreement of the executable native decoder with official Sail
 
@@ -6,6 +8,8 @@ Successful parsing gives the exact instruction returned by the pinned Sail decod
 configured state. The checked program image therefore requires no caller-provided decoder
 certificate. The hint-extension aliases excluded by the parser have distinct Sail constructors.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailDecode
 

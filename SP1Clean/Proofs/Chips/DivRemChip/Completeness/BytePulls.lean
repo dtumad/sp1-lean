@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Bounds
 
 /-! # `DivRemChip` — the simple byte-range pulls (factored for dedup + parallel compilation)
 
@@ -8,6 +10,8 @@ The chip's tail emits 26 single-cell `byteChannel` range lookups (`pabsc`/`pabsr
 discharges each by rewriting the cell to its populate value and `convert byteRow_range16 … using 2`.
 That `convert` is a deep defeq; factoring it into one parametric lemma collapses 26 of them into a
 single proof (and moves it off the heavy `completeness` budget). -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip.BytePulls
 

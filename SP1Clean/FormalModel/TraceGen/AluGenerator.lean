@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.TraceGen.GenState
+module
+
+public import SP1Clean.FormalModel.TraceGen.GenState
 
 /-!
 # Generating an R-type ALU event stream
@@ -23,6 +25,8 @@ This module does not read the Sail model. Producing the `AluStep` list *from* an
 remaining half of the generator, and it is where the decode restriction and the register read-through
 live.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

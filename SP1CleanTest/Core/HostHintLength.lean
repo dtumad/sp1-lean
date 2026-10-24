@@ -1,9 +1,11 @@
-import SP1CleanTest.Core.HintSourceExport
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
-import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
+module
+
+public import SP1CleanTest.Core.HintSourceExport
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge
+public import SP1Clean.Proofs.Chips.HostHintLengthChip.Ledger
 
 /-! # Current-head HINT_LEN, source authentication, and instruction handoff
 
@@ -12,6 +14,8 @@ HostCall, node, and queue-state ledgers against explicit fixture endpoints; the 
 Memory/Program/State channels remain external. These are component integration regressions,
 not a claim that the handler is installed in the full local-core ensemble.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostHintLength
 

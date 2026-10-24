@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Cases
-import SP1Clean.Proofs.Chips.DivRemChip.Assembly
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Cases
+public import SP1Clean.Proofs.Chips.DivRemChip.Assembly
 
 /-! # `DivRemChip` — unsigned low-32 evidence extraction
 
@@ -8,6 +10,8 @@ This is the circuit-independent `DIVUW`/`REMUW` family proof. It consumes the fo
 `DivRemCore.CoreSpec` and `DivRemCompare.CompareSpec`, projects the zero-extended arithmetic
 columns to their low 32 bits, and proves the sign-extended architectural quotient and remainder.
 No circuit offsets or witness-layout reductions cross this boundary. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

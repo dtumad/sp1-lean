@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # Add — circuit-grounding contracts
 
@@ -8,6 +10,8 @@ the elaborated `circuit.output`) to the generic typed-Memory grounding layer.  N
 the flattened `Component` projections — the single `rowOutput → circuit.output` identification
 happens once, over abstract circuits, in `circuitRegisterOperandPullShape_of_exposure`
 (`Soundness/TypedMemory.lean`), which keeps the kernel cost of these per-chip theorems low. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

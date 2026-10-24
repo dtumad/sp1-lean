@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Assembly
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Assembly
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
 
 /-! # `DivRemChip` — shared signed-family evidence lemmas
 
 These small, circuit-independent lemmas isolate the two semantic facts shared by the signed 64-bit
 and signed word cases: the conditional two's-complement absolute-value witness and the conversion of
 the row's zero limb-sum constraint into a zero `BitVec`. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

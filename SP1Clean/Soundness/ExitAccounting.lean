@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.TypedState
-import SP1Clean.Soundness.TypedMemoryBalance
-import SP1Clean.Soundness.EnsembleChannels
+module
+
+public import SP1Clean.Soundness.TypedState
+public import SP1Clean.Soundness.TypedMemoryBalance
+public import SP1Clean.Soundness.EnsembleChannels
 
 /-! # Exit-channel accounting
 
@@ -17,6 +19,8 @@ a syscall HALT; balance alone does not exclude that case.
 These specializations serve the legacy two-contributor ensemble. They can disappear when its
 remaining capstone consumers adopt the native host/Exit boundary and retire the separate Halt table.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

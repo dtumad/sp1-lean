@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.LoadByteStatic
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Proofs.Completeness.LoadByteStatic
+public import SP1Clean.Model.SP1Field
 
 /-! # Executable LoadByte fixed-lookup comparison
 
@@ -7,6 +9,8 @@ The matrix uses actual `MemoryEvent.toLoadByteInputs` and both actual witness bu
 Provider rows are real existing Byte/Range circuits. Only the Byte ledger is closed here;
 State, Memory and Program are retained as consumer demand, not claimed balanced.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.Examples.LoadByteStatic
 

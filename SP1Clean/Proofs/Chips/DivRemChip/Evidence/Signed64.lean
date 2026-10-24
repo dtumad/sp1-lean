@@ -1,12 +1,16 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import SP1Clean.Proofs.Chips.DivRemChip.Cases
-import SP1Clean.Proofs.Chips.DivRemChip.Evidence.SignedCommon
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Defs
+public import SP1Clean.Proofs.Chips.DivRemChip.Cases
+public import SP1Clean.Proofs.Chips.DivRemChip.Evidence.SignedCommon
 
 /-! # `DivRemChip` — signed 64-bit evidence extraction
 
 This is the circuit-independent `DIV`/`REM` family proof. It consumes the folded whole-row
 contracts and makes the three architectural cases explicit: signed overflow, division by zero, and
 the normal signed Euclidean identity with remainder magnitude and sign bounds. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

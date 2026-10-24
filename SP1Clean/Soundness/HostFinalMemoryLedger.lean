@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.HostFinalMemoryView
+module
+
+public import SP1Clean.Soundness.HostFinalMemoryView
 
 /-! # Private Memory receipts in the physical host ledger
 
@@ -6,6 +8,8 @@ The old host components are silent on the five boundary protocols. This is a sta
 property of registered circuits. Selecting the seven boundary tables therefore preserves
 these ledgers exactly, while their Byte guarantees still come from the full assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostFinalMemory
 

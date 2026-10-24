@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
-import SP1Clean.Model.SP1Field
+module
+
+public import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
+public import SP1Clean.Model.SP1Field
 
 /-! # Executable decoder regressions
 
@@ -7,6 +9,8 @@ Literal instruction encodings cover the entire SP1 opcode projection supported b
 immediate and reserved-bit edge cases. The uniform parser/Sail agreement theorem is in the main
 proof library; these regressions also witness the official hint-extension priority concretely.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.InstructionDecode
 

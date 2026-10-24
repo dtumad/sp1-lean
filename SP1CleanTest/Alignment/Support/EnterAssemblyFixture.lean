@@ -1,5 +1,7 @@
-import SP1CleanTest.Alignment.Support.HostProgramFixture
-import SP1CleanTest.Alignment.Support.OrdinaryAssemblyFixture
+module
+
+public import SP1CleanTest.Alignment.Support.HostProgramFixture
+public import SP1CleanTest.Alignment.Support.OrdinaryAssemblyFixture
 
 /-! # Constrained ENTER replay followed by HALT
 
@@ -7,6 +9,8 @@ The ROM includes a genuine EXIT_UNCONSTRAINED path. Released execution visits it
 back; the constrained trace observes ENTER's zero return and branches over it. Native consumers
 contain exactly that constrained replay, not a fabricated nonzero ENTER result.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.EnterAssembly
 

@@ -1,4 +1,6 @@
-import SP1Clean.Native.Operations.HintNodeAllocate
+module
+
+public import SP1Clean.Native.Operations.HintNodeAllocate
 
 /-! # Checked fresh identities for persistent hint allocation
 
@@ -6,6 +8,8 @@ The address adder's high carry rules out 48-bit overflow; the frontier's bounded
 64-bit wrap. Thus the result is an actual successor, not modular reuse of a historical identity.
 The same semantic contract gives completeness, with all comparison/range witnesses computed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

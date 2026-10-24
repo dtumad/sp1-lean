@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
+module
+
+public import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
 
 /-! # Compiling an ordered hint prefix into fresh allocations
 
@@ -7,6 +9,8 @@ allocating from back to front to retain reply order. The proofs derive every loc
 contract, the exact row count, and full cursor continuity from semantic queue representation and
 one capacity bound. Matching these rows to the host call and its bytes remains AIR integration.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintNodeAllocate
 

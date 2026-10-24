@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.SP1Ensemble
-import SP1Clean.Soundness.TypedInteractions
-import SP1Clean.Soundness.TypedState
-import SP1Clean.Model.Semantics.Truth
-import SP1Clean.FormalModel.Execution
+module
+
+public import SP1Clean.Soundness.SP1Ensemble
+public import SP1Clean.Soundness.TypedInteractions
+public import SP1Clean.Soundness.TypedState
+public import SP1Clean.Model.Semantics.Truth
+public import SP1Clean.FormalModel.Execution
 
 /-! # Semantic bindings for preprocessed and boundary tables
 
@@ -11,6 +13,8 @@ the provider is the committed program or the selected initial machine state.  Th
 that companion boundary honestly.  They are deliberately separate from raw AIR satisfaction and do
 not contain an execution trajectory.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

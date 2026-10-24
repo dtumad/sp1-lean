@@ -1,6 +1,8 @@
-import SP1Clean.Model.Semantics.TransitionView
-import SP1Clean.Model.Semantics.AccessSchedule
-import SP1Clean.Proofs.Completeness.EventBuckets
+module
+
+public import SP1Clean.Model.Semantics.TransitionView
+public import SP1Clean.Model.Semantics.AccessSchedule
+public import SP1Clean.Proofs.Completeness.EventBuckets
 
 /-!
 # One-transition instruction-event compilation
@@ -21,6 +23,8 @@ not contain `InstructionChipId.Valid` (or an existential table witness) as a pre
 alignment, and control-flow-target facts needed for full per-chip validity remain semantic facts of
 the official Sail step and can be proved at the later execution-fold boundary.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

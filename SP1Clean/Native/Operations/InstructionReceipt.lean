@@ -1,5 +1,7 @@
-import SP1Clean.Model.Channels
-import ToClean.Circuit.Receipt
+module
+
+public import SP1Clean.Model.Channels
+public import ToClean.Circuit.Receipt
 
 /-! # Ordinary instruction observations for outgoing Sail bookkeeping
 
@@ -8,6 +10,8 @@ activity gate and successor State payload are also published on a dedicated rece
 The registry proves these are the actual State emissions read by the existing decoder.
 Ordered receipt consumption, count and endpoint binding remain separate ensemble obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InstructionReceipt
 

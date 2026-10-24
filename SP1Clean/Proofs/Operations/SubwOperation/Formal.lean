@@ -1,12 +1,16 @@
-import SP1Clean.Native.Operations.SubwOperation.RawSpec
-import SP1Clean.Native.Operations.SubwOperation.Populate
-import SP1Clean.Native.Operations.SubwOperation.Defs
+module
+
+public import SP1Clean.Native.Operations.SubwOperation.RawSpec
+public import SP1Clean.Native.Operations.SubwOperation.Populate
+public import SP1Clean.Native.Operations.SubwOperation.Defs
 
 /-! # `SubwOperation` — the `FormalAssertion` (borrow-form analog of `AddwOperation`)
 
 SP1's `SubwOperation::eval` as a Clean `FormalAssertion`. Composes `U16MSBOperation` on the high
 result limb, pulls two limb ranges from the byte bus, asserts the two gated borrows. `Spec`/
 `spec_populate` live here (not in `FormalModel/Contracts/Operations.lean`) to avoid an import cycle. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubwOperation
 

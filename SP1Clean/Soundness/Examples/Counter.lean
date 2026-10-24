@@ -1,8 +1,10 @@
-import ToClean.Air.Realizes
-import ToClean.Air.PublicVerifier
-import SP1Clean.Soundness.RankedGrounding
-import Clean.Utils.Tactics.CircuitProofStart
-import Mathlib.Data.ZMod.Basic
+module
+
+public import ToClean.Air.Realizes
+public import ToClean.Air.PublicVerifier
+public import SP1Clean.Soundness.RankedGrounding
+public import Clean.Utils.Tactics.CircuitProofStart
+public import Mathlib.Data.ZMod.Basic
 
 /-! # A complete, executable counter arithmetization
 
@@ -11,6 +13,8 @@ semantics. It is deliberately independent of RISC-V and of SP1 faithfulness. The
 event increments a natural number below 15. A fixed lookup prevents modular wraparound;
 State balance and a strict rank recover every physical transition occurrence.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.CounterExample
 

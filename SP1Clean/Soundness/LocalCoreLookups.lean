@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.LocalCoreEnsemble
-import SP1Clean.Soundness.EnsembleLookups
+module
+
+public import SP1Clean.Soundness.LocalCoreEnsemble
+public import SP1Clean.Soundness.EnsembleLookups
 
 /-! # Fixed lookup constraints in the local execution assembly
 
@@ -9,6 +11,8 @@ are lookup-free. The remaining lookup predicates ignore prover data, so local co
 survive canonical-data changes when physical row cells are retained. Channel guarantees
 remain separate obligations, established from actual balance and fixed prefixes.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

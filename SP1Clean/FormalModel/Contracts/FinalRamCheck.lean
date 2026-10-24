@@ -1,7 +1,11 @@
-import SP1Clean.FormalModel.Contracts.FinalMemoryChange
-import SP1Clean.FormalModel.Contracts.FinalRamValue
+module
+
+public import SP1Clean.FormalModel.Contracts.FinalMemoryChange
+public import SP1Clean.FormalModel.Contracts.FinalRamValue
 
 /-! # A validated final RAM value and its optional change contribution -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalRamCheck
 

@@ -1,6 +1,8 @@
-import SP1Clean.Model.FinalMemoryValue
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
+module
+
+public import SP1Clean.Model.FinalMemoryValue
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
 
 /-! # Finalizers retaining their original rows and publishing target-check receipts
 
@@ -8,6 +10,8 @@ The wrapper composes the original provider and publishes its full output record 
 witness cells, assertions, or lookups. Every original channel is retained, so its ordered Memory
 inventory can be projected without assuming that the appended target checks balance Memory.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalMemoryReceipt
 

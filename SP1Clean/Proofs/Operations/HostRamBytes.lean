@@ -1,6 +1,8 @@
-import SP1Clean.Native.Operations.HostRamBytes
-import SP1Clean.Model.Core.HostReadWords
-import ToClean.Circuit.InteractionRecovery
+module
+
+public import SP1Clean.Native.Operations.HostRamBytes
+public import SP1Clean.Model.Core.HostReadWords
+public import ToClean.Circuit.InteractionRecovery
 
 /-! # Canonical bytes from a bounded host read
 
@@ -8,6 +10,8 @@ The existing safe decoder establishes byte bounds and exact reassembly. The read
 supplies the aligned guest address and word bounds from the producing RAM row's local proof.
 No caller supplies byte equations to soundness.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamBytes
 

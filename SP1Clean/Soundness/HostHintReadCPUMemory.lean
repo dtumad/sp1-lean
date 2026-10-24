@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostQueueCPUOrder
-import SP1Clean.Soundness.HostHintReadLocalMemory
+module
+
+public import SP1Clean.Soundness.HostQueueCPUOrder
+public import SP1Clean.Soundness.HostHintReadLocalMemory
 
 /-! # Physical hint RAM accesses grouped by their actual CPU events
 
@@ -8,6 +10,8 @@ instruction. Distinct CPU clocks make grouping exhaustive without losing duplica
 occurrences. These are the access lists for mixed Memory grounding; predecessor value truth
 and complete outgoing-state agreement remain separate obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

@@ -1,5 +1,7 @@
-import SP1Clean.Native.Chips.LoadByteChip.Defs
-import Clean.Gadgets.ByteLookup
+module
+
+public import SP1Clean.Native.Chips.LoadByteChip.Defs
+public import Clean.Gadgets.ByteLookup
 
 /-! # LoadByte with two fixed-byte lookups
 
@@ -8,6 +10,8 @@ arithmetic constraints are unchanged. Only the selected-limb U8Range channel occ
 is replaced by two lookups in Clean's fixed 256-row `Bytes` table. Multiplying both
 lookup inputs by `isReal` preserves the original inactive-row byte freedom.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteStaticChip
 

@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.HintQueueEvent
-import SP1Clean.Proofs.Operations.HintQueueCursor
-import SP1Clean.Soundness.Walk
+module
+
+public import SP1Clean.Model.Core.HintQueueEvent
+public import SP1Clean.Proofs.Operations.HintQueueCursor
+public import SP1Clean.Soundness.Walk
 
 /-! # Lifting a queue-token path to byte-level history
 
@@ -9,6 +11,8 @@ Stores may grow along the path while preserving every prior node and remaining i
 authenticated final inventory. The lifting theorem is independent of the handler registry;
 allocating handlers must eventually supply the same local advance proof as observations/pops.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HintQueueHistory
 

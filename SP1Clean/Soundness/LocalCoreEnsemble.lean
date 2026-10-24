@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.NativeCoreEnsemble
-import SP1Clean.Soundness.SnapshotMemoryEnsemble
-import SP1Clean.Native.Operations.LocalSourceBoundary
+module
+
+public import SP1Clean.Soundness.NativeCoreEnsemble
+public import SP1Clean.Soundness.SnapshotMemoryEnsemble
+public import SP1Clean.Native.Operations.LocalSourceBoundary
 
 /-! # Native local-shard assembly with a checked complete source
 
@@ -17,6 +19,8 @@ initial memory invariant are derived in `LocalCoreSourceGrounding`. The mixed ho
 outgoing state, and witness composition remain open; this assembly is not yet an execution theorem.
 Host state and Sail bookkeeping are retained source data, without a reset at a shard cut.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LocalCore
 

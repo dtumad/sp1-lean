@@ -1,9 +1,11 @@
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Chips.HostControlLedger
-import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
-import SP1Clean.Proofs.Chips.HostControlPopulate
+module
+
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Proofs.Chips.HostControlLedger
+public import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
+public import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+public import SP1Clean.Proofs.Chips.HostControlPopulate
 
 /-! # Native control handlers against instructions and host dispatch
 
@@ -13,6 +15,8 @@ terminal receipt comes from the HALT handler. This checks local guarantees
 and handoff accounting, not an assembled boot-to-HALT witness. Interpreter checks include
 nonempty host state, unrestricted unused arguments, canonical exits, and stopped dispatch.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HostControl
 

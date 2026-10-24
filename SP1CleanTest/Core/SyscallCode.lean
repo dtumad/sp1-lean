@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Model.SP1Field
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
+public import SP1Clean.Model.SP1Field
+public import Clean.Circuit.WitnessExport
 
 /-! # Native syscall guard regressions
 
@@ -8,6 +10,8 @@ Check the production guard's generated witnesses and arithmetic constraints. The
 suffix test also checks that the guard reads the prior x5 word, including every upper limb.
 These local checks make no claim about host effects or whole-ensemble balance.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.SyscallCode
 

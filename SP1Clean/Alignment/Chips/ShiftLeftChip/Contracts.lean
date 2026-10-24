@@ -1,5 +1,7 @@
-import SP1Clean.Alignment.Chips.ShiftLeftChip.Bridge
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.ShiftLeftChip.Bridge
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # ShiftLeft — circuit-grounding contracts
 
@@ -7,6 +9,8 @@ Folded structural facts used by whole-machine grounding. Arithmetic meaning rema
 `ShiftLeftChip.Spec`; this file projects only the retained reader, state/adapter passthrough, and
 the chip-owned selector/routing constraints from the physical circuit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

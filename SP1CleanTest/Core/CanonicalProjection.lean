@@ -1,6 +1,8 @@
-import ToClean.Air.EnsembleProjection
-import ToClean.Air.MessageFilter
-import ToClean.Air.ExpressionScope
+module
+
+public import ToClean.Air.EnsembleProjection
+public import ToClean.Air.MessageFilter
+public import ToClean.Air.ExpressionScope
 
 /-! # Canonical data under physical prefix projection
 
@@ -9,6 +11,8 @@ is removed. The retained key is preserved, while the removed key disappears from
 These cases prevent proof views from relying on the old freely supplied data environment.
 Row selection also retains duplicate occurrences and cannot discard required fixed rows.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.CanonicalProjection
 

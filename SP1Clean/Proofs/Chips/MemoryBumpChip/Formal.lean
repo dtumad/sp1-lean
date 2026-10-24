@@ -1,7 +1,9 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.MemoryBumpChip.Defs
-import Clean.Utils.Tactics
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.MemoryBumpChip.Defs
+public import Clean.Utils.Tactics
 
 /-! # MemoryBump: soundness, completeness, and the bundled circuit (W3, report Finding 2)
 
@@ -11,6 +13,8 @@ the refreshed-limb ranges and register-index bound from the byte pulls, and the 
 from the gated asserts; the refreshed **push**'s `isU64 ∧ ClkBound` requirement is discharged from
 the pull's value guarantee (same word) and the own limb checks (`clkLow_lt_2pow24`). Completeness
 replays everything from `ProverAssumptions := Spec` (an all-zero padding row satisfies it). -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryBumpChip
 

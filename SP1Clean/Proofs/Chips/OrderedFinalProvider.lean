@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.OrderedMemoryProvider
-import SP1Clean.Proofs.Chips.FinalRegisterProvider
-import SP1Clean.Proofs.Chips.FinalRamProvider
+module
+
+public import SP1Clean.Proofs.Chips.OrderedMemoryProvider
+public import SP1Clean.Proofs.Chips.FinalRegisterProvider
+public import SP1Clean.Proofs.Chips.FinalRamProvider
 
 /-! # Constructive ordered finalization
 
@@ -8,6 +10,8 @@ Both final-record circuits use the same ordering wrapper as initialization. Thei
 accept exactly canonical register or bounded aligned RAM locations,
 and a preceding key smaller than the record's key. No internal address-gadget condition escapes.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedFinalProvider
 

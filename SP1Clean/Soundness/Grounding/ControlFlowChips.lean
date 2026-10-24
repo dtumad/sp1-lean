@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.Grounding.ITypeChips
-import SP1Clean.Alignment.Chips.JalrChip.Bridge
-import SP1Clean.Alignment.Chips.BranchChip.Bridge
+module
+
+public import SP1Clean.Soundness.Grounding.ITypeChips
+public import SP1Clean.Alignment.Chips.JalrChip.Bridge
+public import SP1Clean.Alignment.Chips.BranchChip.Bridge
 
 /-! # Control-flow chip grounding
 
@@ -10,6 +12,8 @@ retained reader.  Branch uses the immutable I-type layout and treats both regist
 sources.  This module keeps those two upstream layouts explicit instead of weakening them into a
 single permissive interaction schema.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

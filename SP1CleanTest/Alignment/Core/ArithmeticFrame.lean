@@ -1,6 +1,8 @@
-import SP1Clean.Model.Semantics.SailArithmeticFrame
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Proofs.Sail.InstructionDecode
+module
+
+public import SP1Clean.Model.Semantics.SailArithmeticFrame
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Arithmetic retirement without a circuit witness
 
@@ -9,6 +11,8 @@ fixtures exercise discarded x0 writes, signed division by zero and overflow, and
 Normal retirement, configuration, and the complete byte-map frame come from the core theorem;
 native evaluation only checks finite source data; parsing reduces in the kernel.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.ArithmeticFrame
 

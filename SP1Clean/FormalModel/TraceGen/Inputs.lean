@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Events
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Circuits.Types.MemoryAccess
+module
+
+public import SP1Clean.FormalModel.TraceGen.Events
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Circuits.Types.MemoryAccess
 
 /-! # Trace generation — events to typed chip inputs
 
@@ -39,6 +41,8 @@ new chip into this layer costs one `def` here and one `ProverAssumptions` lemma 
 `Fact (2 ^ 17 < p)` through `SP1Clean.instFact_2_17_of_2_24`): the 24-bit clock arithmetic the
 timestamp columns perform has to be non-wrapping in the field, which a `2 ^ 17` bound does not
 give. SP1's own prime is 31-bit, and the grounding engine already carries `Fact (2 ^ 25 < p)`. -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGen
 

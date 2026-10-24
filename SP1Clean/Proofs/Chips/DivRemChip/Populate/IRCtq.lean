@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRWord
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.IRWord
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
 
 /-! # `DivRemChip` — witness-IR `c_times_quotient` limbs (A7b)
 
@@ -15,6 +17,8 @@ hold 128 bits, so the IR computes the low and high 64-bit slices separately:
   identity, proved here as `ctqProd_shift_toNat`).
 
 Everything stays in the u64 sort; only the final `.toField` casts commit the limbs. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

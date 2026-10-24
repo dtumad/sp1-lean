@@ -1,10 +1,12 @@
-import SP1Clean.FormalModel.Contracts.Commit
-import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.FormalModel.CoreShard
-import SP1Clean.FormalModel.Relations
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Machine.Execution
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.FormalModel.Contracts.Commit
+public import SP1Clean.FormalModel.Contracts.PublicValues
+public import SP1Clean.FormalModel.CoreShard
+public import SP1Clean.FormalModel.Relations
+public import SP1Clean.Model.Machine.EventExecution
+public import SP1Clean.Model.Machine.Execution
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Program-execution relations
 
@@ -20,6 +22,8 @@ execution theorem, after shard continuity and the recursion completion checks ha
 Like its `Relations`/`CoreProfile`/`CoreAIRRelation`/`Verifier` siblings, part of this module is
 reserved relation-level API for the exact-AIR/ArkLib composition — declared ahead of the consumer
 that will instantiate it, so some declarations are expected to be unreferenced in-tree today. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

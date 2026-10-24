@@ -1,6 +1,8 @@
-import SP1Clean.Model.Core.SailRegisterEquality
-import SP1Clean.Model.Core.MemorySnapshot
-import SP1Clean.Model.Core.ExecutionBoot
+module
+
+public import SP1Clean.Model.Core.SailRegisterEquality
+public import SP1Clean.Model.Core.MemorySnapshot
+public import SP1Clean.Model.Core.ExecutionBoot
 
 /-! # Complete finite snapshots of local execution states
 
@@ -15,6 +17,8 @@ without resetting bookkeeping or ignoring untouched memory. The AIR must still b
 snapshots and prove its final state realizes the outgoing one; this module does not assume that
 binding into an ensemble relation or claim certified AIR composition.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

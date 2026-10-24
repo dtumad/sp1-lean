@@ -1,6 +1,8 @@
-import SP1Clean.Model.SailPure
-import SP1Clean.Semantics.ISA.RV64
-import ToMathlib.BitVec
+module
+
+public import SP1Clean.Model.SailPure
+public import SP1Clean.Semantics.ISA.RV64
+public import ToMathlib.BitVec
 /-!
 # Sail "M"-extension write values are the RV64 reference functions
 
@@ -18,6 +20,8 @@ The signed division/remainder cases are the ones with content: the model compute
 
 This module replaces the former `riscv-lean` dependency's `SailPureToInstructions` role.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

@@ -1,10 +1,12 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.AluX0Chip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
-import Clean.Air.FlatComponent
-import SP1Clean.Proofs.Sail.RV64Bridge
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.AluX0Chip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
+public import Clean.Air.FlatComponent
+public import SP1Clean.Proofs.Sail.RV64Bridge
 
 /-! # Native Sail bridge for `AluX0` (ALU-into-`x0`) + `ChipKind`
 
@@ -21,6 +23,8 @@ dynamic-opcode table as a Lean disjunction. The chip's byte lookup proves `opcod
 projection then identifies one of the official Core ALU instruction families, including every immediate
 and word-immediate form supported by SP1 v6.4.0. Source-register facts are needed only so the Sail reads
 succeed; their values are discarded. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.AluX0Sail

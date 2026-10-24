@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostLocalCoreMemory
-import SP1Clean.Soundness.LocalCoreRows
+module
+
+public import SP1Clean.Soundness.HostLocalCoreMemory
+public import SP1Clean.Soundness.LocalCoreRows
 
 /-! # The full host Memory interior in execution-row form
 
@@ -8,6 +10,8 @@ their complete Memory ledgers. Separating these contributions is a permutation: 
 interleave old and new accesses. No host access, disabled interaction, or duplicate occurrence
 is discarded, and no Memory balance is projected to the smaller local assembly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

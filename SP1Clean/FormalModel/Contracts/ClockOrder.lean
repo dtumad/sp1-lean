@@ -1,11 +1,15 @@
-import SP1Clean.Model.Semantics.MicroTime
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.Model.Semantics.MicroTime
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Strict order between two native event clocks
 
 Both clocks use bounded 24-bit high and low limbs. This contract states natural time order,
 without exposing the equality selector or subtraction used to constrain it.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ClockOrder
 

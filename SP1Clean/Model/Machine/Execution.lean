@@ -1,7 +1,9 @@
-import SP1Clean.Model.Machine.Schedule
-import SP1Clean.Model.Machine.Boot
-import PolyFun.PFunctor.Dynamical.Basic
-import PolyFun.PFunctor.Dynamical.Run
+module
+
+public import SP1Clean.Model.Machine.Schedule
+public import SP1Clean.Model.Machine.Boot
+public import PolyFun.PFunctor.Dynamical.Basic
+public import PolyFun.PFunctor.Dynamical.Run
 
 /-! # The Lean-native SP1 execution machine
 
@@ -12,6 +14,8 @@ stutters, making the transition total without treating an interpreter error as a
 
 PolyFun is used only for this semantic transition/run interface.  Circuit construction and Clean's
 interaction machinery remain independent of it. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

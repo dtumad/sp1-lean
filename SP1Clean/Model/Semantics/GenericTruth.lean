@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.Truth
+module
+
+public import SP1Clean.Model.Semantics.Truth
 
 /-! # Shard-local truth over an arbitrary trajectory
 
@@ -28,6 +30,8 @@ Two conventions worth stating, because both are load-bearing:
 * The initial state is a *separate* parameter from the trajectory. Reads before the timeline's
   genesis go to that state directly, exactly as `microValue` does today; they do not consult the
   trajectory at all. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

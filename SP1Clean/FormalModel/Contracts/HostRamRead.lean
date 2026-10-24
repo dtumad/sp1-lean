@@ -1,4 +1,6 @@
-import SP1Clean.FormalModel.Contracts.HostRamAccess
+module
+
+public import SP1Clean.FormalModel.Contracts.HostRamAccess
 
 /-! # A physical host RAM read
 
@@ -6,6 +8,8 @@ Each covered WRITE cell preserves its word, advances the physical Memory record 
 supplies one logical read. Buffer coverage and call identity are established by the consuming
 tables, not by this provider's local contract. Released VERIFY makes no RAM requests.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostRamReadChip
 

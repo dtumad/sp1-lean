@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
-import ToClean.Circuit.Guarded
+module
+
+public import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
+public import ToClean.Circuit.Guarded
 
 /-! # Soundness and completeness of native commitment-bank transitions
 
@@ -7,6 +9,8 @@ The selected call and value bound are checked locally. Strict clock order and th
 pair support a subsequent bank-history proof; no final-bank or fixed-public-digest equality is
 assumed by this component.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitChip
 

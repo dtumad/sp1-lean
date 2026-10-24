@@ -1,8 +1,10 @@
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Core.ExecutionWritePolicy
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.Core.CommitmentStatement
+module
+
+public import SP1Clean.Model.Core.SourceExecution
+public import SP1Clean.Model.Core.ExecutionWritePolicy
+public import SP1Clean.Model.Core.ExecutionEncoding
+public import SP1Clean.Model.Core.ExecutionResources
+public import SP1Clean.Model.Core.CommitmentStatement
 
 /-! # Complete-state semantics for the native shard capstone
 
@@ -19,6 +21,8 @@ complete boundary/host installation remain separate implementation obligations; 
 contains no compiler readiness or supplied grounding certificate.
 See `Soundness/Shard/Contract` for the two end-to-end targets.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FormalModel.Shard
 

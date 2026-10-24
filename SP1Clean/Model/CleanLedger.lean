@@ -1,5 +1,7 @@
-import SP1Clean.Model.InteractionProjection
-import ToClean.Air.TableBuild
+module
+
+public import SP1Clean.Model.InteractionProjection
+public import ToClean.Air.TableBuild
 
 /-! # Literal Clean access ledgers
 
@@ -11,6 +13,8 @@ of data-dependent semantic predicates.
 Rust adapters additionally dualize Memory and Program signs. This module describes the native
 ledger and does not prove equivalence to released Rust.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

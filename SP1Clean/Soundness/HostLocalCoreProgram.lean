@@ -1,8 +1,10 @@
-import SP1Clean.Soundness.HostLocalCore
-import SP1Clean.Soundness.LocalCoreProgram
-import SP1Clean.Soundness.SyscallGrounding
-import SP1Clean.Soundness.CoreTouches
-import SP1Clean.Soundness.SyscallInputs
+module
+
+public import SP1Clean.Soundness.HostLocalCore
+public import SP1Clean.Soundness.LocalCoreProgram
+public import SP1Clean.Soundness.SyscallGrounding
+public import SP1Clean.Soundness.CoreTouches
+public import SP1Clean.Soundness.SyscallInputs
 
 /-! # Program authentication and register reads in the host assembly
 
@@ -11,6 +13,8 @@ balance authenticates every instruction against the fixed image, including the w
 ECALL operand indices. At a grounded prefix, the three register touches then read the exact
 code and arguments emitted by that physical wrapper. Memory balance remains in the extended AIR.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostLocalCore
 

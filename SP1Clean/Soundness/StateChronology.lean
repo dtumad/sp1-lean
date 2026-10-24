@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.TypedTimeContracts
+module
+
+public import SP1Clean.Soundness.TypedTimeContracts
 
 /-! # Canonical chronology from a balanced State graph
 
@@ -7,6 +9,8 @@ preserve the high clock limb, and either preserve or bound the upper PC limbs. S
 provide canonical targets. Two goodness passes rule out noncanonical cycles before bump edges
 cancel under re-limbing. The remaining ranked graph contains every execution occurrence.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.StateChronology
 

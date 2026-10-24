@@ -1,12 +1,16 @@
-import SP1Clean.Math.Word
-import SP1Clean.Model.Core.MemoryWord
-import SP1Clean.Model.Core.Boot
+module
+
+public import SP1Clean.Math.Word
+public import SP1Clean.Model.Core.MemoryWord
+public import SP1Clean.Model.Core.Boot
 
 /-! # The native initial-memory word-read contract
 
 The contract accepts one address and returns the little-endian memory word at that address.
 The complete eight-byte footprint is bounded; byte-row witnesses belong to the circuit.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.InitialMemoryRead
 

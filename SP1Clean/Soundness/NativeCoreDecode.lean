@@ -1,4 +1,6 @@
-import SP1Clean.Soundness.NativeCoreProgram
+module
+
+public import SP1Clean.Soundness.NativeCoreProgram
 
 /-! # Physical instruction decoding in the authenticated native core
 
@@ -7,6 +9,8 @@ decoder inherits raw constraints, finished-channel guarantees, and the actual in
 Active instruction fetches therefore reach the checked image and Sail decoder through one public
 statement. Table offsets and instruction cases remain inside this adapter.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.NativeCore
 

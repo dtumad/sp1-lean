@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
-import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
-import SP1Clean.Proofs.Chips.InitialRamProvider
-import SP1Clean.Proofs.Chips.InitialRegisterProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
+public import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
+public import SP1Clean.Proofs.Chips.InitialRamProvider
+public import SP1Clean.Proofs.Chips.InitialRegisterProvider
 
 /-! # Binding initial records to their ordered keys
 
@@ -10,6 +12,8 @@ current key is constrained to the provider's canonical address plus one. Zero is
 available as a fixed start sentinel, including when the first record initializes register x0.
 The increment cannot wrap: canonical memory addresses fit in 48 bits.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedInitialProvider
 

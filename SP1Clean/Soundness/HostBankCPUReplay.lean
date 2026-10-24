@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostQueueCPUReplay
-import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Model.Core.BankReplay
+module
+
+public import SP1Clean.Soundness.HostQueueCPUReplay
+public import SP1Clean.Soundness.HostHintReadBanks
+public import SP1Clean.Model.Core.BankReplay
 
 /-! # Commitment histories agree with the ordered CPU tape
 
@@ -9,6 +11,8 @@ projection. Selecting each bank's arguments preserves its clock and multiplicity
 and bank chronology then identifies the lists, including repeated overwrites. The semantic bank
 fold is a projection of the existing full host interpreter.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostBankCPUReplay
 

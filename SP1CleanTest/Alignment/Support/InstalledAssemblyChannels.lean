@@ -1,9 +1,13 @@
-import SP1CleanTest.Alignment.Support.InstalledAssembly
+module
+
+public import SP1CleanTest.Alignment.Support.InstalledAssembly
 
 /-! # Exact channel inventory for the complete installed assembly
 
 The registry transport retains complete raw channel identities and every physical occurrence.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 

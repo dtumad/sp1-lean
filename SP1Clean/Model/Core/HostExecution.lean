@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.HostIO
-import SP1Clean.Model.Core.SyscallCode
+module
+
+public import SP1Clean.Model.Core.HostIO
+public import SP1Clean.Model.Core.SyscallCode
 
 /-! # Stateful execution of the native eight-call host profile
 
@@ -30,6 +32,8 @@ commit in a shard against one fixed public-values vector
 slot within that shard therefore need a separate restriction or refinement
 argument; successful native execution alone does not imply that exact public-value binding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

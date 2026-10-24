@@ -1,4 +1,6 @@
-import Clean.Circuit.Basic
+module
+
+public import Clean.Circuit.Basic
 
 /-! # Circuit-derived trace rows
 
@@ -10,6 +12,8 @@ These helpers support real-row satisfiability and event-population tests in `SP1
 Built-in Lean-to-Rust export has separate comparisons against released SP1. This sampled path
 does not establish all-input witness agreement or compiler completeness.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TraceGenTests
 

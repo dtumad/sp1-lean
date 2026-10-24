@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Completeness.SemanticAccess
-import SP1Clean.Model.Machine.ConfiguredState
-import SP1Clean.Model.Semantics.SailControlExecute
+module
+
+public import SP1Clean.Proofs.Completeness.SemanticAccess
+public import SP1Clean.Model.Machine.ConfiguredState
+public import SP1Clean.Model.Semantics.SailControlExecute
 
 /-! # Control-flow compiler boundary counterexamples
 
@@ -11,6 +13,8 @@ the enabled native link arithmetic imposes a genuine 48-bit AIR restriction. An 
 likewise need not bound its unselected candidate. These are execute-stage and event-contract
 counterexamples, not a claim that the complete mixed capstone has been instantiated.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.CompilerBoundary
 open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target

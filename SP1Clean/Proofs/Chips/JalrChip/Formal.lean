@@ -1,11 +1,15 @@
-import Clean.Air.FlatComponent
-import ToClean.Circuit.SubcircuitProjection
-import SP1Clean.Native.Chips.JalrChip.Defs
-import ToClean.Circuit.InteractionRecovery
-import SP1Clean.Math.EvalVec
-import Clean.Air.Circuit
+module
+
+public import Clean.Air.FlatComponent
+public import ToClean.Circuit.SubcircuitProjection
+public import SP1Clean.Native.Chips.JalrChip.Defs
+public import ToClean.Circuit.InteractionRecovery
+public import SP1Clean.Math.EvalVec
+public import Clean.Air.Circuit
 
 /-! # `SP1Clean.JalrChip` — contract: `Assumptions` / soundness / completeness / `circuit` -/
+
+@[expose] public section
 
 namespace SP1Clean.JalrChip
 

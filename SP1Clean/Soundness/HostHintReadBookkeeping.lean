@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HostHintReadExecutionPath
-import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Model.Core.SailBookkeeping
+module
+
+public import SP1Clean.Soundness.HostHintReadExecutionPath
+public import SP1Clean.Soundness.HostHintReadBanks
+public import SP1Clean.Model.Core.SailBookkeeping
 
 /-! # Complete retirement bookkeeping along the installed local execution
 
@@ -9,6 +11,8 @@ Actual chip effects authenticate each update, while all host adapters frame thes
 No instruction dispatch, replay-success, or bookkeeping agreement is supplied by the caller of
 the endpoint execution theorem. Binding these observations to a supplied target remains separate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 

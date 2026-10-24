@@ -1,6 +1,8 @@
-import SP1Clean.Soundness.HintReadCoverage
-import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
-import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
+module
+
+public import SP1Clean.Soundness.HintReadCoverage
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Bridge
+public import SP1Clean.Proofs.Chips.HostHintReadChip.Ledger
 
 /-! # HINT_READ coverage with the actual handler endpoints
 
@@ -8,6 +10,8 @@ The word walk now starts and ends at the handler's physical interactions. Authen
 queue and immutable records identify its exact node and padded count. The enclosing shard must
 still derive these record bindings, local specifications, and each call's projected balance.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadCoverage
 

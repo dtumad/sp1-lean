@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.HostCall
-import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Native.Readers.RegisterRead
-import Clean.Gadgets.IsEqual
+module
+
+public import SP1Clean.FormalModel.Contracts.HostCall
+public import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
+public import SP1Clean.Native.Readers.RegisterRead
+public import Clean.Gadgets.IsEqual
 
 /-! # A native syscall row with its host-call handoff
 
@@ -9,6 +11,8 @@ The full-word equality gadget computes WRITE selection internally. That selector
 extra x12 Memory pair, while the instruction's activity gate controls the host-call handoff.
 The original instruction circuit, including its PublicValues interactions, is preserved.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCallChip
 

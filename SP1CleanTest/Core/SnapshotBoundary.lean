@@ -1,14 +1,18 @@
-import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
-import SP1Clean.Model.SP1Field
-import ToClean.Air.FiniteLookup
-import SP1CleanTest.Core.StaticMembership
-import Clean.Circuit.WitnessExport
+module
+
+public import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
+public import SP1Clean.Model.SP1Field
+public import ToClean.Air.FiniteLookup
+public import SP1CleanTest.Core.StaticMembership
+public import Clean.Circuit.WitnessExport
 
 /-! # Arbitrary source-snapshot AIR regressions
 
 Execute the real witness programs and check all flattened assertions, concrete fixed lookups,
 nonzero Byte messages, and both fixed membership ledgers. These are provider regressions, not a whole-machine balance claim.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.SnapshotBoundary
 

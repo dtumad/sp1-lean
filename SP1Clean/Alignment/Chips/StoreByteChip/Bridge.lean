@@ -1,9 +1,11 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.StoreByteChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailMemory
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.StoreByteChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for StoreByte (SB)
 
@@ -11,6 +13,8 @@ import SP1Clean.Proofs.Sail.Advance
 emulation: write `nextPC = pc + 4` and the low byte of `rs2` into `mem[addr]`, via
 `SailMem.run_vmem_write_of_width_1`. Bytes have no alignment; the 8-byte read-modify-write
 `store_value` bus representation is a separate trace-level concern. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.StoreByteSail

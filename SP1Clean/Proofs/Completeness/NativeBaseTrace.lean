@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.ExecutionInventory
-import SP1Clean.Proofs.Completeness.Assembly
+module
+
+public import SP1Clean.Proofs.Completeness.ExecutionInventory
+public import SP1Clean.Proofs.Completeness.Assembly
 
 /-! # Bounded base assembly from the native execution compiler
 
@@ -9,6 +11,8 @@ adding a caller premise to semantic execution. Public clock and PC endpoints are
 the statement. Preprocessed provider lists are empty here; their demand-driven closure belongs to
 `NativeTraceCompiler` and does not participate in base construction or its local validity proof.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

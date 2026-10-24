@@ -1,5 +1,7 @@
-import SP1Clean.Model.CleanLedger
-import SP1Clean.Proofs.Completeness.Ledger
+module
+
+public import SP1Clean.Model.CleanLedger
+public import SP1Clean.Proofs.Completeness.Ledger
 
 /-! # What one built provider row actually emits
 
@@ -30,6 +32,8 @@ equal outright. From there a provider that names a single channel has
 access. `Ledger.OnlyChannel` and its ten instances (`Proofs/Completeness/Ledger.lean:245-327`) supply
 the single-channel premise; they already existed for the balance argument.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

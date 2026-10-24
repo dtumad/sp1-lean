@@ -1,11 +1,15 @@
-import SP1Clean.Model.FinalMemoryChange
-import ToClean.Air.VerifierExtension
+module
+
+public import SP1Clean.Model.FinalMemoryChange
+public import ToClean.Air.VerifierExtension
 
 /-! # Verifier-owned demand for every changed Memory location
 
 The fixed demand is computed from both complete snapshots, including their sparse RAM supports.
 The closed verifier adapter invokes it exactly once. No witness chooses its keys or row count.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalMemoryChangeBoundary
 

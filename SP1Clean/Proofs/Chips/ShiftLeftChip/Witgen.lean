@@ -1,11 +1,15 @@
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # Computable shift-left witnesses
 
 All 31 witness cells depend only on the operand, instruction-selector, and immediate inputs.
 The generators and their evaluation laws use Clean's witness IR.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftLeftChip
 

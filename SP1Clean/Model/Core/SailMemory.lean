@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.Memory
-import SP1Clean.Model.Semantics.GuestProgram
+module
+
+public import SP1Clean.Model.Core.Memory
+public import SP1Clean.Model.Semantics.GuestProgram
 
 /-! # Realizing sparse byte memory in the official Sail state
 
@@ -9,6 +11,8 @@ This is a semantic construction for the Sail execution relation: it is never eva
 event compiler or exported witness generator. Those use the sparse representation directly.
 The bound stays symbolic in all proofs, including the eventual 48-bit native specialization.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

@@ -1,8 +1,10 @@
-import SP1Clean.FormalModel.Contracts.OrdinaryObservation
-import SP1Clean.Native.Operations.InstructionReceipt
-import SP1Clean.Native.Operations.ClockOrder
-import SP1Clean.Native.Operations.WordRangeCheck
-import SP1Clean.Proofs.Operations.AddOperation.Formal
+module
+
+public import SP1Clean.FormalModel.Contracts.OrdinaryObservation
+public import SP1Clean.Native.Operations.InstructionReceipt
+public import SP1Clean.Native.Operations.ClockOrder
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
 
 /-! # Consuming ordinary receipts in strict clock order
 
@@ -11,6 +13,8 @@ addition gadget establish chronological retirement, including 64-bit counter wra
 Counter result ranges use the actual Byte ledger; the complete mixed installation must retain
 these pulls. Endpoint binding and exhaustive ordering are separate global obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrdinaryObservation
 

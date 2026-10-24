@@ -1,10 +1,14 @@
-import SP1Clean.Proofs.Chips.HostCommitChip.Formal
+module
+
+public import SP1Clean.Proofs.Chips.HostCommitChip.Formal
 
 /-! # Constructing native commitment rows
 
 Only the selected call's semantic value bounds and strict clock order are supplied. The
 comparison and byte columns are computed, including for repeated updates of the same slot.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitChip
 

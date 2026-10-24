@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Glue
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Shapes
 
 /-! # `DivRemChip` populate value bundles — carry-chain / Euclidean-identity facts
 
@@ -22,6 +24,8 @@ carry-chain constraints.
   equations by the generic digit-extraction lemma `chain_limbs_of_sum`.
 * **§3 Carry top**: the dropped `2^128` overflow is absorbed by `chain_limbs_of_sum`'s top digit
   equation — no separate deliverable. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

@@ -1,8 +1,10 @@
-import SP1Clean.FormalModel.Contracts.HostHintRead
-import SP1Clean.Proofs.Operations.HintReadSpan
-import SP1Clean.Proofs.Operations.HintReadStep
-import SP1Clean.Native.Operations.ClockOrder
-import Clean.Gadgets.Equality
+module
+
+public import SP1Clean.FormalModel.Contracts.HostHintRead
+public import SP1Clean.Proofs.Operations.HintReadSpan
+public import SP1Clean.Proofs.Operations.HintReadStep
+public import SP1Clean.Native.Operations.ClockOrder
+public import Clean.Gadgets.Equality
 
 /-! # Native HINT_READ handler
 
@@ -10,6 +12,8 @@ All call operands, the full return code, current head, padded span, and actual f
 request are connected by Clean subcircuits. The emitted word endpoints require the physical
 consumer tables to cover the whole write. This row itself performs no physical Memory access.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostHintReadChip
 

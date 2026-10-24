@@ -1,4 +1,6 @@
-import SP1Clean.Proofs.Chips.ShiftRightChip.Core
+module
+
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Core
 
 /-! # ShiftRight dispatch lemmas (16-way within-byte case split)
 
@@ -23,6 +25,8 @@ twelve lemmas. Laddered after the rewrite (LSP, with the mandatory 1-heartbeat c
 real re-elaboration): 200000 ok, 50000 ok, 35000 ok, 25000 FAILS (`whnf` /
 `«synthesize pending MVars»`), 20000 FAILS. True floor (25k, 35k] — ≥5x headroom at the 200000
 default, so all twelve ceilings were removed. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftRightMath
 

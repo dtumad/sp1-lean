@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostSailBoundary
-import SP1Clean.Soundness.ProtectedOrdinaryReceipt
+module
+
+public import SP1Clean.Soundness.HostSailBoundary
+public import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 
 /-! # Install ordinary receipt producers in the existing mixed assembly
 
@@ -9,6 +11,8 @@ host resources and the supplied Sail frame remain installed. The resource block 
 the ordered observation consumer; authentic endpoints and its full Byte closure are subsequent
 integration obligations. This producer installation alone is not an end-to-end capstone.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostOrdinaryReceipts
 

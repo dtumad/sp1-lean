@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.JalrChip.Formal
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.JalrChip.Formal
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.JalrChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -12,6 +14,8 @@ earlier. That is exactly the case `ComputableWitnesses` is stated to permit — 
 the environment *below its own offset* — so the proof uses the environment-agreement hypothesis
 (`ProverEnvironment.AgreesBelow.get_eq`) rather than input agreement, which the other two use. The
 cell sits eight positions below, so the side condition is arithmetic. -/
+
+@[expose] public section
 
 namespace SP1Clean.JalrChip
 

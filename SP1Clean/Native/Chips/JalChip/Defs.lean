@@ -1,15 +1,17 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.JTypeReader
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
-import ToClean.Circuit.WitnessCombinator
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Proofs.Operations.AddOperation.Formal
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.JTypeReader
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import SP1Clean.Model.ByteTable
+public import ToClean.Circuit.WitnessCombinator
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The JAL chip row as a `GeneralFormalCircuit`
 
@@ -17,6 +19,8 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 `AddOperation` gadgets (jump target `pc + op_b_imm` + link address `pc + 4`), `CPUState`, `JTypeReader`,
 and a 4-byte alignment range check (`Range(add_operation.value[0] / 4, 14)`). The link-address gate is
 `is_real - op_a_0` (not enforced when `rd = x0`). Implements SP1's `Jal` `air.rs:eval`. -/
+
+@[expose] public section
 
 namespace SP1Clean.JalChip
 

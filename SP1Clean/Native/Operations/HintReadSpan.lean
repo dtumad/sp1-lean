@@ -1,7 +1,9 @@
-import SP1Clean.FormalModel.Contracts.HintReadSpan
-import SP1Clean.Proofs.Operations.AddressDiv8
-import SP1Clean.Native.Operations.AddressOrder
-import SP1Clean.Proofs.Operations.AddrAddOperation.Address
+module
+
+public import SP1Clean.FormalModel.Contracts.HintReadSpan
+public import SP1Clean.Proofs.Operations.AddressDiv8
+public import SP1Clean.Native.Operations.AddressOrder
+public import SP1Clean.Proofs.Operations.AddrAddOperation.Address
 
 /-! # Checked HINT_READ word-span endpoints
 
@@ -9,6 +11,8 @@ Reuse Euclidean division for alignment and padded count, inclusive address order
 lower bound, and the bounded adder for the last written cell. The mathematical one-past endpoint
 may equal `2^48`; it is never narrowed into an address field.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadSpan
 

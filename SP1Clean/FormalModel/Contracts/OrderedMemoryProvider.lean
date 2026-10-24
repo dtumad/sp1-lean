@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.FormalModel.Contracts.OrderedBoundary
+module
+
+public import SP1Clean.FormalModel.Contracts.MemoryBoundary
+public import SP1Clean.FormalModel.Contracts.OrderedBoundary
 
 /-! # Canonical memory inventories
 
 Initialization and finalization use the same ordering contract. Their separate record predicates
 state the value semantics; the control key always names the actual decoded Memory location.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedMemoryProvider
 

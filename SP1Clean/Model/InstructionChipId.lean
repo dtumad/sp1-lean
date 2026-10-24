@@ -1,4 +1,6 @@
-import Mathlib.Data.List.Basic
+module
+
+public import Mathlib.Data.List.Basic
 
 /-!
 # Stable identities for the supported instruction chips
@@ -11,6 +13,8 @@ The provider and boundary tables are deliberately outside this type.  They have 
 and no instruction-routing identity; any provider identity vocabulary should remain a separate
 type rather than extending this enum into a heterogeneous 53-table descriptor.
 -/
+
+@[expose] public section
 
 namespace SP1Clean
 

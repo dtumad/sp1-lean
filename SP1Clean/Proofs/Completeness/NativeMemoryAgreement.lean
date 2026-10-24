@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.NativeTraceCompiler
-import SP1Clean.Proofs.Completeness.ProviderInteractions
+module
+
+public import SP1Clean.Proofs.Completeness.NativeTraceCompiler
+public import SP1Clean.Proofs.Completeness.ProviderInteractions
 
 /-!
 # Native compiler agreement with the built Memory tables
@@ -14,6 +16,8 @@ regroups that history by location into `memoryHandoffChains`.
 The regrouping is a theorem about the deterministic compiler output.  It is not an admissibility
 field and it does not use channel balance.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

@@ -1,7 +1,9 @@
-import SP1Clean.Model.MemoryClock
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Model.Semantics.MicroTime
+module
+
+public import SP1Clean.Model.MemoryClock
+public import SP1Clean.Model.Core.ExecutionEncoding
+public import SP1Clean.FormalModel.Contracts.Readers
+public import SP1Clean.Model.Semantics.MicroTime
 
 /-! # Extracting natural-number time from CPUState clocks
 
@@ -23,6 +25,8 @@ Two axes:
   `current_comp_val, prev_comp_value` are range-checked to be `< 2^24` and as long as we're working in
   a field larger than `2 * 2^24`") — and `Fact (2 ^ 25 < p)` is precisely that `2 · 2^24` field bound.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

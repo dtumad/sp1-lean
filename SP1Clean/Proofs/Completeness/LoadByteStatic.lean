@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Transport
-import SP1Clean.Proofs.Completeness.ProviderInteractions
+module
+
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Transport
+public import SP1Clean.Proofs.Completeness.ProviderInteractions
 
 /-! # Occurrence-preserving LoadByte replacement in an assembled ledger
 
@@ -15,6 +17,8 @@ one evaluation environment fixed, including for arbitrary residual tables. Apply
 canonical inventory still requires transporting residual lookups to that inventory; this theorem
 does not establish that agreement.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.LoadByteStatic
 

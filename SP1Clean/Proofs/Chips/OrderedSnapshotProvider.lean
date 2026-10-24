@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.OrderedMemoryProvider
-import SP1Clean.Proofs.Chips.SnapshotRamProvider
-import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
+module
+
+public import SP1Clean.Proofs.Chips.OrderedMemoryProvider
+public import SP1Clean.Proofs.Chips.SnapshotRamProvider
+public import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
 
 /-! # Ordered source records authenticated by an arbitrary local snapshot
 
@@ -8,6 +10,8 @@ The generic ordered-memory wrapper supplies address uniqueness and key binding. 
 instantiates it for the snapshot's register and RAM providers and constructs all internal columns.
 The source snapshot and the ordering channel are instance parameters, independent of boot.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.OrderedSnapshotProvider
 

@@ -1,7 +1,11 @@
-import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
-import SP1Clean.Proofs.Chips.LoadByteChip.Complete
+module
+
+public import SP1Clean.Proofs.Chips.LoadByteStaticChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadByteChip.Complete
 
 /-! # The existing LB/LBU event builder completes the alternative circuit -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadByteStaticChip
 

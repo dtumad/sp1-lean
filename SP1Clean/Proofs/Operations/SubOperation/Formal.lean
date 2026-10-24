@@ -1,12 +1,16 @@
-import SP1Clean.Native.Operations.SubOperation.RawSpec
-import SP1Clean.Native.Operations.SubOperation.Populate
-import SP1Clean.Native.Operations.SubOperation.Defs
+module
+
+public import SP1Clean.Native.Operations.SubOperation.RawSpec
+public import SP1Clean.Native.Operations.SubOperation.Populate
+public import SP1Clean.Native.Operations.SubOperation.Defs
 
 /-! # `SubOperation` — the `FormalAssertion` (soundness / completeness / contract)
 
 The local subtraction gadget as a Clean `FormalAssertion`. Soundness/completeness route through
 `RawSpec`'s `subSemantics_of_carries`/`carries_of_subSemantics`; no Rust operation artifact is part of
 this proof. -/
+
+@[expose] public section
 
 namespace SP1Clean.SubOperation
 

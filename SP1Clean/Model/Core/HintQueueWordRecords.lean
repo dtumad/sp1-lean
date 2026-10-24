@@ -1,5 +1,7 @@
-import SP1Clean.Model.Core.HintQueueRecords
-import SP1Clean.Model.Core.HintQueueWords
+module
+
+public import SP1Clean.Model.Core.HintQueueRecords
+public import SP1Clean.Model.Core.HintQueueWords
 
 /-! # Authenticating immutable hint words from finite source bytes
 
@@ -10,6 +12,8 @@ The source lookup is computed
 from source hints and permits no witness-selected content. Positions beyond the key range are
 omitted, never wrapped; completeness states the needed position bound explicitly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core.HintQueue
 

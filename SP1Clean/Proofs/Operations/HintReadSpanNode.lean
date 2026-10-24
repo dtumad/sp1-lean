@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Operations.HintReadSpanPopulate
-import SP1Clean.Model.Core.HintQueueWordRecords
+module
+
+public import SP1Clean.Proofs.Operations.HintReadSpanPopulate
+public import SP1Clean.Model.Core.HintQueueWordRecords
 
 /-! # Checked HINT_READ endpoints bound to the actual immutable node
 
@@ -7,6 +9,8 @@ A final-word marker authenticates the true node extent. Together with its metada
 checked span, it rules out modulo-64-bit length aliases without a static source-size restriction.
 The future handler must derive these bindings from the source/allocation and queue ledgers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HintReadSpan
 

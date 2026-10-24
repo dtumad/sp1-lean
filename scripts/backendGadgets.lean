@@ -1,10 +1,12 @@
-import SP1Clean.Circuits.Gadgets.IsZero
-import SP1Clean.Circuits.Gadgets.IsZeroWord
-import SP1Clean.Native.Operations.WordRangeCheck
-import Clean.Backends.Circom.Compile
-import Clean.Backends.Circom.R1CS
-import CompPoly.Fields.BN254.Basic
-import Lean.Data.Json
+module
+
+public import SP1Clean.Circuits.Gadgets.IsZero
+public import SP1Clean.Circuits.Gadgets.IsZeroWord
+public import SP1Clean.Native.Operations.WordRangeCheck
+public import Clean.Backends.Circom.Compile
+public import Clean.Backends.Circom.R1CS
+public import CompPoly.Fields.BN254.Basic
+public import Lean.Data.Json
 
 /-! # Native standalone backend conformance exporter
 
@@ -12,6 +14,8 @@ The two zero adapters witness the existing populate IR and invoke the public ass
 gate one. Range checking invokes its public circuit unchanged. These are export harnesses,
 not new operation faithfulness anchors or a proof of the backend. All constraints are retained.
 -/
+
+@[expose] public section
 
 namespace BackendGadgets
 

@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostCallChip.Formal
-import SP1Clean.Native.Readers.RegisterReadPopulate
+module
+
+public import SP1Clean.Proofs.Chips.HostCallChip.Formal
+public import SP1Clean.Native.Readers.RegisterReadPopulate
 
 /-! # Completing a syscall row with its host-call handoff
 
@@ -7,6 +9,8 @@ The original instruction row keeps its own completeness contract. The extra sema
 WRITE's bounded prior x12 word and strict prior/access order. The CPU contract supplies the target
 clock bound; the constructor computes the extra timestamp column, and Clean computes the selector.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCallChip
 

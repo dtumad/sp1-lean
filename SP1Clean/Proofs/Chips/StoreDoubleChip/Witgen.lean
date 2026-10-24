@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
-import SP1Clean.Proofs.Operations.AddressOperation.Witgen
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
+public import SP1Clean.Proofs.Operations.AddressOperation.Witgen
+public import ToClean.Circuit.WitgenBridge
 
 /-! # `SP1Clean.StoreDoubleChip` — honest witness generation (`ComputableWitnesses`)
 
@@ -8,6 +10,8 @@ SD on the witgen bridge (see `StoreWordChip/Witgen.lean` for the store family's 
 simplest row of the family: no sub-word merge and no `store_value` column — the word written is the
 `rs2` read value itself — so the only witnessed cells are the four the composed `AddressOperation`
 produces, and the offset bits it is passed are all literal zero (SD is 8-byte aligned). -/
+
+@[expose] public section
 
 namespace SP1Clean.StoreDoubleChip
 

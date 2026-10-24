@@ -1,4 +1,6 @@
-import SP1Clean.Model.Core.ExecutionReplay
+module
+
+public import SP1Clean.Model.Core.ExecutionReplay
 
 /-! # Commitment-bank observations of whole-state execution
 
@@ -7,6 +9,8 @@ machine. A selected bank changes only on its own COMMIT call. Every other call, 
 and VERIFY, preserves it. Successful replay therefore determines the bank by the ordered list of
 argument pairs. Bounds are established by successful execution, not assumed of a candidate tape.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Model.Core
 

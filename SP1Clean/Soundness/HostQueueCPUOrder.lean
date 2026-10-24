@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintQueueHistory
-import ToMathlib.ListChronology
+module
+
+public import SP1Clean.Soundness.HostHintQueueHistory
+public import ToMathlib.ListChronology
 
 /-! # Queue history in CPU event order
 
@@ -9,6 +11,8 @@ then puts the queue clocks in the CPU walk as a subsequence, independent of tabl
 This uses the extended witness's own balance; it does not project away host Memory effects or
 assume successful host replay. WRITE/hook queue edges are outside the present handler registry.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostQueueCPUOrder
 

@@ -1,4 +1,6 @@
-import SP1Clean.Model.Semantics.SailStepReduction
+module
+
+public import SP1Clean.Model.Semantics.SailStepReduction
 
 /-! # Official Sail fetch from authenticated code memory
 
@@ -6,6 +8,8 @@ Configuration and committed ROM bytes determine the actual Sail fetch result. Th
 fetch facts are derived only at an executed address; configuration itself remains independent of PC.
 These lemmas are shared by the semantic execution model and the existing instruction bridges.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.Advance

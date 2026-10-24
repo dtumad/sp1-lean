@@ -1,9 +1,11 @@
-import Mathlib.Tactic.FinCases
-import Aesop
-import Mathlib.Tactic.Ring
-import Mathlib.Data.ZMod.Basic
-import LeanRV64D.Regs
-import ToMathlib.General
+module
+
+public import Mathlib.Tactic.FinCases
+public import Aesop
+public import Mathlib.Tactic.Ring
+public import Mathlib.Data.ZMod.Basic
+public import LeanRV64D.Regs
+public import ToMathlib.General
 
 /-! # Sail machine state and register-index decoding
 
@@ -23,6 +25,8 @@ The seam between the generated Sail model and this project's 5-bit register indi
   to any proof that case-splits on indices.
 - The `@[simp]` battery (`regidxToRegister_eq_x*_iff`, `…_ofNat_*`, the `no_confusion`
   non-collision lemmas) — closes the index-vs-register goals the chip Sail bridges generate. -/
+
+@[expose] public section
 
 set_option linter.unusedSimpArgs false
 

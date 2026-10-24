@@ -1,4 +1,8 @@
-import SP1Clean.Soundness.HaltExecution
+module
+
+public import SP1Clean.Soundness.HaltExecution
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

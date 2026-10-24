@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.Contracts.HostCall
-import SP1Clean.FormalModel.Contracts.ClockOrder
-import SP1Clean.FormalModel.Contracts.BoundedWord
+module
+
+public import SP1Clean.FormalModel.Contracts.HostCall
+public import SP1Clean.FormalModel.Contracts.ClockOrder
+public import SP1Clean.FormalModel.Contracts.BoundedWord
 
 /-! # Mutable native commitment-bank updates
 
@@ -10,6 +12,8 @@ row consumes the authenticated call and replaces exactly one slot in a clock-ord
 The original instruction's PublicValues pulls receive per-call matching records, not a claim
 that every historical value equals the final bank. Exact upstream public-value binding stays separate.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCommitChip
 

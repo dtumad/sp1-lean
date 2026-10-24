@@ -1,7 +1,9 @@
-import SP1CleanTest.Core.HostChecks
-import Clean.Circuit.WitnessExport
-import SP1Clean.Proofs.Operations.HintQueuePrepend
-import SP1Clean.Proofs.Operations.HintNodeAllocateLedger
+module
+
+public import SP1CleanTest.Core.HostChecks
+public import Clean.Circuit.WitnessExport
+public import SP1Clean.Proofs.Operations.HintQueuePrepend
+public import SP1Clean.Proofs.Operations.HintNodeAllocateLedger
 
 /-! # Native allocation after pops and across identity carries
 
@@ -9,6 +11,8 @@ Run the actual witness program, local assertions, and Byte requests. Cursor repl
 separately against the persistent-store compiler. These tests deliberately retain the distinction
 between a checked header and authenticated bytes; host-call and byte-source integration is open.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HintNodeAllocate
 

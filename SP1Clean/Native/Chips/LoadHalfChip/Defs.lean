@@ -1,16 +1,18 @@
-import SP1Clean.FormalModel.Contracts.Chips
-import SP1Clean.Native.Operations.AddressOperation
-import SP1Clean.Circuits.Gadgets.U16MSB
-import SP1Clean.Native.Readers.CPUState
-import SP1Clean.Native.Readers.ITypeReader
-import SP1Clean.Native.Readers.MemoryAccess
-import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import Clean.Circuit.Basic
-import Clean.Circuit.Subcircuit
-import Clean.Circuit.Channel
-import Clean.Gadgets.Equality
-import Clean.Utils.Tactics.ProvableStructDeriving
+module
+
+public import SP1Clean.FormalModel.Contracts.Chips
+public import SP1Clean.Native.Operations.AddressOperation
+public import SP1Clean.Circuits.Gadgets.U16MSB
+public import SP1Clean.Native.Readers.CPUState
+public import SP1Clean.Native.Readers.ITypeReader
+public import SP1Clean.Native.Readers.MemoryAccess
+public import SP1Clean.Native.Readers.RegisterWrite
+public import SP1Clean.Model.Channels
+public import Clean.Circuit.Basic
+public import Clean.Circuit.Subcircuit
+public import Clean.Circuit.Channel
+public import Clean.Gadgets.Equality
+public import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `LoadHalf` chip row as a `GeneralFormalCircuit`
 
@@ -25,6 +27,8 @@ The SP1 memory **bus** access stays 8-byte-aligned: `MemoryAccess` sends/receive
 `prev_value`. Two selectors `is_lh` / `is_lhu` replace the single `is_real` (`is_real = is_lh + is_lhu`);
 LH sign-extends, LHU zero-extends (`msb` zeroed by `is_lhu·msb`). The cross-row offline-memory meaning
 is derived by `Soundness/TypedMemory.lean`. -/
+
+@[expose] public section
 
 namespace SP1Clean.LoadHalfChip
 

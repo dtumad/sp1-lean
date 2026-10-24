@@ -1,4 +1,6 @@
-import SP1Clean.Model.Machine.Shard
+module
+
+public import SP1Clean.Model.Machine.Shard
 
 /-! # The event-indexed trajectory and its timeline
 
@@ -29,6 +31,8 @@ that is true, and the uniform case is a lemma rather than a separate development
 Past the end of a transcript the timeline keeps advancing at eight ticks per step. That is not a
 claim about what the machine does there — nothing does — but it is what makes `Timeline`'s `gap`
 field provable for every `n`, so a finite transcript still yields a total timeline. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,5 +1,7 @@
-import SP1Clean.FormalModel.Contracts.ResourceBoundary
-import SP1Clean.Model.Core.SailFinalCheck
+module
+
+public import SP1Clean.FormalModel.Contracts.ResourceBoundary
+public import SP1Clean.Model.Core.SailFinalCheck
 
 /-! # Supplied Sail target: invariant fields and actual public endpoints
 
@@ -7,6 +9,8 @@ This is one part of complete Sail target binding. Register presence and invarian
 checked as finite snapshot data. The public clock and PC are tied to the same target. Dynamic
 nextPC and retirement, and full host-field reconstruction, are separate remaining obligations.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailBoundary
 

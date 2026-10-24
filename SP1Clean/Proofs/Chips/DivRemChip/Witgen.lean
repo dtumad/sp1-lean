@@ -1,6 +1,8 @@
-import SP1Clean.Proofs.Chips.DivRemChip.Formal
-import SP1Clean.Proofs.Chips.DivRemChip.Populate.Congr
-import ToClean.Circuit.WitgenBridge
+module
+
+public import SP1Clean.Proofs.Chips.DivRemChip.Formal
+public import SP1Clean.Proofs.Chips.DivRemChip.Populate.Congr
+public import ToClean.Circuit.WitgenBridge
 
 /-! # DivRem witness locality
 
@@ -8,6 +10,8 @@ All thirty `populateRow` payloads use Clean's witness IR. Their congruence proof
 only on the operand reads, row activity and explicit opcode selectors. `inputFacts` projects
 these four agreements once from the structured circuit input; no external hint is needed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemChip
 

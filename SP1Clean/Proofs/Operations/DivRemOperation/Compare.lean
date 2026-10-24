@@ -1,7 +1,9 @@
-import SP1Clean.Native.Operations.DivRemOperation.Compare
-import SP1Clean.Semantics.Specs.DivRem
-import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
-import SP1Clean.Proofs.CircuitProofStart
+module
+
+public import SP1Clean.Native.Operations.DivRemOperation.Compare
+public import SP1Clean.Semantics.Specs.DivRem
+public import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
+public import SP1Clean.Proofs.CircuitProofStart
 
 /-! # `DivRemCompare` — the `FormalAssertion` bundle (soundness / completeness / contract)
 
@@ -19,6 +21,8 @@ Both directions used to carry a 4000000-heartbeat ceiling. Measured 2026-07-28 (
 heartbeat, then a distinct-rung pass): `completeness` cleared 39999 as found; `soundness` failed at
 40000 inside `hbin_rcm`'s `simp_all` and clears it once that closer is narrowed to a targeted
 `rw`/`simp`. Both ceilings were therefore removed — the plain default carries ≥5× headroom. -/
+
+@[expose] public section
 
 namespace SP1Clean.DivRemCompare
 

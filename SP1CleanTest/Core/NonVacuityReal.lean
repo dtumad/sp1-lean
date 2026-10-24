@@ -1,55 +1,57 @@
-import SP1Clean.Model.SP1Field
-import SP1Clean.Proofs.Chips.AddChip.Formal
-import SP1Clean.Proofs.Chips.AddChip.Witgen
-import SP1Clean.Proofs.Chips.AddiChip.Formal
-import SP1Clean.Proofs.Chips.AddiChip.Witgen
-import SP1Clean.Proofs.Chips.AddwChip.Formal
-import SP1Clean.Proofs.Chips.AddwChip.Witgen
-import SP1Clean.Proofs.Chips.AluX0Chip.Formal
-import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
-import SP1Clean.Proofs.Chips.BitwiseChip.Complete
-import SP1Clean.Proofs.Chips.BranchChip.Formal
-import SP1Clean.Proofs.Chips.BranchChip.Witgen
-import SP1Clean.Proofs.Chips.DivRemChip.Formal
-import SP1Clean.Proofs.Chips.DivRemChip.Witgen
-import SP1Clean.Proofs.Chips.JalChip.Formal
-import SP1Clean.Proofs.Chips.JalChip.Witgen
-import SP1Clean.Proofs.Chips.JalrChip.Formal
-import SP1Clean.Proofs.Chips.JalrChip.Witgen
-import SP1Clean.Proofs.Chips.LoadByteChip.Formal
-import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
-import SP1Clean.Proofs.Chips.LoadDoubleChip.Witgen
-import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
-import SP1Clean.Proofs.Chips.LoadHalfChip.Witgen
-import SP1Clean.Proofs.Chips.LoadWordChip.Formal
-import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
-import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
-import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
-import SP1Clean.Proofs.Chips.LtChip.Complete
-import SP1Clean.Proofs.Chips.MulChip.Formal
-import SP1Clean.Proofs.Chips.MulChip.Witgen
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
-import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
-import SP1Clean.Proofs.Chips.ShiftRightChip.Witgen
-import SP1Clean.Proofs.Chips.StoreByteChip.Formal
-import SP1Clean.Proofs.Chips.StoreByteChip.Witgen
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
-import SP1Clean.Proofs.Chips.StoreDoubleChip.Witgen
-import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
-import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
-import SP1Clean.Proofs.Chips.StoreWordChip.Formal
-import SP1Clean.Proofs.Chips.StoreWordChip.Witgen
-import SP1Clean.Proofs.Chips.SubChip.Formal
-import SP1Clean.Proofs.Chips.SubChip.Witgen
-import SP1Clean.Proofs.Chips.SubwChip.Formal
-import SP1Clean.Proofs.Chips.SubwChip.Witgen
-import SP1Clean.Proofs.Chips.UTypeChip.Formal
-import SP1Clean.Proofs.Chips.UTypeChip.Witgen
-import SP1Clean.Circuits.Types.CPUState
-import SP1Clean.Circuits.Types.MemoryAccess
-import SP1CleanTest.TraceGenTests.EventPopulate
+module
+
+public import SP1Clean.Model.SP1Field
+public import SP1Clean.Proofs.Chips.AddChip.Formal
+public import SP1Clean.Proofs.Chips.AddChip.Witgen
+public import SP1Clean.Proofs.Chips.AddiChip.Formal
+public import SP1Clean.Proofs.Chips.AddiChip.Witgen
+public import SP1Clean.Proofs.Chips.AddwChip.Formal
+public import SP1Clean.Proofs.Chips.AddwChip.Witgen
+public import SP1Clean.Proofs.Chips.AluX0Chip.Formal
+public import SP1Clean.Proofs.Chips.AluX0Chip.Witgen
+public import SP1Clean.Proofs.Chips.BitwiseChip.Complete
+public import SP1Clean.Proofs.Chips.BranchChip.Formal
+public import SP1Clean.Proofs.Chips.BranchChip.Witgen
+public import SP1Clean.Proofs.Chips.DivRemChip.Formal
+public import SP1Clean.Proofs.Chips.DivRemChip.Witgen
+public import SP1Clean.Proofs.Chips.JalChip.Formal
+public import SP1Clean.Proofs.Chips.JalChip.Witgen
+public import SP1Clean.Proofs.Chips.JalrChip.Formal
+public import SP1Clean.Proofs.Chips.JalrChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadByteChip.Formal
+public import SP1Clean.Proofs.Chips.LoadByteChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
+public import SP1Clean.Proofs.Chips.LoadDoubleChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Formal
+public import SP1Clean.Proofs.Chips.LoadHalfChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadWordChip.Formal
+public import SP1Clean.Proofs.Chips.LoadWordChip.Witgen
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Formal
+public import SP1Clean.Proofs.Chips.LoadX0Chip.Witgen
+public import SP1Clean.Proofs.Chips.LtChip.Complete
+public import SP1Clean.Proofs.Chips.MulChip.Formal
+public import SP1Clean.Proofs.Chips.MulChip.Witgen
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
+public import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Formal
+public import SP1Clean.Proofs.Chips.ShiftRightChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreByteChip.Formal
+public import SP1Clean.Proofs.Chips.StoreByteChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Formal
+public import SP1Clean.Proofs.Chips.StoreDoubleChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Formal
+public import SP1Clean.Proofs.Chips.StoreHalfChip.Witgen
+public import SP1Clean.Proofs.Chips.StoreWordChip.Formal
+public import SP1Clean.Proofs.Chips.StoreWordChip.Witgen
+public import SP1Clean.Proofs.Chips.SubChip.Formal
+public import SP1Clean.Proofs.Chips.SubChip.Witgen
+public import SP1Clean.Proofs.Chips.SubwChip.Formal
+public import SP1Clean.Proofs.Chips.SubwChip.Witgen
+public import SP1Clean.Proofs.Chips.UTypeChip.Formal
+public import SP1Clean.Proofs.Chips.UTypeChip.Witgen
+public import SP1Clean.Circuits.Types.CPUState
+public import SP1Clean.Circuits.Types.MemoryAccess
+public import SP1CleanTest.TraceGenTests.EventPopulate
 
 /-! # Real-row satisfiability anchors: every chip constraint system has an `is_real = 1` model
 
@@ -99,6 +101,8 @@ discharged by `native_decide` (sanctioned in this test library only), lifted to 
 Operand non-degeneracy is stated per theorem. Where cheap, a companion theorem also pins the
 Spec-level result computed by the row (e.g. the Lt compare bit on a true and a false comparison).
 -/
+
+@[expose] public section
 
 namespace SP1Clean.NonVacuityRealTests
 

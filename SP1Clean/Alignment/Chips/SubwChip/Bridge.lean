@@ -1,8 +1,10 @@
-import SP1Clean.Model.SailWrap
-import SP1Clean.Math.Word
-import SP1Clean.Proofs.Chips.SubwChip.Formal
-import SP1Clean.Soundness.ChipRow
-import SP1Clean.Proofs.Sail.Advance
+module
+
+public import SP1Clean.Model.SailWrap
+public import SP1Clean.Math.Word
+public import SP1Clean.Proofs.Chips.SubwChip.Formal
+public import SP1Clean.Soundness.ChipRow
+public import SP1Clean.Proofs.Sail.Advance
 
 /-! # Native Sail bridge for SUBW (+ `ChipKind` registration)
 
@@ -10,6 +12,8 @@ import SP1Clean.Proofs.Sail.Advance
 given the chip's semantic fact `a_val = sext32→64 (op_b - op_c)` and the register/PC reads.
 `execute_RTYPEW rs2 rs1 rd .SUBW` computes `sext (rX(rs1)[31:0] - rX(rs2)[31:0])`, so
 `rs1 ↦ op_b_val`, `rs2 ↦ op_c_val` — the non-commutative order is load-bearing. -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 namespace SP1Clean.SubwSail

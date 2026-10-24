@@ -1,6 +1,8 @@
-import SP1Clean.Model.CleanLedger
-import SP1Clean.Proofs.Completeness.Assembly
-import SP1Clean.Proofs.Completeness.ProviderTables
+module
+
+public import SP1Clean.Model.CleanLedger
+public import SP1Clean.Proofs.Completeness.Assembly
+public import SP1Clean.Proofs.Completeness.ProviderTables
 
 /-! # Recounting Byte, Range and Program demand
 
@@ -17,6 +19,8 @@ Only Byte and Program are closed by this recount. State, Memory, Exit and host-c
 remain separate semantic obligations. This module establishes the demand/supply ledger equations,
 not a complete execution or the data-dependent program commitment.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

@@ -1,21 +1,23 @@
-import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Soundness.RefreshElimination
-import SP1Clean.Soundness.Grounding.RTypeChips
-import SP1Clean.Soundness.Grounding.ITypeChips
-import SP1Clean.Soundness.Grounding.ALUTypeChips
-import SP1Clean.Soundness.Grounding.JTypeChips
-import SP1Clean.Soundness.Grounding.ControlFlowChips
-import SP1Clean.Soundness.Grounding.MemoryChips
-import SP1Clean.Soundness.Decode
-import SP1Clean.Soundness.MemoryFrontier
-import SP1Clean.Soundness.SystemMemoryRows
-import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
-import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
-import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
-import SP1Clean.Alignment.Chips.LoadDoubleChip.Contracts
-import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
-import SP1Clean.Alignment.Chips.SubChip.Contracts
-import SP1Clean.Alignment.Chips.MulChip.Contracts
+module
+
+public import SP1Clean.Soundness.GroundingAdapter
+public import SP1Clean.Soundness.RefreshElimination
+public import SP1Clean.Soundness.Grounding.RTypeChips
+public import SP1Clean.Soundness.Grounding.ITypeChips
+public import SP1Clean.Soundness.Grounding.ALUTypeChips
+public import SP1Clean.Soundness.Grounding.JTypeChips
+public import SP1Clean.Soundness.Grounding.ControlFlowChips
+public import SP1Clean.Soundness.Grounding.MemoryChips
+public import SP1Clean.Soundness.Decode
+public import SP1Clean.Soundness.MemoryFrontier
+public import SP1Clean.Soundness.SystemMemoryRows
+public import SP1Clean.Alignment.Chips.LoadByteChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadHalfChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadWordChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadDoubleChip.Contracts
+public import SP1Clean.Alignment.Chips.LoadX0Chip.Contracts
+public import SP1Clean.Alignment.Chips.SubChip.Contracts
+public import SP1Clean.Alignment.Chips.MulChip.Contracts
 
 /-! # Chip grounding contracts
 
@@ -37,6 +39,8 @@ The legacy `sp1Ensemble` capstone still consumes witness-specialized contracts a
 Those adapters can disappear when its consumers use the component-local interfaces shared by the
 native boot and local assemblies.
 -/
+
+@[expose] public section
 
 open LeanRV64D.Defs
 

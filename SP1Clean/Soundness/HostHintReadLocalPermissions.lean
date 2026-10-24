@@ -1,5 +1,7 @@
-import SP1Clean.Soundness.HostHintReadLocal
-import SP1Clean.Soundness.HostLocalCorePermissions
+module
+
+public import SP1Clean.Soundness.HostHintReadLocal
+public import SP1Clean.Soundness.HostLocalCorePermissions
 
 /-! # Authenticated permissions for installed HINT_READ writes
 
@@ -9,6 +11,8 @@ only source. Its raw constraints and the ensemble's own balance authenticate eac
 byte request. The handler span and authenticated successor path supply the lower native-window
 bound independently of prior RAM values and timestamps.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 

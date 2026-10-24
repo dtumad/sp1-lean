@@ -1,8 +1,10 @@
-import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Native.Operations.HintQueueSource
-import SP1Clean.Native.Operations.HintQueueWordSource
-import ToClean.Air.EnsembleCheck
-import ToClean.Circuit.VerifierInteractions
+module
+
+public import SP1CleanTest.Core.ComponentExport
+public import SP1Clean.Native.Operations.HintQueueSource
+public import SP1Clean.Native.Operations.HintQueueWordSource
+public import ToClean.Air.EnsembleCheck
+public import ToClean.Circuit.VerifierInteractions
 
 /-! # Closed fixed-source hint export through Clean
 
@@ -10,6 +12,8 @@ The actual node/word providers serve public requests through Clean's existing pr
 scheduler. Complete physical rows and zero-count occurrences remain visible to the checker
 and Rust reference. Native source-queue authentication is separate from full host execution.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Core.HintSourceExport
 

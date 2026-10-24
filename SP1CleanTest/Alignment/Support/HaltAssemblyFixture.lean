@@ -1,10 +1,14 @@
-import SP1CleanTest.Alignment.Support.HostProgramFixture
+module
+
+public import SP1CleanTest.Alignment.Support.HostProgramFixture
 
 /-! # Active HALT in the complete installed assembly
 
 The shared semantic host step and finalizers authenticate all accessed registers. A real HALT
 supplies the sole Exit receipt; the legacy continuing-padding component has no row.
 -/
+
+@[expose] public section
 
 namespace SP1CleanTest.Alignment.HaltAssembly
 open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness

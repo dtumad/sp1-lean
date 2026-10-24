@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Chips.HostCallChip.Formal
-import SP1Clean.Native.Readers.RegisterReadLedger
+module
+
+public import SP1Clean.Proofs.Chips.HostCallChip.Formal
+public import SP1Clean.Native.Readers.RegisterReadLedger
 
 /-! # Authenticated host-call selection and the actual interaction ledger
 
@@ -7,6 +9,8 @@ Raw constraints determine WRITE selection without Memory grounding. The composed
 all original instruction interactions, adds the selected x12 pair, and emits one gated host call.
 The call channel authenticates requests; it does not yet prove the host's returned value or effects.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.HostCallChip
 

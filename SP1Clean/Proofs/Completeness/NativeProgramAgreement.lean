@@ -1,5 +1,7 @@
-import SP1Clean.Proofs.Completeness.ConsumerClosure
-import SP1Clean.Proofs.Completeness.NativeTraceCompiler
+module
+
+public import SP1Clean.Proofs.Completeness.ConsumerClosure
+public import SP1Clean.Proofs.Completeness.NativeTraceCompiler
 
 /-!
 # Native compiler agreement with the canonical Program provider
@@ -14,6 +16,8 @@ relation's `SupportedSP1Transition` already owns the same shared transition view
 configured Sail state, so the `decodedInROM` hoist is projected from semantic validity rather than
 stored again in `NativeTraceReady`.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 

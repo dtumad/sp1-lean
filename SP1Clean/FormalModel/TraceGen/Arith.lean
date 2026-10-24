@@ -1,6 +1,8 @@
-import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Native.Operations.AddOperation.Populate
-import SP1Clean.Math.WordEquality
+module
+
+public import SP1Clean.FormalModel.TraceGen.Readers
+public import SP1Clean.Native.Operations.AddOperation.Populate
+public import SP1Clean.Math.WordEquality
 
 /-! # Trace generation — the `AddOperation` witness at built words
 
@@ -8,7 +10,9 @@ The second module split out of `Readers.lean` for a layering reason, and the sam
 `Memory.lean` records: `Readers.lean` proves the reader-family contracts while importing nothing
 below `FormalModel/`, and this file needs `Native/Operations/AddOperation/Populate.lean` — the
 witness generator the two **jump** chips run over their operands. Keeping it here confines that
-import to one module.
+public import to one module.
+
+@[expose] public section
 
 The content is one theorem and its two convenience forms. `AddOperation.populate` is SP1's
 limb-wise 64-bit addition, and the builder of `Inputs.lean` commits every 64-bit quantity as

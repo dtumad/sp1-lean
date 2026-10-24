@@ -1,11 +1,15 @@
-import SP1Clean.FormalModel.Contracts.CommitmentStatement
-import ToClean.Air.StaticProvider
+module
+
+public import SP1Clean.FormalModel.Contracts.CommitmentStatement
+public import ToClean.Air.StaticProvider
 
 /-! # Verifier-fixed commitment declarations
 
 Only the sixteen declaration counts are prover-owned. Clean's fixed-table provider retains all
 rows, including unused slots, and prevents changing a word or flag to match a conflicting call.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.CommitmentDeclaration
 

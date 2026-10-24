@@ -1,12 +1,16 @@
-import SP1Clean.Alignment.Chips.MulChip.Bridge
-import SP1Clean.Proofs.Chips.MulChip.Structural
-import SP1Clean.Soundness.TypedMemory
+module
+
+public import SP1Clean.Alignment.Chips.MulChip.Bridge
+public import SP1Clean.Proofs.Chips.MulChip.Structural
+public import SP1Clean.Soundness.TypedMemory
 
 /-! # MUL — circuit-grounding contracts
 
 Small structural facts crossing the completed MUL circuit boundary.  They expose adapter
 passthrough and the chip-owned selector/routing constraints; multiplication arithmetic remains in
 `MulChip.Spec` and its Sail bridge. -/
+
+@[expose] public section
 
 namespace SP1Clean.Soundness
 
