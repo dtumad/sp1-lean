@@ -19,8 +19,8 @@ private def write : HostExecution := ⟨.write, 1, 70000, 2, ⟨{}, none⟩⟩
 private def readHint : HostExecution :=
   ⟨.hintRead, 70000, 8, 241, ⟨{}, some ⟨70000, hintWriteBytes [1, 2, 3, 4, 5, 6, 7, 8]⟩⟩⟩
 
-/-- VERIFY counts both overlapping logical buffers; WRITE observes x12; aligned hints still pad. -/
-theorem hostDemand : verify.readByteCount context = 64 ∧
+/-- VERIFY ignores overlapping pointers; WRITE observes x12; aligned hints still pad. -/
+theorem hostDemand : verify.readByteCount context = 0 ∧
     write.readByteCount context = 17 ∧ readHint.writeByteCount = 16 := by decide +kernel
 
 private def oldHost : HostState := { io.hints := [[7]] }

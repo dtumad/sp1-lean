@@ -19,7 +19,7 @@ from check_release_surface import CHIPS
 ROOT = Path(__file__).resolve().parents[1]
 RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "symbolic_arithmetic_export": 2, "system_export": 4,
-    "syscall_export": 7, "host_control_export": 8, "byte_provider_export": 6,
+    "syscall_export": 7, "host_control_export": 9, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
     "assembly_boundaries_export": 5, "assembly_stopped_export": 5,

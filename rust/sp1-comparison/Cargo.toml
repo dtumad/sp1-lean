@@ -14,14 +14,14 @@ opt-level = 1
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 enum-map = { version = "2.7.3", optional = true }
-slop-air = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-slop-matrix = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-slop-uni-stark = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-sp1-core-executor = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-slop-algebra = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-sp1-core-machine = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-sp1-hypercube = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
-sp1-primitives = { git = "https://github.com/succinctlabs/sp1", rev = "b8387fa61e1361d90ee7de49f551863418ca0f08", optional = true }
+slop-air = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+slop-matrix = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+slop-uni-stark = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+sp1-core-executor = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+slop-algebra = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+sp1-core-machine = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+sp1-hypercube = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
+sp1-primitives = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
 
 # The backend and emitter use the same published Clean revision as lake-manifest.json.
 clean_backend = { git = "https://github.com/dtumad/clean", rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc", optional = true }

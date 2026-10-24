@@ -68,7 +68,6 @@ import SP1Clean.FormalModel.Contracts.HintReadSpan
 import SP1Clean.FormalModel.Contracts.HintReadStep
 import SP1Clean.FormalModel.Contracts.HintReadWord
 import SP1Clean.FormalModel.Contracts.HintWords
-import SP1Clean.FormalModel.Contracts.HostBuffer32
 import SP1Clean.FormalModel.Contracts.HostCall
 import SP1Clean.FormalModel.Contracts.CommitmentBoundary
 import SP1Clean.FormalModel.Contracts.CommitmentStatement
@@ -163,7 +162,6 @@ import SP1Clean.Model.Core.HostFootprint
 import SP1Clean.Model.Core.HostHalt
 import SP1Clean.Model.Core.HostIO
 import SP1Clean.Model.Core.HostQueue
-import SP1Clean.Model.Core.HostReadPlan
 import SP1Clean.Model.Core.HostReadWords
 import SP1Clean.Model.Core.HostReplay
 import SP1Clean.Model.Core.HostSail
@@ -219,6 +217,7 @@ import SP1Clean.Model.Opcode
 import SP1Clean.Model.ProgramChip
 import SP1Clean.Model.ProviderTableId
 import SP1Clean.Semantics.ISA.RV64
+import SP1Clean.Semantics.ReleasePolicy
 import SP1Clean.Model.Register
 import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.SP1Field
@@ -329,7 +328,6 @@ import SP1Clean.Native.Operations.HintQueueWordSource
 import SP1Clean.Native.Operations.HintReadSpan
 import SP1Clean.Native.Operations.HintReadStep
 import SP1Clean.Native.Operations.HostBoundary
-import SP1Clean.Native.Operations.HostBuffer32
 import SP1Clean.Native.Operations.CommitmentBoundary
 import SP1Clean.Native.Operations.CommitmentStatement
 import SP1Clean.Native.Operations.HostCommitBoundary
@@ -599,10 +597,6 @@ import SP1Clean.Proofs.Operations.HintReadSpanPopulate
 import SP1Clean.Proofs.Operations.HintReadStep
 import SP1Clean.Proofs.Operations.HintReadStepLedger
 import SP1Clean.Proofs.Operations.HintReadStepPopulate
-import SP1Clean.Proofs.Operations.HostBuffer32
-import SP1Clean.Proofs.Operations.HostBuffer32.Content
-import SP1Clean.Proofs.Operations.HostBuffer32.Ledger
-import SP1Clean.Proofs.Operations.HostBuffer32.Populate
 import SP1Clean.Proofs.Operations.HostRamBytes
 import SP1Clean.Proofs.Operations.ShiftLeftOperation.Core
 import SP1Clean.Proofs.Operations.ShiftRightOperation.Core

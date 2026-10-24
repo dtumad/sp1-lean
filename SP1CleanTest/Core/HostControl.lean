@@ -119,7 +119,7 @@ private def host : HostState :=
   { io := ⟨[[1, 2], []], [3, 4]⟩
     committed := Vector.replicate 8 17, deferred := Vector.replicate 8 19
     stdout := [5], stderr := [6]
-    requests := [.proof ⟨[7], [8]⟩] }
+    requests := [⟨15, [7, 8]⟩] }
 
 private def context (input : HostCallChip.Message Fp) : HostReadContext where
   register index := if index == 5 then some (Word.toBitVec64 input.code)

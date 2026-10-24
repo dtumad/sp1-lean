@@ -4,7 +4,7 @@ import SP1Clean.Model.Core.HostReplay
 /-! # Complete host reconstruction on the installed local execution
 
 The final queue cursor and both bank endpoints agree with the same CPU path. Complete physical
-call accounting excludes WRITE and VERIFY in this installation, so all remaining host I/O fields
+call accounting excludes WRITE in this installation, so all remaining host I/O fields
 are preserved from the source. Terminal status comes from actual HALT events, retaining the
 semantic difference between running and exit zero. Binding a caller's complete outgoing snapshot
 and the public Exit bus remains separate; no restriction is added to the all-eight-call target.
@@ -24,11 +24,10 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
 
 private theorem wrapper_frame (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
-    (notWrite : Word.toBitVec64 (input.message flag).code ≠ SyscallKind.write.code)
-    (notVerify : Word.toBitVec64 (input.message flag).code ≠ SyscallKind.verifyProof.code) :
+    (notWrite : Word.toBitVec64 (input.message flag).code ≠ SyscallKind.write.code) :
     HostFrameSafe (ExecutionRow.syscall input.instruction).event := by
   simpa only [HostFrameSafe, ExecutionRow.event, rawCode_syscallEventOfRow,
-    HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat] using And.intro notWrite notVerify
+    HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat] using notWrite
 
 private theorem inventory_frame
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
@@ -56,7 +55,6 @@ private theorem inventory_frame
       obtain ⟨env, envMem, rfl⟩ := List.mem_map.mp active
       have received := handoff.mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) envMem)
       exact wrapper_frame (HostCallLedger.input env) _ (noWrite _ received)
-        (HostQueueCallProjection.calls_not_verify witness interface constraints bytes specs _ received)
 
 private theorem queue_terminal
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))

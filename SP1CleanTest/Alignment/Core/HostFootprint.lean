@@ -36,11 +36,12 @@ theorem byteCovers :
     MemorySpan.unionCells [⟨65537, 32⟩, ⟨65544, 32⟩] = [8192, 8193, 8194, 8195, 8196] := by
   native_decide
 
-/-- WRITE's x12 is retained, and overlapping proof-request buffers share physical cells. -/
+/-- WRITE retains x12 and its buffer footprint; VERIFY ignores both pointers. -/
 theorem dispatchFootprints :
     footprint {} (source 2 13 65543 2) = some ⟨[5, 10, 11, 12], [8192, 8193]⟩ ∧
     footprint {} (source 2 13 65543 0) = some ⟨[5, 10, 11, 12], []⟩ ∧
-    footprint {} (source 27 65537 65544 0) = some ⟨[5, 10, 11], [8192, 8193, 8194, 8195, 8196]⟩ ∧
+    footprint {} (source 27 65537 65544 0) = some ⟨[5, 10, 11], []⟩ ∧
+    footprint {} (source 27 0 0xffffffffffffffff 0) = some ⟨[5, 10, 11], []⟩ ∧
     footprint {} (source 16 0 7 0) = some ⟨[5, 10, 11], []⟩ := by native_decide
 
 /-- Empty and aligned-length hints retain the mandatory final padding cell. -/

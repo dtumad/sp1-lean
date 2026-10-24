@@ -1,6 +1,10 @@
 //! Source-side regression cases for behavior reviewed during the release migration.
 //! These call the released executor; they are not a proof of Lean/executor equivalence.
 
+#[allow(dead_code)]
+#[path = "support/execution.rs"]
+mod execution;
+
 use sp1_core_executor::{
     chunked_memory_init_events, Instruction, MinimalExecutor, Opcode, Program, SupervisorMode,
     SyscallCode,
@@ -173,4 +177,80 @@ fn hint_read_always_writes_its_final_padded_word() {
             u64::MAX
         );
     }
+}
+
+#[test]
+fn remw_overflow_clears_a_nonzero_previous_remainder() {
+    // Default Linux x86 runs the JIT; mprotect and macOS use released portable execution.
+    let program = Program::new(
+        vec![
+            Instruction::new(Opcode::ADDI, 1, 0, 100, false, true),
+            Instruction::new(Opcode::ADDI, 2, 0, 7, false, true),
+            Instruction::new(Opcode::LUI, 3, 0xffff_ffff_8000_0000, 0, true, true),
+            Instruction::new(Opcode::ADDI, 4, 0, u64::MAX, false, true),
+            Instruction::new(Opcode::REMW, 6, 1, 2, false, false),
+            Instruction::new(Opcode::REMW, 7, 3, 4, false, false),
+            Instruction::new(Opcode::DIVW, 8, 3, 4, false, false),
+            Instruction::new(Opcode::ECALL, 5, 10, 11, false, false),
+        ],
+        STACK_TOP,
+        STACK_TOP,
+    );
+    let executor = run(program, None);
+    assert_eq!(executor.registers()[6], 2);
+    assert_eq!(executor.registers()[7], 0);
+    assert_eq!(executor.registers()[8], 0xffff_ffff_8000_0000);
+}
+
+#[test]
+fn verify_ignores_invalid_pointers_and_preserves_the_hint_queue() {
+    let address = STACK_TOP + 4096;
+    for (key, values) in [
+        (0, 0),
+        (u64::MAX, u64::MAX),
+        (address, address),
+        (address + 1, address + 32),
+    ] {
+        let mut code = vec![];
+        execution::syscall(&mut code, SyscallCode::VERIFY_SP1_PROOF, key, values);
+        code.push(Instruction::new(Opcode::ADDI, 6, 5, 0, false, true));
+        execution::syscall(&mut code, SyscallCode::HINT_READ, address, 3);
+        execution::syscall(&mut code, SyscallCode::HALT, 0, 0);
+        let mut program = Program::new(code, STACK_TOP, STACK_TOP);
+        Arc::make_mut(&mut program.memory_image).insert(address + 8, u64::MAX);
+        // Trace the chunk too: VERIFY must ignore these pointers in constrained replay,
+        // while preserving its ordinary return-register write.
+        let (executor, records) = execution::run(program, &[vec![7, 8, 9]]);
+        assert_eq!(executor.exit_code(), 0);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].syscall_events.len(), 3);
+        let (event, access) = records[0].syscall_events[0];
+        assert_eq!(event.syscall_code, SyscallCode::VERIFY_SP1_PROOF);
+        assert_eq!((event.arg1, event.arg2), (key, values));
+        match access.a {
+            sp1_core_executor::events::MemoryRecordEnum::Write(write) => {
+                assert_eq!(write.value, SyscallCode::VERIFY_SP1_PROOF as u64)
+            }
+            _ => panic!("VERIFY must retain its syscall result write"),
+        }
+        assert_eq!(
+            executor.registers()[6],
+            SyscallCode::VERIFY_SP1_PROOF as u64
+        );
+        assert_eq!(executor.get_memory_value(address).value, 0x090807);
+        assert_eq!(executor.get_memory_value(address + 8).value, u64::MAX);
+    }
+}
+
+#[test]
+fn default_release_status_policy_rejects_every_sampled_nonzero_exit() {
+    use sp1_core_executor::StatusCode;
+    assert!(StatusCode::SUCCESS.is_accepted_code(0));
+    assert!(StatusCode::ANY.is_accepted_code(0));
+    for code in [1, 2, 3, 65536, u32::MAX] {
+        assert!(!StatusCode::ANY.is_accepted_code(code));
+        assert!(!StatusCode::SUCCESS.is_accepted_code(code));
+    }
+    assert!(!StatusCode::PANIC.is_accepted_code(1));
+    assert!(!StatusCode::INVALID_HINT.is_accepted_code(3));
 }
