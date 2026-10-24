@@ -59,6 +59,12 @@ on:
         type: boolean
         default: false
 
+# Cancel the entire obsolete PR validation graph, including downstream matrix jobs.
+# Main keeps its resumable build: one running validation and one pending per ref.
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   # Bump to invalidate every cache entry (toolchain and manifest changes already rekey; a change to
   # CACHE_PATHS requires it). Keep cache-cleanup/build-experiment in sync (gated by tests).
@@ -124,10 +130,6 @@ jobs:
     # Below GitHub's 6-hour job limit; individual builds have a 5-hour timeout. Cache saving
     # runs after ordinary build failures, but a cancelled/timed-out job is never saved.
     timeout-minutes: 350
-    # PR pushes supersede each other; `main` queues (one running + one pending per group).
-    concurrency:
-      group: core-${{ github.ref }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     permissions:
       actions: write
       contents: read
@@ -238,7 +240,8 @@ jobs:
       - name: Upload compiled exporter
         uses: actions/upload-artifact@v4
         with:
-          name: ensemble-driver-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-driver-${{ github.run_id }}
+          overwrite: true
           path: .lake/ensemble-export/driver/
           if-no-files-found: error
           retention-days: 3
@@ -332,6 +335,8 @@ jobs:
           python3 scripts/ci/cache_gc.py --repo "${{ github.repository }}" --prefix "${{ steps.key.outputs.prefix }}" \
             --only-ref "refs/pull/${{ github.event.pull_request.number }}/merge" --apply
 
+  # Hand-off names are stable across attempts: rerunning only failed jobs must be able
+  # to consume successful producers from an earlier attempt of this same source revision.
   export-generate:
     needs: build
     runs-on: ubuntu-latest
@@ -346,7 +351,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: ensemble-driver-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-driver-${{ github.run_id }}
           path: .lake/ensemble-export/driver/
       - name: Generate fresh AIR, witnesses and references
         env:
@@ -359,7 +364,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ensemble-${{ matrix.generation }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-${{ matrix.generation }}-${{ github.run_id }}
+          overwrite: true
           path: .lake/ensemble-export/${{ matrix.generation }}/
           if-no-files-found: error
           retention-days: 3
@@ -374,11 +380,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: ensemble-first-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-first-${{ github.run_id }}
           path: .lake/ensemble-export/first/
       - uses: actions/download-artifact@v4
         with:
-          name: ensemble-second-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-second-${{ github.run_id }}
           path: .lake/ensemble-export/second/
       - name: Verify provenance and deterministic inventory
         run: >-
@@ -388,7 +394,8 @@ jobs:
       - name: Publish verified Cargo inputs before compilation
         uses: actions/upload-artifact@v4
         with:
-          name: ensemble-verified-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-verified-${{ github.run_id }}
+          overwrite: true
           path: .lake/ensemble-export/verified/
           if-no-files-found: error
           retention-days: 14
@@ -420,7 +427,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: ensemble-verified-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ensemble-verified-${{ github.run_id }}
           path: .lake/ensemble-export/verified/
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2

@@ -56,6 +56,16 @@ class FullValidationTests(unittest.TestCase):
         flattened = {name: count for group in rust_groups().values() for name, count in group.items()}
         self.assertEqual(flattened, RUST_TESTS)
 
+    def test_artifact_handoffs_survive_rerunning_only_failed_jobs(self):
+        workflow = (SCRIPTS.parent / ".github/workflows/lean_action_ci.yml").read_text()
+        downloads = re.findall(r"uses: actions/download-artifact@v4\n        with:\n          name: (.+)", workflow)
+        self.assertEqual(len(downloads), 4)
+        for name in downloads:
+            self.assertIn("github.run_id", name)
+            self.assertNotIn("github.run_attempt", name)
+        for stem in ["driver", "${{ matrix.generation }}", "verified"]:
+            self.assertIn("name: ensemble-" + stem + "-${{ github.run_id }}\n          overwrite: true", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
