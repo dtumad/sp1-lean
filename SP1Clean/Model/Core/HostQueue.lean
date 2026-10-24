@@ -103,11 +103,7 @@ theorem HostState.executeKind_hintSuffix {host : HostState} {policy : HostPolicy
     obtain ⟨_, _, _, _, _, written, rfl⟩ :=
       (host.execute_write_iff policy context arg1 arg2 effect).mp success
     exact HostState.writeOutput_hintSuffix written
-  | verifyProof =>
-    simp only [HostState.executeKind, bind, Option.bind_eq_some_iff, Option.some.injEq] at success
-    obtain ⟨_, _, _, _, rfl⟩ := success
-    exact ⟨[], rfl⟩
-  | enterUnconstrained | hintLength => cases success; exact ⟨[], rfl⟩
+  | enterUnconstrained | hintLength | verifyProof => cases success; exact ⟨[], rfl⟩
   | halt | commit | commitDeferred =>
     simp only [HostState.executeKind] at success
     split_ifs at success

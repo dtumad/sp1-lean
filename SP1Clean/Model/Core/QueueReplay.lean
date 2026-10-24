@@ -38,16 +38,11 @@ private theorem HostState.executeKind_hints_eq {host : HostState} {policy : Host
   cases kind with
   | write => exact (notWrite rfl).elim
   | hintRead => exact (notRead rfl).elim
-  | enterUnconstrained | hintLength => cases success; rfl
+  | enterUnconstrained | hintLength | verifyProof => cases success; rfl
   | halt | commit | commitDeferred =>
     simp only [HostState.executeKind] at success
     split_ifs at success
     cases success
-    rfl
-  | verifyProof =>
-    simp only [HostState.executeKind, bind, Option.bind_eq_some_iff] at success
-    obtain ⟨key, _, values, _, equal⟩ := success
-    cases equal
     rfl
 
 /-- A successful nonallocating host call agrees with its label's checked byte-queue action. -/

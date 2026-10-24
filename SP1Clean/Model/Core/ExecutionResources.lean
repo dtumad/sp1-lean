@@ -32,16 +32,15 @@ def hintPayloadCost (hints : List Bytes) : ℕ := 8 + (hints.map bytePayloadCost
 def HookReply.payloadCost (reply : HookReply) : ℕ :=
   4 + bytePayloadCost reply.request.input + hintPayloadCost reply.hints
 
-/-- Request tags and logical buffers are counted even when guest addresses overlap. -/
-def HostRequest.payloadCost : HostRequest → ℕ
-  | .hook request => 1 + 4 + bytePayloadCost request.input
-  | .proof request => 1 + bytePayloadCost request.verificationKey + bytePayloadCost request.publicValues
+/-- Hook requests retain their descriptor and observed guest buffer. -/
+def HookRequest.payloadCost (request : HookRequest) : ℕ :=
+  4 + bytePayloadCost request.input
 
 /-- Host boundary payload, including pending replies, recorded requests, banks and exit status. -/
 def HostState.payloadCost (host : HostState) : ℕ :=
   hintPayloadCost host.io.hints + bytePayloadCost host.io.publicOutput +
     8 + (host.replies.map HookReply.payloadCost).sum +
-    64 + 8 + (host.requests.map HostRequest.payloadCost).sum +
+    64 + 8 + (host.requests.map HookRequest.payloadCost).sum +
     bytePayloadCost host.stdout + bytePayloadCost host.stderr + 5
 
 /-- Canonical live nonzero RAM addresses in the represented Sail domain. -/

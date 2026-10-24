@@ -77,7 +77,7 @@ theorem changingQueue :
       some ⟨[3, 2, 0, 1, 3, BitVec.allOnes 64],
         [[9, 8, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],
          [7, 0, 0, 0, 0, 0, 0, 0], [1, 2, 3, 0, 0, 0, 0, 0]],
-        4, some [], [], 4, 5, 2, 0, some 0⟩ := by native_decide
+        4, some [], [], 4, 5, 1, 0, some 0⟩ := by native_decide
 
 /-- Both banks agree with the selected call fold through all eight kinds, including hook
 writes and VERIFY. Nonzero untouched slots survive; reversing repeated writes changes the result.

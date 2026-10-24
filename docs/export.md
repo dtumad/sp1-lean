@@ -38,7 +38,7 @@ interpreter or scheduler.
   native discriminants export as metadata; no Rust source parser or generated Lean enum is needed.
 - All 25 supported instruction families export through the same built-in path. Rust compares
   generated witnesses, local constraint satisfaction and complete
-  interaction multisets with SP1 v6.9.0's supervisor AIR, including padding and column mutations.
+  interaction multisets with SP1 v6.10.0's supervisor AIR, including padding and column mutations.
   Multi-opcode components use explicit selectors without hints. Comparisons retain repeated and
   zero-multiplicity messages, including the multiplication gadget's caller-supplied result word.
   Both Cargo configurations, with and without `mprotect`, run these tests; user-mode and
@@ -195,7 +195,7 @@ with SP1; separate tests cover the native model's sparse, unordered addresses. T
 `ToClean.Air.MessageIndex` helper expresses first-match routing in Clean's existing witness IR;
 its scheduler rechecks the complete payload. A scalable sparse index remains an upstream optimization.
 
-The reviewed upgrade target is [SP1 v6.9.0](https://github.com/succinctlabs/sp1/releases/tag/v6.9.0).
+The reviewed upgrade target is [SP1 v6.10.0](https://github.com/succinctlabs/sp1/releases/tag/v6.10.0).
 The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,
 independently of extraction. Cargo and the reviewed coverage record must agree with the release
 revision in provenance.json. This is the only supported SP1 pin; old generated evidence is
@@ -208,7 +208,15 @@ boundary. Guest public-output bytes are separate from the executor's bounded std
 snapshots. `HINT_READ` always writes a final padded word, including for zero or word-aligned lengths;
 ordinary memory-initialization events do not add an empty word. The released executor regressions
 in `rust/sp1-comparison/tests/release_semantics.rs` check these byte boundaries and instruction
-execution behavior. They do not prove translation from ELF or executor equivalence.
+execution behavior, including `REMW(INT32_MIN, -1) = 0` after a nonzero remainder. Default Linux
+x86 checks use the JIT; the mprotect build uses portable execution. They do not prove translation
+from ELF or executor equivalence.
+
+Default SP1 verification accepts only exit zero. `Semantics.ReleasePolicy.acceptsExit` states this
+separate release-facing policy; exported reference cases compare it with `StatusCode::ANY`.
+Nonzero-HALT execution and native AIR tests remain valid operational checks. Experimental
+acceptance is not enabled implicitly. VERIFY ignores its pointers in both minimal execution and
+constrained replay, so the native host has no verification-buffer or proof-request machinery.
 
 The migration must cover:
 

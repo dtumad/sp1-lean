@@ -1,12 +1,10 @@
 import SP1Clean.FormalModel.Contracts.HostRamAccess
-import Clean.Gadgets.Boolean
 
-/-! # Sharing one physical host RAM read
+/-! # A physical host RAM read
 
-WRITE requests each covered cell once. The two VERIFY_SP1_PROOF buffers can overlap and
-request a cell twice. A read row preserves the word, advances its physical Memory record once,
-and supplies one or two logical reads of that same word. Buffer coverage and call identity are
-established by the consuming tables, not by this provider's local contract.
+Each covered WRITE cell preserves its word, advances the physical Memory record once and
+supplies one logical read. Buffer coverage and call identity are established by the consuming
+tables, not by this provider's local contract. Released VERIFY makes no RAM requests.
 -/
 
 namespace SP1Clean.HostRamReadChip
@@ -15,7 +13,6 @@ open Circuit
 
 structure Inputs (F : Type) where
   ram : HostRamAccessChip.Inputs F
-  shared : F
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
@@ -48,10 +45,10 @@ def Inputs.message {R : Type} [Add R] [Mul R] [OfNat R 65536] [One R]
   ⟨input.ram.clk_high, input.ram.clockLow, input.ram.addr0, input.ram.addr1,
     input.ram.addr2, input.ram.new_value⟩
 
-/-- One bounded, value-preserving transfer, serving one or two consumers. -/
+/-- One bounded, value-preserving transfer serving one consumer. -/
 def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop :=
   HostRamAccessChip.Spec input.ram ∧
-    input.ram.new_value = input.ram.access.prev_value ∧ IsBool input.shared
+    input.ram.new_value = input.ram.access.prev_value
 
 /-- All outgoing read guarantees follow from the physical access's local contract. -/
 theorem Spec.message {p : ℕ} [Fact p.Prime] {input : Inputs (ZMod p)}

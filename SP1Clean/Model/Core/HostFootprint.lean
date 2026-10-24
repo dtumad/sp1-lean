@@ -5,7 +5,7 @@ import SP1Clean.Model.Core.MemorySpan
 
 The footprint is computed from the decoded call and actual observations. Register inputs include
 WRITE's x12; RAM cells cover all requested bytes and every emitted write byte, including hint
-padding. Shared cells occur once even when the two proof-request buffers overlap. Matching the
+padding. Each shared cell occurs once in the physical cover. Matching the
 observations on this finite footprint suffices to replay the same host execution.
 
 This is the semantic contract for host AIR accesses. It does not supply those AIR rows, their
@@ -38,7 +38,6 @@ def HostExecution.readSpans? (execution : HostExecution) (context : HostReadCont
     Option (List MemorySpan) :=
   match execution.kind with
   | .write => (context.register 12).map fun length => [⟨execution.arg2.toNat, length.toNat⟩]
-  | .verifyProof => some [⟨execution.arg1.toNat, 32⟩, ⟨execution.arg2.toNat, 32⟩]
   | _ => some []
 
 def HostExecution.writeSpans (execution : HostExecution) : List MemorySpan :=
@@ -111,18 +110,7 @@ theorem HostState.readSpans_observed {host : HostState} {policy : HostPolicy}
       subst reads
       simpa only [List.mem_singleton, forall_eq] using (⟨bytes, fetched⟩ : ∃ bytes,
         context.readGuest? policy.memory execution.arg2.toNat length.toNat = some bytes)
-  | verifyProof =>
-      rw [kind] at executed
-      simp only [HostState.executeKind, bind, Option.bind_eq_some_iff, Option.some.injEq] at executed
-      obtain ⟨key, keyRead, values, valuesRead, _⟩ := executed
-      simp only [HostExecution.readSpans?, kind, Option.some.injEq] at spans
-      subst reads
-      intro span member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl
-      · exact ⟨key, keyRead⟩
-      · exact ⟨values, valuesRead⟩
-  | halt | enterUnconstrained | commit | commitDeferred | hintLength | hintRead =>
+  | halt | enterUnconstrained | commit | commitDeferred | hintLength | hintRead | verifyProof =>
       simp only [HostExecution.readSpans?, kind, Option.some.injEq] at spans
       subst reads
       simp
@@ -198,13 +186,7 @@ theorem HostState.run_congr_of_footprint {host : HostState} {policy : HostPolicy
         obtain ⟨length, observed, rfl⟩ := spans
         have bytes := readAgree ⟨execution.arg2.toNat, length.toNat⟩ (by simp)
         simp only [HostState.executeKind, observed, ← lengthAgree, bind, Option.bind_some, bytes]
-    | verifyProof =>
-        simp only [HostExecution.readSpans?, kind, Option.some.injEq] at spans
-        subst reads
-        have key := readAgree ⟨execution.arg1.toNat, 32⟩ (by simp)
-        have values := readAgree ⟨execution.arg2.toNat, 32⟩ (by simp)
-        simp only [HostState.executeKind, key, values]
-    | halt | enterUnconstrained | commit | commitDeferred | hintLength | hintRead => rfl
+    | halt | enterUnconstrained | commit | commitDeferred | hintLength | hintRead | verifyProof => rfl
   have binding := (host.run_eq_some_iff policy left execution).mp run
   apply (host.run_eq_some_iff policy right execution).mpr
   refine ⟨binding.1, ?_, ?_, ?_, binding.2.2.2.2.1, sameEffect ▸ binding.2.2.2.2.2⟩

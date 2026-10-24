@@ -2,11 +2,10 @@ import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
 import Clean.Air.Balance
 
-/-! # Physical and logical ledgers of shared host reads
+/-! # Physical and logical ledgers of host reads
 
-One prior/new Memory pair survives composition, regardless of sharing. The lower-level
-coordination pair cancels internally. Logical reads use separate unit-weight messages, so
-the global count guard counts each possible copy.
+One prior/new Memory pair survives composition. The lower-level coordination pair cancels
+internally; exactly one unit-weight read message remains.
 -/
 
 namespace SP1Clean.HostRamReadChip
@@ -29,26 +28,15 @@ private theorem equality_empty (target : RawChannel (ZMod p))
 private theorem ram_main : (HostRamAccessChip.circuit (p := p)).main =
     HostRamAccessChip.main := rfl
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem boolean_empty (target : RawChannel (ZMod p))
-    (input : Var field (ZMod p)) (offset : ℕ) :
-    (FlatOperation.interactions (assertBool.toSubcircuit offset input).ops.toFlat).filter
-        (fun (interaction : AbstractInteraction (ZMod p)) => decide (interaction.channel = target)) =
-      [] := by
-  exact InteractionRecovery.filter_interactions_formalAssertion_eq_nil
-    assertBool target input List.not_mem_nil List.not_mem_nil
-
 theorem main_memory_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith memoryChannel.toRaw =
       [(memoryChannel.pulled input.ram.prior).toRaw,
        (memoryChannel.pushed input.ram.pushed).toRaw] := by
   have ram := HostRamAccessChip.main_memory_interactions (p := p)
   simp only [main, circuit_norm, List.nil_append]
-  have boolean := boolean_empty (p := p)
-  simp only [circuit_norm] at boolean
   simp only [Operations.interactionsWith, Circuit.operations] at ram ⊢
   simp only [GeneralFormalCircuit.toSubcircuit_interactions, ram_main, ram, equality_empty,
-    boolean, List.nil_append]
+    List.nil_append]
   simp [circuit_norm, channel, HostRamAccessChip.channel, memoryChannel]
 
 theorem main_access_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -57,27 +45,22 @@ theorem main_access_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
        (HostRamAccessChip.channel.pulled input.ram.message).toRaw] := by
   have ram := HostRamAccessChip.main_host_interactions (p := p)
   simp only [main, circuit_norm, List.nil_append]
-  have boolean := boolean_empty (p := p)
-  simp only [circuit_norm] at boolean
   simp only [Operations.interactionsWith, Circuit.operations] at ram ⊢
   simp only [GeneralFormalCircuit.toSubcircuit_interactions, ram_main, ram, equality_empty,
-    boolean, List.nil_append]
+    List.nil_append]
   simp [circuit_norm, channel, HostRamAccessChip.channel]
 
 theorem main_read_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).interactionsWith channel.toRaw =
-      [(channel.pushed input.message).toRaw,
-       (channel.pushedIf input.shared input.message).toRaw] := by
+      [(channel.pushed input.message).toRaw] := by
   have ram (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
     HostRamAccessChip.circuit.base channel.toRaw input.ram n
     (by simp [HostRamAccessChip.circuit, HostRamAccessChip.elaborated,
       circuit_norm, channel, HostRamAccessChip.channel, memoryChannel, byteChannel])
   simp only [main, circuit_norm, List.nil_append]
-  have boolean := boolean_empty (p := p)
-  simp only [circuit_norm] at boolean
   simp only [Operations.interactionsWith, Circuit.operations] at ram ⊢
   simp only [GeneralFormalCircuit.toSubcircuit_interactions, ram, equality_empty,
-    boolean, List.nil_append]
+    List.nil_append]
   simp [circuit_norm, channel, HostRamAccessChip.channel]
 
 theorem memory_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
@@ -96,10 +79,9 @@ theorem access_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Enviro
 
 theorem read_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
     ((main input).operations offset).interactionValuesWith channel.toRaw env =
-      [channel.pushedValue (Eval.eval env input.message),
-       channel.pushedIfValue (env input.shared) (Eval.eval env input.message)] := by
+      [channel.pushedValue (Eval.eval env input.message)] := by
   simp only [Operations.interactionValuesWith, main_read_interactions,
-    List.map_cons, List.map_nil, Channel.eval_pushed, Channel.eval_pushedIf, ProvableType.eval_field]
+    List.map_cons, List.map_nil, Channel.eval_pushed]
 
 /-- A read row has no net access-coordination demand, for every environment. -/
 theorem access_balance (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))

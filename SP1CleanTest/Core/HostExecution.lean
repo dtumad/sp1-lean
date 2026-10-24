@@ -63,7 +63,7 @@ private def hookHost : HostState :=
 /-- Replies bind both descriptor and observed bytes, are consumed once, and preserve queue order. -/
 theorem hookReplies :
     (run hookHost .write 15 65537 (some 2)).map (·.effect.state) =
-      some { io := ⟨[[3], [4], [9]], [42]⟩, requests := [.hook ⟨15, [1, 2]⟩] } ∧
+      some { io := ⟨[[3], [4], [9]], [42]⟩, requests := [⟨15, [1, 2]⟩] } ∧
     run hookHost .write 16 65537 (some 2) = none ∧
     run hookHost .write 15 65538 (some 2) = none ∧
     run {} .write 15 65537 (some 2) = none := by native_decide
@@ -77,13 +77,14 @@ theorem commitmentUpdates :
     run {} .commit 0 0x100000000 = none ∧
     run {} .commitDeferred 0 (BitVec.ofNat 64 SP1Prime) = none := by native_decide
 
-/-- Verification requests record both actual 32-byte inputs without asserting proof acceptance. -/
-theorem proofObservations :
-    (run {} .verifyProof 65536 65568).map (·.effect.state.requests) =
-      some [.proof ⟨(List.range 32).map (BitVec.ofNat 8),
-        (List.range 32).map (fun index => BitVec.ofNat 8 (32 + index))⟩] ∧
-    (run {} .verifyProof 65536 65568).map (·.effect.write) = some none ∧
-    run {} .verifyProof 65536 65569 = none := by native_decide
+/-- VERIFY ignores invalid and overlapping pointers and preserves all host effects. -/
+theorem verifyNoOp :
+    (run hookHost .verifyProof 0 0).map (·.effect.state) = some hookHost ∧
+    (run hookHost .verifyProof 0xffffffffffffffff 0xffffffffffffffff).map (·.effect.state) =
+      some hookHost ∧
+    (run {} .verifyProof 65536 65569).map (·.effect.write) = some none ∧
+    (run {} .verifyProof 65536 65536).map (·.result) = some SyscallKind.verifyProof.code := by
+  native_decide
 
 /-- Every subsequent call is rejected after HALT; exit values use the canonical field range. -/
 theorem terminality :
@@ -201,7 +202,7 @@ private def continuationSource : HostState :=
   { io := ⟨[[1, 2], [3]], [41, 42]⟩
     committed := #v[10, 20, 30, 40, 50, 60, 70, 80]
     deferred := #v[101, 102, 103, 104, 105, 106, 107, 108]
-    requests := [.hook ⟨15, [7]⟩, .proof ⟨[8], [9]⟩]
+    requests := [⟨15, [7]⟩, ⟨16, [8, 9]⟩]
     replies := [⟨⟨16, [5]⟩, [[6]]⟩]
     stdout := [11, 12]
     stderr := [13] }

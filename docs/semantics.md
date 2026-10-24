@@ -70,8 +70,10 @@ it must not become a per-execution readiness condition in the public equivalence
 Host effects include padding writes, peak queue/output/request resources, ordered byte streams
 and fresh allocation history. Popping a hint does not authorize reusing its node.
 WRITE must distinguish exact 64-bit descriptor branches from low32 branches and authenticate
-x12, buffer reads, output, hints and hook replies. VERIFY authenticates both 32-byte reads,
-overlap and the request-bound reply interface; it does not prove cryptographic verification.
+x12, buffer reads, output, hints and hook replies. VERIFY follows released execution: both
+pointers are ignored, no memory is read, and no requests, replies or queue effects occur. Its
+normal return-register, PC and clock transition still belongs to the execution. It does not
+perform cryptographic verification.
 The proof statement includes one immutable public-output digest, one deferred-proof digest and
 their rolling flags. Every actual COMMIT or COMMIT_DEFERRED declaration must match its selected
 word and a set flag. Public-output words are u32s; deferred words must be canonical field elements.

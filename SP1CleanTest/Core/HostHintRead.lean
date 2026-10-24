@@ -22,7 +22,7 @@ private abbrev Fp := ZMod SP1Prime
 
 private def host (hints : List Bytes) : HostState :=
   { io := ⟨hints, [4, 5]⟩, committed := Vector.replicate 8 17, deferred := Vector.replicate 8 19,
-    stdout := [6], stderr := [7], requests := [.proof ⟨[8], [9]⟩] }
+    stdout := [6], stderr := [7], requests := [⟨15, [8, 9]⟩] }
 
 private def policy : HostPolicy := ⟨{ readOnly := fun _ => false }, SP1Prime⟩
 

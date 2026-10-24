@@ -22,7 +22,7 @@ private def prior : Channels.MemoryMsg Fp :=
   ⟨0, 16777215, 0, 1, 0, #v[65280, 32769, 255, 32766]⟩
 
 private def provider : HostRamReadChip.Inputs Fp :=
-  HostRamReadChip.populate prior 1 1 0 true
+  HostRamReadChip.populate prior 1 1 0
 
 private def evaluate (input : SP1Clean.HostRamBytes.Inputs Fp)
     (output : Vector Fp 8 := expected) : Bool × Ledger :=
@@ -49,13 +49,13 @@ theorem decodesBytes : (evaluate consumer).1 = true ∧
       !(evaluate consumer (expected.set! index (expected[index]! + 1))).1) = true := by
   native_decide
 
-/-- Two decoders consume both shared reads while retaining only one physical RAM update. -/
-theorem sharedDecoderLedger :
+/-- One decoder consumes the read while retaining one physical RAM update. -/
+theorem decoderLedger :
     let consumed := evaluate consumer
-    let ledger := produced.2 ++ consumed.2 ++ consumed.2
+    let ledger := produced.2 ++ consumed.2
     produced.1 = true ∧ consumed.1 = true ∧ readBalanced ledger = true ∧
     ((ledger.filter fun entry => entry.1 == "SP1Memory").map fun entry => entry.2.2) = [-1, 1] ∧
-    readBalanced (produced.2 ++ consumed.2) = false ∧
+    readBalanced produced.2 = false ∧
     readBalanced (ledger ++ consumed.2) = false := by native_decide
 
 /-- Byte-column changes and malformed channel guarantees fail the executable local checks. -/
@@ -75,7 +75,7 @@ theorem rejectsWrongReadKey :
         let changed := SP1Clean.HostRamBytes.populate read
         let output := SP1Clean.HostRamBytes.bytes (256 : Fp)⁻¹ changed
         let checked := evaluate changed output
-        checked.1 && !readBalanced (produced.2 ++ checked.2 ++ (evaluate consumer).2)) = true := by
+        checked.1 && !readBalanced (produced.2 ++ checked.2)) = true := by
   native_decide
 
 private def context : HostReadContext where

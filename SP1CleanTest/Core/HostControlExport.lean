@@ -1,4 +1,5 @@
 import SP1CleanTest.Core.ComponentExport
+import SP1Clean.Semantics.ReleasePolicy
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostEnterChip.Formal
@@ -66,7 +67,7 @@ private def rowReference {Input : TypeMap} [ProvableType Input]
         Lean.toJson (interaction.msg.toList.map (·.val))]))]
 
 /-- Lean constructor references authenticate the Rust field adapter and every physical occurrence. -/
-def reference : Lean.Json := Lean.toJson (
+def reference : Lean.Json := Lean.Json.mkObj [("rows", Lean.toJson (
   [rowReference "host_halt" HostHaltChip.circuit
       (HostHaltChip.populate (call 0 (SP1Prime - 1) (2 ^ 64 - 1) 0)),
    rowReference "host_enter" HostEnterChip.circuit (call 3 (2 ^ 64 - 1) 0 0)] ++
@@ -75,7 +76,10 @@ def reference : Lean.Json := Lean.toJson (
     rowReference (commitName deferred slot) (HostCommitChip.circuit deferred slot)
       (HostCommitChip.populate deferred (call code slot.val 131075 code) previous, 1)) ++
   [rowReference "host_commit_terminal" (HostCommitBoundary.terminal false) previous,
-   rowReference "host_deferred_terminal" (HostCommitBoundary.terminal true) previous])
+   rowReference "host_deferred_terminal" (HostCommitBoundary.terminal true) previous])),
+  ("releaseExitPolicy", Lean.toJson ([0, 1, 2, 3, 65536, SP1Prime - 1, 2 ^ 32 - 1].map
+    fun code : ℕ => Lean.Json.mkObj [("code", Lean.toJson code),
+      ("accepted", Lean.toJson (Semantics.ReleasePolicy.acceptsExit (BitVec.ofNat 32 code)))]))]
 
 private def hintExecution (hints : List Model.Core.Bytes) (kind : Model.Core.SyscallKind)
     (arg1 arg2 : ℕ) : Except String Model.Core.HostExecution :=
