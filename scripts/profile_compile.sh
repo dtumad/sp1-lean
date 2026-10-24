@@ -58,6 +58,9 @@ cd "$(dirname "$0")/.." || exit 1
 ROOT="$(pwd)"
 OUTDIR="${OUTDIR:-$ROOT/.lake/profile}"
 PREFIX="${1:-}"
+case "$PREFIX" in
+  LeanRV64D*) PREFIX=".lake/generated/sail/$PREFIX" ;;
+esac
 TREES="${TREES:-SP1Clean ToClean ToMathlib ToPolyFun}"
 TOP="${TOP:-50}"
 

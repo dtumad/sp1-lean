@@ -56,7 +56,7 @@ jobs:
           path: |
             .lake/sail-gen/opam
             .lake/sail-gen/compiler-revision
-          key: sail-toolchain-${{ runner.os }}-ocaml${{ steps.pins.outputs.OCAML_VERSION }}-${{ steps.pins.outputs.SAIL_SHA }}
+          key: sail-compiler-${{ runner.os }}-${{ steps.pins.outputs.SAIL_SHA }}-${{ steps.pins.outputs.OCAML_VERSION }}
 
       - name: Build or verify the pinned Sail compiler
         run: scripts/sail-config/generate_lean_rv64d.sh --deps
