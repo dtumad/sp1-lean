@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostFinalMemoryExecution
+import SP1Clean.Soundness.CommitmentEnsemble
 import SP1Clean.FormalModel.ShardMachine
 
 /-! # Raw acceptance of the installed native assembly as a Sail machine trace
@@ -14,9 +15,11 @@ SP1's concrete host interpreter on an ECALL committed in both the program and Sa
 The statement has no caller-supplied grounding, provider validity, syscall inactivity or
 readiness premise. `Endpoint` collects what the header and verifier endpoints fix about the
 actual final state of that trace, including all integer registers and the entire RAM map.
-This assembly has no commitment-declaration provider, so it accepts only shards without an
-active COMMIT/COMMIT_DEFERRED call. Complete outgoing-snapshot equality, WRITE/VERIFY
-installation and resource limits remain obligations of `SoundnessTarget` (#12).
+`trace_of_committed_statement` covers the assembly with the verifier-owned commitment statement
+installed, including COMMIT/COMMIT_DEFERRED calls; the bare assembly has no declaration provider
+and accepts no active commitment call. Agreement of the declarations with the immutable statement,
+complete outgoing-snapshot equality, WRITE/VERIFY installation and resource limits remain
+obligations of `SoundnessTarget` (#12).
 -/
 
 namespace SP1Clean.Soundness.Shard
@@ -67,18 +70,23 @@ structure Endpoint (source : ExecutionSnapshot) (outgoing : MemorySnapshot)
 variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
-/-- **Native soundness as a Sail trace.** If the installed assembly accepts `header`, the checked
-source is valid and is the header's incoming endpoint, and the SP1 Sail machine has a trace from
-it whose ordinary writes respect ROM protection and whose final state has the header's endpoint
-and the outgoing registers and RAM. -/
-theorem trace_of_statement (valid : image.Valid) {header : SP1PublicIO (ZMod p)}
-    (accepted : (installed image source outgoing final bankFinal channels).Statement header) :
-    ExecutionSourceValid image source ∧ header.SourceFor source ∧
-      ∃ (events : List ExecutionEvent) (target : ExecutionState),
-        (sp1Machine p image valid).Trace source.realize events target ∧
-        ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
-        Endpoint source outgoing final bankFinal header events target := by
-  obtain ⟨witness, rfl, constraints, balanced⟩ := accepted
+/-- What one accepted header proves: the checked source is valid and is the header's incoming
+endpoint, and the SP1 Sail machine has a trace from it whose ordinary writes respect ROM
+protection and whose final state has the header's endpoint and the outgoing registers and RAM. -/
+def SailTrace (image : ProgramImage) (valid : image.Valid) (source : ExecutionSnapshot)
+    (outgoing : MemorySnapshot) (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
+    (header : SP1PublicIO (ZMod p)) : Prop :=
+  ExecutionSourceValid image source ∧ header.SourceFor source ∧
+    ∃ (events : List ExecutionEvent) (target : ExecutionState),
+      (sp1Machine p image valid).Trace source.realize events target ∧
+      ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
+      Endpoint source outgoing final bankFinal header events target
+
+/-- Constraints and balance outside the commitment declarations already give the trace. -/
+theorem trace_of_witness (valid : image.Valid)
+    (witness : EnsembleWitness (installed image source outgoing final bankFinal channels))
+    (constraints : witness.Constraints) (balanced : HostFinalMemory.DeclarationsOpen witness) :
+    SailTrace image valid source outgoing final bankFinal witness.publicInput := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels (HostFinalMemory.baseWitness witness)
     (HostFinalMemory.sourceInterface source.host.io.hints outgoing)
     (HostFinalMemory.baseWitness_constraints witness constraints)
@@ -93,5 +101,34 @@ theorem trace_of_statement (valid : image.Valid) {header : SP1PublicIO (ZMod p)}
     { clock, pc, nextPC, increment, retired, preserved, runtime, registers, ram
       host := ⟨hints, decoded, host⟩
       exit }⟩
+
+/-- **Native soundness as a Sail trace.** Raw acceptance of the complete-memory assembly. Without
+a declaration provider this assembly accepts no active COMMIT/COMMIT_DEFERRED call. -/
+theorem trace_of_statement (valid : image.Valid) {header : SP1PublicIO (ZMod p)}
+    (accepted : (installed image source outgoing final bankFinal channels).Statement header) :
+    SailTrace image valid source outgoing final bankFinal header := by
+  obtain ⟨witness, rfl, constraints, balanced⟩ := accepted
+  exact trace_of_witness valid witness constraints (.of_balancedChannels balanced)
+
+/-- **Native soundness as a Sail trace, with the commitment statement.** Raw acceptance of the
+complete-memory assembly with the verifier-owned commitment statement installed above it, which
+admits COMMIT and COMMIT_DEFERRED calls. `lookupFree` is a static fact about the installed
+circuits, never about a witness: it lets the provider be forgotten although canonical prover
+data changes at its name. -/
+theorem trace_of_committed_statement (valid : image.Valid) {commitments : CommitmentStatement}
+    {fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
+      (installed image source outgoing final bankFinal channels).tables.map (·.circuit.name)}
+    (lookupFree : ∀ component ∈ (installed image source outgoing final bankFinal channels).tables,
+      component.operations.lookups = [])
+    {header : SP1PublicIO (ZMod p)}
+    (accepted : (CommitmentEnsemble.install commitments
+      (installed image source outgoing final bankFinal channels) fresh).Statement header) :
+    SailTrace image valid source outgoing final bankFinal header := by
+  obtain ⟨witness, rfl, constraints, balanced⟩ := accepted
+  rw [← CommitmentEnsemble.project_publicInput witness]
+  exact trace_of_witness valid (CommitmentEnsemble.project witness)
+    (CommitmentEnsemble.project_constraints witness lookupFree constraints)
+    (fun channel member different =>
+      CommitmentEnsemble.project_balancedChannel witness balanced channel member different)
 
 end SP1Clean.Soundness.Shard

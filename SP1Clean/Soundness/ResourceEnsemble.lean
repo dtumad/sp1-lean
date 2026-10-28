@@ -115,7 +115,7 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
   have spec := resource_spec witness balanced
   obtain ⟨events, actual, -, path, permitted, clock, pc, registers, ram, -⟩ :=
     HostFinalMemory.source_execution valid (baseWitness witness)
-      (baseWitness_constraints witness constraints) (baseWitness_balanced witness balanced)
+      (baseWitness_constraints witness constraints) (.of_balancedChannels (baseWitness_balanced witness balanced))
   rw [baseWitness_publicInput] at clock pc
   obtain ⟨endpoint, ticks, count⟩ := spec.path_work path clock
   exact ⟨events, actual, path, permitted, endpoint, ticks, count, spec, pc, registers, ram⟩
