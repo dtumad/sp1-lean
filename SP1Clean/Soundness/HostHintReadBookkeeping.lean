@@ -43,6 +43,7 @@ private theorem host_retirement (execution : HostExecution) (current : SailState
     execution.other_register_frame current pc Register.minstret (by decide) (by decide)]
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 local instance bookkeepingLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance bookkeepingLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 variable {image : ProgramImage} {source : ExecutionSnapshot}
@@ -50,8 +51,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem step_bookkeeping (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current next : ExecutionState} {row : ExecutionRow p}
     (atRow : carrier.ordered[n]? = some row)
     (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -78,8 +79,8 @@ private theorem step_bookkeeping (valid : image.Valid)
 policy and handling empty segments, inhibited counting, and wraparound uniformly. -/
 theorem GroundingCarrier.retirement (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) :
@@ -106,8 +107,8 @@ theorem GroundingCarrier.retirement (valid : image.Valid)
 preserve the incoming nextPC, including when HALT parks PC at its sentinel. -/
 theorem GroundingCarrier.nextPC (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) :

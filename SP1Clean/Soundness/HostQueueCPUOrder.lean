@@ -15,6 +15,7 @@ namespace SP1Clean.Soundness.HostQueueCPUOrder
 open Circuit Air.Flat Model.Core HostHintQueue HostQueueOrder HostHintReadLocal NativeCore Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance cpuClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance cpuLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -272,8 +273,8 @@ agreement from raw constraints and full balance. It retains arbitrary local CPU 
 Successful whole-host replay, Memory grounding, and outgoing snapshot binding remain separate. -/
 theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ cpu : List (ExecutionRow p), ∃ path : List (Row (p := p)),
       cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ∧
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -285,7 +286,7 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
       CurrentQueues witness.data source.host.io.hints (HintQueue.ofList source.host.io.hints).1 cpu path := by
   let retained := HostHintQueueBoundary.projected witness
   have checks : retained.Constraints := by exact HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have callBalance := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   obtain ⟨cpu, cpuExhaustive, cpuWalk⟩ := HostLocalCore.executionRows_ordered_of_orderingChannels retained checks ordering

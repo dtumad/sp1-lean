@@ -13,6 +13,7 @@ namespace SP1Clean.Soundness.HostHintReadTerminal
 open Circuit Air.Flat Channels Model.Core NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 local instance terminalLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance terminalClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
@@ -20,7 +21,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQu
 
 private theorem bound
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) : 57 < witness.tables.length := by
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) : 57 < witness.tables.length := by
   rw [← witness.same_length]
   change 57 < ((HostLocalCore.tables image source _).set 57 _).length
   rw [List.length_set, HostLocalCore.tables_length]
@@ -28,7 +29,7 @@ private theorem bound
 
 private theorem projected_rows
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) 2).table =
       (witness.tables[57]'(bound witness)).table := by
   change ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).tables[57]'_).table = _
@@ -40,7 +41,7 @@ private theorem projected_rows
 /-- The original carrier contains no active legacy HALT row. -/
 theorem legacy_rows_nil
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
     (constraints : witness.Constraints) :
     activeSystemRows (LocalCore.systemTable
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) 2)

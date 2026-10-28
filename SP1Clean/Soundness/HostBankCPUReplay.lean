@@ -15,6 +15,7 @@ namespace SP1Clean.Soundness.HostBankCPUReplay
 open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueCallProjection NativeCore Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 /-- Use Clean's field equality when projecting the original physical balance. -/
 local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
@@ -226,15 +227,15 @@ private theorem calls_projection_generic (deferred : Bool)
 /-- Selecting a bank from the complete physical handoff retains exactly its handler occurrences. -/
 theorem calls_projection (deferred : Bool)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap (stamped deferred)).Perm
       (((TransitionView.readIndexedActiveRows HostCommitBank.indices (HostCommitBank.view deferred)
           (HostHintReadBanks.bankTables deferred witness)).filterMap
         HostCommitBank.call?).map label) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   rw [HostHintReadBanks.calls_eq_slot_tables]
   have projected := calls_projection_generic deferred (HostHintQueueBoundary.projected witness) interface checks records.byte
     (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
@@ -349,8 +350,8 @@ private theorem cpu_ordered (deferred : Bool)
 the argument values and incoming clocks of repeated updates. -/
 theorem cpu_projection (deferred : Bool)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -362,7 +363,7 @@ theorem cpu_projection (deferred : Bool)
     cpu.filterMap (stampedCPU deferred witness.data) = calls.map label := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have handoff := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   rw [HostHintReadBanks.calls_eq_slot_tables deferred witness] at bankExhaustive
@@ -407,8 +408,8 @@ private theorem final_bank (deferred : Bool) (host target : HostState) :
 The CPU walk and successful replay here are supplied internally by the execution capstone. -/
 theorem replay_bank (deferred : Bool)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)

@@ -15,41 +15,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalByteLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance finalByteClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem not_required (component : Component (ZMod p))
-    (quiet : (component.circuit.channelsWithRequirements.map RawChannel.name).contains "SP1Byte" = false)
-    (env : Environment (ZMod p)) (checked : component.operations.ConstraintsHold env) :
-    component.operations.ChannelRequirements byteChannel.toRaw env := by
-  apply Operations.requirements_of_not_mem _ _ _ (component.inChannelsOrRequirements_of_constraints env checked)
-  intro member
-  have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) member)
-  change (component.circuit.channelsWithRequirements.map RawChannel.name).contains "SP1Byte" = true at present
-  rw [quiet] at present
-  contradiction
-
-private theorem checks_silent (target : MemorySnapshot) (channel : RawChannel (ZMod p))
-    (quiet : (FinalMemoryChecks.checkTables (p := p) target).all
-      (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true) :
-    ∀ component ∈ FinalMemoryChecks.checkTables target, channel ∉ component.circuit.channels := by
-  intro component member used
-  have silent := List.all_eq_true.mp quiet component member
-  rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
-  contradiction
-
-/-- The target consumers have a proved static host-resource interface. -/
-theorem targetInterface (target : MemorySnapshot)
-    {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
-    (interface : HostHintReadLocal.ExtensionInterface others resources) :
-    HostHintReadLocal.ExtensionInterface others (resources ++ FinalMemoryChecks.checkTables target) := by
-  apply interface.appendResources
-  · constructor
-    · intro component member env checked
-      simp only [FinalMemoryChecks.checkTables, List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl | rfl <;> exact not_required _ (by rfl) env checked
-    · exact checks_silent target stateChannel.toRaw (by rfl)
-  · exact checks_silent target HostCallChip.channel.toRaw (by rfl)
-  · exact checks_silent target HintReadWordChip.stateChannel.toRaw (by rfl)
-
 variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}

@@ -15,6 +15,7 @@ namespace SP1Clean.Soundness.HostHintReadLocal
 open Circuit Air.Flat Channels Model.Core Semantics HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance memoryLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance memoryLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -176,11 +177,11 @@ private theorem word_push_bound (last : Bool) (table : Table (ZMod p))
 /-- The installed source registry's non-word auxiliaries are statically Memory-silent. -/
 theorem source_memory_silent (source : ExecutionSnapshot) :
     ∀ component ∈ (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-      sourceResources source.host.io.hints,
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing),
       memoryChannel.toRaw ∉ component.circuit.channels := by
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
-      sourceResources source.host.io.hints).all
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (memoryChannel (p := p)).toRaw.name) = true := rfl
   intro component member used
@@ -190,12 +191,12 @@ theorem source_memory_silent (source : ExecutionSnapshot) :
 
 private theorem source_memoryBinary (source : ExecutionSnapshot) :
     ∀ component ∈ (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-      (wordResources ++ sourceResources source.host.io.hints),
+      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)),
       NativeCore.MemoryBinary component := by
   intro component member
   have split : component ∈ wordResources ∨ component ∈
       (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-        sourceResources source.host.io.hints := by
+        (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) := by
     simpa only [List.mem_append, or_assoc, or_left_comm, or_comm] using member
   rcases split with word | other
   · simp only [wordResources, List.mem_cons, List.not_mem_nil, or_false] at word
@@ -205,11 +206,11 @@ private theorem source_memoryBinary (source : ExecutionSnapshot) :
 /-- None of the installed source-backed hint components contributes a Program fetch. -/
 theorem source_program_silent (source : ExecutionSnapshot) :
     ∀ component ∈ (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-      (wordResources ++ sourceResources source.host.io.hints),
+      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)),
       programChannel.toRaw ∉ component.circuit.channels := by
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
-      (wordResources ++ sourceResources source.host.io.hints)).all
+      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (programChannel (p := p)).toRaw.name) = true := rfl
   intro component member used
@@ -225,11 +226,11 @@ theorem source_boundary_silent (source : ExecutionSnapshot)
       source.sail.memorySnapshot.registerTable.channel.toRaw,
       (InitialMemoryLookup.membership source.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw]) :
     ∀ component ∈ (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-      (wordResources ++ sourceResources source.host.io.hints),
+      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)),
       channel ∉ component.circuit.channels := by
   have checked : ((receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
-      (wordResources ++ sourceResources source.host.io.hints)).all
+      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         channel.name) = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at boundary
@@ -251,8 +252,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQu
 /-- The complete assembly's actual membership ledger survives both physical projections. -/
 theorem source_membership_balance
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ channel ∈ SnapshotMemoryEnsemble.membershipChannels source.sail.memorySnapshot,
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel channel := by
   intro channel known
@@ -270,13 +271,13 @@ theorem source_membership_balance
 supplying a channel interface or any Memory guarantee. -/
 theorem source_word_touches
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness)),
       HostRamTouches.AccessFacts (HintReadCoverage.rowInput row).ram :=
   word_touches (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing)
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced).byte
 
@@ -284,8 +285,8 @@ theorem source_word_touches
 There is no Memory guarantee, host-currentness, or multiplicity premise from the caller. -/
 theorem source_memory_records_perm
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
       (LocalCore.sourceWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
       producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
@@ -301,14 +302,14 @@ theorem source_memory_records_perm
 original instructions, refreshes, wrapper read-backs, and every physical hint word. -/
 theorem source_memory_push_bound (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ message ∈ producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness)),
       MemoryMsg.ClkBound message := by
   let retained := HostHintQueueBoundary.projected witness
   have checked : retained.Constraints := by exact HostHintQueueBoundary.projected_constraints witness constraints
   have byteBalanced := (HostHintQueueBoundary.record_channels witness balanced).byte
-  have bytes := byte_guarantees retained (source_interface source.host.io.hints) checked byteBalanced
+  have bytes := byte_guarantees retained (HostFinalMemory.sourceInterface source.host.io.hints outgoing) checked byteBalanced
   apply HostLocalCore.memoryInterior_push_bound valid retained checked bytes
   · change BalancedInteractions ((HostLocalCore.localWitness retained).interactionsWith programChannel.toRaw)
     rw [HostLocalCore.localWitness_program retained (source_program_silent source)]
@@ -318,7 +319,8 @@ theorem source_memory_push_bound (valid : image.Valid)
     have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
     rw [HostLocalCore.auxiliaryTables_components] at componentMem
     have split : table.component ∈ wordResources ∨ table.component ∈
-        (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++ sourceResources source.host.io.hints := by
+        (receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
+          (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) := by
       simpa only [List.mem_append, or_assoc, or_left_comm, or_comm] using componentMem
     have present : table ∈ retained.tables := List.mem_of_mem_drop member
     have tableChecked : table.Constraints := checked table present
@@ -339,8 +341,8 @@ theorem source_memory_push_bound (valid : image.Valid)
 record. This includes appended host accesses and uses no prior Memory guarantees. -/
 theorem source_memory_prior_bound (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ message ∈ consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness)),
       MemoryMsg.ClkBound message := by
   intro message member
@@ -349,7 +351,7 @@ theorem source_memory_prior_bound (valid : image.Valid)
   rcases List.mem_append.mp produced with sourceRecord | push
   · have checked := HostHintQueueBoundary.projected_constraints witness constraints
     have bytes := HostLocalCore.localWitness_byte (HostHintQueueBoundary.projected witness)
-      (auxiliaryInterface (source_interface source.host.io.hints)) checked
+      (auxiliaryInterface (HostFinalMemory.sourceInterface source.host.io.hints outgoing)) checked
       (HostHintQueueBoundary.record_channels witness balanced).byte
     have specs := LocalCore.sourceTables_spec_of_channels _
       (HostLocalCore.localWitness_constraints _ checked) bytes (source_membership_balance witness balanced)
@@ -361,8 +363,8 @@ theorem source_memory_prior_bound (valid : image.Valid)
 Both clock bounds now follow from the complete assembly's own constraints and balance. -/
 theorem source_word_order (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness)),
       MemoryMsg.timeNat (HintReadCoverage.rowInput row).ram.prior <
@@ -389,8 +391,8 @@ theorem source_word_order (valid : image.Valid)
 ordering channels, giving the full host Memory ledger its per-location frontier equation. -/
 theorem source_memory_frontier_balance
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (loc : MemLoc) :
     TimedGrounding.optMS (LocalCore.memoryInitialFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc) +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑(producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))) : Multiset _) =
@@ -398,7 +400,7 @@ theorem source_memory_frontier_balance
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑(consumedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))) : Multiset _) :=
   HostLocalCore.memory_frontier_balance (HostHintQueueBoundary.projected witness)
-    (auxiliaryInterface (source_interface source.host.io.hints))
+    (auxiliaryInterface (HostFinalMemory.sourceInterface source.host.io.hints outgoing))
     (source_boundary_silent source _ (List.mem_cons_self ..))
     (source_boundary_silent source _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
     (fun channel known => source_boundary_silent source channel (by

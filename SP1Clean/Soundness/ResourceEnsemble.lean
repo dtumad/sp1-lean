@@ -1,10 +1,10 @@
 import SP1Clean.Native.Operations.ResourceBoundary
 import SP1Clean.FormalModel.ShardResources
-import SP1Clean.Soundness.HostHintReadExecutionPath
+import SP1Clean.Soundness.HostFinalMemoryExecution
 
 /-! # Enforced endpoint resources for the installed mixed assembly
 
-The public resource circuit is installed above the existing source-hint assembly. Projection
+The public resource circuit is installed above the complete-memory host assembly. Projection
 retains all physical tables and every ledger occurrence, so all earlier grounding and endpoint
 theorems remain available. The new clock check bounds actual elapsed work and, for the native
 preset, actual event count. Arbitrarily tighter event limits need a separate event inventory check.
@@ -44,22 +44,18 @@ theorem checks_of_admissible {limits : ResourceLimits} {image : ProgramImage}
 variable [Fact (2 ^ 25 < p)]
 local instance resourceClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-/-- The current six-call assembly with actual endpoint-resource enforcement. -/
+/-- The current six-call complete-memory assembly with actual endpoint-resource enforcement. -/
 def ensemble (limits : ResourceLimits) (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (channels : List (RawChannel (ZMod p))) :
     Ensemble (ZMod p) SP1PublicIO :=
-  install limits source target (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) channels
-      (HostHintReadLocal.source_unique_names image source source.host.io.hints))
+  install limits source target (HostFinalMemory.Installed image source target.sail.memorySnapshot final bankFinal channels)
 
 /-- A derived proof view retains every table of the original installed assembly. -/
 def baseWitness {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     {channels : List (RawChannel (ZMod p))}
     (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels)) :
-    EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints) channels
-      (HostHintReadLocal.source_unique_names image source source.host.io.hints)) :=
+    EnsembleWitness (HostFinalMemory.Installed image source target.sail.memorySnapshot final bankFinal channels) :=
   (ResourceBoundary.checker limits source target).project witness
 
 /-- Original constraints remain available without unfolding the resource verifier at consumers. -/
@@ -95,8 +91,9 @@ theorem resource_spec {limits : ResourceLimits} {image : ProgramImage}
     (baseWitness witness).publicInput = witness.publicInput :=
   (ResourceBoundary.checker limits source target).project_publicInput witness
 
-/-- Constraints and balance yield the existing exhaustive path and literal resource bounds.
-The actual target is deliberately distinguished from the supplied snapshot until A4 binds it. -/
+/-- Constraints and balance yield the complete-memory path and literal resource bounds.
+The actual target is deliberately distinguished from the supplied snapshot until A4 binds it;
+its integer registers and RAM are already the supplied target's. -/
 theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     {channels : List (RawChannel (ZMod p))} (valid : image.Valid)
@@ -111,20 +108,17 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
         source.realize events) .ticks ≤ limits.ticks ∧
       8 * events.length ≤ target.clock - source.clock ∧
       ResourceBoundary.Spec limits source target witness.publicInput ∧
-      events.Perm ((LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected
-        (baseWitness witness)))).map NativeCore.ExecutionRow.event) ∧
       actual.sail.regs.get? LeanRV64D.Defs.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
-      ∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected
-          (baseWitness witness))) loc = some message →
-        locContent actual.sail loc = some (Word.toBitVec64 message.value) := by
+      (∀ index, actual.sail.get_reg? index = some (target.sail.memorySnapshot.read (.reg index))) ∧
+      actual.sail.mem = target.sail.memorySnapshot.memory.toSailMemory (2 ^ 48) := by
   have spec := resource_spec witness balanced
-  obtain ⟨events, actual, path, permitted, inventory, clock, pc, memory⟩ :=
-    HostHintReadCPU.source_execution valid (baseWitness witness)
+  obtain ⟨events, actual, -, path, permitted, clock, pc, registers, ram, -⟩ :=
+    HostFinalMemory.source_execution valid (baseWitness witness)
       (baseWitness_constraints witness constraints) (baseWitness_balanced witness balanced)
   rw [baseWitness_publicInput] at clock pc
   obtain ⟨endpoint, ticks, count⟩ := spec.path_work path clock
-  exact ⟨events, actual, path, permitted, endpoint, ticks, count, spec, inventory, pc, memory⟩
+  exact ⟨events, actual, path, permitted, endpoint, ticks, count, spec, pc, registers, ram⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 /-- The native tick ceiling implies its event ceiling without treating host calls as eight ticks. -/

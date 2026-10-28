@@ -89,11 +89,14 @@ theorem interactions (channel : RawChannel (ZMod p)) :
   · rfl
   · simpa only [List.length_map] using bound witness
 
-theorem balanced (balance : witness.BalancedChannels) : (project witness).BalancedChannels := by
-  intro channel member
+theorem balancedChannel (channel : RawChannel (ZMod p)) (balance : witness.BalancedChannel channel) :
+    (project witness).BalancedChannel channel := by
   change BalancedInteractions ((project witness).interactionsWith channel)
   rw [interactions]
-  exact balance channel member
+  exact balance
+
+theorem balanced (balance : witness.BalancedChannels) : (project witness).BalancedChannels :=
+  fun channel member => balancedChannel witness channel (balance channel member)
 
 theorem drop_tables (count : ℕ) (after : slot.index.val < count) :
     (project witness).tables.drop count = witness.tables.drop count :=
