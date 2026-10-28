@@ -1,12 +1,12 @@
-import SP1CleanTest.Alignment.Support.InstalledAssemblyLookups
+import SP1CleanTest.Alignment.Support.InstalledAssembly
 import SP1Clean.Soundness.Shard.Trace
 
 /-! # The exported assembly proves a Sail machine trace
 
-The complete production assembly used for export comparisons is lookup-free, so the generic
-committed-statement theorem applies to it with no remaining premise. Raw acceptance of a public
-header yields a trace of the PolyFun SP1 machine from the complete source snapshot, ending with the
-header's PC and clock and the context's outgoing registers and RAM.
+The complete production assembly used for export comparisons is an instance of `Shard.sail_trace`,
+with no remaining premise. Raw acceptance of a public header yields a trace of the PolyFun SP1
+machine from the complete source snapshot, ending with the header's PC and clock and the context's
+outgoing registers and RAM.
 -/
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
@@ -18,10 +18,6 @@ theorem trace_of_statement (context : Context) (valid : context.image.Valid) {he
     (accepted : (assembly context).Statement header) :
     Shard.SailTrace context.image valid context.source context.target context.finalHints context.finalHost
       header :=
-  Shard.trace_of_committed_statement valid
-    (fun component member => component_lookups context component (by
-      rw [tables_eq]
-      exact List.mem_append_left _ member))
-    accepted
+  Shard.sail_trace valid accepted
 
 end SP1CleanTest.Alignment.InstalledAssembly

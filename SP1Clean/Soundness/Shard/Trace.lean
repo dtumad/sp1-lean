@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostFinalMemoryExecution
 import SP1Clean.Soundness.CommitmentEnsemble
+import SP1Clean.Soundness.HostFinalMemoryLookups
 import SP1Clean.FormalModel.ShardMachine
 
 /-! # Raw acceptance of the installed native assembly as a Sail machine trace
@@ -16,7 +17,8 @@ The statement has no caller-supplied grounding, provider validity, syscall inact
 readiness premise. `Endpoint` collects what the header and verifier endpoints fix about the
 actual final state of that trace, including all integer registers and the entire RAM map.
 `trace_of_committed_statement` covers the assembly with the verifier-owned commitment statement
-installed, including COMMIT/COMMIT_DEFERRED calls; the bare assembly has no declaration provider
+installed, including COMMIT/COMMIT_DEFERRED calls, and `sail_trace` discharges its static
+lookup-freedom premise over SP1's field, giving the exported circuit's statement with no premise; the bare assembly has no declaration provider
 and accepts no active commitment call. Agreement of the declarations with the immutable statement,
 complete outgoing-snapshot equality, WRITE/VERIFY installation and resource limits remain
 obligations of `SoundnessTarget` (#12).
@@ -130,5 +132,22 @@ theorem trace_of_committed_statement (valid : image.Valid) {commitments : Commit
     (CommitmentEnsemble.project_constraints witness lookupFree constraints)
     (fun channel member different =>
       CommitmentEnsemble.project_balancedChannel witness balanced channel member different)
+
+/-- **The exported native circuit proves a Sail trace.** Over SP1's field, raw acceptance of the
+complete-memory assembly with the commitment statement installed gives a trace of the SP1 Sail
+machine from the valid source snapshot, ending at the header's endpoint with the outgoing
+registers and RAM. There is no premise beyond the checked program image. -/
+theorem sail_trace {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
+    {final : HostHintQueue.State (ZMod SP1Prime)} {bankFinal : HostState}
+    {channels : List (RawChannel (ZMod SP1Prime))} (valid : image.Valid)
+    {commitments : CommitmentStatement}
+    {fresh : (CommitmentDeclaration.source (p := SP1Prime) commitments).circuit.name ∉
+      (installed image source outgoing final bankFinal channels).tables.map (·.circuit.name)}
+    {header : SP1PublicIO (ZMod SP1Prime)}
+    (accepted : (CommitmentEnsemble.install commitments
+      (installed image source outgoing final bankFinal channels) fresh).Statement header) :
+    SailTrace image valid source outgoing final bankFinal header :=
+  trace_of_committed_statement valid (fun component member => HostFinalMemory.installed_lookups component member)
+    accepted
 
 end SP1Clean.Soundness.Shard
