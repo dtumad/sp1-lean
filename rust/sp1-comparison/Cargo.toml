@@ -65,7 +65,7 @@ name = "instruction_export"
 required-features = ["instruction-export"]
 
 [[test]]
-name = "symbolic_add_export"
+name = "symbolic_arithmetic_export"
 required-features = ["instruction-export"]
 
 [[test]]
@@ -105,5 +105,33 @@ name = "hint_source_export"
 required-features = ["clean-export"]
 
 [[test]]
-name = "installed_assembly_export"
+name = "assembly_boundaries_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_commitments_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_enter_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_halt_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_hint_read_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_hints_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_ordinary_export"
+required-features = ["instruction-export"]
+
+[[test]]
+name = "assembly_stopped_export"
 required-features = ["instruction-export"]

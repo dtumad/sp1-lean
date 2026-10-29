@@ -39,12 +39,18 @@ def enter : ReceiverView (HostCallChip.channel (p := p)) where
 
 def commit (deferred : Bool) (slot : Fin 8) : ReceiverView (HostCallChip.channel (p := p)) where
   component := { circuit := HostCommitChip.circuit deferred slot, Assumptions := (HostCommitChip.circuit deferred slot).Assumptions }
-  message env := eval env (varFromOffset HostCommitChip.Inputs 0).call
+  message env := eval env (varFromOffset HostCommitChip.RowInput 0).1.call
+  activity := (varFromOffset HostCommitChip.RowInput 0).2
+  activity_of_constraints := by
+    intro env valid
+    rw [Component.constraintsHold_iff] at valid
+    exact Guarded.activity_of_constraints (HostCommitChip.activeCircuit deferred slot) inferInstance
+      (varFromOffset HostCommitChip.RowInput 0) (size HostCommitChip.RowInput) env valid
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-    change ((HostCommitChip.main deferred slot (varFromOffset HostCommitChip.Inputs 0)).operations
-      (size HostCommitChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
-    exact HostCommitChip.host_values deferred slot _ _ env
+    change (((HostCommitChip.circuit deferred slot).main (varFromOffset HostCommitChip.RowInput 0)).operations
+      (size HostCommitChip.RowInput)).interactionValuesWith HostCallChip.channel.toRaw env = _
+    exact HostCommitChip.guarded_host_values deferred slot _ _ env
 
 def hintLength (empty : Bool) : ReceiverView (HostCallChip.channel (p := p)) where
   component := { circuit := HostHintLengthChip.circuit empty, Assumptions := (HostHintLengthChip.circuit empty).Assumptions }
@@ -72,11 +78,20 @@ theorem enter_message (env : Environment (ZMod p)) :
 /-- Each commitment receiver reads its row's complete call. -/
 theorem commit_message (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p)) :
     (HostCallReceivers.commit (p := p) deferred slot).message env =
-      (valueFromOffset HostCommitChip.Inputs 0 env).call := by
+      (valueFromOffset HostCommitChip.RowInput 0 env).1.call := by
   have evaluated (input : Var HostCommitChip.Inputs (ZMod p)) : eval env input.call = (eval env input).call := by
     cases input
     simp only [circuit_norm]
-  simp only [HostCallReceivers.commit, evaluated, eval_varFromOffset_valueFromOffset]
+  change eval env (varFromOffset HostCommitChip.RowInput 0).1.call = _
+  rw [evaluated]
+  have decoded := eval_varFromOffset_valueFromOffset HostCommitChip.RowInput 0 env
+  rw [CircuitType.eval_var_provablePair] at decoded
+  exact congrArg (fun input : HostCommitChip.Inputs (ZMod p) => input.call) (congrArg Prod.fst decoded)
+
+/-- A commitment receiver uses the same guard as its bank transition view. -/
+theorem commit_activity (deferred : Bool) (slot : Fin 8) :
+    (commit (p := p) deferred slot).activity = (varFromOffset HostCommitChip.RowInput 0).2 := by
+  simp only [commit]
 
 /-- The implemented non-RAM handlers: control, both eight-slot commitment families,
 and empty/nonempty HINT_LEN. HINT_READ adds its own receiver and RAM resources. -/

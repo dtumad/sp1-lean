@@ -48,9 +48,12 @@ def view (deferred : Bool) : Index → TransitionView (stateChannel (p := p) def
   | some slot => HostCommitHistory.view deferred slot
   | none => terminalView deferred
 
-private theorem view_activity (deferred : Bool) (index : Index) :
-    (view (p := p) deferred index).activity = .const 1 := by
-  cases index <;> rfl
+/-- Local semantic meaning is required only of active transitions. -/
+def RowSpec (deferred : Bool) (index : Index) (env : Environment (ZMod p)) : Prop :=
+  match index with
+  | some slot => Spec deferred slot (valueFromOffset RowInput 0 env).1
+  | none => (terminalView deferred).component.Spec env
+
 
 def views (deferred : Bool) := indices.map (view (p := p) deferred)
 def components (deferred : Bool) := (views (p := p) deferred).map (·.component)
@@ -63,7 +66,7 @@ theorem components_unique_names (deferred : Bool) :
     ((components (p := p) deferred).map (·.circuit.name)).Nodup := by
   cases deferred <;>
     simp [components, views, indices, view, terminalView, HostCommitHistory.view,
-      HostCommitChip.circuit, HostCommitBoundary.terminal, List.finRange]
+      HostCommitChip.circuit, Guarded.circuit, HostCommitChip.activeCircuit, HostCommitBoundary.terminal, List.finRange]
   all_goals decide
 
 abbrev Row := Index × Environment (ZMod p)
@@ -77,7 +80,7 @@ def execute (deferred : Bool) (policy : HostPolicy) (context : HostReadContext)
 
 /-- A bank terminal is administrative; each slot row carries its complete instruction handoff. -/
 def call? (row : Row (p := p)) : Option (HostCallChip.Message (ZMod p)) :=
-  row.1.map fun _ => (valueFromOffset Inputs 0 row.2).call
+  row.1.map fun _ => (valueFromOffset RowInput 0 row.2).1.call
 
 def executeCall (deferred : Bool) (policy : HostPolicy) (context : HostReadContext)
     (host : HostState) (call : HostCallChip.Message (ZMod p)) : Option HostState :=
@@ -111,7 +114,12 @@ theorem view_spec_of_byte (deferred : Bool) (index : Index) (env : Environment (
     (constraints : (view deferred index).component.operations.ConstraintsHold env)
     (byte : (view deferred index).component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
     (view deferred index).component.Spec env := by
-  have assumptions : (view deferred index).component.CircuitAssumptions env := by cases index <;> trivial
+  have assumptions : (view deferred index).component.CircuitAssumptions env := by
+    cases index with
+    | none => trivial
+    | some slot =>
+      change _ → True
+      exact fun _ => trivial
   apply (Component.weakSoundness assumptions constraints ?_).1
   rw [Operations.guarantees_iff _ _ _ ((view deferred index).component.inChannelsOrGuarantees env)]
   intro channel member
@@ -122,15 +130,26 @@ theorem view_spec_of_byte (deferred : Bool) (index : Index) (env : Environment (
     exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
   | some slot =>
     have metadata : (view (p := p) deferred (some slot)).component.circuit.channelsWithGuarantees =
-        [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw,
+        [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, CommitmentDeclaration.channel.toRaw,
           HostCallChip.channel.toRaw, (stateChannel deferred).toRaw] := by cases deferred <;> rfl
     rw [metadata] at member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl
+    rcases member with rfl | rfl | rfl | rfl | rfl
     · exact byte
     · exact byte
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [CommitmentDeclaration.channel, Channel.toRaw]) _ _
     · exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
     · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
+
+/-- A selected active call inherits the unguarded semantic contract. -/
+theorem commit_spec_of_byte (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p))
+    (constraints : (view deferred (some slot)).component.operations.ConstraintsHold env)
+    (byte : (view deferred (some slot)).component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
+    (active : env (varFromOffset RowInput 0).2 = 1) :
+    Spec deferred slot (valueFromOffset RowInput 0 env).1 := by
+  have checked := view_spec_of_byte deferred (some slot) env constraints byte
+  rw [Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at active
+  exact checked.2 active
 
 private theorem commit_strict (deferred : Bool) (slot : Fin 8) (input : Inputs (ZMod p))
     (valid : Spec deferred slot input) :
@@ -139,7 +158,7 @@ private theorem commit_strict (deferred : Bool) (slot : Fin 8) (input : Inputs (
   valid.2.1.2.2.2.2
 
 private theorem view_strict (deferred : Bool) (index : Index) (env : Environment (ZMod p))
-    (valid : (view deferred index).component.Spec env) :
+    (valid : RowSpec deferred index env) :
     Semantics.clkNat ((view deferred index).edge env).1.clk_high ((view deferred index).edge env).1.clk_low <
       Semantics.clkNat ((view deferred index).edge env).2.clk_high ((view deferred index).edge env).2.clk_low := by
   cases index with
@@ -161,19 +180,19 @@ private theorem commit_effect (deferred : Bool) (slot : Fin 8) (input : Inputs (
   rfl
 
 private theorem view_executes (deferred : Bool) (index : Index) (env : Environment (ZMod p))
-    (valid : (view deferred index).component.Spec env) (host : HostState)
+    (valid : RowSpec deferred index env) (host : HostState)
     (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext) :
     execute deferred policy context (((view deferred index).edge env).1.apply deferred host) (index, env) =
       some (((view deferred index).edge env).2.apply deferred host) := by
   cases index with
   | none => exact congrArg some (terminal_apply (valueFromOffset State 0 env) deferred host)
   | some slot =>
-    exact commit_effect deferred slot (valueFromOffset Inputs 0 env) valid host policy characteristic context
+    exact commit_effect deferred slot (valueFromOffset RowInput 0 env).1 valid host policy characteristic context
 
 private theorem fold_of_walk (deferred : Bool) (policy : HostPolicy)
     (characteristic : policy.characteristic = p) (context : HostReadContext) (host : HostState)
     (initial final : State (ZMod p)) (path : List (Row (p := p)))
-    (valid : ∀ row ∈ path, (view deferred row.1).component.Spec row.2)
+    (valid : ∀ row ∈ path, RowSpec deferred row.1 row.2)
     (walk : Walk.IsWalk (edge deferred) initial final path) :
     path.foldlM (execute deferred policy context) (initial.apply deferred host) =
       some (final.apply deferred host) := by
@@ -193,7 +212,7 @@ private theorem fold_of_walk (deferred : Bool) (policy : HostPolicy)
 
 private theorem history_of_balance (deferred : Bool) (rows : List (Row (p := p)))
     (initial final : State (ZMod p))
-    (valid : ∀ row ∈ rows, (view deferred row.1).component.Spec row.2)
+    (valid : ∀ row ∈ rows, RowSpec deferred row.1 row.2)
     (balanced : EndpointBalanced (↑rows) (edge deferred) initial final)
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) (host : HostState) :
@@ -208,35 +227,60 @@ private theorem history_of_balance (deferred : Bool) (rows : List (Row (p := p))
   intro row member
   exact valid row (perm.mem_iff.mp member)
 
-/-- Local bank-row specifications from the actual table checks and Byte guarantees. -/
-theorem rows_spec_of_byte (deferred : Bool) (tables : List (Table (ZMod p)))
+/-- Local bank-table specifications follow from constraints and Byte guarantees. -/
+theorem tables_spec_of_byte (deferred : Bool) (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun index table => (view deferred index).component = table.component) indices tables)
+    (constraints : ∀ table ∈ tables, table.Constraints)
+    (byte : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
+    ∀ table ∈ tables, table.Spec := by
+  intro table member row rowMember
+  have allSame : indices.map (fun index => (view deferred index).component) = tables.map (·.component) := by
+    have mapped : List.Forall₂ (· = ·) (indices.map (fun index => (view deferred index).component))
+        (tables.map (·.component)) := by
+      simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using aligned
+    simpa only [List.forall₂_eq_eq_eq] using mapped
+  have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+  rw [← allSame] at componentMem
+  obtain ⟨index, _, same⟩ := List.mem_map.mp componentMem
+  have checked := constraints table member row rowMember
+  have bytes := byte table member row rowMember
+  rw [← same] at checked bytes ⊢
+  exact view_spec_of_byte deferred index _ checked bytes
+
+/-- Every physical row inherits the guarded component contract. -/
+theorem physical_specs_of_byte (deferred : Bool) (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun index table => (view deferred index).component = table.component) indices tables)
     (constraints : ∀ table ∈ tables, table.Constraints)
     (byte : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
     ∀ row ∈ TransitionView.readIndexedRows indices tables,
       (view deferred row.1).component.Spec row.2 := by
-  have alignment : List.Forall₂ (fun view table => view.component = table.component) (views deferred) tables := by
-    simpa only [views, List.forall₂_map_left_iff] using aligned
-  have specs : ∀ table ∈ tables, table.Spec := by
-    intro table member row rowMember
-    have allSame : indices.map (fun index => (view deferred index).component) = tables.map (·.component) := by
-      have mapped : List.Forall₂ (· = ·) (indices.map (fun index => (view deferred index).component))
-          (tables.map (·.component)) := by
-        simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using aligned
-      simpa only [List.forall₂_eq_eq_eq] using mapped
-    have componentMem := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-    rw [← allSame] at componentMem
-    obtain ⟨index, _, same⟩ := List.mem_map.mp componentMem
-    have checked := constraints table member row rowMember
-    have bytes := byte table member row rowMember
-    rw [← same] at checked bytes ⊢
-    exact view_spec_of_byte deferred index _ checked bytes
-  exact TransitionView.readIndexedRows_spec indices (view deferred) tables alignment specs
+  exact TransitionView.readIndexedRows_spec indices (view deferred) tables
+    (by simpa only [List.forall₂_map_left_iff] using aligned)
+    (tables_spec_of_byte deferred tables aligned constraints byte)
+
+/-- Active physical rows retain their semantic transition; padding is not an execution step. -/
+theorem rows_spec_of_byte (deferred : Bool) (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun index table => (view deferred index).component = table.component) indices tables)
+    (constraints : ∀ table ∈ tables, table.Constraints)
+    (byte : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
+    ∀ row ∈ TransitionView.readIndexedActiveRows indices (view deferred) tables,
+      RowSpec deferred row.1 row.2 := by
+  intro row member
+  obtain ⟨physical, active⟩ := TransitionView.mem_readIndexedActiveRows.mp member
+  have checked := physical_specs_of_byte deferred tables aligned constraints byte row physical
+  rcases row with ⟨index, env⟩
+  cases index with
+  | none => exact checked
+  | some slot =>
+    simp only [view, HostCommitHistory.view_activity] at active
+    have decoded := Guarded.eval_activity env (varFromOffset (F := ZMod p) RowInput 0)
+    rw [eval_varFromOffset_valueFromOffset] at decoded
+    exact checked.2 (decoded.symm.trans active)
 
 /-- The complete bank path, including its terminal, is strictly ordered by successor clocks. -/
 theorem times_pairwise (deferred : Bool) {path : List (Row (p := p))}
     {initial final : State (ZMod p)} (walk : Walk.IsWalk (edge deferred) initial final path)
-    (valid : ∀ row ∈ path, (view deferred row.1).component.Spec row.2) :
+    (valid : ∀ row ∈ path, RowSpec deferred row.1 row.2) :
     (path.map fun row => Semantics.clkNat (edge deferred row).2.clk_high
       (edge deferred row).2.clk_low).Pairwise (· < ·) :=
   RankedGrounding.targetRanks_pairwise_of_isWalk (edge deferred)
@@ -251,14 +295,14 @@ private theorem call_time (deferred : Bool) (row : Row (p := p))
   cases index with
   | none => simp only [call?, Option.map_none, reduceCtorEq] at present
   | some slot =>
-    have same : (valueFromOffset Inputs 0 env).call = call := Option.some.inj present
+    have same : (valueFromOffset RowInput 0 env).1.call = call := Option.some.inj present
     rw [← same]
     simp only [edge, view, HostCommitHistory.view, Inputs.next]
 
 /-- The complete handoffs remain strictly chronological after erasing the terminal. -/
 theorem calls_pairwise (deferred : Bool) {path : List (Row (p := p))}
     {initial final : State (ZMod p)} (walk : Walk.IsWalk (edge deferred) initial final path)
-    (valid : ∀ row ∈ path, (view deferred row.1).component.Spec row.2) :
+    (valid : ∀ row ∈ path, RowSpec deferred row.1 row.2) :
     ((path.filterMap call?).map fun call => Semantics.clkNat call.clk_high call.clk_low).Pairwise (· < ·) := by
   apply List.pairwise_map.mpr
   apply (List.pairwise_map.mp (times_pairwise deferred walk valid)).filterMap
@@ -266,7 +310,7 @@ theorem calls_pairwise (deferred : Bool) {path : List (Row (p := p))}
   rw [call_time deferred a x hx, call_time deferred b y hy]
   exact ordered
 
-/-- The fixed local source and public final words determine a history of every physical bank row.
+/-- The fixed local source and public final words determine a history of every active bank row.
 Local specifications are derived from constraints and Byte guarantees, including at the terminal. -/
 theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
     (initialValues values : Vector (Word (ZMod p)) 8)
@@ -280,23 +324,19 @@ theorem ordered_history (deferred : Bool) (tables : List (Table (ZMod p)))
     (policy : HostPolicy) (characteristic : policy.characteristic = p)
     (context : HostReadContext) (host : HostState) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows indices tables) ∧
+      path.Perm (TransitionView.readIndexedActiveRows indices (view deferred) tables) ∧
       Walk.IsWalk (edge deferred) (HostCommitBoundary.start initialValues) (HostCommitBoundary.final values) path ∧
       path.foldlM (execute deferred policy context) ((HostCommitBoundary.start initialValues).apply deferred host) =
         some ((HostCommitBoundary.final values).apply deferred host) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component) (views deferred) tables := by
     simpa only [views, List.forall₂_map_left_iff] using aligned
   have localSpecs := rows_spec_of_byte deferred tables aligned constraints byte
-  have projected := TransitionView.readRows_interactions (views deferred) tables alignment
-  rw [views, TransitionView.readRows_eq_indexed] at projected
-  simp only [List.flatMap_map, view_activity] at projected
-  rw [projected] at balanced
-  change BalancedInteractions ((stateChannel deferred).transitionLedger (HostCommitBoundary.start initialValues)
-    (HostCommitBoundary.final values) (TransitionView.readIndexedRows indices tables) (edge deferred)) at balanced
-  have endpoints := ((stateChannel deferred).transitionLedger_balanced_iff _ _ _ _).mp balanced
-  have endpointBalance : EndpointBalanced (↑(TransitionView.readIndexedRows indices tables)) (edge deferred)
-      (HostCommitBoundary.start initialValues) (HostCommitBoundary.final values) := by
-    simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints.2
+  have specs := tables_spec_of_byte deferred tables aligned constraints byte
+  have endpoints := TransitionView.active_endpoints_perm indices (view deferred) tables
+    (HostCommitBoundary.start initialValues) (HostCommitBoundary.final values) alignment specs balanced
+  have endpointBalance : EndpointBalanced
+      (↑(TransitionView.readIndexedActiveRows indices (view deferred) tables)) (edge deferred)
+      (HostCommitBoundary.start initialValues) (HostCommitBoundary.final values) := Quot.sound endpoints
   exact history_of_balance deferred _ _ _ localSpecs endpointBalance policy characteristic context host
 
 end SP1Clean.Soundness.HostCommitBank

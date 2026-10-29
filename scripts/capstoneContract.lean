@@ -22,33 +22,35 @@ section Contract
 variable {p : ℕ} [Fact p.Prime]
 variable {PublicIO : TypeMap} [ProvableType PublicIO]
 variable (ensemble : Ensemble (ZMod p) PublicIO) (limits : ResourceLimits)
-  (image : ProgramImage) (source target : ExecutionSnapshot) (header : PublicIO (ZMod p))
+  (commitments : CommitmentStatement) (image : ProgramImage) (source target : ExecutionSnapshot) (header : PublicIO (ZMod p))
 
 example : ensemble.Statement header ↔
     ∃ witness : EnsembleWitness ensemble,
       witness.publicInput = header ∧ witness.Constraints ∧ witness.BalancedChannels := Iff.rfl
 
-example : SoundnessTarget ensemble limits image source target header =
+example : SoundnessTarget ensemble limits commitments image source target header =
     (∀ publicInput, True → ensemble.Statement publicInput →
       ∃ events, publicInput = header ∧
-        (∃ valid : ExecutionSourceValid image source,
+        ((∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
             source.realize events target.realize ∧
           ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events) ∧ nativeProfile limits p image source target events) := rfl
+            source.realize events) ∧ nativeProfile limits p image source target events) ∧
+        commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
-example : CompilerTarget ensemble limits image source target header =
+example : CompilerTarget ensemble limits commitments image source target header =
     EnsembleCompiler ensemble (List ExecutionEvent)
       (fun publicInput events => publicInput = header ∧
-        (∃ valid : ExecutionSourceValid image source,
+        ((∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
             source.realize events target.realize ∧
           ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events) ∧ nativeProfile limits p image source target events) := rfl
+            source.realize events) ∧ nativeProfile limits p image source target events) ∧
+        commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
-example (sound : SoundnessTarget ensemble limits image source target header)
-    (compiler : CompilerTarget ensemble limits image source target header) :
-    ensemble.Statement header ↔ ∃ events, AdmissibleExecution limits p image source target events :=
+example (sound : SoundnessTarget ensemble limits commitments image source target header)
+    (compiler : CompilerTarget ensemble limits commitments image source target header) :
+    ensemble.Statement header ↔ ∃ events, StatementExecution limits p commitments image source target events :=
   SP1Clean.Soundness.Shard.statement_iff sound compiler
 
 end Contract

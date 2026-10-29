@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Regenerate Clean exports twice and compare them with released SP1 in Rust."""
+import argparse
 from contextlib import contextmanager
 import fcntl
 import hashlib
@@ -7,39 +8,24 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
+from time import monotonic
 
 from check_release_surface import CHIPS
-from lean_flags import flags_for, load_lakefile
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD_TARGETS = [
-    "SP1CleanTest.Core.EnsembleExport",
-    "SP1CleanTest.Core.RangeProviderExport",
-    "SP1CleanTest.Core.SystemExport",
-    "SP1CleanTest.Core.SyscallExport",
-    "SP1CleanTest.Core.HostControlExport",
-    "SP1CleanTest.Core.InstructionExport",
-    "SP1CleanTest.Core.ByteProviderExport",
-    "SP1CleanTest.Core.SyscallCodeExport",
-    "SP1CleanTest.Core.SnapshotRegisterExport",
-    "SP1CleanTest.Core.StaticProviderExport",
-    "SP1CleanTest.Core.RamExport",
-    "SP1CleanTest.Core.ProgramExport",
-    "SP1CleanTest.Core.WritePermissionExport",
-    "SP1CleanTest.Core.HintSourceExport",
-    "SP1CleanTest.Alignment.Support.InstalledAssemblyExport",
-    "SP1CleanTest.Alignment.Support.StoppedAssemblyFixture",
-    "SP1CleanTest.Alignment.Support.HintReadAssemblyFixture"
-]
 RUST_TESTS = {
-    "clean_export": 17, "instruction_export": 26, "symbolic_add_export": 2, "system_export": 4,
-    "syscall_export": 7, "host_control_export": 7, "byte_provider_export": 6,
+    "clean_export": 17, "instruction_export": 26, "symbolic_arithmetic_export": 2, "system_export": 4,
+    "syscall_export": 7, "host_control_export": 8, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
-    "installed_assembly_export": 13,
+    "assembly_boundaries_export": 5, "assembly_stopped_export": 5,
+    "assembly_hint_read_export": 3, "assembly_halt_export": 3,
+    "assembly_commitments_export": 3, "assembly_ordinary_export": 3,
+    "assembly_hints_export": 4, "assembly_enter_export": 3,
 }
 
 
@@ -75,7 +61,15 @@ def artifact_names():
               "installed_hint_word_padding.rs", "installed_hint_word_padding.reference.json"]
     files += [name + suffix
               for name in ["installed_stopped_zero", "installed_stopped_wide",
-                           "installed_stopped_changed", "installed_fabricated_halt"]
+                           "installed_stopped_changed", "installed_fabricated_halt",
+                           "installed_halt_zero", "installed_halt_wide", "installed_halt_max",
+                           "installed_commit_repeat", "installed_deferred_repeat",
+                           "installed_commit_partial_halt", "installed_commit_complete_halt"]
+              for suffix in [".rs", ".reference.json"]]
+    files += [name + suffix
+              for name in ["installed_ordinary", "installed_ordinary_prefix", "installed_ordinary_suffix",
+                           "installed_ordinary_empty", "installed_hints_empty", "installed_hints_tail",
+                           "installed_hints_aligned", "installed_enter"]
               for suffix in [".rs", ".reference.json"]]
     return files
 
@@ -161,80 +155,186 @@ def check_rust_log(log, expected=RUST_TESTS):
     return binaries
 
 
-def generate(out, env):
-    build = run_logged(["lake", "build", "--wfail", "--iofail", *BUILD_TARGETS],
-                       out / "build.log", env)
+def write_json(path, value):
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def source_identity():
+    """Bind hand-offs to this checkout, including local edits and new source files."""
+    names = subprocess.check_output(
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"]
+    ).decode().split("\0")
+    content = hashlib.sha256()
+    for name in sorted(set(names) - {""}):
+        path = ROOT / name
+        # A tracked deletion is distinct from both the old file and an empty file.
+        content.update(name.encode() + b"\0")
+        content.update(digest(path).encode() if path.is_file() else b"deleted")
+        content.update(b"\0")
+    manifest = json.loads((ROOT / "lake-manifest.json").read_text())
+    clean = next(p for p in manifest["packages"] if p["name"] == "Clean")
+    return {
+        "sourceRevision": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True).strip(),
+        "sourceDigest": content.hexdigest(),
+        "cleanRevision": clean["rev"],
+        "sp1Revision": json.loads((ROOT / "scripts/provenance.json").read_text())["sp1"]["revision"],
+    }
+
+
+def timed_run(command, log, env):
+    """Keep GNU time's per-process-tree resource report separate from checked output."""
+    started = monotonic()
+    if sys.platform.startswith("linux"):
+        command = ["/usr/bin/time", "-v", "-o", str(log.with_suffix(".resources.log")), *command]
+    try:
+        return run_logged(command, log, env)
+    finally:
+        write_json(log.with_suffix(".timing.json"), {"seconds": monotonic() - started})
+
+
+def prepare(driver, env):
+    driver.mkdir(parents=True, exist_ok=True)
+    identity = source_identity()
+    build = timed_run(["lake", "build", "--wfail", "--iofail", "ensembleExport"],
+                      driver / "build.log", env)
     if "Build completed successfully" not in build:
-        raise RuntimeError(f"Incomplete dependency build; see {out}/build.log")
-    manifest = json.loads(Path("lake-manifest.json").read_text())
-    clean = next(package for package in manifest["packages"] if package["name"] == "Clean")
-    directory = Path(manifest["packagesDir"]) / "Clean"
+        raise RuntimeError(f"Incomplete dependency build; see {driver}/build.log")
+    manifest = json.loads((ROOT / "lake-manifest.json").read_text())
+    directory = ROOT / manifest["packagesDir"] / "Clean"
     revision = subprocess.check_output(
         ["git", "-C", str(directory), "rev-parse", "HEAD"], text=True).strip()
     dirty = subprocess.check_output(
         ["git", "-C", str(directory), "status", "--porcelain", "--untracked-files=no"], text=True)
-    if revision != clean["rev"] or dirty:
+    if revision != identity["cleanRevision"] or dirty:
         raise RuntimeError("Clean checkout differs from the pinned emitter/backend")
-    command = ["lake", "env", "lean", *flags_for(load_lakefile("lakefile.toml"), "SP1CleanTest"),
-               "scripts/ensembleExportFixture.lean"]
-    for directory in [out, out / "repeat"]:
-        directory.mkdir(exist_ok=True)
-        result = subprocess.run(command, env={**env, "ENSEMBLE_EXPORT_OUT": str(directory)},
-                                text=True, capture_output=True)
-        (directory / "lean.log").write_text(result.stdout + result.stderr)
-        if result.returncode or result.stderr or result.stdout != "EXPORTED ensemble Rust and Lean reference cases\n":
-            raise RuntimeError(f"Incomplete Lean export; see {directory}/lean.log")
+    if identity != source_identity():
+        raise RuntimeError("Source changed during exporter build")
+    executable = driver / "ensembleExport"
+    shutil.copy2(ROOT / ".lake/build/bin/ensembleExport", executable)
+    write_json(driver / "driver.json", {"source": identity, "executable": digest(executable)})
+
+
+def check_source(record):
+    if record["source"] != source_identity():
+        raise ValueError("Export provenance differs from the current source/pins")
+
+
+def artifact_hashes(directory):
     names = artifact_names()
     if len(names) != len(set(names)):
         raise ValueError("Duplicate expected export artifact")
-    for directory in [out, out / "repeat"]:
-        actual = {path.name for path in directory.iterdir() if path.suffix in {".rs", ".json"}}
-        if actual != set(names):
-            raise ValueError(f"Unexpected export inventory: {actual.symmetric_difference(names)}")
-    hashes = {}
-    for name in names:
-        content = (out / name).read_bytes()
-        if content != (out / "repeat" / name).read_bytes():
-            raise ValueError(f"Nondeterministic ensemble export: {name}")
-        hashes[name] = hashlib.sha256(content).hexdigest()
-    provenance = {
-        "cleanRevision": revision,
-        "sp1Revision": json.loads(Path("scripts/provenance.json").read_text())["sp1"]["revision"],
-        "sourceRevision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-        "artifacts": hashes,
-    }
-    (out / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
-    return hashes
+    actual = {p.name for p in directory.iterdir() if p.suffix in {".rs", ".json"}
+              and p.name not in {"generation.json", "provenance.json"}
+              and not p.name.endswith(".timing.json")}
+    if actual != set(names):
+        raise ValueError(f"Unexpected export inventory: {actual.symmetric_difference(names)}")
+    if any((directory / name).is_symlink() for name in names):
+        raise ValueError("Export artifacts must be regular files, not symlinks")
+    return {name: digest(directory / name) for name in names}
 
 
-def compare_rust(out, env):
-    """Keep the large assembly's compiler cost separate from component optimization."""
-    assembly = {"installed_assembly_export": RUST_TESTS["installed_assembly_export"]}
-    components = {name: count for name, count in RUST_TESTS.items() if name not in assembly}
-    groups = [
-        ("components", components, []),
-        ("assembly", assembly, [
-            "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
-            "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
-        ]),
-    ]
-    for features, name in [("instruction-export", "rust"),
-                           ("instruction-export,mprotect", "rust-mprotect")]:
+def generate(driver, out, env):
+    """One fresh generation; CI can run two independent copies of the same executable."""
+    record = json.loads((driver / "driver.json").read_text())
+    check_source(record)
+    executable = driver / "ensembleExport"
+    if executable.is_symlink() or digest(executable) != record["executable"]:
+        raise ValueError("Exporter executable differs from its build manifest")
+    # upload-artifact does not preserve executable mode.
+    executable.chmod(0o755)
+    out.mkdir(parents=True, exist_ok=False)
+    result = timed_run([str(executable)], out / "lean.log",
+                       {**env, "ENSEMBLE_EXPORT_OUT": str(out)})
+    if result != "EXPORTED ensemble Rust and Lean reference cases\n":
+        raise RuntimeError(f"Incomplete Lean export; see {out}/lean.log")
+    check_source(record)
+    write_json(out / "generation.json", {**record, "artifacts": artifact_hashes(out)})
+
+
+def verify(first, second, out):
+    """Authenticate both independent generations before publishing any Cargo input."""
+    records = [json.loads((path / "generation.json").read_text()) for path in [first, second]]
+    for path, record in zip([first, second], records):
+        check_source(record)
+        if record["artifacts"] != artifact_hashes(path):
+            raise ValueError(f"Fresh artifact hash mismatch: {path}")
+    if records[0] != records[1]:
+        raise ValueError("Nondeterministic exports or different exporter builds")
+    if first.resolve() == second.resolve():
+        raise ValueError("Two independent generation directories are required")
+    out.mkdir(parents=True, exist_ok=False)
+    stage_inputs(first, out, records[0]["artifacts"])
+    write_json(out / "provenance.json", {**records[0], "deterministic": True})
+    print(f"Verified {len(records[0]['artifacts'])} deterministic artifacts: {out}", flush=True)
+
+
+def validate_inputs(source):
+    record = json.loads((source / "provenance.json").read_text())
+    check_source(record)
+    if record.get("deterministic") is not True or record["artifacts"] != artifact_hashes(source):
+        raise ValueError("Cargo inputs lack matching deterministic export evidence")
+    return record["artifacts"]
+
+
+def rust_groups():
+    components = {name: count for name, count in RUST_TESTS.items() if not name.startswith("assembly_")}
+    return {"components": components, **{
+        name: {name: count} for name, count in RUST_TESTS.items() if name.startswith("assembly_")}}
+
+
+def compare_rust(out, env, group="all", configuration="all"):
+    groups = rust_groups()
+    if group != "all":
+        groups = {group: groups[group]}
+    configurations = {"default": "instruction-export", "mprotect": "instruction-export,mprotect"}
+    if configuration != "all":
+        configurations = {configuration: configurations[configuration]}
+    out.mkdir(parents=True, exist_ok=True)
+    for name, features in configurations.items():
         logs = []
-        for group, expected, options in groups:
+        for group_name, expected in groups.items():
+            options = [] if group_name == "components" else [
+                "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
+                "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
+            ]
             tests = [argument for test in expected for argument in ["--test", test]]
-            log = run_logged(["cargo", "test", "--locked", "--release", "--manifest-path",
-                              "rust/sp1-comparison/Cargo.toml", "--no-default-features",
-                              "--features", features, *options, *tests],
-                             out / f"{name}-{group}.log", env)
+            log = timed_run(["cargo", "test", "--locked", "--release", "--manifest-path",
+                            "rust/sp1-comparison/Cargo.toml", "--no-default-features",
+                            "--features", features, *options, *tests],
+                           out / f"{name}-{group_name}.log", env)
             check_rust_log(log, expected)
             logs.append(log)
         combined = "\n".join(logs)
-        check_rust_log(combined)
+        check_rust_log(combined, {test: n for tests in groups.values() for test, n in tests.items()})
         (out / f"{name}.log").write_text(combined)
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("stage", nargs="?", default="all",
+                        choices=["all", "prepare", "generate", "verify", "rust"])
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--driver", type=Path)
+    parser.add_argument("--first", type=Path)
+    parser.add_argument("--second", type=Path)
+    parser.add_argument("--inputs", type=Path)
+    parser.add_argument("--group", default="all", choices=["all", *rust_groups()])
+    parser.add_argument("--configuration", default="all", choices=["all", "default", "mprotect"])
+    args = parser.parse_args()
+    required = {"prepare": ["output"], "generate": ["driver", "output"],
+                "verify": ["first", "second", "output"], "rust": ["inputs", "output"]}
+    for name in required.get(args.stage, []):
+        if getattr(args, name) is None:
+            parser.error(f"{args.stage} requires --{name}")
+    for name in ["output", "driver", "first", "second", "inputs"]:
+        value = getattr(args, name)
+        if value is not None:
+            setattr(args, name, value.resolve())
     os.chdir(ROOT)
     root = ROOT / ".lake/ensemble-export"
     root.mkdir(parents=True, exist_ok=True)
@@ -243,24 +343,36 @@ def main():
            "CARGO_BUILD_JOBS": os.environ.get("CARGO_BUILD_JOBS", "2")}
     with exclusive_run(root / "inputs.lock"):
         subprocess.run([sys.executable, "scripts/check_pins.py"], env=env, check=True)
-        out = Path(tempfile.mkdtemp(prefix="run.", dir=root))
-        hashes = generate(out, env)
-        print(f"Fresh ensemble artifacts: {out}", flush=True)
-        inputs = root / "compile-inputs"
-        staging = stage_inputs(out, inputs, hashes)
-        (out / "compile-inputs.json").write_text(json.dumps({
-            "directory": str(inputs), "artifacts": hashes, **staging}, indent=2) + "\n")
-        print(f"Cargo inputs: {len(staging['changed'])} changed, "
-              f"{len(staging['removed'])} removed, {staging['unchanged']} unchanged", flush=True)
-        env["CLEAN_ENSEMBLE_EXPORT_DIR"] = str(inputs)
-        compare_rust(out, env)
-        print("PASS: deterministic Clean export, Rust backend regressions and released SP1 "
-              "instruction, system and Byte/Range provider comparisons")
+        if args.stage == "prepare":
+            prepare(args.output, env)
+        elif args.stage == "generate":
+            generate(args.driver, args.output, env)
+        elif args.stage == "verify":
+            verify(args.first, args.second, args.output)
+        else:
+            if args.stage == "all":
+                out = args.output or Path(tempfile.mkdtemp(prefix="run.", dir=root))
+                out.mkdir(parents=True, exist_ok=True)
+                prepare(out / "driver", env)
+                generate(out / "driver", out / "first", env)
+                generate(out / "driver", out / "second", env)
+                verify(out / "first", out / "second", out / "verified")
+                source = out / "verified"
+            else:
+                out, source = args.output, args.inputs
+            hashes = validate_inputs(source)
+            inputs = root / "compile-inputs"
+            staging = stage_inputs(source, inputs, hashes)
+            out.mkdir(parents=True, exist_ok=True)
+            write_json(out / "compile-inputs.json", {"artifacts": hashes, **staging})
+            env["CLEAN_ENSEMBLE_EXPORT_DIR"] = str(inputs)
+            compare_rust(out, env, args.group, args.configuration)
+        print(f"PASS: ensemble export {args.stage}", flush=True)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         sys.exit(1)

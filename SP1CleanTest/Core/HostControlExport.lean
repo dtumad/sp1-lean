@@ -11,7 +11,8 @@ import ToClean.Air.TableBuild
 
 These are the installed production components, with their complete declared channels. Rust
 compares active effects against released execution and retains the separate per-call receipt
-and shard-public contracts. Component rows have no inactive flag; zero rows are not padding.
+and shard-public contracts. Commitment rows have Boolean activity for padding; terminals
+and the other control handlers remain actual events.
 -/
 
 namespace SP1CleanTest.Core.HostControlExport
@@ -72,7 +73,7 @@ def reference : Lean.Json := Lean.toJson (
   [false, true].flatMap (fun deferred => (List.finRange 8).map fun slot =>
     let code := if deferred then 26 else 16
     rowReference (commitName deferred slot) (HostCommitChip.circuit deferred slot)
-      (HostCommitChip.populate deferred (call code slot.val 131075 code) previous)) ++
+      (HostCommitChip.populate deferred (call code slot.val 131075 code) previous, 1)) ++
   [rowReference "host_commit_terminal" (HostCommitBoundary.terminal false) previous,
    rowReference "host_deferred_terminal" (HostCommitBoundary.terminal true) previous])
 

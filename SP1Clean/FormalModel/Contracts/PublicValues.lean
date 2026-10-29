@@ -23,23 +23,13 @@ census will find them unreferenced in-tree, which is this design choice, not dea
 
 namespace SP1Clean
 
-/-- The State-bus endpoints and terminal cells committed by the current Clean ensemble —
-**split-limb form** (W3 D5-A, external report Finding 2). Each end carries its clock as the
-upstream `SP1Timestamp` `(16, 8, 8, 16)` limbs (`clk_0_16`/`clk_16_24`/`clk_24_32`/`clk_32_48`,
-ascending) plus the three 16-bit pc limbs; the folded State-bus pair is recovered by the
-`init_clk_high`/`init_clk_low`/`final_clk_high`/`final_clk_low` recombination projections below,
-so `Semantics.clkNat` call sites and the boundary State messages read exactly as before. The
-split is what lets the boundary verifier range-check every committed limb in-circuit
-(`sp1StateVerifier`'s byte pulls), making the initial State message's canonicity a theorem of the
-ensemble rather than an `InitialBoundaryFacts` premise — and it is the faithful shape: SP1's real
-public values commit timestamps in precisely these limbs.
+/-- Public endpoints of the native Clean ensemble. Clocks use `(16, 8, 8, 16)` limbs
+and PCs use three 16-bit limbs. The state verifier checks their canonical ranges.
 
-The three terminal fields mirror the corresponding cells of the 160-cell upstream record
-(`exit_code`, `is_execution_shard`, and the flattened 8×4-byte `committed_value_digest`).  They
-are **committed but deliberately unconstrained** by the boundary verifier, faithful to upstream:
-SP1's own AIR gives `exit_code` no independent range check (the halt row binds it to the reduced
-`op_b` word) and constrains the digest cells only on COMMIT rows.  Their meaning arrives with the
-halt/COMMIT-row semantics (semantics-gap campaign Track 2). -/
+`CommitmentBoundary` binds the digest bytes, deferred field elements and rolling flags to an
+immutable verifier-owned statement. Commitment calls authenticate individual declarations
+against it; partial segments need not cover every slot. Exit accounting is independent of the
+host's optional stopped status. This native interface is smaller than SP1's full shard record. -/
 structure SP1StateBoundary (F : Type) where
   init_clk_0_16 : F
   init_clk_16_24 : F
@@ -58,6 +48,12 @@ structure SP1StateBoundary (F : Type) where
   exit_code : F
   is_execution_shard : F
   committed_value_digest : Vector F 32
+  /-- Eight canonical deferred-proof field elements fixed by the statement. -/
+  deferredProofsDigest : Vector F 8
+  /-- Public commitment flag; it does not assert slot coverage or call existence. -/
+  commitSyscall : F
+  /-- Deferred commitment flag, bound to the same immutable statement. -/
+  commitDeferredSyscall : F
 deriving ProvableStruct
 provable_struct_eval_lemmas SP1StateBoundary
 
@@ -98,11 +94,8 @@ def SP1StateBoundary.LimbBounds {p : ℕ} [Fact p.Prime] (b : SP1StateBoundary (
 /-- Compatibility name used by the existing circuit layer. -/
 abbrev SP1PublicIO := SP1StateBoundary
 
-/-- Exact public-values type of the supported-core prefix theorem.  Naming the prefix explicitly
-records that this is still a strict prefix of the full 160-cell layout below: the ensemble
-constrains the State-bus boundary limbs in-circuit, while the terminal cells (`exit_code`,
-`is_execution_shard`, `committed_value_digest`) are committed carrier data awaiting their
-halt/COMMIT-row semantics. -/
+/-- Public interface of the supported-core theorem. Stronger host assemblies additionally
+install commitment, queue and terminal-boundary checks. -/
 abbrev SupportedCorePrefixPublicValues := SP1StateBoundary
 
 /-! ## The real SP1 shard public-values layout

@@ -68,7 +68,7 @@ private def tableFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
     (index : HostCommitBank.Index) : Table Fp :=
   match index with
   | some selected => Table.build { circuit := HostCommitChip.circuit deferred selected, Assumptions := (HostCommitChip.circuit deferred selected).Assumptions }
-      ((events.filter (fun event => event.1 == selected)).map (·.2)) (fun _ _ => #[]) (ProverHint.empty Fp)
+      ((events.filter (fun event => event.1 == selected)).map (fun event => (event.2, 1))) (fun _ _ => #[]) (ProverHint.empty Fp)
       (by exact (List.length_map _).le.trans ((List.length_filter_le ..).trans eventsBound))
   | none => Table.build { circuit := HostCommitBoundary.terminal deferred, Assumptions := (HostCommitBoundary.terminal deferred).Assumptions } terminals
       (fun _ _ => #[]) (ProverHint.empty Fp) terminalsBound
@@ -152,8 +152,8 @@ private def terminalChecked (deferred : Bool) (state : State Fp) : Bool :=
 theorem terminalClocks : [false, true].all (fun deferred =>
     terminalChecked deferred ⟨2 ^ 24 - 1, 2 ^ 24 - 1, Vector.replicate 8 0⟩ &&
     !(tableChecked (fun _ _ => #[]) (Table.build { circuit := HostCommitChip.circuit deferred 0, Assumptions := (HostCommitChip.circuit deferred 0).Assumptions }
-      [HostCommitChip.populate deferred ((calls deferred 0)[0]!).call
-        (HostCommitBoundary.final (Vector.replicate 8 0))] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide)))) &&
+      [(HostCommitChip.populate deferred ((calls deferred 0)[0]!).call
+        (HostCommitBoundary.final (Vector.replicate 8 0)), 1)] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide)))) &&
     [⟨2 ^ 24, 0, Vector.replicate 8 0⟩, ⟨0, 2 ^ 24, Vector.replicate 8 0⟩,
      ⟨-1, 0, Vector.replicate 8 0⟩, ⟨0, -1, Vector.replicate 8 0⟩].all
        (fun state => !terminalChecked deferred state)) = true := by native_decide

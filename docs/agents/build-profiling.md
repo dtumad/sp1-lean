@@ -140,9 +140,11 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
 - GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
 - The `build` runner performs core and full builds on every PR, then full-tree `lake lint`,
-  export/conformance gates and both compiled trust scopes. Setup and cache restore/save happen
-  once, and full lint covers the core. `build-full` retains the full-check status name and fails
-  if that runner fails, is cancelled or does not select full validation; it performs no build.
+  backend checks and both compiled trust scopes. Setup and cache restore/save happen once,
+  and full lint covers the core. Fresh export generations use the compiled driver on separate
+  runners; their verified inventory feeds Rust fixture-family jobs. Each stage preserves timing
+  and Linux resource reports. `build-full` requires the complete dependency graph to succeed,
+  rejects skipped or missing jobs and core-only validation, and performs no build.
   Core-only dispatches and `ci-testing` pushes still run core lint. No label controls PR coverage.
 - Production, cache cleanup and build experiments must agree on the cache version; production
   and experiments also need identical path lists, since paths participate in the cache identity.

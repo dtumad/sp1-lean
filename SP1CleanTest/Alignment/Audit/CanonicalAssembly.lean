@@ -2,7 +2,7 @@ import SP1CleanTest.Alignment.Support.InstalledAssembly
 
 /-! # Generation inputs cannot supply uncommitted program metadata
 
-The complete installed 94-table inventory has no physical table named `sp1.pc_start`. Its
+The complete installed 95-table inventory has no physical table named `sp1.pc_start`. Its
 canonical data therefore cannot inherit that entry from witness-generation inputs. The check
 applies to every witness of this inventory, independently of generation or semantic validity.
 Program-binding consumers must use an authenticated boundary.
@@ -18,16 +18,20 @@ theorem uncommittedInitialPcAbsent {context : Context}
     witness.data "sp1.pc_start" 3 = #[] := by
   have absent : "sp1.pc_start" ∉
       ((assembly context).tables.map fun component => component.circuit.name) := by
-    dsimp only [assembly]
-    erw [Soundness.HostFinalMemory.tables_eq]
-    simp only [List.map_set, Soundness.HostFinalMemory.beforeChecks,
-      Soundness.HostLocalCore.tables_names, Soundness.ProtectedLocalCore.tables_names,
-      Soundness.LocalCore.tables, Soundness.LocalCore.afterSourceTables,
-      List.map_append, List.map_cons, List.map_nil,
-      Soundness.SnapshotMemoryEnsemble.registerMembership, StaticTable.component,
-      StaticTable.provider, MemorySnapshot.registerTable, StaticTable.ofRows,
-      Soundness.FinalMemoryChecks.checkTables, FinalRegisterValue.membership]
-    exact of_decide_eq_true rfl
+    rw [tables_eq, List.map_append]
+    simp only [List.mem_append, not_or]
+    constructor
+    · dsimp only [withoutCommitments]
+      erw [Soundness.HostFinalMemory.tables_eq]
+      simp only [List.map_set, Soundness.HostFinalMemory.beforeChecks,
+        Soundness.HostLocalCore.tables_names, Soundness.ProtectedLocalCore.tables_names,
+        Soundness.LocalCore.tables, Soundness.LocalCore.afterSourceTables,
+        List.map_append, List.map_cons, List.map_nil,
+        Soundness.SnapshotMemoryEnsemble.registerMembership, StaticTable.component,
+        StaticTable.provider, MemorySnapshot.registerTable, StaticTable.ofRows,
+        Soundness.FinalMemoryChecks.checkTables, FinalRegisterValue.membership]
+      exact of_decide_eq_true rfl
+    · exact of_decide_eq_true rfl
   have noTable : ∀ table ∈ witness.tables, table.component.circuit.name ≠ "sp1.pc_start" := by
     intro table member same
     apply absent

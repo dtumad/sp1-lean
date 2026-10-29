@@ -86,7 +86,7 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
       else ["sp1.native.hint_queue_state", "sp1.native.hint_read_state", "SP1WritePermission",
         "sp1.native.write_permission",
         "SP1State", "SP1Exit", "SP1HostExit", "SP1Syscall", "SP1PublicValues", "sp1.native.host_call",
-        "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access",
+        "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.commitment_declaration", "sp1.native.host_ram_access",
         "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"].contains
           interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>

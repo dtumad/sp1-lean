@@ -15,6 +15,9 @@ namespace SP1Clean.Soundness.HostBankCPUReplay
 open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueCallProjection NativeCore Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+
+/-- Use Clean's field equality when projecting the original physical balance. -/
+local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 local instance replayLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance replayClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -48,6 +51,7 @@ private theorem messages_project {Label : Type*} (views : List (HostLocalHandoff
     (project expected : HostCallChip.Message (ZMod p) → Option Label)
     (same : ∀ receiver ∈ views, ∀ env, receiver.component.operations.ConstraintsHold env →
       receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env →
+      env receiver.activity = 1 →
       project (receiver.message env) = expected (receiver.message env)) :
     (ReceiverView.messages views tables).filterMap project =
       (ReceiverView.messages views tables).filterMap expected := by
@@ -59,9 +63,10 @@ private theorem messages_project {Label : Type*} (views : List (HostLocalHandoff
       · simp only [ReceiverView.tableMessages, List.filterMap_map]
         apply List.filterMap_congr
         intro physical member
+        obtain ⟨member, active⟩ := List.mem_filter.mp member
         exact same receiver (List.mem_cons_self ..) _
           (component ▸ constraints table (List.mem_cons_self ..) physical member)
-          (component ▸ bytes table (List.mem_cons_self ..) physical member)
+          (component ▸ bytes table (List.mem_cons_self ..) physical member) (of_decide_eq_true active)
       · exact ih (fun table member => constraints table (List.mem_cons_of_mem _ member))
           (fun table member => bytes table (List.mem_cons_of_mem _ member))
           (fun receiver member => same receiver (List.mem_cons_of_mem _ member))
@@ -70,11 +75,13 @@ private theorem commit_projection (deferred selected : Bool) (slot : Fin 8)
     (env : Environment (ZMod p))
     (constraints : (HostCallReceivers.commit (p := p) selected slot).component.operations.ConstraintsHold env)
     (bytes : (HostCallReceivers.commit (p := p) selected slot).component.operations.ChannelGuarantees
-      Channels.byteChannel.toRaw env) :
+      Channels.byteChannel.toRaw env)
+    (active : env (HostCallReceivers.commit (p := p) selected slot).activity = 1) :
     stamped deferred ((HostCallReceivers.commit selected slot).message env) =
       if deferred = selected then some (label ((HostCallReceivers.commit selected slot).message env)) else none := by
-  have spec := HostCommitBank.view_spec_of_byte selected (some slot) env constraints bytes
-  change HostCommitChip.Spec selected slot (valueFromOffset HostCommitChip.Inputs 0 env) at spec
+  rw [HostCallReceivers.commit_activity] at active
+  have spec := HostCommitBank.commit_spec_of_byte selected slot env constraints bytes active
+  change HostCommitChip.Spec selected slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at spec
   rw [HostCallReceivers.commit_message]
   simp only [stamped, bankCall?, spec.1.1, code_value]
   cases deferred <;> cases selected <;> simp [bankKind, SyscallKind.code, label]
@@ -122,17 +129,18 @@ private theorem control_projection (deferred : Bool) (tables : List (Table (ZMod
   have quiet := messages_project _ _ (sliced 0 2)
     (fun table member => constraints table (List.mem_of_mem_drop (List.mem_of_mem_take member)))
     (fun table member => bytes table (List.mem_of_mem_drop (List.mem_of_mem_take member)))
-    (stamped deferred) (fun _ => none) (quiet_projection deferred)
+    (stamped deferred) (fun _ => none) (fun receiver member env checked bytes _ =>
+      quiet_projection deferred receiver member env checked bytes)
   simp only [List.drop_zero] at quiet
   have commits (selected : Bool) := messages_project _ _ (sliced (if selected then 10 else 2) 8)
     (fun table member => constraints table (List.mem_of_mem_drop (List.mem_of_mem_take member)))
     (fun table member => bytes table (List.mem_of_mem_drop (List.mem_of_mem_take member)))
     (stamped deferred) (fun message => if deferred = selected then some (label message) else none)
-    (fun receiver member env checked byte => by
+    (fun receiver member env checked byte active => by
       have slots : receiver ∈ List.ofFn (fun slot => HostCallReceivers.commit selected slot) := by
         cases selected <;> exact member
       obtain ⟨slot, rfl⟩ := List.mem_ofFn.mp slots
-      exact commit_projection deferred selected slot env checked byte)
+      exact commit_projection deferred selected slot env checked byte active)
   have length : tables.length = 18 := aligned.length_eq.symm
   have last : tables.drop 10 = (tables.drop 10).take 8 := by
     symm
@@ -221,7 +229,8 @@ theorem calls_projection (deferred : Bool)
       (final := final) (bankFinal := bankFinal) (channels := channels))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap (stamped deferred)).Perm
-      (((TransitionView.readIndexedRows HostCommitBank.indices (HostHintReadBanks.bankTables deferred witness)).filterMap
+      (((TransitionView.readIndexedActiveRows HostCommitBank.indices (HostCommitBank.view deferred)
+          (HostHintReadBanks.bankTables deferred witness)).filterMap
         HostCommitBank.call?).map label) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
@@ -347,7 +356,7 @@ theorem cpu_projection (deferred : Bool)
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {calls : List (HostCallChip.Message (ZMod p))}
-    (bankExhaustive : calls.Perm ((TransitionView.readIndexedRows HostCommitBank.indices
+    (bankExhaustive : calls.Perm ((TransitionView.readIndexedActiveRows HostCommitBank.indices (HostCommitBank.view deferred)
       (HostHintReadBanks.bankTables deferred witness)).filterMap HostCommitBank.call?))
     (bankSorted : (calls.map fun call => clkNat call.clk_high call.clk_low).Pairwise (· < ·)) :
     cpu.filterMap (stampedCPU deferred witness.data) = calls.map label := by

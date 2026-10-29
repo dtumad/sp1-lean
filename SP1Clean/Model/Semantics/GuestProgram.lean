@@ -1,7 +1,7 @@
 import SP1Clean.Model.SailMemory
 import SP1Clean.Model.SailWrap
 import SP1Clean.Model.Register
-import LeanRV64D
+import LeanRV64D.Step
 
 /-! # Guest programs + the Sail execution model — the semantic-execution substrate (`Model/Semantics/`)
 

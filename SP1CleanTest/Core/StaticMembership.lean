@@ -48,6 +48,17 @@ def providerLedger {Row : TypeMap} [ProvableType Row] (source : StaticTable F Ro
   (table source ledger bounded).interactions.map fun interaction =>
     (interaction.channel.name, interaction.msg.toList, interaction.mult)
 
+/-- Evaluate a fixed payload provider on its semantic channel, retaining unused occurrences. -/
+def payloadLedger {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row)
+    (channel : Channel F Row) (valid : ∀ row, source.Spec row → ∀ data, channel.Guarantees row data)
+    (ledger : Ledger F) (bounded : source.height < UInt64.size) : Ledger F :=
+  let physical := Table.buildPreallocated (source.payloadComponent channel valid bounded)
+    (source.fixedColumns bounded) rfl
+    (literalSuffix channel.name (size Row) ledger (source.fixedColumns bounded))
+    (fun _ _ => #[]) (ProverHint.empty F)
+  physical.interactions.map fun interaction =>
+    (interaction.channel.name, interaction.msg.toList, interaction.mult)
+
 /-- A subsystem membership check retains forged messages in the complete ledger. -/
 def check {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row) (ledger : Ledger F)
     (bounded : source.height < UInt64.size := by decide) : Bool :=
