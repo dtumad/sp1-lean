@@ -324,4 +324,63 @@ theorem ordered_calls (deferred : Bool)
     calls_pairwise deferred walk (fun row member => specs row (perm.mem_iff.mp member)), ?_⟩
   rw [fold_calls, executed]
 
+/-- An active slot row is a physical handler row of the witness. It satisfies its call
+specification and requests its slot's declaration with the call's own argument word. -/
+theorem active_slot (deferred : Bool)
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
+    {slot : Fin 8} {env : Environment (ZMod p)}
+    (member : (some slot, env) ∈
+      TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)) :
+    HostCommitChip.Spec deferred slot (valueFromOffset HostCommitChip.RowInput 0 env).1 ∧
+      CommitmentDeclaration.channel.pulledValue
+          ⟨if deferred then 1 else 0, slot.val, (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2, 1⟩ ∈
+        witness.interactionsWith CommitmentDeclaration.channel.toRaw := by
+  have checked := HostHintQueueBoundary.projected_constraints witness constraints
+  have bytes := byte_guarantees (HostHintQueueBoundary.projected witness)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) checked
+    (HostHintQueueBoundary.record_channels witness balanced).byte
+  have specs := rows_spec_of_byte deferred (bankTables deferred witness) (tables_aligned deferred witness)
+    (fun table member => checked table (bank_mem deferred witness table member))
+    (fun table member => bytes table (bank_mem deferred witness table member))
+  refine ⟨specs _ member, ?_⟩
+  obtain ⟨read, active⟩ := TransitionView.mem_readIndexedActiveRows.mp member
+  simp only [view, HostCommitHistory.view_activity] at active
+  have argument : Eval.eval env (varFromOffset (F := ZMod p) HostCommitChip.RowInput 0).1.call.arg2 =
+      (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2 := by
+    have call := HostCallReceivers.commit_message (p := p) deferred slot env
+    change Eval.eval env (varFromOffset (F := ZMod p) HostCommitChip.RowInput 0).1.call = _ at call
+    rw [← call]
+    simp only [circuit_norm]
+  have values : (view (p := p) deferred (some slot)).component.operations.interactionValuesWith
+      CommitmentDeclaration.channel.toRaw env =
+        [CommitmentDeclaration.channel.pulledValue
+          ⟨if deferred then 1 else 0, slot.val, (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2, 1⟩] := by
+    simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
+    change (((HostCommitChip.circuit deferred slot).main (varFromOffset (F := ZMod p) HostCommitChip.RowInput 0)).operations
+      (size HostCommitChip.RowInput)).interactionValuesWith CommitmentDeclaration.channel.toRaw env = _
+    rw [HostCommitChip.guarded_declaration_values]
+    beta_reduce
+    rw [active]
+    simp only [circuit_norm] at argument
+    simp only [CommitmentDeclaration.request, Channel.pulledIfValue, Channel.pulledValue, circuit_norm, argument]
+  have ledger := TransitionView.readIndexedRows_interactions indices (fun index => (view (p := p) deferred index).component)
+    (bankTables deferred witness) CommitmentDeclaration.channel.toRaw (tables_aligned deferred witness)
+  have banked : CommitmentDeclaration.channel.pulledValue
+      ⟨if deferred then 1 else 0, slot.val, (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2, 1⟩ ∈
+        (bankTables deferred witness).flatMap (·.interactionsWith CommitmentDeclaration.channel.toRaw) := by
+    rw [ledger]
+    refine List.mem_flatMap.mpr ⟨(some slot, env), read, ?_⟩
+    change _ ∈ (view (p := p) deferred (some slot)).component.operations.interactionValuesWith
+      CommitmentDeclaration.channel.toRaw env
+    rw [values]
+    exact List.mem_singleton_self _
+  obtain ⟨table, tableMem, emitted⟩ := List.mem_flatMap.mp banked
+  have physical : table ∈ witness.tables := by
+    rw [bankTables_eq] at tableMem
+    rcases List.mem_append.mp tableMem with within | within <;>
+      exact List.mem_of_mem_drop (List.mem_of_mem_drop (List.mem_of_mem_take within))
+  exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, physical, emitted⟩)
+
 end SP1Clean.Soundness.HostHintReadBanks

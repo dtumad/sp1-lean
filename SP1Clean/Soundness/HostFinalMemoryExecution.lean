@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostFinalMemorySoundness
 import SP1Clean.Soundness.HostHintReadFinalSnapshot
+import SP1Clean.Soundness.HostCommitDeclarations
 
 /-! # Execution of the complete-memory host assembly
 
@@ -9,7 +10,8 @@ host grounding proofs read, so raw acceptance of the complete assembly yields th
 execution path. The installed finite target comparison and the path's own final-record
 characterization read the same physical finalizer rows; together they identify every integer
 register and the entire Sail RAM map of the path's final state with the supplied outgoing
-snapshot. Complete outgoing Sail/host equality remains separate.
+snapshot. Each commitment call of the path also requests its declaration in the witness ledger
+(`CommitmentEnsemble.Declared`). Complete outgoing Sail/host equality remains separate.
 -/
 
 namespace SP1Clean.Soundness.HostFinalMemory
@@ -124,16 +126,23 @@ theorem source_execution (valid : image.Valid)
         deferred := bankFinal.deferred
         exitCode := bankFinal.exitCode } ∧
       (∀ code : BitVec 32, source.host.exitCode = none → target.host.exitCode = some code →
-        code.toNat = witness.publicInput.exit_code.val) := by
+        code.toNat = witness.publicInput.exit_code.val) ∧
+      CommitmentEnsemble.Declared witness events := by
   have checked := checkFinal_of_declarationsOpen witness constraints balanced
-  obtain ⟨events, target, hints, path, permitted, -, clock, pc, -, -, runtime, nextPC, retirement,
+  have baseConstraints := baseWitness_constraints witness constraints
+  have baseBalanced := baseWitness_hostBalanced witness balanced
+  obtain ⟨events, target, hints, path, permitted, inventory, clock, pc, -, -, runtime, nextPC, retirement,
     preserved, decoded, host, exit, memory⟩ :=
-    HostHintReadCPU.source_execution_with_memory valid (baseWitness witness)
-      (baseWitness_constraints witness constraints) (baseWitness_hostBalanced witness balanced)
+    HostHintReadCPU.source_execution_with_memory valid (baseWitness witness) baseConstraints baseBalanced
   rw [finalRecords_eq_core] at checked
   obtain ⟨registers, ram⟩ := (memory outgoing).mp checked
   rw [baseWitness_publicInput] at clock pc nextPC exit
-  exact ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC, retirement,
-    preserved, decoded, host, exit⟩
+  have declared := (HostCommitDeclarations.rows_declared valid (baseWitness witness) baseConstraints
+    baseBalanced).of_perm inventory
+  refine ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC, retirement,
+    preserved, decoded, host, exit, declared.transfer fun interaction member => ?_⟩
+  rw [baseWitness_interactions witness _ (by simp [CommitmentDeclaration.channel, FinalMemoryValue.channel,
+    Channel.toRaw]) (by simp [CommitmentDeclaration.channel, FinalMemoryValue.channel, Channel.toRaw])] at member
+  exact ClosedVerifier.mem_interactionsWith_of_project _ witness member
 
 end SP1Clean.Soundness.HostFinalMemory
