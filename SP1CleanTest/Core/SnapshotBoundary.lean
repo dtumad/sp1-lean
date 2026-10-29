@@ -45,8 +45,9 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
     | .witness .. => true
   let ledger := (FlatOperation.interactions operations).map fun interaction =>
     (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult)
-  (valid && StaticMembership.check snapshot.registerTable ledger &&
-      StaticMembership.check (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory") ledger,
+  (valid && StaticMembership.check snapshot.registerTable ledger (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot) &&
+      StaticMembership.check (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory") ledger
+        (InitialMemoryLookup.membership_height_lt_uint64 snapshot.memory "sp1.native.initial_memory"),
     (toElements (ProvableType.eval env (circuit.output (size Input)))).toList)
 
 private def name : String := "SP1NativeSourceMemoryOrder"
@@ -82,13 +83,13 @@ theorem fixedRegisterOccurrences :
     let message := (toElements (snapshot.registerRow (p := SP1Prime) 5)).toList ++ [1]
     let requests : StaticMembership.Ledger Fp :=
       [(source.channel.name, message, -1), (source.channel.name, message, -1)]
-    let built := StaticMembership.table source requests
-    let ledger := StaticMembership.providerLedger source requests
+    let built := StaticMembership.table source requests (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot)
+    let ledger := StaticMembership.providerLedger source requests (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot)
     built.length = 32 ∧ ledger.length = 32 ∧
       (ledger.filter (fun entry => entry.2.1 == message)).map (·.2.2) = [2] ∧
       (ledger.filter (fun entry => entry.2.2 == 0)).length = 31 ∧
-      StaticMembership.check source requests = true ∧
-      (StaticMembership.providerLedger source []).map (·.2.2) = List.replicate 32 0 := by
+      StaticMembership.check source requests (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot) = true ∧
+      (StaticMembership.providerLedger source [] (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot)).map (·.2.2) = List.replicate 32 0 := by
   native_decide
 
 /-- Duplicate rows remain physical; an empty predicate has one inactive backend row. -/

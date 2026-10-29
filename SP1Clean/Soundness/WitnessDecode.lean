@@ -151,6 +151,16 @@ noncomputable def decodeInstructionTables :
       table.table.map (⟨chip, ·⟩) ++ decodeInstructionTables chips tables
   | _, _ => []
 
+/-- Decoding retains physical cells and descriptors, independently of stored prover data. -/
+theorem decodeInstructionTables_setData (chips : List (SupportedChip p))
+    (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) :
+    decodeInstructionTables chips (tables.map fun table => { table with data }) =
+      decodeInstructionTables chips tables := by
+  induction chips generalizing tables with
+  | nil => simp [decodeInstructionTables]
+  | cons chip chips ih =>
+      cases tables <;> simp [decodeInstructionTables, ih]
+
 /-- A decoded row retains both its descriptor's position and the corresponding physical row.
 This provenance survives component extensions whose additional channels are absent from the decoder. -/
 theorem position_of_mem_decodeInstructionTables
@@ -175,6 +185,12 @@ theorem position_of_mem_decodeInstructionTables
 noncomputable def decodedInstructionRows (tables : List (Table (ZMod p))) :
     List (DecodedInstructionRow p) :=
   decodeInstructionTables (supportedChips (p := p)) (tables.take 25)
+
+/-- Canonical data derivation preserves the complete decoded physical instruction stream. -/
+@[simp] theorem decodedInstructionRows_withDerivedData (tables : List (Table (ZMod p))) :
+    decodedInstructionRows (p := p) (withDerivedData tables) = decodedInstructionRows tables := by
+  simp only [decodedInstructionRows, withDerivedData, ← List.map_take,
+    decodeInstructionTables_setData]
 
 /-- Positional alignment identifies each physical table with its supported circuit descriptor.
 Evaluation data is supplied explicitly to both the decoder and the physical ledger. -/
@@ -201,10 +217,11 @@ The positional alignment pins the dependent circuit, and both views use the same
 theorem constraints_of_mem_decodeInstructionTables (data : ProverData (ZMod p)) :
     ∀ {chips : List (SupportedChip p)} {tables : List (Table (ZMod p))},
       InstructionTablesAligned chips tables →
-      (∀ table ∈ tables, table.Constraints data) →
+      (∀ table ∈ tables, table.data = data) →
+      (∀ table ∈ tables, table.Constraints) →
       ∀ decoded ∈ decodeInstructionTables chips tables,
         decoded.chip.table.operations.ConstraintsHold (decoded.environment data) := by
-  intro chips tables aligned tableConstraints decoded decodedMem
+  intro chips tables aligned sameData tableConstraints decoded decodedMem
   induction aligned with
   | nil => simp [decodeInstructionTables] at decodedMem
   | @cons chip table chips tables head _ ih =>
@@ -215,8 +232,9 @@ theorem constraints_of_mem_decodeInstructionTables (data : ProverData (ZMod p)) 
         have holds := tableConstraints table List.mem_cons_self physical physicalMem
         simp only [DecodedInstructionRow.environment]
         rw [← head]
-        exact holds
+        simpa only [Table.environment, sameData table List.mem_cons_self] using holds
       · exact ih
+          (fun other otherMem => sameData other (List.mem_cons_of_mem table otherMem))
           (fun other otherMem => tableConstraints other (List.mem_cons_of_mem table otherMem))
           decodedMem
 
@@ -227,10 +245,11 @@ theorem channelGuarantees_of_mem_decodeInstructionTables (data : ProverData (ZMo
     (channel : RawChannel (ZMod p)) :
     ∀ {chips : List (SupportedChip p)} {tables : List (Table (ZMod p))},
       InstructionTablesAligned chips tables →
-      (∀ table ∈ tables, table.ChannelGuarantees data channel) →
+      (∀ table ∈ tables, table.data = data) →
+      (∀ table ∈ tables, table.ChannelGuarantees channel) →
       ∀ decoded ∈ decodeInstructionTables chips tables,
         decoded.chip.table.operations.ChannelGuarantees channel (decoded.environment data) := by
-  intro chips tables aligned tableGuarantees decoded decodedMem
+  intro chips tables aligned sameData tableGuarantees decoded decodedMem
   induction aligned with
   | nil => simp [decodeInstructionTables] at decodedMem
   | @cons chip table chips tables head _ ih =>
@@ -241,8 +260,9 @@ theorem channelGuarantees_of_mem_decodeInstructionTables (data : ProverData (ZMo
         have guarantees := tableGuarantees table List.mem_cons_self physical physicalMem
         simp only [DecodedInstructionRow.environment]
         rw [← head]
-        exact guarantees
+        simpa only [Table.environment, sameData table List.mem_cons_self] using guarantees
       · exact ih
+          (fun other otherMem => sameData other (List.mem_cons_of_mem table otherMem))
           (fun other otherMem => tableGuarantees other (List.mem_cons_of_mem table otherMem))
           decodedMem
 
@@ -259,7 +279,7 @@ theorem decodedInstructionInteractionsWith_eq_tables {Message : TypeMap} [Provab
     ∀ {chips : List (SupportedChip p)} {tables : List (Table (ZMod p))},
       InstructionTablesAligned chips tables →
       decodedInstructionInteractionsWith data chips tables channel =
-        tables.flatMap (typedTableInteractionsWith · data channel) := by
+        tables.flatMap (typedTableInteractionsWith · channel) := by
   intro chips tables aligned
   induction aligned with
   | nil => rfl
@@ -267,17 +287,18 @@ theorem decodedInstructionInteractionsWith_eq_tables {Message : TypeMap} [Provab
       have headEq :
           table.table.flatMap (fun physical =>
             (DecodedInstructionRow.mk chip physical).interactionsWith data channel) =
-            typedTableInteractionsWith table data channel := by
+            typedTableInteractionsWith table channel := by
         unfold typedTableInteractionsWith
         apply List.flatMap_congr
         intro physical _
         simp only [DecodedInstructionRow.interactionsWith,
           DecodedInstructionRow.environment]
         rw [← head]
+        exact typedInteractionValuesWith_congr _ _ rfl
       simp only [decodedInstructionInteractionsWith, decodeInstructionTables,
         List.flatMap_append, List.flatMap_map]
       rw [headEq]
-      change typedTableInteractionsWith table data channel ++
+      change typedTableInteractionsWith table channel ++
           decodedInstructionInteractionsWith data chips tables channel = _
       rw [ih]
       rfl

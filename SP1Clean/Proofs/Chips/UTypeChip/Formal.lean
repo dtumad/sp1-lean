@@ -262,8 +262,7 @@ def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
 only register traffic is the rd slot).  The op_a read-prior pull descends from the composed
 `JTypeReader`; the op_a write push from the composed `RegisterWrite`, carrying the witnessed
 LUI/AUIPC result `add_value` (cells `offset+3..6`, after the three addend limbs).  Keeping this list
-beside `circuit` makes Clean's exposure interface the single structural source consumed by both
-faithfulness and semantic grounding. -/
+beside `circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -617,9 +616,9 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := UTypeChip.circuit (p := p) } :
+    ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     UTypeChip.circuit_main_eq]
   simp [UTypeChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.JTypeReader.circuit, Readers.JTypeReader.main,

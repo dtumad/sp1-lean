@@ -57,9 +57,21 @@ private theorem private_not_local (channel : RawChannel (ZMod p))
       StaticTable.ofRows, Channel.toRaw] at names
 
 private def fixedAdditions (image : ProgramImage) : List (Component (ZMod p)) :=
-  [{ circuit := ProtectedStore.byte }, { circuit := ProtectedStore.half }, { circuit := ProtectedStore.word }, { circuit := ProtectedStore.double },
-   { circuit := WritePermissionProvider.circuit image }, HostCallLedger.producer,
-   HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
+  [{ circuit := ProtectedStore.byte
+     Assumptions := ProtectedStore.byte.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := ProtectedStore.half
+     Assumptions := ProtectedStore.half.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := ProtectedStore.word
+     Assumptions := ProtectedStore.word.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   { circuit := ProtectedStore.double
+     Assumptions := ProtectedStore.double.Assumptions
+     circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h },
+   WritePermissionProvider.component image,
+   WritePermissionProvider.membershipComponent image,
+   HostCallLedger.producer, HostHintReadHandoff.receiver.component] ++ HostHintReadHandoff.wordResources
 
 private theorem additions_private (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p) target)
@@ -69,7 +81,10 @@ private theorem additions_private (channel : RawChannel (ZMod p))
   have quiet : (fixedAdditions (p := p) image).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains channel.name) = true := by
     simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
-    rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;> rfl
+    rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;>
+      unfold fixedAdditions WritePermissionProvider.component WritePermissionProvider.membershipComponent
+        WritePermissionProvider.circuit WritePermissionProvider.activeCircuit
+        WritePermissionProvider.activeElaborated WritePermissionProvider.activeMain ProgramImage.writePermissionTable <;> rfl
   simpa using List.all_eq_true.mp quiet component member
 
 /-- Receipt freshness follows from the existing core inventory and the installed resource interface. -/
@@ -92,8 +107,9 @@ theorem beforeChecks_private (interface : PrivateInterface target others resourc
             · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
           · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
         · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
-      · obtain rfl := List.mem_singleton.mp permission
-        exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
+      · simp only [List.mem_cons, List.not_mem_nil, or_false] at permission
+        rcases permission with rfl | rfl <;>
+          exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
     · exact additions_private (image := image) channel privateChannel _ (by simp [fixedAdditions])
   · change component ∈ (HostHintReadHandoff.receiver :: others).map (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
         (HostHintReadHandoff.wordResources ++ resources) at auxiliary
@@ -131,7 +147,8 @@ private theorem check_channels (channel : RawChannel (ZMod p))
     channel ∈ (FinalMemoryChecks.checkTables (p := p) target).flatMap (·.circuit.channels) := by
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
   rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;>
-    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit,
+    simp [FinalMemoryChecks.checkTables, FinalRegisterCheck.circuit, FinalRamCheck.circuit, Guarded.circuit,
+      FinalRegisterCheck.activeCircuit, FinalRamCheck.activeCircuit,
       StaticTable.component, StaticTable.provider, circuit_norm]
 
 /-- Queue, bank and CPU verifier boundaries emit nothing on the Memory receipt protocols.
@@ -171,8 +188,8 @@ theorem base_verifier_private (channel : RawChannel (ZMod p))
       apply HostHintQueueBoundary.boundary_silent <;>
       simp [FinalMemoryValue.channel, FinalMemoryChange.channel, FinalRegisterValue.membership, StaticTable.channel, InitialMemoryLookup.membership, HostHintQueue.stateChannel,
         HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
-  have empty := (HostHintQueueBoundary.boundary source final bankFinal).singleton.interactionsWith_nil_of_channel_not_mem
-    (data := env.data) boundaryQuiet
+  have empty := ((HostHintQueueBoundary.boundary source final bankFinal).singleton env.data).interactionsWith_nil_of_channel_not_mem
+    boundaryQuiet
   rw [ClosedVerifier.singleton_interactions] at empty
   rw [quiet, empty, List.append_nil]
 

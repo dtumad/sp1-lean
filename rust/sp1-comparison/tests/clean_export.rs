@@ -1,5 +1,9 @@
 extern crate alloc;
 
+#[path = "support/backend.rs"]
+mod backend;
+use backend::{assert_backend_rejection, config, fixed_trace, interaction, physical_reference};
+
 // Clean's renderer emits reusable helpers that this small fixture does not all exercise.
 #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
 mod generated {
@@ -44,42 +48,11 @@ mod empty_target_registers {
 use clean_backend::witness_generation::{Program, WitnessGenerationError};
 use clean_backend::{
     prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, GeneratedEnsemble,
-    StarkConfig,
 };
-use p3_challenger::DuplexChallenger;
-use p3_commit::ExtensionMmcs;
-use p3_dft::Radix2DitParallel;
-use p3_field::extension::BinomialExtensionField;
-use p3_field::{Field, PrimeCharacteristicRing, PrimeField64};
-use p3_fri::{create_test_fri_params, TwoAdicFriPcs};
-use p3_koala_bear::{KoalaBear as F, Poseidon2KoalaBear};
+use p3_field::{PrimeCharacteristicRing, PrimeField64};
+use p3_koala_bear::KoalaBear as F;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::Matrix;
-use p3_merkle_tree::MerkleTreeMmcs;
-use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
-use rand::{rngs::SmallRng, SeedableRng};
-
-type Perm = Poseidon2KoalaBear<16>;
-type Hash = PaddingFreeSponge<Perm, 16, 8, 8>;
-type Compress = TruncatedPermutation<Perm, 2, 8, 16>;
-type Mmcs = MerkleTreeMmcs<<F as Field>::Packing, <F as Field>::Packing, Hash, Compress, 8>;
-type Challenge = BinomialExtensionField<F, 4>;
-type ChallengeMmcs = ExtensionMmcs<F, Challenge, Mmcs>;
-type Challenger = DuplexChallenger<F, Perm, 16, 8>;
-type Pcs = TwoAdicFriPcs<F, Radix2DitParallel<F>, Mmcs, ChallengeMmcs>;
-type Config = StarkConfig<Pcs, Challenge, Challenger>;
-
-fn config() -> Config {
-    let mut rng = SmallRng::seed_from_u64(7);
-    let permutation = Perm::new_from_rng_128(&mut rng);
-    let mmcs = Mmcs::new(
-        Hash::new(permutation.clone()),
-        Compress::new(permutation.clone()),
-    );
-    let fri = create_test_fri_params(ChallengeMmcs::new(mmcs.clone()), 0);
-    let pcs = Pcs::new(Radix2DitParallel::default(), mmcs, fri);
-    Config::new(pcs, Challenger::new(permutation))
-}
 
 fn field(value: u64) -> F {
     F::from_u64(value)
@@ -122,7 +95,7 @@ fn generated_witnesses_match_lean_and_independent_fixed_membership() {
             ]]
         );
         assert_eq!(case["interactionCount"], 3);
-        let statement = generated::FixedMembershipStatement::<F>::new(&[2]).unwrap();
+        let statement = generated::Statement::<F>::new(&[2]).unwrap();
         assert_eq!(
             statement.interaction_count(),
             3,
@@ -130,7 +103,7 @@ fn generated_witnesses_match_lean_and_independent_fixed_membership() {
         );
         let traces = witness.into_traces().unwrap();
         assert_eq!((traces[0].height(), traces[0].width()), (2, 2));
-        let fixed = generated::FixedMembershipAirSpec::fixed_trace::<F>(0).unwrap();
+        let fixed = fixed_trace::<generated::Ensemble>(0);
         assert_eq!(fixed.values, vec![field(7), field(9)]);
     }
     assert!(matches!(
@@ -146,7 +119,7 @@ fn generated_witnesses_match_lean_and_independent_fixed_membership() {
 #[test]
 fn generated_air_proves_and_binds_the_public_value() {
     let config = config();
-    let statement = generated::FixedMembershipStatement::<F>::new(&[2]).unwrap();
+    let statement = generated::Statement::<F>::new(&[2]).unwrap();
     for value in [7, 9] {
         let public = [field(value)];
         let traces = generated::generate(&public, &[])
@@ -164,17 +137,17 @@ fn generated_air_proves_and_binds_the_public_value() {
 #[test]
 fn generated_air_rejects_wrong_shape_and_row_content() {
     let config = config();
-    let statement = generated::FixedMembershipStatement::<F>::new(&[2]).unwrap();
+    let statement = generated::Statement::<F>::new(&[2]).unwrap();
     assert!(matches!(
-        generated::FixedMembershipStatement::<F>::new(&[]),
+        generated::Statement::<F>::new(&[]),
         Err(EnsembleShapeError::ComponentCount { .. })
     ));
     assert!(matches!(
-        generated::FixedMembershipStatement::<F>::new(&[2, 2]),
+        generated::Statement::<F>::new(&[2, 2]),
         Err(EnsembleShapeError::ComponentCount { .. })
     ));
     assert!(matches!(
-        generated::FixedMembershipStatement::<F>::new(&[4]),
+        generated::Statement::<F>::new(&[4]),
         Err(EnsembleShapeError::FixedTraceHeight { .. })
     ));
     let public = [field(7)];
@@ -215,29 +188,9 @@ fn generated_air_rejects_wrong_shape_and_row_content() {
         });
     }
     assert_eq!(
-        <generated::FixedMembership as Program<F>>::COMPONENT_NAMES,
+        <generated::Ensemble as Program<F>>::COMPONENT_NAMES,
         &["allowed"]
     );
-}
-
-// Release mode verifies a rejected proof; debug mode can reject invalid constraints earlier.
-// Propagate unrelated panics instead of treating an arbitrary crash as rejection.
-fn assert_backend_rejection(check: impl FnOnce() -> bool) {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(check)) {
-        Ok(rejected) => assert!(rejected, "invalid witness was accepted"),
-        Err(payload) => {
-            let message = payload
-                .downcast_ref::<String>()
-                .map(String::as_str)
-                .or_else(|| payload.downcast_ref::<&str>().copied())
-                .unwrap_or("");
-            if !cfg!(debug_assertions)
-                || !(message.contains("constraint") || message.contains("lookup"))
-            {
-                std::panic::resume_unwind(payload);
-            }
-        }
-    }
 }
 
 // This arbitrary local snapshot is not SP1's boot-only all-zero register table.
@@ -270,15 +223,15 @@ fn padded_membership_rows(source: &[u64], public: &[u64]) -> Vec<Vec<u64>> {
         .collect()
 }
 
-fn check_padded_membership<P: Program<F>, S: GeneratedAirSpec>(
+fn check_padded_membership<P: Program<F> + GeneratedAirSpec>(
     source: &[u64],
     public: &[u64],
     reference: &serde_json::Value,
 ) {
     let rows = padded_membership_rows(source, public);
     let height = rows.len();
-    assert_eq!(P::FIXED_WIDTHS, &[2]);
-    let fixed = S::fixed_trace::<F>(0).unwrap();
+    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[2]);
+    let fixed = fixed_trace::<P>(0);
     assert_eq!((fixed.height(), fixed.width()), (height, 2));
     assert_eq!(
         fixed.values,
@@ -324,13 +277,13 @@ fn check_padded_membership<P: Program<F>, S: GeneratedAirSpec>(
         actual,
         serde_json::json!({"tables": [rows], "interactions": ledger})
     );
-    let statement = GeneratedEnsemble::<F, S>::new(&[height]).unwrap();
+    let statement = GeneratedEnsemble::<F, P>::new(&[height]).unwrap();
     assert_eq!(
         statement.interaction_count(),
         (height + public.len()) as u128
     );
     for invalid in [0, height + 1, height * 2] {
-        assert!(GeneratedEnsemble::<F, S>::new(&[invalid]).is_err());
+        assert!(GeneratedEnsemble::<F, P>::new(&[invalid]).is_err());
     }
     let config = config();
     let traces = witness.into_traces().unwrap();
@@ -369,7 +322,7 @@ fn check_padded_membership<P: Program<F>, S: GeneratedAirSpec>(
             let interactions = [first, second].map(|index| {
                 let mut row: Vec<_> = rows[index].iter().copied().map(field).collect();
                 row[2] = altered[0].values[index];
-                P::interactions(0, &row)
+                <P as Program<F>>::interactions(0, &row)
             });
             assert_eq!(interactions[0].len(), 1);
             assert_eq!(interactions[1].len(), 1);
@@ -397,29 +350,46 @@ macro_rules! padded_membership_fixture {
             use super::*;
             #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
             mod used {
-                include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/static_", $name, ".rs"));
+                include!(concat!(
+                    env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+                    "/static_",
+                    $name,
+                    ".rs"
+                ));
             }
             #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
             mod unused {
-                include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/static_", $name, "_unused.rs"));
+                include!(concat!(
+                    env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+                    "/static_",
+                    $name,
+                    "_unused.rs"
+                ));
             }
             #[test]
             fn independent_rows_ledgers_and_backend_mutations() {
                 let fixtures: serde_json::Value = serde_json::from_str(include_str!(concat!(
-                    env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/static_membership.reference.json"
-                ))).unwrap();
+                    env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
+                    "/static_membership.reference.json"
+                )))
+                .unwrap();
                 assert_eq!(fixtures.as_array().unwrap().len(), 5);
-                let fixture = fixtures.as_array().unwrap().iter().find(|f| f["name"] == $name).unwrap();
+                let fixture = fixtures
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|f| f["name"] == $name)
+                    .unwrap();
                 let cases = fixture["cases"].as_array().unwrap();
                 assert_eq!(cases.len(), 16);
-                for (index, (a, b)) in [0, 7, 9, 11].into_iter()
-                    .flat_map(|a| [0, 7, 9, 11].into_iter().map(move |b| (a, b))).enumerate()
+                for (index, (a, b)) in [0, 7, 9, 11]
+                    .into_iter()
+                    .flat_map(|a| [0, 7, 9, 11].into_iter().map(move |b| (a, b)))
+                    .enumerate()
                 {
-                    check_padded_membership::<used::StaticMembership, used::StaticMembershipAirSpec>(
-                        $source, &[a, b], &cases[index]);
+                    check_padded_membership::<used::Ensemble>($source, &[a, b], &cases[index]);
                 }
-                check_padded_membership::<unused::UnusedMembership, unused::UnusedMembershipAirSpec>(
-                    $source, &[], &fixture["unused"]);
+                check_padded_membership::<unused::Ensemble>($source, &[], &fixture["unused"]);
             }
         }
     };
@@ -435,49 +405,6 @@ fn memory(row: &[u64]) -> Vec<u64> {
     let mut message = vec![0, 0, row[0], 0, 0];
     message.extend_from_slice(&row[1..]);
     message
-}
-
-fn interaction(channel: &str, mult: u64, message: Vec<u64>, assumes: bool) -> serde_json::Value {
-    serde_json::json!({
-        "channel": channel, "message": message,
-        "multiplicity": mult, "assumeGuarantees": assumes,
-    })
-}
-
-fn physical_reference<P: Program<F>>(public: &[F], tables: &[Vec<Vec<F>>]) -> serde_json::Value {
-    let interactions = P::verifier_interactions(public)
-        .into_iter()
-        .chain(tables.iter().enumerate().flat_map(|(component, rows)| {
-            rows.iter()
-                .flat_map(move |row| P::interactions(component, row))
-        }))
-        .map(|entry| {
-            interaction(
-                entry.channel,
-                entry.multiplicity.as_canonical_u64(),
-                entry
-                    .message
-                    .iter()
-                    .map(PrimeField64::as_canonical_u64)
-                    .collect(),
-                entry.assume_guarantees,
-            )
-        })
-        .collect::<Vec<_>>();
-    let rows = tables
-        .iter()
-        .map(|table| {
-            table
-                .iter()
-                .map(|row| {
-                    row.iter()
-                        .map(PrimeField64::as_canonical_u64)
-                        .collect::<Vec<_>>()
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    serde_json::json!({"tables": rows, "interactions": interactions})
 }
 
 fn register_reference() -> serde_json::Value {
@@ -525,11 +452,8 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
     }
     assert_eq!(reference["cases"].as_array().unwrap().len(), cases.len());
     assert_eq!(cases.len(), 40);
-    assert_eq!(
-        <registers::SnapshotRegisters as Program<F>>::FIXED_WIDTHS,
-        &[0, 6]
-    );
-    let fixed = registers::SnapshotRegistersAirSpec::fixed_trace::<F>(1).unwrap();
+    assert_eq!(<registers::Ensemble as Program<F>>::FIXED_WIDTHS, &[0, 6]);
+    let fixed = fixed_trace::<registers::Ensemble>(1);
     assert_eq!((fixed.height(), fixed.width()), (32, 6));
     assert_eq!(
         fixed.values,
@@ -551,8 +475,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
             continue;
         }
         let witness = result.unwrap();
-        let actual =
-            physical_reference::<registers::SnapshotRegisters>(&public_fields, &witness.tables);
+        let actual = physical_reference::<registers::Ensemble>(&public_fields, &witness.tables);
         assert_eq!(actual, case["witness"], "{name}");
         let sparse: Vec<Vec<u64>> = public.chunks_exact(5).map(<[u64]>::to_vec).collect();
         let fixed_rows: Vec<Vec<u64>> = (0..32)
@@ -590,7 +513,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
             38,
             "keep all repeated and zero-count occurrences"
         );
-        let statement = registers::SnapshotRegistersStatement::<F>::new(&[2, 32]).unwrap();
+        let statement = registers::Statement::<F>::new(&[2, 32]).unwrap();
         assert_eq!(statement.interaction_count(), 38);
         let traces = witness.into_traces().unwrap();
         assert_eq!((traces[0].height(), traces[0].width()), (2, 5));
@@ -601,8 +524,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
 #[test]
 fn unused_snapshot_registers_keep_all_fixed_rows_and_zero_occurrences() {
     let witness = empty_registers::generate::<F>(&[], &[]).unwrap();
-    let actual =
-        physical_reference::<empty_registers::EmptySnapshotRegisters>(&[], &witness.tables);
+    let actual = physical_reference::<empty_registers::Ensemble>(&[], &witness.tables);
     assert_eq!(actual, register_reference()["empty"]);
     let rows: Vec<_> = (0..32)
         .map(|index| {
@@ -625,7 +547,7 @@ fn unused_snapshot_registers_keep_all_fixed_rows_and_zero_occurrences() {
         actual,
         serde_json::json!({"tables": [rows], "interactions": ledger})
     );
-    let statement = empty_registers::EmptySnapshotRegistersStatement::<F>::new(&[32]).unwrap();
+    let statement = empty_registers::Statement::<F>::new(&[32]).unwrap();
     assert_eq!(statement.interaction_count(), 32);
     let config = config();
     let traces = witness.into_traces().unwrap();
@@ -643,7 +565,7 @@ fn unused_snapshot_registers_keep_all_fixed_rows_and_zero_occurrences() {
 #[test]
 fn snapshot_register_proofs_bind_each_public_index_and_limb() {
     let config = config();
-    let statement = registers::SnapshotRegistersStatement::<F>::new(&[2, 32]).unwrap();
+    let statement = registers::Statement::<F>::new(&[2, 32]).unwrap();
     for indices in [[0, 31], [5, 5]] {
         let public: Vec<_> = indices.into_iter().flat_map(register).map(field).collect();
         let traces = registers::generate(&public, &[])
@@ -662,8 +584,19 @@ fn snapshot_register_proofs_bind_each_public_index_and_limb() {
 
 #[test]
 fn snapshot_register_air_rejects_shapes_sparse_row_and_count_mutations() {
+    // Keep the prototype's shape/count regression on an installed boundary. This check
+    // counts physical occurrences before any witness values or multiplicities are supplied.
+    assert!(registers::Statement::<F>::new(&[1usize << 29, 32]).is_ok());
+    assert!(matches!(
+        registers::Statement::<F>::new(&[1usize << 30, 32]),
+        Err(EnsembleShapeError::InteractionCountBound { .. })
+    ));
+    assert!(matches!(
+        registers::Statement::<F>::new(&[3, 32]),
+        Err(EnsembleShapeError::TraceHeight { .. })
+    ));
     for heights in [vec![], vec![32], vec![2, 32, 32], vec![2, 16], vec![2, 64]] {
-        assert!(registers::SnapshotRegistersStatement::<F>::new(&heights).is_err());
+        assert!(registers::Statement::<F>::new(&heights).is_err());
     }
     assert!(matches!(
         registers::generate::<F>(&[], &[]),
@@ -679,7 +612,7 @@ fn snapshot_register_air_rejects_shapes_sparse_row_and_count_mutations() {
         .into_traces()
         .unwrap();
     let config = config();
-    let statement = registers::SnapshotRegistersStatement::<F>::new(&[2, 32]).unwrap();
+    let statement = registers::Statement::<F>::new(&[2, 32]).unwrap();
     assert!(matches!(
         prove_ensemble(&config, &statement, vec![traces[0].clone()], &public),
         Err(EnsembleShapeError::TraceCount { .. })
@@ -765,10 +698,10 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
     assert_eq!(cases.len(), 42);
     assert_eq!(reference["cases"].as_array().unwrap().len(), cases.len());
     assert_eq!(
-        <target_registers::TargetRegisters as Program<F>>::FIXED_WIDTHS,
+        <target_registers::Ensemble as Program<F>>::FIXED_WIDTHS,
         &[0, 6]
     );
-    let fixed = target_registers::TargetRegistersAirSpec::fixed_trace::<F>(1).unwrap();
+    let fixed = fixed_trace::<target_registers::Ensemble>(1);
     assert_eq!((fixed.height(), fixed.width()), (32, 6));
     assert_eq!(
         fixed.values,
@@ -778,7 +711,7 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
             .collect::<Vec<_>>()
     );
     let config = config();
-    let statement = target_registers::TargetRegistersStatement::<F>::new(&[2, 32]).unwrap();
+    let statement = target_registers::Statement::<F>::new(&[2, 32]).unwrap();
     for (case, (name, public, accepted)) in reference["cases"].as_array().unwrap().iter().zip(cases)
     {
         assert_eq!(case["name"], name);
@@ -791,8 +724,7 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
             assert!(!accepted, "{name}");
             continue;
         };
-        let actual =
-            physical_reference::<target_registers::TargetRegisters>(&public, &witness.tables);
+        let actual = physical_reference::<target_registers::Ensemble>(&public, &witness.tables);
         assert_eq!(actual, case["witness"], "{name}");
         let sparse: Vec<Vec<u64>> = public
             .chunks_exact(9)
@@ -852,8 +784,7 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
 #[test]
 fn unused_target_registers_retain_every_zero_count_occurrence() {
     let witness = empty_target_registers::generate::<F>(&[], &[]).unwrap();
-    let actual =
-        physical_reference::<empty_target_registers::EmptyTargetRegisters>(&[], &witness.tables);
+    let actual = physical_reference::<empty_target_registers::Ensemble>(&[], &witness.tables);
     assert_eq!(actual, target_register_reference()["empty"]);
     let rows: Vec<_> = (0..32)
         .map(|index| {
@@ -876,7 +807,7 @@ fn unused_target_registers_retain_every_zero_count_occurrence() {
         actual,
         serde_json::json!({"tables": [rows], "interactions": ledger})
     );
-    let statement = empty_target_registers::EmptyTargetRegistersStatement::<F>::new(&[32]).unwrap();
+    let statement = empty_target_registers::Statement::<F>::new(&[32]).unwrap();
     assert_eq!(statement.interaction_count(), 32);
     let config = config();
     let traces = witness.into_traces().unwrap();
@@ -894,13 +825,13 @@ fn unused_target_registers_retain_every_zero_count_occurrence() {
 #[test]
 fn target_register_backend_binds_clocks_values_addresses_and_counts() {
     for heights in [vec![], vec![32], vec![2, 32, 32], vec![2, 16], vec![2, 64]] {
-        assert!(target_registers::TargetRegistersStatement::<F>::new(&heights).is_err());
+        assert!(target_registers::Statement::<F>::new(&heights).is_err());
     }
     assert!(matches!(
         target_registers::generate::<F>(&[], &[]),
         Err(WitnessGenerationError::PublicInputWidth { .. })
     ));
-    let statement = target_registers::TargetRegistersStatement::<F>::new(&[2, 32]).unwrap();
+    let statement = target_registers::Statement::<F>::new(&[2, 32]).unwrap();
     let config = config();
     for indices in [[0, 31], [5, 5]] {
         let public: Vec<_> = indices
@@ -949,7 +880,7 @@ fn target_register_backend_binds_clocks_values_addresses_and_counts() {
 #[allow(dead_code)]
 mod ram;
 
-fn check_ram_membership<P: Program<F>, S: GeneratedAirSpec>(name: &str) {
+fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
     let reference: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
         "/ram_membership.reference.json"
@@ -969,8 +900,8 @@ fn check_ram_membership<P: Program<F>, S: GeneratedAirSpec>(name: &str) {
     ] {
         requests.push(([bad, first.clone()].concat(), false));
     }
-    assert_eq!(P::FIXED_WIDTHS, &[10]);
-    let fixed = S::fixed_trace::<F>(0).unwrap();
+    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[10]);
+    let fixed = fixed_trace::<P>(0);
     assert_eq!((fixed.height(), fixed.width()), (16, 10));
     let fixed_rows: Vec<_> = (0..16)
         .map(|index| {
@@ -1039,10 +970,10 @@ fn check_ram_membership<P: Program<F>, S: GeneratedAirSpec>(name: &str) {
         .into_iter()
         .map(field)
         .collect();
-    let statement = GeneratedEnsemble::<F, S>::new(&[16]).unwrap();
+    let statement = GeneratedEnsemble::<F, P>::new(&[16]).unwrap();
     assert_eq!(statement.interaction_count(), 18);
     for height in [0, 8, 32] {
-        assert!(GeneratedEnsemble::<F, S>::new(&[height]).is_err());
+        assert!(GeneratedEnsemble::<F, P>::new(&[height]).is_err());
     }
     let traces = clean_backend::witness_generation::generate::<F, P>(&public, &[])
         .unwrap()
@@ -1077,13 +1008,13 @@ fn check_ram_membership<P: Program<F>, S: GeneratedAirSpec>(name: &str) {
 }
 
 macro_rules! ram_membership_fixture {
-    ($module:ident, $file:literal, $program:ident, $air:ident, $channel:literal) => {
+    ($module:ident, $file:literal, $channel:literal) => {
         #[allow(dead_code, unused_imports, unused_variables, unused_parens)]
         mod $module {
             include!(concat!(env!("CLEAN_ENSEMBLE_EXPORT_DIR"), "/", $file));
             #[test]
             fn interval_rows_counts_and_backend_mutations() {
-                super::check_ram_membership::<$program, $air>($channel);
+                super::check_ram_membership::<Ensemble>($channel);
             }
         }
     };
@@ -1091,14 +1022,10 @@ macro_rules! ram_membership_fixture {
 ram_membership_fixture!(
     source_ram,
     "ram_source_membership.rs",
-    RamSourceMembership,
-    RamSourceMembershipAirSpec,
     "sp1.native.initial_memory"
 );
 ram_membership_fixture!(
     target_ram,
     "ram_target_membership.rs",
-    RamTargetMembership,
-    RamTargetMembershipAirSpec,
     "sp1.native.target_memory"
 );

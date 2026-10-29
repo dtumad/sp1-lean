@@ -39,11 +39,12 @@ theorem NativeTraceReady.balancedChannels
       stateFinalToken (nativeTrace statement execution))
   let memoryKeys := (memoryHandoffChains (p := p) compiled.memoryHistory).flatMap chainTokens
   exact (nativeBaseTrace statement execution).canonicalClosure_balancedChannels_of_handoff
+    (nativeBaseTrace_canonicalCapacity statement execution)
     (ready.wellFormed publicWellFormed) ready.demandServable
     (ready.skeletonNonpositive publicWellFormed) stateKeys memoryKeys
     (ready.stateLedgerPerm publicWellFormed) ready.memoryLedgerPerm
-    ((nativeBaseTrace statement execution).canonicalClosure.haltTablePadding).2
-    ((nativeBaseTrace statement execution).canonicalClosure.haltTablePadding).1
+    ((nativeTrace statement execution).haltTablePadding).2
+    ((nativeTrace statement execution).haltTablePadding).1
     ready.exitZero ((Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp capacity)
 
 /-- Functional completeness of the native ensemble on its exact deterministic compiler image.

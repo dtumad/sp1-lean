@@ -196,8 +196,7 @@ entries (op_a = rs2 pull + read-back at `clk + 4`, op_b = rs1 pull + read-back a
 genuine reads, no `RegisterWrite`).  The RAM push is a **genuine write**: SW pushes the
 read-modify-write word `store_value` (rs2's low two limbs merged into the `offset_bit`-selected half
 of the aligned doubleword, the other half kept from `memory_access.prev_value`).  Keeping this list
-beside `circuit` makes Clean's exposure interface the single structural source consumed by both
-faithfulness and semantic grounding. -/
+beside `circuit` makes Clean's exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -330,9 +329,9 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := StoreWordChip.circuit (p := p) } :
+    ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     StoreWordChip.circuit_main_eq]
   simp [StoreWordChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,

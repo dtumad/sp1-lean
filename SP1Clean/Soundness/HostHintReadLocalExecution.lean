@@ -55,12 +55,13 @@ private theorem eval_word (env : Environment (ZMod p)) (row : Var HintReadWordCh
 
 private theorem consumer_record (row : HintReadCoverage.Row (p := p)) :
     (HintReadCoverage.view row.1).component.operations.interactionValuesWith wordChannel.toRaw row.2 =
-      [wordChannel.pulledValue ((HintReadCoverage.rowInput row).step row.1).word] := by
+      [wordChannel.pulledIfValue (HintReadCoverage.rowActivity row)
+        ((HintReadCoverage.rowInput row).step row.1).word] := by
   simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-  change ((HintReadWordChip.main row.1 (varFromOffset HintReadWordChip.Inputs 0)).operations
-    (size HintReadWordChip.Inputs)).interactionValuesWith wordChannel.toRaw row.2 = _
-  rw [HintReadWordChip.word_values, eval_word, eval_varFromOffset_valueFromOffset]
-  rfl
+  change (((HintReadWordChip.circuit row.1).main (varFromOffset HintReadWordChip.RowInput 0)).operations
+    (size HintReadWordChip.RowInput)).interactionValuesWith wordChannel.toRaw row.2 = _
+  rw [HintReadWordChip.guarded_word_values, eval_word, HintReadCoverage.eval_rowInput]
+  simp only [HintReadCoverage.rowActivity, varFromOffset_pair, Nat.zero_add]
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
@@ -79,20 +80,25 @@ private theorem handler_pull_mem (witness : EnsembleWitness (ensemble image sour
   refine Or.inr ⟨handlerTable witness, handlerTable_mem witness, ?_⟩
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
   apply List.mem_flatMap.mpr
-  exact ⟨physical, physicalMem, (handlerTable_component witness) ▸ present⟩
+  refine ⟨physical, physicalMem, ?_⟩
+  have shared : (handlerTable witness).data = witness.data :=
+    witness.same_data _ (handlerTable_mem witness)
+  simpa only [Table.environment, shared, handlerTable_component witness] using present
 
 private theorem consumer_pull_mem (witness : EnsembleWitness (ensemble image source others resources channels names))
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     wordChannel.pulledValue ((HintReadCoverage.rowInput row).step row.1).word ∈
       witness.interactionsWith wordChannel.toRaw := by
+  obtain ⟨physical, active⟩ := HintReadCoverage.mem_active_rows.mp member
   have present : wordChannel.pulledValue ((HintReadCoverage.rowInput row).step row.1).word ∈
-      (wordTables witness).flatMap (·.interactionsWith witness.data wordChannel.toRaw) := by
+      (wordTables witness).flatMap (·.interactionsWith wordChannel.toRaw) := by
     rw [TransitionView.readIndexedRows_interactions HintReadCoverage.variants
-      (fun last => (HintReadCoverage.view last).component) _ witness.data _ (wordTables_aligned witness)]
-    refine List.mem_flatMap.mpr ⟨row, member, ?_⟩
+      (fun last => (HintReadCoverage.view last).component) _ _ (wordTables_aligned witness)]
+    refine List.mem_flatMap.mpr ⟨row, physical, ?_⟩
     change _ ∈ (HintReadCoverage.view row.1).component.operations.interactionValuesWith wordChannel.toRaw row.2
-    rw [consumer_record]
+    rw [consumer_record, active]
+    change _ ∈ [wordChannel.pulledValue ((HintReadCoverage.rowInput row).step row.1).word]
     exact List.mem_cons_self ..
   obtain ⟨table, tableMem, present⟩ := List.mem_flatMap.mp present
   exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, wordTables_mem witness table tableMem, present⟩)
@@ -102,7 +108,7 @@ theorem consumer_word_binding (witness : EnsembleWitness (ensemble image source 
     (store : Store) (authenticated : RecordAuthentication witness store)
     (balanced : witness.BalancedChannel wordChannel.toRaw)
     (row : HintReadCoverage.Row (p := p))
-    (member : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data) :
+    (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     ((HintReadCoverage.rowInput row).step row.1).word.Binds store :=
   (word_authenticated witness store authenticated balanced _ (consumer_pull_mem witness row member)).2
 
@@ -111,26 +117,26 @@ private theorem consumer_pointer (witness : EnsembleWitness (ensemble image sour
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
     (row : HintReadCoverage.Row (p := p))
-    (rowMem : row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data)
+    (rowMem : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness))
     (clock : HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous =
       HostHintReadPartition.callClock env) :
     ((HintReadCoverage.rowInput row).step row.1).word.pointer = (input env).node.pointer := by
   have selected := balanced_for_of_channels witness interface constraints ordering calls cursor env member
   rw [handler_cursor] at selected
-  have fixed := HintReadCoverage.selection_fixed (wordTables witness) witness.data
+  have fixed := HintReadCoverage.selection_fixed (wordTables witness)
     (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) (wordTables_aligned witness)
-  have alignment := TransitionView.selectTables_aligned _ _ witness.data
+  have alignment := TransitionView.selectTables_aligned _ _
     (fun last => (HintReadCoverage.view last).component)
     (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) fixed (wordTables_aligned witness)
   have specs := wordSpecs.select (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) fixed
-  obtain ⟨path, perm, _, _, _, _, same⟩ := HintReadCoverage.ordered_cover _ witness.data _ _ alignment specs selected
+  obtain ⟨path, perm, _, _, _, _, same⟩ := HintReadCoverage.ordered_cover _ _ _ alignment specs selected
   have included : row ∈ path := by
     apply perm.mem_iff.mpr
-    rw [TransitionView.readIndexedRows_selectTables]
+    rw [TransitionView.readIndexedActiveRows_selectTables]
     exact List.mem_filter.mpr ⟨rowMem, by
       simp only [HostHintReadPartition.keepWord, HostHintReadPartition.keepState,
         HintReadCoverage.rowInput]
@@ -145,21 +151,23 @@ theorem current_records (witness : EnsembleWitness (ensemble image source others
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (handlerSpecs : (handlerTable witness).Spec witness.data)
-    (wordSpecs : HintReadCoverage.Steps (wordTables witness) witness.data)
+    (handlerSpecs : (handlerTable witness).Spec)
+    (wordSpecs : HintReadCoverage.Steps (wordTables witness))
     (store finalStore : Store) (extension : Extends store finalStore)
     (authenticated : RecordAuthentication witness finalStore)
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
     (hints : List Bytes) (current : (input env).previous.Binds store hints) :
     (input env).node.Binds store ∧ (input env).endStep.word.Binds store ∧
-      ∀ row ∈ TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness) witness.data,
+      ∀ row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness),
         HostHintReadPartition.clock (HintReadCoverage.rowInput row).previous = HostHintReadPartition.callClock env →
           ((HintReadCoverage.rowInput row).step row.1).word.Binds store := by
   have valid : handler.Spec env := by
     obtain ⟨physical, present, rfl⟩ := List.mem_map.mp member
-    rw [← handlerTable_component witness]
-    exact handlerSpecs physical present
+    have shared : (handlerTable witness).data = witness.data :=
+      witness.same_data _ (handlerTable_mem witness)
+    simpa only [Table.environment, shared, handlerTable_component witness] using
+      handlerSpecs physical present
   have bound : Address.toNat (input env).node.pointer ≤ store.size := by
     have head : (input env).previous.head = (input env).node.pointer := valid.2.2.2.2.2.2.1
     rw [← head]
@@ -180,8 +188,11 @@ no local specifications or per-record binding premises are supplied by the calle
 theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image source others resources channels names))
     (interface : ExtensionInterface others resources)
     (pulls : ∀ component ∈ others.map (·.component) ++ resources, WritePermission.Pulls component)
+    (members : ∀ component ∈ others.map (·.component) ++ resources,
+      image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints) (records : RecordChannels witness)
     (permissions : witness.BalancedChannel WritePermissionProvider.channel.toRaw)
+    (membershipBalance : witness.BalancedChannel image.writePermissionTable.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
     (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
@@ -196,15 +207,15 @@ theorem run_of_authenticated_witness (witness : EnsembleWitness (ensemble image 
     (arg2 : context.register 11 = some (Word.toBitVec64 (input env).call.arg2)) :
     ∃ bytes rest, host.io.hints = bytes :: rest ∧ (input env).next.Binds store rest ∧
       host.run ⟨{ readOnly := image.readOnly }, p⟩ context = some (HostHintReadChip.execution (input env) host bytes rest) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness) witness.data
-          (wordTables_aligned witness)) witness.data).map
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness)
+          (wordTables_aligned witness))).map
         HintReadWrites.produced).Perm (wordWrites (Address.toNat (input env).span.start) bytes) := by
   have handlerSpecs := handler_spec witness interface finalStore authenticated constraints records
   have wordSpecs := word_steps witness interface finalStore authenticated constraints records
   obtain ⟨header, ending, words⟩ := current_records witness interface constraints records ordering calls cursor handlerSpecs wordSpecs
     store finalStore extension authenticated env member host.io.hints current
-  exact run_of_witness witness interface pulls constraints permissions ordering calls cursor handlerSpecs wordSpecs env member
+  exact run_of_witness witness interface pulls members constraints permissions membershipBalance ordering calls cursor handlerSpecs wordSpecs env member
     host store current header ending words running context code arg1 arg2
 
 end SP1Clean.Soundness.HostHintReadLocal

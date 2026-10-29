@@ -29,6 +29,7 @@ private theorem instructionRows_advancing {image : ProgramImage} {source : Execu
   have active := of_decide_eq_true real
   have byte := channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
     (instructionTables_aligned witness)
+    (fun table member => witness.same_data table (instructionTables_mem witness member))
     (fun table tableMem => channels.byte table (instructionTables_mem witness tableMem)) row decodedMem
   have step := row.stateTimeStep_of_byteGuarantees witness.data (witness.tables.drop 7) decodedMem byte active
   refine ⟨⟨?_, rfl, ?_⟩, step⟩
@@ -47,6 +48,7 @@ private theorem haltRows_advancing {image : ProgramImage} {source : ExecutionSna
         StateMsg.timeNat ((ExecutionRow.halt row).edge witness.data).1 + (ExecutionRow.halt row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact halt_advancing _ (haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
     (channels.byte _ (systemTable_mem witness 2)) physicalMem real)
 
 private theorem syscallRows_advancing {image : ProgramImage} {source : ExecutionSnapshot}
@@ -58,9 +60,11 @@ private theorem syscallRows_advancing {image : ProgramImage} {source : Execution
         StateMsg.timeNat ((ExecutionRow.syscall row).edge witness.data).1 + (ExecutionRow.syscall row).duration := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact syscall_advancing _ (syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
     (channels.byte _ (systemTable_mem witness 3)) physicalMem real)
     (syscall_halt_binary _ witness.data (systemTable_component witness 3) (systemTable_constraints witness constraints 3) physicalMem)
     real (syscallInstrsRow_pcArm_spec_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
       (systemTable_constraints witness constraints 3) physicalMem)
 
 /-- Clock progress and the PC preservation/range-check dichotomy come from each physical row. -/
@@ -84,6 +88,7 @@ private theorem stateBumps_spec {image : ProgramImage} {source : ExecutionSnapsh
     StateBumpChip.Spec row ∧ row.is_real = 1 := by
   obtain ⟨physical, physicalMem, rfl, real⟩ := activeSystemRows_member _ _ _ member
   exact ⟨stateBumpTable_spec_of_component _ witness.data (systemTable_component witness 1)
+    (witness.same_data _ (systemTable_mem witness 1))
     (systemTable_constraints witness constraints 1)
     (channels.byte _ (systemTable_mem witness 1)) _ physicalMem, real⟩
 

@@ -79,8 +79,7 @@ source_paths.extend((ROOT / "scripts").rglob("*.lean"))
 handwritten_lean = sorted(
     path
     for path in source_paths
-    if not relative(path).startswith("SP1Clean/Extracted/")
-    and not path.name.endswith("Vectors.lean")
+    if not path.name.endswith("Vectors.lean")
 )
 
 for source in handwritten_lean:

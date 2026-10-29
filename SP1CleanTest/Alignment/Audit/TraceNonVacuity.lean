@@ -26,8 +26,10 @@ open SP1Clean.Audit.JointNonVacuity
 hint, so it is arbitrary. -/
 def anchorHint : ProverHint (ZMod SP1Prime) := ProverHint.empty _
 
+/-- Width used by the public boundary limb checks. -/
 def width16 : RangeChip.Width := ⟨16, by norm_num⟩
 
+/-- Unit-count public boundary requests, preserving all repeated occurrences. -/
 def anchorRangeEntries (width : RangeChip.Width) : List TraceGen.RangeEntry :=
   if width = width16 then
     [⟨1, 1⟩, ⟨1, 1⟩, ⟨1, 1⟩, ⟨1, 1⟩, ⟨0, 1⟩, ⟨0, 1⟩, ⟨0, 1⟩, ⟨0, 1⟩, ⟨0, 1⟩, ⟨0, 1⟩]
@@ -65,6 +67,13 @@ middle clock limbs, both zero).
 def anchorTrace : SupportedCoreTraceWitness SP1Prime where
   instructionEvents := anchorInstructionEvents
   providerOccurrences := anchorProviderOccurrences
+  instructionCapacity := by intro id; cases id <;> decide
+  providerCapacity := by
+    intro id
+    cases id with
+    | range width => fin_cases width <;> decide
+    | byte provider => cases provider <;> decide
+    | program | memoryInit | memoryFinalize | memoryBump | stateBump | halt | syscallInstrs => decide
   generationData := anchorData
   hint := anchorHint
   boundary := boundaryInputs 1 65536 1 65536
@@ -120,120 +129,98 @@ the balance argument can speak about them. -/
 def u8RangeBuilt : Table (ZMod SP1Prime) :=
   Table.build ByteChip.U8Range.component
     (ByteChip.U8Range.traceInputs
-      (anchorTrace.providerOccurrences (.byte .u8Range))) anchorData anchorHint
+      (anchorTrace.providerOccurrences (.byte .u8Range))) anchorData anchorHint (by decide)
 
 /-- The built 16-bit `RangeChip` table: ten unit-count rows, four checking `a = 1` and six `a = 0`. -/
 def range16Built : Table (ZMod SP1Prime) :=
   Table.build (RangeChip.componentFor width16)
-    (RangeChip.traceInputs (anchorTrace.providerOccurrences (.range width16))) anchorData anchorHint
+    (RangeChip.traceInputs (anchorTrace.providerOccurrences (.range width16))) anchorData anchorHint (by decide)
 
 /-- The built Halt table: the mandatory single padding row (`Occurrence .halt = Empty`, so the
 compiler emits no real halt rows and `haltTraceInputs [] = [paddingInputs]`). -/
 def haltBuilt : Table (ZMod SP1Prime) :=
   Table.build HaltChip.component
-    (HaltChip.haltTraceInputs (anchorTrace.providerOccurrences .halt)) anchorData anchorHint
+    (HaltChip.haltTraceInputs (anchorTrace.providerOccurrences .halt)) anchorData anchorHint (by decide)
 
 /-- The generated Halt table **is** the soundness-side anchor's hand-built padding table: same
 component, same width, and the same single all-zero row.  Every Halt fact proved there therefore
 transfers verbatim. -/
 theorem haltBuilt_eq : haltBuilt = haltPaddingTable :=
-  Table.ext_iff.mpr ⟨rfl, by native_decide⟩
+  Table.ext_iff.mpr ⟨rfl, by native_decide, rfl⟩
 
 /-- One indexed range table is the named width-16 table or is physically empty. Keeping the
 dependent occurrence projection folded makes this a stable rewrite boundary for `rangeTables`. -/
 theorem anchorRangeBuilt_interactionsWith (width : RangeChip.Width)
     (ch : RawChannel (ZMod SP1Prime)) :
-    (Table.build (RangeChip.componentFor width)
-      (RangeChip.traceInputs (anchorTrace.providerOccurrences (.range width)))
-      anchorTrace.generationData anchorTrace.hint).interactionsWith anchorData ch =
-        if width = width16 then range16Built.interactionsWith anchorData ch else [] := by
+    (anchorTrace.providerTableFor (.range width)).interactionsWith ch =
+        if width = width16 then range16Built.interactionsWith ch else [] := by
   by_cases hwidth : width = width16
   · subst width
     rfl
   · rw [if_neg hwidth]
     have hocc : anchorTrace.providerOccurrences (.range width) = [] := by
       rw [anchorTrace_rangeOccurrences, anchorRangeEntries, if_neg hwidth]
-    rw [hocc]
-    rfl
-
-/-- The same rewrite after the registry projection has reduced to its semantic range list. -/
-theorem anchorRangeEntriesBuilt_interactionsWith (width : RangeChip.Width)
-    (ch : RawChannel (ZMod SP1Prime)) :
-    (Table.build (RangeChip.componentFor width)
-      (RangeChip.traceInputs (anchorRangeEntries width)) anchorTrace.generationData anchorTrace.hint).interactionsWith
-        anchorData ch = if width = width16 then range16Built.interactionsWith anchorData ch else [] := by
-  by_cases hwidth : width = width16
-  · subst width
-    rfl
-  · rw [if_neg hwidth]
-    have hentries : anchorRangeEntries width = [] := by
-      simp [anchorRangeEntries, hwidth]
-    rw [hentries]
+    simp only [SupportedCoreTraceWitness.providerTableFor,
+      SupportedCoreTraceWitness.providerInputsFor, hocc]
     rfl
 
 /-- A table built from no occurrences contributes nothing to any channel. -/
 theorem nilTable (c : Component (ZMod SP1Prime)) (ch : RawChannel (ZMod SP1Prime))
-    {hint : ProverHint (ZMod SP1Prime)} {fixed : c.fixedRowsMatch []} :
-    (Table.build c [] anchorData hint fixed).interactionsWith anchorData ch = [] := rfl
-
-/-- The dependent input type of an empty indexed Range table stays folded at the component
-boundary, avoiding an unnecessary transparency conversion through `componentFor`. -/
-theorem nilRangeTable (width : RangeChip.Width) (ch : RawChannel (ZMod SP1Prime)) :
-    (Table.build (RangeChip.componentFor width) (RangeChip.traceInputs [])
-      anchorData anchorHint).interactionsWith anchorData ch = [] := rfl
+    {hint : ProverHint (ZMod SP1Prime)} {fixed : c.FixedRowsMatch []} :
+    (Table.build c [] anchorData hint (Nat.zero_le _) fixed).interactionsWith ch = [] := rfl
 
 /-- The assembled table list with every empty occurrence list already reduced to `[]` — one `rfl`,
 which is what lets the channel split below be a single `simp only`. -/
 theorem anchorTrace_tables_eq :
     anchorTrace.tables =
-      [Table.build AddChip.component [] anchorData anchorHint,
-       Table.build AddiChip.component [] anchorData anchorHint,
-       Table.build AddwChip.component [] anchorData anchorHint,
-       Table.build SubChip.component [] anchorData anchorHint,
-       Table.build SubwChip.component [] anchorData anchorHint,
-       Table.build BitwiseChip.component [] anchorData (ProverHint.empty _),
-       Table.build LtChip.component [] anchorData (ProverHint.empty _),
-       Table.build ShiftLeftChip.component [] anchorData (ProverHint.empty _),
-       Table.build ShiftRightChip.component [] anchorData (ProverHint.empty _),
-       Table.build JalChip.component [] anchorData anchorHint,
-       Table.build JalrChip.component [] anchorData anchorHint,
-       Table.build BranchChip.component [] anchorData (ProverHint.empty _),
-       Table.build UTypeChip.component [] anchorData anchorHint,
-       Table.build LoadByteChip.component [] anchorData anchorHint,
-       Table.build LoadHalfChip.component [] anchorData anchorHint,
-       Table.build LoadWordChip.component [] anchorData anchorHint,
-       Table.build LoadDoubleChip.component [] anchorData anchorHint,
-       Table.build LoadX0Chip.component [] anchorData anchorHint,
-       Table.build StoreByteChip.component [] anchorData anchorHint,
-       Table.build StoreHalfChip.component [] anchorData anchorHint,
-       Table.build StoreWordChip.component [] anchorData anchorHint,
-       Table.build StoreDoubleChip.component [] anchorData anchorHint,
-       Table.build MulChip.component [] anchorData anchorHint,
-       Table.build DivRemChip.component [] anchorData (ProverHint.empty _),
-       Table.build AluX0Chip.component [] anchorData anchorHint,
+      [Table.build AddChip.component [] anchorData anchorHint (by decide),
+       Table.build AddiChip.component [] anchorData anchorHint (by decide),
+       Table.build AddwChip.component [] anchorData anchorHint (by decide),
+       Table.build SubChip.component [] anchorData anchorHint (by decide),
+       Table.build SubwChip.component [] anchorData anchorHint (by decide),
+       Table.build BitwiseChip.component [] anchorData (ProverHint.empty _) (by decide),
+       Table.build LtChip.component [] anchorData (ProverHint.empty _) (by decide),
+       Table.build ShiftLeftChip.component [] anchorData (ProverHint.empty _) (by decide),
+       Table.build ShiftRightChip.component [] anchorData (ProverHint.empty _) (by decide),
+       Table.build JalChip.component [] anchorData anchorHint (by decide),
+       Table.build JalrChip.component [] anchorData anchorHint (by decide),
+       Table.build BranchChip.component [] anchorData (ProverHint.empty _) (by decide),
+       Table.build UTypeChip.component [] anchorData anchorHint (by decide),
+       Table.build LoadByteChip.component [] anchorData anchorHint (by decide),
+       Table.build LoadHalfChip.component [] anchorData anchorHint (by decide),
+       Table.build LoadWordChip.component [] anchorData anchorHint (by decide),
+       Table.build LoadDoubleChip.component [] anchorData anchorHint (by decide),
+       Table.build LoadX0Chip.component [] anchorData anchorHint (by decide),
+       Table.build StoreByteChip.component [] anchorData anchorHint (by decide),
+       Table.build StoreHalfChip.component [] anchorData anchorHint (by decide),
+       Table.build StoreWordChip.component [] anchorData anchorHint (by decide),
+       Table.build StoreDoubleChip.component [] anchorData anchorHint (by decide),
+       Table.build MulChip.component [] anchorData anchorHint (by decide),
+       Table.build DivRemChip.component [] anchorData (ProverHint.empty _) (by decide),
+       Table.build AluX0Chip.component [] anchorData anchorHint (by decide),
        u8RangeBuilt,
-       Table.build ByteChip.MSB.component [] anchorData anchorHint,
-       Table.build ByteChip.AndByte.component [] anchorData anchorHint,
-       Table.build ByteChip.OrByte.component [] anchorData anchorHint,
-       Table.build ByteChip.XorByte.component [] anchorData anchorHint,
-       Table.build ByteChip.Ltu.component [] anchorData anchorHint
-       ] ++ anchorTrace.rangeTables ++ [Table.build ProgramProviderChip.component [] anchorData anchorHint,
-       Table.build MemoryProviderChip.component [] anchorData anchorHint,
-       Table.build MemoryFinalizeChip.component [] anchorData anchorHint,
-       Table.build MemoryBumpChip.component [] anchorData anchorHint,
-       Table.build StateBumpChip.component [] anchorData anchorHint,
-       haltBuilt, Table.build SyscallInstrsChip.component [] anchorData anchorHint] := rfl
+       Table.build ByteChip.MSB.component [] anchorData anchorHint (by decide),
+       Table.build ByteChip.AndByte.component [] anchorData anchorHint (by decide),
+       Table.build ByteChip.OrByte.component [] anchorData anchorHint (by decide),
+       Table.build ByteChip.XorByte.component [] anchorData anchorHint (by decide),
+       Table.build ByteChip.Ltu.component [] anchorData anchorHint (by decide)
+       ] ++ anchorTrace.rangeTables ++ [Table.build ProgramProviderChip.component [] anchorData anchorHint (by decide),
+       Table.build MemoryProviderChip.component [] anchorData anchorHint (by decide),
+       Table.build MemoryFinalizeChip.component [] anchorData anchorHint (by decide),
+       Table.build MemoryBumpChip.component [] anchorData anchorHint (by decide),
+       Table.build StateBumpChip.component [] anchorData anchorHint (by decide),
+       haltBuilt, Table.build SyscallInstrsChip.component [] anchorData anchorHint (by decide)] := rfl
 
 /-- **The whole shard's channel view**: the verifier row followed by the two byte providers and the
 Halt padding table, the fifty-two empty tables contributing nothing. -/
 theorem anchorTrace_interactionsWith_split (ch : RawChannel (ZMod SP1Prime)) :
     anchorTrace.witness.interactionsWith ch =
       anchorTrace.witness.verifierInteractionsWith ch ++
-        (u8RangeBuilt.interactionsWith anchorData ch ++
-          (range16Built.interactionsWith anchorData ch ++ haltPaddingTable.interactionsWith anchorData ch)) := by
-  change _ ++ anchorTrace.tables.flatMap
-    (fun t => t.interactionsWith anchorTrace.witness.data ch) = _
-  simp_rw [Table.interactionsWith_setData _ anchorTrace.witness.data anchorData]
+        (u8RangeBuilt.interactionsWith ch ++
+          (range16Built.interactionsWith ch ++ haltPaddingTable.interactionsWith ch)) := by
+  change _ ++ (withDerivedData anchorTrace.tables).flatMap
+    (fun t => t.interactionsWith ch) = _
+  rw [withDerivedData_interactionsWith]
   rw [anchorTrace_tables_eq]
   simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, nilTable,
     haltBuilt_eq, List.nil_append, List.append_nil]
@@ -269,13 +256,13 @@ theorem range16Built_channels :
   simp [GeneralFormalCircuit.channels, RangeChip.circuitFor, RangeChip.circuit, circuit_norm]
 
 theorem u8RangeBuilt_interactionsWith_nil {ch : RawChannel (ZMod SP1Prime)}
-    (hne : ch ≠ byteChannel.toRaw) : u8RangeBuilt.interactionsWith anchorData ch = [] := by
+    (hne : ch ≠ byteChannel.toRaw) : u8RangeBuilt.interactionsWith ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (u8RangeBuilt_channels _ hmem)
 
 theorem range16Built_interactionsWith_nil {ch : RawChannel (ZMod SP1Prime)}
-    (hne : ch ≠ byteChannel.toRaw) : range16Built.interactionsWith anchorData ch = [] := by
+    (hne : ch ≠ byteChannel.toRaw) : range16Built.interactionsWith ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (range16Built_channels _ hmem)
@@ -285,11 +272,11 @@ verifier row's twelve pulls, then the two providers' twelve unit-count pushes. -
 def byteInteractions : List (Interaction (ZMod SP1Prime)) :=
   (verifierBytePulls (varFromOffset SP1PublicIO 0)).map
       (AbstractInteraction.eval (Environment.fromInput pv anchorData)) ++
-    (u8RangeBuilt.interactions anchorData ++ range16Built.interactions anchorData)
+    (u8RangeBuilt.interactions ++ range16Built.interactions)
 
 theorem anchorTrace_byteInteractions :
     anchorTrace.witness.interactionsWith byteChannel.toRaw =
-      byteInteractions ++ haltPaddingTable.interactionsWith anchorData byteChannel.toRaw := by
+      byteInteractions ++ haltPaddingTable.interactionsWith byteChannel.toRaw := by
   rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions, jointWitness_verifierByte,
     table_interactionsWith_eq_interactions u8RangeBuilt_channels,
     table_interactionsWith_eq_interactions range16Built_channels]
@@ -303,7 +290,7 @@ theorem anchorTrace_stateInteractions :
          ⟨pv.final_clk_high, pv.final_clk_low, pv.final_pc0, pv.final_pc1, pv.final_pc2⟩,
        stateChannel.pushedIfValue 1
          ⟨pv.init_clk_high, pv.init_clk_low, pv.init_pc0, pv.init_pc1, pv.init_pc2⟩] ++
-        haltPaddingTable.interactionsWith anchorData stateChannel.toRaw := by
+        haltPaddingTable.interactionsWith stateChannel.toRaw := by
   rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions, jointWitness_verifierState,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),
     range16Built_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),
@@ -311,7 +298,7 @@ theorem anchorTrace_stateInteractions :
 
 theorem anchorTrace_programInteractions :
     anchorTrace.witness.interactionsWith programChannel.toRaw =
-      haltPaddingTable.interactionsWith anchorData programChannel.toRaw := by
+      haltPaddingTable.interactionsWith programChannel.toRaw := by
   rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions,
     jointWitness_verifierProgram_nil,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.programChannel_eq_byteChannel_false),
@@ -320,7 +307,7 @@ theorem anchorTrace_programInteractions :
 
 theorem anchorTrace_memoryInteractions :
     anchorTrace.witness.interactionsWith memoryChannel.toRaw =
-      haltPaddingTable.interactionsWith anchorData memoryChannel.toRaw := by
+      haltPaddingTable.interactionsWith memoryChannel.toRaw := by
   rw [anchorTrace_interactionsWith_split, anchorTrace_verifierInteractions,
     jointWitness_verifierMemory_nil,
     u8RangeBuilt_interactionsWith_nil (of_eq_false Channels.memoryChannel_eq_byteChannel_false),
@@ -364,7 +351,7 @@ theorem pulledMessages_nil_of_mult_zero {l : List (Interaction (ZMod SP1Prime))}
 view. -/
 theorem balancedOn_append_halt {ch : RawChannel (ZMod SP1Prime)}
     {l : List (Interaction (ZMod SP1Prime))}
-    (heq : anchorTrace.witness.interactionsWith ch = l ++ haltPaddingTable.interactionsWith anchorData ch)
+    (heq : anchorTrace.witness.interactionsWith ch = l ++ haltPaddingTable.interactionsWith ch)
     (hname : ch.name ≠ "SP1Exit") (hlen : l.length < 100) (hbin : Ledger.SignedMults l)
     (hperm : (Ledger.pushedMessages l).Perm (Ledger.pulledMessages l)) :
     anchorTrace.BalancedOn ch := by
@@ -462,14 +449,14 @@ theorem anchorTrace_memoryInitProviderBound :
 
 theorem anchorTrace_memoryInitProviderUnique :
     MemoryInitProviderUnique (p := SP1Prime) anchorTrace.witness := by
-  show (typedTableInteractionsWith (memoryInitProviderTable anchorTrace.witness) anchorTrace.witness.data
+  show (typedTableInteractionsWith (memoryInitProviderTable anchorTrace.witness)
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, anchorTrace_memoryInitProviderTable_nil, List.flatMap_nil]
   exact List.Pairwise.nil
 
 theorem anchorTrace_memoryFinalizeProviderUnique :
     MemoryFinalizeProviderUnique (p := SP1Prime) anchorTrace.witness := by
-  show (typedTableInteractionsWith (memoryFinalizeProviderTable anchorTrace.witness) anchorTrace.witness.data
+  show (typedTableInteractionsWith (memoryFinalizeProviderTable anchorTrace.witness)
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, anchorTrace_memoryFinalizeProviderTable_nil, List.flatMap_nil]
   exact List.Pairwise.nil

@@ -13,7 +13,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # Native `RTypeReader` reader — the register-adapter per-row checks as a Clean `GeneralFormalCircuit`
 
 The second real reader (sibling of `Readers/CPUState.lean`). SP1's `RTypeReader::eval`
-(`crates/core/machine/src/adapter/register/r_type.rs`, mirrored in `Extracted/RTypeReader.lean`) emits
+(`crates/core/machine/src/adapter/register/r_type.rs`) emits
 three kinds of bus interaction per ALU row:
 
 - the **program** send (instruction fetch), gated by `is_trusted`;
@@ -46,8 +46,7 @@ open SP1Clean.Channels (byteChannel memoryChannel MemoryMsg programChannel Progr
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Component-wise evaluation of the canonical R-type reader row.  Kept beside the native reader so
-soundness and faithfulness clients share one folded evaluator boundary. -/
+/-- Folded evaluation of the canonical R-type reader row for chip soundness. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     Eval.eval env cols =
@@ -178,7 +177,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- `r_type.rs:100`) so the pull's off-gate `Requirements` are vacuous, letting `programChannel` drop from
   -- `channelsWithRequirements`. Arity-16 tuple: pc, opcode, the operands as register indices (R-type ⇒ the
   -- higher limbs + `imm_b`/`imm_c` are `0`), the `op_a_0` flag. (SP1 *sends* this `+1`; our pull is `−1`,
-  -- bridged up-to-sign in `Faithful/RTypeReader.lean`.)
+  -- normalized by channel in the Rust comparison adapter.)
   assertZero (input.is_trusted * (input.is_trusted - 1))
   programChannel.pullIf input.is_trusted
     (⟨input.pc[0], input.pc[1], input.pc[2], input.opcode,
@@ -195,7 +194,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- **reads** (value = the read-back `prev_value`). **W11 polarity flip:** the *read-prior* is a `pullIf` (the
   -- chip *derives* `MemoryMsg.isU64` of the operand `prev_value`) and the *read-back* a `pushIf` (the chip
   -- *proves* `isU64` of the pushed value, from the paired read-prior pull — same value). SP1 *sends* the
-  -- read-prior (`+is_real`); our pull is `−is_real`, bridged up-to-sign in `Faithful/RTypeReader.lean`.
+  -- read-prior (`+is_real`); our pull is `−is_real`, normalized in the Rust comparison adapter.
   memoryChannel.pullIf input.is_real
     (⟨input.clk_high, cols.op_a_memory.access_timestamp.prev_low, cols.op_a, 0, 0,
       cols.op_a_memory.prev_value⟩ : MemoryMsg (Expression (ZMod p)))

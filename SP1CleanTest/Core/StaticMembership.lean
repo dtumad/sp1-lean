@@ -15,29 +15,43 @@ open Circuit Air.Flat
 
 variable {F : Type} [FiniteField F]
 
+/-- Channel names, message cells and signed multiplicities in physical occurrence order. -/
 abbrev Ledger (F : Type) := List (String × List F × F)
+
+/-- Allocate literal fixed-message demand to its first physical occurrence. Later duplicates
+remain present with zero count. A trailing eligibility column is not part of the payload.
+This fixture helper does not replace Clean's scheduler. -/
+def literalSuffix (channel : String) (width : ℕ) (ledger : Ledger F) (fixed : FixedColumns F)
+    (index : ℕ) : Array F :=
+  let row := fixed.row (UInt64.ofNat index)
+  let message := row.take width
+  if (row.size == width + 1 && row[width]?.getD 0 == 0) ||
+      (List.range index).any (fun earlier => (fixed.row (UInt64.ofNat earlier)).take width == message) then #[0]
+  else #[-((ledger.filter fun entry => entry.1 == channel && entry.2.1 == message.toList).map (·.2.2)).sum]
 
 /-- Assign demand only to verifier-eligible rows. Duplicate and padding rows retain their
 zero-count occurrences, and unmatched or inactive demand remains unbalanced. -/
 def suffix (channel : String) (ledger : Ledger F) (fixed : FixedColumns F) (index : ℕ) : Array F :=
-  if (fixed.row index).back?.getD 0 == 0 then #[0] else
-  #[-((ledger.filter fun entry => entry.1 == channel && entry.2.1 == (fixed.row index).toList).map
+  if (fixed.row (UInt64.ofNat index)).back?.getD 0 == 0 then #[0] else
+  #[-((ledger.filter fun entry => entry.1 == channel && entry.2.1 == (fixed.row (UInt64.ofNat index)).toList).map
     (·.2.2)).sum]
 
 /-- Evaluate the actual physical provider, including every zero-count occurrence. -/
-def table {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row) (ledger : Ledger F) : Table F :=
-  Table.buildPreallocated source.component source.fixedColumns rfl
-    (suffix source.channel.name ledger source.fixedColumns) (fun _ _ => #[]) (ProverHint.empty F)
+def table {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row) (ledger : Ledger F)
+    (bounded : source.height < UInt64.size := by decide) : Table F :=
+  Table.buildPreallocated (source.component bounded) (source.fixedColumns bounded) rfl
+    (suffix source.channel.name ledger (source.fixedColumns bounded)) (fun _ _ => #[]) (ProverHint.empty F)
 
 /-- The canonical interaction ledger of the actual provider rows. -/
 def providerLedger {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row)
-    (ledger : Ledger F) : Ledger F :=
-  ((table source ledger).interactions (fun _ _ => #[])).map fun interaction =>
+    (ledger : Ledger F) (bounded : source.height < UInt64.size := by decide) : Ledger F :=
+  (table source ledger bounded).interactions.map fun interaction =>
     (interaction.channel.name, interaction.msg.toList, interaction.mult)
 
 /-- A subsystem membership check retains forged messages in the complete ledger. -/
-def check {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row) (ledger : Ledger F) : Bool :=
-  let complete := (ledger ++ providerLedger source ledger).filter (fun entry => entry.1 == source.channel.name)
+def check {Row : TypeMap} [ProvableType Row] (source : StaticTable F Row) (ledger : Ledger F)
+    (bounded : source.height < UInt64.size := by decide) : Bool :=
+  let complete := (ledger ++ providerLedger source ledger bounded).filter (fun entry => entry.1 == source.channel.name)
   complete.all fun entry =>
     ((complete.filter (fun other => other.2.1 == entry.2.1)).map (·.2.2)).sum == 0
 
@@ -62,19 +76,21 @@ def demandLedger (components : List (Component F)) (inputs : ℕ → List (List 
 requirement channel, which selects their counts independently of other providers. Ordinary
 components retain the supplied input order verbatim. -/
 def buildTables (components : List (Component F)) (inputs : ℕ → List (List F))
-    (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F) : List (Table F) :=
+    (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F)
+    (bounded : ∀ index : Fin components.length, (inputs index.val).length ≤ UInt64.size) : List (Table F) :=
   List.ofFn fun index : Fin components.length =>
     let component := components[index]
     Table.buildWithFixed component ((inputs index.val).map fun cells =>
       fromElements (Vector.ofFn fun cell => cells[cell.val]?.getD 0))
       (fun fixed index => match component.circuit.channelsWithRequirements with
-        | [channel] => suffix channel.name ledger fixed index
-        | _ => #[]) data hint
+        | [channel] => literalSuffix channel.name channel.arity ledger fixed index
+        | _ => #[]) data hint (by simpa only [List.length_map] using bounded index)
 
 /-- Construction preserves the whole physical inventory and its order. -/
 theorem buildTables_components (components : List (Component F)) (inputs : ℕ → List (List F))
-    (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F) :
-    (buildTables components inputs ledger data hint).map (·.component) = components := by
+    (ledger : Ledger F) (data : ProverData F) (hint : ProverHint F)
+    (bounded : ∀ index : Fin components.length, (inputs index.val).length ≤ UInt64.size) :
+    (buildTables components inputs ledger data hint bounded).map (·.component) = components := by
   simp only [buildTables, List.map_ofFn, Function.comp_def, Table.buildWithFixed_component]
   exact List.ofFn_getElem
 

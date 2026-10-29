@@ -151,12 +151,13 @@ theorem balancedInteractions_of_fieldClosurePermutation {Message : Type*}
 
 theorem u8Range_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.U8Range.component (p := p))
-        (ByteChip.U8Range.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.U8Range.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e => actualProviderAccess (p := p) (u8RangeAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.U8Range.component (p := p)) entries
-    ByteChip.U8Range.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ByteChip.U8Range.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [u8Range_buildRow_cleanAccesses]
   have hb := (hwf e he).1
   have hc := (hwf e he).2
@@ -168,12 +169,13 @@ theorem u8Range_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 
 theorem msb_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.MSB.component (p := p))
-        (ByteChip.MSB.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.MSB.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e => actualProviderAccess (p := p) (msbAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.MSB.component (p := p)) entries
-    ByteChip.MSB.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ByteChip.MSB.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [msb_buildRow_cleanAccesses _ _ _ (val_natCast_lt (hwf e he).1 (by norm_num))]
   simp only [actualProviderAccess, withFieldMultiplicity, msbAccess, ByteChip.MSB.ofEntry,
     val_ofNat_small (p := p) (n := 5) (by norm_num), val_ite_bit, val_zero_zmod,
@@ -181,12 +183,13 @@ theorem msb_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 
 theorem and_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.AndByte.component (p := p))
-        (ByteChip.AndByte.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.AndByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e => actualProviderAccess (p := p) (andAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.AndByte.component (p := p)) entries
-    ByteChip.AndByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ByteChip.AndByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [and_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, andAccess, ByteChip.AndByte.ofEntry,
@@ -196,12 +199,13 @@ theorem and_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 
 theorem or_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.OrByte.component (p := p))
-        (ByteChip.OrByte.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.OrByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e => actualProviderAccess (p := p) (orAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.OrByte.component (p := p)) entries
-    ByteChip.OrByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ByteChip.OrByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [or_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, orAccess, ByteChip.OrByte.ofEntry,
@@ -211,12 +215,13 @@ theorem or_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 
 theorem xor_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.XorByte.component (p := p))
-        (ByteChip.XorByte.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.XorByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e => actualProviderAccess (p := p) (xorAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.XorByte.component (p := p)) entries
-    ByteChip.XorByte.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ByteChip.XorByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [xor_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, xorAccess, ByteChip.XorByte.ofEntry,
@@ -226,12 +231,13 @@ theorem xor_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 
 theorem ltu_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.Ltu.component (p := p))
-        (ByteChip.Ltu.traceInputs entries) data hint (by trivial)) data =
+        (ByteChip.Ltu.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e => actualProviderAccess (p := p) (ltuAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.Ltu.component (p := p)) entries
-    ByteChip.Ltu.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ByteChip.Ltu.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [ltu_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, ltuAccess, ByteChip.Ltu.ofEntry,
@@ -242,13 +248,14 @@ theorem ltu_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 theorem range_traceTable_actualAccesses (width : RangeChip.Width)
     (entries : List TraceGen.RangeEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hwf : ∀ e ∈ entries, e.WellFormed width.val) :
     tableCleanAccesses (Table.build (RangeChip.componentFor (p := p) width)
-        (RangeChip.traceInputs entries) data hint (by trivial)) data =
+        (RangeChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e =>
         actualProviderAccess (p := p) (rangeAccess width e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (RangeChip.componentFor (p := p) width) entries
-    RangeChip.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    RangeChip.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [range_buildRow_cleanAccesses]
   have ha : e.a < 2 ^ 24 := by
     have hlt : e.a < 2 ^ width.val := hwf e he
@@ -260,13 +267,14 @@ theorem range_traceTable_actualAccesses (width : RangeChip.Width)
 
 theorem program_traceTable_actualAccesses (entries : List TraceGen.RomEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (bounded : entries.length ≤ UInt64.size)
     (hfit : ∀ e ∈ entries, RomKeyFits e) :
     tableCleanAccesses (Table.build (ProgramProviderChip.component (p := p))
-        (ProgramProviderChip.traceInputs entries) data hint (by trivial)) data =
+        (ProgramProviderChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
       entries.map fun e =>
         actualProviderAccess (p := p) (programEntryAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ProgramProviderChip.component (p := p)) entries
-    ProgramProviderChip.ofEntry _ data hint (by trivial) data (fun e he => ?_)
+    ProgramProviderChip.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
   rw [program_buildRow_cleanAccesses]
   obtain ⟨hop, hopa, hopa0, himmb, himmc⟩ := hfit e he
   simp only [actualProviderAccess, withFieldMultiplicity, programRowAccess, programEntryAccess,
@@ -318,22 +326,50 @@ def actualProviderLedger : LookupAccessList :=
 `preprocessedProviderLedger_eq`, this needs no multiplicity-capacity premise. -/
 theorem preprocessedProviderActualLedger_eq (hwf : trace.WellFormed)
     (hromKeys : ∀ e ∈ trace.providerOccurrences .program, RomKeyFits e) :
-    tablesCleanAccesses trace.preprocessedProviderTables trace.data = trace.actualProviderLedger := by
-  rw [tablesCleanAccesses_setData _ trace.data trace.generationData,
-    preprocessedProviderTables_eq]
+    tablesCleanAccesses trace.preprocessedProviderTables = trace.actualProviderLedger := by
+  have u8Range : tableCleanAccesses (trace.providerTableFor (.byte .u8Range)) =
+      (trace.providerOccurrences (.byte .u8Range)).map (fun e =>
+        actualProviderAccess (p := p) (u8RangeAccess e) e.multiplicity) :=
+    u8Range_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .u8Range))
+      (hwf.provider (.byte .u8Range))
+  have msb : tableCleanAccesses (trace.providerTableFor (.byte .msb)) =
+      (trace.providerOccurrences (.byte .msb)).map (fun e =>
+        actualProviderAccess (p := p) (msbAccess e) e.multiplicity) :=
+    msb_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .msb))
+      (hwf.provider (.byte .msb))
+  have andByte : tableCleanAccesses (trace.providerTableFor (.byte .andByte)) =
+      (trace.providerOccurrences (.byte .andByte)).map (fun e =>
+        actualProviderAccess (p := p) (andAccess e) e.multiplicity) :=
+    and_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .andByte))
+      (hwf.provider (.byte .andByte))
+  have orByte : tableCleanAccesses (trace.providerTableFor (.byte .orByte)) =
+      (trace.providerOccurrences (.byte .orByte)).map (fun e =>
+        actualProviderAccess (p := p) (orAccess e) e.multiplicity) :=
+    or_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .orByte))
+      (hwf.provider (.byte .orByte))
+  have xorByte : tableCleanAccesses (trace.providerTableFor (.byte .xorByte)) =
+      (trace.providerOccurrences (.byte .xorByte)).map (fun e =>
+        actualProviderAccess (p := p) (xorAccess e) e.multiplicity) :=
+    xor_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .xorByte))
+      (hwf.provider (.byte .xorByte))
+  have ltu : tableCleanAccesses (trace.providerTableFor (.byte .ltu)) =
+      (trace.providerOccurrences (.byte .ltu)).map (fun e =>
+        actualProviderAccess (p := p) (ltuAccess e) e.multiplicity) :=
+    ltu_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .ltu))
+      (hwf.provider (.byte .ltu))
+  have range (width : RangeChip.Width) : tableCleanAccesses (trace.providerTableFor (.range width)) =
+      (trace.providerOccurrences (.range width)).map (fun e =>
+        actualProviderAccess (p := p) (rangeAccess width e) e.multiplicity) :=
+    range_traceTable_actualAccesses _ _ _ _ (trace.providerCapacity (.range width))
+      (hwf.provider (.range width))
+  have program : tableCleanAccesses (trace.providerTableFor .program) =
+      (trace.providerOccurrences .program).map (fun e =>
+        actualProviderAccess (p := p) (programEntryAccess e) e.multiplicity) :=
+    program_traceTable_actualAccesses _ _ _ (trace.providerCapacity .program) hromKeys
+  rw [preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,
-    List.append_nil, rangeTables,
-    u8Range_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .u8Range)),
-    msb_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .msb)),
-    and_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .andByte)),
-    or_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .orByte)),
-    xor_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .xorByte)),
-    ltu_traceTable_actualAccesses _ _ _ (hwf.provider (.byte .ltu)),
-    program_traceTable_actualAccesses _ _ _ hromKeys]
-  simp only [actualProviderLedger, List.flatMap_def, List.map_map, Function.comp_def,
-    range_traceTable_actualAccesses _ _ _ _
-      (fun e he => hwf.provider (.range _) e he)]
-  simp [List.append_assoc]
+    List.append_nil, rangeTables, List.flatMap_map, actualProviderLedger,
+    u8Range, msb, andByte, orByte, xorByte, ltu, range, program, List.append_assoc]
 
 /-- The actual provider ledger and the natural-demand ledger have identical per-key sums modulo
 `p`, for arbitrary aggregate counts. -/
@@ -381,59 +417,88 @@ def canonicalProviderOccurrences : (id : ProviderTableId) → List id.Occurrence
   | .halt => trace.providerOccurrences .halt
   | .syscallInstrs => trace.providerOccurrences .syscallInstrs
 
+/-- Exact physical representability of the recounted provider inventory. This is separate from
+field multiplicity and channel-count bounds, and preserves every generated occurrence. -/
+def CanonicalCapacity : Prop :=
+  ∀ id, (trace.canonicalProviderOccurrences id).length ≤ UInt64.size
+
+/-- Each recounted family filters the closing-key list before mapping keys to rows. Non-recounted
+providers retain their existing exact capacities. -/
+theorem canonicalCapacity_of_closingKeyList (bounded : trace.closingKeyList.length ≤ UInt64.size) :
+    trace.CanonicalCapacity := by
+  intro id
+  cases id with
+  | byte provider =>
+      cases provider <;>
+        exact (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded)
+  | range width =>
+      exact (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded)
+  | program =>
+      exact (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded)
+  | memoryInit => exact trace.providerCapacity .memoryInit
+  | memoryFinalize => exact trace.providerCapacity .memoryFinalize
+  | memoryBump => exact trace.providerCapacity .memoryBump
+  | stateBump => exact trace.providerCapacity .stateBump
+  | halt => exact trace.providerCapacity .halt
+  | syscallInstrs => exact trace.providerCapacity .syscallInstrs
+
 /-- Rebuild only the Byte, Range, and Program provider window from the trace's own demand. -/
-def canonicalClosure : SupportedCoreTraceWitness p where
+def canonicalClosure (capacity : trace.CanonicalCapacity) : SupportedCoreTraceWitness p where
   instructionEvents := trace.instructionEvents
   providerOccurrences := trace.canonicalProviderOccurrences
+  instructionCapacity := trace.instructionCapacity
+  providerCapacity := capacity
   generationData := trace.generationData
   hint := trace.hint
   boundary := trace.boundary
 
+variable (capacity : trace.CanonicalCapacity)
+
 @[simp] theorem canonicalClosure_providerOccurrences (id : ProviderTableId) :
-    trace.canonicalClosure.providerOccurrences id = trace.canonicalProviderOccurrences id := rfl
+    (trace.canonicalClosure capacity).providerOccurrences id = trace.canonicalProviderOccurrences id := rfl
 
 @[simp] theorem canonicalClosure_instructionEvents (id : InstructionChipId) :
-    trace.canonicalClosure.instructionEvents id = trace.instructionEvents id := rfl
+    (trace.canonicalClosure capacity).instructionEvents id = trace.instructionEvents id := rfl
 
 @[simp] theorem canonicalClosure_generationData :
-    trace.canonicalClosure.generationData = trace.generationData := rfl
-@[simp] theorem canonicalClosure_hint : trace.canonicalClosure.hint = trace.hint := rfl
-@[simp] theorem canonicalClosure_boundary : trace.canonicalClosure.boundary = trace.boundary := rfl
+    (trace.canonicalClosure capacity).generationData = trace.generationData := rfl
+@[simp] theorem canonicalClosure_hint : (trace.canonicalClosure capacity).hint = trace.hint := rfl
+@[simp] theorem canonicalClosure_boundary : (trace.canonicalClosure capacity).boundary = trace.boundary := rfl
 @[simp] theorem canonicalClosure_publicValues :
-    trace.canonicalClosure.publicValues = trace.publicValues := rfl
+    (trace.canonicalClosure capacity).publicValues = trace.publicValues := rfl
 
 theorem canonicalClosure_memoryInit :
-    trace.canonicalClosure.providerOccurrences .memoryInit =
+    (trace.canonicalClosure capacity).providerOccurrences .memoryInit =
       trace.providerOccurrences .memoryInit := rfl
 
 theorem canonicalClosure_memoryFinalize :
-    trace.canonicalClosure.providerOccurrences .memoryFinalize =
+    (trace.canonicalClosure capacity).providerOccurrences .memoryFinalize =
       trace.providerOccurrences .memoryFinalize := rfl
 
 theorem canonicalClosure_memoryBump :
-    trace.canonicalClosure.providerOccurrences .memoryBump =
+    (trace.canonicalClosure capacity).providerOccurrences .memoryBump =
       trace.providerOccurrences .memoryBump := rfl
 
 theorem canonicalClosure_stateBump :
-    trace.canonicalClosure.providerOccurrences .stateBump =
+    (trace.canonicalClosure capacity).providerOccurrences .stateBump =
       trace.providerOccurrences .stateBump := rfl
 
 @[simp] theorem canonicalClosure_instructionTableFor (id : InstructionChipId) :
-    trace.canonicalClosure.instructionTableFor id = trace.instructionTableFor id := by
+    (trace.canonicalClosure capacity).instructionTableFor id = trace.instructionTableFor id := by
   cases id <;> rfl
 
 theorem canonicalClosure_instructionTables :
-    trace.canonicalClosure.instructionTables = trace.instructionTables := by
+    (trace.canonicalClosure capacity).instructionTables = trace.instructionTables := by
   rw [instructionTables, instructionTables]
-  exact List.map_congr_left fun id _ => trace.canonicalClosure_instructionTableFor id
+  exact List.map_congr_left fun id _ => trace.canonicalClosure_instructionTableFor capacity id
 
 /-- Public input cells determine the verifier ledger; rebuilding provider rows may change data. -/
 theorem canonicalClosure_verifierLedger :
-    trace.canonicalClosure.verifierLedger = trace.verifierLedger := by
+    (trace.canonicalClosure capacity).verifierLedger = trace.verifierLedger := by
   unfold verifierLedger
   apply congrArg (List.map Interaction.toAccess)
   exact Operations.interactionValues_congr
-    (env := Environment.fromInput trace.canonicalClosure.publicValues trace.canonicalClosure.data)
+    (env := Environment.fromInput (trace.canonicalClosure capacity).publicValues (trace.canonicalClosure capacity).data)
     (env' := Environment.fromInput trace.publicValues trace.data) rfl
 
 /-- The prefix selected by `skeletonTables` is exactly the instruction segment. -/
@@ -460,7 +525,7 @@ theorem providerTables_drop_preprocessed (t : SupportedCoreTraceWitness p) :
 
 /-- Canonical closure preserves the six-table suffix after the preprocessed window. -/
 theorem canonicalClosure_providerTables_drop :
-    trace.canonicalClosure.providerTables.drop preprocessedProviderTableCount =
+    (trace.canonicalClosure capacity).providerTables.drop preprocessedProviderTableCount =
       trace.providerTables.drop preprocessedProviderTableCount := by
   simp [providerTables, ProviderTableId.all, ByteProviderId.all,
     preprocessedProviderTableCount, canonicalClosure, List.drop_append]
@@ -470,7 +535,7 @@ theorem canonicalClosure_providerTables_drop :
 /-- Replacing the preprocessed-provider occurrence lists leaves the provider-free skeleton tables
 unchanged.  This is deliberately a definitional audit of the two registry orders. -/
 theorem canonicalClosure_skeletonTables :
-    trace.canonicalClosure.skeletonTables = trace.skeletonTables := by
+    (trace.canonicalClosure capacity).skeletonTables = trace.skeletonTables := by
   rw [skeletonTables, skeletonTables, tables_take_instructionTables,
     tables_take_instructionTables, tables_drop_preprocessed, tables_drop_preprocessed,
     canonicalClosure_instructionTables, canonicalClosure_providerTables_drop]
@@ -478,53 +543,52 @@ theorem canonicalClosure_skeletonTables :
 /-- Therefore canonical closure does not change the Clean ledger against which provider demand is
 computed. -/
 theorem canonicalClosure_skeletonLedger :
-    trace.canonicalClosure.skeletonLedger = trace.skeletonLedger := by
+    (trace.canonicalClosure capacity).skeletonLedger = trace.skeletonLedger := by
   rw [skeletonLedger, skeletonLedger, canonicalClosure_verifierLedger,
-    canonicalClosure_skeletonTables,
-    tablesCleanAccesses_setData _ trace.canonicalClosure.data trace.data]
+    canonicalClosure_skeletonTables]
 
 @[simp] theorem canonicalClosure_closingKeyList :
-    trace.canonicalClosure.closingKeyList = trace.closingKeyList := by
+    (trace.canonicalClosure capacity).closingKeyList = trace.closingKeyList := by
   rw [closingKeyList, closingKeyList, canonicalClosure_skeletonLedger]
 
 @[simp] theorem canonicalClosure_providerDemand (key : LookupAccessList.LookupKey) :
-    trace.canonicalClosure.providerDemand key = trace.providerDemand key := by
+    (trace.canonicalClosure capacity).providerDemand key = trace.providerDemand key := by
   rw [providerDemand, providerDemand, canonicalClosure_skeletonLedger]
 
 @[simp] theorem canonicalClosure_closureU8RangeEntries :
-    trace.canonicalClosure.closureU8RangeEntries = trace.closureU8RangeEntries := by
+    (trace.canonicalClosure capacity).closureU8RangeEntries = trace.closureU8RangeEntries := by
   simp [closureU8RangeEntries]
 
 @[simp] theorem canonicalClosure_closureMsbEntries :
-    trace.canonicalClosure.closureMsbEntries = trace.closureMsbEntries := by
+    (trace.canonicalClosure capacity).closureMsbEntries = trace.closureMsbEntries := by
   simp [closureMsbEntries]
 
 @[simp] theorem canonicalClosure_closureAndByteEntries :
-    trace.canonicalClosure.closureAndByteEntries = trace.closureAndByteEntries := by
+    (trace.canonicalClosure capacity).closureAndByteEntries = trace.closureAndByteEntries := by
   simp [closureAndByteEntries]
 
 @[simp] theorem canonicalClosure_closureOrByteEntries :
-    trace.canonicalClosure.closureOrByteEntries = trace.closureOrByteEntries := by
+    (trace.canonicalClosure capacity).closureOrByteEntries = trace.closureOrByteEntries := by
   simp [closureOrByteEntries]
 
 @[simp] theorem canonicalClosure_closureXorByteEntries :
-    trace.canonicalClosure.closureXorByteEntries = trace.closureXorByteEntries := by
+    (trace.canonicalClosure capacity).closureXorByteEntries = trace.closureXorByteEntries := by
   simp [closureXorByteEntries]
 
 @[simp] theorem canonicalClosure_closureLtuEntries :
-    trace.canonicalClosure.closureLtuEntries = trace.closureLtuEntries := by
+    (trace.canonicalClosure capacity).closureLtuEntries = trace.closureLtuEntries := by
   simp [closureLtuEntries]
 
 @[simp] theorem canonicalClosure_closureRangeEntries (width : RangeChip.Width) :
-    trace.canonicalClosure.closureRangeEntries width = trace.closureRangeEntries width := by
+    (trace.canonicalClosure capacity).closureRangeEntries width = trace.closureRangeEntries width := by
   simp [closureRangeEntries]
 
 @[simp] theorem canonicalClosure_closureRomEntries :
-    trace.canonicalClosure.closureRomEntries = trace.closureRomEntries := by
+    (trace.canonicalClosure capacity).closureRomEntries = trace.closureRomEntries := by
   simp [closureRomEntries]
 
 /-- The rebuilt trace realizes its own closure.  Idempotence is supplied by skeleton invariance. -/
-theorem canonicalClosure_closureRealized : trace.canonicalClosure.ClosureRealized where
+theorem canonicalClosure_closureRealized : (trace.canonicalClosure capacity).ClosureRealized where
   u8Range := by
     simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences,
       canonicalClosure_closureU8RangeEntries]
@@ -553,7 +617,7 @@ theorem canonicalClosure_closureRealized : trace.canonicalClosure.ClosureRealize
 /-- Servability depends only on the provider-free skeleton, so it is preserved by canonical
 closure. -/
 theorem DemandServable.canonicalClosure (hserv : trace.DemandServable) :
-    trace.canonicalClosure.DemandServable where
+    (trace.canonicalClosure capacity).DemandServable where
   byte key hkey hkind := hserv.byte key (by simpa using hkey) hkind
   program key hkey hkind := hserv.program key (by simpa using hkey) hkind
 
@@ -570,7 +634,7 @@ theorem closureRomEntries_romKeyFits (hserv : trace.DemandServable) :
 
 /-- The canonical trace's ROM provider rows meet the unchecked-key bounds. -/
 theorem canonicalClosure_romKeyFits (hserv : trace.DemandServable) :
-    ∀ entry ∈ trace.canonicalClosure.providerOccurrences .program, RomKeyFits entry := by
+    ∀ entry ∈ (trace.canonicalClosure capacity).providerOccurrences .program, RomKeyFits entry := by
   intro entry hentry
   simp only [canonicalClosure_providerOccurrences, canonicalProviderOccurrences] at hentry
   exact trace.closureRomEntries_romKeyFits hserv entry hentry
@@ -643,7 +707,7 @@ This is the replacement for `balancedOn_of_closure` on the aggregate-provider bu
 capacity premise is Clean's own interaction-list bound.  In particular there is no `CountsFit`,
 `ProviderMultiplicitiesFit`, or `2 * multiplicity ≤ p` premise. -/
 theorem canonicalClosure_balancedInteractions
-    (hwf : trace.canonicalClosure.WellFormed)
+    (hwf : (trace.canonicalClosure capacity).WellFormed)
     (hserv : trace.DemandServable)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
       multiplicitySum trace.skeletonLedger key ≤ 0)
@@ -651,14 +715,14 @@ theorem canonicalClosure_balancedInteractions
     (hchannel : channel ∈ (sp1Ensemble (p := p)).channels)
     (hkind : kindOf channel.name = InteractionKind.Byte ∨
       kindOf channel.name = InteractionKind.Program)
-    (hlen : (trace.canonicalClosure.witness.interactionsWith channel).length < p) :
-    BalancedInteractions (trace.canonicalClosure.witness.interactionsWith channel) := by
-  let closed := trace.canonicalClosure
+    (hlen : ((trace.canonicalClosure capacity).witness.interactionsWith channel).length < p) :
+    BalancedInteractions ((trace.canonicalClosure capacity).witness.interactionsWith channel) := by
+  let closed := (trace.canonicalClosure capacity)
   change BalancedInteractions (closed.witness.interactionsWith channel)
-  have hservClosed : closed.DemandServable := hserv.canonicalClosure
+  have hservClosed : closed.DemandServable := DemandServable.canonicalClosure trace capacity hserv
   have hreal : closed.ClosureRealized := by
-    change trace.canonicalClosure.ClosureRealized
-    exact trace.canonicalClosure_closureRealized
+    change (trace.canonicalClosure capacity).ClosureRealized
+    exact trace.canonicalClosure_closureRealized capacity
   have hsupply : closed.SuppliesDemand :=
     closed.suppliesDemand_of_closureRealized hreal hservClosed
   have hnonposClosed : ∀ key ∈ closed.closingKeyList,
@@ -668,7 +732,7 @@ theorem canonicalClosure_balancedInteractions
     rw [canonicalClosure_skeletonLedger]
     exact hnonpos key hkey
   have hromKeys : ∀ entry ∈ closed.providerOccurrences .program, RomKeyFits entry :=
-    trace.canonicalClosure_romKeyFits hserv
+    trace.canonicalClosure_romKeyFits capacity hserv
   constructor
   · left
     simpa only [ZMod.ringChar_zmod_n] using hlen
@@ -693,28 +757,28 @@ theorem canonicalClosure_balancedInteractions
 
 /-- Byte-channel specialization of `canonicalClosure_balancedInteractions`. -/
 theorem canonicalClosure_byte_balancedInteractions
-    (hwf : trace.canonicalClosure.WellFormed)
+    (hwf : (trace.canonicalClosure capacity).WellFormed)
     (hserv : trace.DemandServable)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
       multiplicitySum trace.skeletonLedger key ≤ 0)
-    (hlen : (trace.canonicalClosure.witness.interactionsWith
+    (hlen : ((trace.canonicalClosure capacity).witness.interactionsWith
       Channels.byteChannel.toRaw).length < p) :
     BalancedInteractions
-      (trace.canonicalClosure.witness.interactionsWith Channels.byteChannel.toRaw) :=
-  trace.canonicalClosure_balancedInteractions hwf hserv hnonpos _
+      ((trace.canonicalClosure capacity).witness.interactionsWith Channels.byteChannel.toRaw) :=
+  trace.canonicalClosure_balancedInteractions capacity hwf hserv hnonpos _
     (by simp [sp1Ensemble_channels]) (Or.inl rfl) hlen
 
 /-- Program-channel specialization of `canonicalClosure_balancedInteractions`. -/
 theorem canonicalClosure_program_balancedInteractions
-    (hwf : trace.canonicalClosure.WellFormed)
+    (hwf : (trace.canonicalClosure capacity).WellFormed)
     (hserv : trace.DemandServable)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
       multiplicitySum trace.skeletonLedger key ≤ 0)
-    (hlen : (trace.canonicalClosure.witness.interactionsWith
+    (hlen : ((trace.canonicalClosure capacity).witness.interactionsWith
       Channels.programChannel.toRaw).length < p) :
     BalancedInteractions
-      (trace.canonicalClosure.witness.interactionsWith Channels.programChannel.toRaw) :=
-  trace.canonicalClosure_balancedInteractions hwf hserv hnonpos _
+      ((trace.canonicalClosure capacity).witness.interactionsWith Channels.programChannel.toRaw) :=
+  trace.canonicalClosure_balancedInteractions capacity hwf hserv hnonpos _
     (by simp [sp1Ensemble_channels]) (Or.inr rfl) hlen
 
 end SupportedCoreTraceWitness

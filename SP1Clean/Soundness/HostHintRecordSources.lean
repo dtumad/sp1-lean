@@ -1,11 +1,13 @@
 import SP1Clean.Soundness.HostHintReadHandoff
-import SP1Clean.Proofs.Operations.HintQueueWordSource
+import SP1Clean.Native.Operations.HintQueueWordSource
+import SP1Clean.Model.Core.ExecutionResources
+import SP1Clean.Model.SP1Field
 import ToClean.Air.Authentication
 
 /-! # Immutable hint-record source contracts
 
-Fixed source lookups establish both canonical representations and binding to the complete
-source queue. Binding survives persistent store extension. Unit consumers cannot supply records
+Fixed source tables establish canonical representations and binding to the complete source
+queue through their physical prefixes. Binding survives persistent store extension. Unit consumers cannot supply records
 of their own. Dynamic allocation providers use the physical-table authentication interface,
 which can consume prior grounding facts rather than demanding a proof from raw constraints
 alone. Neither current queue heads nor RAM predecessor currency is assumed here.
@@ -19,6 +21,16 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
+/-- The existing native semantic boundary limits preserve every immutable source word.
+This is a consequence of the admitted hint and byte counts, not an extra compiler premise. -/
+theorem source_word_inventory_of_native_resources (source : ExecutionSnapshot)
+    (fits : source.resources.Fits (ResourceLimits.native SP1Prime)) :
+    sourceWordInventory (p := SP1Prime) source.host.io.hints = sourceWordTable source.host.io.hints := by
+  apply sourceWordInventory_of_limits _ (SP1Prime - 1)
+  · exact fits .liveHints
+  · exact fits .liveHintBytes
+  · decide
+
 /-- Only sources must prove canonical, immutable contents; pulls and padding impose no content premise. -/
 structure Authenticates (store : Store) (component : Component (ZMod p)) : Prop where
   node : component.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds store)
@@ -31,60 +43,31 @@ theorem Authenticates.extend {old new : Store} {component : Component (ZMod p)}
   ⟨authenticated.node.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩),
     authenticated.word.mono (fun _ valid => ⟨valid.1, valid.2.extend extension⟩)⟩
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem lookup_spec {Row : TypeMap} [ProvableType Row] (table : StaticTable (ZMod p) Row)
-    (input : Var Row (ZMod p)) (env : Environment (ZMod p))
-    (checked : (⟨table.toTable.toRaw, toElements (M := Row) input⟩ : Lookup (ZMod p)).Contains env) :
-    table.Spec (eval env input) := by
-  apply table.contains_iff _ |>.mp
-  change (∃ index, fromElements (M := Row) ((toElements (M := Row) input).map (Expression.eval env)) = table.row index) at checked
-  rwa [ProvableType.fromElements_eval_toElements] at checked
+/-- The actual fixed node table authenticates its source store; its other channel is silent. -/
+theorem source_node_authenticates (hints : List Bytes) (table : Table (ZMod p))
+    (same : table.component = HostHintQueue.source hints)
+    (consistent : table.DataConsistency) (checked : table.Constraints) :
+    table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) ∧
+    table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) := by
+  refine ⟨HostHintQueue.source_authenticates hints table same consistent checked, ?_⟩
+  apply Table.Authenticates.of_component table _ _ ?_ checked
+  rw [same]
+  apply Component.Authenticates.of_silent
+  change wordChannel.toRaw ∉ [nodeChannel.toRaw]
+  simp [nodeChannel, wordChannel, Channel.toRaw]
 
-theorem source_node_checked (hints : List Bytes) (env : Environment (ZMod p))
-    (checked : ({ circuit := HostHintQueue.source hints } : Component (ZMod p)).operations.ConstraintsHold env) :
-    (valueFromOffset NodeRecord 0 env).Valid ∧ (valueFromOffset NodeRecord 0 env).Binds (ofList hints).1 := by
-  apply sourceTable_sound hints
-  rw [← eval_varFromOffset_valueFromOffset NodeRecord 0 env]
-  apply lookup_spec
-  rw [Component.constraintsHold_iff] at checked
-  simpa only [Component.rowOperations, HostHintQueue.source, sourceMain, circuit_norm] using checked
-
-theorem source_word_checked (hints : List Bytes) (env : Environment (ZMod p))
-    (checked : ({ circuit := sourceWord hints } : Component (ZMod p)).operations.ConstraintsHold env) :
-    (valueFromOffset WordRecord 0 env).Valid ∧ (valueFromOffset WordRecord 0 env).Binds (ofList hints).1 := by
-  apply sourceWordTable_sound hints
-  rw [← eval_varFromOffset_valueFromOffset WordRecord 0 env]
-  apply lookup_spec
-  rw [Component.constraintsHold_iff] at checked
-  simpa only [Component.rowOperations, sourceWord, sourceWordMain, circuit_norm] using checked
-
-theorem source_node_authenticates (hints : List Bytes) :
-    Authenticates (ofList hints).1 ({ circuit := HostHintQueue.source (p := p) hints } : Component (ZMod p)) := by
-  constructor
-  · intro env checked interaction member _ _
-    rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ ((sourceMain hints (varFromOffset NodeRecord 0)).operations
-      (size NodeRecord)).interactionValuesWith nodeChannel.toRaw env at member
-    rw [source_node_values, eval_varFromOffset_valueFromOffset] at member
-    obtain rfl := List.mem_singleton.mp member
-    exact ⟨valueFromOffset NodeRecord 0 env, rfl, source_node_checked hints env checked⟩
-  · apply Component.Authenticates.of_silent
-    change wordChannel.toRaw ∉ [nodeChannel.toRaw]
-    simp [nodeChannel, wordChannel, Channel.toRaw]
-
-theorem source_word_authenticates (hints : List Bytes) :
-    Authenticates (ofList hints).1 ({ circuit := sourceWord (p := p) hints } : Component (ZMod p)) := by
-  constructor
-  · apply Component.Authenticates.of_silent
-    change nodeChannel.toRaw ∉ [wordChannel.toRaw]
-    simp [nodeChannel, wordChannel, Channel.toRaw]
-  · intro env checked interaction member _ _
-    rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ ((sourceWordMain hints (varFromOffset WordRecord 0)).operations
-      (size WordRecord)).interactionValuesWith wordChannel.toRaw env at member
-    rw [source_word_values, eval_varFromOffset_valueFromOffset] at member
-    obtain rfl := List.mem_singleton.mp member
-    exact ⟨valueFromOffset WordRecord 0 env, rfl, source_word_checked hints env checked⟩
+/-- Source word authenticity includes the complete fixed byte inventory and zero-count padding. -/
+theorem source_word_authenticates (hints : List Bytes) (table : Table (ZMod p))
+    (same : table.component = HostHintQueue.sourceWord hints)
+    (consistent : table.DataConsistency) (checked : table.Constraints) :
+    table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) ∧
+    table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) := by
+  refine ⟨?_, HostHintQueue.sourceWord_authenticates hints table same consistent checked⟩
+  apply Table.Authenticates.of_component table _ _ ?_ checked
+  rw [same]
+  apply Component.Authenticates.of_silent
+  change nodeChannel.toRaw ∉ [wordChannel.toRaw]
+  simp [nodeChannel, wordChannel, Channel.toRaw]
 
 theorem handler_authenticates (store : Store) :
     Authenticates store (HostHintReadCoverage.handler (p := p)) := by
@@ -114,13 +97,18 @@ theorem word_consumer_authenticates (store : Store) (last : Bool) :
     have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
     cases last <;> change false = true at present <;> contradiction
   · apply Component.Authenticates.of_pulls
-    intro env _ interaction member
+    intro env checked interaction member
+    have binary := HintReadCoverage.row_activity_binary (last, env) checked
     rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
-    change interaction ∈ (((HintReadWordChip.main last (varFromOffset HintReadWordChip.Inputs 0)).operations
-      (size HintReadWordChip.Inputs)).interactionsWith wordChannel.toRaw).map _ at member
-    rw [HintReadWordChip.main_word_interactions] at member
+    change interaction ∈ (((HintReadWordChip.circuit last).main (varFromOffset HintReadWordChip.RowInput 0)).operations
+      (size HintReadWordChip.RowInput)).interactionValuesWith wordChannel.toRaw env at member
+    rw [HintReadWordChip.guarded_word_values] at member
     obtain rfl := List.mem_singleton.mp member
-    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue])
+    simp only [HintReadCoverage.rowActivity] at binary
+    simp only [Channel.pulledIfValue, varFromOffset_pair, Nat.zero_add]
+    rcases binary with inactive | active
+    · exact Or.inl (by rw [inactive, neg_zero])
+    · exact Or.inr (congrArg Neg.neg active)
 
 theorem hint_length_authenticates (store : Store) (empty : Bool) :
     Authenticates store (HostCallReceivers.hintLength (p := p) empty).component := by

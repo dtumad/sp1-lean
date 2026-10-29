@@ -1,3 +1,4 @@
+import ToClean.Circuit.Guarded
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.Native.Operations.OrderedBoundary
 import SP1Clean.Proofs.Operations.AddOperation.Formal
@@ -78,27 +79,47 @@ theorem main_interactions (name : String) (distinct : name ≠ "SP1Byte")
     OrderedBoundary.circuit, linkExact, List.nil_append]
   rfl
 
+/-- Channels outside the ordering wrapper retain the provider's exact physical ledger. -/
+theorem main_provider_interactions (name : String)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (selected : RawChannel (ZMod p)) (notByte : selected ≠ byteChannel.toRaw)
+    (notOrder : selected ≠ (OrderedBoundary.channel name).toRaw)
+    (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
+    ((main name provider input).operations offset).interactionsWith selected =
+      ((provider.main input.payload).operations offset).interactionsWith selected := by
+  have linkEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
+    (OrderedBoundary.circuit (p := p) name).base selected input.link n (by
+      simp [OrderedBoundary.circuit, circuit_norm, notByte, notOrder])
+  have addEmpty (args : Var AddOperation.Inputs (ZMod p)) (n : ℕ) :=
+    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddOperation.circuit
+      selected args
+      (by change selected ∉ [byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw]
+          simp [notByte])
+      (by change selected ∉ []; exact List.not_mem_nil) (n := n)
+  simp only [main, circuit_norm, addEmpty, List.append_nil]
+  simp only [Operations.interactionsWith] at linkEmpty ⊢
+  simp only [GeneralFormalCircuit.toSubcircuit_interactions, linkEmpty, List.append_nil]
+
 /-- Ordering adds no Memory interactions: the provider's ledger is retained verbatim. -/
 theorem main_memory_interactions (name : String)
     (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
     (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
     ((main name provider input).operations offset).interactionsWith memoryChannel.toRaw =
-      ((provider.main input.payload).operations offset).interactionsWith memoryChannel.toRaw := by
-  have linkEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    (OrderedBoundary.circuit (p := p) name).base memoryChannel.toRaw input.link n (by
-      simp [OrderedBoundary.circuit, circuit_norm,
-        OrderedBoundary.channel, memoryChannel, byteChannel])
-  have addEmpty (args : Var AddOperation.Inputs (ZMod p)) (n : ℕ) :=
-    InteractionRecovery.filter_interactions_formalAssertion_eq_nil AddOperation.circuit
-      memoryChannel.toRaw args
-      (by change memoryChannel.toRaw ∉ [byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw]
-          simp only [List.mem_cons, List.not_mem_nil, memoryChannel_eq_byteChannel_false, or_self, not_false_eq_true])
-      (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil) (n := n)
-  simp only [main, circuit_norm, addEmpty, List.append_nil]
-  simp only [Operations.interactionsWith] at linkEmpty ⊢
-  simp only [GeneralFormalCircuit.toSubcircuit_interactions, linkEmpty, List.append_nil]
+      ((provider.main input.payload).operations offset).interactionsWith memoryChannel.toRaw :=
+  main_provider_interactions name provider memoryChannel.toRaw
+    (by
+      intro same
+      have names := congrArg RawChannel.name same
+      change "SP1Memory" = "SP1Byte" at names
+      contradiction)
+    (by
+      intro same
+      have arity := congrArg RawChannel.arity same
+      change 9 = 4 at arity
+      contradiction) input offset
 
-def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
+/-- The bundled active row, retaining the payload semantics and strict address ordering. -/
+def activeCircuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
     (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
     (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record) :
@@ -147,16 +168,84 @@ def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     simpa only [oneWord, toBitVec64_bitVecToWord, MemoryBoundary.address, circuit_norm]
       using h_assumptions.2.2.2 _ spec
 
+/-- Ordering preserves every provider lookup occurrence, including repeated keys. -/
+@[circuit_norm] theorem main_lookups (name : String)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
+    ((main name provider input).operations offset).lookups =
+      ((provider.main input.payload).operations offset).lookups := by
+  simp [main, OrderedBoundary.circuit, AddOperation.circuit, AddOperation.main, circuit_norm]
+
+/-- The ordering gadgets preserve the leaf provider's structural guard capabilities. -/
+instance guardSupported (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [child : Guarded.Supported provider]
+    (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
+    (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record) :
+    Guarded.Supported (activeCircuit name recordSpec provider binds canonical) :=
+  Guarded.Supported.of_emitted_requirements _
+    (by
+      intro input offset
+      change ((main name provider input).operations offset).lookups = []
+      rw [main_lookups, ← Operations.lookups_toFlat, ← GeneralFormalCircuit.toSubcircuit_toFlat]
+      exact child.noLookups input.payload offset)
+    (by
+      intro selected member
+      change selected ∈ (provider.channelsWithGuarantees ++
+        [byteChannel.toRaw, (OrderedBoundary.channel name).toRaw,
+          byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw]) ++
+        (provider.channelsWithRequirements ++ [(OrderedBoundary.channel name).toRaw]) at member
+      rcases List.mem_append.mp member with guaranteed | required
+      · rcases List.mem_append.mp guaranteed with original | extra
+        · exact child.channelsNeutral selected (List.mem_append_left _ original)
+        · simp only [List.mem_cons, List.not_mem_nil, or_false] at extra
+          rcases extra with rfl | rfl | rfl | rfl | rfl | rfl <;> infer_instance
+      · rcases List.mem_append.mp required with original | extra
+        · exact child.channelsNeutral selected (List.mem_append_right _ original)
+        · have same := List.mem_singleton.mp extra
+          subst selected
+          infer_instance)
+    (by
+      intro input offset selected _ outside interaction occurs
+      change selected ∉ provider.channelsWithGuarantees ++
+        [byteChannel.toRaw, (OrderedBoundary.channel name).toRaw,
+          byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw] at outside
+      have notByte : selected ≠ byteChannel.toRaw := by
+        intro same
+        exact outside (List.mem_append_right _ (by simp [same]))
+      have notOrder : selected ≠ (OrderedBoundary.channel name).toRaw := by
+        intro same
+        exact outside (List.mem_append_right _ (by simp [same]))
+      change interaction ∈ ((main name provider input).operations offset).interactionsWith selected at occurs
+      rw [main_provider_interactions name provider selected notByte notOrder] at occurs
+      cases carries : interaction.assumeGuarantees with
+      | false => rfl
+      | true =>
+        have registered := child.declared input.payload offset interaction (by
+          rw [GeneralFormalCircuit.toSubcircuit_interactions]
+          exact (List.mem_filter.mp occurs).1) carries
+        have same : interaction.channel = selected := by
+          simpa using (List.mem_filter.mp occurs).2
+        rw [same] at registered
+        exact False.elim (outside (List.mem_append_left _ registered)))
+
+/-- Boolean activity guards the complete ordered row, including its payload and control effects. -/
+def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
+    (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
+    (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record) :
+    GeneralFormalCircuit (ZMod p) (RowInput Payload) MemoryMsg :=
+  Guarded.circuit (activeCircuit name recordSpec provider binds canonical) inferInstance
+
 /-- Construct the control columns from the payload and its semantic address. -/
-def populate (payload : Payload (ZMod p)) (previous address : ℕ) : Inputs Payload (ZMod p) :=
-  ⟨payload, OrderedBoundary.populate (bitVecToWord (BitVec.ofNat 64 previous))
-    (bitVecToWord (BitVec.ofNat 64 (address + 1)))⟩
+def populate (payload : Payload (ZMod p)) (previous address : ℕ) : RowInput Payload (ZMod p) :=
+  (⟨payload, OrderedBoundary.populate (bitVecToWord (BitVec.ofNat 64 previous))
+    (bitVecToWord (BitVec.ofNat 64 (address + 1)))⟩, 1)
 
 /-- A provider that preserves its query admits the ordered wrapper's honest constructor.
 In particular, the universally quantified internal output condition is discharged here rather
 than left as a compiler-readiness condition on an execution. -/
 theorem populate_assumptions (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (query : Payload (ZMod p) → ℕ)
     (bindsAt : ∀ input output data,
       provider.Spec input output data → recordSpec output ∧
@@ -169,6 +258,8 @@ theorem populate_assumptions (name : String) (recordSpec : MemoryMsg (ZMod p) �
       (populate payload previous (query payload)) data hint := by
   have previousBound : previous < 2 ^ 64 := by omega
   have currentBound : query payload + 1 < 2 ^ 64 := by omega
+  refine ⟨Or.inr rfl, ?_⟩
+  intro _
   refine ⟨prover, assumes, ?_, ?_⟩
   · apply OrderedBoundary.populate_assumptions _ _ (isU64_bitVecToWord _) (isU64_bitVecToWord _)
     rw [endpoint_toNat _ previousBound, endpoint_toNat _ currentBound]
@@ -182,13 +273,5 @@ theorem populate_assumptions (name : String) (recordSpec : MemoryMsg (ZMod p) �
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt currentBound, BitVec.toNat_add,
       Word.toBitVec64_toNat canonicalRecord.2.1, valid.2,
       show (1 : BitVec 64).toNat = 1 by decide, Nat.mod_eq_of_lt currentBound]
-
-/-- Ordering preserves every provider lookup occurrence, including repeated keys. -/
-@[circuit_norm] theorem main_lookups (name : String)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
-    (input : Var (Inputs Payload) (ZMod p)) (offset : ℕ) :
-    ((main name provider input).operations offset).lookups =
-      ((provider.main input.payload).operations offset).lookups := by
-  simp [main, OrderedBoundary.circuit, AddOperation.circuit, AddOperation.main, circuit_norm]
 
 end SP1Clean.OrderedMemoryProvider

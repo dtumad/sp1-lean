@@ -78,7 +78,7 @@ Mutable executor commitment banks are distinct from fixed digest checks in the e
 
 | Surface | Result and limit |
 |---|---|
-| 25 instruction chips | Native soundness/completeness and Sail bridges; whole-chip Rust faithfulness on reconstructed rows in the codec image |
+| 25 instruction chips | Native soundness/completeness and Sail bridges; exported rows have separate released-Rust comparison tests |
 | Execution model | Complete steps/paths, finite boundaries, split/join, semantic boot/HALT, independent ROM/frame/fetch preservation and PolyFun connections |
 | Ordinary construction | Deterministic 55-table compiler on an explicitly narrower admissible domain; readiness/capacity restrictions remain local to it |
 | Ordinary soundness | `supported_core_native_sound` assumes native algebra, semantic boundary binding and an inactive syscall table with a physical Halt table |
@@ -86,9 +86,9 @@ Mutable executor commitment banks are distinct from fixed digest checks in the e
 | Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison; the complete Memory ensemble retains its separate public verifier |
 | Sail boundary | Static target checks, protected ordinary receipts and ordered observation are proved; combined dynamic supplied-target equality remains open |
 | Concrete examples | Accepted ADD and compiler-derived BEQ assemblies; LoadByte fixed-table replacement with occurrence-preserving transport |
-| Exact upstream AIR | A paired 34+6-table relation with a 160-cell public-value block and conditional refinement combinators; no closed exact-Core theorem |
+| Released SP1 agreement | Direct Rust comparisons of exported native components; public-addressing and complete active-host assembly gaps remain explicit |
 
-Current Rust evidence is tied to the semantic/extractor revisions in
+Current Rust evidence is tied to the single released-SP1 revision in
 [provenance](../scripts/provenance.json). A release upgrade must review loader/host behavior as
 well as AIR equations; it cannot be achieved by changing a version string.
 

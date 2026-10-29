@@ -1,7 +1,6 @@
 module
 
-public import Clean.Air.Extraction.Lower
-import all Clean.Air.Extraction.Lower
+public import Clean.Backends.Program
 public import ToClean.Air.TableBuild
 
 /-! # Physical prefix evaluation from Clean's extraction scope check
@@ -13,13 +12,12 @@ checked prefix preserves constraints without lookups and the literal interaction
 
 This is a proof extension to the upstream lowering check, not another expression representation
 or evaluator. Lookup predicates and channel guarantees can depend on prover data and still need
-their own transport proofs. The implementation import exposes the existing scope checker to
-these proofs; remove it when upstream exports the corresponding evaluation lemmas.
+their own transport proofs. Remove these lemmas when upstream supplies the corresponding evaluation theorems.
 -/
 
 @[expose] public section
 
-namespace Air.Flat.Extraction
+namespace Backends
 
 variable {F : Type} [FiniteField F]
 
@@ -83,4 +81,4 @@ theorem interaction_eval_extract {width : ℕ} (row : Array F) (data data' : Pro
   simp only [AbstractInteraction.eval, message,
     eval_extract row data data' interaction.mult (scope _ (List.mem_cons_self ..))]
 
-end Air.Flat.Extraction
+end Backends

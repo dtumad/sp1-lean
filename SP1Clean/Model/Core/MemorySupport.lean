@@ -32,6 +32,14 @@ theorem supportBelow_card_le (memory : ByteMemory) (limit : ℕ) :
       exact absent (Finset.mem_image.mpr ⟨entry, List.mem_toFinset.mpr member, equal⟩))
     exact live.2 zero
 
+/-- The address domain bounds live support regardless of duplicate update history. -/
+theorem supportBelow_card_le_limit (memory : ByteMemory) (limit : ℕ) :
+    (memory.supportBelow limit).card ≤ limit := by
+  have subset : memory.supportBelow limit ⊆ Finset.range limit := by
+    intro address member
+    exact Finset.mem_range.mpr ((mem_supportBelow memory limit address).mp member).1
+  simpa only [Finset.card_range] using Finset.card_le_card subset
+
 /-- Equivalent finite boundaries have the same canonical support, not merely the same size. -/
 theorem supportBelow_congr {left right : ByteMemory} {limit : ℕ}
     (same : left.agreesBelow right limit = true) :

@@ -18,7 +18,6 @@ class PinTests(unittest.TestCase):
         self.root = Path(self.directory.name)
         for name in ("lakefile.toml", "lake-manifest.json", "lean-toolchain",
                      "scripts/provenance.json", "scripts/sail-config/sp1_rv64d_cfg.json",
-                     "SP1Clean/FormalModel/CoreProfile.lean", "export/sp1dump/index.json",
                      "rust/sp1-comparison/Cargo.toml", "rust/sp1-comparison/Cargo.lock",
                      "LeanRV64D.lean"):
             path = self.root / name
@@ -54,10 +53,6 @@ class PinTests(unittest.TestCase):
         with (self.root / "LeanRV64D.lean").open("a") as output:
             output.write("\n-- unreviewed generated edit\n")
         self.assertTrue(any("generated Sail tree" in e for e in check_pins.check(self.root)))
-
-    def test_dump_pin_drift(self):
-        self.edit_json("export/sp1dump/index.json", lambda data: data.update(sp1Commit="0" * 40))
-        self.assertTrue(any("SP1 dumps" in e for e in check_pins.check(self.root)))
 
     def test_widened_rvfi_workaround(self):
         path = self.root / "lakefile.toml"

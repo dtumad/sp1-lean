@@ -75,7 +75,7 @@ theorem memoryInitProviderTable_getElem?
 /-- The stable Memory-init witness position is the range-checking push circuit. -/
 theorem memoryInitProviderTable_component
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (memoryInitProviderTable witness).component = { circuit := MemoryProviderChip.circuit } := by
+    (memoryInitProviderTable witness).component = { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } := by
   unfold memoryInitProviderTable
   have aligned := witness.same_circuits memoryInitProviderIndex (by
     simp [memoryInitProviderIndex, programProviderIndex, instructionTableCount,
@@ -87,14 +87,14 @@ theorem memoryInitProviderTable_component
 theorem memoryInitProviderTable_requirements
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
-    (memoryInitProviderTable witness).ChannelRequirements witness.data memoryChannel.toRaw := by
+    (memoryInitProviderTable witness).ChannelRequirements memoryChannel.toRaw := by
   let table := memoryInitProviderTable witness
   apply table.channelRequirements_of_requirements
   intro row rowMem
   exact (Component.weakSoundness_of_no_guarantees table.component
-    (by rw [show table.component = { circuit := MemoryProviderChip.circuit } from
+    (by rw [show table.component = { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } from
       memoryInitProviderTable_component witness]; rfl)
-    (by rw [show table.component = { circuit := MemoryProviderChip.circuit } from
+    (by rw [show table.component = { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } from
       memoryInitProviderTable_component witness]; trivial)
     (constraints table (List.getElem_mem (memoryInitProviderIndex_lt_tablesLength witness)) row rowMem)).2
 
@@ -122,7 +122,7 @@ theorem memoryFinalizeProviderTable_getElem?
 /-- The stable Memory-finalize witness position is the boundary pull circuit. -/
 theorem memoryFinalizeProviderTable_component
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (memoryFinalizeProviderTable witness).component = { circuit := MemoryFinalizeChip.circuit } := by
+    (memoryFinalizeProviderTable witness).component = { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions } := by
   unfold memoryFinalizeProviderTable
   have aligned := witness.same_circuits memoryFinalizeProviderIndex (by
     simp [memoryFinalizeProviderIndex, programProviderIndex, instructionTableCount,
@@ -141,12 +141,11 @@ balance can consume both boundary tables uniformly. -/
 theorem memoryFinalizeProviderTable_requirements
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
-    (memoryFinalizeProviderTable witness).ChannelRequirements witness.data memoryChannel.toRaw := by
-  have tableConstraints : (memoryFinalizeProviderTable witness).Constraints witness.data :=
+    (memoryFinalizeProviderTable witness).ChannelRequirements memoryChannel.toRaw := by
+  have tableConstraints : (memoryFinalizeProviderTable witness).Constraints :=
     constraints (memoryFinalizeProviderTable witness)
       (List.getElem_mem (memoryFinalizeProviderIndex_lt_tablesLength witness))
-  refine (memoryFinalizeProviderTable witness).requirements_of_not_mem_of_constraints
-    witness.data tableConstraints ?_
+  refine (memoryFinalizeProviderTable witness).requirements_of_not_mem_of_constraints tableConstraints ?_
   rw [Table.channelsWithRequirements, memoryFinalizeProviderTable_component witness]
   simp [MemoryFinalizeChip.circuit]
 
@@ -158,7 +157,7 @@ noncomputable def ProgramProviderBound (program : GuestProgram)
     (witness : EnsembleWitness (sp1Ensemble (p := p))) : Prop :=
   ∀ interaction,
     ∀ member : interaction ∈
-      (programProviderTable witness).interactionsWith witness.data programChannel.toRaw,
+      (programProviderTable witness).interactionsWith programChannel.toRaw,
     interaction.mult ≠ 0 →
       Semantics.CommittedProgTruth (TypedInteraction.message
         { raw := interaction
@@ -179,7 +178,7 @@ noncomputable def MemoryInitProviderBound
     (initial : SailState) (initialClock : ℕ) : Prop :=
   ∀ interaction,
     ∀ member : interaction ∈
-      (memoryInitProviderTable witness).interactionsWith witness.data memoryChannel.toRaw,
+      (memoryInitProviderTable witness).interactionsWith memoryChannel.toRaw,
     interaction.mult ≠ 0 →
       MemoryInitMessageBound initial initialClock
         (TypedInteraction.message
@@ -202,7 +201,7 @@ the extracted-AIR layer rather than re-derived from the per-row `WordRangeCheck`
 (which cannot see across rows). -/
 noncomputable def MemoryInitProviderUnique
     (witness : EnsembleWitness (sp1Ensemble (p := p))) : Prop :=
-  (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel).Pairwise
+  (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel).Pairwise
     fun i₁ i₂ => signedVal i₁.mult ≠ 0 → signedVal i₂.mult ≠ 0 →
       MemoryMsg.locOf i₁.message ≠ MemoryMsg.locOf i₂.message
 
@@ -212,7 +211,7 @@ channel balance alone cannot force this, so it is an honest boundary companion f
 extracted-AIR layer, and (like the init one, since 2026-07-20) a field of `InitialBoundaryFacts`. -/
 noncomputable def MemoryFinalizeProviderUnique
     (witness : EnsembleWitness (sp1Ensemble (p := p))) : Prop :=
-  (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data memoryChannel).Pairwise
+  (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel).Pairwise
     fun i₁ i₂ => signedVal i₁.mult ≠ 0 → signedVal i₂.mult ≠ 0 →
       MemoryMsg.locOf i₁.message ≠ MemoryMsg.locOf i₂.message
 
@@ -225,11 +224,11 @@ theorem MemoryInitProviderBound.localMemTruth_of_mem_produced
     (bound : MemoryInitProviderBound witness initial initialClock)
     (message : MemoryMsg (ZMod p))
     (member : message ∈ producedMessages
-      (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data memoryChannel)) :
+      (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel)) :
     LocalMemTruth initial initialClock message := by
   have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   have isU64 := guarantee_of_mem_producedTableMessages
-    (memoryInitProviderTable witness) witness.data memoryChannel hp
+    (memoryInitProviderTable witness) memoryChannel hp
     (memoryInitProviderTable_requirements witness constraints) message member
   -- G1: the memory channel's `Guarantees` is now the pair `isU64 ∧ ClkBound`, and `LocalMemTruth`
   -- consumes both — the value half is the provider's `WordRangeCheck`, the clock half its
@@ -241,7 +240,7 @@ theorem MemoryInitProviderBound.localMemTruth_of_mem_produced
   obtain ⟨typedMem, positive⟩ := List.mem_filter.mp interactionMem
   simp only [decide_eq_true_eq] at positive
   have rawMem : interaction.raw ∈
-      (memoryInitProviderTable witness).interactionsWith witness.data memoryChannel.toRaw := by
+      (memoryInitProviderTable witness).interactionsWith memoryChannel.toRaw := by
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem typedMem
   have multNonzero : interaction.raw.mult ≠ 0 := by

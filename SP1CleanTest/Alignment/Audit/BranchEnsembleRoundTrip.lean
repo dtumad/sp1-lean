@@ -9,6 +9,7 @@ providers, fixed lookup meanings, complete target Memory and every registered ch
 
 namespace SP1Clean.Audit.BranchEnsemble
 
+open SP1CleanTest.Alignment.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Semantics
 open LeanRV64D.Defs LeanRV64D.Functions
 
@@ -18,21 +19,26 @@ theorem seeds_present : (seeds? target header consumerSeeds).isSome = true := by
 /-- Exact successful provider construction, without a fallback witness. -/
 def activeSeeds : List Seed := (seeds? target header consumerSeeds).get seeds_present
 
-/-- The actual witness on `HostFinalMemory.ensemble`, retaining its complete original registry. -/
-def activeWitness : EnsembleWitness (assembly target) := witness target header activeSeeds
+/-- The actual finite inventory fits Clean's physical row-count type. -/
+theorem activeSeeds_bounded : activeSeeds.length ≤ UInt64.size := by native_decide
 
-/-- All 93 tables remain installed, including empty instruction and host components. -/
-theorem activeWitness_length : activeWitness.tables.length = 93 := builtTables_length target activeSeeds
+/-- The actual witness on `HostFinalMemory.ensemble`, retaining its complete original registry. -/
+def activeWitness : EnsembleWitness (assembly (context target)) := witness target header activeSeeds activeSeeds_bounded
+
+/-- All 94 tables remain installed, including empty instruction and host components. -/
+theorem activeWitness_length : activeWitness.tables.length = 94 := by
+  simpa only [activeWitness, witness, EnsembleWitness.ofTables_tables,
+    withDerivedData, List.length_map] using builtTables_length target activeSeeds activeSeeds_bounded
 
 /-- Concrete execution of the generic authenticated checker accepts all rows and channels. -/
-theorem active_checked : checkPhysical target header activeSeeds = true := by native_decide
+theorem active_checked : checkPhysical target header activeSeeds activeSeeds_bounded = true := by native_decide
 
 /-- Raw Clean constraints and all channel balances hold on the original assembled witness. -/
 theorem accepted : activeWitness.Constraints ∧ activeWitness.BalancedChannels :=
-  (checkPhysical_iff target header activeSeeds).mp active_checked
+  (checkPhysical_iff target header activeSeeds activeSeeds_bounded).mp active_checked
 
 /-- The original assembled Clean relation has this concrete public statement. -/
-theorem statement : (assembly target).Statement header :=
+theorem statement : (assembly (context target)).Statement header :=
   ⟨activeWitness, rfl, accepted⟩
 
 /-- The public header encodes the same ordinary clock and PC endpoints as the official step. -/
@@ -77,24 +83,16 @@ theorem joined (policy : HostPolicy) :
   rw [source_realizes]
   exact BranchCompilerRoundTrip.execution_step policy
 
-/-- Identity endpoints retain the complete source snapshot and unchanged ordinary clock. -/
-def identityHeader : SP1PublicIO Fp := { header with final_clk_0_16 := 1, final_pc0 := 0 }
-
-/-- Empty instruction traces still carry their real ordered and host-bank terminals and Exit padding. -/
-def identityConsumers : List Seed :=
-  [terminal 2 [], terminal 5 []] ++ hostTerminals ++
-    [Seed.ofCells 57 (List.replicate (size HaltChip.Inputs) 0)]
-
 /-- Named computed outcomes; exceptions and malformed outputs are rejected by the runner. -/
 def results : List (String × Bool × Bool) :=
   [("active-branch", true, check target header consumerSeeds),
     ("wrong-public-next-pc", false, check target { header with final_pc0 := 4096 } consumerSeeds),
     ("missing-authentication-row", false,
-      check target header (consumerSeeds.eraseP fun seed => seed.table == 89)),
+      check target header (consumerSeeds.eraseP fun seed => seed.table == 90)),
     ("duplicate-authentication-row", false, check target header (consumerSeeds ++ validatorSeeds.take 1)),
     ("changed-untouched-register", false,
       check { target with registers := target.registers.set 31 1 } header consumerSeeds),
-    ("empty-identity", true, check target identityHeader identityConsumers),
+    ("empty-identity", true, check target identityHeader (emptyConsumers (context target))),
     ("malformed-seed-index", false, check target header (consumerSeeds ++ [Seed.ofCells 999 []])),
     ("malformed-seed-length", false,
       check target header ({ branchSeed with cells := [] } :: consumerSeeds))]

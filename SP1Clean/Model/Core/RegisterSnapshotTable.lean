@@ -30,6 +30,11 @@ def registerRow (snapshot : MemorySnapshot) (index : BitVec 5) : RegisterSnapsho
     (List.ofFn fun index : Fin 32 => snapshot.registerRow (BitVec.ofNat 5 index.val))
 
 omit [Fact (2 ^ 17 < p)] in
+@[simp] theorem registerTable_length (snapshot : MemorySnapshot) :
+    (snapshot.registerTable (p := p)).length = 32 := by
+  simp only [registerTable, StaticTable.ofRows, List.length_ofFn]
+
+omit [Fact (2 ^ 17 < p)] in
 theorem registerTable_spec (snapshot : MemorySnapshot) (row : RegisterSnapshotRow (ZMod p)) :
     snapshot.registerTable.Spec row ↔ ∃ index, snapshot.registerRow index = row := by
   rw [registerTable]

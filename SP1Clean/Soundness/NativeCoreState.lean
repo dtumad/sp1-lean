@@ -24,7 +24,7 @@ noncomputable def stateBumps {image : ProgramImage}
 private theorem providerView_state_silent {Payload : TypeMap} [ProvableType Payload]
     (name : String) (distinct : name ≠ "SP1Byte") (notState : name ≠ "SP1State")
     (recordSpec : MemoryMsg (ZMod p) → Prop)
-    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg)
+    (provider : GeneralFormalCircuit (ZMod p) Payload MemoryMsg) [Guarded.Supported provider]
     (binds : ∀ input output data, provider.Spec input output data → recordSpec output)
     (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record)
     (privateChannel : (OrderedBoundary.channel name).toRaw ∉ provider.channels)
@@ -75,7 +75,7 @@ private theorem boundary_state_silent (image : ProgramImage) (component : Compon
 
 private theorem boundaryTables_state_silent {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (witness.tables.take 6).flatMap (typedTableInteractionsWith · witness.data stateChannel) = [] := by
+    (witness.tables.take 6).flatMap (typedTableInteractionsWith · stateChannel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply typedTableInteractions_nil
@@ -86,7 +86,7 @@ private theorem boundaryTables_state_silent {image : ProgramImage}
 
 private theorem byteTables_state_silent {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · witness.data stateChannel) = [] := by
+    ((witness.tables.drop 32).take 23).flatMap (typedTableInteractionsWith · stateChannel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply typedTableInteractions_nil
@@ -99,26 +99,28 @@ private theorem byteTables_state_silent {image : ProgramImage}
 /-- The physical State interior contains exactly ordinary rows and the three State system tables. -/
 theorem state_interiors {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    witness.tables.flatMap (typedTableInteractionsWith · witness.data stateChannel) =
-      (instructionTables witness).flatMap (typedTableInteractionsWith · witness.data stateChannel) ++
-        typedTableInteractionsWith (systemTable witness 1) witness.data stateChannel ++
-        typedTableInteractionsWith (systemTable witness 2) witness.data stateChannel ++
-        typedTableInteractionsWith (systemTable witness 3) witness.data stateChannel := by
+    witness.tables.flatMap (typedTableInteractionsWith · stateChannel) =
+      (instructionTables witness).flatMap (typedTableInteractionsWith · stateChannel) ++
+        typedTableInteractionsWith (systemTable witness 1) stateChannel ++
+        typedTableInteractionsWith (systemTable witness 2) stateChannel ++
+        typedTableInteractionsWith (systemTable witness 3) stateChannel := by
   have length : witness.tables.length = 60 := by
     rw [← witness.same_length]; exact tables_length image
-  have programSilent : typedTableInteractionsWith (programTable witness) witness.data stateChannel = [] := by
+  have programSilent : typedTableInteractionsWith (programTable witness) stateChannel = [] := by
     apply typedTableInteractions_nil
     rw [programTable_component]
-    change (stateChannel (p := p)).toRaw ∉ [programChannel.toRaw]
+    change (stateChannel (p := p)).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [stateChannel_eq_programChannel_false]
-  have refreshSilent : typedTableInteractionsWith (systemTable witness 0) witness.data stateChannel = [] := by
+  have refreshSilent : typedTableInteractionsWith (systemTable witness 0) stateChannel = [] := by
     apply typedTableInteractions_nil
     rw [systemTable_component]
     change (stateChannel (p := p)).toRaw ∉ [byteChannel.toRaw, memoryChannel.toRaw, memoryChannel.toRaw]
     simp [stateChannel_eq_byteChannel_false, stateChannel_eq_memoryChannel_false]
   have head : witness.tables.drop 6 = programTable witness :: witness.tables.drop 7 := by
     rw [List.drop_eq_getElem_cons (by omega)]; rfl
-  have ramSilent : typedTableInteractionsWith (ramMembershipTable witness) witness.data stateChannel = [] := by
+  have ramSilent : typedTableInteractionsWith (ramMembershipTable witness) stateChannel = [] := by
     apply typedTableInteractions_nil
     exact ramMembershipTable_silent witness stateChannel.toRaw (by simp [stateChannel, Channel.toRaw])
   have tail : witness.tables.drop 55 = [systemTable witness 0, systemTable witness 1,
@@ -128,7 +130,7 @@ theorem state_interiors {image : ProgramImage}
       List.drop_eq_getElem_cons (by omega),
       List.drop_eq_nil_of_le (by omega)]
     rfl
-  have split := congrArg (List.flatMap (typedTableInteractionsWith · witness.data stateChannel))
+  have split := congrArg (List.flatMap (typedTableInteractionsWith · stateChannel))
     (List.take_append_drop 6 witness.tables)
   rw [List.flatMap_append, boundaryTables_state_silent, List.nil_append] at split
   rw [← split, head, List.flatMap_cons, programSilent, List.nil_append,
@@ -181,7 +183,7 @@ theorem verifier_state_interactions {image : ProgramImage}
 
 private theorem instruction_state_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (instructionTables witness).flatMap (typedTableInteractionsWith · witness.data stateChannel) =
+    (instructionTables witness).flatMap (typedTableInteractionsWith · stateChannel) =
       (instructionRows witness).flatMap (fun row =>
         statePairInteractions (row.toChipRow witness.data).is_real (decodedStateEdge witness.data row)) := by
   rw [← decodedInstructionInteractionsWith_eq_tables witness.data stateChannel
@@ -239,6 +241,7 @@ theorem state_signedBinary {image : ProgramImage}
   · exact statePairs_signedBinary _ _ _ (instruction_selector_binary witness constraints) interaction ordinary
   · exact statePairs_signedBinary _ _ _
       (stateBumpRow_binary _ witness.data (systemTable_component witness 1)
+    (witness.same_data _ (systemTable_mem witness 1))
         (systemTable_constraints witness constraints 1)
         (((finishedChannel_guarantees image witness constraints balanced).2) _ (systemTable_mem witness 1)).1)
       interaction bump
@@ -273,6 +276,7 @@ private theorem activeStateEdges_balance {image : ProgramImage}
   have bump := statePairs_projection _ _ (fun physical =>
     let row := stateBumpRow witness.data physical
     (StateBumpChip.pulledMessage row, StateBumpChip.pushedMessage row)) (stateBumpRow_binary _ witness.data (systemTable_component witness 1)
+    (witness.same_data _ (systemTable_mem witness 1))
     (systemTable_constraints witness constraints 1)
     (((finishedChannel_guarantees image witness constraints balanced).2) _ (systemTable_mem witness 1)).1)
   have halt := statePairs_projection _ _ (fun physical =>

@@ -48,6 +48,8 @@ theorem interactionValues (name : String) (initial final : Word (ZMod p))
 /-- The fixed endpoints are public verifier traffic, with no committed table. -/
 def verifierProgram (name : String) (initial final : Word (ZMod p)) :
     Verifier.Program (ZMod p) unit where
+  Spec _ _ := True
+  soundness := by intros; trivial
   main _ := Verifier.ofInteractions ((main name initial final ()).operations 0).interactions (by
     intro interaction member env
     simp only [main, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member

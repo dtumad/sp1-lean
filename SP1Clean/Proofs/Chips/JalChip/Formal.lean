@@ -279,11 +279,9 @@ def exposedStateInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
        input.state.clk_0_16 + input.state.clk_16_24 * 65536 + 8,
        var ⟨offset⟩, var ⟨offset + 1⟩, var ⟨offset + 2⟩⟩ ]
 
-/-- Exact Byte-channel list emitted by JAL.  This is the native composition
-order: CPU clock checks, jump-add limbs, link-add limbs, destination-register
-timestamp checks, then the jump-target alignment check.  The pinned Rust AIR
-emits the same multiset in a different order; whole-chip faithfulness compares
-them with `List.Perm`. -/
+/-- Exact JAL Byte-channel list: CPU clock checks, jump-add limbs, link-add limbs,
+register timestamp checks, then jump alignment. Rust comparisons account for the different
+ordering of released rows while retaining the complete multiset. -/
 def exposedByteInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (byteChannel (p := p))) :=
   let clkLow := input.state.clk_0_16 + input.state.clk_16_24 * 65536
@@ -327,7 +325,7 @@ only register traffic is the rd slot).  The op_a read-prior pull descends from t
 `JTypeReader`; the op_a write push from the composed `RegisterWrite`, carrying the witnessed link
 address `op_a_value` (cells `offset+4..7`, the four cells after the jump target `add_value`).
 Keeping this list beside `circuit` makes Clean's exposure interface the single structural source
-consumed by both faithfulness and semantic grounding. -/
+consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -738,9 +736,9 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := JalChip.circuit (p := p) } :
+    ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
       Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     JalChip.circuit_main_eq]
   simp [JalChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.JTypeReader.circuit,

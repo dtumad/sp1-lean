@@ -34,7 +34,9 @@ theorem syscall_program_committed {image : ProgramImage} (valid : image.Valid)
   have emitted : interaction ∈ witness.interactionsWith programChannel.toRaw := by
     apply EnsembleWitness.mem_interactionsWith.mpr
     refine Or.inr ⟨systemTable witness 3, systemTable_mem witness 3, List.mem_flatMap.mpr ⟨physical, member, ?_⟩⟩
-    rw [← typedInteractionValuesWith_raw,
+    have shared : (systemTable witness 3).data = witness.data :=
+      witness.same_data _ (systemTable_mem witness 3)
+    rw [Table.environment, shared, ← typedInteractionValuesWith_raw,
       syscallInstrsRow_typedProgram_of_component _ witness.data (systemTable_component witness 3)]
     exact List.mem_cons_self
   exact program_pull_committed valid witness constraints balanced message interaction emitted
@@ -72,8 +74,10 @@ private theorem haltRows_aligned {image : ProgramImage}
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   have byte := ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 2)).1
   exact halt_aligned _ (haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
     byte physicalMem (of_decide_eq_true real))
     (haltRow_accessTimestamp_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
       byte physicalMem (of_decide_eq_true real))
 
 private theorem syscallRows_aligned {image : ProgramImage} (valid : image.Valid)
@@ -85,8 +89,10 @@ private theorem syscallRows_aligned {image : ProgramImage} (valid : image.Valid)
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   have byte := ((finishedChannel_guarantees image witness constraints balanced).2 _ (systemTable_mem witness 3)).1
   exact syscall_aligned _ (syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
     byte physicalMem (of_decide_eq_true real))
     (syscallInstrsRow_accessTimestamp_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
       byte physicalMem (of_decide_eq_true real))
     (syscall_operands valid witness constraints balanced physicalMem (of_decide_eq_true real))
 

@@ -9,8 +9,6 @@ node_modules
 *.ilean
 *.profraw
 
-# Regenerate native witness exports under .lake/witgen-export/.
-/export/witgen/
 /export/testdata/
 
 # Local runs, Python caches and workspace state.

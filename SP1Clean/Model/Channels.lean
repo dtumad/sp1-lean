@@ -25,9 +25,9 @@ direct chip-level `public_values` access, which Clean's flat AIR reserves to the
 they are factored through channels instead (upstream Clean's `Air/Vm.lean` requires the same shape
 of its own verifier). `docs/assurance.md` discloses that as a native-only bus.
 
-The last two are **declared but not yet ensemble members**. `kindOf` classifies both, so adding
-either to `sp1Ensemble` no longer risks folding it into State balance — but it does now owe
-`Soundness.EnsembleChannels.channel_eq_of_kindOf_eq` a case, which is where the obligation belongs. -/
+The installed assembly classifies every channel independently through `kindOf`. Native host
+handlers consume host-call messages and supply commitment receipts; these boundaries remain
+distinct from SP1's direct public-value assertions. -/
 
 @[expose] public section
 
@@ -56,8 +56,8 @@ there, `crates/core/machine/src/memory/global.rs`). **W11 polarity flip:** the m
 guarantee for an `op_b`/`op_c` read-back), and the *read-prior* `pullIf`-pulls (deriving `isU64`), so the
 operand `isU64` is *derived* by the consuming chip rather than carried as a chip-level `Assumptions`
 precondition — the byte/program-bus model. SP1's Rust *sends* the read-prior (`+is_real`); our pull emits
-`−is_real`, so our Memory interactions match SP1's extracted oracle **up to per-channel multiplicity
-negation** (a sound LogUp sign symmetry, bridged in the `Faithful/*` Memory anchors). The cross-row
+`−is_real`, so our Memory interactions match SP1's released AIR **up to per-channel multiplicity
+negation** (a per-channel LogUp sign symmetry). The cross-row
 offline-memory *value-correctness* (read = last write) is derived globally by the timed typed-memory
 grounding layer (`Soundness/TypedMemory.lean`); this channel carries only the local `isU64` and clock
 facts. The `name` matches the `"SP1Memory"` interaction key. -/
@@ -70,9 +70,8 @@ decode well-formedness (indices `< 32`, pc `< 2^16`, `op_a_0` boolean). **W11 po
 provider now `pushIf`-pushes valid program rows (proving `ProgramMsg.RowSpec`) and the CPU readers
 `pullIf`-pull (deriving it), so the decode bounds are *derived* by consumers — the byte-bus model. SP1's
 Rust genuinely *sends* program (`+1`); our pull emits `−1`, so our Program interactions match SP1's
-extracted oracle **up to per-channel multiplicity negation** (a sound LogUp sign symmetry — the balance is
-invariant under negating one channel's multiplicities; the divergence is bridged, FV-checked, in the
-`Faithful/*` Program anchors). The channel name is the upstream table identity `"SP1Program"`.
+released AIR **up to per-channel multiplicity negation**: balance is invariant under negating
+one channel's multiplicities. The Rust comparison adapters apply this orientation explicitly. The channel name is the upstream table identity `"SP1Program"`.
 
 The channel carries only the structural `RowSpec`.  Agreement with the committed ROM (`ProgTruth`) is
 derived globally from the provider table, program commitment, and interaction balance; it is not a
@@ -94,8 +93,7 @@ Gating is **multiplicity-gated** (`Channel.pullIf`, mult `-is_real`), faithful t
 (`mult = 0`) drops out of the LogUp sum entirely (`mult / fingerprint(values)` with `mult = 0`), owing
 nothing — post-#398 a receive owes no `Requirements` at all. The provider side is
 `Proofs/Chips/ByteChip/` (pushes the table, proves each row); with it landed, the pull's justification
-is closed by the native Byte/Range providers and ensemble balance; the exact/native artifact recounts
-their demand in `Composition/PreprocessedProviders.lean`. Pulled by
+is closed by the native Byte/Range providers and ensemble balance. Pulled by
 `Readers/{CPUState,RegisterAccessTimestamp,RegisterAccessCols,RTypeReader}.lean`. -/
 def byteChannel : Channel (ZMod p) ByteRow where
   name := "SP1Byte"
@@ -134,21 +132,9 @@ def haltHandoffChannel : Channel (ZMod p) ExitMsg where
   name := "SP1HaltHandoff"
   Guarantees _ _ := True
 
-/-- The Syscall channel — SP1's own syscall bus (`InteractionKind::Syscall`), the one new channel
-here that is *not* native-only. Its payload is the existing `SyscallMsg`, the same carrier the
-exact v6.4.0 lists project, so both models name this bus with one type.
-
-Its consumer upstream is `SyscallCore`, which the supported profile excludes, so the native
-ensemble declares the channel with **no provider**: balance then forces every send's multiplicity —
-byte 1 of the syscall id, SP1's "this handler has its own table" flag — to zero, which is exactly
-the statement that a supported shard uses only the syscalls `SyscallInstrs` handles inline.
-`Guarantees := True`: as with State and Exit, the content is the multiset fact, not a per-message
-predicate.
-
-Both sides of a faithfulness anchor agree on this bus by name *and* by kind:
-`Extracted.Interaction.toAccess` gives the generated `.raw .syscall` send the same `"SP1Syscall"`
-name, and `kindOf` classifies it `InteractionKind.Syscall`. A whole-chip anchor compares exactly
-that pair, so the agreement has to be deliberate rather than incidental. -/
+/-- SP1's Syscall channel, with the nine-field SyscallMsg carrier and no local semantic
+guarantee. The routing-byte multiplicity and the installed consumer/provider inventory determine
+its global balance. Native host effects use their separate authenticated host-call interface. -/
 def syscallChannel : Channel (ZMod p) SyscallMsg where
   name := "SP1Syscall"
   Guarantees _ _ := True
@@ -156,12 +142,13 @@ def syscallChannel : Channel (ZMod p) SyscallMsg where
 /-- The public-values channel — the second native-only bus, and the general form of what
 `exitChannel` does for one cell. A chip-level assertion about `public_values` cannot be a row
 constraint in Clean's flat AIR (a `Table` carries no `PublicIO`, and `Ensemble.tables` cannot
-depend on one), so each such assertion is factored into one addressed-cell message; upstream
+depend on one), so each such assertion is factored into a weighted public-value query; upstream
 Clean's `Air/Vm.lean` `VmTables` requires the same shape of its verifier.
 
-Declared with no provider for now, so balance forces the commit selectors to zero. `Guarantees :=
-True` for the same reason as `exitChannel`: the binding is established by balance against the
-verifier (or, once COMMIT is modelled, against a `PublicValues` provider), not row-locally. -/
+The instruction-only ensemble has no provider. The installed host assembly supplies per-call
+commitment receipts, preserving mutable bank history. These are distinct from binding every
+call to SP1's final shard digest. `Guarantees := True`: the channel meaning must be established
+by balance against the actual installed providers or verifier, not row-locally. -/
 def publicValuesChannel : Channel (ZMod p) PublicValueMsg where
   name := "SP1PublicValues"
   Guarantees _ _ := True

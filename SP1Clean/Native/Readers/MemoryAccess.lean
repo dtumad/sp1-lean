@@ -11,8 +11,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # Native `MemoryAccess` primitive — one true-address memory read/write as a Clean `GeneralFormalCircuit`
 
 SP1's `eval_memory_access_read` / `eval_memory_access_write` + `eval_memory_access_timestamp`
-(`crates/core/machine/src/air/memory.rs`), mirrored in the `memory_access` fragment of the
-`Extracted/ChipOracle/{Load,Store}*.lean` oracles. The Memory bus operates at a *real* 48-bit address
+(`crates/core/machine/src/air/memory.rs`), compared through the released load/store AIRs in Rust. The Memory bus operates at a *real* 48-bit address
 (`addr0/1/2 ≠ register-index shape`); the read/write distinction is carried by the `new_value`
 parameter (read: `new = prev_value`; write: `new = store_value`).
 
@@ -23,7 +22,7 @@ Byte bus) — and emits the two Memory interactions. **W11 polarity flip:** the 
 previous timestamp is a `pullIf` (mult `−is_real`, deriving its `isU64 ∧ ClkBound`), and `new_value`
 at the current timestamp `(clk_high, clk_low + 1)` is a `pushIf` (`+is_real`, proving the guarantee) —
 SP1's Rust *sends* the prior (`+`) and *receives* the new (`−`), matched up to the per-channel
-multiplicity negation bridged in the Faithful anchors.
+multiplicity negation used by the Rust comparison adapters.
 The bus's cross-row meaning (offline-memory, last-write-wins) is derived by
 `Soundness/TypedMemory.lean`; this primitive supplies the per-row monotonicity + emission. -/
 

@@ -153,7 +153,7 @@ theorem GroundingCarrier.hintLength_result (valid : image.Valid)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull) :
@@ -190,12 +190,12 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current, carrier.ordered[n]? = some event ∧ carrier.pairedTrajectory valid n = some current ∧
       current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
@@ -238,8 +238,7 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     before instructionTime original
   have tables := queue_specs (HostHintQueueBoundary.projected witness) interface _
     (HostHintQueueBoundary.source_authentication witness constraints) checks (HostHintQueueBoundary.record_channels witness balanced)
-  simp only [HostHintQueueBoundary.projected_data] at tables
-  have spec := HostQueueOrder.rows_spec _ witness.data (queueTables_aligned (HostHintQueueBoundary.projected witness))
+  have spec := HostQueueOrder.rows_spec _ (queueTables_aligned (HostHintQueueBoundary.projected witness))
     tables (some empty, env) handler
   change HostCallLedger.call physical = (valueFromOffset HostHintLengthChip.Inputs 0 env).call at sameCall
   rw [sameCall] at registers
@@ -251,10 +250,13 @@ private theorem read_member {resources : List (Component (ZMod p))}
         (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
-    (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) witness.data := by
+    (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) := by
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp member
   simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
     List.zip_cons_cons, List.flatMap_cons]
+  have shared : (handlerTable witness).data = witness.data :=
+    witness.same_data _ (handlerTable_mem witness)
+  simp only [Table.environment, shared]
   exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
 
 /-- HINT_READ dispatch and its exact padded writes follow at the replayed prefix from incoming
@@ -272,8 +274,8 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current store bytes remaining, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧
@@ -282,10 +284,10 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
       (HostHintReadCoverage.input env).next.Binds store remaining ∧
       current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
         some (HostHintReadChip.execution (HostHintReadCoverage.input env) current.host bytes remaining) ∧
-      ((TransitionView.readIndexedRows HintReadCoverage.variants
+      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data
-          (wordTables_aligned (HostHintQueueBoundary.projected witness))) witness.data).map HintReadWrites.produced).Perm
+          (wordTables (HostHintQueueBoundary.projected witness))
+          (wordTables_aligned (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
         (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by
   obtain ⟨n, current, atIndex, split, paired, replayed, pc⟩ := prefix_of_state valid carrier member pull
   have checks := HostHintQueueBoundary.projected_constraints witness constraints

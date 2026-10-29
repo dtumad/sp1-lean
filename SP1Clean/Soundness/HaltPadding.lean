@@ -33,7 +33,7 @@ theorem table_component :
 
 /-- Erase only the added assertion, retaining the complete physical table. -/
 def project : EnsembleWitness ens :=
-  EnsembleWitness.ofTables ens
+  EnsembleWitness.ofCanonicalTables ens
     (witness.tables.set slot.index.val
       ((witness.tables[slot.index.val]'(bound witness)).withComponent HaltPaddingChip.original
         (by rw [table_component]; rfl) (by rw [table_component]; rfl)))
@@ -42,7 +42,13 @@ def project : EnsembleWitness ens :=
       change (ens.tables.set slot.index.val HaltPaddingChip.component).set slot.index.val
         HaltPaddingChip.original = ens.tables
       rw [List.set_set]
-      simpa only [slot.component_eq] using List.set_getElem_self slot.index.isLt)
+      simpa only [slot.component_eq] using List.set_getElem_self slot.index.isLt) (by
+      apply witness.same_data_set ⟨slot.index.val, bound witness⟩
+      · change HaltPaddingChip.original.circuit.name =
+          (witness.tables[slot.index.val]'(bound witness)).component.circuit.name
+        rw [table_component]; rfl
+      · intro arity; rfl
+      · exact witness.same_data (witness.tables[slot.index.val]'(bound witness)) (List.getElem_mem _))
 
 /-- Both circuits expose exactly the same derived entry at the same registered name. -/
 @[simp] theorem project_data : (project witness).data = witness.data := by
@@ -52,14 +58,12 @@ def project : EnsembleWitness ens :=
     rw [table_component]
     rfl
   · intro arity
-    simp only [Table.proverRows, Table.withComponent_component, Table.withComponent_rows, table_component]
     rfl
 
 @[simp] theorem project_publicInput : (project witness).publicInput = witness.publicInput := rfl
 
 theorem constraints (checked : witness.Constraints) : (project witness).Constraints := by
-  rw [EnsembleWitness.constraints_iff]
-  simp only [project_data]
+  rw [EnsembleWitness.Constraints]
   intro table member
   rcases List.mem_or_eq_of_mem_set member with old | rfl
   · exact checked table old
@@ -72,16 +76,16 @@ theorem interactions (channel : RawChannel (ZMod p)) :
     (project witness).interactionsWith channel = witness.interactionsWith channel := by
   have row := Table.withComponent_interactions (witness.tables[slot.index.val]'(bound witness))
     HaltPaddingChip.original (by rw [table_component]; rfl) (by rw [table_component]; rfl)
-    witness.data channel (by rw [table_component, HaltPaddingChip.interactions])
+    channel (by rw [table_component, HaltPaddingChip.interactions])
   simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
-    EnsembleWitness.tableContext, TableContext.interactionsWith, project_data, project_publicInput]
+    EnsembleWitness.toTables, Tables.interactionsWith, project_data, project_publicInput]
   change ens.verifierOperations.interactionValuesWith channel _ ++
-      (witness.tables.set slot.index.val _).flatMap (·.interactionsWith witness.data channel) =
+      (witness.tables.set slot.index.val _).flatMap (·.interactionsWith channel) =
     ens.verifierOperations.interactionValuesWith channel _ ++
-      witness.tables.flatMap (·.interactionsWith witness.data channel)
+      witness.tables.flatMap (·.interactionsWith channel)
   congr 1
   rw [List.flatMap, List.map_set, row, ← List.getElem_map (l := witness.tables) (i := slot.index.val)
-    (f := fun table : Table (ZMod p) => table.interactionsWith witness.data channel), List.set_getElem_self]
+    (f := fun table : Table (ZMod p) => table.interactionsWith channel), List.set_getElem_self]
   · rfl
   · simpa only [List.length_map] using bound witness
 

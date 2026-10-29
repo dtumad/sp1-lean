@@ -1185,7 +1185,7 @@ theorem walkedRow_pullAt (data : ProverData (ZMod p))
   exact position
 
 omit [Fact (2 ^ 17 < p)] in
-/-- **`SyscallRowContext` from its five named pieces, over an abstract row.** The assembly is a
+/-- **`SyscallRowContext` from its four named pieces, over an abstract row.** The assembly is a
 re-association plus three `rfl`-level spelling changes — the event's `pc`/`rawCode`/`arg1`/`arg2`
 *are* the row's recombined limbs — but at the witness's concrete 65-column row those `rfl`s exceed
 the depth budget, so the crossing happens once here where every argument is a variable. -/
@@ -1193,7 +1193,6 @@ theorem SyscallRowContext.of_pieces (r : SyscallInstrsChip.Inputs (ZMod p))
     (prog : Target.GuestProgram) (source : SailState)
     (opA : ((5 : ℕ) : ZMod p) = r.op_a) (opB : ((10 : ℕ) : ZMod p) = r.op_b)
     (opC : ((11 : ℕ) : ZMod p) = r.op_c)
-    (pcCarry : (r.state.pc[0]).val + 4 < 2 ^ 16)
     (fetch : prog.fetchWord (Target.pcBitsOfRow
       (Semantics.rowOfMsg (SyscallInstrsChip.programMessage r))) = some Target.ECALL_ENC)
     (pcValue : source.regs.get? Register.PC
@@ -1205,7 +1204,7 @@ theorem SyscallRowContext.of_pieces (r : SyscallInstrsChip.Inputs (ZMod p))
     (vC : source.get_reg? 11#5 = some (Word.toBitVec64 r.op_c_memory.prev_value)) :
     SyscallRowContext r prog source :=
   ⟨⟨by simpa using opA.symm, by simpa using opB.symm, by simpa using opC.symm⟩,
-   pcCarry, ⟨(syscallEventOfRow r).pc, pcValue, fetch⟩, ⟨vA, vB, vC⟩, pcValue⟩
+   ⟨(syscallEventOfRow r).pc, pcValue, fetch⟩, ⟨vA, vB, vC⟩, pcValue⟩
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The walk's *value* currency, split at the row's three named pulls — the `LocalValueAtG` twin of

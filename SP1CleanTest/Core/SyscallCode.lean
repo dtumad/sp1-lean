@@ -1,12 +1,11 @@
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
 import SP1Clean.Model.SP1Field
-import ToClean.Air.FiniteLookup
 import Clean.Circuit.WitnessExport
 
-/-! # Native syscall profile and finite-lookup regressions
+/-! # Native syscall guard regressions
 
-Run the guard's actual flattened assertions and its canonical finite lookup realization.
-The whole-chip lookup is checked separately to catch wiring mistakes in the composition.
+Check the production guard's generated witnesses and arithmetic constraints. The whole-chip
+suffix test also checks that the guard reads the prior x5 word, including every upper limb.
 These local checks make no claim about host effects or whole-ensemble balance.
 -/
 
@@ -16,26 +15,14 @@ open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
 
 private abbrev Fp := ZMod SP1Prime
 
-private def fixed : FiniteLookup Fp := FiniteLookup.ofStatic SyscallKind.fixedTable
-
-private def contains (lookup : Lookup Fp) (env : Environment Fp) : Bool :=
-  lookup.table.name == fixed.table.name && lookup.table.arity == fixed.table.arity &&
-    fixed.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
-
 private def accepts (input : SyscallCodeGuard.Inputs Fp) : Bool :=
   let program := SyscallCodeGuard.main (varFromOffset SyscallCodeGuard.Inputs 0)
   let env := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
   (program.operations (size SyscallCodeGuard.Inputs)).toFlat.all fun operation =>
     match operation with
     | .assert expression => env expression == 0
-    | .lookup lookup => contains lookup env
+    | .lookup _ => false
     | .witness .. | .interact .. => true
-
-/-- The exported fixed rows are exactly the eight canonical full words, in profile order. -/
-theorem exportedInventory :
-    fixed.rows.map (fun row => row.toArray.map (·.val)) =
-      [#[0, 0, 0, 0], #[2, 0, 0, 0], #[3, 0, 0, 0], #[16, 0, 0, 0],
-       #[26, 0, 0, 0], #[27, 0, 0, 0], #[240, 0, 0, 0], #[241, 0, 0, 0]] := by native_decide
 
 /-- Every supported full code is accepted; selection is independent of witness-supplied tables. -/
 theorem supportedCodes :
@@ -51,27 +38,30 @@ theorem rejectedCodes :
 /-- Padding imposes no code bound, but still checks that its gate is boolean. -/
 theorem padding : accepts ⟨#v[65536, 91, 123, 90000], 0⟩ = true := by native_decide
 
-private def chipLookupsAccept (code : Word Fp) : Bool :=
+private def chipGuardAccepts (code : Word Fp) : Bool :=
   let input : SyscallInstrsChip.Inputs Fp :=
     { (fromElements (Vector.replicate (size SyscallInstrsChip.Inputs) 0)) with
       op_a_memory := ⟨code, ⟨0, 0⟩⟩, is_real := 1 }
-  let program := CoreSyscallChip.circuit.main (varFromOffset SyscallInstrsChip.Inputs 0)
+  let vars := varFromOffset SyscallInstrsChip.Inputs 0
+  let program := CoreSyscallChip.circuit.main vars
   let env := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
-  let lookups := (program.operations (size SyscallInstrsChip.Inputs)).lookups
-  lookups.length == 1 && lookups.all (fun lookup => contains lookup env)
+  let ops := program.operations (size SyscallInstrsChip.Inputs)
+  let original := (SyscallInstrsChip.circuit.main vars).operations (size SyscallInstrsChip.Inputs)
+  let guard := ops.constraints.drop original.constraints.length
+  ops.lookups.isEmpty && guard.length == 11 && guard.all (fun expression => env expression == 0)
 
-/-- The complete chip wires its one fixed lookup to the prior x5 word, across all four limbs.
-The synthetic rows here test lookup wiring only, not the other instruction constraints. -/
+/-- The composed guard reads all four limbs of the prior x5 value. Synthetic rows test this
+suffix only, independently of the original instruction constraints. -/
 theorem chipProfileWiring :
-    SyscallKind.all.all (fun kind => chipLookupsAccept kind.encode) = true ∧
-    chipLookupsAccept #v[3, 0, 1, 0] = false ∧
-    chipLookupsAccept #v[4, 0, 0, 0] = false := by native_decide
+    SyscallKind.all.all (fun kind => chipGuardAccepts kind.encode) = true ∧
+    chipGuardAccepts #v[3, 0, 1, 0] = false ∧
+    chipGuardAccepts #v[4, 0, 0, 0] = false := by native_decide
 
-/-- info: exportable ✓ (0 witness cells) -/
+/-- info: exportable ✓ (6 witness cells) -/
 #guard_msgs in
 #assert_exportable (SyscallCodeGuard.circuit (p := SP1Prime))
 
-/-- info: exportable ✓ (0 witness cells) -/
+/-- info: exportable ✓ (6 witness cells) -/
 #guard_msgs in
 #assert_exportable (CoreSyscallChip.circuit (p := SP1Prime))
 

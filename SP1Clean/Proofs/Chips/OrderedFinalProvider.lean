@@ -18,23 +18,23 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def channelName : String := "SP1NativeMemoryFinalOrder"
 
 def registerCircuit :
-    GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.Inputs MemoryMsg) MemoryMsg :=
+    GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.RowInput MemoryMsg) MemoryMsg :=
   OrderedMemoryProvider.circuit channelName MemoryBoundary.FinalSpec FinalRegisterProvider.circuit
     (fun _ _ _ valid => valid.1) (fun _ valid => valid)
 
 def ramCircuit :
-    GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.Inputs MemoryMsg) MemoryMsg :=
+    GeneralFormalCircuit (ZMod p) (OrderedMemoryProvider.RowInput MemoryMsg) MemoryMsg :=
   OrderedMemoryProvider.circuit channelName MemoryBoundary.RamFinalSpec FinalRamProvider.circuit
     (fun _ _ _ valid => valid.1) (fun _ valid => valid.1)
 
 def populateRegister? (previous : ℕ) (record : MemoryMsg (ZMod p)) :
-    Option (OrderedMemoryProvider.Inputs MemoryMsg (ZMod p)) :=
+    Option (OrderedMemoryProvider.RowInput MemoryMsg (ZMod p)) :=
   if FinalRegisterProvider.Domain record ∧ previous < Word.toNat (MemoryBoundary.address record) + 1 then
     some (OrderedMemoryProvider.populate record previous (Word.toNat (MemoryBoundary.address record)))
   else none
 
 def populateRam? (previous : ℕ) (record : MemoryMsg (ZMod p)) :
-    Option (OrderedMemoryProvider.Inputs MemoryMsg (ZMod p)) :=
+    Option (OrderedMemoryProvider.RowInput MemoryMsg (ZMod p)) :=
   if FinalRamProvider.Domain record ∧ previous < Word.toNat (MemoryBoundary.address record) + 1 then
     some (OrderedMemoryProvider.populate record previous (Word.toNat (MemoryBoundary.address record)))
   else none
@@ -54,7 +54,7 @@ theorem populateRam?_isSome_iff (previous : ℕ) (record : MemoryMsg (ZMod p)) :
   split <;> simp_all
 
 theorem populateRegister?_sound (previous : ℕ) (record : MemoryMsg (ZMod p))
-    (input : OrderedMemoryProvider.Inputs MemoryMsg (ZMod p))
+    (input : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p))
     (found : populateRegister? previous record = some input)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     registerCircuit.ProverAssumptions input data hint := by
@@ -70,7 +70,7 @@ theorem populateRegister?_sound (previous : ℕ) (record : MemoryMsg (ZMod p))
   next invalid => contradiction
 
 theorem populateRam?_sound (previous : ℕ) (record : MemoryMsg (ZMod p))
-    (input : OrderedMemoryProvider.Inputs MemoryMsg (ZMod p))
+    (input : OrderedMemoryProvider.RowInput MemoryMsg (ZMod p))
     (found : populateRam? previous record = some input)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ramCircuit.ProverAssumptions input data hint := by

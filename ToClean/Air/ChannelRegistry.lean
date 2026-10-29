@@ -23,7 +23,11 @@ def Ensemble.withChannels (ens : Ensemble F PublicIO) (channels : List (RawChann
 /-- Reuse the identical witness after replacing only the channel registry. -/
 def EnsembleWitness.withChannels {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
     (channels : List (RawChannel F)) : EnsembleWitness (ens.withChannels channels) :=
-  EnsembleWitness.ofTables _ witness.tables witness.publicInput witness.tables_map_component
+  { tables := witness.tables
+    publicInput := witness.publicInput
+    same_length := witness.same_length
+    same_circuits := witness.same_circuits
+    same_data := witness.same_data }
 
 /-- Changing a registry preserves all raw assertions and fixed-table lookups. -/
 theorem EnsembleWitness.withChannels_constraints {ens : Ensemble F PublicIO}

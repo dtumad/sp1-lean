@@ -20,6 +20,15 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def membership (target : MemorySnapshot) : StaticTable (ZMod p) RegisterSnapshotRow :=
   { target.registerTable with name := "sp1.native.target_registers" }
 
+omit [Fact (2 ^ 17 < p)] in
+theorem membership_height_lt_uint64 (target : MemorySnapshot) :
+    (membership (p := p) target).height < UInt64.size := by
+  have padded := (membership (p := p) target).height_lt_double
+  change (membership (p := p) target).height < 2 * max target.registerTable.length 1 at padded
+  rw [target.registerTable_length] at padded
+  norm_num [UInt64.size] at *
+  omega
+
 def main (target : MemorySnapshot) (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) Unit := do
   (membership target).channel.pull ⟨⟨input.addr0, input.value⟩, 1⟩
   assertZero input.addr1

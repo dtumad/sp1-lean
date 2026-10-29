@@ -35,7 +35,9 @@ theorem coreWitness_boundary_rows
   have retained : (HostHintQueueBoundary.projected (baseWitness witness)).tables.take 6 =
       (baseWitness witness).tables.take 6 :=
     List.take_set_of_le (by decide : 6 ≤ 57)
-  rw [coreWitness, HostLocalCore.boundary_tables, retained,
+  simp only [coreWitness, HostLocalCore.boundary_tables, List.map_map]
+  change ((HostHintQueueBoundary.projected (baseWitness witness)).tables.take 6).map (·.table) = _
+  rw [retained,
     List.map_take, baseWitness_rows, ← List.map_take]
 
 /-- The physical final inventory is identical in the installed checker and existing grounding path. -/

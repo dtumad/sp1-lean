@@ -14,7 +14,7 @@ public import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # Native division/remainder inputs and columns
 
 The 246-cell native row owns its shared arithmetic blocks independently of generated Rust types.
-`Faithful.divRemChipReconfigure` relates it to the legacy Rust oracle. The explicit ProvableStruct
+The explicit ProvableStruct
 instance avoids the elaboration cost of deriving the 45-field layout.
 -/
 

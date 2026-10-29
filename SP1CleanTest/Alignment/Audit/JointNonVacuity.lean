@@ -139,8 +139,10 @@ def emptyTableOf (c : Component (ZMod SP1Prime)) (fixed : c.fixedColumns = none)
     Table (ZMod SP1Prime) where
   component := c
   table := []
+  data := anchorData
+  length_le := by decide
   uniform_width := by simp
-  fixed_rows_match := by simp only [Component.fixedRowsMatch, fixed]
+  fixed_rows_match := by simp only [Component.FixedRowsMatch, fixed]
 
 /-- The declared supported-core components have no fixed columns. -/
 theorem sp1Components_noFixed (c : Component (ZMod SP1Prime))
@@ -167,8 +169,11 @@ theorem emptyTables_length : emptyTables.length = 55 := by
 pushing `⟨3, 0, 0, 0⟩` with multiplicity 2. Row layout: `[b, c, multiplicity]`, then the two
 `rangeCheck 8` bit blocks (all zero). -/
 def u8RangeTable : Table (ZMod SP1Prime) where
-  component := { circuit := ByteChip.U8Range.circuit }
+  component := { circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions }
   table := [#[0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+  data := anchorData
+  length_le := by decide
+  fixed_rows_match := by trivial
   uniform_width := by intro row hrow; fin_cases hrow; rfl
 
 /-- The width-16 `RangeChip` provider table (stable position 47): two rows checking `a = 1` and
@@ -177,10 +182,14 @@ layout: `[a, multiplicity]`, then the `rangeCheck 16` bit block (little-endian, 
 exactly the first bit). -/
 def rangeWidth16 : RangeChip.Width := ⟨16, by norm_num⟩
 
+/-- Two physical Range rows with counts four and six for the public boundary requests. -/
 def range16Table : Table (ZMod SP1Prime) where
-  component := { circuit := RangeChip.circuitFor rangeWidth16 }
+  component := { circuit := RangeChip.circuitFor rangeWidth16, Assumptions := (RangeChip.circuitFor rangeWidth16).Assumptions }
   table := [#[1, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             #[0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+  data := anchorData
+  length_le := by decide
+  fixed_rows_match := by trivial
   uniform_width := by intro row hrow; fin_cases hrow <;> rfl
 
 /-- The all-zero Halt row: the `size HaltChip.Inputs = 25` input cells (the halt circuit declares
@@ -194,8 +203,11 @@ the six register Memory records are all emitted at multiplicity zero; only the a
 `1 - is_real = 1` Exit push of `⟨0⟩` is live, and that is what balances the boundary verifier's
 ungated `⟨exit_code⟩` pull. -/
 def haltPaddingTable : Table (ZMod SP1Prime) where
-  component := { circuit := HaltChip.circuit }
+  component := { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }
   table := [haltPaddingRow]
+  data := anchorData
+  length_le := by decide
+  fixed_rows_match := by trivial
   uniform_width := by intro row hrow; fin_cases hrow; rfl
 
 /-- The 55 mapped tables of the joint shard: the all-empty template with the two byte-provider
@@ -287,29 +299,33 @@ theorem flatMap_set_set_set_of_nil {α β : Type*} {l : List α} {f : α → Lis
 
 /-- **The joint shard**: 52 zero-row tables plus the two byte-provider tables and the Halt padding
 table and the equal-endpoints public boundary. Clean derives data from these physical rows. -/
-noncomputable def jointWitness : SupportedCoreNativeWitness SP1Prime where
-  tables := jointTables
-  publicInput := pv
-  same_length := by simp [jointTables, emptyTables]
-  same_circuits := by
-    intro i hi
-    rcases eq_or_ne i 25 with rfl | h25
-    · simp only [jointTables, List.getElem_set_ne (by omega : (53 : ℕ) ≠ 25),
-        List.getElem_set_ne (by omega : (47 : ℕ) ≠ 25), List.getElem_set_self]
-      rfl
-    rcases eq_or_ne i 47 with rfl | h47
-    · simp only [jointTables, List.getElem_set_ne (by omega : (53 : ℕ) ≠ 47),
-        List.getElem_set_self]
-      rfl
-    rcases eq_or_ne i 53 with rfl | h53
-    · simp only [jointTables, List.getElem_set_self]
-      rfl
-    · simp only [jointTables, List.getElem_set_ne (Ne.symm h53),
-        List.getElem_set_ne (Ne.symm h47), List.getElem_set_ne (Ne.symm h25)]
-      simp [emptyTables, emptyTableOf]
+theorem jointTables_components : jointTables.map (·.component) = (sp1Ensemble (p := SP1Prime)).tables := by
+  apply List.ext_getElem
+  · simp [jointTables, emptyTables]
+  intro i hi _
+  rw [List.getElem_map]
+  rcases eq_or_ne i 25 with rfl | h25
+  · simp only [jointTables, List.getElem_set_ne (by omega : (53 : ℕ) ≠ 25),
+      List.getElem_set_ne (by omega : (47 : ℕ) ≠ 25), List.getElem_set_self]
+    rfl
+  rcases eq_or_ne i 47 with rfl | h47
+  · simp only [jointTables, List.getElem_set_ne (by omega : (53 : ℕ) ≠ 47),
+      List.getElem_set_self]
+    rfl
+  rcases eq_or_ne i 53 with rfl | h53
+  · simp only [jointTables, List.getElem_set_self]
+    rfl
+  · simp only [jointTables, List.getElem_set_ne (Ne.symm h53),
+      List.getElem_set_ne (Ne.symm h47), List.getElem_set_ne (Ne.symm h25)]
+    simp [emptyTables, emptyTableOf]
 
-@[simp] theorem jointWitness_tables : jointWitness.tables = jointTables := rfl
-@[simp] theorem jointWitness_data : jointWitness.data = deriveProverData jointTables := rfl
+/-- Boundary-only ensemble with data derived from its complete physical inventory. -/
+noncomputable def jointWitness : SupportedCoreNativeWitness SP1Prime :=
+  EnsembleWitness.ofTables _ jointTables pv jointTables_components
+
+@[simp] theorem jointWitness_tables : jointWitness.tables = withDerivedData jointTables := rfl
+@[simp] theorem jointWitness_data : jointWitness.data = deriveProverData jointTables :=
+  EnsembleWitness.ofTables_data ..
 @[simp] theorem jointWitness_publicInput : jointWitness.publicInput = pv := rfl
 
 /-- Positions other than the two byte providers and the Halt table keep zero rows — in particular
@@ -346,10 +362,14 @@ theorem constraintsHold_of_check {env : Environment (ZMod SP1Prime)}
   exact ⟨h.2, fun l hl => absurd hl (by simp [h.1])⟩
 
 theorem jointWitness_constraints : jointWitness.Constraints := by
-  rw [EnsembleWitness.constraints_iff]
-  intro t ht row hrow
-  rcases mem_jointTables ht with h | rfl | rfl | rfl
-  · rw [emptyTables_table_eq_nil t h] at hrow
+  intro t ht
+  obtain ⟨original, originalMem, rfl⟩ := List.mem_map.mp ht
+  intro row hrow
+  change original.component.operations.ConstraintsHold
+    (Environment.fromArray row (deriveProverData jointTables))
+  change row ∈ original.table at hrow
+  rcases mem_jointTables originalMem with h | rfl | rfl | rfl
+  · rw [emptyTables_table_eq_nil original h] at hrow
     exact absurd hrow (List.not_mem_nil)
   · fin_cases hrow
     apply Component.constraintsHold_setData (data := anchorData)
@@ -397,7 +417,7 @@ theorem balancedInteractions_pair {F : Type} [FiniteField F] [DecidableEq F]
       exact add_zero 0
 
 /-- The empty interaction list balances (over a positive-characteristic field). -/
-theorem balancedInteractions_nil {F : Type} [FiniteField F] [DecidableEq F]
+theorem balancedInteractions_nil {F : Type} [FiniteField F]
     (hchar : (0 : ℕ) < ringChar F ∨ ringChar F = 0) :
     BalancedInteractions ([] : List (Interaction F)) := by
   constructor
@@ -438,9 +458,9 @@ theorem balancedInteractions_of_member_balance {l : List (Interaction (ZMod SP1P
 /-- A table over a single-channel circuit filters nothing: its channel view is its whole
 interaction list. -/
 theorem table_interactionsWith_eq_interactions {t : Table (ZMod SP1Prime)}
-    {data : ProverData (ZMod SP1Prime)} {ch : RawChannel (ZMod SP1Prime)}
+    {ch : RawChannel (ZMod SP1Prime)}
     (h : ∀ c ∈ t.component.circuit.channels, c = ch) :
-    t.interactionsWith data ch = t.interactions data := by
+    t.interactionsWith ch = t.interactions := by
   rw [Table.interactionsWith_eq_filter]
   apply List.filter_eq_self.mpr
   intro i hi
@@ -466,21 +486,20 @@ theorem range16Table_channels :
 /-- The two provider tables are silent on every channel other than Byte. -/
 theorem u8RangeTable_interactionsWith_nil {ch : RawChannel (ZMod SP1Prime)}
     (hne : ch ≠ byteChannel.toRaw) :
-    u8RangeTable.interactionsWith anchorData ch = [] := by
+    u8RangeTable.interactionsWith ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (u8RangeTable_channels _ hmem)
 
 theorem range16Table_interactionsWith_nil {ch : RawChannel (ZMod SP1Prime)}
     (hne : ch ≠ byteChannel.toRaw) :
-    range16Table.interactionsWith anchorData ch = [] := by
+    range16Table.interactionsWith ch = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
   intro hmem
   exact hne (range16Table_channels _ hmem)
 
-theorem emptyTables_interactionsWith_nil (data : ProverData (ZMod SP1Prime))
-    (ch : RawChannel (ZMod SP1Prime)) :
-    ∀ t ∈ emptyTables, t.interactionsWith data ch = [] := by
+theorem emptyTables_interactionsWith_nil (ch : RawChannel (ZMod SP1Prime)) :
+    ∀ t ∈ emptyTables, t.interactionsWith ch = [] := by
   intro t ht
   simp only [Table.interactionsWith, emptyTables_table_eq_nil t ht, List.flatMap_nil]
 
@@ -489,20 +508,18 @@ Halt padding table (in stable position order), the 52 zero-row tables contributi
 theorem jointWitness_interactionsWith_split (ch : RawChannel (ZMod SP1Prime)) :
     jointWitness.interactionsWith ch =
       jointWitness.verifierInteractionsWith ch ++
-        (u8RangeTable.interactionsWith anchorData ch ++
-          (range16Table.interactionsWith anchorData ch ++ haltPaddingTable.interactionsWith anchorData ch)) := by
-  change _ ++ jointTables.flatMap (fun t => t.interactionsWith jointWitness.data ch) = _
+        (u8RangeTable.interactionsWith ch ++
+          (range16Table.interactionsWith ch ++ haltPaddingTable.interactionsWith ch)) := by
+  change _ ++ (withDerivedData jointTables).flatMap (fun t => t.interactionsWith ch) = _
+  rw [withDerivedData_interactionsWith]
   have split := flatMap_set_set_set_of_nil (l := emptyTables)
-    (f := fun (t : Table (ZMod SP1Prime)) => t.interactionsWith jointWitness.data ch)
+    (f := fun (t : Table (ZMod SP1Prime)) => t.interactionsWith ch)
     (i := 25) (j := 47) (k := 53)
     (a := u8RangeTable) (b := range16Table) (c := haltPaddingTable)
     (by omega) (by omega) (by rw [emptyTables_length]; omega)
-    (emptyTables_interactionsWith_nil jointWitness.data ch)
-  change jointTables.flatMap (fun t => t.interactionsWith jointWitness.data ch) = _ at split
+    (emptyTables_interactionsWith_nil ch)
+  change jointTables.flatMap (fun t => t.interactionsWith ch) = _ at split
   rw [split]
-  rw [Table.interactionsWith_setData u8RangeTable _ anchorData,
-    Table.interactionsWith_setData range16Table _ anchorData,
-    Table.interactionsWith_setData haltPaddingTable _ anchorData]
 
 /-! ### The Halt padding row's per-channel views
 
@@ -513,16 +530,16 @@ is recovered from the halt circuit's own exposed-channel closed form. -/
 
 /-- Executable check: every Halt padding-row interaction outside the Exit bus is gated off. -/
 theorem haltPaddingTable_zeroOrExit :
-    (haltPaddingTable.interactions anchorData).all
+    (haltPaddingTable.interactions).all
       (fun i => decide (i.mult = 0) || (i.channel.name == "SP1Exit")) = true := by native_decide
 
 /-- Executable check: the padding row emits nineteen interactions in total. -/
-theorem haltPaddingTable_interactions_length : (haltPaddingTable.interactions anchorData).length = 19 := by
+theorem haltPaddingTable_interactions_length : (haltPaddingTable.interactions).length = 19 := by
   native_decide
 
 /-- On any non-Exit channel the Halt padding table contributes only multiplicity-zero entries. -/
 theorem haltPaddingTable_mult_zero {ch : RawChannel (ZMod SP1Prime)} (hname : ch.name ≠ "SP1Exit") :
-    ∀ i ∈ haltPaddingTable.interactionsWith anchorData ch, i.mult = 0 := by
+    ∀ i ∈ haltPaddingTable.interactionsWith ch, i.mult = 0 := by
   intro i hi
   rw [Table.interactionsWith_eq_filter] at hi
   obtain ⟨hmem, hch⟩ := List.mem_filter.mp hi
@@ -534,7 +551,7 @@ theorem haltPaddingTable_mult_zero {ch : RawChannel (ZMod SP1Prime)} (hname : ch
 
 /-- A channel view is a sublist of the whole interaction list, so it is bounded by its length. -/
 theorem haltPaddingTable_interactionsWith_length (ch : RawChannel (ZMod SP1Prime)) :
-    (haltPaddingTable.interactionsWith anchorData ch).length ≤ 19 := by
+    (haltPaddingTable.interactionsWith ch).length ≤ 19 := by
   rw [Table.interactionsWith_eq_filter, ← haltPaddingTable_interactions_length]
   exact List.length_filter_le _ _
 
@@ -544,7 +561,7 @@ nineteen interactions. -/
 theorem balancedInteractions_append_halt {l : List (Interaction (ZMod SP1Prime))}
     (hlen : l.length < 100) (hbal : ∀ msg, balanceOf l msg = 0)
     {ch : RawChannel (ZMod SP1Prime)} (hname : ch.name ≠ "SP1Exit") :
-    BalancedInteractions (l ++ haltPaddingTable.interactionsWith anchorData ch) := by
+    BalancedInteractions (l ++ haltPaddingTable.interactionsWith ch) := by
   have hchar : (119 : ℕ) < ringChar (ZMod SP1Prime) := by
     rw [ZMod.ringChar_zmod_n]; norm_num [SP1Prime]
   refine ⟨Or.inl ?_, fun msg => ?_⟩
@@ -663,7 +680,7 @@ balance. -/
 def byteInteractions : List (Interaction (ZMod SP1Prime)) :=
   (verifierBytePulls (varFromOffset SP1PublicIO 0)).map
       (AbstractInteraction.eval (Environment.fromInput pv anchorData)) ++
-    ((u8RangeTable.interactions anchorData) ++ (range16Table.interactions anchorData))
+    ((u8RangeTable.interactions) ++ (range16Table.interactions))
 
 theorem jointWitness_verifierByte :
     jointWitness.verifierInteractionsWith byteChannel.toRaw =
@@ -681,7 +698,7 @@ theorem jointWitness_verifierByte :
 
 theorem jointWitness_byteInteractions :
     jointWitness.interactionsWith byteChannel.toRaw =
-      byteInteractions ++ haltPaddingTable.interactionsWith anchorData byteChannel.toRaw := by
+      byteInteractions ++ haltPaddingTable.interactionsWith byteChannel.toRaw := by
   rw [jointWitness_interactionsWith_split, jointWitness_verifierByte,
     table_interactionsWith_eq_interactions u8RangeTable_channels,
     table_interactionsWith_eq_interactions range16Table_channels]
@@ -713,7 +730,7 @@ def haltExitInteractions : List (Interaction (ZMod SP1Prime)) :=
     (AbstractInteraction.eval (Environment.fromArray haltPaddingRow anchorData))
 
 theorem haltPaddingTable_exit :
-    haltPaddingTable.interactionsWith anchorData exitChannel.toRaw = haltExitInteractions := by
+    haltPaddingTable.interactionsWith exitChannel.toRaw = haltExitInteractions := by
   show [haltPaddingRow].flatMap _ = _
   rw [List.flatMap_singleton, Operations.interactionValuesWith_eq_map,
     Component.interactionsWith_eq]
@@ -742,12 +759,11 @@ theorem jointWitness_syscallTable_nil :
     ∀ t : Table (ZMod SP1Prime),
       jointWitness.tables[syscallTablePosition]? = some t → t.table = [] := by
   intro t ht
-  have hidx : jointWitness.tables[syscallTablePosition]?
-      = emptyTables[syscallTablePosition]? := by
-    rw [jointWitness_tables, jointTables, List.getElem?_set_ne (by decide),
-      List.getElem?_set_ne (by decide), List.getElem?_set_ne (by decide)]
-  rw [hidx] at ht
-  exact emptyTables_table_eq_nil t (List.mem_of_getElem? ht)
+  rw [jointWitness_tables, withDerivedData, List.getElem?_map] at ht
+  obtain ⟨original, originalAt, rfl⟩ := Option.map_eq_some_iff.mp ht
+  rw [jointTables, List.getElem?_set_ne (by decide),
+    List.getElem?_set_ne (by decide), List.getElem?_set_ne (by decide)] at originalAt
+  exact emptyTables_table_eq_nil original (List.mem_of_getElem? originalAt)
 
 /-- The same fact at `BumpDecode`'s accessor. -/
 theorem jointWitness_syscallInstrsTable_nil :
@@ -970,14 +986,14 @@ theorem jointWitness_memoryInitProviderBound :
 
 theorem jointWitness_memoryInitProviderUnique :
     MemoryInitProviderUnique (p := SP1Prime) jointWitness := by
-  show (typedTableInteractionsWith (memoryInitProviderTable jointWitness) jointWitness.data
+  show (typedTableInteractionsWith (memoryInitProviderTable jointWitness)
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, memoryInitProviderTable_table_nil, List.flatMap_nil]
   exact List.Pairwise.nil
 
 theorem jointWitness_memoryFinalizeProviderUnique :
     MemoryFinalizeProviderUnique (p := SP1Prime) jointWitness := by
-  show (typedTableInteractionsWith (memoryFinalizeProviderTable jointWitness) jointWitness.data
+  show (typedTableInteractionsWith (memoryFinalizeProviderTable jointWitness)
     memoryChannel).Pairwise _
   rw [typedTableInteractionsWith, memoryFinalizeProviderTable_table_nil, List.flatMap_nil]
   exact List.Pairwise.nil

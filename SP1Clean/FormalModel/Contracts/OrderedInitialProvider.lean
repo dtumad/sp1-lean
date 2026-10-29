@@ -11,7 +11,7 @@ namespace SP1Clean.OrderedInitialProvider
 
 open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
 
-abbrev Inputs := OrderedMemoryProvider.Inputs
+abbrev Inputs := OrderedMemoryProvider.RowInput
 
 variable {p : ℕ} [Fact p.Prime]
 

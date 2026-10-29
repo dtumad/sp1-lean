@@ -1,3 +1,4 @@
+import ToClean.Circuit.Guarded
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Operations.InitialMemoryRead
@@ -212,5 +213,33 @@ theorem populate?_isSome_iff (address : ℕ) :
       [] := by
   simp [main, InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed,
     AddressOperation.circuit, circuit_norm]
+
+/-- Authentication and Byte channels admit disabled rows; Memory is emitted without assumptions. -/
+instance guardSupported (snapshot : MemorySnapshot) :
+    Guarded.Supported (circuit snapshot (p := p)) :=
+  Guarded.Supported.of_emitted_requirements _
+    (fun input offset => List.map_eq_nil_iff.mp (main_lookupNames snapshot input offset))
+    (by
+      intro selected member
+      change selected ∈ (InitialMemoryRead.circuit snapshot.memory).channelsWithGuarantees ++
+        [byteChannel.toRaw] ++ [memoryChannel.toRaw] at member
+      have registered : selected =
+          (InitialMemoryLookup.membership snapshot.memory (2 ^ 48)
+            "sp1.native.initial_memory").channel.toRaw ∨
+          selected = byteChannel.toRaw ∨ selected = memoryChannel.toRaw := by
+        simpa [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed_guarantees,
+          List.mem_flatten, List.mem_replicate, or_assoc, or_left_comm, or_comm] using member
+      rcases registered with rfl | rfl | rfl <;> infer_instance)
+    (by
+      intro input offset selected member _ interaction occurs
+      have same : selected = memoryChannel.toRaw := by
+        simpa only [circuit, List.mem_singleton] using member
+      subst selected
+      change interaction ∈ ((main snapshot input).operations offset).interactionsWith
+        memoryChannel.toRaw at occurs
+      rw [main_memory_interactions] at occurs
+      have same := List.mem_singleton.mp occurs
+      subst interaction
+      rfl)
 
 end SP1Clean.SnapshotRamProvider

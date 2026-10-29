@@ -24,7 +24,7 @@ private def target : ExecutionSnapshot :=
 
 private def check (target : ExecutionSnapshot) (input : SP1PublicIO Fp := header) : Bool :=
   (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source
-    { circuit := SP1Clean.SailBoundary.circuit source target } (toElements input).toList []).1
+    { circuit := SP1Clean.SailBoundary.circuit source target, Assumptions := (SP1Clean.SailBoundary.circuit source target).Assumptions } (toElements input).toList []).1
 
 /-- The outgoing ADD state supplies the existing header's real PC/clock and preserves its frame. -/
 theorem activeAcceptance : check target = true := by native_decide

@@ -48,8 +48,8 @@ theorem source_no_push_of_final_none (valid : image.Valid)
     (absent : LocalCore.memoryFinalFrontier
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = none) :
     ∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
-      ∀ message ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPushes,
+      ∀ message ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPushes,
         MemoryMsg.locOf message ≠ loc := by
   obtain ⟨ordered, rows, _, _, _, chronology, projection⟩ :=
     source_ordered_memory_rows valid witness constraints balanced

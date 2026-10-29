@@ -39,14 +39,14 @@ def main (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p)) : Circui
   -- A `match` rather than `if deferred`: see `HostHintLengthChip.main`.
   match deferred with
   | true =>
-    publicValuesChannel.push ⟨147, 1⟩
-    publicValuesChannel.push ⟨Expression.const ((72 + slot.val : ℕ) : ZMod p),
-      input.call.arg2[0] + input.call.arg2[1] * 65536⟩
+    publicValuesChannel.push (PublicValueMsg.scalar 147 1)
+    publicValuesChannel.push (PublicValueMsg.atSlot 72 1 slot (input.call.arg2[0] + input.call.arg2[1] * 65536))
   | false =>
-    publicValuesChannel.push ⟨145, 1⟩
+    publicValuesChannel.push (PublicValueMsg.scalar 145 1)
     forEach (Vector.ofFn (fun i : Fin 4 => i)) fun i =>
       publicValuesChannel.push
-        ⟨Expression.const ((32 + 4 * slot.val + i.val : ℕ) : ZMod p), (input.digest (Expression.const (256 : ZMod p)⁻¹))[i]⟩
+        (PublicValueMsg.atSlot (Expression.const ((32 + i.val : ℕ) : ZMod p)) 4 slot
+          (input.digest (Expression.const (256 : ZMod p)⁻¹))[i])
 
 instance elaborated (deferred : Bool) (slot : Fin 8) :
     ElaboratedCircuit (ZMod p) Inputs unit (main deferred slot) := by

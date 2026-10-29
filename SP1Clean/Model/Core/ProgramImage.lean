@@ -55,6 +55,22 @@ theorem checkFields_eq_true_iff (input : ProgramImage) : input.checkFields = tru
 instance (input : ProgramImage) : Decidable input.Valid :=
   decidable_of_iff (input.checkFields = true) input.checkFields_eq_true_iff
 
+/-- Distinct checked ROM addresses bound the physical inventory by the guest address space.
+This is a consequence of image validation, not an additional capacity condition on callers. -/
+theorem rom_length_le (input : ProgramImage) (valid : input.Valid) :
+    input.rom.length ≤ 2 ^ 48 := by
+  let addresses := (input.rom.map Prod.fst).map BitVec.toNat
+  have unique : addresses.Nodup := valid.1.map BitVec.toNat_injective
+  have subset : addresses.toFinset ⊆ Finset.range (2 ^ 48) := by
+    intro address member
+    have listed : address ∈ (input.rom.map Prod.fst).map BitVec.toNat := List.mem_toFinset.mp member
+    obtain ⟨pc, pcMember, rfl⟩ := List.mem_map.mp listed
+    obtain ⟨row, rowMember, rfl⟩ := List.mem_map.mp pcMember
+    have bound := (valid.2.1 row rowMember).2.1.2
+    exact Finset.mem_range.mpr (by change row.1.toNat + 4 ≤ 2 ^ 48 at bound; omega)
+  simpa only [List.toFinset_card_of_nodup unique, Finset.card_range,
+    addresses, List.length_map] using Finset.card_le_card subset
+
 /-- Convert checked bytes into the semantic program; no decoding result is invented. -/
 def toGuestProgram (input : ProgramImage) (valid : input.Valid) : GuestProgram where
   rom := input.rom

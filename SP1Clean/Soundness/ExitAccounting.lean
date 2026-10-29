@@ -78,14 +78,14 @@ theorem witness_instructionExitInteractions_eq_nil
 /-- The provider suffix retains exactly the Halt and syscall Exit ledgers, in physical order. -/
 theorem witness_providerExitInteractions_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (witness.tables.drop 25).flatMap (typedTableInteractionsWith · witness.data exitChannel) =
-      typedTableInteractionsWith (haltTable witness) witness.data exitChannel ++
-        typedTableInteractionsWith (syscallInstrsTable witness) witness.data exitChannel := by
+    (witness.tables.drop 25).flatMap (typedTableInteractionsWith · exitChannel) =
+      typedTableInteractionsWith (haltTable witness) exitChannel ++
+        typedTableInteractionsWith (syscallInstrsTable witness) exitChannel := by
   have length : witness.tables.length = 55 := by
     rw [← witness.same_length]
     simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
   have silent : ((witness.tables.drop 25).take 28).flatMap
-      (typedTableInteractionsWith · witness.data exitChannel) = [] := by
+      (typedTableInteractionsWith · exitChannel) = [] := by
     have checked : ((sp1ProviderTables (p := p)).take 28).all
         (fun component => !(component.circuit.channels.map RawChannel.name).contains
           (exitChannel (p := p)).toRaw.name) = true := rfl
@@ -105,7 +105,7 @@ theorem witness_providerExitInteractions_eq
     rw [List.drop_drop, List.drop_eq_getElem_cons (by omega),
       List.drop_eq_getElem_cons (by omega), List.drop_eq_nil_of_le (by omega)]
     rfl
-  have split := congrArg (List.flatMap (typedTableInteractionsWith · witness.data exitChannel))
+  have split := congrArg (List.flatMap (typedTableInteractionsWith · exitChannel))
     (List.take_append_drop 28 (witness.tables.drop 25))
   rw [List.flatMap_append, silent, List.nil_append, tail] at split
   simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using split.symm

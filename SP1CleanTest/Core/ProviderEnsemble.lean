@@ -19,21 +19,21 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 private def program (PublicIO : TypeMap) [ProvableType PublicIO] :
     SoundEnsemble (ZMod p) PublicIO :=
   SoundEnsemble.empty (ZMod p) PublicIO
-    |>.addTable { circuit := ProgramProviderChip.circuit }
+    |>.addTable { circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions }
         (by simp [circuit_norm, ProgramProviderChip.circuit]) (by simp [circuit_norm])
     |>.addFinishedChannel programChannel.toRaw
 
 private def memory (PublicIO : TypeMap) [ProvableType PublicIO] :
     SoundEnsemble (ZMod p) PublicIO :=
   SoundEnsemble.empty (ZMod p) PublicIO
-    |>.addTable { circuit := MemoryProviderChip.circuit }
+    |>.addTable { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions }
         (by simp [circuit_norm, MemoryProviderChip.circuit]) (by simp [circuit_norm])
     |>.addFinishedChannel memoryChannel.toRaw
 
 private def boundary (PublicIO : TypeMap) [ProvableType PublicIO] :
     SoundEnsemble (ZMod p) PublicIO :=
   memory (p := p) PublicIO
-    |>.addTable { circuit := MemoryFinalizeChip.circuit }
+    |>.addTable { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, memory])
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, memory])
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, MemoryProviderChip.circuit, memory])
@@ -48,7 +48,7 @@ theorem memoryFinished (PublicIO : TypeMap) [ProvableType PublicIO] :
 
 theorem boundaryComponents (PublicIO : TypeMap) [ProvableType PublicIO] :
     (boundary (p := p) PublicIO).tables =
-      [{ circuit := MemoryFinalizeChip.circuit }, { circuit := MemoryProviderChip.circuit }] := rfl
+      [{ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }, { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions }] := rfl
 
 theorem boundaryNames (PublicIO : TypeMap) [ProvableType PublicIO] :
     ((boundary (p := p) PublicIO).tables.map (·.circuit.name)) =

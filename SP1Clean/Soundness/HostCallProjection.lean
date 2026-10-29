@@ -19,7 +19,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit }
+def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }
 
 /-- WRITE's additional register read, using the constraint-determined full-word selector. -/
 def extraRead (env : Environment (ZMod p)) : Readers.RegisterRead.Inputs (ZMod p) :=
@@ -139,7 +139,7 @@ private theorem main_other_interactions (channel : RawChannel (ZMod p))
   rw [HostCallChip.main_other_interactions channel byte memory host]
   simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-    SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit,
+    SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit,
     Operations.interactionsWith]
 
 private theorem main_byte_subset (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ) :
@@ -149,7 +149,7 @@ private theorem main_byte_subset (row : Var HostCallChip.Inputs (ZMod p)) (offse
   simp only [GeneralFormalCircuit.toSubcircuit_interactions,
     FormalCircuit.toSubcircuit_interactions, CoreSyscallChip.circuit,
     CoreSyscallChip.main, circuit_norm, FormalAssertion.toSubcircuit_interactions,
-    SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit,
+    SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit,
     Operations.interactionsWith]
   simp only [List.filter_append]
   exact List.subset_append_left _ _
@@ -194,7 +194,7 @@ private theorem main_memory_values (input : Var HostCallChip.Inputs (ZMod p)) (o
       ((SyscallInstrsChip.main input.instruction).operations offset).interactionsWith memoryChannel.toRaw := by
     simp only [CoreSyscallChip.circuit, CoreSyscallChip.main, circuit_norm,
       GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
-      SyscallCodeGuard.circuit, SyscallCodeGuard.main, SyscallInstrsChip.circuit, Operations.interactionsWith]
+      SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, SyscallInstrsChip.circuit, Operations.interactionsWith]
   rw [core]
   congr 1
   simp only [List.map_cons, List.map_nil, Channel.eval_pulledIf, Channel.eval_pushedIf]
@@ -268,14 +268,26 @@ attribute [local circuit_norm]
 /-- Clean's scope checker bounds every original assertion, multiplicity and message by the
 instruction's own width, independent of the wider host wrapper. -/
 theorem original_scope :
-    Extraction.expressionsBadVariable (original (p := p)).width
+    Backends.expressionsBadVariable (original (p := p)).width
       (original (p := p)).operations.constraints = none ∧
-    Extraction.expressionsBadVariable (original (p := p)).width
+    Backends.expressionsBadVariable (original (p := p)).width
       ((original (p := p)).operations.interactions.flatMap fun interaction =>
         interaction.mult :: interaction.msg.toList) = none := by
   have width : (original (p := p)).width = 65 := rfl
   rw [width]
-  constructor <;> simp only [circuit_norm] <;> cbv
+  constructor
+  · simp only [circuit_norm]
+    cbv
+  · simp only [circuit_norm]
+    -- Check each expression separately so a larger message does not deepen one reduction.
+    simp only [Backends.expressionsBadVariable, List.findSome?_eq_none_iff,
+      List.forall_mem_flatMap, FlatOperation.interactions, List.forall_mem_append,
+      List.forall_mem_cons]
+    repeat' apply And.intro
+    all_goals solve
+      | exact List.forall_mem_nil _
+      | (apply List.findSome?_eq_none_iff.mp; cbv)
+      | cbv
 
 end Scope
 
@@ -284,7 +296,7 @@ theorem constraints_prefix (row : Array (ZMod p)) (data data' : ProverData (ZMod
     (checked : producer.operations.ConstraintsHold (Environment.fromArray row data)) :
     original.operations.ConstraintsHold
       (Environment.fromArray (row.extract 0 (original (p := p)).width) data') := by
-  apply Extraction.constraints_extract row data data' SyscallInstrsChip.lookups_empty ?_
+  apply Backends.constraints_extract row data data' SyscallInstrsChip.lookups_empty ?_
     (constraints_original _ checked)
   exact (original_scope (p := p)).1
 
@@ -294,12 +306,12 @@ theorem byte_guarantees_prefix (row : Array (ZMod p)) (data data' : ProverData (
     original.operations.ChannelGuarantees byteChannel.toRaw
       (Environment.fromArray (row.extract 0 (original (p := p)).width) data') := by
   intro interaction member channel
-  have scope : Extraction.expressionsBadVariable (original (p := p)).width
+  have scope : Backends.expressionsBadVariable (original (p := p)).width
       (interaction.mult :: interaction.msg.toList) = none :=
     List.findSome?_eq_none_iff.mpr fun expression used =>
       List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression
         (List.mem_flatMap.mpr ⟨interaction, member, used⟩)
-  rw [← AbstractInteraction.eval_guarantees, Extraction.interaction_eval_extract row data data' _ scope]
+  rw [← AbstractInteraction.eval_guarantees, Backends.interaction_eval_extract row data data' _ scope]
   have kept := byte_guarantees (Environment.fromArray row data) guarantees interaction member channel
   rcases interaction with ⟨declared, mult, msg, assume⟩
   cases channel
@@ -327,7 +339,7 @@ theorem original_values_prefix (row : Array (ZMod p)) (data data' : ProverData (
   simp only [Operations.interactionValuesWith]
   apply List.map_congr_left
   intro interaction member
-  apply Extraction.interaction_eval_extract
+  apply Backends.interaction_eval_extract
   apply List.findSome?_eq_none_iff.mpr
   intro expression used
   exact List.findSome?_eq_none_iff.mp (original_scope (p := p)).2 expression

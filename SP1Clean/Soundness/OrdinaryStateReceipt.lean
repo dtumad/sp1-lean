@@ -75,7 +75,7 @@ def component (id : InstructionChipId) : Component (ZMod p) :=
   let chip := supportedChipFor (p := p) id
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  { circuit := InstructionReceipt.circuit chip.circuit (projection id) }
+  { circuit := InstructionReceipt.circuit chip.circuit (projection id), Assumptions := (InstructionReceipt.circuit chip.circuit (projection id)).Assumptions }
 
 /-- Keep the descriptor's input representation available without unfolding the chip. -/
 local instance (id : InstructionChipId) : ProvableType (supportedChipFor (p := p) id).kind.Inputs :=
@@ -250,7 +250,7 @@ theorem row_meaning {Input Output : TypeMap} [ProvableType Input] [ProvableType 
     (observation : Receipt.Projection (ZMod p) Input StateMsg)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (agrees : AgreesWith provider observation view) (env : Environment (ZMod p)) :
-    let original : Component (ZMod p) := { circuit := provider }
+    let original : Component (ZMod p) := { circuit := provider, Assumptions := (provider).Assumptions }
     Eval.eval env (observation.gate (varFromOffset Input 0) (size Input)) =
       (view (original.rowInput env) (original.rowOutput env)).is_real ∧
     Eval.eval env (observation.message (varFromOffset Input 0) (size Input)) =
@@ -306,8 +306,8 @@ def construct (id : InstructionChipId) (original : Table (ZMod p))
 
 /-- The constructor preserves raw row validity in both directions at the same ensemble data. -/
 theorem construct_constraints (id : InstructionChipId) (original : Table (ZMod p))
-    (registered : original.component = (supportedChipFor id).table) (data : ProverData (ZMod p)) :
-    (construct id original registered).Constraints data ↔ original.Constraints data := by
+    (registered : original.component = (supportedChipFor id).table) :
+    (construct id original registered).Constraints ↔ original.Constraints := by
   apply Table.withComponent_constraints
   · rw [registered, constraints]
   · rw [registered, lookups]
@@ -320,18 +320,19 @@ theorem construct_length (id : InstructionChipId) (original : Table (ZMod p))
 /-- The full receipt ledger is decoded directly from the original arrays and shared data. -/
 theorem construct_receipts (id : InstructionChipId) (original : Table (ZMod p))
     (registered : original.component = (supportedChipFor id).table) (data : ProverData (ZMod p)) :
-    (construct id original registered).interactionsWith data InstructionReceipt.channel.toRaw =
+    (construct id original registered).interactionsWith InstructionReceipt.channel.toRaw =
       original.table.map (fun physical =>
         let row := (supportedChipFor (p := p) id).decodeRow data physical
         InstructionReceipt.channel.pushedIfValue row.is_real (statePushMessage row)) := by
-  simp only [construct, Table.interactionsWith, Table.withComponent, row_receipt]
+  simp only [construct, Table.interactionsWith, Table.withComponent, Table.environment, row_receipt,
+    (supportedChipFor (p := p) id).decodeRow_setData original.data data]
   exact List.map_eq_flatMap.symm
 
 /-- Exact cost includes the inactive occurrence on every padding row. -/
 theorem construct_receipt_count (id : InstructionChipId) (original : Table (ZMod p))
-    (registered : original.component = (supportedChipFor id).table) (data : ProverData (ZMod p)) :
-    ((construct id original registered).interactionsWith data InstructionReceipt.channel.toRaw).length =
+    (registered : original.component = (supportedChipFor id).table) :
+    ((construct id original registered).interactionsWith InstructionReceipt.channel.toRaw).length =
       original.length := by
-  rw [construct_receipts, List.length_map]
+  rw [construct_receipts id original registered original.data, List.length_map]
 
 end SP1Clean.Soundness.OrdinaryStateReceipt

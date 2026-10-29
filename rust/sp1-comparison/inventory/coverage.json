@@ -36,9 +36,10 @@
       "export": "component",
       "comparisonKind": "sp1-component",
       "comparison": [
-        "rust/sp1-comparison/tests/instruction_export.rs"
+        "rust/sp1-comparison/tests/instruction_export.rs",
+        "rust/sp1-comparison/tests/symbolic_add_export.rs"
       ],
-      "limit": "Supervisor local AIR and open interaction buses; no whole-execution or user-mode agreement."
+      "limit": "Supervisor local AIR and open interaction buses; no whole-execution or user-mode agreement. ADD additionally has an exact arbitrary-row algebraic comparison for the supervisor profile with untrusted programs disabled, using upstream degree bounds, complete polynomial interpolation and full affine interaction signatures; unexpected public dependencies fail and the Rust checker/adapters remain trusted."
     },
     "bytes": {
       "lean": [
@@ -55,20 +56,24 @@
       "lean": [
         "SP1Clean/Proofs/Chips/ByteChip/RangeChip.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Native bit-length range providers; built-in export and independent Rust comparison remain open."
+      "export": "component",
+      "comparisonKind": "sp1-component",
+      "comparison": [
+        "rust/sp1-comparison/tests/byte_provider_export.rs"
+      ],
+      "limit": "All 17 installed bit-length providers compare every released Range preprocessed row and AIR at four multiplicities, preserving duplicate and zero-count occurrences. Native polynomial membership has a different physical layout; external Byte balance is separate."
     },
     "bump": {
       "lean": [
         "SP1Clean/Proofs/Chips/MemoryBumpChip/Formal.lean",
         "SP1Clean/Proofs/Chips/StateBumpChip/Formal.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Native bump proofs and legacy faithfulness exist; released Rust comparisons remain open."
+      "export": "component",
+      "comparisonKind": "sp1-component",
+      "comparison": [
+        "rust/sp1-comparison/tests/system_export.rs"
+      ],
+      "limit": "Both bump components compare released active and padding rows, local constraint satisfaction and complete open-bus ledgers, with mutations of every column. All cells are inputs; this does not prove native execution-to-row generation or whole-ensemble balance."
     },
     "memory": {
       "lean": [
@@ -78,42 +83,57 @@
         "SP1Clean/Native/Operations/InitialMemoryLookup.lean",
         "SP1Clean/Native/Operations/FinalRamValue.lean"
       ],
-      "export": "subcomponent",
+      "export": "component",
       "comparisonKind": "native-backend",
       "comparison": [
         "rust/sp1-comparison/tests/clean_export.rs",
-        "rust/sp1-comparison/tests/ram_export.rs"
+        "rust/sp1-comparison/tests/ram_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Source/target register and RAM membership and RAM byte/word rows are tested. Ordered wrappers, terminals and complete assembly remain open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
+      "limit": "Standalone tests cover register/RAM membership and RAM byte/word rows. Complete branch, empty and stopped fixtures compare source/target register boundaries, fixed inventories and all table positions; empty and stopped cases reject removal of either ordered boundary terminal. The complete sixteen-byte HINT_READ fixture checks physical RAM writes and final register/RAM values against released execution. Its six ordered boundary/target-check tables pad three active rows to four; backend tests cover arbitrary disabled cells, invalid activity and erased real checks. General ordered-memory execution remains open. Native arbitrary local snapshots differ from SP1 boot/global-memory digests."
     },
     "program": {
       "lean": [
-        "SP1Clean/Proofs/Chips/DecodedProgramProvider.lean"
+        "SP1Clean/Proofs/Chips/FixedProgramProvider/Preprocessed.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Decoded native ROM authenticates semantic instructions; legacy lookup blocks built-in export. Released Program preprocessing comparison remains open."
+      "export": "component",
+      "comparisonKind": "sp1-component",
+      "comparison": [
+        "rust/sp1-comparison/tests/program_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "Installed verifier-fixed Program provider. Independent released preprocessing, AIR and count-generation comparison covers a contiguous ROM; native tests cover sparse unordered addresses, unused rows, padding and empty inventory. The complete branch fixture exercises installed fetch generation; the empty segment retains fixed ROM rows with zero demand. User-mode execution remains open."
     },
     "host": {
       "lean": [
         "SP1Clean/Proofs/Chips/HostCallChip/Formal.lean",
+        "SP1Clean/Native/Operations/SyscallCodeGuard.lean",
+        "SP1Clean/Native/Operations/WritePermission.lean",
         "SP1Clean/Soundness/HostCallReceivers.lean",
         "SP1Clean/Soundness/HostHintRecordSources.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12; export and Rust comparison remain open."
+      "export": "component",
+      "comparisonKind": "native-backend",
+      "comparison": [
+        "rust/sp1-comparison/tests/syscall_code_export.rs",
+        "rust/sp1-comparison/tests/syscall_export.rs",
+        "rust/sp1-comparison/tests/host_control_export.rs",
+        "rust/sp1-comparison/tests/write_permission_export.rs",
+        "rust/sp1-comparison/tests/hint_source_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN, HINT_READ. Full-word canonical codes restrict executor dispatch. WRITE and VERIFY_SP1_PROOF installation remains #12. The code guard is compared with SP1 enum values and Lean rows. The syscall instruction and installed host-call wrapper compare released supervisor rows, public bindings, shared ledgers and WRITE's register read. Weighted public queries preserve all eight field coefficients. Sixteen inactive-commit bitmaps cover empty/unit/multi-hot/non-Boolean/cancelling weights with public-cell, flag and cached-result mutations; finite tests do not establish arbitrary-row public equivalence. Closed native write-permission tests cover ROM exclusion, fixed intervals and complete ledgers; they do not implement SP1 runtime mprotect. Closed native hint-source tests authenticate literal bytes, node identities, final padding and counted ledgers. All installed host components export in complete branch, empty and stopped assemblies, whose call tables remain empty. Empty and stopped cases require both bank terminals; stopped cases include nonzero banks and reject changed optional exit status, fabricated HALT and resumed execution. HALT, constrained-replay ENTER, all sixteen commitment handlers and both bank terminals compare generated rows/ledgers and released executor effects. Native per-call receipts preserve mutable bank history; a released-shard regression shows that earlier differing writes fail SP1 public-digest AIR despite the same final bank. Empty/nonempty HINT_LEN and HINT_READ handlers compare complete rows/ledgers, queue transitions and padded-write endpoints with released execution, including empty hints and limb carries. A complete sixteen-byte HINT_READ assembly closes physical Memory, hint and cursor ledgers, compares final register/RAM values with released execution and rejects malformed activity/target checks. Arbitrary hint lengths still need word-transfer padding; broader active-host generation remains open."
     },
     "halt": {
       "lean": [
         "SP1Clean/Proofs/Chips/HaltChip/Formal.lean"
       ],
-      "export": "none",
-      "comparisonKind": "none",
-      "comparison": [],
-      "limit": "Native execution boundary; export and Rust public-boundary comparison remain open."
+      "export": "component",
+      "comparisonKind": "native-backend",
+      "comparison": [
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
+      ],
+      "limit": "Complete branch, empty and stopped fixtures export Halt and check its nonhalting padding row and public exit contribution. Empty and stopped segments reject nonzero public exit and removal of the Exit terminal. Stopped optional status is distinct from public exit: zero and wide codes preserve their full zero-multiplicity verifier payloads. Complete active HALT execution remains open."
     },
     "unmodeled": {
       "lean": [],
@@ -140,12 +160,13 @@
       "lean": [
         "SP1Clean/Soundness/HostSailBoundary.lean"
       ],
-      "export": "subcomponent",
+      "export": "component",
       "comparisonKind": "native-backend",
       "comparison": [
-        "rust/sp1-comparison/tests/clean_export.rs"
+        "rust/sp1-comparison/tests/clean_export.rs",
+        "rust/sp1-comparison/tests/installed_assembly_export.rs"
       ],
-      "limit": "Independent backend fixtures bind their public values. Complete native/Sail public verifier export remains open; no cryptographic SP1 verifier soundness claim."
+      "limit": "The complete native public verifier exports with 94-table branch, empty, stopped and sixteen-byte HINT_READ assemblies. Rust compares every verifier occurrence, including failed generation cases, and attempts fresh proofs with altered public endpoints, missing terminals, resumed execution and invalid optional exits. Host banks are fixed instance parameters; changed public digest bytes remain accepted in stopped segments, so these cases do not establish digest-to-bank binding. The HINT_READ fixture additionally binds final clock and physical target checks. Broader active memory and host cases remain open; no cryptographic SP1 verifier soundness claim."
     }
   },
   "released": {
@@ -273,13 +294,13 @@
     "Uint256OpsUser": "user"
   },
   "native": [
-    {"name": "sp1.native.memory.snapshot.registers.SP1NativeMemoryInitOrder", "width": 149, "inputWidth": 21, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.memory.snapshot.ram.SP1NativeMemoryInitOrder", "width": 892, "inputWidth": 20, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.memory.snapshot.registers.SP1NativeMemoryInitOrder", "width": 150, "inputWidth": 22, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.memory.snapshot.ram.SP1NativeMemoryInitOrder", "width": 893, "inputWidth": 21, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.SP1NativeMemoryInitOrder.terminal", "width": 140, "inputWidth": 12, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.memory.final.registers.SP1NativeMemoryFinalOrder", "width": 158, "inputWidth": 25, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.memory.final.ram.SP1NativeMemoryFinalOrder", "width": 221, "inputWidth": 25, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.memory.final.registers.SP1NativeMemoryFinalOrder", "width": 159, "inputWidth": 26, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.memory.final.ram.SP1NativeMemoryFinalOrder", "width": 222, "inputWidth": 26, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.SP1NativeMemoryFinalOrder.terminal", "width": 140, "inputWidth": 12, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.program.fixed", "width": 70, "inputWidth": 17, "fixedWidth": 0, "group": "program", "lookups": ["sp1.native.program"]},
+    {"name": "sp1.native.program.fixed", "width": 17, "inputWidth": 17, "fixedWidth": 16, "group": "program", "lookups": []},
     {"name": "sp1.native.add", "width": 33, "inputWidth": 29, "fixedWidth": 0, "group": "instructions", "lookups": []},
     {"name": "sp1.native.addi", "width": 30, "inputWidth": 26, "fixedWidth": 0, "group": "instructions", "lookups": []},
     {"name": "sp1.native.addw", "width": 36, "inputWidth": 33, "fixedWidth": 0, "group": "instructions", "lookups": []},
@@ -331,10 +352,11 @@
     {"name": "sp1.native.memory_bump", "width": 15, "inputWidth": 15, "fixedWidth": 0, "group": "bump", "lookups": []},
     {"name": "sp1.native.state_bump", "width": 14, "inputWidth": 14, "fixedWidth": 0, "group": "bump", "lookups": []},
     {"name": "sp1.native.halt", "width": 25, "inputWidth": 25, "fixedWidth": 0, "group": "halt", "lookups": []},
-    {"name": "sp1.native.host_call", "width": 79, "inputWidth": 71, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.syscall_code"]},
+    {"name": "sp1.native.host_call", "width": 85, "inputWidth": 71, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.source_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
     {"name": "sp1.native.initial_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []},
-    {"name": "sp1.native.write_permission", "width": 97, "inputWidth": 9, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.write_permission"]},
+    {"name": "sp1.native.write_permission", "width": 98, "inputWidth": 4, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.write_permission.provider", "width": 8, "inputWidth": 8, "fixedWidth": 7, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_read", "width": 368, "inputWidth": 66, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.host_halt", "width": 94, "inputWidth": 30, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.enter", "width": 22, "inputWidth": 22, "fixedWidth": 0, "group": "host", "lookups": []},
@@ -356,14 +378,14 @@
     {"name": "sp1.native.commit_deferred.7", "width": 254, "inputWidth": 68, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_len.nonempty", "width": 162, "inputWidth": 40, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.hint_len.empty", "width": 162, "inputWidth": 40, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.hint_read_word.next", "width": 296, "inputWidth": 31, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.hint_read_word.last", "width": 296, "inputWidth": 31, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.hint_node.source", "width": 10, "inputWidth": 10, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.hint_source_nodes"]},
-    {"name": "sp1.native.hint_word.source", "width": 11, "inputWidth": 11, "fixedWidth": 0, "group": "host", "lookups": ["sp1.native.hint_source_words"]},
+    {"name": "sp1.native.hint_read_word.next", "width": 297, "inputWidth": 32, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.hint_read_word.last", "width": 297, "inputWidth": 32, "fixedWidth": 0, "group": "host", "lookups": []},
+    {"name": "sp1.native.hint_node.source", "width": 12, "inputWidth": 12, "fixedWidth": 11, "group": "host", "lookups": []},
+    {"name": "sp1.native.hint_word.source", "width": 13, "inputWidth": 13, "fixedWidth": 12, "group": "host", "lookups": []},
     {"name": "sp1.native.commit.terminal", "width": 82, "inputWidth": 34, "fixedWidth": 0, "group": "host", "lookups": []},
     {"name": "sp1.native.commit_deferred.terminal", "width": 82, "inputWidth": 34, "fixedWidth": 0, "group": "host", "lookups": []},
-    {"name": "sp1.native.memory.check.registers.changes", "width": 10, "inputWidth": 10, "fixedWidth": 0, "group": "memory", "lookups": []},
-    {"name": "sp1.native.memory.check.ram.changes", "width": 750, "inputWidth": 10, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.memory.check.registers.changes", "width": 11, "inputWidth": 11, "fixedWidth": 0, "group": "memory", "lookups": []},
+    {"name": "sp1.native.memory.check.ram.changes", "width": 751, "inputWidth": 11, "fixedWidth": 0, "group": "memory", "lookups": []},
     {"name": "sp1.native.target_registers.provider", "width": 7, "inputWidth": 7, "fixedWidth": 6, "group": "memory", "lookups": []},
     {"name": "sp1.native.target_memory.provider", "width": 11, "inputWidth": 11, "fixedWidth": 10, "group": "memory", "lookups": []}
   ],

@@ -70,7 +70,7 @@ private theorem initial_silent
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p) target) :
-    (witness.tables.take 3).flatMap (·.interactionsWith witness.data channel) = [] := by
+    (witness.tables.take 3).flatMap (·.interactionsWith channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -85,7 +85,7 @@ private theorem middle_silent
     (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p) target) :
     ((witness.tables.take (beforeChecks image source others resources).length).drop 6).flatMap
-      (·.interactionsWith witness.data channel) = [] := by
+      (·.interactionsWith channel) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -104,8 +104,8 @@ theorem boundaryTables_interactions
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p) target) :
-    witness.tables.flatMap (·.interactionsWith witness.data channel) =
-      (boundaryTables witness).flatMap (·.interactionsWith witness.data channel) := by
+    witness.tables.flatMap (·.interactionsWith channel) =
+      (boundaryTables witness).flatMap (·.interactionsWith channel) := by
   let count := (beforeChecks image source others resources).length
   have lower : 6 ≤ count := by dsimp only [count]; rw [prefix_length]; omega
   have prefixSplit : witness.tables.take count =
@@ -117,9 +117,9 @@ theorem boundaryTables_interactions
         rw [List.take_take, Nat.min_eq_left lower]
       _ = _ := by rw [show 6 = 3 + 3 from rfl, List.take_add]
   calc
-    witness.tables.flatMap (·.interactionsWith witness.data channel) =
-        (witness.tables.take count ++ witness.tables.drop count).flatMap (·.interactionsWith witness.data channel) :=
-      congrArg (List.flatMap (·.interactionsWith witness.data channel)) (List.take_append_drop count witness.tables).symm
+    witness.tables.flatMap (·.interactionsWith channel) =
+        (witness.tables.take count ++ witness.tables.drop count).flatMap (·.interactionsWith channel) :=
+      congrArg (List.flatMap (·.interactionsWith channel)) (List.take_append_drop count witness.tables).symm
     _ = _ := by
       rw [List.flatMap_append, prefixSplit, List.flatMap_append, List.flatMap_append,
         initial_silent witness interface channel privateChannel,
@@ -157,14 +157,9 @@ theorem boundaryWitness_interactions
     (interface : PrivateInterface target others resources) (channel : RawChannel (ZMod p))
     (privateChannel : channel ∈ privateChannels (p := p) target) :
     (boundaryWitness witness).interactionsWith channel = witness.interactionsWith channel := by
-  have dataChange : (boundaryTables witness).flatMap
-      (·.interactionsWith (boundaryWitness witness).data channel) =
-      (boundaryTables witness).flatMap (·.interactionsWith witness.data channel) :=
-    congrArg List.flatten (List.map_congr_left fun table _ =>
-      table.interactionsWith_setData (boundaryWitness witness).data witness.data channel)
-  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.tableContext,
-    TableContext.interactionsWith, boundaryWitness_tables]
-  rw [dataChange, boundaryTables_interactions witness interface channel privateChannel,
+  simp only [EnsembleWitness.interactionsWith, EnsembleWitness.toTables,
+    Tables.interactionsWith, boundaryWitness_tables, withDerivedData_interactionsWith]
+  rw [boundaryTables_interactions witness interface channel privateChannel,
     verifier_values witness channel privateChannel, FinalMemoryChecks.verifier_values]
   simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at privateChannel
   rcases privateChannel with rfl | rfl | rfl | rfl | rfl <;>

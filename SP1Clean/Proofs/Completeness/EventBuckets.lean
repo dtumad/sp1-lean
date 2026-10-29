@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Completeness.Assembly
+import SP1Clean.FormalModel.TraceGen.InstructionRegistry
 
 /-!
 # Chronological events and registry-indexed table buckets

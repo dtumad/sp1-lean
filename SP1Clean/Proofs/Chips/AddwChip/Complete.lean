@@ -96,7 +96,7 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHin
 /-- The Addw chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit }
+def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
 
 /-- The rows a trace builds: one input row per event, then `padding` zero rows. -/
 def traceInputs (events : List ALUTypeEvent) (padding : ℕ) : List (Inputs (ZMod p)) :=
@@ -119,31 +119,34 @@ theorem proverAssumptions_of_mem_traceInputs {events : List ALUTypeEvent} {paddi
 circuit evaluates to zero on every built row, and no static lookup is left unchecked. -/
 theorem traceTable_constraints (events : List ALUTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (h : ∀ e ∈ events, e.WellFormed) :
+    (h : ∀ e ∈ events, e.WellFormed)
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      hint).Constraints data :=
-  Air.Flat.Table.build_constraints _ _ _ _ _ computableWitnesses
+      hint bounded).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
 Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List ALUTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (h : ∀ e ∈ events, e.WellFormed) :
+    (h : ∀ e ∈ events, e.WellFormed)
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      hint).Guarantees data :=
-  Air.Flat.Table.build_guarantees _ _ _ _ _ computableWitnesses
+      hint bounded).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
 concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List ALUTypeEvent) (padding : ℕ)
-    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-        hint).interactionsWith data channel =
+        hint bounded).interactionsWith channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ _ data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
 
 end SP1Clean.AddwChip

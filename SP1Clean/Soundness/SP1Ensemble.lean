@@ -277,7 +277,7 @@ def ensembleTableCount : ℕ := NativeTableId.all.length
 /-- The complete fixed-width realization of SP1's preprocessed Range table, ordered by width
 `0, …, 16`. -/
 def sp1RangeProviderTables : List (Component (ZMod p)) :=
-  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width }
+  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions }
 
 theorem sp1RangeProviderTables_length : (sp1RangeProviderTables (p := p)).length = 17 := by
   simp [sp1RangeProviderTables, RangeChip.allWidths]
@@ -286,30 +286,24 @@ theorem sp1RangeProviderTables_length : (sp1RangeProviderTables (p := p)).length
 Unlike the identity, this map deliberately imports circuits; it remains total and contains no
 instruction-routing cases. -/
 def providerTableFor : ProviderTableId → Component (ZMod p)
-  | .byte .u8Range => { circuit := ByteChip.U8Range.circuit }
-  | .byte .msb => { circuit := ByteChip.MSB.circuit }
-  | .byte .andByte => { circuit := ByteChip.AndByte.circuit }
-  | .byte .orByte => { circuit := ByteChip.OrByte.circuit }
-  | .byte .xorByte => { circuit := ByteChip.XorByte.circuit }
-  | .byte .ltu => { circuit := ByteChip.Ltu.circuit }
-  | .range width => { circuit := RangeChip.circuitFor width }
-  | .program => { circuit := ProgramProviderChip.circuit }
-  | .memoryInit => { circuit := MemoryProviderChip.circuit }
-  | .memoryFinalize => { circuit := MemoryFinalizeChip.circuit }
-  | .memoryBump => { circuit := MemoryBumpChip.circuit }
-  | .stateBump => { circuit := StateBumpChip.circuit }
-  | .halt => { circuit := HaltChip.circuit }
-  | .syscallInstrs => { circuit := SyscallInstrsChip.circuit }
+  | .byte .u8Range => { circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions }
+  | .byte .msb => { circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions }
+  | .byte .andByte => { circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions }
+  | .byte .orByte => { circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions }
+  | .byte .xorByte => { circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions }
+  | .byte .ltu => { circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions }
+  | .range width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions }
+  | .program => { circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions }
+  | .memoryInit => { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions }
+  | .memoryFinalize => { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }
+  | .memoryBump => { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }
+  | .stateBump => { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }
+  | .halt => { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }
+  | .syscallInstrs => { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }
 
-/-- The 30 in-circuit boundary/provider tables: six `ByteChip` opcode tables, the complete
-17-member fixed-width Range family, the program-ROM provider, the two memory boundary tables
-(init-push + finalize-pull), the two SP1 system tables MemoryBump (position 51: the
-register-record timestamp refreshes) and StateBump (position 52: the clock/pc re-limbing rows that
-allow clock and pc limb normalization), the Halt table (position 53: the halting shard's ECALL
-witness row), and the `SyscallInstrs` table (position 54: SP1's whole syscall chip).
-MemoryBump, StateBump, and SyscallInstrs have whole-table faithfulness anchors. Every pusher proves
-its pushes' channel `Guarantees` in-circuit, which is what
-grounds the chips' byte/program/memory pulls at the capstone. -/
+/-- The 30 boundary/provider tables: six Byte, 17 fixed-width Range, Program ROM, Memory
+init/finalize, MemoryBump, StateBump, Halt and SyscallInstrs. Pushers prove their guarantees
+in-circuit; balance supplies the consumers' Byte, Program and Memory requirements. -/
 def sp1ProviderTables : List (Component (ZMod p)) :=
   ProviderTableId.all.map (providerTableFor (p := p))
 
@@ -317,12 +311,12 @@ def sp1ProviderTables : List (Component (ZMod p)) :=
 keeps existing position-sensitive consumers auditable without maintaining a second registry. -/
 theorem sp1ProviderTables_explicit :
     sp1ProviderTables (p := p) =
-      [{ circuit := ByteChip.U8Range.circuit }, { circuit := ByteChip.MSB.circuit }, { circuit := ByteChip.AndByte.circuit },
-       { circuit := ByteChip.OrByte.circuit }, { circuit := ByteChip.XorByte.circuit }, { circuit := ByteChip.Ltu.circuit }] ++
+      [{ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions }, { circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions }, { circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions },
+       { circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions }, { circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions }, { circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions }] ++
         sp1RangeProviderTables ++
-      [{ circuit := ProgramProviderChip.circuit }, { circuit := MemoryProviderChip.circuit },
-       { circuit := MemoryFinalizeChip.circuit }, { circuit := MemoryBumpChip.circuit },
-       { circuit := StateBumpChip.circuit }, { circuit := HaltChip.circuit }, { circuit := SyscallInstrsChip.circuit }] := by
+      [{ circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions }, { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions },
+       { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }, { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions },
+       { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }, { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }, { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }] := by
   rfl
 
 /-- Pointwise positional coverage, including out-of-bounds provider positions. -/
@@ -403,6 +397,7 @@ theorem decodedInstructionRow_constraints
       (decoded.environment witness.data) := by
   apply constraints_of_mem_decodeInstructionTables witness.data
     (witness_instructionTables_aligned witness)
+    (fun table member => witness.same_data table (List.mem_of_mem_take member))
   · intro table tableMem
     exact constraints table
       (List.mem_of_mem_take tableMem)
@@ -426,7 +421,7 @@ theorem decodedWitnessInstructionInteractionsWith_eq_tables
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (channel : Channel (ZMod p) Message) :
     decodedWitnessInstructionInteractionsWith witness.data witness.tables channel =
-      (witness.tables.take 25).flatMap (typedTableInteractionsWith · witness.data channel) :=
+      (witness.tables.take 25).flatMap (typedTableInteractionsWith · channel) :=
   decodedInstructionInteractionsWith_eq_tables witness.data channel
     (witness_instructionTables_aligned witness)
 
@@ -440,7 +435,7 @@ theorem typedEnsembleInteractionsWith_partition
       typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations channel
           (Environment.fromInput witness.publicInput witness.data) ++
         decodedWitnessInstructionInteractionsWith witness.data witness.tables channel ++
-          (witness.tables.drop 25).flatMap (typedTableInteractionsWith · witness.data channel) := by
+          (witness.tables.drop 25).flatMap (typedTableInteractionsWith · channel) := by
   rw [decodedWitnessInstructionInteractionsWith_eq_tables]
   unfold typedEnsembleInteractionsWith
   rw [List.append_assoc, ← List.flatMap_append, List.take_append_drop]

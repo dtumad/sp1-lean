@@ -3,7 +3,7 @@ import SP1Clean.Soundness.LocalCoreChannels
 
 /-! # New private protocols on the complete host-enabled local ledger
 
-The public boundary verifier and 61 non-wrapper components are silent on each new registered
+The public boundary verifier and 62 non-wrapper components are silent on each new registered
 private protocol. Source assertions use a channel fresh for the complete host inventory.
 Their silence follows from the local channel inventory and the protected store projections.
 Only the physical syscall wrapper and appended auxiliary tables can contribute. This exact
@@ -24,7 +24,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
 
 def auxiliaryTables (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :=
-  witness.tables.drop 62
+  witness.tables.drop 63
 
 /-- Auxiliary tables retain the exact registered component inventory and order. -/
 theorem auxiliaryTables_components (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
@@ -33,17 +33,18 @@ theorem auxiliaryTables_components (witness : EnsembleWitness (ensemble image so
   rw [List.drop_left' (by simp only [List.length_set, ProtectedLocalCore.tables_length])]
 
 private theorem prefix_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
-    62 ≤ witness.tables.length := by
+    63 ≤ witness.tables.length := by
   rw [← witness.same_length]
-  change 62 ≤ (tables image source auxiliary).length
+  change 63 ≤ (tables image source auxiliary).length
   rw [tables_length]
   omega
 
 private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (channel : RawChannel (ZMod p)) (fresh : channel ∉ (LocalCore.ensemble (p := p) image source).channels)
     (permission : channel ≠ WritePermissionProvider.channel.toRaw)
-    (index : Fin 62) (notWrapper : index.val ≠ 58) :
-    (witness.tables[index.val]'(by have := prefix_length witness; omega)).interactionsWith witness.data channel = [] := by
+    (notMembership : channel ≠ image.writePermissionTable.channel.toRaw)
+    (index : Fin 63) (notWrapper : index.val ≠ 58) :
+    (witness.tables[index.val]'(by have := prefix_length witness; omega)).interactionsWith channel = [] := by
   by_cases old : index.val < 61
   · let original := (LocalCore.tables (p := p) image source)[index.val]'(by
       rw [LocalCore.tables_length]; exact old)
@@ -59,34 +60,51 @@ private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image so
       exact (ProtectedLocalCore.component_layout image source ⟨index.val, old⟩).2
     have silent := Table.interactionsWith_nil_of_channel_not_mem
       (table := (witness.tables[index.val]'(by have := prefix_length witness; omega)).withComponent original width fixed)
-      (data := witness.data) (channel := channel) (fun used => fresh
+      (channel := channel) (fun used => fresh
         (List.mem_append_left _
           (LocalCore.component_channels_subset image source original (List.getElem_mem _) used)))
-    rw [Table.withComponent_interactions _ original width fixed witness.data channel (by
+    rw [Table.withComponent_interactions _ original width fixed channel (by
       rw [component]
       exact ((ProtectedLocalCore.component_projection (p := p) image source ⟨index.val, old⟩).2.2 channel permission).symm)] at silent
     exact silent
-  · have last : index.val = 61 := by omega
-    have component : (witness.tables[index.val]'(by have := prefix_length witness; omega)).component = { circuit := WritePermissionProvider.circuit image } := by
-      rw [← witness.same_circuits]
-      change (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) = _
-      simp only [tables]
-      rw [List.getElem_append_left (by simp only [List.length_set, ProtectedLocalCore.tables_length]; exact index.isLt),
-        List.getElem_set_ne (Ne.symm notWrapper)]
-      simp only [last]
-      rfl
-    apply Table.interactionsWith_nil_of_channel_not_mem
-    rw [component]
-    change channel ∉ [WritePermissionProvider.channel.toRaw]
-    simpa only [List.mem_singleton] using permission
+  · have positions : index.val = 61 ∨ index.val = 62 := by omega
+    rcases positions with last | last
+    · have component : (witness.tables[index.val]'(by have := prefix_length witness; omega)).component =
+          WritePermissionProvider.component image := by
+        rw [← witness.same_circuits]
+        change (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) = _
+        simp only [tables]
+        rw [List.getElem_append_left (by simp only [List.length_set, ProtectedLocalCore.tables_length]; exact index.isLt),
+          List.getElem_set_ne (Ne.symm notWrapper)]
+        simp only [last]
+        rfl
+      apply Table.interactionsWith_nil_of_channel_not_mem
+      rw [component]
+      change channel ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
+      simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+      exact ⟨notMembership, permission⟩
+    · have component : (witness.tables[index.val]'(by have := prefix_length witness; omega)).component =
+          WritePermissionProvider.membershipComponent image := by
+        rw [← witness.same_circuits]
+        change (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) = _
+        simp only [tables]
+        rw [List.getElem_append_left (by simp only [List.length_set, ProtectedLocalCore.tables_length]; exact index.isLt),
+          List.getElem_set_ne (Ne.symm notWrapper)]
+        simp only [last]
+        rfl
+      apply Table.interactionsWith_nil_of_channel_not_mem
+      rw [component]
+      change channel ∉ [image.writePermissionTable.channel.toRaw]
+      simpa only [List.mem_singleton] using notMembership
 
 /-- A fresh protocol's complete ledger comes only from the installed wrapper and actual auxiliaries. -/
 theorem interactions_split_new (witness : EnsembleWitness (ensemble image source auxiliary channels names))
     (channel : RawChannel (ZMod p)) (registered : channel ∈ (baseEnsemble image source auxiliary channels names).channels)
     (fresh : channel ∉ (LocalCore.ensemble (p := p) image source).channels)
-    (permission : channel ≠ WritePermissionProvider.channel.toRaw) :
-    witness.interactionsWith channel = (hostCallTable witness).interactionsWith witness.data channel ++
-      (auxiliaryTables witness).flatMap (·.interactionsWith witness.data channel) := by
+    (permission : channel ≠ WritePermissionProvider.channel.toRaw)
+    (notMembership : channel ≠ image.writePermissionTable.channel.toRaw) :
+    witness.interactionsWith channel = (hostCallTable witness).interactionsWith channel ++
+      (auxiliaryTables witness).flatMap (·.interactionsWith channel) := by
   have verifierSilent : witness.verifierInteractionsWith channel = [] := by
     change ((LocalSourceBoundary.checker image source).install
       (baseEnsemble image source auxiliary channels names)).verifierOperations.interactionValuesWith
@@ -95,27 +113,27 @@ theorem interactions_split_new (witness : EnsembleWitness (ensemble image source
     exact LocalCore.boundaryVerifier_silent image source channel
       (fun member => fresh (List.mem_append_left _ member)) _
   simp only [EnsembleWitness.interactionsWith, verifierSilent, List.nil_append,
-    EnsembleWitness.tableContext, TableContext.interactionsWith]
-  have split := List.take_append_drop 62 witness.tables
+    EnsembleWitness.toTables, Tables.interactionsWith]
+  have split := List.take_append_drop 63 witness.tables
   rw [← split, List.flatMap_append]
   congr 1
   have length := prefix_length witness
-  have prefixTables : witness.tables.take 62 = List.ofFn (fun index : Fin 62 =>
+  have prefixTables : witness.tables.take 63 = List.ofFn (fun index : Fin 63 =>
       witness.tables[index.val]'(by omega)) := by
     apply List.ext_getElem
     · simp only [List.length_take, Nat.min_eq_left length, List.length_ofFn]
     · intro index hi hj
       simp only [List.getElem_take, List.getElem_ofFn]
   rw [prefixTables]
-  have actual : (List.ofFn fun index : Fin 62 =>
-      (witness.tables[index.val]'(by omega)).interactionsWith witness.data channel) =
-      List.ofFn (fun index : Fin 62 => if index.val = 58 then (hostCallTable witness).interactionsWith witness.data channel else []) := by
+  have actual : (List.ofFn fun index : Fin 63 =>
+      (witness.tables[index.val]'(by omega)).interactionsWith channel) =
+      List.ofFn (fun index : Fin 63 => if index.val = 58 then (hostCallTable witness).interactionsWith channel else []) := by
     apply congrArg List.ofFn
     funext index
     by_cases same : index.val = 58
     · simp only [same, ↓reduceIte, hostCallTable]
     · rw [if_neg same]
-      exact prefixTable_silent witness channel fresh permission index same
+      exact prefixTable_silent witness channel fresh permission notMembership index same
   simp only [List.flatMap, List.map_ofFn, Function.comp_def]
   rw [actual]
   simp only [List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Nat.reduceEqDiff,
@@ -142,9 +160,10 @@ theorem hostCall_fresh : HostCallChip.channel.toRaw ∉ (LocalCore.ensemble (p :
 /-- The whole HostCall ledger, including the unique physical producer position. -/
 theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
     witness.interactionsWith HostCallChip.channel.toRaw =
-      (hostCallTable witness).interactionsWith witness.data HostCallChip.channel.toRaw ++
-        (auxiliaryTables witness).flatMap (·.interactionsWith witness.data HostCallChip.channel.toRaw) :=
+      (hostCallTable witness).interactionsWith HostCallChip.channel.toRaw ++
+        (auxiliaryTables witness).flatMap (·.interactionsWith HostCallChip.channel.toRaw) :=
   interactions_split_new witness HostCallChip.channel.toRaw (List.mem_cons_self ..) hostCall_fresh
     (by simp [HostCallChip.channel, WritePermissionProvider.channel, Channel.toRaw])
+    (by simp [HostCallChip.channel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])
 
 end SP1Clean.Soundness.HostLocalCore

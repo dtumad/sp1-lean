@@ -40,12 +40,9 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Native LoadWord-chip row (Rust field order). The reader, memory, and sign-bit blocks reuse the
-project substrate (`Circuits.Types.AddressOperation`/`Circuits.Types.U16MSBOperation` are still standalone
-generated modules — the other loads/stores and the compare ops compose the same gadgets;
-`Circuits.Types.MemoryAccessCols` lives in the generated `MemoryAccess` struct carrier).
-`Faithful.LoadWordChip.loadWordChipReconfigure` is the sole bridge to Rust's separately generated
-whole-chip row. -/
+/-- Native LoadWord-chip row in Rust field order. Reader, address and memory columns
+reuse the native carriers in `Circuits.Types`; the instruction export suite compares complete
+constructor rows with released SP1. -/
 structure Columns (F : Type) where
   state : Circuits.Types.CPUState F
   adapter : Circuits.Types.ITypeReader F

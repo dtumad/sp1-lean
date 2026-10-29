@@ -17,17 +17,19 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 def populate (last : Bool) (ram : HostRamAccessChip.Inputs (ZMod p))
-    (pointer index : fields 3 (ZMod p)) : Inputs (ZMod p) :=
+    (pointer index : fields 3 (ZMod p)) : RowInput (ZMod p) :=
   let step := HintReadStep.populate last ⟨pointer, index, ram.new_value, if last then 1 else 0⟩
     #v[ram.addr0, ram.addr1, ram.addr2]
-  ⟨ram, pointer, index, step.nextIndex, step.nextAddress⟩
+  (⟨ram, pointer, index, step.nextIndex, step.nextAddress⟩, 1)
 
 theorem populate_assumptions (last : Bool) (ram : HostRamAccessChip.Inputs (ZMod p))
     (pointer index : fields 3 (ZMod p)) (valid : HostRamAccessChip.ProverAssumptions ram)
     (pointerBound : Address.Bounded pointer) (positive : 0 < Address.toNat pointer)
     (indexBound : Address.Bounded index) (indexFits : Address.toNat index + 1 < 2 ^ 48)
-    (addressFits : last = false → Address.toNat #v[ram.addr0, ram.addr1, ram.addr2] + 8 < 2 ^ 48) :
-    ProverAssumptions last (populate last ram pointer index) := by
+    (addressFits : last = false → Address.toNat #v[ram.addr0, ram.addr1, ram.addr2] + 8 < 2 ^ 48)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (circuit last).ProverAssumptions (populate last ram pointer index) data hint := by
+  refine ⟨Or.inr rfl, fun _ => ?_⟩
   refine ⟨valid, ?_⟩
   apply HintReadStep.populate_spec last
     ⟨pointer, index, ram.new_value, if last then 1 else 0⟩ #v[ram.addr0, ram.addr1, ram.addr2]
@@ -44,9 +46,10 @@ theorem populate_assumptions_of_span (span : HintReadSpan.Inputs (ZMod p))
     (valid : HostRamAccessChip.ProverAssumptions ram) (pointer : fields 3 (ZMod p))
     (pointerBound : Address.Bounded pointer) (positive : 0 < Address.toNat pointer)
     (index : ℕ) (position : index < Address.toNat span.count)
-    (address : Address.toNat #v[ram.addr0, ram.addr1, ram.addr2] = Address.toNat span.start + index * 8) :
-    ProverAssumptions (decide (index + 1 = Address.toNat span.count))
-      (populate (decide (index + 1 = Address.toNat span.count)) ram pointer (Address.ofNat index)) := by
+    (address : Address.toNat #v[ram.addr0, ram.addr1, ram.addr2] = Address.toNat span.start + index * 8)
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (circuit (decide (index + 1 = Address.toNat span.count))).ProverAssumptions
+      (populate (decide (index + 1 = Address.toNat span.count)) ram pointer (Address.ofNat index)) data hint := by
   have countFits := Address.toNat_lt checked.2.2.2.2.2.1
   have indexFits : index < 2 ^ 48 := by omega
   apply populate_assumptions _ _ _ _ valid pointerBound positive (Address.bounded_ofNat _)

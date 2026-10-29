@@ -27,19 +27,20 @@ theorem authenticated_auxiliary_pull {image : ProgramImage} {source : ExecutionS
     (registered : channel.toRaw ∈ (baseEnsemble image source auxiliary channels names).channels)
     (fresh : channel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels)
     (permission : channel.toRaw ≠ WritePermissionProvider.channel.toRaw)
+    (notMembership : channel.toRaw ≠ image.writePermissionTable.channel.toRaw)
     (wrapper : channel.toRaw ∉ (HostCallLedger.producer (p := p)).circuit.channels)
     (property : Record (ZMod p) → Prop)
-    (sources : ∀ table ∈ auxiliaryTables witness, table.Authenticates witness.data channel property)
+    (sources : ∀ table ∈ auxiliaryTables witness, table.Authenticates channel property)
     (balanced : witness.BalancedChannel channel.toRaw)
     (record : Record (ZMod p))
     (member : channel.pulledValue record ∈ witness.interactionsWith channel.toRaw) : property record := by
-  have silent : (hostCallTable witness).interactionsWith witness.data channel.toRaw = [] := by
+  have silent : (hostCallTable witness).interactionsWith channel.toRaw = [] := by
     apply Table.interactionsWith_nil_of_channel_not_mem
     rwa [hostCallTable_component]
-  have ledger := interactions_split_new witness channel.toRaw registered fresh permission
+  have ledger := interactions_split_new witness channel.toRaw registered fresh permission notMembership
   rw [silent, List.nil_append] at ledger
   change BalancedInteractions (witness.interactionsWith channel.toRaw) at balanced
   rw [ledger] at balanced member
-  exact authenticated_pull_of_tables (auxiliaryTables witness) witness.data channel property sources balanced record member
+  exact authenticated_pull_of_tables (auxiliaryTables witness) channel property sources balanced record member
 
 end SP1Clean.Soundness.HostLocalCore

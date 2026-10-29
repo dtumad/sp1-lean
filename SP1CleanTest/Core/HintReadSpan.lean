@@ -1,3 +1,4 @@
+import SP1CleanTest.Core.HintSourceExport
 import SP1CleanTest.Core.HostChecks
 import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Operations.HintReadSpanPopulate
@@ -83,9 +84,7 @@ theorem sourceWordCover : (List.range 18).all (fun length =>
     let memory := (ByteMemory.mk []).writeBytes address (hintWriteBytes bytes)
     (checked input).1 && (List.range (Address.toNat input.count)).all (fun index =>
       let record := HintQueue.WordRecord.encode (p := SP1Prime) 1 bytes index
-      let source := evaluateProgram
-        (HostHintQueue.sourceWordMain [bytes] (varFromOffset HintQueue.WordRecord 0))
-        (toElements record).toList none [FiniteLookup.ofStatic (HintQueue.sourceWordTable [bytes])]
+      let source := HintSourceExport.observe (HintSourceExport.words [bytes]) record
       source.1 && (record.isLast == 1) == (index + 1 == Address.toNat input.count) &&
         Word.toBitVec64 record.value == memory.readWord (address + index * 8))) = true := by native_decide
 

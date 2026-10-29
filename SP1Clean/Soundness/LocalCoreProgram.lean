@@ -19,7 +19,7 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 /-- The fixed image is the only Program producer, including across both local boundaries. -/
 theorem component_program_source (image : ProgramImage) (source : ExecutionSnapshot)
     (component : Component (ZMod p)) (member : component ∈ (ensemble image source).tables) :
-    component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) ∨ NativeCore.ProgramPulls component := by
+    component = (FixedProgramProvider.Preprocessed.component image) ∨ NativeCore.ProgramPulls component := by
   change component ∈ tables image source at member
   have split : tables (p := p) image source =
       (SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).views.map (·.component) ++
@@ -116,19 +116,26 @@ def programTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : 
 
 theorem programTable_component {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    (programTable witness).component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) :=
+    (programTable witness).component = (FixedProgramProvider.Preprocessed.component image) :=
   (witness.same_circuits 6 (by change 6 < (tables image source).length; rw [tables_length]; decide)).symm
 
-/-- Every physical Program row is authenticated against this image's ROM and official Sail,
-including zero-multiplicity rows. No provider-validity premise is supplied. -/
+/-- Every counted Program row is authenticated against this image's ROM and official Sail.
+The fixed prefix and canonical data supply all provider assumptions. -/
 theorem program_row_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints)
-    (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
+    (row : Array (ZMod p)) (member : row ∈ (programTable witness).table)
+    (active : (valueFromOffset FixedProgramProvider.Preprocessed.Input 0
+      (Environment.fromArray row witness.data)).2 ≠ 0) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
-        (Environment.fromArray row witness.data)).toMessage) := by
-  have checked := constraints (programTable witness) (List.getElem_mem (programIndex_bound witness)) row member
-  rw [programTable_component witness] at checked
-  exact DecodedProgramProvider.constraints_committed valid _ checked
+      (rowOfMsg (valueFromOffset FixedProgramProvider.Preprocessed.Input 0
+        (Environment.fromArray row witness.data)).1) := by
+  have tableMem := List.getElem_mem (programIndex_bound witness)
+  have shared : (programTable witness).data = witness.data :=
+    witness.same_data (programTable witness) tableMem
+  simpa only [Table.environment, shared] using
+    FixedProgramProvider.Preprocessed.table_committed valid (programTable witness)
+      (programTable_component witness) (witness.dataConsistency_of_mem _ tableMem)
+      (constraints _ tableMem) row member
+      (by simpa only [Table.environment, shared] using active)
 
 end SP1Clean.Soundness.LocalCore

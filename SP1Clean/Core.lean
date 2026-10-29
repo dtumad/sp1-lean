@@ -47,7 +47,7 @@ import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.OrdinaryObservation
-import SP1Clean.FormalModel.Contracts.CoreAIR
+import SP1Clean.FormalModel.Contracts.Commit
 import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.Semantics.Specs.Chips.Mul
 import SP1Clean.Semantics.Specs.Mul
@@ -95,12 +95,9 @@ import SP1Clean.FormalModel.Contracts.SnapshotMemory
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.FormalModel.Contracts.SystemChips
 import SP1Clean.FormalModel.Contracts.WritePermission
-import SP1Clean.FormalModel.CoreAIRRelation
-import SP1Clean.FormalModel.CoreProfile
 import SP1Clean.FormalModel.CoreShard
 import SP1Clean.FormalModel.EventExecution
 import SP1Clean.FormalModel.Execution
-import SP1Clean.FormalModel.OpcodeTable
 import SP1Clean.FormalModel.Relations
 import SP1Clean.FormalModel.Shard
 import SP1Clean.FormalModel.ShardMachine
@@ -116,6 +113,7 @@ import SP1Clean.FormalModel.TraceGen.ClockBridge
 import SP1Clean.FormalModel.TraceGen.Events
 import SP1Clean.FormalModel.TraceGen.GenState
 import SP1Clean.FormalModel.TraceGen.Inputs
+import SP1Clean.FormalModel.TraceGen.InstructionRegistry
 import SP1Clean.FormalModel.TraceGen.Memory
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.FormalModel.TraceGen.SailAlu
@@ -133,6 +131,7 @@ import SP1Clean.Math.WordEquality
 import SP1Clean.Model.BalanceBridge
 import SP1Clean.Model.BusMessages
 import SP1Clean.Model.ByteTable
+import SP1Clean.Model.ByteProvider
 import SP1Clean.Model.Channels
 import SP1Clean.Model.CleanLedger
 import SP1Clean.Model.Core.AddressRange
@@ -196,7 +195,7 @@ import SP1Clean.Model.Core.SailRegisterEquality
 import SP1Clean.Model.Core.SourceExecution
 import SP1Clean.Model.Core.SourceSnapshot
 import SP1Clean.Model.Core.SyscallCode
-import SP1Clean.Model.Core.SyscallTable
+import SP1Clean.Model.Core.SyscallEncoding
 import SP1Clean.Model.Core.WritePermission
 import SP1Clean.Model.FinalMemoryValue
 import SP1Clean.Model.FinalMemoryChange
@@ -407,7 +406,6 @@ import SP1Clean.Proofs.Chips.ByteChip.Provider
 import SP1Clean.Proofs.Chips.ByteChip.RangeChip
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Proofs.Chips.DecodedProgramProvider
 import SP1Clean.Proofs.Chips.DivRemChip.Assembly
 import SP1Clean.Proofs.Chips.DivRemChip.Cases
 import SP1Clean.Proofs.Chips.DivRemChip.Complete
@@ -443,7 +441,7 @@ import SP1Clean.Proofs.Chips.DivRemChip.Soundness
 import SP1Clean.Proofs.Chips.DivRemChip.Witgen
 import SP1Clean.Proofs.Chips.FinalRamProvider
 import SP1Clean.Proofs.Chips.FinalRegisterProvider
-import SP1Clean.Proofs.Chips.FixedProgramProvider
+import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import SP1Clean.Proofs.Chips.HaltChip.Witgen
 import SP1Clean.Proofs.Chips.HintReadWordChip.Formal
@@ -566,6 +564,7 @@ import SP1Clean.Proofs.Chips.SubwChip.Formal
 import SP1Clean.Proofs.Chips.SubwChip.Witgen
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Arms
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
+import SP1Clean.Proofs.Chips.SyscallInstrsChip.Ledger
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Witgen
 import SP1Clean.Proofs.Chips.UTypeChip.Complete
 import SP1Clean.Proofs.Chips.UTypeChip.Formal
@@ -586,7 +585,6 @@ import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
 import SP1Clean.Proofs.Operations.HintNodeWords
 import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Proofs.Operations.HintQueuePrepend
-import SP1Clean.Proofs.Operations.HintQueueWordSource
 import SP1Clean.Proofs.Operations.HintReadSpan
 import SP1Clean.Proofs.Operations.HintReadSpanLedger
 import SP1Clean.Proofs.Operations.HintReadSpanNode
@@ -609,7 +607,6 @@ import SP1Clean.Soundness.RowView
 
 Root of the `SP1Core` library: every hand-written module of strata 0–6 of `scripts/layering.txt`
 (`Math`, `Model`, `FormalModel`, `Circuits/Types`, `Native`, `Proofs/Operations`, `Proofs/CircuitProofStart`,
-`Proofs/Chips`, `Soundness/RowView`). The generated `Extracted/` modules are not indexed; the ones
-the core needs are built as imports. `lake build SP1Core` builds this module's import closure, and
+`Proofs/Chips`, `Soundness/RowView`). `lake build SP1Core` builds this module's import closure, and
 `scripts/check_layering.sh` fails if this list and the stratum map disagree. Wire every new core
 module here and into `SP1Clean.lean`. -/

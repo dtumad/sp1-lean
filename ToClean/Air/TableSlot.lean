@@ -83,24 +83,24 @@ theorem table_mem (slot : TableSlot ens.tables component) (witness : EnsembleWit
 
 /-- The selected physical table determines its entry in the witness's canonical data. -/
 theorem table_data (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens) (arity : ℕ) :
-    witness.data component.circuit.name arity = component.proverRows (slot.table witness).table arity := by
+    witness.data component.circuit.name arity = (slot.table witness).proverRows arity := by
   have sameName := congrArg (fun component : Component F => component.circuit.name) (slot.table_component witness)
   simpa only [sameName, slot.table_component witness] using witness.data_of_mem_table (slot.table_mem witness) arity
 
 /-- Whole-witness constraints restrict to the original selected physical table. -/
 theorem table_constraints (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens)
-    (checked : witness.Constraints) : (slot.table witness).Constraints witness.data :=
+    (checked : witness.Constraints) : (slot.table witness).Constraints :=
   checked _ (slot.table_mem witness)
 
 /-- Individual channel guarantees restrict without claiming balance of any smaller inventory. -/
 theorem table_channelGuarantees (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens)
-    (channel : RawChannel F) (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel) :
-    (slot.table witness).ChannelGuarantees witness.data channel := guarantees _ (slot.table_mem witness)
+    (channel : RawChannel F) (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees channel) :
+    (slot.table witness).ChannelGuarantees channel := guarantees _ (slot.table_mem witness)
 
 /-- Every selected interaction remains an occurrence in the complete physical ledger. -/
 theorem table_interactions_subset (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens)
     (channel : RawChannel F) :
-    (slot.table witness).interactionsWith witness.data channel ⊆ witness.interactionsWith channel := by
+    (slot.table witness).interactionsWith channel ⊆ witness.interactionsWith channel := by
   intro interaction member
   exact EnsembleWitness.mem_interactionsWith.mpr
     (Or.inr ⟨slot.table witness, slot.table_mem witness, member⟩)

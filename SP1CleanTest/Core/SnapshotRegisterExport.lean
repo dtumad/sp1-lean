@@ -1,4 +1,4 @@
-import Clean.Air.Extraction.Rust
+import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
 import SP1Clean.Native.Operations.FinalRegisterValue
 import SP1Clean.Model.SP1Field
@@ -24,17 +24,23 @@ def snapshot : MemorySnapshot :=
   ⟨Vector.ofFn (fun index => BitVec.ofNat 64 (index.val * 0x123456789abcdef)), ⟨[]⟩⟩
 
 /-- The production source table, with all 32 rows supplied by the fixed-column IR. -/
-def membership : Component Fp := snapshot.registerTable.component
+def membership : Component Fp := snapshot.registerTable.component (by
+  have padded := (snapshot.registerTable (p := SP1Prime)).height_lt_double
+  rw [snapshot.registerTable_length] at padded
+  norm_num [UInt64.size] at *
+  omega)
 
 /-- The public boundary requests two complete zero-time Memory records. -/
 def verifier : Verifier.Program Fp Requests where
+  Spec _ _ := True
+  soundness := by intros; trivial
   main input := do
     Verifier.pull Channels.memoryChannel (SnapshotRegisterProvider.message input[0])
     Verifier.pull Channels.memoryChannel (SnapshotRegisterProvider.message input[1])
 
 /-- Sparse Memory rows remain separate from the complete fixed register inventory. -/
 def ensemble : Ensemble Fp Requests where
-  tables := [{ circuit := SnapshotRegisterProvider.circuit snapshot }, membership]
+  tables := [{ circuit := SnapshotRegisterProvider.circuit snapshot, Assumptions := (SnapshotRegisterProvider.circuit snapshot).Assumptions }, membership]
   unique_names := by
     simp [membership, StaticTable.component, StaticTable.provider,
       SnapshotRegisterProvider.circuit, MemorySnapshot.registerTable, StaticTable.ofRows]
@@ -49,16 +55,22 @@ def membershipMode : WitnessGeneration.Mode Fp := .preallocated {
   handlers := [{ interaction := 0, column := 6 }]
 }
 
+/-- Fixed membership uses one count column and keeps the complete register inventory. -/
+def membershipGeneration : WitnessGeneration.Generation Fp where
+  mode := membershipMode
+  padding := { input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }
+
 /-- Allocate one sparse row per Memory occurrence, including repeated messages. -/
-def config : WitnessGeneration.Config Fp unit where
-  modes := [.demand {
-    channel := (Channels.memoryChannel (p := SP1Prime)).name
-    direction := .pull
-    aggregation := .perOccurrence
-    input := ⟨[.message 2, .message 5, .message 6, .message 7, .message 8]⟩
-  }, membershipMode]
-  padding := [{ input := #[0, 0, 0, 0, 0] },
-    { input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }]
+def config : WitnessGeneration.Config Fp where
+  components := [((SnapshotRegisterProvider.circuit (p := SP1Prime) snapshot).name, {
+    mode := .demand {
+      channel := (Channels.memoryChannel (p := SP1Prime)).toRaw
+      direction := .pull
+      aggregation := .perOccurrence
+      input := ⟨[.message 2, .message 5, .message 6, .message 7, .message 8]⟩
+    }
+    padding := { input := #[0, 0, 0, 0, 0] }
+  }), (membership.circuit.name, membershipGeneration)]
   fuel := 128
 
 /-- Check complete raw constraints and both ledgers, retaining zero-count occurrences. -/
@@ -86,9 +98,8 @@ def emptyEnsemble : Ensemble Fp unit where
   unique_names := by simp
   channels := [snapshot.registerTable.channel.toRaw]
 
-def emptyConfig : WitnessGeneration.Config Fp unit where
-  modes := [membershipMode]
-  padding := [{ input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }]
+def emptyConfig : WitnessGeneration.Config Fp where
+  components := [(membership.circuit.name, membershipGeneration)]
   fuel := 1
 
 def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
@@ -106,15 +117,15 @@ def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
       Verifier.Program.empty, circuit_norm]
 
 def generate (requests : Requests Fp) : Except String (EnsembleWitness ensemble) :=
-  WitnessGeneration.generate ensemble config requests ()
+  WitnessGeneration.generate (ComponentExport.fixture ensemble) config requests () |>.mapError toString
 
 def generateEmpty : Except String (EnsembleWitness emptyEnsemble) :=
-  WitnessGeneration.generate emptyEnsemble emptyConfig () ()
+  WitnessGeneration.generate (ComponentExport.fixture emptyEnsemble) emptyConfig () () |>.mapError toString
 
 def rustExports : List (String × Except String String) :=
-  [("snapshot_registers.rs", Extraction.Rust.ensembleToRust "SnapshotRegisters" ensemble config),
+  [("snapshot_registers.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) config),
    ("snapshot_registers_empty.rs",
-     Extraction.Rust.ensembleToRust "EmptySnapshotRegisters" emptyEnsemble emptyConfig)]
+     Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture emptyEnsemble) emptyConfig)]
 
 /-- All indices, one repeated demand, and independently forged indices and limbs. -/
 def cases : List (String × Requests Fp × Bool) :=
@@ -152,15 +163,18 @@ abbrev Requests := ProvableVector Channels.MemoryMsg 2
 
 /-- The target has its own fixed channel, independent of source membership. -/
 def membership : Component Fp := (FinalRegisterValue.membership snapshot).component
+      (FinalRegisterValue.membership_height_lt_uint64 snapshot)
 
 /-- Public final receipts retain both clock limbs and all address/value limbs. -/
 def verifier : Verifier.Program Fp Requests where
+  Spec _ _ := True
+  soundness := by intros; trivial
   main input := do
     Verifier.push (FinalMemoryValue.channel false) input[0]
     Verifier.push (FinalMemoryValue.channel false) input[1]
 
 def ensemble : Ensemble Fp Requests where
-  tables := [{ circuit := FinalRegisterValue.circuit snapshot }, membership]
+  tables := [{ circuit := FinalRegisterValue.circuit snapshot, Assumptions := (FinalRegisterValue.circuit snapshot).Assumptions }, membership]
   unique_names := by
     simp [membership, StaticTable.component, StaticTable.provider,
       FinalRegisterValue.circuit, FinalRegisterValue.membership]
@@ -169,16 +183,21 @@ def ensemble : Ensemble Fp Requests where
   verifier := verifier
 
 /-- Clean allocates one validation row per complete receipt and updates fixed-row counts. -/
-def config : WitnessGeneration.Config Fp unit where
-  modes := [.demand {
-    channel := (FinalMemoryValue.channel (p := SP1Prime) false).name
-    direction := .push
-    aggregation := .perOccurrence
-    input := ⟨(List.range 9).map .message⟩
-  }, membershipMode]
-  padding := [{ input := #[0, 0, 0, 0, 0, 0, 0, 0, 0] },
-    { input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }]
+def config : WitnessGeneration.Config Fp where
+  components := [((FinalRegisterValue.circuit (p := SP1Prime) snapshot).name, {
+    mode := .demand {
+      channel := (FinalMemoryValue.channel (p := SP1Prime) false).toRaw
+      direction := .push
+      aggregation := .perOccurrence
+      input := ⟨(List.range 9).map .message⟩
+    }
+    padding := { input := #[0, 0, 0, 0, 0, 0, 0, 0, 0] }
+  }), (membership.circuit.name, membershipGeneration)]
   fuel := 128
+
+def emptyConfig : WitnessGeneration.Config Fp where
+  components := [(membership.circuit.name, membershipGeneration)]
+  fuel := 1
 
 def description : Air.Flat.EnsembleCheck ensemble where
   lookups := []
@@ -218,15 +237,15 @@ def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
       Verifier.Program.empty, circuit_norm]
 
 def generate (requests : Requests Fp) : Except String (EnsembleWitness ensemble) :=
-  WitnessGeneration.generate ensemble config requests ()
+  WitnessGeneration.generate (ComponentExport.fixture ensemble) config requests () |>.mapError toString
 
 def generateEmpty : Except String (EnsembleWitness emptyEnsemble) :=
-  WitnessGeneration.generate emptyEnsemble emptyConfig () ()
+  WitnessGeneration.generate (ComponentExport.fixture emptyEnsemble) emptyConfig () () |>.mapError toString
 
 def rustExports : List (String × Except String String) :=
-  [("target_registers.rs", Extraction.Rust.ensembleToRust "TargetRegisters" ensemble config),
+  [("target_registers.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) config),
    ("target_registers_empty.rs",
-     Extraction.Rust.ensembleToRust "EmptyTargetRegisters" emptyEnsemble emptyConfig)]
+     Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture emptyEnsemble) emptyConfig)]
 
 def record (index clock : Nat) : Channels.MemoryMsg Fp :=
   { SnapshotRegisterProvider.message (snapshot.registerRow (BitVec.ofNat 5 index)) with

@@ -22,8 +22,8 @@ range-checked (`(value[0] - 4·b₂ - 2·b₁ - b₀)/8 < 2^13`) to pin the offs
 
 Address limbs are witnessed via `AddrAddOperation.populate`; `AddrAddOperation` (a `FormalAssertion`)
 is composed as a Clean `assertion` at `input.is_real`. `RawSpec` composes `AddrAddOperation.RawSpec`
-plus the offset constraints; `Faithful/AddressOperation.lean` anchors it to the generated
-`Extracted.AddressOperation.asserts`/`interactions` lists. Soundness and completeness are axiom-clean.
+plus the offset constraints. Its bundled soundness and completeness proofs connect those
+constraints to address arithmetic; released row agreement is tested in Rust.
 
 Measured elaboration floors (ladder against a 1-heartbeat control): `metadata_of_constraints`
 (5k, 10k], `soundness` (5k, 10k], `completeness` (30k, 40k]. All three formerly carried a
@@ -145,10 +145,8 @@ theorem metadata_of_constraints
   rw [← hOffsetVal, hv0eq]
   omega
 
-/-- Raw → semantic core (for the `Faithful` anchor): the literal `AddressOperation` constraint list
-at `is_real = 1` implies the semantic `Spec` — the address sum from the composed
-`AddrAddOperation.RawSpec` (via `addrAddSemantics_of_carries`), the offset booleans verbatim, and
-the valid-address facts from `metadata_of_constraints`. -/
+/-- Raw-to-semantic readout at `is_real = 1`: composed address-addition arithmetic,
+offset booleans and address metadata imply `Spec`. -/
 theorem addressSemantics_of_raw {input : Inputs (ZMod p)}
     {cols : Circuits.Types.AddressOperation (ZMod p)}
     (hb : Word.isU64 input.b) (hcc : Word.isU64 input.cc)
@@ -203,7 +201,7 @@ def main (input : Var Inputs (ZMod p)) :
   input.offset_bit2 * (input.offset_bit2 - 1) === 0
   inv[0] * (value[1] + value[2]) - input.is_real === 0
   -- offset low-3-bits range check via the **byte bus** (SP1's `Range(13)` send,
-  -- `Extracted/AddressOperation.lean`), not a `ToBits` bit-decomposition: the offset decomposition
+  -- the released AddressOperation AIR), not a `ToBits` bit-decomposition: the offset decomposition
   -- `(value[0] - 4·b₂ - 2·b₁ - b₀)/8 < 2^13` as a `byteChannel` `Range` receive at
   -- `input.is_real`, matching the composed `AddrAddOperation` assertion's sends.
   byteChannel.pullIf input.is_real

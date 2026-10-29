@@ -118,15 +118,15 @@ theorem BitwiseChip.selectorActive_of_mainConstraints
 
 /-- Bitwise passes its independent state input through to the completed row. -/
 theorem BitwiseChip.inputOutputState (env : Environment (ZMod p)) :
-    (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state =
-      (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state := by
+    (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state =
+      (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state := by
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0
   let offset := size BitwiseChip.Inputs
   have inputEq : Eval.eval env input =
-      (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset BitwiseChip.Inputs 0 env
   have outputEq : Eval.eval env ((BitwiseChip.circuit (p := p)).output input offset) =
-      (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).state =
@@ -135,15 +135,15 @@ theorem BitwiseChip.inputOutputState (env : Environment (ZMod p)) :
 
 /-- Bitwise passes its independent ALU adapter input through to the completed row. -/
 theorem BitwiseChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
-      (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter := by
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0
   let offset := size BitwiseChip.Inputs
   have inputEq : Eval.eval env input =
-      (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset BitwiseChip.Inputs 0 env
   have outputEq : Eval.eval env ((BitwiseChip.circuit (p := p)).output input offset) =
-      (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   change (Eval.eval env input).adapter =
@@ -154,13 +154,13 @@ theorem BitwiseChip.inputOutputAdapter (env : Environment (ZMod p)) :
 normalizing the full witnessed arithmetic row in every structural theorem statement. -/
 noncomputable def BitwiseChip.physicalCols (env : Environment (ZMod p)) :
     BitwiseChip.Columns (ZMod p) :=
-  ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
+  ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env
 
 /-- The completed Bitwise view at one physical component row. -/
 noncomputable def BitwiseChip.physicalView (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   BitwiseChip.rowView
-    (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
     (BitwiseChip.physicalCols env)
 
 /-- The folded physical view's selector is exactly the evaluated typed input selector. -/
@@ -168,7 +168,7 @@ theorem BitwiseChip.physicalView_isReal (env : Environment (ZMod p)) :
     (BitwiseChip.physicalView env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) BitwiseChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset BitwiseChip.Inputs 0) =
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset BitwiseChip.Inputs 0 env
   simpa only [BitwiseChip.physicalView, BitwiseChip.rowView] using
     congrArg (fun input : BitwiseChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -176,7 +176,7 @@ theorem BitwiseChip.physicalView_isReal (env : Environment (ZMod p)) :
 /-- Component-level form of Bitwise's physical non-`x0` route. -/
 theorem BitwiseChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
     (BitwiseChip.physicalView env).adapter.op_a_0 = 0 := by
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0
   let offset := size BitwiseChip.Inputs
@@ -185,9 +185,9 @@ theorem BitwiseChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod 
   have route :=
     (BitwiseChip.controlFacts_of_mainConstraints input offset env mainConstraints).opA0Zero
   have inputEq : Eval.eval env input =
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset BitwiseChip.Inputs 0 env
-  change (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+  change (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← BitwiseChip.inputOutputAdapter env, ← inputEq, BitwiseChip.eval_inputAdapter,
     Readers.ALUTypeReader.eval_opA0]
   exact route
@@ -195,7 +195,7 @@ theorem BitwiseChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod 
 /-- Component-level active opcode partition used by `advanceReady`. -/
 theorem BitwiseChip.rowViewSelectorActive_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (BitwiseChip.physicalView env).is_real = 1) :
     BitwiseChip.ActiveSelector (BitwiseChip.physicalCols env) := by
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0
@@ -237,7 +237,7 @@ theorem BitwiseChip.aluTypeReader_mem (input : Var BitwiseChip.Inputs (ZMod p)) 
 /-- The retained ALU reader binds source C to the decoded immediate on immediate rows. -/
 theorem BitwiseChip.rowViewOpCBinding_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (immediate : (BitwiseChip.physicalView env).adapter.imm_c = 1) :
     (BitwiseChip.physicalView env).adapter.op_c_memory.prev_value =
       (BitwiseChip.physicalView env).adapter.op_c := by
@@ -250,19 +250,19 @@ theorem BitwiseChip.rowViewOpCBinding_of_constraints (env : Environment (ZMod p)
     ((BitwiseChip.main input).operations offset) Readers.ALUTypeReader.circuit readerInput
     (offset + 16) (BitwiseChip.aluTypeReader_mem input offset) mainConstraints
   have inputEq : Eval.eval env input =
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset BitwiseChip.Inputs 0 env
   have immediateInput : Expression.eval env readerInput.cols.imm_c = 1 := by
     change Expression.eval env input.adapter.imm_c = 1
-    change (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.imm_c = 1
+    change (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.imm_c = 1
       at immediate
     rw [← BitwiseChip.inputOutputAdapter env, ← inputEq, BitwiseChip.eval_inputs,
       Readers.ALUTypeReader.eval_immC] at immediate
     exact immediate
   have binding := Readers.ALUTypeReader.eval_opCPrev_eq_opC_of_mainConstraints
     readerInput (offset + 16) env readerConstraints immediateInput
-  change (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
-    (({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_c
+  change (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_c_memory.prev_value =
+    (({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_c
   rw [← BitwiseChip.inputOutputAdapter env, ← inputEq, BitwiseChip.eval_inputs,
     Readers.ALUTypeReader.eval_opCPrev, Readers.ALUTypeReader.eval_opC]
   simpa only [readerInput, BitwiseChip.aluTypeReaderInput] using binding
@@ -303,7 +303,7 @@ private theorem BitwiseChip.flagCombo_ne_ecall {x y z : ZMod p}
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem BitwiseChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := BitwiseChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (real : (BitwiseChip.physicalView env).is_real = 1) :
     (BitwiseChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var BitwiseChip.Inputs (ZMod p) := varFromOffset BitwiseChip.Inputs 0

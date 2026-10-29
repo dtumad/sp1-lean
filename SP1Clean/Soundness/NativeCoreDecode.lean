@@ -47,6 +47,7 @@ theorem instructionRows_constraints {image : ProgramImage}
     ∀ row ∈ instructionRows witness,
       row.chip.table.operations.ConstraintsHold (row.environment witness.data) :=
   constraints_of_mem_decodeInstructionTables witness.data (instructionTables_aligned witness)
+    (fun table member => witness.same_data table (instructionTables_mem witness member))
     (fun table member => constraints table (instructionTables_mem witness member))
 
 /-- Every evaluated decoded interaction is an interaction of the original combined witness. -/
@@ -81,9 +82,11 @@ theorem instructionRows_finished_guarantees {image : ProgramImage}
   constructor
   · exact channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
       (instructionTables_aligned witness)
+      (fun table member => witness.same_data table (instructionTables_mem witness member))
       (fun table tableMem => (closed.2 table (instructionTables_mem witness tableMem)).1) row member
   · exact channelGuarantees_of_mem_decodeInstructionTables witness.data programChannel.toRaw
       (instructionTables_aligned witness)
+      (fun table member => witness.same_data table (instructionTables_mem witness member))
       (fun table tableMem => (closed.2 table (instructionTables_mem witness tableMem)).2) row member
 
 /-- An active decoded instruction fetch belongs to the checked image and official Sail decoder.

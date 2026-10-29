@@ -16,9 +16,9 @@ theorems, with the timed-grounding interior factored into
   (`supported_core_native_sound`), with the model-scheduled and capacity-bounded shard forms as
   corollaries.
 
-The names `supported_core_air_sound` and `sp1_air_sound` are reserved for extracted upstream AIR
-relations.  They are not declared over the native ensemble because doing so would conflate a Clean
-implementation with its Rust-faithfulness theorem. -/
+These theorems describe native Clean AIR. Agreement with released Rust and correctness of
+Lean-to-Rust lowering are separate claims; executable comparisons do not establish either as a
+formal refinement theorem. -/
 
 namespace SP1Clean.Soundness
 
@@ -430,17 +430,12 @@ Sail execution produces such a trace; the latter still requires a verified Sail-
 generator. Using the broader `SupportedCoreLocalExecutionRelation` directly would be false for
 unsupported Sail executions. -/
 
-/-! ## Full extracted target
+/-! ## Released-SP1 agreement
 
-`Soundness/CoreAIR.lean` owns the conditional
-`sp1_air_refinement_of_obligations`/`sp1_air_sound_of_obligations` combinators.  Their source is the
-concrete paired 34+6-table Rust relation in `Faithful/CoreAIR.lean`, not this smaller native ensemble.
-The required field-by-field proof bundle is not yet instantiated, so the unqualified
-`sp1_air_refinement`/`sp1_air_sound` names remain reserved for that closed result.  Its COMMIT
-conclusion is deliberately limited to correctness of rows that exist.  The base composed execution
-relation preserves that distinction; complete eight-row coverage appears only in the optional
-`SP1CommitCoveredExecutionRelation`, derived from the explicit program contract
-`UsesStandardHaltWrapper`.  This file continues to own only the 25-chip proof-oriented Clean slice. -/
+This theorem concerns the native 25-instruction slice. Released-SP1 agreement is tested through
+Clean's Rust export and independently generated source rows. Those tests do not establish a
+formal lowering theorem or the full mixed-execution capstone.
+-/
 
 /-! Shard AIR soundness is not itself a halting theorem.  After recursion authenticates an ordered
 ledger and all companion integrity relations, the composed target has the separate shape:

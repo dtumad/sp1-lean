@@ -3,7 +3,7 @@ import Mathlib.Data.BitVec
 /-! # The native core's guest-runtime syscall profile
 
 These eight full-register codes are the selected native profile. Their numeric values follow
-SP1 v6.4.0 (`f66b4bff51d0ccff51d152e0f7f66b2ffedf3529`),
+SP1 v6.9.0 (`b8387fa61e1361d90ee7de49f551863418ca0f08`),
 `crates/core/executor/src/syscall_code.rs`. This is a deliberate restriction: SP1's executor
 casts x5 to u32, whereas this profile requires the complete 64-bit register to be canonical.
 Membership says which call is allowed, not that its host effects have been verified.
@@ -29,7 +29,7 @@ def code : SyscallKind → BitVec 64
   | .hintLength => 240
   | .hintRead => 241
 
-/-- The finite inventory used by decoding and the native fixed lookup. -/
+/-- The finite inventory used by decoding and the native profile guard. -/
 def all : List SyscallKind :=
   [.halt, .write, .enterUnconstrained, .commit, .commitDeferred, .verifyProof, .hintLength, .hintRead]
 

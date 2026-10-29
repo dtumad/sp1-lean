@@ -12,19 +12,16 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Utils.Tactics.ProvableStructDeriving
 
-/-! # The `ShiftLeft` chip row as a `GeneralFormalCircuit`
+/-! # The ShiftLeft chip row as a GeneralFormalCircuit
 
-`SLL`/`SLLW`: SP1's shift logic (the six shift-amount bits `c_bits`, the `v_01/v_012/v_0123` power
-encodings, the `shift_u16` byte-shift one-hot selector, the `lower_limb`/`higher_limb` bit-split, the
-`limb_result` reassembly, and the SLLW MSB sign-extension) is inlined into
-the generated ShiftLeft oracle's `asserts`/`interactions` (`Extracted/ChipOracle/ShiftLeft.lean`) — no separate operation-level extraction.
+SLL/SLLW share shift-amount bits, power encodings, a byte-shift selector, limb decomposition and
+sign extension. `AssertSpec` and `InteractSpec` describe implementation evidence; the public RV64
+contract lives in `Semantics/Specs/Chips/ShiftLeft.lean`.
 
-`AssertSpec` / `InteractSpec` capture the structural meaning of SP1's two extracted constraint lists;
-the semantic, flag-gated `Spec` (RV64 `sll`/`sllw` identity) is in `Semantics/Specs/Chips/ShiftLeft.lean`.
-`Faithful/ShiftLeftChip.lean` anchors both structural specs to SP1's extracted lists.
-
-`main` composes the CPU, ALU reader, register write and shift assertions. Its opcode selectors
-are explicit inputs, activity is their sum, and Clean's witness IR generates the shift columns. -/
+The circuit composes CPU, ALU reader, register-write and shift assertions. Opcode selectors are
+explicit inputs, activity is their sum, and Clean's witness IR generates the shift columns.
+Released Rust comparisons check complete rows, assertions and interactions.
+-/
 
 namespace SP1Clean.ShiftLeftChip
 
@@ -1044,10 +1041,8 @@ private theorem constraints_main_bind_decompose
   rw [witnessConstraints, List.nil_append,
     witnessPrefixLocalLength_eq]
 
-/-- Exact folded decomposition of every native ShiftLeft assertion.  This is the structural
-normalization boundary used by the whole-chip Rust faithfulness proof: the expensive 31-cell
-witness generator stays opaque, while the genuine Clean subcircuits and the three parent selector
-constraints remain visible as complete blocks. -/
+/-- Folded decomposition of every native ShiftLeft assertion. The expensive 31-cell witness
+generator stays opaque while subcircuits and parent selector constraints remain visible. -/
 theorem constraints_decompose
     (env : Environment (ZMod p)) (input : Var Inputs (ZMod p))
     (offset : ℕ) :

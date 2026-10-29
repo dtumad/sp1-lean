@@ -12,9 +12,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # The `SyscallInstrs` row as a native circuit
 
-SP1's ECALL table (contract: `FormalModel/Contracts/SyscallInstrsChip.lean`), written against the
-complete extracted assertion and interaction lists of `Extracted/SystemOracle/SyscallInstrs.lean`
-rather than against one arm of it.
+SP1's ECALL table (contract: `FormalModel/Contracts/SyscallInstrsChip.lean`), modelling the complete dispatcher row and its interactions.
 
 **Shape.** A `Readers.CPUState` block at the syscall edge (`clk_inc = 264`, to the row's own
 `next_pc`), three `Readers.RegisterAccessCols` timestamp sub-assertions at access clocks
@@ -111,12 +109,6 @@ cell decodes back to `a0`. -/
     input.digest_index_bits[3] + input.digest_index_bits[4] + input.digest_index_bits[5] +
     input.digest_index_bits[6] + input.digest_index_bits[7]
 
-/-- The one-hot selected base index into a public-values block: `Σ bitᵢ · (base + strideᵢ)`. -/
-@[circuit_norm] def selectedIndex (input : Var Inputs (ZMod p)) (base stride : ℕ) :
-    Expression (ZMod p) :=
-  (List.finRange 8).foldl
-    (fun acc i => acc + input.digest_index_bits[i] * natConst (base + stride * i.val)) 0
-
 /-- The syscall row. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- Shallow booleanity gates, so every off-gate pull discharges its `Requirements`.
@@ -200,18 +192,18 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
 
   -- The five public-value bindings, each one message built from columns above (see the docstring).
   exitChannel.pushIf input.is_halt (exitMsg input)
-  publicValuesChannel.pullIf input.is_commit.result ⟨natConst 145, 1⟩
-  publicValuesChannel.pullIf input.is_commit_deferred.result ⟨natConst 147, 1⟩
+  publicValuesChannel.pullIf input.is_commit.result (PublicValueMsg.scalar (natConst 145) 1)
+  publicValuesChannel.pullIf input.is_commit_deferred.result (PublicValueMsg.scalar (natConst 147) 1)
   publicValuesChannel.pullIf input.is_commit.result
-    ⟨selectedIndex input 32 4 + 0, input.digest_word[0]⟩
+    ⟨natConst 32, natConst 4, input.digest_index_bits, input.digest_word[0]⟩
   publicValuesChannel.pullIf input.is_commit.result
-    ⟨selectedIndex input 32 4 + 1, input.digest_word[1]⟩
+    ⟨natConst 33, natConst 4, input.digest_index_bits, input.digest_word[1]⟩
   publicValuesChannel.pullIf input.is_commit.result
-    ⟨selectedIndex input 32 4 + 2, input.digest_word[2]⟩
+    ⟨natConst 34, natConst 4, input.digest_index_bits, input.digest_word[2]⟩
   publicValuesChannel.pullIf input.is_commit.result
-    ⟨selectedIndex input 32 4 + 3, input.digest_word[3]⟩
+    ⟨natConst 35, natConst 4, input.digest_index_bits, input.digest_word[3]⟩
   publicValuesChannel.pullIf (input.is_real * input.is_commit_deferred.result)
-    ⟨selectedIndex input 72 1, reduceWord input.op_c_memory.prev_value⟩
+    ⟨natConst 72, natConst 1, input.digest_index_bits, reduceWord input.op_c_memory.prev_value⟩
 
   -- The generic hand-off: multiplicity is the identifier's table byte.
   syscallChannel.pushIf (tableByteVar input) (syscallMsg input)

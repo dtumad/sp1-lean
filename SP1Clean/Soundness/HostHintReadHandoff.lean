@@ -49,7 +49,8 @@ theorem auxiliaryInterface : HostLocalCore.AuxiliaryInterface
   · intro component member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl <;>
-      simp [handler, HintReadCoverage.view, HostHintReadChip.circuit, HintReadWordChip.circuit,
+      simp [handler, HintReadCoverage.view, HintReadCoverage.component, HostHintReadChip.circuit,
+        HintReadWordChip.circuit, Guarded.circuit, HintReadWordChip.activeCircuit,
         Channels.byteChannel, Channels.memoryChannel, HostHintQueue.nodeChannel,
         HostHintQueue.wordChannel, HostHintQueue.stateChannel, HostCallChip.channel,
         HintReadWordChip.stateChannel, HostRamAccessChip.channel, WritePermissionProvider.channel, Channel.toRaw]
@@ -95,9 +96,12 @@ theorem wordResources_hostCall_silent : ∀ component ∈ wordResources (p := p)
   rcases member with rfl | rfl <;> change false = true at present <;> contradiction
 
 private theorem callClock_nodup_of_receiver (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (unique : ((ReceiverView.tableMessages receiver table data).map HostCallLedger.clock).Nodup) :
+    (unique : ((ReceiverView.tableMessages receiver table).map HostCallLedger.clock).Nodup) :
     ((table.table.map (Environment.fromArray · data)).map HostHintReadPartition.callClock).Nodup := by
-  simpa only [ReceiverView.tableMessages, receiver, List.map_map, Function.comp_def,
+  have inputs (row : Array (ZMod p)) : input (table.environment row) =
+      input (Environment.fromArray row data) :=
+    ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
+  simpa only [ReceiverView.tableMessages, receiver, List.map_map, Function.comp_def, inputs,
     HostCallLedger.clock, HostHintReadPartition.callClock, HostHintReadPartition.clock,
     HostHintReadChip.Inputs.first] using unique
 

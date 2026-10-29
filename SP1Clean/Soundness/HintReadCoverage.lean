@@ -32,93 +32,205 @@ private theorem eval_next (env : Environment (ZMod p)) (input : Var Inputs (ZMod
   rcases ram with ⟨access, high, low0, low1, addr0, addr1, addr2, value⟩
   simp only [Inputs.next, HostRamAccessChip.Inputs.clockLow, circuit_norm]
 
+/-- The installed word-transfer component, including Boolean physical padding activity. -/
+def component (last : Bool) : Component (ZMod p) where
+  circuit := HintReadWordChip.circuit last
+  Assumptions := (HintReadWordChip.circuit last).Assumptions
+
 def view (last : Bool) : TransitionView (stateChannel (p := p)) where
-  component := { circuit := HintReadWordChip.circuit last }
+  component := component last
+  activity := (varFromOffset RowInput 0).2
   edge env :=
-    let input := valueFromOffset Inputs 0 env
-    (input.previous, input.next)
+    let input := valueFromOffset RowInput 0 env
+    (input.1.previous, input.1.next)
+  activity_binary := by
+    intro env valid
+    rw [Guarded.eval_activity, eval_varFromOffset_valueFromOffset]
+    exact valid.1
+  activity_of_constraints := by
+    intro env valid
+    rw [Component.constraintsHold_iff] at valid
+    exact Guarded.activity_of_constraints (activeCircuit last) inferInstance
+      (varFromOffset RowInput 0) (size RowInput) env valid
   interactions := by
     intro env
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq,
-      Component.rowOperations, HintReadWordChip.circuit]
-    rw [main_state_interactions]
-    simp only [List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed,
-      eval_previous, eval_next, eval_varFromOffset_valueFromOffset]
+      Component.rowOperations]
+    change (((circuit last).main (varFromOffset RowInput 0)).operations
+      (size RowInput)).interactionValuesWith stateChannel.toRaw env = _
+    rw [guarded_state_values, eval_previous, eval_next]
+    have decoded := eval_varFromOffset_valueFromOffset RowInput 0 env
+    rw [CircuitType.eval_var_provablePair] at decoded
+    have payload := congrArg Prod.fst decoded
+    change Eval.eval env (varFromOffset RowInput 0).1 =
+      (valueFromOffset RowInput 0 env).1 at payload
+    rw [payload]
+
+theorem view_activity (last : Bool) :
+    (view (p := p) last).activity = (varFromOffset RowInput 0).2 := by
+  simp only [view]
 
 def variants : List Bool := [false, true]
 
 abbrev Row := Bool × Environment (ZMod p)
 
-def rowInput (row : Row (p := p)) : Inputs (ZMod p) := valueFromOffset Inputs 0 row.2
+def rowInput (row : Row (p := p)) : Inputs (ZMod p) := (valueFromOffset RowInput 0 row.2).1
+
+omit [Fact (2 ^ 25 < p)] in
+theorem eval_rowInput (row : Row (p := p)) :
+    Eval.eval row.2 (varFromOffset (F := ZMod p) RowInput 0).1 = rowInput row := by
+  have decoded := eval_varFromOffset_valueFromOffset RowInput 0 row.2
+  rw [CircuitType.eval_var_provablePair] at decoded
+  exact congrArg Prod.fst decoded
+
+/-- The physical activity cell is independent of the semantic word payload. -/
+def rowActivity (row : Row (p := p)) : ZMod p := row.2 (varFromOffset field (size Inputs))
+
+theorem active_rows (tables : List (Table (ZMod p))) :
+    TransitionView.readIndexedActiveRows variants view tables =
+      (TransitionView.readIndexedRows variants tables).filter
+        (fun row => @decide (rowActivity row = 1) (FiniteField.instDecidableEq _ _)) := by
+  simp only [TransitionView.readIndexedActiveRows, view_activity, rowActivity,
+    varFromOffset_pair, Nat.zero_add]
+  congr 1
+  funext row
+  exact congrArg (@decide _) (Subsingleton.elim _ _)
 
 def edge (row : Row (p := p)) : State (ZMod p) × State (ZMod p) :=
   ((rowInput row).previous, (rowInput row).next)
 
+private theorem view_edge (row : Row (p := p)) : (view row.1).edge row.2 = edge row := by
+  simp only [view, edge, rowInput]
+
+private theorem view_rowActivity (row : Row (p := p)) : row.2 (view row.1).activity = rowActivity row := by
+  simp only [view_activity, rowActivity, varFromOffset_pair, Nat.zero_add]
+
+theorem mem_active_rows {tables : List (Table (ZMod p))} {row : Row (p := p)} :
+    row ∈ TransitionView.readIndexedActiveRows variants view tables ↔
+      row ∈ TransitionView.readIndexedRows variants tables ∧ rowActivity row = 1 := by
+  rw [TransitionView.mem_readIndexedActiveRows, view_rowActivity]
+
+/-- The physical guard is Boolean before any semantic or channel authentication. -/
+theorem row_activity_binary (row : Row (p := p))
+    (valid : (view row.1).component.operations.ConstraintsHold row.2) :
+    rowActivity row = 0 ∨ rowActivity row = 1 := by
+  simpa only [view_rowActivity] using (view row.1).activity_of_constraints row.2 valid
+
+/-- Active rows retain the child constraints at the guarded row's actual witness offset. -/
+theorem active_constraints (row : Row (p := p)) (active : rowActivity row = 1)
+    (valid : (view row.1).component.operations.ConstraintsHold row.2) :
+    ((HintReadWordChip.main row.1 (varFromOffset RowInput 0).1).operations
+      (size RowInput)).ConstraintsHold row.2 := by
+  rw [Component.constraintsHold_iff] at valid
+  apply Guarded.constraints_of_active (activeCircuit row.1) inferInstance
+    (varFromOffset RowInput 0) (size RowInput) row.2 _ valid
+  simpa only [varFromOffset_pair, Nat.zero_add, rowActivity] using active
+
+/-- Active rows retain each child channel guarantee without assuming other channels. -/
+theorem active_channelGuarantees (row : Row (p := p)) (channel : RawChannel (ZMod p))
+    (active : rowActivity row = 1)
+    (valid : (view row.1).component.operations.ChannelGuarantees channel row.2) :
+    ((HintReadWordChip.main row.1 (varFromOffset RowInput 0).1).operations
+      (size RowInput)).ChannelGuarantees channel row.2 := by
+  rw [Component.channelGuarantees_iff] at valid
+  apply Guarded.channelGuarantees_of_active (activeCircuit row.1) inferInstance
+    (varFromOffset RowInput 0) (size RowInput) row.2 channel _ valid
+  simpa only [varFromOffset_pair, Nat.zero_add, rowActivity] using active
+
 def context (state : State (ZMod p)) := (state.clk_high, state.clk_low, state.pointer)
 
-theorem rows_spec (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem rows_spec (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec data) :
-    ∀ row ∈ TransitionView.readIndexedRows variants tables data, Spec row.1 (rowInput row) := by
+    (valid : ∀ table ∈ tables, table.Spec) :
+    ∀ row ∈ TransitionView.readIndexedActiveRows variants view tables, Spec row.1 (rowInput row) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  exact TransitionView.readIndexedRows_spec variants view tables data alignment valid
+  intro row member
+  have checked := TransitionView.readIndexedActiveRows_spec variants view tables alignment valid row member
+  have active := (TransitionView.mem_readIndexedActiveRows.mp member).2
+  rw [view_activity] at active
+  rw [Guarded.eval_activity, eval_varFromOffset_valueFromOffset] at active
+  exact checked.2 active
+
+/-- Actual row constraints establish Boolean activity before any channel authentication. -/
+theorem rows_activity_binary (tables : List (Table (ZMod p)))
+    (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
+    (valid : ∀ table ∈ tables, table.Constraints) :
+    ∀ row ∈ TransitionView.readIndexedRows variants tables,
+      rowActivity row = 0 ∨ rowActivity row = 1 := by
+  intro row member
+  exact row_activity_binary row
+    (TransitionView.readIndexedRows_constraints variants (fun last => (view last).component)
+      tables aligned valid row member)
 
 /-- Coverage uses authenticated words and exact index/address successors. The prior RAM values
 and timestamps are separate facts to be established by Memory grounding. -/
-def Steps (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) : Prop :=
-  ∀ row ∈ TransitionView.readIndexedRows variants tables data,
+structure Steps (tables : List (Table (ZMod p))) : Prop where
+  /-- Every physical row satisfies the guard's Boolean activity constraint. -/
+  binary : ∀ row ∈ TransitionView.readIndexedRows variants tables,
+    rowActivity row = 0 ∨ rowActivity row = 1
+  /-- Only active rows are semantic word transfers. -/
+  step : ∀ row ∈ TransitionView.readIndexedActiveRows variants view tables,
     HintReadStep.Spec row.1 ((rowInput row).step row.1)
 
-theorem steps_of_specs (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem steps_of_specs (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : ∀ table ∈ tables, table.Spec data) : Steps tables data :=
-  fun row member => (rows_spec tables data aligned valid row member).2
+    (valid : ∀ table ∈ tables, table.Spec) : Steps tables where
+  binary row member := by
+    simpa only [view_rowActivity] using (view row.1).activity_binary row.2
+      (TransitionView.readIndexedRows_spec variants view tables
+        (by simpa only [List.forall₂_map_left_iff] using aligned) valid row member)
+  step row member := (rows_spec tables aligned valid row member).2
 
 /-- Registered word components have no fixed columns, so selecting complete rows preserves
 all fixed-column obligations. This is derived from the component registry. -/
-theorem selection_fixed (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem selection_fixed (tables : List (Table (ZMod p)))
     (keep : Bool → Environment (ZMod p) → Bool)
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables) :
-    ∀ last table, (last, table) ∈ variants.zip tables → table.component.fixedRowsMatch
-      (table.table.filter fun row => keep last (Environment.fromArray row data)) := by
+    ∀ last table, (last, table) ∈ variants.zip tables → table.component.FixedRowsMatch
+      (table.table.filter fun row => keep last (table.environment row)) := by
   intro last table paired
   rw [← List.forall₂_zip aligned paired]
   trivial
 
-omit [Fact (2 ^ 25 < p)] in
 /-- Selecting one call retains exactly the corresponding word-step facts. -/
-theorem Steps.select {tables : List (Table (ZMod p))} {data : ProverData (ZMod p)}
-    (valid : Steps tables data) (keep : Bool → Environment (ZMod p) → Bool)
-    (fixed : ∀ last table, (last, table) ∈ variants.zip tables → table.component.fixedRowsMatch
-      (table.table.filter fun row => keep last (Environment.fromArray row data))) :
-    Steps (TransitionView.selectTables variants tables data keep fixed) data := by
-  intro row member
-  rw [TransitionView.readIndexedRows_selectTables] at member
-  exact valid row (List.mem_filter.mp member).1
+theorem Steps.select {tables : List (Table (ZMod p))}
+    (valid : Steps tables) (keep : Bool → Environment (ZMod p) → Bool)
+    (fixed : ∀ last table, (last, table) ∈ variants.zip tables → table.component.FixedRowsMatch
+      (table.table.filter fun row => keep last (table.environment row))) :
+    Steps (TransitionView.selectTables variants tables keep fixed) := by
+  constructor
+  · intro row member
+    rw [TransitionView.readIndexedRows_selectTables] at member
+    exact valid.binary row (List.mem_filter.mp member).1
+  · intro row member
+    rw [TransitionView.readIndexedActiveRows_selectTables] at member
+    exact valid.step row (List.mem_filter.mp member).1
 
-theorem rows_balanced (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem rows_balanced (tables : List (Table (ZMod p)))
     (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component)
       variants tables)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
-    EndpointBalanced (↑(TransitionView.readIndexedRows variants tables data)) edge initial final := by
-  let rows := TransitionView.readIndexedRows variants tables data
+        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
+    EndpointBalanced (↑(TransitionView.readIndexedActiveRows variants view tables)) edge initial final := by
+  let rows := TransitionView.readIndexedRows variants tables
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
   have projected := TransitionView.readRows_interactions
-    (variants.map view) tables data alignment
+    (variants.map view) tables alignment
   rw [TransitionView.readRows_eq_indexed] at projected
-  simp only [List.flatMap_map] at projected
+  simp only [List.flatMap_map, view_rowActivity, view_edge] at projected
   rw [projected] at balanced
-  change BalancedInteractions (stateChannel.transitionLedger initial final rows edge) at balanced
-  have endpoints := (stateChannel.transitionLedger_balanced_iff initial final rows edge).mp balanced
-  simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe]
-    using endpoints.2
+  change BalancedInteractions (stateChannel.gatedTransitionLedger initial final rows rowActivity edge) at balanced
+  have endpoints := (stateChannel.gatedTransitionLedger_balanced_iff initial final rows rowActivity edge
+    valid.binary).mp balanced
+  rw [active_rows]
+  exact Quot.sound endpoints.2
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem indices_of_walk {R V : Type*} (edge : R → V × V) (index : V → ℕ)
@@ -205,34 +317,39 @@ private theorem nil_of_closed {R V : Type*} (edge : R → V × V) (index : V →
     simp at empty
 
 /-- A balanced set of consumers without any handler endpoints must be empty. -/
-theorem rows_nil_of_balanced (tables : List (Table (ZMod p))) (data : ProverData (ZMod p))
+theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables data)
-    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
-    TransitionView.readIndexedRows variants tables data = [] := by
+    (valid : Steps tables)
+    (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
+    TransitionView.readIndexedActiveRows variants view tables = [] := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  have projected := TransitionView.readRows_interactions (variants.map view) tables data alignment
+  have projected := TransitionView.readRows_interactions (variants.map view) tables alignment
   rw [TransitionView.readRows_eq_indexed] at projected
-  simp only [List.flatMap_map] at projected
+  simp only [List.flatMap_map, view_rowActivity, view_edge] at projected
   rw [projected] at balanced
-  have closed := (stateChannel.pairedLedger_balanced_iff
-    (TransitionView.readIndexedRows variants tables data) edge).mp balanced
+  change BalancedInteractions ((TransitionView.readIndexedRows variants tables).flatMap
+    (fun row => [stateChannel.pulledIfValue (rowActivity row) (edge row).1,
+      stateChannel.pushedIfValue (rowActivity row) (edge row).2])) at balanced
+  have active := balanced.filter_nonzero
+  rw [stateChannel.gatedPairs_filter_nonzero _ rowActivity edge valid.binary] at active
+  have closed := (stateChannel.pairedLedger_balanced_iff _ edge).mp active
+  rw [active_rows]
   exact nil_of_closed edge (fun state : State (ZMod p) => Address.toNat state.index)
-    (TransitionView.readIndexedRows variants tables data) closed.2
-    (fun row member => successor_of_spec row.1 (rowInput row) (valid row member))
+    _ closed.2 (fun row member => successor_of_spec row.1 (rowInput row)
+      (valid.step row (by rw [active_rows]; exact member)))
 
-/-- Every physical word row occurs exactly once, with successive indices and a fixed call/node.
+/-- Every active word row occurs exactly once, with successive indices and a fixed call/node.
 Authenticated word-step contracts and ledger balance determine the order internally. -/
-theorem ordered_cover (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
+theorem ordered_cover (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables data)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
+        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
     ∃ path : List (Row (p := p)),
-      path.Perm (TransitionView.readIndexedRows variants tables data) ∧
+      path.Perm (TransitionView.readIndexedActiveRows variants view tables) ∧
       Walk.IsWalk edge initial final path ∧
       Address.toNat final.index = Address.toNat initial.index + path.length ∧
       path.map (fun row => Address.toNat (rowInput row).index) =
@@ -240,10 +357,10 @@ theorem ordered_cover (tables : List (Table (ZMod p))) (data : ProverData (ZMod 
       context final = context initial ∧
       ∀ row ∈ path, context (rowInput row).previous = context initial := by
   apply ranked_cover edge (fun state : State (ZMod p) => Address.toNat state.index) context
-    (TransitionView.readIndexedRows variants tables data) initial final
-    (rows_balanced tables data initial final aligned balanced)
+    (TransitionView.readIndexedActiveRows variants view tables) initial final
+    (rows_balanced tables initial final aligned valid balanced)
   · intro row member
-    exact successor_of_spec row.1 (rowInput row) (valid row member)
+    exact successor_of_spec row.1 (rowInput row) (valid.step row member)
   · intro row _
     exact context_preserve (rowInput row)
 
@@ -264,64 +381,69 @@ private theorem lower_of_walk {R V : Type*} (edge : R → V × V) (address : V �
 
 /-- Every consumer address is at least the handler's start address. This needs only the
 authenticated successor constraints, independently of the prior RAM word or timestamp. -/
-theorem address_lower (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
+theorem address_lower (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables data)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith data stateChannel.toRaw))) :
-    ∀ row ∈ TransitionView.readIndexedRows variants tables data,
+        tables.flatMap (·.interactionsWith stateChannel.toRaw))) :
+    ∀ row ∈ TransitionView.readIndexedActiveRows variants view tables,
       Address.toNat initial.address ≤ Address.toNat (rowInput row).address := by
-  obtain ⟨path, perm, walk, _⟩ := ordered_cover tables data initial final aligned valid balanced
+  obtain ⟨path, perm, walk, _⟩ := ordered_cover tables initial final aligned valid balanced
   have lower := lower_of_walk edge (fun state : State (ZMod p) => Address.toNat state.address)
     initial final path walk (by
       intro row member
-      have advance := (valid row (perm.mem_iff.mp member)).2.2.2.2.2.2
+      have advance := (valid.step row (perm.mem_iff.mp member)).2.2.2.2.2.2
       change Address.toNat (rowInput row).address ≤ Address.toNat (rowInput row).nextAddress
       change Address.toNat (rowInput row).nextAddress = Address.toNat (rowInput row).address + _ at advance
       omega)
   exact fun row member => lower row (perm.mem_iff.mpr member)
 
 /-- Zero-based endpoints force exactly the full count, independently of physical row order. -/
-theorem complete_indices (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
+theorem complete_indices (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables data)
+    (valid : Steps tables)
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith data stateChannel.toRaw)))
+        tables.flatMap (·.interactionsWith stateChannel.toRaw)))
     (zero : Address.toNat initial.index = 0) :
-    ((TransitionView.readIndexedRows variants tables data).map fun row => Address.toNat (rowInput row).index).Perm
+    ((TransitionView.readIndexedActiveRows variants view tables).map fun row => Address.toNat (rowInput row).index).Perm
       (List.range (Address.toNat final.index)) := by
-  obtain ⟨path, perm, _, count, indices, _⟩ := ordered_cover tables data initial final aligned valid balanced
+  obtain ⟨path, perm, _, count, indices, _⟩ := ordered_cover tables initial final aligned valid balanced
   rw [zero, Nat.zero_add] at count
   rw [zero, ← List.range_eq_range'] at indices
   rw [count, ← indices]
   exact (perm.map _).symm
 
-/-- A constructed complete cursor walk balances the physical tables under Clean's count guard. -/
-theorem balanced_of_walk (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) (initial final : State (ZMod p))
+/-- A constructed active cursor walk balances the physical tables under their original count guard. -/
+theorem balanced_of_walk (tables : List (Table (ZMod p))) (initial final : State (ZMod p))
     (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (path : List (Row (p := p))) (perm : path.Perm (TransitionView.readIndexedRows variants tables data))
-    (walk : Walk.IsWalk edge initial final path) (bound : 2 * (path.length + 1) < p) :
+    (valid : ∀ table ∈ tables, table.Constraints)
+    (path : List (Row (p := p)))
+    (perm : path.Perm (TransitionView.readIndexedActiveRows variants view tables))
+    (walk : Walk.IsWalk edge initial final path)
+    (bound : 2 * ((TransitionView.readIndexedRows variants tables).length + 1) < p) :
     BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
-        tables.flatMap (·.interactionsWith data stateChannel.toRaw)) := by
+        tables.flatMap (·.interactionsWith stateChannel.toRaw)) := by
   have alignment : List.Forall₂ (fun view table => view.component = table.component)
       (variants.map view) tables := by
     simpa only [List.forall₂_map_left_iff] using aligned
-  have projected := TransitionView.readRows_interactions (variants.map view) tables data alignment
+  have projected := TransitionView.readRows_interactions (variants.map view) tables alignment
   rw [TransitionView.readRows_eq_indexed] at projected
-  simp only [List.flatMap_map] at projected
+  simp only [List.flatMap_map, view_rowActivity, view_edge] at projected
   rw [projected]
-  change BalancedInteractions (stateChannel.transitionLedger initial final
-    (TransitionView.readIndexedRows variants tables data) edge)
-  apply (stateChannel.transitionLedger_balanced_iff _ _ _ _).mpr
+  change BalancedInteractions (stateChannel.gatedTransitionLedger initial final
+    (TransitionView.readIndexedRows variants tables) rowActivity edge)
+  apply (stateChannel.gatedTransitionLedger_balanced_iff _ _ _ _ _
+    (rows_activity_binary tables aligned valid)).mpr
   refine ⟨Or.inl ?_, ?_⟩
-  · simpa only [← perm.length_eq, ZMod.ringChar_zmod_n] using bound
+  · simpa only [ZMod.ringChar_zmod_n] using bound
   · have endpoints := endpointBalanced_of_isWalk edge walk
     have endpointPerm : (initial :: path.map (fun row => (edge row).2)).Perm
         (final :: path.map (fun row => (edge row).1)) := by
       simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints
+    rw [active_rows] at perm
     exact ((perm.map (fun row => (edge row).2)).cons initial).symm.trans
       (endpointPerm.trans ((perm.map (fun row => (edge row).1)).cons final))
 

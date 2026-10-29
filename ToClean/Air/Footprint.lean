@@ -23,9 +23,15 @@ variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 noncomputable def Component.channelWidth (component : Component F) (channel : RawChannel F) : ℕ :=
   (component.operations.interactionsWith channel).length
 
+/-- The complete ledger counts every syntactic interaction on every physical row. -/
+theorem Table.interactions_length (table : Table F) :
+    table.interactions.length = table.length * table.component.operations.interactions.length := by
+  simp only [Table.interactions, List.length_flatMap, Operations.interactionValues, List.length_map]
+  simp [Table.length, List.sum_replicate]
+
 /-- Every physical row contributes its full circuit width, even if all multiplicities are zero. -/
-theorem Table.interactionsWith_length (table : Table F) (data : ProverData F) (channel : RawChannel F) :
-    (table.interactionsWith data channel).length = table.length * table.component.channelWidth channel := by
+theorem Table.interactionsWith_length (table : Table F) (channel : RawChannel F) :
+    (table.interactionsWith channel).length = table.length * table.component.channelWidth channel := by
   simp only [Table.interactionsWith, List.length_flatMap, Operations.interactionValuesWith, List.length_map]
   simp [Component.channelWidth, Table.length, List.sum_replicate]
 
@@ -44,7 +50,7 @@ noncomputable def channelOccurrences (witness : EnsembleWitness ens) (channel : 
 theorem channelOccurrences_eq_length (witness : EnsembleWitness ens) (channel : RawChannel F) :
     witness.channelOccurrences channel = (witness.interactionsWith channel).length := by
   simp only [channelOccurrences, EnsembleWitness.interactionsWith, verifierInteractionsWith,
-    tableContext, TableContext.interactionsWith, List.length_append, List.length_flatMap,
+    toTables, Tables.interactionsWith, List.length_append, List.length_flatMap,
     Operations.interactionValuesWith, List.length_map, Table.interactionsWith_length]
 
 /-- Physical height accounting follows the canonical table inventory exactly. -/

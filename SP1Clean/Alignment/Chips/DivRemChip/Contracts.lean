@@ -99,15 +99,15 @@ theorem DivRemChip.eval_output_a (input : Var DivRemChip.Inputs (ZMod p)) (offse
 
 /-- Component-level adapter passthrough, with the large output layout kept folded. -/
 theorem DivRemChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter =
-      (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter := by
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0
   let offset := size DivRemChip.Inputs
   have inputEq : Eval.eval env input =
-      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset DivRemChip.Inputs 0 env
   have outputEq : Eval.eval env ((DivRemChip.circuit (p := p)).output input offset) =
-      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
+      ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   exact DivRemChip.eval_output_adapter input offset env
@@ -116,8 +116,8 @@ theorem DivRemChip.inputOutputAdapter (env : Environment (ZMod p)) :
 arithmetic `Spec` or any Memory assumption. -/
 theorem DivRemChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
-    (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
+      ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0
   let offset := size DivRemChip.Inputs
   let cols := DivRemChip.populatedRowAt input offset
@@ -135,7 +135,7 @@ theorem DivRemChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
   have flagZero := DivRemChip.opA0_eq_zero_of_coreShallowConstraints env cols
     (offset + 210) coreShallow
   have inputEq : Eval.eval env input =
-      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+      ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset DivRemChip.Inputs 0 env
   rw [DivRemChip.populatedRowAt_adapter_eq] at flagZero
   rw [← inputEq, DivRemChip.eval_inputs, Readers.RTypeReader.eval_opA0]
@@ -144,11 +144,11 @@ theorem DivRemChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
 /-- Row-view form of DivRem's physical routing assertion. -/
 theorem DivRemChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env) :
+      ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
     (DivRemChip.rowView
-      (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
-      (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
-  change (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+      (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+      (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
+  change (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← DivRemChip.inputOutputAdapter env]
   exact DivRemChip.inputOpA0_eq_zero_of_constraints env constraints
 
@@ -157,13 +157,13 @@ theorem DivRemChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p
 /-- The completed DivRem columns at one physical component row. -/
 noncomputable def DivRemChip.physicalCols (env : Environment (ZMod p)) :
     DivRemChip.Columns (ZMod p) :=
-  ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowOutput env
+  ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env
 
 /-- The completed DivRem row view at one physical component row. -/
 noncomputable def DivRemChip.physicalView (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   DivRemChip.rowView
-    (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+    (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
     (DivRemChip.physicalCols env)
 
 /-- The DivRemCore shallow tail forces the unconditional eight-flag sum `Σ flags = 1` (`E367`)
@@ -242,7 +242,7 @@ private theorem DivRemChip.encodedOpcode_ne_ecall {f0 f1 f2 f3 f4 f5 f6 f7 : ZMo
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem DivRemChip.physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
     (_real : (DivRemChip.physicalView env).is_real = 1) :
     (DivRemChip.physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var DivRemChip.Inputs (ZMod p) := varFromOffset DivRemChip.Inputs 0

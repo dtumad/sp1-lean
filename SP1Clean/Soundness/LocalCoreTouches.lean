@@ -35,7 +35,9 @@ theorem syscall_program_committed_of_balance {image : ProgramImage} {source : Ex
   have emitted : interaction ∈ witness.interactionsWith programChannel.toRaw := by
     apply EnsembleWitness.mem_interactionsWith.mpr
     refine Or.inr ⟨systemTable witness 3, systemTable_mem witness 3, List.mem_flatMap.mpr ⟨physical, member, ?_⟩⟩
-    rw [← typedInteractionValuesWith_raw,
+    have shared : (systemTable witness 3).data = witness.data :=
+      witness.same_data _ (systemTable_mem witness 3)
+    rw [Table.environment, shared, ← typedInteractionValuesWith_raw,
       syscallInstrsRow_typedProgram_of_component _ witness.data (systemTable_component witness 3)]
     exact List.mem_cons_self
   exact program_pull_committed_of_balance valid witness constraints balanced message interaction emitted
@@ -65,7 +67,7 @@ private theorem syscall_operands {image : ProgramImage} {source : ExecutionSnaps
 private theorem ordinaryRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : DecodedInstructionRow p} (member : row ∈ activeInstructionRows witness) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.instruction row).facts witness.data) := by
@@ -75,27 +77,30 @@ private theorem ordinaryRows_aligned {image : ProgramImage} {source : ExecutionS
   have checked := instructionRows_constraints witness constraints row decodedMem
   have byte := channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
     (instructionTables_aligned witness)
+    (fun table member => witness.same_data table (instructionTables_mem witness member))
     (fun table member => bytes table (instructionTables_mem witness member)) row decodedMem
   have committed := instructionRows_program_committed_of_balance valid witness constraints balanced decodedMem active
   exact ordinary_aligned witness.data row chipMem active checked byte (image.toGuestProgram valid) committed
 
 private theorem haltRows_aligned {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     {row : HaltChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 2) (haltRow witness.data) (·.is_real)) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.halt row).facts witness.data) := by
   obtain ⟨mapped, real⟩ := List.mem_filter.mp member
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   have byte := bytes _ (systemTable_mem witness 2)
   exact halt_aligned _ (haltRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
     byte physicalMem (of_decide_eq_true real))
     (haltRow_accessTimestamp_bounds_of_component _ witness.data (systemTable_component witness 2)
+    (witness.same_data _ (systemTable_mem witness 2))
       byte physicalMem (of_decide_eq_true real))
 
 private theorem syscallRows_aligned {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : SyscallInstrsChip.Inputs (ZMod p)} (member : row ∈ activeSystemRows (systemTable witness 3) (syscallInstrsRow witness.data) (·.is_real)) :
     ∃ aligned, AlignedFacts aligned ((ExecutionRow.syscall row).facts witness.data) := by
@@ -103,8 +108,10 @@ private theorem syscallRows_aligned {image : ProgramImage} {source : ExecutionSn
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp mapped
   have byte := bytes _ (systemTable_mem witness 3)
   exact syscall_aligned _ (syscallInstrsRow_cpuState_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
     byte physicalMem (of_decide_eq_true real))
     (syscallInstrsRow_accessTimestamp_bounds_of_component _ witness.data (systemTable_component witness 3)
+    (witness.same_data _ (systemTable_mem witness 3))
       byte physicalMem (of_decide_eq_true real))
     (syscall_operands valid witness constraints balanced physicalMem (of_decide_eq_true real))
 
@@ -113,7 +120,7 @@ may retain additional host accesses in its own Memory ledger. -/
 theorem executionRows_aligned_of_channels {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw)
     {row : ExecutionRow p} (member : row ∈ executionRows witness) :
     ∃ aligned, AlignedFacts aligned (row.facts witness.data) := by
@@ -138,7 +145,7 @@ received-value premise. This includes active syscall writes and actual refresh r
 theorem memoryInterior_push_bound {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw)
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balanced : witness.BalancedChannel programChannel.toRaw) :
     ∀ message ∈ producedMessages (memoryInterior witness), MemoryMsg.ClkBound message := by
   intro message member

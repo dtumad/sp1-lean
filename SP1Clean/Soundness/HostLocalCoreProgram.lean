@@ -77,7 +77,9 @@ theorem hostCall_program_committed (valid : image.Valid)
       (SyscallInstrsChip.programMessage (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction))
   · apply EnsembleWitness.mem_interactionsWith.mpr
     refine Or.inr ⟨hostCallTable witness, hostCallTable_mem witness, List.mem_flatMap.mpr ⟨physical, physicalMem, ?_⟩⟩
-    rw [hostCallTable_component, wrapper_program_values witness]
+    have shared : (hostCallTable witness).data = witness.data :=
+      witness.same_data _ (hostCallTable_mem witness)
+    rw [Table.environment, shared, hostCallTable_component, wrapper_program_values witness]
     exact List.mem_cons_self
   · change -(HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real = -1
     rw [real]
@@ -195,6 +197,7 @@ theorem hostCall_contract
     exact balanced
   have program := LocalCore.program_guarantees_of_balance image source (localWitness witness) checked balance
   have contract := syscallInstrsRow_contract_of_component _ (localWitness witness).data (LocalCore.systemTable_component (localWitness witness) 3)
+    ((localWitness witness).same_data _ (LocalCore.systemTable_mem _ 3))
     (LocalCore.systemTable_constraints (localWitness witness) checked 3)
     (byte _ (LocalCore.systemTable_mem (localWitness witness) 3))
     (program.2 _ (LocalCore.systemTable_mem (localWitness witness) 3)) physicalMem (by rwa [same])

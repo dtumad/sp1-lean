@@ -4,8 +4,8 @@ import SP1Clean.Native.Operations.WritePermission
 
 /-! # Local AIR with explicit ROM write protection
 
-Four instruction components acquire byte-permission requests, and one fixed-interval provider
-supplies them. The complete source verifier and all other tables are retained. This is the native
+Four instruction components acquire byte-permission requests. A permission row checks each address
+against a verifier-fixed interval-membership provider. The complete source verifier and all other tables are retained. This is the native
 assembly intended for the capstone. `ProtectedLocalCoreExecution` derives ordinary ROM preservation
 from its additional ledger; active host effects and complete execution reconstruction remain open.
 -/
@@ -19,19 +19,22 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 /-- The four store positions in the shared instruction inventory, after the seven boundary rows. -/
 def tables (image : ProgramImage) (source : ExecutionSnapshot) : List (Component (ZMod p)) :=
   let stores := LocalCore.tables image source
-    |>.set 25 { circuit := ProtectedStore.byte }
-    |>.set 26 { circuit := ProtectedStore.half }
-    |>.set 27 { circuit := ProtectedStore.word }
-    |>.set 28 { circuit := ProtectedStore.double }
-  stores ++ [{ circuit := WritePermissionProvider.circuit image }]
+    |>.set 25 { circuit := ProtectedStore.byte, Assumptions := (ProtectedStore.byte).Assumptions }
+    |>.set 26 { circuit := ProtectedStore.half, Assumptions := (ProtectedStore.half).Assumptions }
+    |>.set 27 { circuit := ProtectedStore.word, Assumptions := (ProtectedStore.word).Assumptions }
+    |>.set 28 { circuit := ProtectedStore.double, Assumptions := (ProtectedStore.double).Assumptions }
+  stores ++ [WritePermissionProvider.component image,
+    WritePermissionProvider.membershipComponent image]
 
 /-- Permission wrappers keep the original stores' canonical data keys. -/
 theorem tables_names (image : ProgramImage) (source : ExecutionSnapshot) :
     (tables (p := p) image source).map (·.circuit.name) =
-      (LocalCore.tables (p := p) image source).map (·.circuit.name) ++ ["sp1.native.write_permission"] := by
+      (LocalCore.tables (p := p) image source).map (·.circuit.name) ++
+        ["sp1.native.write_permission", "sp1.native.write_permission.provider"] := by
+  unfold tables WritePermissionProvider.membershipComponent ProgramImage.writePermissionTable
   rfl
 
-/-- The provider adds one new name to the unchanged local inventory. -/
+/-- The request and fixed-membership components have distinct new data keys. -/
 theorem tables_unique_names (image : ProgramImage) (source : ExecutionSnapshot) :
     ((tables (p := p) image source).map (·.circuit.name)).Nodup := by
   rw [tables_names, List.nodup_append]
@@ -44,11 +47,12 @@ theorem tables_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO where
   tables := tables image source
   unique_names := tables_unique_names image source
-  channels := WritePermissionProvider.channel.toRaw :: (LocalCore.ensemble image source).channels
+  channels := WritePermissionProvider.channel.toRaw :: image.writePermissionTable.channel.toRaw ::
+    (LocalCore.ensemble image source).channels
   verifier := (LocalCore.ensemble image source).verifier
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) :
-    (tables (p := p) image source).length = 62 := by
-  simp only [tables, List.length_append, List.length_set, List.length_singleton, LocalCore.tables_length]
+    (tables (p := p) image source).length = 63 := by
+  simp only [tables, List.length_append, List.length_set, List.length_cons, List.length_nil, LocalCore.tables_length]
 
 end SP1Clean.Soundness.ProtectedLocalCore

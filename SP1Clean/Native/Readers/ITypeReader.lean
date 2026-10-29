@@ -14,8 +14,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 The register adapter for **I-type** instructions (loads and reg-reg-imm ops): a destination write `op_a`
 (= rd), a source read `op_b` (= rs1), and an **immediate** `op_c_imm` (no op_c register read). SP1's
-`ITypeReader::eval` (`crates/core/machine/src/adapter/register/i_type.rs`, mirrored in
-`Extracted/ITypeReader.lean`) emits per row:
+`ITypeReader::eval` (`crates/core/machine/src/adapter/register/i_type.rs`) emits per row:
 
 - the **program** send (instruction fetch), gated by `is_trusted`, carrying `op_c_imm` with `imm_c = 1`;
 - per operand (rd write / rs1 read), two **memory** interactions, gated by `is_real`; and
@@ -34,8 +33,7 @@ open SP1Clean.Channels (byteChannel memoryChannel MemoryMsg programChannel Progr
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Component-wise evaluation of the canonical I-type reader row.  This is the folded evaluator
-boundary used by chip-level grounding and faithfulness proofs. -/
+/-- Folded evaluation of the canonical I-type reader row for chip grounding. -/
 @[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     Eval.eval env cols =

@@ -57,16 +57,18 @@ theorem EnsembleWitness.channelGuarantees_of_requirements (witness : EnsembleWit
     (channel : RawChannel F) [channel.Consistent]
     (balanced : witness.BalancedChannel channel)
     (verifier : ens.VerifierChannelRequirements witness.publicInput witness.data channel)
-    (requirements : ∀ table ∈ witness.tables, table.ChannelRequirements witness.data channel) :
+    (requirements : ∀ table ∈ witness.tables, table.ChannelRequirements channel) :
     ens.VerifierChannelGuarantees witness.publicInput witness.data channel ∧
-      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
+      ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
   have allRequirements : ∀ interaction ∈ witness.interactionsWith channel,
       interaction.channel = channel ∧ interaction.Requirements witness.data := by
     intro interaction member
     refine ⟨EnsembleWitness.channel_eq_of_mem_interactionsWith member, ?_⟩
     rcases EnsembleWitness.mem_interactionsWith.mp member with emitted | ⟨table, member, emitted⟩
     · exact EnsembleWitness.verifierChannelRequirements_iff_forall.mp verifier interaction emitted
-    · exact (table.channelRequirements_iff_forall witness.data channel).mp
+    · have shared : table.data = witness.data := witness.same_data table member
+      rw [← shared]
+      exact (table.channelRequirements_iff_forall channel).mp
         (requirements table member) interaction emitted
   have guarantees := (inferInstance : channel.Consistent).consistent
     (witness.interactionsWith channel) witness.data balanced allRequirements
@@ -75,8 +77,9 @@ theorem EnsembleWitness.channelGuarantees_of_requirements (witness : EnsembleWit
     intro interaction emitted
     exact guarantees interaction (EnsembleWitness.mem_interactionsWith.mpr (Or.inl emitted))
   · intro table member
-    rw [table.channelGuarantees_iff_forall witness.data channel]
+    rw [table.channelGuarantees_iff_forall channel]
     intro interaction emitted
+    rw [witness.same_data table member]
     exact guarantees interaction
       (EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, member, emitted⟩))
 
@@ -89,10 +92,10 @@ theorem EnsembleWitness.channelGuarantees_of_component_requirements (witness : E
     (requirements : ∀ component ∈ ens.tables, ∀ env,
       component.operations.ConstraintsHold env → component.operations.ChannelRequirements channel env) :
     ens.VerifierChannelGuarantees witness.publicInput witness.data channel ∧
-      ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data channel := by
+      ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
   apply witness.channelGuarantees_of_requirements channel balanced (verifier _ _)
   intro table member row rowMember
-  apply requirements table.component (EnsembleWitness.mem_component_of_mem member)
+  apply requirements table.component (EnsembleWitness.component_mem_tables_of_mem member)
   exact constraints table member row rowMember
 
 end Air.Flat

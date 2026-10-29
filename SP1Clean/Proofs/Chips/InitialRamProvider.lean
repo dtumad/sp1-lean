@@ -51,4 +51,21 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Word MemoryMs
     (fun _ _ _ valid => ⟨valid.1.initial, valid.2⟩)).soundness
   completeness := (SnapshotRamProvider.circuit image.memorySnapshot).completeness
 
+/-- Specializing the source-state meaning preserves the snapshot provider's guard capabilities. -/
+instance guardSupported (image : ProgramImage) :
+    Guarded.Supported (circuit image (p := p)) where
+  noLookups := by
+    intro input offset
+    rw [GeneralFormalCircuit.toSubcircuit_toFlat, Operations.lookups_toFlat]
+    exact List.map_eq_nil_iff.mp
+      (SnapshotRamProvider.main_lookupNames image.memorySnapshot input offset)
+  channelsNeutral := (SnapshotRamProvider.guardSupported (p := p) image.memorySnapshot).channelsNeutral
+  declared := by
+    intro input offset interaction member carries
+    rw [GeneralFormalCircuit.toSubcircuit_interactions] at member
+    apply (SnapshotRamProvider.guardSupported (p := p) image.memorySnapshot).declared
+      input offset interaction ?_ carries
+    rw [GeneralFormalCircuit.toSubcircuit_interactions]
+    exact member
+
 end SP1Clean.InitialRamProvider

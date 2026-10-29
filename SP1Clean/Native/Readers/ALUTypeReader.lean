@@ -14,7 +14,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 
 The ALU-type sibling of `Readers/RTypeReader.lean`, for the ALU chips whose `op_c` may be an **immediate**
 (`Addw`, `Lt`, `Bitwise`, `ShiftLeft`, `ShiftRight`). SP1's `ALUTypeReader::eval`
-(mirrored in `Extracted/ALUTypeReader.lean`) is the `RTypeReader` fragment plus the immediate machinery:
+is the `RTypeReader` fragment plus the immediate machinery:
 
 - a flag `imm_c` and a **`Word`-typed** `op_c` (vs `RTypeReader`'s scalar register index);
 - `imm_c` is boolean off padding (`(is_real - 1) * imm_c = 0`);
@@ -29,8 +29,7 @@ it composes a `RegisterAccessCols.circuit` per operand for the timestamp byte ch
 gates, and pulls/pushes the Program + Memory buses (deriving the structural `RowSpec` and
 `isU64 ∧ ClkBound` guarantees from its pulls — the W11 polarity flips). The cross-block values
 (`clk_low`, the four `op_a_write_value` limbs `wv*`) stay
-inputs; the `is_real` binary gate stays on the chip. Faithfulness to SP1's generated constraint list is the
-separate `Faithful/ALUTypeReader.lean` anchor. -/
+inputs; the `is_real` binary gate stays on the chip. Released-SP1 agreement is tested through the consuming instruction exports. -/
 
 namespace SP1Clean.Readers.ALUTypeReader
 
@@ -39,9 +38,8 @@ open SP1Clean.Channels (byteChannel memoryChannel MemoryMsg programChannel Progr
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Component-wise evaluation of the ALU reader input bundle.  Keeping this folded projection next
-to the reader avoids repeatedly normalizing the derived `ProvableStruct` instance in whole-chip
-faithfulness proofs. -/
+/-- Folded evaluation of the ALU reader inputs, avoiding repeated normalization of the
+derived `ProvableStruct` instance in structural proofs. -/
 @[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =

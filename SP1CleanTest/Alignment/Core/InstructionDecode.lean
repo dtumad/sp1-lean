@@ -1,8 +1,7 @@
-import SP1Clean.Alignment.Chips.DecodedProgramProvider.Bridge
+import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
 import SP1Clean.Model.SP1Field
-import Clean.Circuit.WitnessExport
 
-/-! # Executable decoder and fixed Program AIR regressions
+/-! # Executable decoder regressions
 
 Literal instruction encodings cover the entire SP1 opcode projection supported by RV64IM, plus
 immediate and reserved-bit edge cases. The uniform parser/Sail agreement theorem is in the main
@@ -107,35 +106,5 @@ theorem checkedProgram :
     (({ image with rom := image.rom ++ [(65544, 0x00200033)] }).checkProgram).isSome = false ∧
     (({ image with rom := image.rom ++ image.rom }).checkProgram).isSome = false ∧
     (image.programRows (p := SP1Clean.SP1Prime)).length = 2 := by native_decide
-
-private def accepts (input : SP1Clean.ProgramProviderChip.Inputs Fp) : Bool :=
-  let program := (SP1Clean.DecodedProgramProvider.circuit image).main
-    (varFromOffset SP1Clean.ProgramProviderChip.Inputs 0)
-  let env := (program.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
-  (program.operations (size SP1Clean.ProgramProviderChip.Inputs)).toFlat.all fun operation =>
-    match operation with
-    | .assert expression => env expression == 0
-    | .lookup lookup =>
-      if arity : lookup.table.arity = size ProgramMsg then
-        lookup.table.name == "sp1.native.program" && image.programRows.any fun msg =>
-          toElements msg == arity ▸ lookup.entry.map env
-      else false
-    | .witness .. | .interact .. => true
-
-/-- Actual constraints and fixed lookups accept honest rows and reject forged full-message fields,
-including zero-multiplicity rows. The lookup count is free; bus balance constrains it globally. -/
-theorem fixedProgramConstraints :
-    ([0, 1, 17] : List Fp).all (fun multiplicity =>
-      image.rom.all fun entry =>
-        ((SP1Clean.DecodedProgramProvider.populate? image entry multiplicity).map accepts).getD false) = true ∧
-    ((SP1Clean.DecodedProgramProvider.populate? image (65536, 0x003100b3) (0 : Fp)).map fun row =>
-      !accepts { row with opcode := 2 } &&
-      !accepts { row with op_c := #v[4, 0, 0, 0] } &&
-      !accepts { row with pc0 := 8 } &&
-      !accepts { row with op_a_0 := 1 }).getD false = true := by native_decide
-
-/-- info: exportable ✓ (53 witness cells) -/
-#guard_msgs in
-#assert_exportable (SP1Clean.DecodedProgramProvider.circuit (p := SP1Clean.SP1Prime) image)
 
 end SP1CleanTest.Core.InstructionDecode

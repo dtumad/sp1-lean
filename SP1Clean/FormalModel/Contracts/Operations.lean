@@ -215,8 +215,7 @@ namespace SP1Clean.SubOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Proof-oriented local columns for the subtraction gadget. The assembled chip faithfulness map is
-the only place that relates this shape to SP1 Rust's helper-operation columns. -/
+/-- Local carry columns for the subtraction gadget. -/
 structure Columns (F : Type) where
   value : Word F
 deriving ProvableStruct
@@ -245,10 +244,7 @@ namespace SP1Clean.AddwOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Proof-oriented local columns for the 32-bit add gadget: the two witnessed low result limbs
-plus the composed sign-bit block (the shared `Circuits.Types.U16MSBOperation` struct, kept because the
-native gadget composes `U16MSBOperation.circuit`). The assembled chip faithfulness map is the only
-place that relates this shape to SP1 Rust's helper-operation columns. -/
+/-- Local columns for 32-bit addition: two low result limbs and the composed sign-bit block. -/
 structure Columns (F : Type) where
   value : Vector F 2
   msb : Circuits.Types.U16MSBOperation F
@@ -275,10 +271,7 @@ namespace SP1Clean.SubwOperation
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- Proof-oriented local columns for the 32-bit subtract gadget: the two witnessed low result limbs
-plus the composed sign-bit block (the shared `Circuits.Types.U16MSBOperation` struct, kept because the
-native gadget composes `U16MSBOperation.circuit`). The assembled chip faithfulness map is the only
-place that relates this shape to SP1 Rust's helper-operation columns. -/
+/-- Local columns for 32-bit subtraction: two low result limbs and the composed sign-bit block. -/
 structure Columns (F : Type) where
   value : Vector F 2
   msb : Circuits.Types.U16MSBOperation F

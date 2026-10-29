@@ -5,8 +5,7 @@ import ToClean.Air.TableBuild
 /-! # Halt table: component, padding row, and honest witness generation
 
 The build-side substrate shared by the deterministic completeness compiler
-(`Proofs/Completeness/Providers.lean`) and the exact-artifact transport
-(`Composition/SystemTables.lean`): the flat-AIR component, the all-zero padding row with its `Spec`
+(`Proofs/Completeness/Providers.lean`): the flat-AIR component, the all-zero padding row with its `Spec`
 proof, and the vacuous `ComputableWitnesses` (the halt table declares no cells — its composed
 readers are zero-witness input-takers).
 
@@ -23,7 +22,7 @@ open Air.Flat
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The Halt table as a flat-AIR component. -/
-def component : Component (ZMod p) := { circuit := circuit }
+def component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
 
 /-- The all-zero Halt row: the selector off, so every gated conjunct is vacuous. -/
 def paddingInputs : Inputs (ZMod p) where
@@ -69,21 +68,24 @@ theorem haltTraceInputs_spec (events : List Empty) :
   | cons e _ => exact e.elim
 
 theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Constraints data :=
-  Table.build_constraints _ _ _ _ _ computableWitnesses fun r hr => h r hr
+    (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r)
+    (bounded : rows.length ≤ UInt64.size) :
+    (Table.build (component (p := p)) rows data hint bounded).Constraints :=
+  Table.build_constraints _ _ _ _ bounded _ computableWitnesses fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r) :
-    (Table.build (component (p := p)) rows data hint).Guarantees data :=
-  Table.build_guarantees _ _ _ _ _ computableWitnesses fun r hr => h r hr
+    (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r)
+    (bounded : rows.length ≤ UInt64.size) :
+    (Table.build (component (p := p)) rows data hint bounded).Guarantees :=
+  Table.build_guarantees _ _ _ _ bounded _ computableWitnesses fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p)) :
-    (Table.build (component (p := p)) rows data hint).interactionsWith data channel =
+    (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
+    (bounded : rows.length ≤ UInt64.size) :
+    (Table.build (component (p := p)) rows data hint bounded).interactionsWith channel =
       rows.flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Table.build_interactions _ _ _ _ _ data channel
+  Table.build_interactions _ _ _ _ bounded (by trivial) data channel
 
 end SP1Clean.HaltChip

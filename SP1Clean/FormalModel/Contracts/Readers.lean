@@ -186,7 +186,7 @@ gates, the `op_a_0` binary fact, and the op_a/op_b timestamp byte bounds, `is_re
 immediate machinery: `imm_c` is boolean off padding (`(is_real - 1) * imm_c = 0`), the op_c access
 multiplicity `is_real - imm_c` is boolean, when `imm_c = 1` the op_c "read" is pinned to the immediate
 (`imm_c * (op_c_memory.prev_value[i] - op_c[i]) = 0`), and the op_c timestamp byte bounds are gated by
-`is_real - imm_c` (no register read for an immediate). Mirrors `Faithful/ALUTypeReader.lean`. -/
+`is_real - imm_c` (no register read for an immediate). -/
 def Spec (input : Inputs (ZMod p)) : Prop :=
   (input.cols.op_a_0 * input.wv0 = 0 ∧ input.cols.op_a_0 * input.wv1 = 0 ∧
       input.cols.op_a_0 * input.wv2 = 0 ∧ input.cols.op_a_0 * input.wv3 = 0) ∧
@@ -489,8 +489,7 @@ structure Inputs (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
-/-- Semantic contract: the two clock byte-range bounds, **`is_real`-gated** — exactly the content of
-`Faithful/CPUState.lean`'s `cpustate_constraints_faithful` (under `is_real = 1`). Soundness *derives* these
+/-- Semantic contract: the two clock byte-range bounds, **`is_real`-gated**. Soundness *derives* these
 from the byte-bus pull `Guarantees` (`ByteRowSpec`); completeness *consumes* them to discharge the pulls.
 The composing chip, which witnesses the `cols` block with a padding-safe clock, establishes them on real
 rows. Cross-row execution is derived from the typed State ledger by ranked grounding. -/

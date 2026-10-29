@@ -492,9 +492,9 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness Channels.memoryChannel,
       signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
         signedVal interaction.mult = 1)
-    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) witness.data
+    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
       Channels.memoryChannel) = [])
-    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) witness.data
+    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
       Channels.memoryChannel) = [])
     (initUnique : MemoryInitProviderUnique witness)
     (finalizeUnique : MemoryFinalizeProviderUnique witness)
@@ -509,23 +509,23 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
     (loc : MemLoc) :
     optMS (memoryInitFrontier witness loc) + pushesAt (orderedRows.map g) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
+          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             Channels.memoryChannel))) =
       optMS (memoryFinalizeFrontier witness loc) + pullsAt (orderedRows.map g) loc +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
             Channels.memoryChannel))) +
         Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data
+          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
             Channels.memoryChannel))) := by
   have hordinary : memoryFrontierRows witness =
       (realDecodedInstructionRows witness.data witness.tables).map
@@ -1838,7 +1838,7 @@ private theorem loadByteChip_loadMemoryGroundingData_of_eq
     have assumptions :=
       loadByteAssumptions_env env proverData base immediate' ram
     change LoadByteChip.Assumptions
-      (({ circuit := LoadByteChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2003,7 +2003,7 @@ private theorem loadHalfChip_loadMemoryGroundingData_of_eq
     have assumptions :=
       loadHalfAssumptions_env env proverData base immediate' ram
     change LoadHalfChip.Assumptions
-      (({ circuit := LoadHalfChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2203,7 +2203,7 @@ private theorem loadWordChip_loadMemoryGroundingData_of_eq
     have assumptions :=
       loadWordAssumptions_env env proverData base immediate' ram
     change LoadWordChip.Assumptions
-      (({ circuit := LoadWordChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2417,7 +2417,7 @@ private theorem loadDoubleChip_loadMemoryGroundingData_of_eq
     have assumptions :=
       loadDoubleAssumptions_env env proverData base immediate' ram
     change LoadDoubleChip.Assumptions
-      (({ circuit := LoadDoubleChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2666,7 +2666,7 @@ private theorem loadX0Chip_immutableLoadMemoryGroundingData_of_eq
         loadX0Chip_ramAccessOf_decoded, env] using pulled.1
     have assumptions := loadX0Assumptions_env env proverData base immediate' ram
     change LoadX0Chip.Assumptions
-      (({ circuit := LoadX0Chip.circuit (p := p) } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2863,17 +2863,17 @@ private theorem storeByteChip_storeMemoryGroundingData_of_eq
       simpa only [StoreByteChip.rowView] using real
     rw [storeByteChipDescriptor_table] at rowConstraints byteG
     have priorPhysical : Word.isU64
-        (({ circuit := StoreByteChip.circuit (p := p) } :
+        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).memory_access.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact prior
     have realPhysical :
-        (({ circuit := StoreByteChip.circuit (p := p) } :
+        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).is_real = 1 := by
       rw [← circuitRowInputOf_eq_component]
       exact realInput
     have storeValuePhysical : Word.isU64
-        (({ circuit := StoreByteChip.circuit (p := p) } :
+        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).store_value :=
       StoreByteChip.storeValue_isU64_of_constraints
         env rowConstraints byteG realPhysical priorPhysical
@@ -2995,17 +2995,17 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
         Circuits.Types.ITypeReader.toAdapterView] using sourceView
     rw [storeHalfChipDescriptor_table] at rowConstraints
     have priorPhysical : Word.isU64
-        (({ circuit := StoreHalfChip.circuit (p := p) } :
+        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).memory_access.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact prior
     have sourcePhysical : Word.isU64
-        (({ circuit := StoreHalfChip.circuit (p := p) } :
+        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).adapter.op_a_memory.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact source
     have storeValuePhysical : Word.isU64
-        (({ circuit := StoreHalfChip.circuit (p := p) } :
+        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).store_value :=
       StoreHalfChip.storeValue_isU64_of_constraints
         env rowConstraints priorPhysical sourcePhysical
@@ -3127,17 +3127,17 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
         Circuits.Types.ITypeReader.toAdapterView] using sourceView
     rw [storeWordChipDescriptor_table] at rowConstraints
     have priorPhysical : Word.isU64
-        (({ circuit := StoreWordChip.circuit (p := p) } :
+        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).memory_access.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact prior
     have sourcePhysical : Word.isU64
-        (({ circuit := StoreWordChip.circuit (p := p) } :
+        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).adapter.op_a_memory.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact source
     have storeValuePhysical : Word.isU64
-        (({ circuit := StoreWordChip.circuit (p := p) } :
+        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
           Component (ZMod p)).rowInput env).store_value :=
       StoreWordChip.storeValue_isU64_of_constraints
         env rowConstraints priorPhysical sourcePhysical
@@ -3306,9 +3306,9 @@ theorem addiChip_itypeGroundingData :
     chip_subst addiChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-      (({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_c_imm
+      (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_c_imm
     have inputEq : Eval.eval env (varFromOffset AddiChip.Inputs 0) =
-        ({ circuit := AddiChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+        ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
       eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
     rw [← inputEq]
     change Word.isU64
@@ -3381,7 +3381,7 @@ theorem addwChip_aluTypeGroundingData :
     chip_subst addwChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-      (({ circuit := AddwChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
+      (({ circuit := AddwChip.circuit (p := p), Assumptions := (AddwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
     rw [AddwChip.inputOutputAdapter env]
     simpa only [DecodedInstructionRow.toChipRow, addwViewOf_decodeRow, addwViewOf,
       AddwChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, env] using opCU64
@@ -3497,9 +3497,9 @@ theorem ltChip_aluTypeGroundingData :
     chip_subst ltChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-        (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value ∧
-      Word.isU64 (({ circuit := LtChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      Word.isU64 (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
         env).adapter.op_c_memory.prev_value
     rw [LtChip.inputOutputAdapter env]
     simpa only [LtChip.Inputs.op_b_val, LtChip.Inputs.op_c_val,
@@ -3560,10 +3560,10 @@ theorem shiftLeftChip_aluTypeGroundingData :
     chip_subst shiftLeftChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-        (({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value ∧
       Word.isU64
-        (({ circuit := ShiftLeftChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_c_memory.prev_value
     rw [ShiftLeftChip.inputOutputAdapter env]
     simpa only [ShiftLeftChip.Inputs.op_b_val, ShiftLeftChip.Inputs.op_c_val,
@@ -3628,10 +3628,10 @@ theorem shiftRightChip_aluTypeGroundingData :
     chip_subst shiftRightChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-        (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value ∧
       Word.isU64
-        (({ circuit := ShiftRightChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_c_memory.prev_value
     rw [ShiftRightChip.inputOutputAdapter env]
     simpa only [DecodedInstructionRow.toChipRow, shiftRightViewOf_decodeRow, shiftRightViewOf,
@@ -3894,12 +3894,12 @@ theorem mulChip_rtypeGroundingData :
       (MulChip.circuit (p := p)) env rowConstraints
     have inputFlag := MulChip.eval_opA0_eq_zero_of_shallowConstraints input offset env shallow
     have outputEq : Eval.eval env ((MulChip.circuit (p := p)).output input offset) =
-        ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
+        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
       simp only [input, offset, Component.rowOutput, circuit_norm]
     have flagZero : (MulChip.rowView
-        (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
-        (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
-      change (({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+        (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+        (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
+      change (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
       rw [← outputEq, ← MulChip.eval_output_adapter input offset env]
       rw [MulChip.eval_inputs, Readers.RTypeReader.eval_opA0]
       exact inputFlag
@@ -3916,10 +3916,10 @@ theorem mulChip_rtypeGroundingData :
     have shallow := shallowConstraints_of_componentConstraints
       (MulChip.circuit (p := p)) env rowConstraints
     have inputEq : Eval.eval env input =
-        ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowInput env :=
+        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
       eval_varFromOffset_valueFromOffset MulChip.Inputs 0 env
     have outputEq : Eval.eval env ((MulChip.circuit (p := p)).output input offset) =
-        ({ circuit := MulChip.circuit (p := p) } : Component (ZMod p)).rowOutput env := by
+        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
       simp only [input, offset, Component.rowOutput, circuit_norm]
     have adapter := MulChip.eval_output_adapter input offset env
     rw [inputEq, outputEq] at adapter
@@ -3967,9 +3967,9 @@ theorem divRemChip_rtypeGroundingData :
     let env := Environment.fromArray physical proverData
     have adapter := DivRemChip.inputOutputAdapter env
     change Word.isU64
-        (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_b_memory.prev_value ∧
+        (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_b_memory.prev_value ∧
       Word.isU64
-        (({ circuit := DivRemChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
+        (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
     rw [adapter]
     simpa only [env, DecodedInstructionRow.toChipRow, divRemViewOf_decodeRow, divRemViewOf,
       DivRemChip.rowView, Circuits.Types.RTypeReader.toAdapterView] using operands
@@ -4022,32 +4022,32 @@ theorem jalChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverData
   chip_subst jalChipDescriptor (p := p)
   let env := Environment.fromArray physical data
   change JalChip.Spec
-    (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
-    (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) data at spec
+    (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+    (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) data at spec
   have realInput :
-      (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real = 1 := by
+      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real = 1 := by
     change ((jalChipDescriptor (p := p)).decodeRow data physical).view.is_real = 1 at real
     rw [jalViewOf_decodeRow] at real
     simpa only [jalViewOf, JalChip.rowView] using real
   let readerInput : Readers.JTypeReader.Inputs (ZMod p) :=
-    { cols := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter
-      is_real := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real
-      is_trusted := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real
-      clk_high := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+    { cols := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter
+      is_real := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
+      is_trusted := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
+      clk_high := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).state.clk_high
-      clk_low := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      clk_low := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
           env).state.clk_0_16 +
-        (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+        (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
           env).state.clk_16_24 * 65536
-      pc := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state.pc
+      pc := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state.pc
       opcode := 46
-      wv0 := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv0 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[0]
-      wv1 := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv1 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[1]
-      wv2 := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv2 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[2]
-      wv3 := (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv3 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[3] }
   have reader : Readers.JTypeReader.Spec readerInput := by
     simpa only [readerInput] using spec.1
@@ -4088,7 +4088,7 @@ theorem jalChip_assumptionsLocal :
   chip_subst jalChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset JalChip.Inputs 0) =
-      (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset JalChip.Inputs 0 env
   change Word.isU64 (jalViewOf env).adapter.op_b at immediate
   rw [jalViewOf_adapter, inputEq] at immediate
@@ -4097,7 +4097,7 @@ theorem jalChip_assumptionsLocal :
       (jalViewOf env).state.pc[2], 0] : Word (ZMod p)) at pcWord
   rw [jalViewOf_state, inputEq] at pcWord
   have concrete : JalChip.Assumptions
-      (({ circuit := JalChip.circuit (p := p) } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
       ⟨immediate, pcWord⟩
   exact (jalChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4193,35 +4193,35 @@ theorem uTypeChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverDa
   chip_subst uTypeChipDescriptor (p := p)
   let env := Environment.fromArray physical data
   change UTypeChip.Spec
-    (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
-    (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) data at spec
+    (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+    (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) data at spec
   have realInput :
-      (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real = 1 := by
+      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real = 1 := by
     change ((uTypeChipDescriptor (p := p)).decodeRow data physical).view.is_real = 1 at real
     rw [uTypeViewOf_decodeRow] at real
     simpa only [uTypeViewOf, UTypeChip.rowView] using real
   let readerInput : Readers.JTypeReader.Inputs (ZMod p) :=
-    { cols := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter
-      is_real := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real
-      is_trusted := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real
-      clk_high := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+    { cols := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter
+      is_real := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
+      is_trusted := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
+      clk_high := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).state.clk_high
-      clk_low := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      clk_low := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
           env).state.clk_0_16 +
-        (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
           env).state.clk_16_24 * 65536
-      pc := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state.pc
+      pc := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state.pc
       opcode :=
-        (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_auipc * 48 +
-          (1 - (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_auipc * 48 +
+          (1 - (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
             env).is_auipc) * 49
-      wv0 := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv0 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).add_operation.value[0]
-      wv1 := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv1 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).add_operation.value[1]
-      wv2 := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv2 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).add_operation.value[2]
-      wv3 := (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv3 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).add_operation.value[3] }
   have reader : Readers.JTypeReader.Spec readerInput := by
     simpa only [readerInput] using spec.1
@@ -4264,7 +4264,7 @@ theorem uTypeChip_assumptionsLocal :
   chip_subst uTypeChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset UTypeChip.Inputs 0) =
-      (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset UTypeChip.Inputs 0 env
   change Word.isU64 (uTypeViewOf env).adapter.op_b at immediate
   rw [uTypeViewOf_adapter, inputEq] at immediate
@@ -4278,10 +4278,10 @@ theorem uTypeChip_assumptionsLocal :
     simpa only [DecodedInstructionRow.toChipRow, uTypeViewOf_decodeRow, env] using decode
   have decodeRelation :
       Word.toBitVec64
-          (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
             env).adapter.op_b_imm =
         RV64.lui (UTypeChip.immOf
-          (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter) := by
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter) := by
     rcases selector with selectorZero | selectorOne
     · have opcodeEq :
           (programAccess (uTypeViewOf env)).toRow.opcode =
@@ -4292,7 +4292,7 @@ theorem uTypeChip_assumptionsLocal :
       obtain ⟨word, imm, rd, fetch, decodedAll, opA, opB⟩ :=
         decodesUType uop.LUI decode' opcodeEq immC
       have opBInput :
-          (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
               env).adapter.op_b_imm =
             bitVecToWord ((imm.signExtend 64) <<< 12) := by
         change (uTypeViewOf env).adapter.op_b =
@@ -4300,7 +4300,7 @@ theorem uTypeChip_assumptionsLocal :
         rw [uTypeViewOf_adapter, inputEq] at opB
         exact opB
       have immEq := SP1Clean.UTypeChip.immOf_bind imm
-        (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter opBInput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter opBInput
       rw [opBInput, immEq, toBitVec64_bitVecToWord]
       exact uTypeSignExtend_shiftLeft imm
     · have opcodeEq :
@@ -4312,7 +4312,7 @@ theorem uTypeChip_assumptionsLocal :
       obtain ⟨word, imm, rd, fetch, decodedAll, opA, opB⟩ :=
         decodesUType uop.AUIPC decode' opcodeEq immC
       have opBInput :
-          (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
               env).adapter.op_b_imm =
             bitVecToWord ((imm.signExtend 64) <<< 12) := by
         change (uTypeViewOf env).adapter.op_b =
@@ -4320,11 +4320,11 @@ theorem uTypeChip_assumptionsLocal :
         rw [uTypeViewOf_adapter, inputEq] at opB
         exact opB
       have immEq := SP1Clean.UTypeChip.immOf_bind imm
-        (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env).adapter opBInput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter opBInput
       rw [opBInput, immEq, toBitVec64_bitVecToWord]
       exact uTypeSignExtend_shiftLeft imm
   have concrete : UTypeChip.Assumptions
-      (({ circuit := UTypeChip.circuit (p := p) } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
       ⟨immediate, pcWord, decodeRelation⟩
   exact (uTypeChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4423,32 +4423,32 @@ theorem jalrChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverDat
   chip_subst jalrChipDescriptor (p := p)
   let env := Environment.fromArray physical data
   change JalrChip.Spec
-    (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env)
-    (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput env) data at spec
+    (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+    (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) data at spec
   have realInput :
-      (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real = 1 := by
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real = 1 := by
     change ((jalrChipDescriptor (p := p)).decodeRow data physical).view.is_real = 1 at real
     rw [jalrViewOf_decodeRow] at real
     simpa only [jalrViewOf, JalrChip.rowView] using real
   let readerInput : Readers.ITypeReader.Inputs (ZMod p) :=
-    { cols := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).adapter
-      is_real := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real
-      is_trusted := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env).is_real
-      clk_high := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+    { cols := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter
+      is_real := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
+      is_trusted := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
+      clk_high := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).state.clk_high
-      clk_low := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      clk_low := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
           env).state.clk_0_16 +
-        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
           env).state.clk_16_24 * 65536
-      pc := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput env).state.pc
+      pc := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state.pc
       opcode := 47
-      wv0 := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv0 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[0]
-      wv1 := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv1 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[1]
-      wv2 := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv2 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[2]
-      wv3 := (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowOutput
+      wv3 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[3] }
   have reader : Readers.ITypeReader.Spec readerInput := by
     simpa only [readerInput] using spec.1
@@ -4506,38 +4506,38 @@ theorem jalrChip_assumptionsLocal :
   chip_subst jalrChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset JalrChip.Inputs 0) =
-      (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset JalrChip.Inputs 0 env
   have sourceRaw : Word.isU64
-      (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
         env).adapter.op_b_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
       jalrViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceU64
   have sourceInput : Word.isU64
-      (#v[(({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (#v[(({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[0],
-        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[1],
-        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[2],
-        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[3]] : Word (ZMod p)) := by
     rw [wordFour_eta]
     exact sourceRaw
   have immediateInput : Word.isU64
-      (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
         env).adapter.op_c_imm := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
       jalrViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using immediate
   have pcInput : Word.isU64
-      (#v[(({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state.pc[0],
-        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state.pc[1],
-        (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state.pc[2],
+      (#v[(({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[0],
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[1],
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[2],
         0] : Word (ZMod p)) := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
       jalrViewOf_state, inputEq, env] using pcWord
   have concrete : JalrChip.Assumptions
-      (({ circuit := JalrChip.circuit (p := p) } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
     jalrAssumptions_of_components immediateInput sourceInput pcInput
   exact (jalrChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4669,55 +4669,55 @@ theorem branchChip_assumptionsLocal :
   chip_subst branchChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset BranchChip.Inputs 0) =
-      (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset BranchChip.Inputs 0 env
   obtain ⟨sourceA, sourceB⟩ := operands
   have sourceARaw : Word.isU64
-      (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
         env).adapter.op_a_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceA
   have sourceAInput : Word.isU64
-      (#v[(({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[0],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[1],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[2],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[3]] : Word (ZMod p)) := by
     rw [wordFour_eta]
     exact sourceARaw
   have sourceBRaw : Word.isU64
-      (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
         env).adapter.op_b_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceB
   have sourceBInput : Word.isU64
-      (#v[(({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[0],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[1],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[2],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[3]] : Word (ZMod p)) := by
     rw [wordFour_eta]
     exact sourceBRaw
   have immediateInput : Word.isU64
-      (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
         env).adapter.op_c_imm := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using immediate
   have pcInput : Word.isU64
-      (#v[(({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state.pc[0],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state.pc[1],
-        (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env).state.pc[2],
+      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[0],
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[1],
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[2],
         0] : Word (ZMod p)) := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_state, inputEq, env] using pcWord
   have concrete : BranchChip.Assumptions
-      (({ circuit := BranchChip.circuit (p := p) } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
     branchAssumptions_of_components immediateInput sourceAInput sourceBInput pcInput
   exact (branchChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4923,7 +4923,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The MemoryBump table's produced Memory ledger retains every active occurrence. -/
 theorem memoryBump_producedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel) =
+    producedMessages (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel) =
       (realMemoryBumpRows witness).map
         (fun row => MemoryBumpChip.pushedMessage (memoryBumpRow witness.data row)) := by
   have projection := memoryBumpRows_projection (memoryBumpTable witness) witness.data
@@ -4936,7 +4936,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The MemoryBump table's consumed Memory ledger retains every active occurrence. -/
 theorem memoryBump_consumedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data memoryChannel) =
+    consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel) =
       (realMemoryBumpRows witness).map
         (fun row => MemoryBumpChip.pulledMessage (memoryBumpRow witness.data row)) := by
   have projection := memoryBumpRows_projection (memoryBumpTable witness) witness.data
@@ -4949,7 +4949,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The Halt table's produced Memory ledger retains every active occurrence. -/
 theorem halt_producedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) =
+    producedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) =
       (realHaltRows witness).flatMap (fun row =>
         [HaltChip.memPushedMessage (haltRow witness.data row)
            (haltRow witness.data row).x5_memory 5 4,
@@ -4967,7 +4967,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The Halt table's consumed Memory ledger retains every active occurrence. -/
 theorem halt_consumedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) =
+    consumedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) =
       (realHaltRows witness).flatMap (fun row =>
         [HaltChip.memPulledMessage (haltRow witness.data row)
            (haltRow witness.data row).x5_memory 5,
@@ -4985,7 +4985,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The SyscallInstrs table's produced Memory ledger retains every active occurrence. -/
 theorem syscallInstrs_producedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel) =
+    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) =
       (realSyscallInstrsRows witness).flatMap (fun row =>
         [SyscallInstrsChip.memPushedMessage (syscallInstrsRow witness.data row)
            (syscallInstrsRow witness.data row).op_a 4 (syscallInstrsRow witness.data row).op_a_value,
@@ -5003,7 +5003,7 @@ omit [Fact (2 ^ 17 < p)] in
 /-- The SyscallInstrs table's consumed Memory ledger retains every active occurrence. -/
 theorem syscallInstrs_consumedMessages_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints) :
-    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel) =
+    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel) =
       (realSyscallInstrsRows witness).flatMap (fun row =>
         [SyscallInstrsChip.memPulledMessage (syscallInstrsRow witness.data row)
            (syscallInstrsRow witness.data row).op_a_memory (syscallInstrsRow witness.data row).op_a,
@@ -5023,7 +5023,7 @@ the fact that let `SyscallTableInactive`'s two Memory-silence fields be deleted.
 theorem syscallInstrs_producedMessages_nil_of_inactive
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (inactive : realSyscallInstrsRows witness = []) :
-    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel)
+    producedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)
       = [] := by
   rw [syscallInstrs_producedMessages_eq witness constraints, inactive, List.flatMap_nil]
 
@@ -5032,7 +5032,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem syscallInstrs_consumedMessages_nil_of_inactive
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (inactive : realSyscallInstrsRows witness = []) :
-    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) witness.data memoryChannel)
+    consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)
       = [] := by
   rw [syscallInstrs_consumedMessages_eq witness constraints, inactive, List.flatMap_nil]
 
@@ -5041,7 +5041,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem halt_producedMessages_nil_of_haltFree
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (haltFree : realHaltRows witness = []) :
-    producedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) = [] := by
+    producedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) = [] := by
   rw [halt_producedMessages_eq witness constraints, haltFree, List.flatMap_nil]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -5049,7 +5049,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem halt_consumedMessages_nil_of_haltFree
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (haltFree : realHaltRows witness = []) :
-    consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data memoryChannel) = [] := by
+    consumedMessages (typedTableInteractionsWith (haltTable witness) memoryChannel) = [] := by
   rw [halt_consumedMessages_eq witness constraints, haltFree, List.flatMap_nil]
 
 omit [Fact (2 ^ 25 < p)] in
@@ -5212,8 +5212,8 @@ closed form `memoryBumpRow_closedForm` of `Soundness/BumpDecode.lean` — a rewr
 unification, so the decoded row's `valueFromOffset` body is never normalised. -/
 theorem memoryBump_evidence_of_component
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit })
-    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
     (real : (memoryBumpRow data row).is_real = 1) :
     (memoryBumpRow data row).clk_0_16.val < 2 ^ 16 ∧
@@ -5245,19 +5245,22 @@ theorem memoryBump_evidence_of_component
       < 2 ^ 16 ∧
     (memoryBumpRow data row).access.access_timestamp.diff_high_limb.val
       < 2 ^ 8 := by
+  have cells : memoryBumpRow data row = memoryBumpRow table.data row :=
+    ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
+  rw [cells] at real ⊢
   have rowConstraints := constraints row tableMem
   rw [component] at rowConstraints
   have shallow := shallowConstraints_of_componentConstraints MemoryBumpChip.circuit
-    (Environment.fromArray row data) rowConstraints
+    (Environment.fromArray row table.data) rowConstraints
   have byteG : ((MemoryBumpChip.main (varFromOffset MemoryBumpChip.Inputs 0 :
       Var MemoryBumpChip.Inputs (ZMod p))).operations
         (size MemoryBumpChip.Inputs)).ChannelGuarantees byteChannel.toRaw
-        (Environment.fromArray row data) := by
+        (Environment.fromArray row table.data) := by
     have h := byte row tableMem
     rw [Component.channelGuarantees_iff, component,
-      Component.rowOperations_mk] at h
+      Component.rowOperations] at h
     exact h
-  have realEnv : Expression.eval (Environment.fromArray row data)
+  have realEnv : Expression.eval (Environment.fromArray row table.data)
       ((varFromOffset MemoryBumpChip.Inputs 0 : Var MemoryBumpChip.Inputs (ZMod p)).is_real)
       = 1 := by
     -- `simp only` (not `rwa`): the closing `assumption` of `rwa` would unify the rewritten
@@ -5265,7 +5268,7 @@ theorem memoryBump_evidence_of_component
     simp only [memoryBumpRow_closedForm] at real
     exact real
   have core := memoryBump_evidence_of_env (varFromOffset MemoryBumpChip.Inputs 0)
-    (size MemoryBumpChip.Inputs) (Environment.fromArray row data) shallow byteG realEnv
+    (size MemoryBumpChip.Inputs) (Environment.fromArray row table.data) shallow byteG realEnv
   -- `simp only` (not `rw`): it iota-reduces the rewritten structure literal's projections on the
   -- spot, so `exact core` matches syntactically.  A bare `rw` leaves `(⟨…⟩ : Inputs _).clk_0_16`
   -- standing and hands the reduction to unification, which blows the budget.
@@ -5332,8 +5335,8 @@ private lemma bump_val65536 : ((65536 : ZMod p)).val = 65536 := by
 recombined low clock (`ClkBound`) and the recombined high clock are genuine 24-bit values. -/
 theorem memoryBump_pushedMessage_clkFacts_of_component
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit })
-    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
     (real : (memoryBumpRow data row).is_real = 1) :
       SP1Clean.Channels.MemoryMsg.ClkBound
@@ -5431,8 +5434,8 @@ produced side of the widened memory balance — the row's pulled and pushed reco
 `compare_low`-selected difference evidence (`bump_clkNat_lt`). -/
 theorem memoryBump_isRefresh_of_component
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit })
-    (constraints : table.Constraints data) (byte : table.ChannelGuarantees data byteChannel.toRaw)
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
     (real : (memoryBumpRow data row).is_real = 1) :
       SP1Clean.Channels.MemoryMsg.ClkBound

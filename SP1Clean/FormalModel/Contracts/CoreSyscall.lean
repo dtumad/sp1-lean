@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.SyscallTable
+import SP1Clean.Model.Core.SyscallEncoding
 import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 
 /-! # Native syscall profile contracts

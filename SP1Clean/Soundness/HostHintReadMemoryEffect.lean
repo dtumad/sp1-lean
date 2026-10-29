@@ -4,7 +4,7 @@ import SP1Clean.Soundness.HostExecutionEffect
 
 /-! # Hint execution and complete grounding effects
 
-The complete physical word inventory identifies every updated Sail RAM cell, including the
+The complete active word inventory identifies every updated Sail RAM cell, including the
 mandatory padding word. Canonical RAM keys derive destination alignment; cells outside that
 inventory are unchanged. The installed AIR derives a real host execution at the exact next
 paired-replay position, authenticating the complete event including its PC and recombined clock.
@@ -215,18 +215,18 @@ private theorem source_memory_effect
       (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (host : HostState) (bytes : Bytes) (remaining : List Bytes)
-    (inventory : ((TransitionView.readIndexedRows HintReadCoverage.variants
+    (inventory : ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data
-        (wordTables_aligned (HostHintQueueBoundary.projected witness))) witness.data).map HintReadWrites.produced).Perm
+        (wordTables (HostHintQueueBoundary.projected witness))
+        (wordTables_aligned (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
       (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes))
     (state : SailState) (pc : BitVec 64) :
-    (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event,
+    (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event,
       locContent ((HostHintReadChip.execution (HostHintReadCoverage.input env) host bytes remaining).apply state pc)
         (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) ∧
-    (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
+    (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
       locContent ((HostHintReadChip.execution (HostHintReadCoverage.input env) host bytes remaining).apply state pc)
         (.ram cell) = locContent state (.ram cell)) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
@@ -236,13 +236,12 @@ private theorem source_memory_effect
   have selected := handler_wordsAt (HostHintQueueBoundary.projected witness) interface checks calls ordering
   simp only [HostHintQueueBoundary.projected_data] at selected
   have selected := selected event member env handler clock
-  have writes : ((wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-      (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).map HintReadWrites.produced).Perm
+  have writes : ((wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+      (wordTables (HostHintQueueBoundary.projected witness))) event).map HintReadWrites.produced).Perm
       (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by
     rw [selected]
     exact inventory
   have accesses := source_word_touches witness constraints balanced
-  simp only [HostHintQueueBoundary.projected_data] at accesses
   exact hint_memory_effect (HostHintReadCoverage.input env) host bytes remaining _
     (fun row present => accesses row (List.mem_filter.mp present).1)
     writes state pc
@@ -263,18 +262,18 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
-      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event,
+      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event,
         locContent next.sail (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) ∧
-      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
+      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
         locContent next.sail (.ram cell) = locContent current.sail (.ram cell)) := by
   obtain ⟨n, current, _, bytes, remaining, atIndex, paired, _, _, _, ran, inventory⟩ :=
     carrier.hintRead_run valid constraints balanced event member env handler clock pull
@@ -302,10 +301,16 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
   have handlerMember : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data := by
+      (queueTables (HostHintQueueBoundary.projected witness)) := by
     obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
     simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
       List.zip_cons_cons, List.flatMap_cons]
+    have shared : (handlerTable (HostHintQueueBoundary.projected witness)).data =
+        (HostHintQueueBoundary.projected witness).data :=
+      (HostHintQueueBoundary.projected witness).same_data _
+        (handlerTable_mem (HostHintQueueBoundary.projected witness))
+    rw [HostHintQueueBoundary.projected_data] at shared
+    simp only [Table.environment, shared]
     exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
   have matched := HostQueueCPUOrder.call_cpu_at (HostHintQueueBoundary.projected witness) interface checks calls ordering
   simp only [HostHintQueueBoundary.projected_data] at matched
@@ -392,20 +397,20 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
     (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+    (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
       (∀ cell : RamCell, locContent next.sail (.ram cell) = locContent current.sail (.ram cell)) ∧
-      wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event = [] := by
+      wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event = [] := by
   obtain ⟨n, current, atIndex, paired, ran⟩ :=
     carrier.hintLength_run valid constraints balanced event member empty env handler clock pull
       (fun mp present => (currency mp present).2.2)
@@ -622,27 +627,27 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     (sameEvent : event = .syscall (HostCallLedger.input physical).instruction)
     (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+    (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
-      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event,
+      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event,
         locContent next.sail (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) ∧
-      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
+      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
         locContent next.sail (.ram cell) = locContent current.sail (.ram cell))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) ∧
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
     FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
-  let facts := eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-    (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) := by
+  let facts := eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+    (wordTables (HostHintQueueBoundary.projected witness))) event
   suffices advance : ∀ (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid)
       carrier.timeline facts.statePull)
       (currency : ∀ mp ∈ facts.memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
@@ -711,14 +716,13 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
       simpa only [facts, eventFacts, sameEvent, ExecutionRow.facts] using successor
     · intro message messageMem
       change message ∈ (event.facts witness.data).memPushes ++
-        (wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).map (fun row => (touch row).2) at messageMem
+        (wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event).map (fun row => (touch row).2) at messageMem
       rcases List.mem_append.mp messageMem with originalMem | wordMem
       · apply registers message
         simpa only [sameEvent, ExecutionRow.facts] using originalMem
       · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp wordMem
         have accesses := source_word_touches witness constraints balanced
-        simp only [HostHintQueueBoundary.projected_data] at accesses
         have access := accesses row (List.mem_filter.mp rowMem).1
         have aligned := (source_touches_at valid witness constraints balanced event row rowMem).1
         rw [ExecutionRow.edge_eq_facts, cpuTime] at aligned
@@ -742,29 +746,29 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (queueRow : HostQueueOrder.Row (p := p))
     (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow)
     (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
-    (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event).memPulls,
+    (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
-      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event,
+      (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event,
         locContent next.sail (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) ∧
-      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-          (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
+      (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+          (wordTables (HostHintQueueBoundary.projected witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
         locContent next.sail (.ram cell) = locContent current.sail (.ram cell))) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) ∧
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
     FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have interface := source_interface (p := p) source.host.io.hints
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
@@ -789,16 +793,22 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
       (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) ∧
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
     FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (none, env) ?_ clock
     (fun pull currency => carrier.hintRead_step valid constraints balanced event member env handler clock pull currency)
   obtain ⟨physical, physicalMem, rfl⟩ := List.mem_map.mp handler
   simp only [TransitionView.readIndexedRows, HostQueueOrder.indices, queueTables,
     List.zip_cons_cons, List.flatMap_cons]
+  have shared : (handlerTable (HostHintQueueBoundary.projected witness)).data =
+      (HostHintQueueBoundary.projected witness).data :=
+    (HostHintQueueBoundary.projected witness).same_data _
+      (handlerTable_mem (HostHintQueueBoundary.projected witness))
+  rw [HostHintQueueBoundary.projected_data] at shared
+  simp only [Table.environment, shared]
   exact List.mem_append_left _ (List.mem_map_of_mem physicalMem)
 
 /-- Both physical HINT_LEN variants supply the existing timed engine's complete step and
@@ -813,14 +823,14 @@ theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env)) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) ∧
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
     FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (some empty, env) handler clock
   intro pull currency
   obtain ⟨n, current, next, atIndex, before, after, step, unchanged, noWords⟩ :=
@@ -831,10 +841,9 @@ theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem read_handler_member (first : Table (ZMod p)) (others : List (Table (ZMod p)))
-    (data : ProverData (ZMod p))
     (env : Environment (ZMod p))
-    (member : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (first :: others) data) :
-    env ∈ first.table.map (Environment.fromArray · data) := by
+    (member : (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (first :: others)) :
+    env ∈ first.table.map first.environment := by
   cases others with
   | nil => simpa [TransitionView.readIndexedRows, HostQueueOrder.indices, List.mem_map] using member
   | cons second rest =>
@@ -852,19 +861,27 @@ theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (queueRow : HostQueueOrder.Row (p := p))
     (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
-      (queueTables (HostHintQueueBoundary.projected witness)) witness.data)
+      (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow) :
     LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) ∧
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
     FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
-      (eventFacts witness.data (TransitionView.readIndexedRows HintReadCoverage.variants
-        (wordTables (HostHintQueueBoundary.projected witness)) witness.data) event) := by
+      (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
+        (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   rcases queueRow with ⟨index, env⟩
   cases index with
   | none =>
-    exact carrier.hintRead_engineFacts valid constraints balanced event member env
-      (read_handler_member _ _ witness.data env queueMember) clock
+    have handler := read_handler_member _ _ env queueMember
+    have shared : (handlerTable (HostHintQueueBoundary.projected witness)).data =
+        (HostHintQueueBoundary.projected witness).data :=
+      (HostHintQueueBoundary.projected witness).same_data _
+        (handlerTable_mem (HostHintQueueBoundary.projected witness))
+    rw [HostHintQueueBoundary.projected_data] at shared
+    change env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
+      (Environment.fromArray · (handlerTable (HostHintQueueBoundary.projected witness)).data) at handler
+    rw [shared] at handler
+    exact carrier.hintRead_engineFacts valid constraints balanced event member env handler clock
   | some empty =>
     exact carrier.hintLength_engineFacts valid constraints balanced event member empty env queueMember clock
 

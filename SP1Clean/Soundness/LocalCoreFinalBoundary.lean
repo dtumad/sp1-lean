@@ -44,22 +44,31 @@ def finalWitness {image : ProgramImage} {source : ExecutionSnapshot}
 theorem finalTables_spec_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints)
-    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw) :
+    (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (finalWitness witness).tables.take (FinalMemoryEnsemble.inventory (p := p)).views.length,
-      table.Spec (finalWitness witness).data := by
-  intro table member row rowMem
+      table.Spec := by
+  intro table member
   have componentMem : table.component ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) := by
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
     rw [List.map_take, (finalWitness witness).tables_map_component] at mapped
     simpa only [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
       OrderedBoundaryEnsemble.ensemble, List.take_left', List.length_map] using mapped
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
-  have tableMem : table ∈ witness.tables := List.mem_of_mem_drop (List.mem_of_mem_take member)
-  have byte := bytes table tableMem row rowMem
-  have checked := constraints table tableMem row rowMem
+  change table ∈ (withDerivedData (witness.tables.drop 3)).take
+    (FinalMemoryEnsemble.inventory (p := p)).views.length at member
+  rw [withDerivedData, ← List.map_take] at member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  intro row rowMem
+  change original.component.Spec (Environment.fromArray row (deriveProverData (witness.tables.drop 3)))
+  have tableMem : original ∈ witness.tables := List.mem_of_mem_drop (List.mem_of_mem_take originalMember)
+  have byte := bytes original tableMem row rowMem
+  have checked := constraints original tableMem row rowMem
+  have shared : original.data = witness.data := witness.same_data original tableMem
+  rw [Table.environment, shared] at byte checked
+  change view.component = original.component at same
   rw [← same] at byte checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-  exact FinalMemoryEnsemble.view_spec_setData id row witness.data (finalWitness witness).data
+  exact FinalMemoryEnsemble.view_spec_setData id row witness.data (deriveProverData (witness.tables.drop 3))
     (FinalMemoryEnsemble.view_spec id _ checked byte)
 
 /-- The complete local AIR closes the finalizers' Byte requirements. -/
@@ -67,7 +76,7 @@ theorem finalTables_spec {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (finalWitness witness).tables.take (FinalMemoryEnsemble.inventory (p := p)).views.length,
-      table.Spec (finalWitness witness).data :=
+      table.Spec :=
   finalTables_spec_of_byte witness constraints
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)
 
@@ -82,7 +91,7 @@ theorem final_records_canonical {image : ProgramImage} {source : ExecutionSnapsh
 private theorem sourceTables_final_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     (witness.tables.take 3).flatMap
-      (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) = [] := by
+      (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) = [] := by
   apply List.flatMap_eq_nil_iff.mpr
   intro table member
   apply table.interactionsWith_nil_of_channel_not_mem
@@ -124,16 +133,11 @@ theorem finalWitness_interactions {image : ProgramImage} {source : ExecutionSnap
     (finalWitness witness).interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw =
       witness.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw := by
   have suffix : witness.tables.flatMap
-      (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
+      (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
       (witness.tables.drop 3).flatMap
-        (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) := by
+        (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) := by
     conv_lhs => rw [← List.take_append_drop 3 witness.tables]
     rw [List.flatMap_append, sourceTables_final_silent, List.nil_append]
-  have cells : (witness.tables.drop 3).flatMap
-      (·.interactionsWith (finalWitness witness).data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
-      (witness.tables.drop 3).flatMap
-        (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) :=
-    congrArg List.flatten (List.map_congr_left fun table _ => table.interactionsWith_setData _ _ _)
   have different : (LocalSourceBoundary.checker image source).channel (baseEnsemble (p := p) image source) ≠
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw := by
     intro equal
@@ -147,16 +151,15 @@ theorem finalWitness_interactions {image : ProgramImage} {source : ExecutionSnap
       OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).circuitOperations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw
       (Environment.fromInput (Input := unit) () (finalWitness witness).data) ++
-        (witness.tables.drop 3).flatMap (·.interactionsWith (finalWitness witness).data
+        (withDerivedData (witness.tables.drop 3)).flatMap (·.interactionsWith
           (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) =
     boundaryVerifier.circuitOperations.interactionValuesWith
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw
       (Environment.fromInput witness.publicInput witness.data) ++
-        witness.tables.flatMap (·.interactionsWith witness.data
-          (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw)
-  rw [suffix, cells, verifier_final_interactions]
+        witness.tables.flatMap (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw)
+  rw [suffix, withDerivedData_interactionsWith, verifier_final_interactions]
   apply congrArg (fun front => front ++ (witness.tables.drop 3).flatMap
-    (·.interactionsWith witness.data (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw))
+    (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw))
   simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
     Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
@@ -197,12 +200,40 @@ theorem final_records_locations_nodup {image : ProgramImage} {source : Execution
 /-- The final inventory is precisely the negative Memory ledger of its three physical tables. -/
 theorem final_memory_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
-      (FinalMemoryEnsemble.records (finalWitness witness)).map (memoryChannel.emittedValue (-1)) :=
+    ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
+      (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map
+        (fun row => memoryChannel.emittedValue (-row.1) row.2) :=
 by
-  have cells : ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
-      ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith (finalWitness witness).data memoryChannel.toRaw) :=
-    congrArg List.flatten (List.map_congr_left fun table _ => table.interactionsWith_setData _ _ _)
-  exact cells.trans (FinalMemoryEnsemble.memory_interactions_eq (finalWitness witness))
+  have ledger := FinalMemoryEnsemble.memory_interactions_eq (finalWitness witness)
+  change ((withDerivedData (witness.tables.drop 3)).take 3).flatMap
+    (·.interactionsWith memoryChannel.toRaw) = _ at ledger
+  simpa only [withDerivedData, ← List.map_take, List.flatMap_map, Function.comp_def,
+    Table.interactionsWith_setData] using ledger
+
+/-- Final activity follows from raw constraints, including after canonical-data projection. -/
+theorem final_physicalRecords_binary {image : ProgramImage} {source : ExecutionSnapshot}
+    (witness : EnsembleWitness (ensemble (p := p) image source)) (constraints : witness.Constraints) :
+    ∀ row ∈ FinalMemoryEnsemble.physicalRecords (finalWitness witness), row.1 = 0 ∨ row.1 = 1 := by
+  apply FinalMemoryEnsemble.inventory.physicalRecords_binary_of_constraints
+  intro table member
+  have componentMem : table.component ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) := by
+    have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
+    rw [List.map_take, (finalWitness witness).tables_map_component] at mapped
+    simpa only [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
+      OrderedBoundaryEnsemble.ensemble, List.take_left', List.length_map] using mapped
+  obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
+  change table ∈ (withDerivedData (witness.tables.drop 3)).take
+    (FinalMemoryEnsemble.inventory (p := p)).views.length at member
+  rw [withDerivedData, ← List.map_take] at member
+  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  intro row rowMem
+  change original.component.operations.ConstraintsHold
+    (Environment.fromArray row (deriveProverData (witness.tables.drop 3)))
+  apply Component.constraintsHold_setData original.component ?_
+    (constraints original (List.mem_of_mem_drop (List.mem_of_mem_take originalMember)) row rowMem)
+  change view.component = original.component at same
+  rw [← same]
+  obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+  exact FinalMemoryEnsemble.view_lookups id
 
 end SP1Clean.Soundness.LocalCore

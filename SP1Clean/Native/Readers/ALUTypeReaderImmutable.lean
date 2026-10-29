@@ -21,9 +21,7 @@ The op_b/op_c reads and the `imm_c` immediate machinery (op_c gated `is_real - i
 
 A `GeneralFormalCircuit` (output `unit`) over the chip-owned `cols` adapter block, pulling/pushing the
 Program + Memory buses (deriving the structural `RowSpec` and `isU64 ∧ ClkBound` guarantees from its
-pulls — the W11 polarity flips); faithfulness to SP1's generated constraint list is the chip's
-`Faithful/AluX0Chip.lean` anchor (the reader's constraints are inlined there — `eval_op_a_immutable` is a
-plain method, not an `SP1Operation`). -/
+pulls). Released instruction comparisons exercise the immutable adapter through AluX0. -/
 
 namespace SP1Clean.Readers.ALUTypeReaderImmutable
 

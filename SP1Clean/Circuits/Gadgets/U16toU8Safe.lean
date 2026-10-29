@@ -11,7 +11,7 @@ import Clean.Utils.Tactics.CircuitProofStart
 
 Four gated byte-channel pulls certify the low/high decomposition of four 16-bit limbs.
 The low-byte witness constructor and bundled assertion share the pure decomposition contract.
-`RawSpec` remains implementation evidence for transitional Rust faithfulness.
+`RawSpec` records intermediate constraint evidence used by the local proof.
 -/
 
 @[expose] public section

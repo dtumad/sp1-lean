@@ -35,7 +35,7 @@ private theorem inventory_frame
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data) :
+    (specs : ∀ table ∈ queueTables witness, table.Spec) :
     ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), HostFrameSafe row.event := by
   have noWrite := (HostQueueCallProjection.calls_projection witness interface constraints bytes specs).1
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface) constraints calls
@@ -64,14 +64,14 @@ private theorem queue_terminal
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (specs : ∀ table ∈ queueTables witness, table.Spec witness.data)
+    (specs : ∀ table ∈ queueTables witness, table.Spec)
     {cpu : List (ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness)))
     (walk : Walk.IsWalk (ExecutionRow.canonEdge witness.data)
       (initialBoundaryStateMessage witness.publicInput) (finalBoundaryStateMessage witness.publicInput) cpu)
     {path : List (HostQueueOrder.Row (p := p))} {initial final : HostHintQueue.State (ZMod p)}
     {upper : HintQueue.Store}
-    (queueExhaustive : path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) witness.data))
+    (queueExhaustive : path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness)))
     (queueWalk : Walk.IsWalk HostQueueOrder.edge initial final path)
     (history : HostHintQueueHistory.History source.host.io.hints final upper path)
     (policy : HostPolicy) (program : Target.GuestProgram) (target : ExecutionState)

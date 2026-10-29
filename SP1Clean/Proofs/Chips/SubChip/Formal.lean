@@ -83,7 +83,7 @@ theorem completeness :
   rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- Sub's exact Memory-channel interaction list.  Keeping this list beside `circuit` makes Clean's
-exposure interface the single structural source consumed by both faithfulness and semantic grounding. -/
+exposure interface the single structural source consumed by semantic grounding. -/
 def exposedMemoryInteractions (input : Var Inputs (ZMod p)) (offset : ℕ) :
     List (ChannelInteraction (memoryChannel (p := p))) :=
   [ memoryChannel.pulledIf input.is_real
@@ -224,8 +224,8 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := SubChip.circuit (p := p) } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations_mk,
+    ({ circuit := SubChip.circuit (p := p), Assumptions := (SubChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
+  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
     SubChip.circuit_main_eq]
   simp [SubChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.RTypeReader.circuit, Readers.RTypeReader.main,

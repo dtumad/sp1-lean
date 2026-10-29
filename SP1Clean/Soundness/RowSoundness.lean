@@ -160,11 +160,13 @@ theorem witness_decodedRow_finishedChannelGuarantees
   constructor
   · apply channelGuarantees_of_mem_decodeInstructionTables witness.data byteChannel.toRaw
       (witness_instructionTables_aligned witness)
+      (fun table member => witness.same_data table (List.mem_of_mem_take member))
     · intro table tableMem
       exact (finished.2 table (List.mem_of_mem_take tableMem)).1
     · exact decodedMem
   · apply channelGuarantees_of_mem_decodeInstructionTables witness.data programChannel.toRaw
       (witness_instructionTables_aligned witness)
+      (fun table member => witness.same_data table (List.mem_of_mem_take member))
     · intro table tableMem
       exact (finished.2 table (List.mem_of_mem_take tableMem)).2
     · exact decodedMem

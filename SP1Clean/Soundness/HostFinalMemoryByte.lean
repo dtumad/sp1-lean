@@ -110,7 +110,7 @@ theorem byte_guarantees
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannel byteChannel.toRaw) :
-    ∀ table ∈ witness.tables, table.ChannelGuarantees witness.data byteChannel.toRaw := by
+    ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw := by
   apply (witness.channelGuarantees_of_component_requirements byteChannel.toRaw checked balanced
     ?_ (component_byte_requirements interface)).2
   intro input data interaction emitted _
@@ -122,7 +122,7 @@ theorem baseWitness_byte_of_accepted
     (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
-    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees (baseWitness witness).data byteChannel.toRaw := by
+    ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees byteChannel.toRaw := by
   apply baseWitness_byte witness (byte_guarantees witness interface checked (balanced _ ?_))
   simp [ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
     base, HostHintQueueBoundary.ensemble, HaltPadding.install, HostHintReadLocal.ensemble,

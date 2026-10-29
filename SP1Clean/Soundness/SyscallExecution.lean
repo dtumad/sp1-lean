@@ -682,29 +682,29 @@ theorem walkedTouchBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
       TimedGrounding.optMS (memoryInitFrontier witness loc)
           + TimedGrounding.pushesAt (walkedRows.map (WalkedRow.facts g)) loc
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+            (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
         TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
           + TimedGrounding.pullsAt (walkedRows.map (WalkedRow.facts g)) loc
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (haltTable witness) witness.data
+            (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p)))) :
     ∀ loc : Semantics.MemLoc,
       TimedGrounding.optMS (memoryInitFrontier witness loc)
           + (touchPairsAt (walkedRows.map (walkedTouches t)) loc).map Prod.snd
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+            (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) =
         TimedGrounding.optMS (memoryFinalizeFrontier witness loc)
           + (touchPairsAt (walkedRows.map (walkedTouches t)) loc).map Prod.fst
           + Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness) witness.data
+            (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
               Channels.memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
   obtain ⟨pushProj, pullProj, locProj⟩ :=
     walkedTouches_projections initialClock g t walkedRows rowOK instrPush instrPull instrLoc

@@ -26,7 +26,12 @@ private theorem initialView_spec (image : ProgramImage)
     view.component.Spec env := by
   have assumptions : view.component.CircuitAssumptions env := by
     simp only [InitialMemoryEnsemble.views, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl <;> trivial
+    rcases member with rfl | rfl | rfl
+    · intro _
+      trivial
+    · intro _
+      trivial
+    · trivial
   have channels : view.component.circuit.channelsWithGuarantees ⊆
       [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
         (InitialMemoryLookup.membership image.initialMemory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw] := by
@@ -64,14 +69,18 @@ No row or prover data is synthesized or replaced. -/
 def initialWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
     EnsembleWitness (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables (p := p) image ++ [ramMembership image]) []
       (baseEnsemble image).unique_names) :=
-  EnsembleWitness.ofTables _ witness.tables () witness.tables_map_component
+  { tables := witness.tables
+    publicInput := ()
+    same_length := witness.same_length
+    same_circuits := witness.same_circuits
+    same_data := witness.same_data }
 
 /-- The Byte closure of the combined ensemble discharges every initial provider's local
 assumptions. Other instruction/finalizer specifications are not required at this stage. -/
 theorem initialTables_spec {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ table ∈ (initialWitness witness).tables.take (InitialMemoryEnsemble.views (p := p) image).length,
-      table.Spec witness.data := by
+      table.Spec := by
   intro table member row rowMem
   have componentMem : table.component ∈ (InitialMemoryEnsemble.views (p := p) image).map (·.component) := by
     have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
@@ -136,7 +145,9 @@ theorem afterInitialTables_silent (image : ProgramImage) :
           (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
       simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
         byteChannel, Channel.toRaw]
-  · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ [programChannel.toRaw]
+  · change (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName).toRaw ∉
+      (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
     simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel, Channel.toRaw]
   · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
@@ -178,7 +189,7 @@ theorem initialWitness_interactions {image : ProgramImage}
     (Environment.fromInput witness.publicInput witness.data) ++ _
   rw [verifierProgram_values, Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil,
     verifier_initial_interactions]
-  apply congrArg (fun front => front ++ witness.tableContext.interactionsWith
+  apply congrArg (fun front => front ++ witness.toTables.interactionsWith
     (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw)
   change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
   simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
@@ -233,7 +244,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
   have boot := (boot_balanced_iff witness).mp
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
   have byte := (finishedChannel_guarantees image witness constraints balanced).1.1
-  have sourceByte : ({ circuit := verifier image } : Component (ZMod p)).operations.ChannelGuarantees
+  have sourceByte : ({ circuit := verifier image, Assumptions := (verifier image).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromInput witness.publicInput witness.data) := by
     intro interaction member selected
     apply byte interaction ?_ selected
@@ -248,7 +259,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
       GeneralFormalCircuit.toSubcircuit_interactions, sp1StateVerifier,
       sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
       circuit_norm] using member
-  have checked : ({ circuit := verifier image } : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := verifier image, Assumptions := (verifier image).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromInput witness.publicInput witness.data) := by
     rw [Operations.ConstraintsHold, Component.constraints_eq, Component.lookups_eq]
     change (∀ expression ∈ ((verifierMain image (varFromOffset SP1PublicIO 0)).operations (size SP1PublicIO)).constraints,
@@ -259,7 +270,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
       simpa only [verifierMain_constraints] using checks
     · simp [Component.rowOperations, verifier, verifierMain, sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
         circuit_norm]
-  have spec := component_spec_of_byte ({ circuit := verifier image } : Component (ZMod p))
+  have spec := component_spec_of_byte ({ circuit := verifier image, Assumptions := (verifier image).Assumptions } : Component (ZMod p))
     (List.Subset.refl _) _ (by trivial) checked sourceByte
   simpa only [Component.Spec, verifier, Component.rowInput, circuit_norm,
     ProvableType.valueFromOffset_zero_fromInput_eq] using spec
@@ -277,27 +288,42 @@ def programTable {image : ProgramImage} (witness : EnsembleWitness (ensemble (p 
 
 theorem programTable_component {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (programTable witness).component = ({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)) :=
+    (programTable witness).component = (FixedProgramProvider.Preprocessed.component image) :=
   (witness.same_circuits 6 (by change 6 < (tables image).length; rw [tables_length]; decide)).symm
 
-/-- Every physical Program row is authenticated against this image's ROM and official Sail,
-including zero-multiplicity rows. No provider-validity premise is supplied. -/
+/-- Every counted Program row is authenticated against this image's ROM and official Sail.
+The fixed prefix and canonical data supply all provider assumptions. -/
 theorem program_row_committed {image : ProgramImage} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints)
-    (row : Array (ZMod p)) (member : row ∈ (programTable witness).table) :
+    (row : Array (ZMod p)) (member : row ∈ (programTable witness).table)
+    (active : (valueFromOffset FixedProgramProvider.Preprocessed.Input 0
+      (Environment.fromArray row witness.data)).2 ≠ 0) :
     Target.committedInROM (image.toGuestProgram valid)
-      (rowOfMsg (({ circuit := DecodedProgramProvider.circuit image } : Component (ZMod p)).rowInput
-        (Environment.fromArray row witness.data)).toMessage) := by
-  have checked := constraints (programTable witness) (List.getElem_mem (programIndex_bound witness)) row member
-  rw [programTable_component witness] at checked
-  exact DecodedProgramProvider.constraints_committed valid _ checked
+      (rowOfMsg (valueFromOffset FixedProgramProvider.Preprocessed.Input 0
+        (Environment.fromArray row witness.data)).1) := by
+  have tableMem := List.getElem_mem (programIndex_bound witness)
+  have shared : (programTable witness).data = witness.data :=
+    witness.same_data (programTable witness) tableMem
+  simpa only [Table.environment, shared] using
+    FixedProgramProvider.Preprocessed.table_committed valid (programTable witness)
+      (programTable_component witness) (witness.dataConsistency_of_mem _ tableMem)
+      (constraints _ tableMem) row member
+      (by simpa only [Table.environment, shared] using active)
 
 /-- The authenticated initial inventory is exactly the physical Memory push list.
 Together with authentication and uniqueness, this is the initialization interface for grounding. -/
 theorem initial_memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
-    (witness.tables.take 3).flatMap (·.interactionsWith witness.data memoryChannel.toRaw) =
-      (InitialMemoryEnsemble.records (initialWitness witness)).map memoryChannel.pushedValue :=
+    (witness.tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
+      (InitialMemoryEnsemble.physicalRecords (initialWitness witness)).map
+        (fun row => memoryChannel.pushedIfValue row.1 row.2) :=
   InitialMemoryEnsemble.memory_interactions_eq (initialWitness witness)
+
+/-- Boot activity is Boolean from the original raw table constraints. -/
+theorem initial_physicalRecords_binary {image : ProgramImage}
+    (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints) :
+    ∀ row ∈ InitialMemoryEnsemble.physicalRecords (initialWitness witness), row.1 = 0 ∨ row.1 = 1 :=
+  (InitialMemoryEnsemble.inventory image).physicalRecords_binary_of_constraints
+    (initialWitness witness) (fun table member => constraints table (List.mem_of_mem_take member))
 
 end SP1Clean.Soundness.NativeCore
