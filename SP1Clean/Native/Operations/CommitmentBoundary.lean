@@ -70,6 +70,17 @@ def checker (statement : CommitmentStatement) : PublicVerifier (ZMod p) SP1Publi
   interactions := by intros; simp [circuit, main, Gadgets.Equality.circuit, Gadgets.Equality.main,
     FormalAssertion.toSubcircuit_interactions, circuit_norm]
 
+/-- Raw acceptance of the statement checks establishes the encoding, including well-formedness. -/
+theorem spec_of_checks (statement : CommitmentStatement) {input : SP1PublicIO (ZMod p)} {data : ProverData (ZMod p)}
+    (checked : (checker statement).Checks input data) : Spec statement input := by
+  have silent : (((checker statement).circuit.main (varFromOffset SP1PublicIO 0)).operations
+      (size SP1PublicIO)).FullGuarantees (Environment.fromInput input data) := by
+    simp [Operations.FullGuarantees, (checker statement).interactions]
+  have sound := ((checker statement).circuit.original_full_soundness (size SP1PublicIO)
+    (Environment.fromInput input data) (varFromOffset SP1PublicIO 0) ((checker statement).assumptions _ _)
+    checked silent).1
+  rwa [ProvableType.eval_fromInput_varFromOffset_zero] at sound
+
 theorem count_bound [Fact (2 ^ 25 < p)] (statement : CommitmentStatement) :
     (checker (p := p) statement).CountBound := by
   simp only [PublicVerifier.CountBound, PublicVerifier.assertions, checker, circuit, main,

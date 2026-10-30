@@ -14,6 +14,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 local instance bankAgreementLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance bankAgreementClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -23,8 +24,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 /-- Any replay of the carrier's actual tape ends in the two authenticated bank vectors. -/
 theorem GroundingCarrier.final_banks (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (target : ExecutionState)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (target : ExecutionState)
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) :
     target.host.committed = bankFinal.committed ∧ target.host.deferred = bankFinal.deferred := by
@@ -37,8 +38,8 @@ theorem GroundingCarrier.final_banks (valid : image.Valid)
 Nonzero sources and repeated overwrites are preserved without resetting state at shard cuts. -/
 theorem source_execution_with_banks (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
       events.Perm ((LocalCore.executionRows

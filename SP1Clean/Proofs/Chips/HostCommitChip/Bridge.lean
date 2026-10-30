@@ -36,6 +36,11 @@ private theorem slot_value (slot : Fin 8) : Word.toNat (slotWord (R := ZMod p) s
     List.getElem_cons_zero, List.getElem_cons_succ, ZMod.val_zero, zero_mul, add_zero]
   rw [ZMod.val_natCast_of_lt (by have := slot.isLt; omega)]
 
+/-- The slot argument a commitment row accepts is its slot index. -/
+theorem toBitVec64_slotWord (slot : Fin 8) :
+    Word.toBitVec64 (slotWord (R := ZMod p) slot) = BitVec.ofNat 64 slot.val := by
+  rw [Word.toBitVec64, slot_value]
+
 private theorem call_bounds (deferred : Bool) (slot : Fin 8) (call : HostCallChip.Message (ZMod p))
     (valid : CallSpec deferred slot call) :
     (Word.toBitVec64 call.arg1).toNat = slot.val ∧

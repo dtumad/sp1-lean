@@ -22,6 +22,7 @@ open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal
 open LeanRV64D.Defs (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 local instance finalMemoryLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance finalMemoryLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -42,8 +43,8 @@ private theorem no_push_of_empty {α : Type*} (events : List α) (facts : α →
 chronology excludes hidden cycles, including cycles containing physical refresh rows. -/
 theorem source_no_push_of_final_none (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (loc : MemLoc)
     (absent : LocalCore.memoryFinalFrontier
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = none) :
@@ -64,8 +65,8 @@ theorem source_no_push_of_final_none (valid : image.Valid)
 /-- The source value survives at every location omitted by the physical final frontier. -/
 theorem GroundingCarrier.untouched_memory (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (target : ExecutionState)
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target)
@@ -97,8 +98,8 @@ theorem GroundingCarrier.untouched_memory (valid : image.Valid)
 the final inventory retain their source value, including RAM below the register-reserved window. -/
 theorem GroundingCarrier.final_memory (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (target : ExecutionState)
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target)
@@ -119,7 +120,7 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
       exact (localValueAtG_stepStart_iff atEnd).mp value
   | none =>
       have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-        (source_interface source.host.io.hints) constraints balanced
+        (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
       have sourceValid := (LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte).2.1
       exact carrier.untouched_memory valid constraints balanced target replay loc _
         (sourceValid.memory.locContent_of_address_lt loc bound) present
@@ -127,8 +128,8 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
 /-- The finite source has no out-of-window entries, and every actual event preserves their absence. -/
 theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) (address : ℕ) (outside : 2 ^ 48 ≤ address) :

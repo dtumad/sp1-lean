@@ -396,10 +396,15 @@ theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) 
     exact Bool.noConfusion absent
 
 /-- Fixed source records authenticate from actual physical prefixes and canonical prover data.
-No additional source-validity or membership-balance premise is supplied by the caller. -/
-theorem source_record_authentication
+An appended resource block silent on both record channels authenticates vacuously. No additional
+source-validity or membership-balance premise is supplied by the caller. -/
+theorem source_record_authentication {extra : List (Component (ZMod p))}
+    {names : ((HostLocalCore.tables image source ((receiver :: HostCallReceivers.available).map (·.component) ++
+      (wordResources ++ (sourceResources source.host.io.hints ++ extra)))).map (·.circuit.name)).Nodup}
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
+      (sourceResources source.host.io.hints ++ extra) channels names))
+    (silent : ∀ component ∈ extra,
+      nodeChannel.toRaw ∉ component.circuit.channels ∧ wordChannel.toRaw ∉ component.circuit.channels)
     (store : Store) (extension : Extends (ofList source.host.io.hints).1 store)
     (constraints : witness.Constraints) : RecordAuthentication witness store := by
   intro table member
@@ -415,7 +420,7 @@ theorem source_record_authentication
   rw [HostLocalCore.auxiliaryTables_components] at component
   simp only [List.map_cons, List.mem_append, List.mem_cons, wordResources, sourceResources,
     List.not_mem_nil, or_false] at component
-  rcases component with (handler | other) | ((next | last) | (node | word | terminal | deferred))
+  rcases component with (handler | other) | ((next | last) | ((node | word | terminal | deferred) | added))
   · apply fromComponent
     rw [handler]
     exact HostHintRecordSources.handler_authenticates store
@@ -444,6 +449,8 @@ theorem source_record_authentication
     constructor <;> apply Component.Authenticates.of_silent <;>
       simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel,
         Channel.toRaw, circuit_norm]
+  · exact fromComponent ⟨Component.Authenticates.of_silent _ _ _ (silent _ added).1,
+      Component.Authenticates.of_silent _ _ _ (silent _ added).2⟩
 
 theorem source_interface (hints : List Bytes) :
     ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) := by

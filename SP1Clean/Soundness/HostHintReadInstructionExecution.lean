@@ -16,6 +16,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance instructionLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance instructionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -41,9 +42,9 @@ private theorem instruction_staticInputs
 
 private theorem instruction_inputs (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
@@ -52,7 +53,7 @@ private theorem instruction_inputs (valid : image.Valid)
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have checked := HostLocalCore.localWitness_constraints _ checks
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-    (source_interface source.host.io.hints) constraints balanced
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
   have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
       (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data).is_real = 1 := by
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
@@ -73,9 +74,9 @@ private theorem instruction_inputs (valid : image.Valid)
 
 private theorem trajectory_ordinary (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -108,9 +109,9 @@ private theorem trajectory_ordinary (valid : image.Valid)
 as the hint handlers. ROM preservation and absence of added hint accesses follow from the AIR. -/
 theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
@@ -143,7 +144,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
   · intro n time
     have successor := ExecutionCarrier.originalTimeStep carrier member n time
     have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-      (source_interface source.host.io.hints) constraints balanced
+      (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
     have duration := (LocalCore.executionRows_advancing_of_orderingChannels _
       (HostLocalCore.localWitness_constraints _ checks) ordering member).2
     rw [ExecutionRow.edge_setData (.instruction row)
@@ -160,9 +161,9 @@ state, with write permission from the installed AIR. Instruction dispatch and re
 inside the registered chip contracts. -/
 theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -233,9 +234,9 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
 /-- Projection to normal retirement keeps the original instruction-step interface. -/
 theorem GroundingCarrier.instruction_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))

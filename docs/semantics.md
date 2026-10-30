@@ -93,8 +93,8 @@ Adjacent segments use the same statement; cutting a segment preserves declaratio
 | Execution model | Complete steps/paths, finite boundaries, split/join, semantic boot/HALT, independent ROM/frame/fetch preservation and PolyFun connections |
 | Ordinary construction | Deterministic 55-table compiler on an explicitly narrower admissible domain; readiness/capacity restrictions remain local to it |
 | Ordinary soundness | `supported_core_native_sound` assumes native algebra, semantic boundary binding and an inactive syscall table with a physical Halt table |
-| Installed host assembly | Six calls: HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN and HINT_READ; genuine replay and endpoint observations are derived |
-| Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison; the complete Memory ensemble retains its separate public verifier |
+| Installed host assembly | Six calls: HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN and HINT_READ; `Shard.sail_trace` turns raw acceptance of the exported circuit (the complete-memory assembly with the commitment statement) into a trace of the PolyFun SP1 machine from the complete source, with header and endpoint observations derived, a well-formed statement and agreement of every actual declaration with it. Over SP1's field it has no premise beyond the checked image; the exported fixture is an instance |
+| Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison, and the accepted execution ends with exactly the supplied integer registers and RAM; the complete Memory ensemble retains its separate public verifier |
 | Sail boundary | Static target checks, protected ordinary receipts and ordered observation are proved; combined dynamic supplied-target equality remains open |
 | Concrete examples | Accepted ADD and compiler-derived BEQ assemblies; LoadByte fixed-table replacement with occurrence-preserving transport |
 | Released SP1 agreement | Direct Rust comparisons of exported native components; public-addressing and complete active-host assembly gaps remain explicit |

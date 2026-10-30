@@ -115,6 +115,10 @@ import SP1Clean.Soundness.FinalMemoryCheckLedger
 import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.HostFinalMemory
 import SP1Clean.Soundness.HostFinalMemoryByte
+import SP1Clean.Soundness.HostFinalMemoryExecution
+import SP1Clean.Soundness.HostFinalMemoryDeclarations
+import SP1Clean.Soundness.HostFinalMemoryLookups
+import SP1Clean.Soundness.HostFinalMemoryRegistry
 import SP1Clean.Soundness.HostFinalMemoryView
 import SP1Clean.Soundness.HostFinalMemoryLedger
 import SP1Clean.Soundness.HostFinalMemoryTransport
@@ -149,6 +153,7 @@ import SP1Clean.Soundness.HostCallOrder
 import SP1Clean.Soundness.HostCallProjection
 import SP1Clean.Soundness.HostCallReceivers
 import SP1Clean.Soundness.HostCommitBank
+import SP1Clean.Soundness.HostCommitDeclarations
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1Clean.Soundness.CommitmentEnsemble
 import SP1Clean.Soundness.HostCommitHistory
@@ -278,6 +283,7 @@ import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Soundness.Shard.Machine
+import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.StateCanon
 import SP1Clean.Soundness.StateChronology

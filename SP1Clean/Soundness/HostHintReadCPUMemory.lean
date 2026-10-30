@@ -14,6 +14,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance memoryClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance memoryLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -268,12 +269,12 @@ variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 /-- The installed source-backed assembly supplies the word-step contracts used for grouping. -/
 theorem source_word_steps
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     HintReadCoverage.Steps (wordTables (HostHintQueueBoundary.projected witness)) := by
   have steps := word_steps (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing)
     (HintQueue.ofList source.host.io.hints).1 (HostHintQueueBoundary.source_authentication witness constraints)
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced)
@@ -329,22 +330,22 @@ private theorem wordsAt_nil_of_not_read
 out assigning another call's words to a non-read event, without using Memory-value guarantees. -/
 theorem source_wordsAt_nil_of_not_read
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (notRead : ∀ row, event = .syscall row → (syscallEventOfRow row).rawCode ≠ SyscallKind.hintRead.code) :
     wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))) event = [] := by
   have empty := wordsAt_nil_of_not_read (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints) _
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) _
     (HostHintQueueBoundary.source_authentication witness constraints)
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced)
     (HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced)
     (HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced)
-    (HostHintQueueBoundary.projected_orderingChannels witness (source_interface source.host.io.hints) constraints balanced)
+    (HostHintQueueBoundary.projected_orderingChannels witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced)
     event member notRead
   simpa only [HostHintQueueBoundary.projected_data] using empty
 
@@ -380,20 +381,20 @@ theorem words_partition
 /-- The source-backed assembly derives every premise of the exact CPU word partition. -/
 theorem source_words_partition
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) :
     (cpu.flatMap (wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))))).Perm
       (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))) := by
   have partition := words_partition (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing)
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced)
     (HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced)
-    (HostHintQueueBoundary.projected_orderingChannels witness (source_interface source.host.io.hints) constraints balanced)
+    (HostHintQueueBoundary.projected_orderingChannels witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced)
     (by simpa only [HostHintQueueBoundary.projected_data] using source_word_steps witness constraints balanced) cpu exhaustive
   simpa only [HostHintQueueBoundary.projected_data] using partition
 
@@ -401,9 +402,9 @@ theorem source_words_partition
 raw Memory ledger and its count bound. -/
 theorem source_memory_partition
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) :
     ((cpu.flatMap (fun event =>
@@ -440,21 +441,21 @@ theorem source_memory_partition
 /-- The installed source assembly supplies location uniqueness for every CPU group. -/
 theorem source_locations_nodup
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p) :
     ((wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))) event).map
         (fun row => MemoryMsg.locOf (touch row).2)).Nodup := by
   have distinct := wordsAt_locations_nodup (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing)
     (HintQueue.ofList source.host.io.hints).1 (HostHintQueueBoundary.source_authentication witness constraints)
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced)
     (HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced)
     (HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced)
-    (HostHintQueueBoundary.projected_orderingChannels witness (source_interface source.host.io.hints) constraints balanced) event
+    (HostHintQueueBoundary.projected_orderingChannels witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced) event
   simpa only [HostHintQueueBoundary.projected_data] using distinct
 
 omit [Fact (2 ^ 25 < p)] in
@@ -477,9 +478,9 @@ private theorem touches_chain (rows : List (HintReadCoverage.Row (p := p)))
 All its writes share the event's access time, and authenticated coverage makes locations unique. -/
 theorem source_touches_chain
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p) (loc : MemLoc) :
     List.IsChain (fun a b : TimedGrounding.Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
       (((wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
@@ -491,9 +492,9 @@ theorem source_touches_chain
 predecessor order of every active hint word. -/
 theorem source_touches_at (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p) :
     ∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))) event,

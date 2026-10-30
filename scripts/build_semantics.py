@@ -90,6 +90,7 @@ HEADLINES = [
     ("SP1Clean.Soundness.NativeCompleteness", "supported_core_native_complete (+ totality-conditional)", "closed/conditional"),
     ("SP1Clean.Proofs.Completeness.NativeTraceCompiler", "nativeTrace / NativeShardTraceTotal", "closed/open"),
     ("SP1Clean.Soundness.HostHintReadFinalSnapshot", "HostHintReadCPU.source_execution_with_memory (frontier)", "closed, not capstone"),
+    ("SP1Clean.Soundness.Shard.Trace", "Shard.sail_trace (exported-circuit Sail trace)", "closed, not capstone"),
 ]
 
 

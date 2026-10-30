@@ -110,6 +110,13 @@ theorem host_values (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p
   simp only [Operations.interactionValuesWith, main_host_interactions,
     List.map_cons, List.map_nil, Channel.eval_pulled]
 
+theorem declaration_values (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p))
+    (offset : ℕ) (env : Environment (ZMod p)) :
+    ((main deferred slot input).operations offset).interactionValuesWith CommitmentDeclaration.channel.toRaw env =
+      [CommitmentDeclaration.channel.pulledValue (Eval.eval env (CommitmentDeclaration.request deferred slot input.call.arg2))] := by
+  simp only [Operations.interactionValuesWith, main_declaration_interactions,
+    List.map_cons, List.map_nil, Channel.eval_pulled]
+
 theorem state_values (deferred : Bool) (slot : Fin 8) (input : Var Inputs (ZMod p))
     (offset : ℕ) (env : Environment (ZMod p)) :
     ((main deferred slot input).operations offset).interactionValuesWith (stateChannel deferred).toRaw env =

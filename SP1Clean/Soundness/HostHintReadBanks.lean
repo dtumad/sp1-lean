@@ -13,6 +13,7 @@ namespace SP1Clean.Soundness.HostHintReadBanks
 open Circuit Air.Flat Model.Core HostHintReadLocal HostHintReadHandoff HostCommitBank
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance bankLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -20,8 +21,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQu
   {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
 abbrev Witness := EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
-  HostCallReceivers.available (sourceResources source.host.io.hints) channels
-    (source_unique_names image source source.host.io.hints))
+  HostCallReceivers.available (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+    (HostFinalMemory.source_unique_names image source outgoing))
 
 private def start (deferred : Bool) : ℕ := if deferred then 11 else 3
 private def gap (deferred : Bool) : ℕ := if deferred then 7 else 14
@@ -36,14 +37,14 @@ private def outside {α : Type*} (deferred : Bool) (tables : List α) : List α 
 
 /-- The physical COMMIT or deferred tables, followed by that bank's physical terminal. -/
 def bankTables (deferred : Bool) (witness : Witness (p := p) (image := image) (source := source)
-    (final := final) (bankFinal := bankFinal) (channels := channels)) : List (Table (ZMod p)) :=
+    (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) : List (Table (ZMod p)) :=
   indices.map fun index =>
-    (HostTableRegistry.installedBankSlot image source final bankFinal channels deferred index).table witness
+    (HostTableRegistry.installedBankSlot image source final bankFinal outgoing channels deferred index).table witness
 
 private theorem auxiliary_length
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
-    (witness.tables.drop 63).length = 27 := by
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
+    (witness.tables.drop 63).length = 31 := by
   have size := congrArg List.length (HostTableRegistry.auxiliary_components witness)
   simp only [List.length_map] at size
   exact size
@@ -61,7 +62,7 @@ private theorem slice_eq_ofFn {α : Type*} (rows : List α) (offset count : ℕ)
 /-- The registered references select exactly the retained receiver/terminal inventory. -/
 private theorem bankTables_eq (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     bankTables deferred witness = selected deferred (witness.tables.drop 63) := by
   have size := auxiliary_length witness
   simp only [bankTables, indices, List.map_append, List.map_map, List.map_cons, List.map_nil,
@@ -77,7 +78,7 @@ private theorem bankTables_eq (deferred : Bool)
 /-- The original physical receiver prefix is retained under verifier projection. -/
 theorem receiver_tables
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     HostLocalHandoff.receiverTables (HostHintQueueBoundary.projected witness) =
       (witness.tables.drop 63).take 21 := by
   change ((HostHintQueueBoundary.projected witness).tables.drop 63).take 21 = _
@@ -106,7 +107,7 @@ private theorem read_calls (deferred : Bool) (slots : List (Fin 8))
 /-- Erasing the bank terminal leaves precisely its eight physical handler tables. -/
 theorem calls_eq_slot_tables (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     (TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)).filterMap call? =
       ReceiverView.messages (List.ofFn fun slot => HostCallReceivers.commit deferred slot)
         (((HostLocalHandoff.receiverTables (HostHintQueueBoundary.projected witness)).drop
@@ -127,7 +128,7 @@ theorem calls_eq_slot_tables (deferred : Bool)
 
 theorem tables_aligned (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     List.Forall₂ (fun index table => (view deferred index).component = table.component)
       indices (bankTables deferred witness) := by
   have mapped : (bankTables deferred witness).map (·.component) =
@@ -141,7 +142,7 @@ theorem tables_aligned (deferred : Bool)
 
 private theorem bank_mem (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
     (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
     table ∈ (HostHintQueueBoundary.projected witness).tables := by
   have within : table ∈ witness.tables.drop 63 := by
@@ -169,13 +170,13 @@ private theorem flatMap_selected {α β : Type*} (deferred : Bool) (tables : Lis
 
 private theorem auxiliary_interactions (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     (witness.tables.drop 63).flatMap (·.interactionsWith (HostCommitChip.stateChannel deferred).toRaw) =
       (bankTables deferred witness).flatMap (·.interactionsWith (HostCommitChip.stateChannel deferred).toRaw) := by
   rw [bankTables_eq]
   apply flatMap_selected
   have checked : (outside deferred ((receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-      (wordResources ++ sourceResources source.host.io.hints))).all
+      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
         (HostCommitChip.stateChannel (p := p) deferred).toRaw.name) = true := by cases deferred <;> rfl
   intro table member
@@ -219,7 +220,7 @@ private theorem wrapper_bank_silent (deferred : Bool) :
 /-- The complete bank ledger retains physical rows and the verifier's two endpoint occurrences. -/
 theorem interactions (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     (witness.interactionsWith (HostCommitChip.stateChannel deferred).toRaw).Perm
       ([(HostCommitChip.stateChannel deferred).pushedValue
           (HostCommitBoundary.start (HostCommitEnsemble.sourceValues deferred source.host)),
@@ -263,8 +264,8 @@ theorem interactions (deferred : Bool)
 The fold here contains the selected bank's calls; `HostBankCPUReplay` supplies CPU-order agreement. -/
 theorem ordered_history (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext) :
     ∃ path : List (Row (p := p)),
       path.Perm (TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)) ∧
@@ -275,18 +276,19 @@ theorem ordered_history (deferred : Bool)
         some ((HostCommitBoundary.final (HostCommitEnsemble.sourceValues (p := p) deferred bankFinal)).apply deferred source.host) := by
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have bytes := byte_guarantees (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints) (HostHintQueueBoundary.projected_constraints witness constraints)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced).byte
   have physical (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
       table ∈ (HostHintQueueBoundary.projected witness).tables := bank_mem deferred witness table member
   have member : (HostCommitChip.stateChannel deferred).toRaw ∈
       (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-        (sourceResources source.host.io.hints) channels
-        (source_unique_names image source source.host.io.hints)).channels := by
+        (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+        (HostFinalMemory.source_unique_names image source outgoing)).channels := by
     apply List.mem_append_left
     apply List.mem_append_right
     cases deferred <;> simp [HostHintQueueBoundary.boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm]
-  have bank := balancedInteractions_of_perm (balanced _ member) (interactions deferred witness)
+  have bank := balancedInteractions_of_perm (balanced _ member (HostHintQueueBoundary.visible_of_name _ (by
+    cases deferred <;> simp [HostCommitChip.stateChannel, Channel.toRaw]))) (interactions deferred witness)
   have history := HostCommitBank.ordered_history deferred (bankTables deferred witness)
     (HostCommitEnsemble.sourceValues deferred source.host) (HostCommitEnsemble.sourceValues deferred bankFinal)
     (tables_aligned deferred witness) (fun table member => checked table (physical table member))
@@ -298,8 +300,8 @@ final words. Only the administrative terminal is erased. `HostBankCPUReplay` con
 to the CPU tape; neither a call-order premise nor a local specification is supplied here. -/
 theorem ordered_calls (deferred : Bool)
     (witness : Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (policy : HostPolicy) (characteristic : policy.characteristic = p) (context : HostReadContext) :
     ∃ calls : List (HostCallChip.Message (ZMod p)),
       calls.Perm ((TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)).filterMap call?) ∧
@@ -311,7 +313,7 @@ theorem ordered_calls (deferred : Bool)
     ordered_history deferred witness constraints balanced policy characteristic context
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have bytes := byte_guarantees (HostHintQueueBoundary.projected witness)
-    (source_interface source.host.io.hints) (HostHintQueueBoundary.projected_constraints witness constraints)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced).byte
   have physical (table : Table (ZMod p)) (member : table ∈ bankTables deferred witness) :
       table ∈ (HostHintQueueBoundary.projected witness).tables := bank_mem deferred witness table member
@@ -321,5 +323,64 @@ theorem ordered_calls (deferred : Bool)
   refine ⟨path.filterMap call?, perm.filterMap call?,
     calls_pairwise deferred walk (fun row member => specs row (perm.mem_iff.mp member)), ?_⟩
   rw [fold_calls, executed]
+
+/-- An active slot row is a physical handler row of the witness. It satisfies its call
+specification and requests its slot's declaration with the call's own argument word. -/
+theorem active_slot (deferred : Bool)
+    (witness : Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
+    {slot : Fin 8} {env : Environment (ZMod p)}
+    (member : (some slot, env) ∈
+      TransitionView.readIndexedActiveRows indices (view deferred) (bankTables deferred witness)) :
+    HostCommitChip.Spec deferred slot (valueFromOffset HostCommitChip.RowInput 0 env).1 ∧
+      CommitmentDeclaration.channel.pulledValue
+          ⟨if deferred then 1 else 0, slot.val, (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2, 1⟩ ∈
+        witness.interactionsWith CommitmentDeclaration.channel.toRaw := by
+  have checked := HostHintQueueBoundary.projected_constraints witness constraints
+  have bytes := byte_guarantees (HostHintQueueBoundary.projected witness)
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) checked
+    (HostHintQueueBoundary.record_channels witness balanced).byte
+  have specs := rows_spec_of_byte deferred (bankTables deferred witness) (tables_aligned deferred witness)
+    (fun table member => checked table (bank_mem deferred witness table member))
+    (fun table member => bytes table (bank_mem deferred witness table member))
+  refine ⟨specs _ member, ?_⟩
+  obtain ⟨read, active⟩ := TransitionView.mem_readIndexedActiveRows.mp member
+  simp only [view, HostCommitHistory.view_activity] at active
+  have argument : Eval.eval env (varFromOffset (F := ZMod p) HostCommitChip.RowInput 0).1.call.arg2 =
+      (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2 := by
+    have call := HostCallReceivers.commit_message (p := p) deferred slot env
+    change Eval.eval env (varFromOffset (F := ZMod p) HostCommitChip.RowInput 0).1.call = _ at call
+    rw [← call]
+    simp only [circuit_norm]
+  have values : (view (p := p) deferred (some slot)).component.operations.interactionValuesWith
+      CommitmentDeclaration.channel.toRaw env =
+        [CommitmentDeclaration.channel.pulledValue
+          ⟨if deferred then 1 else 0, slot.val, (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2, 1⟩] := by
+    simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
+    change (((HostCommitChip.circuit deferred slot).main (varFromOffset (F := ZMod p) HostCommitChip.RowInput 0)).operations
+      (size HostCommitChip.RowInput)).interactionValuesWith CommitmentDeclaration.channel.toRaw env = _
+    rw [HostCommitChip.guarded_declaration_values]
+    beta_reduce
+    rw [active]
+    simp only [circuit_norm] at argument
+    simp only [CommitmentDeclaration.request, Channel.pulledIfValue, Channel.pulledValue, circuit_norm, argument]
+  have ledger := TransitionView.readIndexedRows_interactions indices (fun index => (view (p := p) deferred index).component)
+    (bankTables deferred witness) CommitmentDeclaration.channel.toRaw (tables_aligned deferred witness)
+  have banked : CommitmentDeclaration.channel.pulledValue
+      ⟨if deferred then 1 else 0, slot.val, (valueFromOffset HostCommitChip.RowInput 0 env).1.call.arg2, 1⟩ ∈
+        (bankTables deferred witness).flatMap (·.interactionsWith CommitmentDeclaration.channel.toRaw) := by
+    rw [ledger]
+    refine List.mem_flatMap.mpr ⟨(some slot, env), read, ?_⟩
+    change _ ∈ (view (p := p) deferred (some slot)).component.operations.interactionValuesWith
+      CommitmentDeclaration.channel.toRaw env
+    rw [values]
+    exact List.mem_singleton_self _
+  obtain ⟨table, tableMem, emitted⟩ := List.mem_flatMap.mp banked
+  have physical : table ∈ witness.tables := by
+    rw [bankTables_eq] at tableMem
+    rcases List.mem_append.mp tableMem with within | within <;>
+      exact List.mem_of_mem_drop (List.mem_of_mem_drop (List.mem_of_mem_take within))
+  exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, physical, emitted⟩)
 
 end SP1Clean.Soundness.HostHintReadBanks

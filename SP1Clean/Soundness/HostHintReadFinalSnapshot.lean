@@ -57,6 +57,7 @@ private theorem mapped_frontier {α : Type*} (records : List α) (location : α 
   simp only [List.filter_map, Function.comp_def, List.head?_map, Option.map_map]
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 local instance snapshotClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance snapshotLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -66,7 +67,7 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 /-- Decode every original final-record occurrence; no record is discarded or filled in. -/
 noncomputable def finalMemoryValues
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) : List (MemLoc × BitVec 64) :=
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) : List (MemLoc × BitVec 64) :=
   (FinalMemoryEnsemble.records
     (LocalCore.finalWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))).map
       (fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value))
@@ -75,8 +76,8 @@ noncomputable def finalMemoryValues
 map on the already-derived execution. Its enforcement by the native AIR remains separate. -/
 theorem GroundingCarrier.memory_of_checkFinal (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (targetMemory : MemorySnapshot)
     (checked : source.sail.memorySnapshot.checkFinal targetMemory (finalMemoryValues witness) = true)
     {target : ExecutionState}
@@ -102,8 +103,8 @@ theorem GroundingCarrier.memory_of_checkFinal (valid : image.Valid)
 Final-record bounds and uniqueness come from the installed AIR, not the check's caller. -/
 theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (targetMemory : MemorySnapshot) {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) :
@@ -119,7 +120,7 @@ theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
     intro address bound
     rw [ram, ByteMemory.toSailMemory_get?, if_pos bound]⟩
   have records := HostLocalCore.final_records_canonical_nodup (HostHintQueueBoundary.projected witness)
-    (auxiliaryInterface (source_interface source.host.io.hints))
+    (auxiliaryInterface (HostFinalMemory.sourceInterface source.host.io.hints outgoing))
     (source_boundary_silent source _ (by simp))
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced).byte
@@ -148,8 +149,8 @@ the optional terminal status agrees with the supplied host. The finite Memory en
 characterized on this same path. Its AIR enforcement and complete target equality remain open. -/
 theorem source_execution_with_memory (valid : image.Valid)
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
       ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)

@@ -252,17 +252,15 @@ theorem channel_not_mem (ens : Ensemble F PublicIO) :
     closed.channel ens ∉ ens.channels ++ closed.circuit.channels :=
   (VerifierChannel.fresh closed.name (closed.withInteractions ens)).unregistered
 
-/-- On a registered channel, installation adds exactly the source circuit's literal emissions.
-The fresh assertion channel contributes no occurrence, including zero multiplicities. -/
-theorem install_verifier_interactions_of_mem (ens : Ensemble F PublicIO) (env : Environment F)
-    (selected : RawChannel F) (registered : selected ∈ ens.channels) :
+/-- On any channel other than the fresh assertion channel, installation adds exactly the source
+circuit's literal emissions. The assertion channel contributes no occurrence there, including zero
+multiplicities. -/
+theorem install_verifier_interactions_of_ne (ens : Ensemble F PublicIO) (env : Environment F)
+    (selected : RawChannel F) (different : closed.channel ens ≠ selected) :
     (closed.install ens).verifierOperations.interactionValuesWith selected env =
       ens.verifierOperations.interactionValuesWith selected env ++
         closed.operations.interactionValuesWith selected
           (Environment.fromInput (Input := unit) () env.data) := by
-  have different : closed.channel ens ≠ selected := by
-    intro same
-    exact closed.channel_not_mem ens (same ▸ List.mem_append_left _ registered)
   change (ens.verifier.andThen (closed.program ens)).circuitOperations.interactionValuesWith selected env = _
   rw [Verifier.Program.andThen_values]
   have append : (closed.program ens).circuitOperations.interactionValuesWith selected env =
@@ -274,6 +272,16 @@ theorem install_verifier_interactions_of_mem (ens : Ensemble F PublicIO) (env : 
       Verifier.Operations.interactions, List.map_append, Operations.interactionValuesWith,
       Operations.interactionsWith, Operations.interactions_append, List.filter_append]
   rw [append, Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil, closed.emit_values]
+
+/-- A registered channel is never the fresh assertion channel. -/
+theorem install_verifier_interactions_of_mem (ens : Ensemble F PublicIO) (env : Environment F)
+    (selected : RawChannel F) (registered : selected ∈ ens.channels) :
+    (closed.install ens).verifierOperations.interactionValuesWith selected env =
+      ens.verifierOperations.interactionValuesWith selected env ++
+        closed.operations.interactionValuesWith selected
+          (Environment.fromInput (Input := unit) () env.data) :=
+  closed.install_verifier_interactions_of_ne ens env selected fun same =>
+    closed.channel_not_mem ens (same ▸ List.mem_append_left _ registered)
 
 /-- Removing only the new checks leaves the original ledger plus one boundary invocation.
 The permutation moves that invocation past the physical rows without dropping any occurrence. -/
@@ -332,6 +340,20 @@ theorem balanced_iff {ens : Ensemble F PublicIO} (witness : EnsembleWitness (clo
       exact original selected member
     · obtain rfl := List.mem_singleton.mp member
       exact (closed.check_balanced_iff witness).mpr ⟨bound, checked⟩
+
+/-- The installed verifier only appends, so forgetting the boundary keeps every occurrence of the
+remaining ledger on every channel. -/
+theorem mem_interactionsWith_of_project {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (closed.install ens)) {selected : RawChannel F} {interaction : Interaction F}
+    (member : interaction ∈ (closed.project witness).interactionsWith selected) :
+    interaction ∈ witness.interactionsWith selected := by
+  rcases EnsembleWitness.mem_interactionsWith.mp member with emitted | ⟨table, tableMem, emitted⟩
+  · refine EnsembleWitness.mem_interactionsWith.mpr (Or.inl ?_)
+    change interaction ∈ (ens.verifier.andThen (closed.program ens)).circuitOperations.interactionValuesWith
+      selected (Environment.fromInput witness.publicInput witness.data)
+    rw [Verifier.Program.andThen_values]
+    exact List.mem_append_left _ emitted
+  · exact EnsembleWitness.mem_interactionsWith.mpr (Or.inr ⟨table, tableMem, emitted⟩)
 
 end ClosedVerifier
 end Air.Flat

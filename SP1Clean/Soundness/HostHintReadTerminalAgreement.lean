@@ -15,6 +15,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Model.Core NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 local instance terminalAgreementLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 private theorem wrapper_receipt (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p) :
@@ -52,8 +53,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQu
 /-- Every semantic HALT receipt is exactly one authenticated physical handler receipt. -/
 theorem GroundingCarrier.terminal_receipts
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     (carrier.events.filterMap (hostExitAfter none)).Perm
       (((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap
         HostTerminalLedger.receipt?).map (fun word => (Word.toBitVec64 word).setWidth 32)) := by
@@ -70,7 +71,7 @@ theorem GroundingCarrier.terminal_receipts
   have physical := (carrier.exhaustive.map ExecutionRow.event).filterMap (hostExitAfter none)
   simp only [List.filterMap_map, Function.comp_def] at physical
   rw [inventory] at physical
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel (HostHintQueueBoundary.projected witness)
     (resources_hostCall_silent interface) (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced)
@@ -94,8 +95,8 @@ private theorem option_eq_of_perm {α : Type*} (left right : Option α)
 /-- The supplied optional exit is the actual endpoint's status, without a running-source premise. -/
 theorem GroundingCarrier.final_terminal (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (path : ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events target) : target.host.exitCode = bankFinal.exitCode := by
