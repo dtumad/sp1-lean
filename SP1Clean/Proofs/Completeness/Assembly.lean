@@ -42,10 +42,10 @@ The inventory's constraints depend only on row cells and fixed lookups, so they 
 canonical committed data even when it differs from the generation input. Channel guarantees,
 program bindings and agreement with a Sail execution remain separate obligations.
 
-Instruction traces are unpadded; power-of-two shape belongs to the exact-Core adapter. Provider
-multiplicities remain explicit, preserving repeated keys, zero-count entries and boolean memory
-selectors. The trace record lives beside the completeness proofs because its provider occurrence
-types depend on chip input types.
+Instruction traces are unpadded; power-of-two padding of active tables remains a separate
+obligation. Provider multiplicities remain explicit, preserving repeated keys, zero-count entries
+and boolean memory selectors. The trace record lives beside the completeness proofs because its
+provider occurrence types depend on chip input types.
 -/
 
 /-! ## Completeness-side realizations of the neutral table identities

@@ -21,12 +21,11 @@
 # deliberately not part of the key: they drift, and a drifting key trains people to edit the allowlist
 # instead of fixing the cause.
 #
-# **Adding an entry is a last resort, not a way to make a build pass.** The bar is in
-# `docs/agents/proof-patterns.md` § "Elaboration budgets": a measured floor bracket, a named
-# mechanism, at least one attempted fix with its result, and a reason the cause cannot be moved.
-# Start from its compile-time section — extract over opaque arguments and check what the
-# extraction can still see. If the site is generated, fix its owned generator
-# rather than allowlisting its output.
+# **Adding an entry is a last resort, not a way to make a build pass.** The bar is a measured floor
+# bracket, a named mechanism, at least one attempted fix with its result, and a reason the cause
+# cannot be moved. Start from `docs/agents/proof-patterns.md` § "Performance and validation" —
+# abstract the expensive argument itself and check what the extracted helper can still see. If the
+# site is generated, fix its owned generator rather than allowlisting its output.
 #
 # Mirrors scripts/check_no_native_decide.sh / check_no_skipkerneltc.sh: exit 0 = clean, 1 = violation.
 # Run from the repo root.

@@ -76,7 +76,7 @@ inductive NaturalDirection
 deriving DecidableEq, Repr
 
 /-- One interaction contribution before encoding direction as an integer sign.  The key type is
-parametric: native Clean uses `LookupKey`, while the exact AIR retains its full payload and scope. -/
+parametric; native Clean uses `LookupKey`. -/
 structure NaturalAccess (Key : Type) where
   key : Key
   direction : NaturalDirection

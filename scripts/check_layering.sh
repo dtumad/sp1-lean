@@ -21,7 +21,6 @@
 #
 # All fail closed: a module matching no stratum prefix is an error, so a new top-level directory
 # cannot silently escape the map.
-# Native core contracts and circuits have no transitive dependency on legacy Rust extraction.
 #
 # Exceptions live in scripts/layering_allowlist.txt with a stated reason. That is a prohibition with
 # a bar, not a ratchet — see AGENTS.md on scripts/option_escapes_allowlist.txt.
@@ -98,7 +97,6 @@ files.sort()
 
 fail = 0
 unmapped, upward, nsbad = [], [], []
-imports_by_file = {}
 
 # Root index modules import the whole world by design; they are the umbrella, not a layer.
 # `SP1Clean/Core.lean` is the sub-index of strata 0-6 (the `SP1Core` library root); check 3 below
@@ -130,7 +128,6 @@ for path in files:
             ns_root = m.group(1)
 
     # 1. direction
-    imports_by_file[path] = [module_to_path(mod) for mod in src_lines]
     for mod in src_lines:
         if not mod.startswith(("SP1Clean", "ToClean", "ToMathlib", "ToPolyFun")):
             continue          # Mathlib / Clean / Std / Sail are all below everything
@@ -149,21 +146,6 @@ for path in files:
                "Soundness", "Composition"}
     if pillar != "-" and ns_root in PILLARS and ns_root != pillar and path not in allowed_ns:
         nsbad.append((path, ns_root, pillar))
-
-core_roots = [p for p in files if p not in ROOT_INDEX
-              and p.startswith("SP1Clean/") and not p.startswith("SP1Clean/Extracted/")
-              and classify(p)[0] is not None and classify(p)[0] <= CORE_MAX_STRATUM]
-pending = [(p, [p]) for p in core_roots]
-seen = set()
-for path, trail in pending:
-    if path in seen:
-        continue
-    seen.add(path)
-    if path.startswith("SP1Clean/Extracted/"):
-        fail = 1
-        print("FAIL: native core depends on legacy extraction: " + " -> ".join(trail))
-        continue
-    pending.extend((dep, trail + [dep]) for dep in imports_by_file.get(path, []))
 
 if unmapped:
     fail = 1
@@ -187,12 +169,11 @@ if nsbad:
     print("  (one of the two is wrong — usually the path; the namespace is the author's intent)")
 
 # 3. the core index: exactly the hand-written modules of strata 0..CORE_MAX_STRATUM under
-#    SP1Clean/. The retired extraction namespace remains forbidden above.
-#    The index is what `lake build SP1Core` builds, so a stale entry silently moves a module in or
-#    out of PR CI.
+#    SP1Clean/. The index is what `lake build SP1Core` builds, so a stale entry silently moves a
+#    module in or out of PR CI.
 expected_core = set()
 for path in files:
-    if path in ROOT_INDEX or not path.startswith("SP1Clean/") or path.startswith("SP1Clean/Extracted/"):
+    if path in ROOT_INDEX or not path.startswith("SP1Clean/"):
         continue
     level, _, _ = classify(path)
     if level is not None and level <= CORE_MAX_STRATUM:

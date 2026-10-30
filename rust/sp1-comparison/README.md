@@ -186,9 +186,9 @@ Cuts agree on their public clock/PC endpoints. These finite fixture constructors
 access compiler and semantic host steps; they are neither an interpreter nor a total Sail compiler.
 General generation completeness and WRITE/VERIFY installation remain open.
 
-The experimental Clean pin adds message
-predicates and indexed preallocated handlers to its existing scheduler. The provider fixtures exercise these APIs;
-general whole-assembly generation still needs its own routing, padding, data and completeness contracts.
+The pinned Clean fork adds message predicates and indexed preallocated handlers to its existing
+scheduler. The provider fixtures exercise these APIs; general whole-assembly generation still
+needs its own routing, padding, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;
 they do not establish complete ensemble balance.
 

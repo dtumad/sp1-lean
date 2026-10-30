@@ -4,12 +4,14 @@ import SP1Clean.Soundness.HostCommitDeclarations
 
 /-! # Execution of the complete-memory host assembly
 
-The Memory proof view retains every physical table, including the target validators, and
-balances every channel except the three final-memory receipt channels. That is exactly what the
-host grounding proofs read, so raw acceptance of the complete assembly yields their local
-execution path. The installed finite target comparison and the path's own final-record
-characterization read the same physical finalizer rows; together they identify every integer
-register and the entire Sail RAM map of the path's final state with the supplied outgoing
+The balance premise `DeclarationsOpen` covers every channel except the commitment declarations,
+whose verifier-owned provider is installed above this assembly. The Memory proof view retains
+every physical table, including the target validators, and balances every channel except those
+declarations and the three final-memory receipt channels (`HostHintQueueBoundary.hiddenChannels`).
+That is exactly what the host grounding proofs read, so raw acceptance of the complete assembly
+yields their local execution path. The installed finite target comparison and the path's own
+final-record characterization read the same physical finalizer rows; together they identify every
+integer register and the entire Sail RAM map of the path's final state with the supplied outgoing
 snapshot. Each commitment call of the path also requests its declaration in the witness ledger
 (`CommitmentEnsemble.Declared`). Complete outgoing Sail/host equality remains separate.
 -/

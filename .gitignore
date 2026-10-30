@@ -9,8 +9,6 @@ node_modules
 *.ilean
 *.profraw
 
-/export/testdata/
-
 # Local runs, Python caches and workspace state.
 /build.log
 /scratch/

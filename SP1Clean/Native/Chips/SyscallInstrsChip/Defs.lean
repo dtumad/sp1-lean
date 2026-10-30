@@ -88,8 +88,7 @@ the prior word for a pure read, the written word for `t0`. -/
   ⟨input.state.clk_high, clkLowVar input + off, idx, 0, 0, value⟩
 
 /-- The generic-syscall hand-off, sent at multiplicity `tableByteVar`. Its payload is the shared
-`SyscallMsg`, the same carrier the exact v6.4.0 lists project: the clock pair, the identifier, and
-the low three limbs of each operand. -/
+`SyscallMsg`: the clock pair, the identifier, and the low three limbs of each operand. -/
 @[circuit_norm] def syscallMsg (input : Var Inputs (ZMod p)) : SyscallMsg (Expression (ZMod p)) :=
   ⟨input.state.clk_high, clkLowVar input, syscallIdVar input,
    #v[input.op_b_memory.prev_value[0], input.op_b_memory.prev_value[1],

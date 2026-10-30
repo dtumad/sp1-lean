@@ -4,7 +4,7 @@
 # `skipKernelTC` bypasses the kernel's type-check re-run — the trust anchor for an
 # axiom-clean proof. It was a last-resort escape used while proving the bit-shift chips;
 # the last site was removed 2026-06-18 and replaced by abstract-`BitVec` helper bridges
-# (see `docs/agents/proof-patterns.md` §"Bit-shift chip soundness", the `2^64` bullet).
+# (see `SP1Clean/Proofs/Chips/ShiftRightChip/Math.lean`, the `2^64` isolation).
 # This gate keeps it out for good.
 #
 # Scope is `SP1Clean/**/*.lean` only — `docs/` legitimately *mentions* the token

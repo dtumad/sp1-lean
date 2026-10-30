@@ -369,22 +369,4 @@ theorem calls_projection
     have facts := control_calls witness interface constraints balanced message member
     exact ⟨facts.1, by simp only [stamped, facts.2.1, Option.map_none]⟩
 
-/-- The installed registry contains no VERIFY handler. Its absence follows from complete call
-accounting, independently of the semantic frame lemma that consumes it. -/
-theorem calls_not_verify
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
-    (interface : ExtensionInterface HostCallReceivers.available resources)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
-    (specs : ∀ table ∈ queueTables witness, table.Spec)
-    (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
-    Word.toBitVec64 message.code ≠ SyscallKind.verifyProof.code := by
-  rcases List.mem_append.mp ((calls_split witness).mem_iff.mp member) with queue | control
-  · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp queue
-    have projected := (queue_projection row
-      (rows_spec _ (queueTables_aligned witness) specs row rowMem)).2
-    intro same
-    simp only [project, queueCallEvent?, same, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
-    cases projected
-  · exact (control_calls witness interface constraints balanced message control).2.2
-
 end SP1Clean.Soundness.HostQueueCallProjection
