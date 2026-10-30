@@ -74,6 +74,7 @@ private theorem hint_write_frame {execution : HostExecution} {address : ℕ} {by
   simpa only [RamCell.baseAddr_toNat] using outsideByte
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance effectLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -205,9 +206,9 @@ private theorem length_event (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZM
 
 private theorem source_memory_effect
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
@@ -230,7 +231,7 @@ private theorem source_memory_effect
       locContent ((HostHintReadChip.execution (HostHintReadCoverage.input env) host bytes remaining).apply state pc)
         (.ram cell) = locContent state (.ram cell)) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have selected := handler_wordsAt (HostHintQueueBoundary.projected witness) interface checks calls ordering
@@ -251,9 +252,9 @@ successor realizes all grouped RAM pushes and preserves every other RAM cell. Th
 antecedents are the incoming State and operand currency supplied by timed grounding. -/
 theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
@@ -294,7 +295,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     rw [carrier.timeline_events constraints balanced, eventTimeline_start_le _ _ _ covered]
     exact replayEvents?_clock paired
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
@@ -390,9 +391,9 @@ private theorem length_not_read (event : ExecutionRow p) (wrapper : HostCallChip
 added-word footprint follows from authenticated HINT_READ ownership and CPU clock uniqueness. -/
 theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
@@ -430,7 +431,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     rw [carrier.timeline_events constraints balanced, eventTimeline_start_le _ _ _ covered]
     exact replayEvents?_clock paired
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
@@ -617,9 +618,9 @@ The actual instruction contract supplies register touches, while all grouped RAM
 in the original extended ledger. Handler-specific dispatch is the remaining premise. -/
 theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (physical : Environment (ZMod p))
@@ -675,7 +676,7 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
   have sail : state = current.sail := Option.some.inj (present.symm.trans before)
   rw [sail] at loaded configured
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced programChannel.toRaw
     (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
@@ -739,9 +740,9 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
 
 private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (queueRow : HostQueueOrder.Row (p := p))
@@ -770,7 +771,7 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have matched := HostQueueCPUOrder.call_cpu_at (HostHintQueueBoundary.projected witness) interface checks calls ordering
@@ -783,9 +784,9 @@ frame obligations on paired replay. Register, RAM, ROM, and configuration effect
 from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
 theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (env : Environment (ZMod p))
@@ -816,9 +817,9 @@ frame obligations on paired replay. Register, RAM, ROM, and configuration effect
 from this witness; no semantic effect or successful-current-step premise is supplied by the caller. -/
 theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (empty : Bool) (env : Environment (ZMod p))
@@ -854,9 +855,9 @@ private theorem read_handler_member (first : Table (ZMod p)) (others : List (Tab
 both HINT_LEN variants are coordinated internally on the same complete execution carrier. -/
 theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (queueRow : HostQueueOrder.Row (p := p))

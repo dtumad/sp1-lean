@@ -147,6 +147,11 @@ gaps, eligibility and padding; only counts are prover-owned. Source RAM reads au
 bytes before emitting one Memory occurrence. Target reads retain the complete final receipt.
 Global balance and fixed prefixes establish membership without caller-supplied provider validity.
 Projected ledgers retain every fixed row, including unused intervals and zero-count padding.
+
+The host grounding proofs are stated over the installed complete-memory resource list and take
+balance on every registered channel except `HostHintQueueBoundary.hiddenChannels`: the
+final-memory receipts and commitment declarations, whose producers lie outside the host proof
+view. No host proof reads those channels; the target validators and statement checks consume them.
 Ordered source/final rows and target checks carry a separate Boolean activity column. Raw
 constraints establish its binarity; balance matches only active records while keeping the full
 weighted physical ledger and occurrence bound. Target-change selection remains separate from

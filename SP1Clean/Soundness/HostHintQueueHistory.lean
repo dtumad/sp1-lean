@@ -16,6 +16,7 @@ open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintQueue HostHintRead
 open SP1Clean.Soundness.HostHintQueueBoundary
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 /-- Complete replay, with current store/frontier truth at every prefix of the physical path. -/
 def History (hints : List Bytes) (final : State (ZMod p)) (upper : Store) (path : List (Row (p := p))) : Prop :=
@@ -57,7 +58,7 @@ theorem of_witness
     (upper : Store) (extension : Extends (ofList source.host.io.hints).1 upper)
     (authenticated : RecordAuthentication (projected witness) upper)
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ path : List (Row (p := p)),
       path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
@@ -79,17 +80,13 @@ theorem of_witness
 reachable queue. This theorem does not require current-head or record-authentication premises. -/
 theorem source_history
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ path : List (Row (p := p)),
       path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final (ofList source.host.io.hints).1 path := by
-  apply of_witness witness (source_interface source.host.io.hints) _ (.refl _)
-    (source_authentication witness constraints) _ constraints balanced
-  intro component member used
-  have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-  simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl <;> change false = true at present <;> exact Bool.noConfusion present
+  apply of_witness witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) _ (.refl _)
+    (source_authentication witness constraints) source_queue_silent constraints balanced
 
 end SP1Clean.Soundness.HostHintQueueHistory

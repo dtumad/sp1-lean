@@ -16,6 +16,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance executionClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance executionLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -204,9 +205,9 @@ private theorem messages_perm (left right : List (TypedInteraction (memoryChanne
 word tables. The zero x12 pairs remain in the raw ledger and disappear only by signed activity. -/
 theorem source_memory_messages
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     (producedMessages (HostLocalCore.memoryInterior (HostHintQueueBoundary.projected witness))).Perm
       (producedMessages (LocalCore.memoryInterior (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ++
         producedMessages ((wordTables (HostHintQueueBoundary.projected witness)).flatMap (typedTableInteractionsWith · memoryChannel))) ∧
@@ -216,7 +217,7 @@ theorem source_memory_messages
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have specs := queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checked records
   have empty := wrapper_messages_nil _ (wrapper_disabled _ interface checked records.byte calls specs)
   have words := auxiliary_memory_words (HostHintQueueBoundary.projected witness) (source_memory_silent source)
@@ -228,8 +229,8 @@ theorem source_memory_messages
 /-- The actual CPU inventory with all installed hint-word Memory effects attached. -/
 noncomputable def sourceExecutionRows
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))) : List (RowFacts p) :=
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))) : List (RowFacts p) :=
   (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map
     (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))))
@@ -238,9 +239,9 @@ noncomputable def sourceExecutionRows
 No host access remains as an unaccounted side ledger. -/
 theorem source_execution_memory_projection
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (loc : MemLoc) :
     TimedGrounding.pushesAt (sourceExecutionRows witness) loc +
         Multiset.filter (fun message => MemoryMsg.locOf message = loc)
           (↑((LocalCore.memoryRefreshes (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map Prod.snd) : Multiset _) =
@@ -284,9 +285,9 @@ theorem source_execution_memory_projection
 This is record conservation before the grounding walk establishes predecessor value currency. -/
 theorem source_execution_memory_balance
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) (loc : MemLoc) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (loc : MemLoc) :
     Multiset.filter (fun message => MemoryMsg.locOf message = loc)
         (↑((SnapshotMemoryEnsemble.inventory source.sail.memorySnapshot).records
           (LocalCore.sourceWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) : Multiset _) +
@@ -404,9 +405,9 @@ private theorem time_of_clock (data : ProverData (ZMod p)) (left right : Executi
 
 private theorem source_word_owner
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (eventMem : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (row : HintReadCoverage.Row (p := p))
@@ -417,7 +418,7 @@ private theorem source_word_owner
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have cursor := HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   obtain ⟨physical, selected⟩ := List.mem_filter.mp member
   have owner := word_cpu (HostHintQueueBoundary.projected witness) interface checked calls cursor
@@ -435,9 +436,9 @@ private theorem source_word_owner
 
 private theorem source_word_disjoint (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (eventMem : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (message : MemoryMsg (ZMod p)) (messageMem : message ∈ (event.facts witness.data).memPushes)
@@ -464,9 +465,9 @@ private theorem source_word_disjoint (valid : image.Valid)
 The enlarged row retains its original State edge, fetch, and all physical Memory occurrences. -/
 theorem source_event_aligned (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (eventMem : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
     ∃ aligned, AlignedFacts aligned (eventFacts witness.data
@@ -474,7 +475,7 @@ theorem source_event_aligned (valid : image.Valid)
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   have checked := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have bytes := HostLocalCore.localWitness_byte (HostHintQueueBoundary.projected witness)
     (auxiliaryInterface interface) checked records.byte
   have program : (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel
@@ -526,9 +527,9 @@ private theorem align_facts (originals : List (RowFacts p))
 aggregates. This directly transports source/final record balance to the aligned rows. -/
 theorem source_ordered_aligned_rows (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ (ordered : List (ExecutionRow p)) (rows : List (RowFacts p)),
       ordered.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ∧
       Walk.IsWalk (ExecutionRow.canonEdge witness.data)
@@ -541,7 +542,7 @@ theorem source_ordered_aligned_rows (valid : image.Valid)
   obtain ⟨ordered, exhaustive, walk⟩ := HostLocalCore.executionRows_ordered_of_orderingChannels
     (HostHintQueueBoundary.projected witness)
     (HostHintQueueBoundary.projected_constraints witness constraints)
-    (HostHintQueueBoundary.projected_orderingChannels witness (source_interface source.host.io.hints) constraints balanced)
+    (HostHintQueueBoundary.projected_orderingChannels witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced)
   simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at walk
   obtain ⟨rows, aligned⟩ := align_facts (ordered.map (eventFacts witness.data
     (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables (HostHintQueueBoundary.projected witness))))) (by

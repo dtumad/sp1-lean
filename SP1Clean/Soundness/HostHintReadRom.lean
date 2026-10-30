@@ -14,6 +14,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance romLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance romLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -23,20 +24,20 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 
 private theorem source_valid
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ExecutionSourceValid image source := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-    (source_interface source.host.io.hints) constraints balanced
+    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
   exact (LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte).2.1
 
 /-- Raw installed AIR premises discharge the independent path's source and permission hypotheses. -/
 theorem GroundingCarrier.frame_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
     Target.SailConfigured target.sail ∧ Target.RomLoaded (image.toGuestProgram valid) target.sail ∧
@@ -50,9 +51,9 @@ theorem GroundingCarrier.frame_prefix (valid : image.Valid)
 /-- Every successful prefix of the installed replay preserves each protected byte exactly. -/
 theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target)
     (address : ℕ) (readOnly : image.readOnly address = true) :
@@ -62,9 +63,9 @@ theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
 /-- The incoming boundary's authenticated ROM survives every prefix of the installed replay. -/
 theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
     Target.RomLoaded (image.toGuestProgram valid) target.sail :=
@@ -73,9 +74,9 @@ theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
 /-- Every actual event of the installed tape fetches its committed word through official Sail. -/
 theorem GroundingCarrier.fetch_at (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (cut : ℕ) (active : cut < carrier.events.length) :
     ∃ current pc word, carrier.pairedTrajectory valid cut = some current ∧
       current.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc ∧

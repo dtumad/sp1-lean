@@ -36,6 +36,7 @@ private theorem path_of_replay {policy : HostPolicy} {program : Target.GuestProg
     simpa only [List.take_succ_cons, replayEvents?, step, Option.bind_some] using prefixReplay
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 local instance pathLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance pathLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -47,9 +48,9 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
 truth and operand currency are supplied by the same installed grounding proof. -/
 theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current : ExecutionState} {row : DecodedInstructionRow p}
     (atRow : carrier.ordered[n]? = some (.instruction row))
     (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -74,9 +75,9 @@ theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
 truth and operand currency are supplied by the same installed grounding proof. -/
 theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {n : ℕ} {current next : ExecutionState} {row : DecodedInstructionRow p}
     (atRow : carrier.ordered[n]? = some (.instruction row))
     (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -94,9 +95,9 @@ theorem GroundingCarrier.instruction_effect_at (valid : image.Valid)
 No permission, decoded-operand, or grounding premise is required from the caller. -/
 theorem GroundingCarrier.writesPermitted (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events := by
   intro n current atEvent prefixReplay
@@ -110,9 +111,9 @@ theorem GroundingCarrier.writesPermitted (valid : image.Valid)
 
 private theorem step_of_replay (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (n : ℕ) (current next : ExecutionState) (event : Machine.ExecutionEvent)
     (atEvent : carrier.events[n]? = some event)
     (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -162,9 +163,9 @@ private theorem step_of_replay (valid : image.Valid)
 
 private theorem final_replay (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (truth : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (finalBoundaryStateMessage witness.publicInput)) :
     ∃ target, carrier.pairedTrajectory valid carrier.events.length = some target ∧
@@ -189,9 +190,9 @@ private theorem final_replay (valid : image.Valid)
 derived complete event tape. Its endpoint agrees with the public PC/clock and every final record. -/
 theorem GroundingCarrier.execution (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize carrier.events target ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
@@ -218,9 +219,9 @@ theorem GroundingCarrier.execution (valid : image.Valid)
 /-- The same actual replay preserves the full Sail memory map outside the native address range. -/
 theorem GroundingCarrier.memory_outside (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) (address : ℕ) (outside : 2 ^ 48 ≤ address) :
@@ -232,9 +233,9 @@ theorem GroundingCarrier.memory_outside (valid : image.Valid)
 /-- Native instruction and host steps preserve Sail's simulator counter and output exactly. -/
 theorem GroundingCarrier.runtime (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) :
@@ -248,9 +249,9 @@ theorem GroundingCarrier.runtime (valid : image.Valid)
 /-- Every Sail register outside the GPR/PC/retirement footprint retains its complete source observation. -/
 theorem GroundingCarrier.other_registers (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints))} (carrier : GroundingCarrier witness)
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target)
@@ -268,9 +269,9 @@ grounding, or event semantics. The path exhausts the active physical inventory, 
 occurrences and erasing inactive padding. Complete outgoing snapshot binding is not asserted. -/
 theorem source_execution (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
       ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -292,9 +293,9 @@ path, using one fixed handler for the whole trace. All endpoint and inventory co
 `source_execution` are retained. General mixed callers keep the complete paired replay. -/
 theorem source_execution_ordinaryHalt (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
+      (HostFinalMemory.source_unique_names image source outgoing)))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (fragment : ∀ event ∈ (LocalCore.executionRows
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event,
         OrdinaryOrHalt event) (handler : Machine.ExecutableSyscallHandler) :

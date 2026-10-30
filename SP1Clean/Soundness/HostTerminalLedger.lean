@@ -14,6 +14,7 @@ namespace SP1Clean.Soundness.HostTerminalLedger
 open Circuit Air.Flat Channels Model.Core HostHintReadLocal HostQueueCallProjection
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {outgoing : MemorySnapshot}
 
 /-- Use Clean's field equality when projecting the original physical balance. -/
 local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
@@ -215,7 +216,7 @@ variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
 private theorem auxiliary_controls
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels)) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
     (witness.tables.drop 63).flatMap (·.interactionsWith HostExitBoundary.channel.toRaw) =
       (controlTables (HostHintQueueBoundary.projected witness)).flatMap
         (·.interactionsWith HostExitBoundary.channel.toRaw) := by
@@ -224,10 +225,10 @@ private theorem auxiliary_controls
     have mapped := HostTableRegistry.auxiliary_components witness
     have checked : (((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
         (fun receiver : HostLocalHandoff.Receiver (p := p) => receiver.component) ++
-          (HostHintReadHandoff.wordResources ++ sourceResources source.host.io.hints)).take 1 ++
+          (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing))).take 1 ++
         ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map
           (fun receiver : HostLocalHandoff.Receiver (p := p) => receiver.component) ++
-          (HostHintReadHandoff.wordResources ++ sourceResources source.host.io.hints)).drop 19).all
+          (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing))).drop 19).all
         (fun component => !(component.circuit.channels.map RawChannel.name).contains
           (HostExitBoundary.channel (p := p)).toRaw.name) = true := rfl
     intro table member
@@ -281,8 +282,8 @@ private theorem wrapper_exit_silent :
 /-- Only checked HALT calls produce terminal receipts; the verifier supplies one possibly disabled pull. -/
 theorem interactions
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     (witness.interactionsWith HostExitBoundary.channel.toRaw).Perm
       ((((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap receipt?).map
         HostExitBoundary.channel.pushedValue) ++
@@ -315,7 +316,7 @@ theorem interactions
   rw [tail, auxiliary_controls] at split
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := source_interface (p := p) source.host.io.hints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
   have controls := controls_interactions (HostHintQueueBoundary.projected witness) interface checks records.byte
   rw [controls] at split
   have selected := calls_receipts (HostHintQueueBoundary.projected witness)
@@ -352,12 +353,13 @@ private theorem balanced_receipts (produced : List (Word (ZMod p)))
 /-- The actual HALT-call inventory is empty or the exact advertised terminal word. -/
 theorem receipts
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap receipt?).Perm
       (if source.host.exitCode = none then bankFinal.exitCode.toList.map HostExitBoundary.encode else []) := by
   apply balanced_receipts
-  apply balancedInteractions_of_perm (balanced HostExitBoundary.channel.toRaw ?_)
+  apply balancedInteractions_of_perm (balanced HostExitBoundary.channel.toRaw ?_
+    (HostHintQueueBoundary.visible_of_name _ (by simp [HostExitBoundary.channel, Channel.toRaw])))
     (interactions witness constraints balanced)
   apply List.mem_append_left
   apply List.mem_append_right
@@ -366,8 +368,8 @@ theorem receipts
 /-- A stopped source's supplied endpoint must retain its exact optional exit code. -/
 theorem source_status
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (channels := channels))
-    (balanced : witness.BalancedChannels) :
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (balanced : HostHintQueueBoundary.Balanced witness) :
     source.host.exitCode = none ∨ source.host.exitCode = bankFinal.exitCode := by
   have raw := HostHintQueueBoundary.boundary_checks witness balanced
   unfold ClosedVerifier.Checks ClosedVerifier.operations at raw

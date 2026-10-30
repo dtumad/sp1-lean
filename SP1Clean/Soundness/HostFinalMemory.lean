@@ -1,5 +1,4 @@
 import SP1Clean.Soundness.HostHintQueueBoundary
-import SP1Clean.Soundness.FinalMemoryChecks
 
 /-! # Complete target Memory checks in the physical host assembly
 
@@ -17,46 +16,6 @@ open Circuit Air.Flat Channels Model.Core
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalMemoryLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance finalMemoryClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-
-/-- The complete physical host inventory has distinct canonical names before receipt wrapping. -/
-abbrev UniqueNames (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
-    (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p))) : Prop :=
-  ((HostLocalCore.tables image source
-    ((HostHintReadHandoff.receiver :: others).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ (resources ++ FinalMemoryChecks.checkTables target)))).map
-      (·.circuit.name)).Nodup
-
-/-- The concrete host registry and both target validators have distinct canonical names. -/
-theorem source_unique_names (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot) :
-    UniqueNames (p := p) image source target HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints) := by
-  let original := HostLocalCore.tables (p := p) image source
-    ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources source.host.io.hints))
-  have split : ((HostLocalCore.tables (p := p) image source
-      ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
-        (HostHintReadHandoff.wordResources ++ (HostHintReadLocal.sourceResources source.host.io.hints ++
-          FinalMemoryChecks.checkTables target)))).map (·.circuit.name)) =
-      original.map (·.circuit.name) ++ (FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name) := by
-    simp only [original, HostLocalCore.tables_names, List.map_append, List.append_assoc]
-  rw [UniqueNames, split, List.nodup_append]
-  refine ⟨HostHintReadLocal.source_unique_names image source source.host.io.hints,
-    ?_, ?_⟩
-  · simp only [FinalMemoryChecks.checkTables, List.map_cons, List.map_nil,
-      StaticTable.component, StaticTable.provider, FinalRegisterValue.membership]
-    exact of_decide_eq_true rfl
-  · have fresh : (original.map (·.circuit.name)).all
-        (fun name => !((FinalMemoryChecks.checkTables (p := p) target).map (·.circuit.name)).contains name) = true := by
-      simp only [original, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
-        LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
-        SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
-        MemorySnapshot.registerTable, StaticTable.ofRows,
-        FinalMemoryChecks.checkTables, FinalRegisterValue.membership]
-      rfl
-    intro a old b added same
-    have absent := List.all_eq_true.mp fresh a old
-    rw [List.contains_iff_mem.mpr (same.symm ▸ added)] at absent
-    exact Bool.noConfusion absent
 
 /-- Install the existing target consumers in the host resource block. Their channels are
 registered by the same host assembly as every other resource. -/

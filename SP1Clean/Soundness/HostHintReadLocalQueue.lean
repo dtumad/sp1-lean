@@ -228,19 +228,27 @@ theorem queue_rows_nil_of_silent_resources
     (queue_specs witness interface store authenticated constraints (RecordChannels.of_balanced witness balanced)) ledger
 
 /-- The fixed source registration lacks queue boundaries: all its queue handlers are necessarily
-inactive under the full AIR relation, even though record-only regressions can contain active rows. -/
-theorem source_queue_rows_nil
+inactive under the full AIR relation, even though record-only regressions can contain active rows.
+An appended block keeps this provided it has no record or queue edge. -/
+theorem source_queue_rows_nil {extra : List (Component (ZMod p))}
+    {names : ((HostLocalCore.tables image source ((receiver :: HostCallReceivers.available).map (·.component) ++
+      (wordResources ++ (sourceResources source.host.io.hints ++ extra)))).map (·.circuit.name)).Nodup}
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available
-      (sourceResources source.host.io.hints) channels
-      (source_unique_names image source source.host.io.hints)))
+      (sourceResources source.host.io.hints ++ extra) channels names))
+    (interface : ExtensionInterface HostCallReceivers.available (sourceResources source.host.io.hints ++ extra))
+    (records : ∀ component ∈ extra,
+      nodeChannel.toRaw ∉ component.circuit.channels ∧ wordChannel.toRaw ∉ component.circuit.channels)
+    (queue : ∀ component ∈ extra, stateChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) = [] := by
-  apply queue_rows_nil_of_silent_resources witness (source_interface source.host.io.hints)
+  apply queue_rows_nil_of_silent_resources witness interface
     (HintQueue.ofList source.host.io.hints).1
-    (source_record_authentication witness _ (.refl _) constraints) _ constraints balanced
+    (source_record_authentication witness records _ (.refl _) constraints) _ constraints balanced
   intro component member used
-  have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-  simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl <;> change false = true at present <;> contradiction
+  rcases List.mem_append.mp member with fixed | added
+  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
+    simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at fixed
+    rcases fixed with rfl | rfl | rfl | rfl <;> change false = true at present <;> exact Bool.noConfusion present
+  · exact queue component added used
 
 end SP1Clean.Soundness.HostHintReadLocal
