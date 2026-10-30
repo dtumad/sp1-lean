@@ -93,9 +93,10 @@ name = "Clean"
 git = "https://github.com/dtumad/clean"
 rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 
-# Module-mode Sail runtime (upstream rems-project/lean-sail#13), paired with the
-# generated model in provenance. The existing disambiguation and FinChoice compatibility
-# fixes are included. Return to a compatible upstream revision after #13 merges.
+# Module-mode Sail runtime: upstream tag `v6` (`c816ea7a`, which adds the sequential ArchSem
+# interpreter after `v5`) plus the module-system migration of rems-project/lean-sail#13. That
+# migration also carries the `open PreSail` and FinChoice compatibility fixes. Paired with the
+# generated model in provenance; return to an upstream revision after #13 merges.
 [[require]]
 name = "Sail"
 git = "https://github.com/dtumad/lean-sail"

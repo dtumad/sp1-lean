@@ -981,7 +981,7 @@
       "typeFingerprint": "3491161245"
     },
     {
-      "bodyFingerprint": "648835061",
+      "bodyFingerprint": "4264562765",
       "local": false,
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.RegisterType",
@@ -1534,7 +1534,7 @@
       "typeFingerprint": "3931117990"
     },
     {
-      "bodyFingerprint": "1166113164",
+      "bodyFingerprint": "646350504",
       "local": false,
       "module": "LeanRV64D.Defs",
       "name": "LeanRV64D.Defs.instDecidableEqRegister",
