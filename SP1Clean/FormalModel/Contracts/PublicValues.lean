@@ -19,7 +19,7 @@ boundary predicates (`InitialLedgerBoundary`, `FinalLedgerBoundary`,
 is the boot-to-halt shard-composition theorem — the reserved `sp1_execution_sound` layer
 sketched in `Soundness/AIR.lean`.  They are deliberately declared now so the cross-shard
 statement shape is fixed and auditable before that proof exists; a reference census will find
-them unreferenced in-tree, which is this design choice, not dead code. -/
+most of them unreferenced in-tree, which is this design choice, not dead code. -/
 
 namespace SP1Clean
 
