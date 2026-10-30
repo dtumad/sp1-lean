@@ -26,7 +26,7 @@ structure ResourceLimits where
   liveHints : ℕ
   /-- Peak total byte length of the live queue. -/
   liveHintBytes : ℕ
-  /-- Number of accumulated external hook and proof requests. -/
+  /-- Number of accumulated external hook requests. -/
   requests : ℕ
   /-- Total accumulated public, standard-output and standard-error bytes. -/
   outputBytes : ℕ

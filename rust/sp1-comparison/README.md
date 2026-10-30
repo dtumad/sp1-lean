@@ -1,6 +1,6 @@
 # Released SP1 comparison
 
-This crate reads the installed AIR inventory directly from pinned SP1 v6.9.0 Rust sources.
+This crate reads the installed AIR inventory directly from pinned SP1 v6.10.0 Rust sources.
 Those sources provide the independent reference for generated native artifacts.
 
 ```sh

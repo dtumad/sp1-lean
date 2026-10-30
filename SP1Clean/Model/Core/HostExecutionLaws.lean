@@ -109,11 +109,7 @@ theorem HostState.executeKind_write_permitted {host : HostState} {policy : HostP
       obtain ⟨_, _, _, _, _, _, rfl⟩ :=
         (host.execute_write_iff policy context arg1 arg2 effect).mp executed
       contradiction
-  | verifyProof =>
-      simp only [executeKind, bind, Option.bind_eq_some_iff, Option.some.injEq] at executed
-      obtain ⟨_, _, _, _, rfl⟩ := executed
-      contradiction
-  | enterUnconstrained | hintLength =>
+  | enterUnconstrained | hintLength | verifyProof =>
       cases executed
       contradiction
   | halt | commit | commitDeferred =>

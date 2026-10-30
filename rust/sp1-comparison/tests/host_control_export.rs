@@ -277,7 +277,18 @@ struct Reference {
     row: Vec<u64>,
     ledger: Ledger,
 }
-fn references() -> Vec<Reference> {
+#[derive(Deserialize)]
+struct ExitPolicyCase {
+    code: u32,
+    accepted: bool,
+}
+#[derive(Deserialize)]
+struct ControlReferences {
+    rows: Vec<Reference>,
+    #[serde(rename = "releaseExitPolicy")]
+    release_exit_policy: Vec<ExitPolicyCase>,
+}
+fn references() -> ControlReferences {
     serde_json::from_str(include_str!(concat!(
         env!("CLEAN_ENSEMBLE_EXPORT_DIR"),
         "/host_control.reference.json"
@@ -287,7 +298,7 @@ fn references() -> Vec<Reference> {
 
 #[test]
 fn twenty_installed_components_match_lean_rows_and_complete_ledgers() {
-    let references = references();
+    let references = references().rows;
     assert_eq!(references.len(), 20);
     for (index, (handler, reference)) in handlers().iter().zip(references).enumerate() {
         let input = fields(&reference.input);
@@ -491,7 +502,7 @@ fn halt_and_constrained_enter_match_released_execution() {
 
 #[test]
 fn malformed_calls_bounds_and_terminal_clocks_are_rejected() {
-    for (index, (handler, reference)) in handlers().iter().zip(references()).enumerate() {
+    for (index, (handler, reference)) in handlers().iter().zip(references().rows).enumerate() {
         let input = fields(&reference.input);
         if index < 18 {
             for column in [2, 4, 14, 18] {
@@ -917,5 +928,21 @@ fn commitment_padding_retains_occurrences_without_executing_a_call() {
             input[activity] = enabled;
             assert!(!handler.valid(&handler.build(&input)));
         }
+    }
+}
+
+#[test]
+fn native_release_exit_policy_matches_the_default_released_verifier_policy() {
+    let cases = references().release_exit_policy;
+    assert_eq!(
+        cases.iter().map(|case| case.code).collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 65536, F::ORDER_U64 as u32 - 1, u32::MAX]
+    );
+    for case in cases {
+        assert_eq!(case.accepted, case.code == 0);
+        assert_eq!(
+            case.accepted,
+            sp1_core_executor::StatusCode::ANY.is_accepted_code(case.code)
+        );
     }
 }

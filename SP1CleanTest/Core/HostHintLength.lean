@@ -23,7 +23,7 @@ private def word (value : ℕ) : Word Fp := Soundness.Target.bitVecToWord (BitVe
 
 private def host (hints : List Bytes) : HostState :=
   { io := ⟨hints, [4, 5]⟩, committed := Vector.replicate 8 17, deferred := Vector.replicate 8 19,
-    stdout := [6], stderr := [7], requests := [.proof ⟨[8], [9]⟩] }
+    stdout := [6], stderr := [7], requests := [⟨15, [8, 9]⟩] }
 
 private def context : HostReadContext where
   register index := if index == 5 then some 240 else if index == 10 then some (2 ^ 64 - 1)

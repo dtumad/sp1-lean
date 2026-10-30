@@ -36,11 +36,7 @@ theorem HostState.executeKind_exit {host : HostState} {policy : HostPolicy}
       obtain ⟨_, _, _, _, _, _, rfl⟩ :=
         (host.execute_hintRead_iff policy context arg1 arg2 effect).mp success
       rfl
-  | verifyProof =>
-      simp only [executeKind, bind, Option.bind_eq_some_iff, Option.some.injEq] at success
-      obtain ⟨_, _, _, _, rfl⟩ := success
-      rfl
-  | enterUnconstrained | hintLength => cases success; rfl
+  | enterUnconstrained | hintLength | verifyProof => cases success; rfl
   | halt | commit | commitDeferred =>
       simp only [executeKind] at success
       split_ifs at success

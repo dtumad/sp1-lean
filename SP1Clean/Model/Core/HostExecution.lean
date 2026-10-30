@@ -16,8 +16,9 @@ The source references use the released SP1 revision in `scripts/provenance.json`
 
 This native profile models constrained replay: ENTER_UNCONSTRAINED returns zero. Deferred
 commitments are explicit outputs with canonical field values, rather than the minimal executor's
-no-op or the replay VM's truncating assignment. VERIFY_SP1_PROOF records the two addressed
-32-byte digests; it does not verify a proof. Hook responses are explicit, request-bound inputs.
+no-op or the replay VM's truncating assignment. VERIFY_SP1_PROOF is the released no-op: it
+ignores both pointers, reads no memory and leaves all host state unchanged. Hook responses are
+explicit, request-bound inputs.
 Standard output/error record bytes before Rust's lossy UTF-8 rendering and profiling effects.
 Guest reads specify the requested byte slice; aligned word covers belong to the AIR footprint.
 The finite native memory window, ROM-write exclusion, and canonical exit/deferred values are
@@ -43,25 +44,13 @@ structure HostMemoryWrite where
   bytes : Bytes
 deriving DecidableEq, Repr
 
-/-- A request to an external verifier contains the bytes observed at the two guest pointers.
-Proof acceptance and the guest's subsequent digest computation are separate claims. -/
-structure ProofRequest where
-  verificationKey : Bytes
-  publicValues : Bytes
-deriving DecidableEq, Repr
-
-inductive HostRequest
-  | hook (request : HookRequest)
-  | proof (request : ProofRequest)
-deriving DecidableEq, Repr
-
 /-- The state threaded between calls. A recorded exit prevents every subsequent host call. -/
 structure HostState where
   io : HostIO := {}
   replies : List HookReply := []
   committed : Vector (BitVec 32) 8 := Vector.replicate 8 0
   deferred : Vector (BitVec 32) 8 := Vector.replicate 8 0
-  requests : List HostRequest := []
+  requests : List HookRequest := []
   stdout : Bytes := []
   stderr : Bytes := []
   exitCode : Option (BitVec 32) := none
@@ -110,7 +99,7 @@ def writeOutput (host : HostState) (descriptor : BitVec 64) (bytes : Bytes) : Op
   else if descriptor.setWidth 32 ∈ hookDescriptors then do
     let request : HookRequest := ⟨descriptor.setWidth 32, bytes⟩
     let (io, rest) ← host.io.applyHook request host.replies
-    some { host with io, replies := rest, requests := host.requests ++ [.hook request] }
+    some { host with io, replies := rest, requests := host.requests ++ [request] }
   else some host
 
 /-- The return register is determined by the kind and the pre-call queue. It is never an input
@@ -129,7 +118,7 @@ def executeKind (host : HostState) (policy : HostPolicy) (context : HostReadCont
       if arg1.toNat < policy.characteristic ∧ arg1.toNat < 2 ^ 32 then
         some ⟨{ host with exitCode := some (arg1.setWidth 32) }, none⟩
       else none
-  | .enterUnconstrained | .hintLength => some ⟨host, none⟩
+  | .enterUnconstrained | .hintLength | .verifyProof => some ⟨host, none⟩
   | .commit =>
       if index : arg1.toNat < 8 then
         if arg2.toNat < 2 ^ 32 then
@@ -142,10 +131,6 @@ def executeKind (host : HostState) (policy : HostPolicy) (context : HostReadCont
           some ⟨{ host with deferred := host.deferred.set arg1.toNat (arg2.setWidth 32) }, none⟩
         else none
       else none
-  | .verifyProof => do
-      let key ← context.readGuest? policy.memory arg1.toNat 32
-      let values ← context.readGuest? policy.memory arg2.toNat 32
-      some ⟨{ host with requests := host.requests ++ [.proof ⟨key, values⟩] }, none⟩
   | .write => do
       let length ← context.register 12
       let bytes ← context.readGuest? policy.memory arg2.toNat length.toNat

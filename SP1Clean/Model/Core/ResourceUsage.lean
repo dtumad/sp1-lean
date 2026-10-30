@@ -115,7 +115,7 @@ def HintQueue.Event.allocations : HintQueue.Event → ℕ
   | .prepend hints => hints.length
   | .read _ | .length _ => 0
 
-/-- Requested bytes from the existing footprint, including each logical VERIFY buffer. -/
+/-- Requested WRITE bytes from the existing footprint; VERIFY contributes no reads. -/
 def HostExecution.readByteCount (execution : HostExecution) (context : HostReadContext) : ℕ :=
   ((execution.readSpans? context).getD []).map MemorySpan.length |>.sum
 
@@ -137,9 +137,9 @@ theorem HostExecution.readByteCount_eq {execution : HostExecution} {context : Ho
     execution.readByteCount context = (reads.map MemorySpan.length).sum := by
   simp only [readByteCount, spans, Option.getD_some]
 
-/-- Overlap changes the physical cell cover, never the two logical 32-byte observations. -/
+/-- Released VERIFY ignores both pointers and requires no guest-memory observations. -/
 theorem HostExecution.readByteCount_verify {execution : HostExecution} (context : HostReadContext)
-    (kind : execution.kind = .verifyProof) : execution.readByteCount context = 64 := by
+    (kind : execution.kind = .verifyProof) : execution.readByteCount context = 0 := by
   simp [readByteCount, readSpans?, kind]
 
 /-- WRITE's demand follows the observed x12 value, not either pointer argument. -/

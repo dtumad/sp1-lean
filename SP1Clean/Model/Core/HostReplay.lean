@@ -3,7 +3,7 @@ import SP1Clean.Model.Core.ExecutionReplay
 /-! # Complete host fields along a local execution
 
 The existing interpreter determines terminal status from actual HALT labels. Calls other than
-WRITE and VERIFY preserve public output, hook replies, requests, stdout, and stderr. This frame
+WRITE preserve public output, hook replies, requests, stdout, and stderr. This frame
 is explicit here and must be derived from a physical receiver inventory before using it for AIR
 soundness; it is not a restriction on the intended eight-call capstone.
 -/
@@ -12,10 +12,10 @@ namespace SP1Clean.Model.Core
 
 open Machine Soundness.Target
 
-/-- Exactly the two calls that may change the host's external I/O fields are excluded. -/
+/-- Exactly the call that may change the host's external I/O fields is excluded. -/
 def HostFrameSafe : ExecutionEvent → Prop
   | .ordinary => True
-  | .syscall call => call.rawCode ≠ SyscallKind.write.code ∧ call.rawCode ≠ SyscallKind.verifyProof.code
+  | .syscall call => call.rawCode ≠ SyscallKind.write.code
 
 /-- The only label that changes terminal status is HALT, including a successful exit zero. -/
 def hostExitAfter (status : Option (BitVec 32)) : ExecutionEvent → Option (BitVec 32)
@@ -25,7 +25,7 @@ def hostExitAfter (status : Option (BitVec 32)) : ExecutionEvent → Option (Bit
 private theorem HostState.executeKind_frame {host : HostState} {policy : HostPolicy}
     {context : HostReadContext} {kind : SyscallKind} {arg1 arg2 : BitVec 64} {effect : HostEffect}
     (success : host.executeKind policy context kind arg1 arg2 = some effect)
-    (notWrite : kind ≠ .write) (notVerify : kind ≠ .verifyProof) :
+    (notWrite : kind ≠ .write) :
     effect.state = { host with
       io.hints := effect.state.io.hints
       committed := effect.state.committed
@@ -33,12 +33,11 @@ private theorem HostState.executeKind_frame {host : HostState} {policy : HostPol
       exitCode := effect.state.exitCode } := by
   cases kind with
   | write => exact (notWrite rfl).elim
-  | verifyProof => exact (notVerify rfl).elim
   | hintRead =>
       obtain ⟨_, _, _, _, _, _, rfl⟩ :=
         (host.execute_hintRead_iff policy context arg1 arg2 effect).mp success
       rfl
-  | enterUnconstrained | hintLength => cases success; rfl
+  | enterUnconstrained | hintLength | verifyProof => cases success; rfl
   | halt | commit | commitDeferred =>
       simp only [HostState.executeKind] at success
       split_ifs at success
@@ -62,8 +61,7 @@ theorem ExecutionStep.host_frame {policy : HostPolicy} {program : GuestProgram}
       dsimp only
       rw [hostEq]
       exact HostState.executeKind_frame observed.2.2.2.2.2
-        (fun same => safe.1 (congrArg SyscallKind.code same))
-        (fun same => safe.2 (congrArg SyscallKind.code same))
+        (fun same => safe (congrArg SyscallKind.code same))
 
 /-- Preserve every external I/O field across the whole path, including an empty or stopped path. -/
 theorem ExecutionPath.host_frame {policy : HostPolicy} {program : GuestProgram}
