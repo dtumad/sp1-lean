@@ -57,6 +57,23 @@ theorem computed : True ∧ True := by
   exact ⟨first, second⟩
 end TrustFixtureAgain
 """,
+        "ModulePrivate": """module
+public import Lean
+
+namespace ModuleTrustFixture
+private axiom hiddenAxiom : False
+public theorem inherited : False := hiddenAxiom
+private theorem unreferenced : False := by sorry
+public theorem computed : True := by native_decide
+end ModuleTrustFixture
+""",
+        "ModuleFacade": """module
+import TrustFixtures.ModulePrivate
+
+namespace ModuleTrustFixture
+public theorem throughPrivateImport : False := inherited
+end ModuleTrustFixture
+""",
     }
     with tempfile.TemporaryDirectory(prefix="sp1-trust-fixtures-") as tmp:
         root = Path(tmp)
@@ -86,15 +103,33 @@ end TrustFixtureAgain
                    for v in trust.evaluate(entries, "test", policy)[1])
         clean = [e for e in entries if e["module"] == "TrustFixtures.Clean"]
         assert len(clean) >= 2 and not trust.evaluate(clean, "main", policy)[1]
-        for name in ("TrustFixture.computed", "TrustFixtureAgain.computed"):
+        for name in ("TrustFixture.computed", "TrustFixtureAgain.computed",
+                     "ModuleTrustFixture.computed"):
             native = [by_name[name]]
-            assert native[0]["axioms"] == [name + "._native.native_decide"]
+            owner = ("_private.TrustFixtures.ModulePrivate.0." + name
+                     if name == "ModuleTrustFixture.computed" else name)
+            assert native[0]["axioms"] == [owner + "._native.native_decide"], native
             assert trust.evaluate(native, "main", policy)[1]
             assert not trust.evaluate(native, "test", policy)[1]
+        hidden = [e for e in entries if e["name"].endswith("ModuleTrustFixture.hiddenAxiom")]
+        assert len(hidden) == 1
+        hidden_name = hidden[0]["name"]
+        assert hidden_name in by_name["ModuleTrustFixture.inherited"]["axioms"]
+        assert any(e["name"].endswith("ModuleTrustFixture.unreferenced")
+                   and "sorryAx" in e["axioms"] for e in entries)
+        # Import only the facade: its non-public dependency and hidden proof body must
+        # still be traversed. This uses the pinned upstream scanner unchanged.
+        facade = ["TrustFixtures.ModuleFacade"]
+        run = subprocess.run(["lean", "--run", str(scanner), "--root", facade[0],
+                              "--out", str(raw)], env=env, text=True,
+                             capture_output=True, check=True)
+        exposed = trust.validate_report(json.loads(raw.read_text()), facade, facade, run.stdout)
+        assert any(e["name"] == "ModuleTrustFixture.throughPrivateImport"
+                   and hidden_name in e["axioms"] for e in exposed)
         missing = subprocess.run(["lean", "--run", str(scanner), "--root", "TrustFixtures.Missing"],
                                  env=env, text=True, capture_output=True)
         assert missing.returncode != 0
-    print("PASS: compiled trust fixtures (private/transitive/type/mutual/native/coverage)")
+    print("PASS: compiled trust fixtures (private/transitive/type/mutual/native/coverage/module)")
 
 
 if __name__ == "__main__":

@@ -84,6 +84,7 @@ an empty 16-to-16 trace; the verifier's public checks reject it. A trace of `n` 
 `2*n + 2` State occurrences and four additional public-check occurrences, including for `n = 0`.
 
 ```sh
+python3 scripts/prepare_sail.py
 lake build --wfail --iofail SP1CleanTest.Alignment.Examples.Counter
 lake env lean scripts/counterExample.lean
 ```

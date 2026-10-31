@@ -1,5 +1,8 @@
 # Build products and dependencies, including nested Rust/Node tools.
 .lake/
+# Retired generator destinations; prepared Sail sources belong under .lake/generated/sail.
+/LeanRV64D/
+/LeanRV64D.lean
 /build/
 target
 node_modules

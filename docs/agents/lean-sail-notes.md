@@ -15,9 +15,9 @@ generated namespaces, memory result types and every symbolically reduced proof. 
 
 | Choice | Reason | Exit |
 |---|---|---|
-| lean-sail fork pin | Fully qualifies an ambiguous PreSail open that otherwise warns under the strict build | Consume upstream rems-project/lean-sail#14 in a compatible runtime |
+| Module-mode Sail pair | Runtime #13 and generator #1742 supply module support while preserving exposed bodies | Consume compatible upstream revisions after those changes merge |
 | LeanRV64DRvfi library / legacy do | Avoids exponential discarded-action elaboration in generated RvfiDii | #6: pinned Lean/backend fix, regenerated/validated model and measured build |
-| Non-module SP1/Sail consumers | Generated Sail and its runtime are not yet migrated together | #33: generation-time module support, then complete consumer migration |
+| Non-module SP1 consumers | Handwritten visibility migration follows the prepared module-mode Sail pair | #33: complete consumer migration and public/private trust checks |
 | Current toolchain | The pinned Clean/PolyFun/Sail graph is validated together | Deliberate coordinated compatibility review; never bare lake update |
 
 ## Useful proof details

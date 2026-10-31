@@ -18,6 +18,7 @@ sorryAx and unknown axioms fail in both scopes. There is no automatic policy upd
 Generated axiom counter suffixes are normalized, but a new proof owner requires explicit review.
 
 ```sh
+python3 scripts/prepare_sail.py
 lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib ToPolyFun
 python3 scripts/check_trust.py
 lake env python3 scripts/test_trust_integration.py

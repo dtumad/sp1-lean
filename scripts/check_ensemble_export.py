@@ -342,7 +342,8 @@ def main():
            "LEAN_NUM_THREADS": os.environ.get("LEAN_NUM_THREADS", "2"),
            "CARGO_BUILD_JOBS": os.environ.get("CARGO_BUILD_JOBS", "2")}
     with exclusive_run(root / "inputs.lock"):
-        subprocess.run([sys.executable, "scripts/check_pins.py"], env=env, check=True)
+        pin_options = [] if args.stage in {"all", "prepare"} else ["--source-only"]
+        subprocess.run([sys.executable, "scripts/check_pins.py", *pin_options], env=env, check=True)
         if args.stage == "prepare":
             prepare(args.output, env)
         elif args.stage == "generate":

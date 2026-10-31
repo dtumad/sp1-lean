@@ -76,6 +76,7 @@ migration supersedes their historical compatibility-preservation guidance.
 ## Build and validation
 
 ```sh
+python3 scripts/prepare_sail.py
 lake build --wfail --iofail
 lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib ToPolyFun
 lake test
@@ -116,8 +117,10 @@ No path dependencies or moving branch pins. Update one Lake requirement at a tim
 lake update. Read [dependency notes](docs/agents/lean-sail-notes.md) before a pin change. A revision
 must be reachable from a published branch/tag so a fresh clone works.
 
-LeanRV64D and the Sail runtime move as a compatible pair. Generate LeanRV64D through
-scripts/sail-config/generate_lean_rv64d.sh; never hand-edit it. The separate RvfiDii Lake library
+LeanRV64D and the Sail runtime move as a compatible pair. Prepare the fingerprinted model under
+`.lake/generated/sail` with `scripts/prepare_sail.py`; its cache miss uses the pinned generator.
+Regenerate through scripts/sail-config/generate_lean_rv64d.sh; never hand-edit it or commit its
+output. The separate RvfiDii Lake library
 is a temporary elaboration workaround owned by #6. SP1 comparisons use the released Rust
 revision in provenance; generated Lean-to-Rust artifacts belong under the ignored build tree.
 

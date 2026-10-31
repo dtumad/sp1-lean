@@ -10,6 +10,7 @@ import sys
 from lean_flags import load_lakefile
 
 ROOT = Path(__file__).resolve().parents[1]
+SAIL_MODEL_DIR = Path(".lake/generated/sail")
 
 
 def sp1_pin_errors(cargo: str, locked: str, sp1: dict) -> list[str]:
@@ -57,7 +58,22 @@ def tree_hash(root: Path) -> tuple[str, int]:
     return digest.hexdigest(), len(files)
 
 
-def check(root: Path) -> list[str]:
+def validate_sail(source, pins):
+    """The digest includes paths and all files, including unexpected additions."""
+    if source.is_symlink() or (source / "LeanRV64D").is_symlink():
+        raise ValueError("Generated Sail inputs must not be symlinks")
+    paths = [source / "LeanRV64D.lean", *sorted((source / "LeanRV64D").rglob("*"))]
+    if any(path.is_symlink() for path in paths):
+        raise ValueError("Generated Sail inputs must not contain symlinks")
+    if tree_hash(source) != (pins["generatedTreeSha256"], pins["generatedFiles"]):
+        raise ValueError("Generated Sail tree differs from provenance")
+    if pins["moduleSystem"] and any(
+        not path.read_text().startswith("module\n") for path in paths if path.is_file()
+    ):
+        raise ValueError("Expected module-mode Sail output")
+
+
+def check(root: Path, *, source_only: bool = False) -> list[str]:
     errors = []
 
     def require(condition, message):
@@ -116,13 +132,22 @@ def check(root: Path) -> list[str]:
     for name, revision in [(key, sail[key]) for key in
                            ("compilerRevision", "modelRevision", "baseSnapshot")]:
         require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)), f"{name}: expected full commit")
-    model_hash, model_files = tree_hash(root)
-    require((model_hash, model_files) == (sail["generatedTreeSha256"], sail["generatedFiles"]),
-            "generated Sail tree differs from provenance; regenerate through the owned pipeline")
+    require(sail.get("moduleSystem") is True, "Sail must be generated in module mode")
+    require(bool(re.fullmatch(r"[0-9a-f]{64}", sail["generatedTreeSha256"])) and
+            sail["generatedFiles"] > 0, "invalid generated Sail fingerprint")
+    if not source_only:
+        try:
+            validate_sail(root / SAIL_MODEL_DIR, sail)
+        except (OSError, ValueError) as error:
+            errors.append(f"generated Sail tree: {error}; run python3 scripts/prepare_sail.py")
     config_hash = hashlib.sha256(
         (root / "scripts/sail-config/sp1_rv64d_cfg.json").read_bytes()).hexdigest()
     require(config_hash == sail["configSha256"], "Sail platform config differs from provenance")
     libraries = {library["name"]: library for library in config["lean_lib"]}
+    for name in ("LeanRV64D", "LeanRV64DRvfi"):
+        require(libraries[name].get("srcDir") == SAIL_MODEL_DIR.as_posix() and
+                libraries[name].get("requiresModuleSystem") is True,
+                f"{name}: generated sources must use the prepared module-mode tree")
     options = {name: library.get("leanOptions", {}) for name, library in libraries.items()}
     require(options.get("SP1CoreTest") == options.get("SP1CleanTest"),
             "test libraries must carry identical Lean options")
@@ -141,9 +166,12 @@ def check(root: Path) -> list[str]:
 
 
 def main() -> int:
-    argparse.ArgumentParser(description=__doc__).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-only", action="store_true",
+                        help="check pinned inputs without requiring prepared generated output")
+    args = parser.parse_args()
     try:
-        errors = check(ROOT)
+        errors = check(ROOT, source_only=args.source_only)
     except (OSError, ValueError, KeyError, TypeError) as error:
         errors = [f"invalid dependency/provenance data: {error}"]
     for error in errors:

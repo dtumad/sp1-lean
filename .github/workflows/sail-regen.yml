@@ -1,20 +1,8 @@
 name: Sail Model Regeneration
 
-# The in-tree `LeanRV64D/` library is GENERATED: the pinned rems-project/sail compiler run over the
-# pinned riscv/sail-riscv sources with the checked-in SP1 platform config. This workflow is the
-# machine check that the committed tree is exactly that generator output — it rebuilds the model
-# from the pins in `scripts/provenance.json` and fails on any byte difference,
-# so regeneration is idempotent and hand edits cannot hide in the generated tree.
-#
-# Steps mirror the script's modes: `--deps` (the OCaml switch and the Sail compiler, cached by
-# toolchain pins; measured 6.5 minutes cold on ubuntu-latest, seconds warm), `--make-config` (the
-# committed config must be base ⊕ overlay for the pinned sail-riscv), `--sp1` (identity against the
-# pinned SP1 snapshot, the gate; ~16 minutes), and `--stock` (identity against the opencompl base,
-# which documents that the SP1 config is the only difference; ~12 minutes). Whole job: ~36 minutes
-# cold, ~30 warm.
-#
-# Runs on demand, monthly, and on pull requests that touch the generator, its config, the generated
-# tree itself, the manifest (a lean-sail re-pin), or this file.
+# Reproduce the ignored model from immutable inputs, independently of the source cache.
+# Preparation caches are accepted only after fingerprint verification. This workflow always
+# regenerates, including the stock-config comparison, and can publish the verified source cache.
 
 on:
   workflow_dispatch:
@@ -24,8 +12,10 @@ on:
     paths:
       - "scripts/sail-config/**"
       - "scripts/provenance.json"
-      - "LeanRV64D/**"
-      - "LeanRV64D.lean"
+      - "scripts/prepare_sail.py"
+      - "scripts/check_pins.py"
+      - "lakefile.toml"
+      - ".github/actions/prepare-sail/**"
       - "lake-manifest.json"
       - ".github/workflows/sail-regen.yml"
 
@@ -38,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 150
     env:
-      SAIL_GEN_DIR: ${{ github.workspace }}/.sail-gen
+      SAIL_GEN_DIR: ${{ github.workspace }}/.lake/sail-gen
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +41,7 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
               print('SAIL_SHA=' + sail['compilerRevision'], file=out)
               print('OCAML_VERSION=' + sail['ocamlVersion'], file=out)
+              print('MODEL_SHA=' + sail['generatedTreeSha256'], file=out)
           PY
 
       - name: System packages
@@ -62,15 +53,12 @@ jobs:
         id: sail-cache
         uses: actions/cache@v4
         with:
-          path: ~/.opam
-          key: sail-toolchain-${{ runner.os }}-ocaml${{ steps.pins.outputs.OCAML_VERSION }}-${{ steps.pins.outputs.SAIL_SHA }}
+          path: |
+            .lake/sail-gen/opam
+            .lake/sail-gen/compiler-revision
+          key: sail-compiler-${{ runner.os }}-${{ steps.pins.outputs.SAIL_SHA }}-${{ steps.pins.outputs.OCAML_VERSION }}
 
-      - name: Initialise opam (cold cache only)
-        if: steps.sail-cache.outputs.cache-hit != 'true'
-        run: opam init --bare --disable-sandboxing --no-setup --yes
-
-      - name: Build the pinned Sail compiler (cold cache only)
-        if: steps.sail-cache.outputs.cache-hit != 'true'
+      - name: Build or verify the pinned Sail compiler
         run: scripts/sail-config/generate_lean_rv64d.sh --deps
 
       - name: The committed config is base ⊕ overlay for the pinned sail-riscv
@@ -78,8 +66,16 @@ jobs:
           scripts/sail-config/generate_lean_rv64d.sh --make-config
           git diff --exit-code -- scripts/sail-config/sp1_rv64d_cfg.json
 
-      - name: Regenerate with the SP1 config and compare with the in-tree copy (the idempotence gate)
-        run: scripts/sail-config/generate_lean_rv64d.sh --sp1
+      - name: Independently regenerate and check the SP1-configured fingerprint
+        run: |
+          scripts/sail-config/generate_lean_rv64d.sh --sp1
+          python3 scripts/prepare_sail.py --from .lake/sail-gen/sail-riscv/build/model/Lean_RV64D
+
+      - name: Save the verified portable sources
+        uses: actions/cache/save@v4
+        with:
+          path: .lake/generated/sail
+          key: sail-source-${{ steps.pins.outputs.MODEL_SHA }}
 
       - name: Regenerate with the stock config and compare with the opencompl base
         run: scripts/sail-config/generate_lean_rv64d.sh --stock
