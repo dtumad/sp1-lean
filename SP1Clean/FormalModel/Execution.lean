@@ -17,9 +17,9 @@ program is then private data bound by the verifying key's preprocessed commitmen
 Neither relation equates a shard endpoint with halting.  Halting is a property of the composed
 execution theorem, after shard continuity and the recursion completion checks have been proved.
 
-Like its `Relations`/`CoreProfile`/`CoreAIRRelation`/`Verifier` siblings, part of this module is
-reserved relation-level API for the exact-AIR/ArkLib composition — declared ahead of the consumer
-that will instantiate it, so some declarations are expected to be unreferenced in-tree today. -/
+Like its `Relations`/`Verifier` siblings, part of this module is reserved relation-level API for
+the ArkLib composition — declared ahead of the consumer that will instantiate it, so some
+declarations are expected to be unreferenced in-tree today. -/
 
 open LeanRV64D.Defs
 

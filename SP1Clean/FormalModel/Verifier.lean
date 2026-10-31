@@ -68,27 +68,26 @@ keeps the AIR-witness type and widens its relation to the semantic target's prei
 
 ```lean
 theorem sp1_verifier_sound
-    (airRefinement : WitnessRelation.FunctionalRefinement
-      (CoreAIR.Current.ShardRelation preprocessedBinding)
-      (Execution.SP1CoreShardSemanticRelation .base handler programBinding))
+    (airRefinement : WitnessRelation.FunctionalRefinement airRelation semanticRelation)
     (hVerifier : verifier.knowledgeSoundness init impl
-      (WitnessRelation.asSet (CoreAIR.Current.ShardRelation preprocessedBinding))
-      acceptRejectRel knowledgeError) :
+      (WitnessRelation.asSet airRelation) acceptRejectRel knowledgeError) :
     verifier.knowledgeSoundness init impl
-      (WitnessRelation.asSet
-        airRefinement.targetPreimage)
+      (WitnessRelation.asSet airRefinement.targetPreimage)
       acceptRejectRel knowledgeError := by
   exact knowledgeSoundness_relIn_mono
     airRefinement.source_subset_targetPreimage hVerifier
 ```
 
-Here `knowledgeSoundness_relIn_mono` is the small ArkLib-side theorem that a straight-line extractor
+Here `airRelation` is the witness relation of the circuit the verifier accepts, and
+`semanticRelation` is its execution target, such as `Execution.SP1CoreShardSemanticRelation`.
+`knowledgeSoundness_relIn_mono` is the small ArkLib-side theorem that a straight-line extractor
 remains sound when its input relation is widened; its proof reuses the same extractor and applies
 `probEvent_mono`, so the knowledge error is unchanged. A consumer maps a successfully extracted AIR
 witness with `airRefinement.map`, and target-preimage membership authenticates that semantic witness.
 
-This belongs in the ArkLib integration layer, not in `sp1_air_sound`: the latter proves the
-deterministic refinement premise and says nothing about Fiat–Shamir, commitments, query soundness, or
-the probability of extractor failure. -/
+This belongs in the ArkLib integration layer, not in the deterministic circuit theorems. Those
+(currently `Shard.sail_trace`, which concludes a Sail trace from acceptance rather than a
+`FunctionalRefinement`) say nothing about Fiat–Shamir, commitments, query soundness, or the
+probability of extractor failure. -/
 
 end SP1Clean.VerifierBoundary

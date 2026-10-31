@@ -90,18 +90,20 @@ theorem projected_drop
 
 /-- Channels whose producers lie outside the host proof view: the final-memory receipts consumed
 by appended target validators, and the commitment declarations pulled by COMMIT handlers from the
-verifier-owned statement provider. No host proof reads them. -/
+verifier-owned statement provider. The host grounding proofs assume no balance on them; the target
+comparison (`HostFinalMemory.checkFinal_of_channels`) and statement authentication
+(`CommitmentEnsemble.declared_member`) use their balance, which complete acceptance supplies. -/
 def hiddenChannels : List (RawChannel (ZMod p)) :=
   [(FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
     FinalMemoryChange.channel.toRaw, CommitmentDeclaration.channel.toRaw]
 
-/-- Balance on every registered channel except the hidden ones, which no host proof reads. -/
+/-- Balance on every registered channel except the hidden ones: the host grounding premise. -/
 def Balanced (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names)) :
     Prop :=
   ∀ channel ∈ (ensemble image source final bankFinal others resources channels names).channels,
     channel ∉ hiddenChannels (p := p) → witness.BalancedChannel channel
 
-/-- Complete balance in particular balances every channel the host proofs read. -/
+/-- Complete balance in particular gives the host grounding premise. -/
 theorem Balanced.of_balancedChannels
     {witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names)}
     (balanced : witness.BalancedChannels) : Balanced witness :=

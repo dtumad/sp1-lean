@@ -151,7 +151,9 @@ Projected ledgers retain every fixed row, including unused intervals and zero-co
 The host grounding proofs are stated over the installed complete-memory resource list and take
 balance on every registered channel except `HostHintQueueBoundary.hiddenChannels`: the
 final-memory receipts and commitment declarations, whose producers lie outside the host proof
-view. No host proof reads those channels; the target validators and statement checks consume them.
+view. The grounding proofs assume no balance on those channels. The target comparison
+(`HostFinalMemory.checkFinal_of_channels`) and commitment-statement authentication
+(`CommitmentEnsemble.declared_member`) use their balance, which complete acceptance supplies.
 Ordered source/final rows and target checks carry a separate Boolean activity column. Raw
 constraints establish its binarity; balance matches only active records while keeping the full
 weighted physical ledger and occurrence bound. Target-change selection remains separate from

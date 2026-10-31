@@ -68,7 +68,8 @@ theorem hookReplies :
     run hookHost .write 15 65538 (some 2) = none ∧
     run {} .write 15 65537 (some 2) = none := by native_decide
 
-/-- Both banks update mutable slots. Distinct overwrites require separate exact-AIR refinement. -/
+/-- Both banks update mutable slots. A conflicting overwrite remains executable but cannot agree
+with one immutable commitment statement. -/
 theorem commitmentUpdates :
     ((run {} .commit 3 7).bind fun first => run first.effect.state .commit 3 8).map
       (fun last => (last.effect.state.committed[3], last.effect.state.committed[2])) = some (8, 0) ∧
