@@ -1,0 +1,45 @@
+name: Prepare generated Sail sources
+description: Verify cached sources or regenerate from the pinned compiler and configuration
+runs:
+  using: composite
+  steps:
+    - name: Read the generated-source fingerprint
+      id: fingerprint
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        import json, os
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            pins = json.load(open('scripts/provenance.json'))['sail']
+            print('sha256=' + pins['generatedTreeSha256'], file=output)
+            print('compiler=' + pins['compilerRevision'] + '-' + pins['ocamlVersion'], file=output)
+        PY
+    - uses: actions/cache@v4
+      with:
+        path: .lake/generated/sail
+        key: sail-source-${{ steps.fingerprint.outputs.sha256 }}
+    - name: Validate the restored sources
+      id: restored
+      shell: bash
+      run: |
+        if python3 scripts/prepare_sail.py --check; then
+          echo 'valid=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'valid=false' >> "$GITHUB_OUTPUT"
+        fi
+    - name: Install generator prerequisites
+      if: steps.restored.outputs.valid != 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y opam cmake z3 libgmp-dev pkg-config zlib1g-dev m4
+    - uses: actions/cache@v4
+      if: steps.restored.outputs.valid != 'true'
+      with:
+        path: |
+          .lake/sail-gen/opam
+          .lake/sail-gen/compiler-revision
+        key: sail-compiler-${{ runner.os }}-${{ steps.fingerprint.outputs.compiler }}
+    - name: Prepare the fingerprinted model
+      shell: bash
+      run: python3 scripts/prepare_sail.py

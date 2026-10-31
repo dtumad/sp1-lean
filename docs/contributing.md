@@ -3,8 +3,11 @@
 Install the Lean toolchain named in [lean-toolchain](../lean-toolchain), Git and Python 3.9 or newer.
 Lake resolves the checked-in dependency graph. The example runners require prepared dependency
 checkouts and never download or update them implicitly.
+Prepare the generated Sail sources first; a cold checkout needs the
+[Sail generator prerequisites](agents/sail-model-provenance.md), while a verified cache avoids regeneration.
 
 ```sh
+python3 scripts/prepare_sail.py
 lake exe cache get
 lake build --wfail --iofail
 lake test
@@ -61,10 +64,10 @@ use moving branch pins. A pinned commit must be reachable from a published branc
 [Dependency notes](agents/lean-sail-notes.md) explain the Sail runtime/generator pairing.
 Regenerate through the owned scripts; do not hand-edit generated Lean.
 
-Keep disposable outputs under `.lake/build`; Rust targets, Node dependencies and compiler caches
-are ignored throughout the tree. Required generated Sail/AIR sources and conformance fixtures
-remain versioned until their consumers have a reproducible replacement. `.gitattributes` marks
-those trees as generated for GitHub statistics and diffs; this does not reduce checkout size.
+Keep disposable outputs under `.lake`; Rust targets, Node dependencies and compiler caches
+are ignored throughout the tree. Sail sources live under `.lake/generated/sail`; generated Rust
+AIR and witness fixtures are also regenerated outside Git. Keep independent reviewed source
+inventories and handwritten conformance cases versioned.
 Do not ignore lockfiles, provenance or reviewed contract snapshots.
 
 Before starting another heavy build, check for existing build workers. Never switch branches

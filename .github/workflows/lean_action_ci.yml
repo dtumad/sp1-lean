@@ -109,7 +109,7 @@ jobs:
       - name: Witness-generation escape hatches (enforced — the witgen cutover is complete)
         run: scripts/check_no_witness_native.sh --enforce
       - name: Recorded pins match the build graph
-        run: scripts/check_pins.py
+        run: scripts/check_pins.py --source-only
       - name: Trust policy is well-formed
         run: python3 scripts/check_trust.py --validate-policy-only
       - name: Audit tooling regressions
@@ -223,6 +223,7 @@ jobs:
           key: sp1-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
           restore-keys: |
             sp1-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+      - uses: ./.github/actions/prepare-sail
       - name: Build (resumable — a cold cache may need one re-run)
         run: timeout 5h lake build --wfail --iofail
       - name: Core tests (lake test = SP1CoreTest, with the warning/info gates)
