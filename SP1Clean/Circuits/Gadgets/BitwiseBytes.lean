@@ -99,12 +99,8 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   simp only [circuit_norm, byteChannel, ea, eb, er] at h_holds ⊢
   obtain ⟨hg0, hg1, hg2, hg3, hg4, hg5, hg6, hg7, _hbool⟩ := h_holds
   -- The eight trailing conjuncts are the byte pulls' own `Requirements` — vacuous off-gate.
-  refine ⟨fun h1 => ?_, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0⟩
-  have hneg : - input_is_real = -1 := by rw [h1]
+  refine ⟨fun h1 => ?_, hbin⟩
+  have hneg : input_is_real = 1 := h1
   -- The byte table guarantees each fired send's operands are bytes and `result = byteOp`.
   have H : ∀ i : Fin 8,
       (input_cols_result[(i : ℕ)].val < 256 ∧ input_a[(i : ℕ)].val < 256 ∧ input_b[(i : ℕ)].val < 256) ∧
@@ -145,10 +141,10 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     exact (byteRowSpec_byteOp _ _ _ hopcode).mpr
       ⟨⟨by rw [hres]; exact byteOp_lt256 _ _ _ hb.1 hb.2, hb.1, hb.2⟩, hres⟩
   simp only [circuit_norm, byteChannel, ea, eb, er]
-  refine ⟨fun hn => key (neg_inj.mp hn) 0, fun hn => key (neg_inj.mp hn) 1,
-    fun hn => key (neg_inj.mp hn) 2, fun hn => key (neg_inj.mp hn) 3,
-    fun hn => key (neg_inj.mp hn) 4, fun hn => key (neg_inj.mp hn) 5,
-    fun hn => key (neg_inj.mp hn) 6, fun hn => key (neg_inj.mp hn) 7, ?_⟩
+  refine ⟨fun hn => key hn 0, fun hn => key hn 1,
+    fun hn => key hn 2, fun hn => key hn 3,
+    fun hn => key hn 4, fun hn => key hn 5,
+    fun hn => key hn 6, fun hn => key hn 7, ?_⟩
   rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- The `BitwiseOperation` gadget as a Clean-native `FormalAssertion`: `is_real`- and opcode-gated

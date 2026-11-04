@@ -15,7 +15,7 @@ emulation (write `nextPC = pc + 4` and the extended byte into `rd`), via
 extend to `#v[selected_byte + 65280·msb, 65535·msb, 65535·msb, 65535·msb]` — the sign fills bits
 8–63, so the low limb already carries `65280·msb`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.LoadByteSail
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -152,7 +152,7 @@ theorem correct_load_byte_native
   rw [hsp] at hread
   simp [spec_lb, sp1_lb, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hext]
 
 /-- End-to-end: from chip + decode + register/PC reads + selected memory byte, Sail's `LB`/`LBU`
 agrees with the SP1 chip emulation. -/
@@ -181,14 +181,14 @@ theorem lb_chip_reaches_sail
     cases hu : is_unsigned with
     | true =>
       have hmsb0 : input.msb = 0 := h_unsigned_msb (by rw [hu])
-      simp only [extend_value, if_true, zero_extend, hmsb0, mul_zero, add_zero]
+      simp only [extend_value, ite_true, zero_extend, hmsb0, mul_zero, add_zero]
       exact zeroExtend64_ofNat8 _ hsel
     | false =>
-      simp only [extend_value, Bool.false_eq_true, if_false, sign_extend, Sail.BitVec.signExtend]
+      simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend, Sail.BitVec.signExtend]
       by_cases hge : input.selected_byte.val ≥ 128
-      · rw [hmsb, if_pos hge]; simp only [mul_one]
+      · rw [hmsb, ite_eq_left hge]; simp only [mul_one]
         exact signExtend64_ofNat8_of_ge_128 _ hsel hge
-      · rw [hmsb, if_neg hge]; simp only [mul_zero, add_zero]
+      · rw [hmsb, ite_eq_right hge]; simp only [mul_zero, add_zero]
         exact signExtend64_ofNat8_of_lt_128 _ hsel (by omega)
   exact correct_load_byte_native rs1_idx rd_idx imm reg_val is_unsigned
     (BitVec.ofNat 8 input.selected_byte.val) _ pc s hs hconfig h_pc h_rs1 h_hi h_lo hext hmem₀
@@ -220,7 +220,7 @@ lemma loadByte_hval (input : Inputs (ZMod p)) (isU : Bool)
   rcases hcase with ⟨hlb, _, rfl⟩ | ⟨hlbu, _, rfl⟩
   · -- LB (signed)
     obtain ⟨hmsbbin, hmsbiff⟩ := h_lb_msb hlb
-    simp only [extend_value, Bool.false_eq_true, if_false, sign_extend, Sail.BitVec.signExtend]
+    simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend, Sail.BitVec.signExtend]
     by_cases hge : 128 ≤ input.selected_byte.val
     · rw [hmsbiff.mpr hge]; simp only [mul_one]
       exact (LoadByteSail.signExtend64_ofNat8_of_ge_128 _ hsel hge).symm
@@ -232,7 +232,7 @@ lemma loadByte_hval (input : Inputs (ZMod p)) (isU : Bool)
       exact (LoadByteSail.signExtend64_ofNat8_of_lt_128 _ hsel (by omega)).symm
   · -- LBU (unsigned)
     rw [h_lbu_msb hlbu]
-    simp only [extend_value, if_true, zero_extend, mul_zero, add_zero]
+    simp only [extend_value, ite_true, zero_extend, mul_zero, add_zero]
     exact (LoadByteSail.zeroExtend64_ofNat8 _ hsel).symm
 
 /-- **LoadByte's committed bus view** — standalone (identical to the former inline `kind.view`) so

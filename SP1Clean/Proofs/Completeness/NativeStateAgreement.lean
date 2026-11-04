@@ -27,7 +27,7 @@ local instance nativeStateAgreementFieldBound : Fact (2 ^ 24 < p) :=
 /-- The generated StateBump rows, evaluated at the witness's canonical prover data. -/
 theorem SupportedCoreTraceWitness.stateBumpTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    stateBumpTable trace.witness = { trace.providerTableFor .stateBump with data := trace.data } := rfl
+    (stateBumpTable trace.witness).table = (trace.providerTableFor .stateBump).table := rfl
 
 /-- Canonical closure preserves the physical Halt rows. -/
 @[simp] theorem SupportedCoreTraceWitness.canonicalClosure_haltRows
@@ -320,13 +320,13 @@ private theorem filter_signedVal_one_eq_filter_isReal_one
           simp [signedZero]
         have rightFalse : decide ((decoded.toChipRow data).is_real = 1) = false := by
           simp [zero]
-        simp only [leftFalse, rightFalse, Bool.false_eq_true, if_false]
+        simp only [leftFalse, rightFalse, Bool.false_eq_true, ite_false]
         exact ih tail
       · have leftTrue : decide (signedVal (decoded.toChipRow data).is_real = 1) = true := by
           simp [one, signedVal_one_nativeState]
         have rightTrue : decide ((decoded.toChipRow data).is_real = 1) = true := by
           simp [one]
-        simp only [leftTrue, rightTrue, if_true, List.cons.injEq, true_and]
+        simp only [leftTrue, rightTrue, ite_true, List.cons.injEq, true_and]
         exact ih tail
 
 /-- The active typed-row count is the length of the same instruction-link list used by the
@@ -354,11 +354,11 @@ theorem SupportedCoreTraceWitness.stateBumpSelectorBinary
   intro row rowMem
   rw [trace.stateBumpTable_witness] at rowMem
   change row ∈ (stateBumpTraceInputs (trace.providerOccurrences .stateBump)).map
-    (fun input => StateBumpChip.component.buildRow input trace.generationData trace.hint) at rowMem
+    (fun input => StateBumpChip.component.buildRow input (trace.providerDataFor .stateBump) trace.hint) at rowMem
   obtain ⟨input, inputMem, rfl⟩ := List.mem_map.mp rowMem
   right
   refine (congrArg StateBumpChip.Inputs.is_real
-    (stateBumpRow_buildRow input trace.generationData trace.witness.data trace.hint)).trans ?_
+    (stateBumpRow_buildRow input (trace.providerDataFor .stateBump) trace.witness.data trace.hint)).trans ?_
   rw [stateBumpTraceInputs] at inputMem
   obtain ⟨event, -, rfl⟩ := List.mem_map.mp inputMem
   rfl
@@ -399,7 +399,7 @@ theorem SupportedCoreTraceWitness.stateBumpLinks_eq_occurrences
     exact signedVal_one_nativeState
   have result := stateBumpBuiltLinks_aux (p := p)
       (stateBumpTraceInputs (p := p) (trace.providerOccurrences .stateBump))
-      trace.generationData trace.witness.data trace.hint active
+      (trace.providerDataFor .stateBump) trace.witness.data trace.hint active
   have rhsEq :
       (stateBumpTraceInputs (p := p) (trace.providerOccurrences .stateBump)).map
           (fun input : StateBumpChip.Inputs (ZMod p) =>
@@ -434,7 +434,7 @@ theorem nativeBaseTraceOfCompiled_stateBumpLinks
           else [(routed.rawPushState.key (p := p), routed.nextState.key (p := p))] := by
         by_cases canonical : routed.rawPushState = routed.nextState
         · simp [RoutedEvent.stateBumpEvents, canonical]
-        · simp only [RoutedEvent.stateBumpEvents, if_neg canonical, List.map_cons,
+        · simp only [RoutedEvent.stateBumpEvents, ite_eq_right canonical, List.map_cons,
             List.map_nil]
           rw [StateRecord.pulledMessage_stateBumpCols,
             StateRecord.pushedMessage_stateBumpCols]

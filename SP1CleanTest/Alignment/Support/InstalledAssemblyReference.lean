@@ -15,8 +15,8 @@ def interactionReference (interaction : Interaction (ZMod SP1Clean.SP1Prime)) : 
   Json.mkObj [
     ("channel", toJson interaction.channel.name),
     ("message", toJson (interaction.msg.map (·.val))),
-    ("multiplicity", toJson interaction.mult.val),
-    ("assumeGuarantees", toJson interaction.assumeGuarantees)]
+    ("multiplicity", toJson interaction.signedMult.val),
+    ("direction", toJson (if interaction.direction == .pull then "pull" else "push"))]
 
 /-- Every table and physical interaction, in its original order. -/
 def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
@@ -30,25 +30,25 @@ def physicalReference {PublicIO : TypeMap} [ProvableType PublicIO]
 
 /-- Run the native scheduler and authenticated checker before recording the expected result. -/
 def installedCase (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
-    (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed)
+    (prepared : SP1CleanTest.Alignment.InstalledAssemblyExport.Prepared)
     (name : String) (publicInput : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime))
-    (privateInput : fields (SP1CleanTest.Alignment.InstalledAssemblyExport.privateInput context consumers).size
+    (privateInput : fields prepared.data.size
       (ZMod SP1Clean.SP1Prime)) (expected : Bool) : IO Json := do
   -- The built-in exporter checks that this verifier depends only on public inputs.
   -- Retain its occurrences even when witness generation rejects the instance.
   let verifier := (SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).verifierOperations
-    |>.interactionValues (Environment.fromInput publicInput (fun _ _ => #[]))
+    |>.interactionValues (Environment.fromInput publicInput (ProverData.empty (ZMod SP1Clean.SP1Prime)))
   let fields := [("name", toJson name), ("accepted", toJson expected),
     ("verifier", toJson (verifier.map interactionReference)),
     ("publicInput", toJson ((toElements publicInput).toArray.map (·.val))),
     ("privateInput", toJson (privateInput.toArray.map (·.val)))]
-  match SP1CleanTest.Alignment.InstalledAssemblyExport.generate context consumers publicInput privateInput with
+  match SP1CleanTest.Alignment.InstalledAssemblyExport.generate context prepared publicInput privateInput with
   | .error message =>
     if expected then throw (IO.userError s!"installed assembly {name}: {message}")
     pure (Json.mkObj (fields ++ [("error", toJson message)]))
   | .ok witness =>
     unless (SP1CleanTest.Alignment.InstalledAssembly.description context).checkWitness
-        SP1Clean.SP1Prime witness == expected do
+        (witness.withEnsemble (SP1CleanTest.Alignment.InstalledAssembly.assembly context) rfl) == expected do
       throw (IO.userError s!"unexpected installed assembly acceptance: {name}")
     pure (Json.mkObj (fields ++ [("witness", physicalReference witness)]))
 
@@ -56,8 +56,11 @@ def installedCase (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
 def installedInventory (context : SP1CleanTest.Alignment.InstalledAssembly.Context) : Json :=
   toJson ((SP1CleanTest.Alignment.InstalledAssemblyExport.installed context).tables.map fun component =>
     Json.mkObj [("name", toJson component.circuit.name), ("width", toJson component.width),
-      ("fixedWidth", toJson (component.fixedColumns.map (·.width) |>.getD 0)),
-      ("fixedHeight", toJson (component.fixedColumns.map (·.height.toNat) |>.getD 0))])
+      ("fixedColumns", toJson (component.generation.cells.1.toList.zipIdx.filterMap
+        (fun (cell, index) => if cell.isFixed then some index else none))),
+      ("fixedHeight", toJson (match component.generation with
+        | .preallocated mode => mode.height.toNat
+        | .demand _ => 0))])
 
 
 end SP1CleanTest.Alignment.InstalledAssemblyReference

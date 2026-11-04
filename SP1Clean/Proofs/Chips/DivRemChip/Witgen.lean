@@ -76,7 +76,7 @@ end Orientation
 
 /-- DivRem's row has computable witnesses: every `populateRow` payload is a function of the
 input row alone. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, populateRow, constrainRow, circuit_norm, Operations.forAllFlat,
     Operations.forAll]
@@ -148,13 +148,17 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   · obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
     exact quotCongr input.selectors env env' _ _ _ hB hC hir hselectors
   · obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
-    exact bMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors
+    simpa only [Witgen.WitgenIR.eval_ofFExprs_one] using
+      congrArg Vector.toArray (bMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
   · obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
-    exact cMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors
+    simpa only [Witgen.WitgenIR.eval_ofFExprs_one] using
+      congrArg Vector.toArray (cMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
   · obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
-    exact remMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors
+    simpa only [Witgen.WitgenIR.eval_ofFExprs_one] using
+      congrArg Vector.toArray (remMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
   · obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
-    exact quotMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors
+    simpa only [Witgen.WitgenIR.eval_ofFExprs_one] using
+      congrArg Vector.toArray (quotMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
   · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]

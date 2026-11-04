@@ -14,7 +14,7 @@ boot-to-HALT soundness can be claimed.
 
 namespace SP1Clean.Soundness.NativeCore
 
-open LeanRV64D.Defs Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core
+open LeanRV64D Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core
 open SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

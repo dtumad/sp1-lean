@@ -359,7 +359,7 @@ theorem unsigned64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
     have hcz1 : cols.c[1] = 0 := (ZMod.val_eq_zero _).mp (by omega)
     have hcz2 : cols.c[2] = 0 := (ZMod.val_eq_zero _).mp (by omega)
     have hcz3 : cols.c[3] = 0 := (ZMod.val_eq_zero _).mp (by omega)
-    rw [if_pos ⟨hcz0, hcz1, hcz2, hcz3⟩] at hzeroResult
+    rw [ite_eq_left ⟨hcz0, hcz1, hcz2, hcz3⟩] at hzeroResult
     rw [hzeroResult, one_mul] at e230 e232 e234 e236 e238 e240 e242 e244
     refine ⟨?_, ?_⟩
     · rw [hqcEq, Word.toNat_def]
@@ -383,7 +383,7 @@ theorem unsigned64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
       apply hcNe
       rw [Word.toNat_def, z0, z1, z2, z3]
       simp
-    rw [if_neg hcnz] at hzeroResult
+    rw [ite_eq_right hcnz] at hzeroResult
     have hrcm : cols.remainder_check_multiplicity = 1 := by
       rw [hzeroResult, hir] at e305; linear_combination -e305
     have hmax0 : cols.max_abs_c_or_1[0] = cols.abs_c[0] := by
@@ -402,7 +402,7 @@ theorem unsigned64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {
     rw [hbit1] at hbit
     have hcmp : cols.abs_remainder.toNat < cols.max_abs_c_or_1.toNat := by
       by_contra hnot
-      rw [if_neg hnot] at hbit
+      rw [ite_eq_right hnot] at hbit
       exact one_ne_zero hbit
     have habsR0 : cols.abs_remainder[0] = cols.remainder_comp[0] := by
       rw [hrneg] at e250; linear_combination e250

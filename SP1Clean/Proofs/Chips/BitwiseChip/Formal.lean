@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.BitwiseChip.Defs
@@ -172,8 +173,8 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- The per-emitter channel-requirement tail: the bare `CPUState` `Assumptions` (the binary gate), the
   -- composed `BitwiseU16Operation`/`ALUTypeReader` requirements (bare or `[] ∨ Assumptions` disjuncts).
   · and_intros <;>
-      first | exact h_bin | exact ⟨hop3, h_bin⟩ | exact Or.inl rfl
-            | exact Or.inr h_bin
+      first
+            | exact Or.inl rfl
             | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
             | exact Or.inr ⟨h_bin, (fun hr => by
                 have hisu := BitwiseU16Operation.resultWord_isU64 hr (h_bw ⟨hop3, h_bin⟩) hop_cases
@@ -618,10 +619,10 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := BitwiseChip.circuit (p := p), Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    BitwiseChip.circuit_main_eq]
+    ((BitwiseChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [BitwiseChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
     Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
@@ -630,5 +631,10 @@ theorem lookups_empty :
     BitwiseU16Operation.circuit, BitwiseU16Operation.main,
     BitwiseOperation.circuit, BitwiseOperation.main,
     Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.BitwiseChip

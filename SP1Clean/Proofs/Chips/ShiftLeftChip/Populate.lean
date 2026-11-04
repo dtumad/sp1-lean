@@ -169,7 +169,7 @@ theorem byteShift_expr_eq (c0 : ZMod p) (f : Vector (ZMod p) 2) (hf0 : f[0] = 0 
     (cBits c0)[4] + (cBits c0)[5] * 2 * f[0] = ((byteShiftNat c0 f : ℕ) : ZMod p) := by
   rcases hf0 with h | h <;>
     simp only [cBits, byteShiftNat, h, Vector.getElem_mk, List.getElem_toArray,
-      List.getElem_cons_zero, List.getElem_cons_succ, if_pos, zero_ne_one, if_false] <;>
+      List.getElem_cons_zero, List.getElem_cons_succ, ite_eq_left, zero_ne_one, ite_false] <;>
     push_cast <;> ring
 
 set_option linter.unusedSectionVars false in
@@ -336,7 +336,7 @@ theorem place_asserts (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 2)
       have hk2 : byteShiftNat c0 f = 0 ∨ byteShiftNat c0 f = 1 := by
         have := Nat.mod_lt (c0.val >>> 4) (show 0 < 2 by norm_num)
         unfold byteShiftNat
-        rw [if_neg (by rw [hf0]; exact zero_ne_one)]
+        rw [ite_eq_right (by rw [hf0]; exact zero_ne_one)]
         omega
       rcases hk2 with hbs | hbs <;>
         · simp only [populateA, sllwMsb, shiftU16, hf0, hf1, hbs]
@@ -398,18 +398,18 @@ theorem populateA_val_lt (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 
     have hcases : byteShiftNat c0 f = 0 ∨ byteShiftNat c0 f = 1 ∨ byteShiftNat c0 f = 2
         ∨ byteShiftNat c0 f = 3 := by omega
     rcases hcases with hbs | hbs | hbs | hbs <;>
-      · simp only [populateA, h0, hbs, if_true]
+      · simp only [populateA, h0, hbs, ite_true]
         interval_cases i <;>
           first | exact hlr _ (by norm_num) | exact hzero
   · by_cases h1 : f[1] = 1
     · by_cases hbs : byteShiftNat c0 f = 0 <;>
-        · simp only [populateA, h0, h1, hbs, if_true, if_false]
+        · simp only [populateA, h0, h1, hbs, ite_true, ite_false]
           interval_cases i <;>
             first
               | exact hlr _ (by norm_num)
               | exact hzero
               | exact hmsb _ (hlr _ (by norm_num))
-    · simp only [populateA, h0, h1, if_false]
+    · simp only [populateA, h0, h1, ite_false]
       interval_cases i <;> exact hzero
 
 /-- The witnessed SLLW sign bit is boolean. -/
@@ -957,7 +957,7 @@ theorem sllwImmIR_eval (env : ProverEnvironment (ZMod p))
       #v[Expression.eval env.toEnvironment isSllw * Expression.eval env.toEnvironment imm_c] := by
   ext i hi
   interval_cases i
-  simp only [sllwImmIR, Witgen.WitgenIR.getElem_eval_ofFExprs, circuit_norm]
+  simp only [sllwImmIR, circuit_norm]
 
 /-! ### Congruence lemmas (environment-locality — the `ComputableWitnesses` counterparts; no
 bounds, `-Witgen.u64Wrap` per the fold rule) -/

@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.StoreByteChip.Defs
@@ -93,7 +94,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
         ∧ input_mem_limb_low_byte.val < 256
         ∧ ((input_mem_limb - input_mem_limb_low_byte) * (256 : ZMod p)⁻¹).val < 256 := by
     intro h1
-    have hneg : - input_is_real = -1 := by rw [h1]
+    have hneg : input_is_real = 1 := by rw [h1]
     have Gr := hreg_rcv hneg; have Gm := hmem_rcv hneg
     have hbr := (byteRowSpec_u8range_pair _ _).mp Gr
     have hbm := (byteRowSpec_u8range_pair _ _).mp Gm
@@ -117,8 +118,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       ⟨sub_eq_zero.mp hr0, sub_eq_zero.mp hr1, sub_eq_zero.mp hr2, sub_eq_zero.mp hr3⟩, h_bin⟩,
     Or.inr h_addr_as, Or.inr ⟨h_bin, h_sv, h_clk⟩,
     ⟨h_bin, h_bin, h_clk⟩,
-    fun h1 h0 => off_gate_vacuous h_bin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_bin h1 h0⟩
+    h_bin⟩
 
 /-- Prover-side row well-formedness. -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p)) (_ : ProverHint (ZMod p)) : Prop :=
@@ -401,10 +401,7 @@ private theorem requirementsChannelsLawful_main (input : Var Inputs (ZMod p)) (o
       List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
     rcases h_interaction with rfl | rfl <;>
       right <;>
-      rw [ChannelInteraction.toRaw_requirements] <;>
-      intro h1 h0 <;>
-      simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool h1 h0
+      exact h_bool
 
 /-- The `StoreByte` chip row as a `GeneralFormalCircuit`; output is the extracted `Columns`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
@@ -483,10 +480,10 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    StoreByteChip.circuit_main_eq]
+    ((StoreByteChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [StoreByteChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
     AddrAddOperation.circuit, AddrAddOperation.main,
@@ -495,5 +492,10 @@ theorem lookups_empty :
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.StoreByteChip

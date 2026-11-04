@@ -41,8 +41,15 @@ python3 scripts/check_ensemble_export.py
 
 Component comparisons use release optimization level 1. Assembly comparisons use level 0,
 with release debug assertions disabled; dependency crates retain their normal release settings.
-The assembly binaries are split by fixture family to bound compilation memory. Both feature
+The `assembly-export` feature compiles the shared generated component modules once in this crate's
+library; fixture-family test binaries import the corresponding assembly wrappers. Both feature
 configurations run every test. These settings do not measure optimized application performance.
+
+Backend tests use Clean's `EnsembleKey`, scoped to one generated program, proof configuration and
+minimum trace height. A key can serve different public inputs and demand-table heights; the empty
+assembly regression also exercises a demand table entering and leaving the proving batch. A key
+whose proving call panics is discarded. Test FRI parameters permit minimum height one; they are
+not deployment security parameters.
 
 The runner builds `ensembleExport` once, generates two fresh inventories and checks every byte
 before Rust consumes either. Source contents, pins, the compiled driver and generated artifacts
@@ -186,9 +193,9 @@ Cuts agree on their public clock/PC endpoints. These finite fixture constructors
 access compiler and semantic host steps; they are neither an interpreter nor a total Sail compiler.
 General generation completeness and WRITE/VERIFY installation remain open.
 
-The pinned Clean fork adds message predicates and indexed preallocated handlers to its existing
-scheduler. The provider fixtures exercise these APIs; general whole-assembly generation still
-needs its own routing, padding, data and completeness contracts.
+The unmodified upstream Clean pin supplies typed demand triggers, indexed fixed providers and
+reusable ensemble keys. The provider fixtures exercise these APIs; general whole-assembly
+generation still needs its own routing, padding, data and completeness contracts.
 The component tests use the existing row adapter and independently check external interactions;
 they do not establish complete ensemble balance.
 

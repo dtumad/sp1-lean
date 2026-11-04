@@ -71,7 +71,32 @@ def artifact_names():
                            "installed_ordinary_empty", "installed_hints_empty", "installed_hints_tail",
                            "installed_hints_aligned", "installed_enter"]
               for suffix in [".rs", ".reference.json"]]
-    return files
+    return files + ["shared_assemblies.rs", "shared_assemblies.json"]
+
+
+def shared_artifact_names(directory, expected):
+    """Bind the shared catalog to the independently enumerated assembly fixtures."""
+    manifest = directory / "shared_assemblies.json"
+    if manifest.is_symlink():
+        raise ValueError("Shared manifest must be a regular file")
+    record = json.loads(manifest.read_text())
+    components, assemblies = record["components"], record["assemblies"]
+    if not isinstance(components, list) or not components or components != [
+            f"shared_component_{i}.rs" for i in range(len(components))]:
+        raise ValueError("Invalid shared component inventory")
+    profiles = {Path(name).stem for name in expected
+                if name.startswith("installed_") and name.endswith(".rs")}
+    if not isinstance(assemblies, dict) or set(assemblies) != profiles:
+        raise ValueError("Shared assembly inventory differs from expected fixtures")
+    used = set()
+    for indices in assemblies.values():
+        if not isinstance(indices, list) or not indices or any(
+                type(i) is not int or not 0 <= i < len(components) for i in indices):
+            raise ValueError("Invalid shared component reference")
+        used.update(indices)
+    if used != set(range(len(components))):
+        raise ValueError("Unreferenced shared component")
+    return components
 
 
 @contextmanager
@@ -226,6 +251,8 @@ def check_source(record):
 
 def artifact_hashes(directory):
     names = artifact_names()
+    if "shared_assemblies.json" in names:
+        names += shared_artifact_names(directory, names)
     if len(names) != len(set(names)):
         raise ValueError("Duplicate expected export artifact")
     actual = {p.name for p in directory.iterdir() if p.suffix in {".rs", ".json"}
@@ -298,6 +325,7 @@ def compare_rust(out, env, group="all", configuration="all"):
     for name, features in configurations.items():
         logs = []
         for group_name, expected in groups.items():
+            group_features = features if group_name == "components" else features + ",assembly-export"
             options = [] if group_name == "components" else [
                 "--config", "profile.release.package.sp1-clean-comparison.opt-level=0",
                 "--config", "profile.release.package.sp1-clean-comparison.debug-assertions=false",
@@ -305,7 +333,7 @@ def compare_rust(out, env, group="all", configuration="all"):
             tests = [argument for test in expected for argument in ["--test", test]]
             log = timed_run(["cargo", "test", "--locked", "--release", "--manifest-path",
                             "rust/sp1-comparison/Cargo.toml", "--no-default-features",
-                            "--features", features, *options, *tests],
+                            "--features", group_features, *options, *tests],
                            out / f"{name}-{group_name}.log", env)
             check_rust_log(log, expected)
             logs.append(log)

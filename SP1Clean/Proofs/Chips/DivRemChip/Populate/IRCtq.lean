@@ -177,10 +177,10 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
       rcases Nat.lt_or_ge qN (2 ^ 63) with hq63 | hq63 <;>
         rcases Nat.lt_or_ge cN (2 ^ 63) with hc63 | hc63 <;>
         simp only [decide_eq_true_eq] <;>
-        [rw [if_neg (by omega), if_neg (by omega)];
-         rw [if_neg (by omega), if_pos (by omega)];
-         rw [if_pos (by omega), if_neg (by omega)];
-         rw [if_pos (by omega), if_pos (by omega)]] <;>
+        [rw [ite_eq_right (by omega), ite_eq_right (by omega)];
+         rw [ite_eq_right (by omega), ite_eq_left (by omega)];
+         rw [ite_eq_left (by omega), ite_eq_right (by omega)];
+         rw [ite_eq_left (by omega), ite_eq_left (by omega)]] <;>
         simp only [Nat.add_mul, Nat.mul_add] <;>
         [rw [show qN / 2 ^ 63 = 0 from by omega, show cN / 2 ^ 63 = 0 from by omega];
          rw [show qN / 2 ^ 63 = 0 from by omega, show cN / 2 ^ 63 = 1 from by omega];
@@ -196,7 +196,7 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
       omega
   rcases Nat.lt_or_ge k 4 with hk4 | hk4
   · -- low limbs: the wrapping 64-bit product
-    rw [ctqLimbNat, show ctqLimbU selectors q c k = (q * c) >>> (16 * k) % 65536 from if_pos hk4]
+    rw [ctqLimbNat, show ctqLimbU selectors q c k = (q * c) >>> (16 * k) % 65536 from ite_eq_left hk4]
     have hpush : (((q * c) >>> (16 * k) % 65536 : Witgen.U64Expr (ZMod p)).eval
         { env := env }).toNat = qN * cN % 2 ^ 64 / 2 ^ (16 * k) % 65536 := by
       simp only [circuit_norm, hq, hc, Nat.shiftRight_eq_div_pow]
@@ -208,7 +208,7 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
     norm_num
   · -- high limbs: the `ctqHiU` slice
     rw [ctqLimbNat, show ctqLimbU selectors q c k = ctqHiU selectors q c >>> (16 * (k - 4)) % 65536
-      from if_neg (by omega)]
+      from ite_eq_right (by omega)]
     have hf0 := flagF_eval selectors env 0 (by omega)
     have hf2 := flagF_eval selectors env 2 (by omega)
     have hf4 := flagF_eval selectors env 4 (by omega)

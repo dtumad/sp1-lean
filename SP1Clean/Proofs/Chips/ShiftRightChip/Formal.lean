@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.ShiftRightChip.Defs
@@ -425,7 +426,7 @@ theorem completeness :
   · -- the word-variant sign witness is the high bit of the placed `a[1]`
     rw [show srwMsb B c0 F = U16MSBOperation.populate_msb (populateA B c0 F)[1] by
       change F[2] + F[3] = 1 at h13
-      rw [srwMsb, if_pos h13]]
+      rw [srwMsb, ite_eq_left h13]]
     exact (U16MSBOperation.spec_populate
       (populateA_val_lt B c0 F hbUw hf0 hf1 hf2 hf3 hsum01 1 (by norm_num)) 1).2 rfl
   · -- `RegisterWrite` write value `a = populateA` is `U64` (each limb `< 2^16`, `populateA_val_lt`).
@@ -547,11 +548,10 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations,
-    ShiftRightChip.circuit_main_eq]
+    ((circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [ShiftRightChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.ALUTypeReader.circuit,
     Readers.ALUTypeReader.main, Readers.RegisterWrite.circuit,
@@ -563,5 +563,10 @@ theorem lookups_empty :
     U16MSBOperation.circuit,
     U16MSBOperation.main, ShiftRightCore.circuit,
     ShiftRightCore.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.ShiftRightChip

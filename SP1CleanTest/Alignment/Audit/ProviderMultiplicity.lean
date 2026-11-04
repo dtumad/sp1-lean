@@ -27,8 +27,9 @@ namespace SP1Clean.Audit.ProviderMultiplicity
 open Air.Flat Circuit
 open SP1Clean SP1Clean.TraceGenTests
 
-/-- Provider tables in this regression do not consult committed lookup data. -/
-def data : ProverData (ZMod SP1Prime) := fun _ _ => #[]
+/-- Initialize the tested provider's canonical input entry from its actual rows. -/
+def data (component : Component (ZMod SP1Prime)) (inputs : List (component.Input (ZMod SP1Prime))) :
+    ProverData (ZMod SP1Prime) := component.inputData inputs (.empty _)
 
 /-- None of the provider witnesses below consults a prover hint. -/
 def hint : ProverHint (ZMod SP1Prime) := ProverHint.empty _
@@ -39,20 +40,20 @@ def bytePadding : TraceGen.ByteEntry := ⟨17, 34, 0⟩
 def byteAggregate : TraceGen.ByteEntry := ⟨17, 34, 7⟩
 
 def bytePaddingTable : Table (ZMod SP1Prime) :=
-  Table.build ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [bytePadding]) data hint (by decide)
+  Table.build ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [bytePadding]) (data ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [bytePadding])) hint (by decide) (by trivial) (Component.inputData_consistent _ _ _)
 
 def byteAggregateTable : Table (ZMod SP1Prime) :=
-  Table.build ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [byteAggregate]) data hint (by decide)
+  Table.build ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [byteAggregate]) (data ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [byteAggregate])) hint (by decide) (by trivial) (Component.inputData_consistent _ _ _)
 
 theorem bytePaddingTable_constraints : bytePaddingTable.Constraints := by
-  refine ByteChip.U8Range.traceTable_constraints [bytePadding] data hint ?_ (by decide)
+  refine ByteChip.U8Range.traceTable_constraints [bytePadding] (data ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [bytePadding])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
   intro e he
   simp only [List.mem_singleton] at he
   subst e
   norm_num [bytePadding, TraceGen.ByteEntry.WellFormed]
 
 theorem byteAggregateTable_constraints : byteAggregateTable.Constraints := by
-  refine ByteChip.U8Range.traceTable_constraints [byteAggregate] data hint ?_ (by decide)
+  refine ByteChip.U8Range.traceTable_constraints [byteAggregate] (data ByteChip.U8Range.component (ByteChip.U8Range.traceInputs [byteAggregate])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
   intro e he
   simp only [List.mem_singleton] at he
   subst e
@@ -157,12 +158,12 @@ def rangeWidth8 : RangeChip.Width := ⟨8, by norm_num⟩
 
 def rangeAggregateTable : Table (ZMod SP1Prime) :=
   Table.build (RangeChip.componentFor rangeWidth8)
-    (RangeChip.traceInputs [rangeAggregate]) data hint (by decide)
+    (RangeChip.traceInputs [rangeAggregate]) (data (RangeChip.componentFor rangeWidth8) (RangeChip.traceInputs [rangeAggregate])) hint (by decide) (by trivial) (Component.inputData_consistent _ _ _)
 
 theorem rangeAggregateTable_constraints : rangeAggregateTable.Constraints := by
   refine RangeChip.traceTable_constraints
     (RangeChip.two_pow_lt (Nat.le_of_lt_succ rangeWidth8.isLt))
-    (Nat.le_of_lt_succ rangeWidth8.isLt) [rangeAggregate] data hint ?_ (by decide)
+    (Nat.le_of_lt_succ rangeWidth8.isLt) [rangeAggregate] (data (RangeChip.componentFor rangeWidth8) (RangeChip.traceInputs [rangeAggregate])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
   intro e he
   simp only [List.mem_singleton] at he
   subst e
@@ -178,10 +179,10 @@ def programAggregate : TraceGen.RomEntry :=
 
 def programAggregateTable : Table (ZMod SP1Prime) :=
   Table.build ProgramProviderChip.component
-    (ProgramProviderChip.traceInputs [programAggregate]) data hint (by decide)
+    (ProgramProviderChip.traceInputs [programAggregate]) (data ProgramProviderChip.component (ProgramProviderChip.traceInputs [programAggregate])) hint (by decide) (by trivial) (Component.inputData_consistent _ _ _)
 
 theorem programAggregateTable_constraints : programAggregateTable.Constraints := by
-  refine ProgramProviderChip.traceTable_constraints [programAggregate] data hint ?_ (by decide)
+  refine ProgramProviderChip.traceTable_constraints [programAggregate] (data ProgramProviderChip.component (ProgramProviderChip.traceInputs [programAggregate])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
   intro e he
   simp only [List.mem_singleton] at he
   subst e
@@ -199,31 +200,31 @@ def memoryActive : TraceGen.MemRecordEntry := ⟨0x1234, 0x55, 0, true⟩
 
 def memoryInitTable : Table (ZMod SP1Prime) :=
   Table.build MemoryProviderChip.component
-    (MemoryProviderChip.traceInputs [memoryInactive, memoryActive]) data hint (by decide)
+    (MemoryProviderChip.traceInputs [memoryInactive, memoryActive]) (data MemoryProviderChip.component (MemoryProviderChip.traceInputs [memoryInactive, memoryActive])) hint (by decide) (by trivial) (Component.inputData_consistent _ _ _)
 
 def memoryFinalizeTable : Table (ZMod SP1Prime) :=
   Table.build MemoryFinalizeChip.component
-    (MemoryFinalizeChip.traceInputs [memoryInactive, memoryActive]) data hint (by decide)
+    (MemoryFinalizeChip.traceInputs [memoryInactive, memoryActive]) (data MemoryFinalizeChip.component (MemoryFinalizeChip.traceInputs [memoryInactive, memoryActive])) hint (by decide) (by trivial) (Component.inputData_consistent _ _ _)
 
 theorem memoryInitTable_constraints : memoryInitTable.Constraints := by
-  refine MemoryProviderChip.traceTable_constraints [memoryInactive, memoryActive] data hint ?_ (by decide)
+  refine MemoryProviderChip.traceTable_constraints [memoryInactive, memoryActive] (data MemoryProviderChip.component (MemoryProviderChip.traceInputs [memoryInactive, memoryActive])) hint ?_ (by decide) (Component.inputData_consistent _ _ _)
   intro e he
   simp only [List.mem_cons, List.not_mem_nil, or_false] at he
   rcases he with rfl | rfl <;>
     rfl
 
 theorem memoryFinalizeTable_constraints : memoryFinalizeTable.Constraints :=
-  MemoryFinalizeChip.traceTable_constraints [memoryInactive, memoryActive] data hint (by decide)
+  MemoryFinalizeChip.traceTable_constraints [memoryInactive, memoryActive] (data MemoryFinalizeChip.component (MemoryFinalizeChip.traceInputs [memoryInactive, memoryActive])) hint (by decide) (Component.inputData_consistent _ _ _)
 
 /-- Memory init reaches both allowed selectors, and its push interaction preserves `0`/`1`. -/
 theorem memoryInitTable_booleanBranches :
     (memoryInitTable.interactions).map (fun i => i.mult) = [0, 1] := by
   native_decide
 
-/-- Memory finalize reaches both allowed selectors; its pull interaction evaluates them as
-`-0 = 0` and `-1`, respectively. -/
+/-- Memory finalize retains Boolean counts and marks both physical occurrences as pulls. -/
 theorem memoryFinalizeTable_booleanBranches :
-    (memoryFinalizeTable.interactions).map (fun i => i.mult) = [0, -1] := by
+    (memoryFinalizeTable.interactions).map (fun i => (i.direction, i.mult)) =
+      [(.pull, 0), (.pull, 1)] := by
   native_decide
 
 end SP1Clean.Audit.ProviderMultiplicity

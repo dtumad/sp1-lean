@@ -17,8 +17,8 @@ def CircuitSelectorBinary {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
-  ∀ data physical,
-    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  ∀ generation data physical,
+    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
     let env := Environment.fromArray physical data
     component.operations.ConstraintsHold env →
       (view (component.rowInput env) (component.rowOutput env)).is_real = 0 ∨
@@ -49,8 +49,9 @@ omit [Fact (2 ^ 24 < p)] in
 theorem shallowConstraints_of_componentConstraints {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    {generation : WitnessGeneration.Generation (ZMod p) Input}
     (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold env) :
     ConstraintsHold.Shallow env
       ((circuit.main (varFromOffset Input 0)).operations (size Input)) := by
   apply FlatOperation.shallowConstraints_of_constraintsHoldFlat
@@ -135,7 +136,7 @@ theorem circuitSelectorBinary_of_main {Input Output : TypeMap}
     (contract : MainSelectorBinary circuit.main selector) :
     CircuitSelectorBinary circuit view := by
   unfold CircuitSelectorBinary
-  intro data physical
+  intro generation data physical
   dsimp only
   intro constraints
   let env := Environment.fromArray physical data
@@ -143,7 +144,7 @@ theorem circuitSelectorBinary_of_main {Input Output : TypeMap}
   let offset := size Input
   have shallow := shallowConstraints_of_componentConstraints circuit env constraints
   have binary := contract.binary input offset env shallow
-  have inputEq : Eval.eval env input = ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env := by
+  have inputEq : Eval.eval env input = ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env := by
     exact eval_varFromOffset_valueFromOffset Input 0 env
   rw [inputEq] at binary
   simpa only [selector_eq] using binary
@@ -152,13 +153,14 @@ theorem circuitSelectorBinary_of_main {Input Output : TypeMap}
 theorem selectorConstraintShape_of_circuit (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (shape : @CircuitSelectorBinary p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
-    SelectorConstraintShape ⟨id, kind, circuit, spec_eq⟩ := by
-  exact shape
+    SelectorConstraintShape ⟨id, kind, circuit, generation, spec_eq⟩ := by
+  exact shape generation
 
 theorem AddChip.mainSelectorBinary : @MainSelectorBinary p _ AddChip.Inputs AddChip.Columns
     inferInstance inferInstance AddChip.main (fun input => input.is_real) := by
@@ -402,7 +404,7 @@ constraint list through the `DivRemCore` subcircuit. -/
 theorem DivRemChip.circuitSelectorBinary :
     CircuitSelectorBinary (p := p) DivRemChip.circuit DivRemChip.rowView := by
   unfold CircuitSelectorBinary
-  intro data physical
+  intro generation data physical
   dsimp only
   intro constraints
   have deep : ∀ e ∈ ((DivRemChip.main (varFromOffset DivRemChip.Inputs 0)).operations
@@ -423,7 +425,7 @@ theorem DivRemChip.circuitSelectorBinary :
       (DivRemChip.rowView i o).is_real = i.is_real := fun _ _ => rfl
   have inputEq : Eval.eval (Environment.fromArray physical data)
       (varFromOffset DivRemChip.Inputs 0 : Var DivRemChip.Inputs (ZMod p))
-      = ({ circuit := DivRemChip.circuit, Assumptions := (DivRemChip.circuit).Assumptions } : Component (ZMod p)).rowInput
+      = ({ circuit := DivRemChip.circuit, Assumptions := (DivRemChip.circuit).Assumptions, generation } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data) :=
     eval_varFromOffset_valueFromOffset DivRemChip.Inputs 0 _
   have evalReal : (Eval.eval (Environment.fromArray physical data)

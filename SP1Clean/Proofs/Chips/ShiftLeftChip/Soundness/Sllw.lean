@@ -84,7 +84,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       have e2 := _hE2; rw [hsllw1] at e2
       exact ShiftLeftCore.eq_zero_of_mul_const h2ne (by linear_combination e2 - _hE4)
     have hgate1 : (input_isSll + input_isSllw : ZMod p) = 1 := by rw [hsll0, hsllw1, zero_add]
-    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
+    have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -121,7 +121,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       (env.get i₀).val < 2 ^ 16 ∧ (env.get (i₀+1)).val < 2 ^ 16 ∧
       (env.get (i₀+2)).val < 2 ^ 16 ∧ (env.get (i₀+3)).val < 2 ^ 16 := by
     intro hgate1
-    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
+    have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -218,7 +218,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have heval_c0 : Expression.eval env input_var_adapter_op_c_memory_prev_value[0] =
         input_adapter_op_c_memory_prev_value[0] := by
       rw [← hcmem, Vector.getElem_map]
-    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
+    have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -301,14 +301,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
           simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
         exacts [hq0, hq1, hq2, hq3]),
         h_clk.at_four⟩,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0⟩
+      (bool_of_mul_pred _hE2)⟩
 
 end SP1Clean.ShiftLeftChip.SoundSllw

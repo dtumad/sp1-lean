@@ -19,7 +19,7 @@ There are two intentionally distinct execution scopes:
 `RowFacts`/`LocalStepFact` form the chip-agnostic per-row advance obligation: from the pulled state's
 truth and engine-supplied current operand truths, the pushed state and written values are true. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Semantics
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -108,9 +108,9 @@ theorem localValueAt_of_initial {initial : SailState} {initialClock time : ℕ}
     LocalValueAt initial initialClock location time value := by
   unfold LocalValueAt microValue
   by_cases strict : time < initialClock
-  · rwa [if_pos strict]
+  · rwa [ite_eq_left strict]
   · obtain rfl : time = initialClock := by omega
-    rw [if_neg (Nat.lt_irrefl _)]
+    rw [ite_eq_right (Nat.lt_irrefl _)]
     cases location <;> simpa [SP1Clean.Machine.trajectory] using content
 
 set_option linter.unusedSectionVars false in
@@ -134,7 +134,7 @@ theorem microValue_stepStart {initial state : SailState} {initialClock steps : �
     microValue initial initialClock location (initialClock + 8 * steps) =
       locContent state location := by
   unfold microValue
-  rw [if_neg (by omega), Nat.add_sub_cancel_left, show 8 * steps / 8 = steps by omega,
+  rw [ite_eq_right (by omega), Nat.add_sub_cancel_left, show 8 * steps / 8 = steps by omega,
     show 8 * steps % 8 = 0 by omega]
   cases location <;> norm_num <;> rw [chainState_of_sailChain chain] <;> rfl
 
@@ -147,7 +147,7 @@ theorem localValueAt_stepStart_iff {initial state : SailState} {initialClock ste
     LocalValueAt initial initialClock location (initialClock + 8 * steps) value ↔
       locContent state location = some (Word.toBitVec64 value) := by
   unfold LocalValueAt microValue
-  rw [if_neg (by omega), Nat.add_sub_cancel_left, show 8 * steps / 8 = steps by omega,
+  rw [ite_eq_right (by omega), Nat.add_sub_cancel_left, show 8 * steps / 8 = steps by omega,
     show 8 * steps % 8 = 0 by omega]
   cases location <;> norm_num <;> rw [chainState_of_sailChain chain] <;> rfl
 

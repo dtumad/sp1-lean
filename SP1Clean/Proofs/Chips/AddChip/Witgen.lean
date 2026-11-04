@@ -19,7 +19,7 @@ A chip still reading `ProverHint` inside a `.native` witness closure could not s
 reason the hint-driven chips move to typed `Unconstrained*` inputs during the cutover. (That used to
 be true for a stronger reason: `ProverEnvironment.AgreesBelow` did not constrain `hint`, so *even*
 the IR's `FExpr.hintGet` node was unprovable. Fixed by stating the obligation at
-`ProverEnvironment.AgreesBelowWithData`, which carries `data` and `hint` — so the remaining argument is about `.native` closures, not about hints per se, and the
+`ProverEnvironment.AgreesBelow`, which carries `data` and `hint` — so the remaining argument is about `.native` closures, not about hints per se, and the
 W4 pilot chooses between the two hint encodings on their merits.) -/
 
 namespace SP1Clean.AddChip
@@ -34,12 +34,12 @@ The proof is the shape every ported chip repeats. `circuit_norm` reduces the com
 to its single witness obligation; `FlatOperation.forAll_witnessCongr_of_subcircuit` dispatches the five
 zero-witness subcircuits by their cell count, without unfolding them; and `populateIR_congr`
 discharges the one real obligation from the input-agreement hypothesis that
-`FormalCircuitBase.ComputableWitnessesWithData` supplies at each witness step.
+`FormalCircuitBase.ComputableWitnesses` supplies at each witness step.
 
 The two `key` steps cross a normalisation gap: `circuit_norm` sends every `Eval.eval` to
 `ProvableStruct.eval` (Clean's `eval_eq_eval` is `↓ high`, and that is the form the input-agreement
 hypothesis arrives in), while the chip's own component-evaluation lemmas are keyed on `Eval.eval`. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,

@@ -173,7 +173,7 @@ theorem exit_messages (witness : EnsembleWitness (ensemble (p := p) image source
   have ledger := balanced
   change BalancedInteractions (witness.interactionsWith exitChannel.toRaw) at ledger
   rw [exit_interactions] at ledger
-  exact balancedInteractions_of_perm ledger (List.perm_append_comm ..)
+  exact BalancedInteractions.of_perm ledger (List.perm_append_comm ..)
 
 private theorem exit_code_of_mem (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel exitChannel.toRaw)

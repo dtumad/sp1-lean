@@ -62,14 +62,15 @@ def Checks (input : PublicIO F) (data : ProverData F) : Prop :=
 
 /-- Exact count bound for the added pull/push pairs, including repeated zero checks. -/
 def CountBound : Prop :=
-  2 * (check.assertions (varFromOffset PublicIO 0)).length < ringChar F ∨ ringChar F = 0
+  2 * (check.assertions (varFromOffset PublicIO 0)).length < ringChar F
 
 /-- Clean's verifier program retains the circuit's semantic specification. -/
 def program (ens : Ensemble F PublicIO) : Verifier.Program F PublicIO where
   main input := Verifier.checkZeros (check.channelName ens) (check.assertions input)
   Spec input data := check.circuit.Spec input () data
   soundness := by
-    intro env guarantees
+    intro data guarantees
+    let env := data.publicEnvironment
     have checked := (Verifier.checkZeros_guarantees (check.channelName ens)
       (check.assertions (varFromOffset PublicIO 0)) env).mp guarantees
     have constraints :
@@ -85,19 +86,33 @@ def program (ens : Ensemble F PublicIO) : Verifier.Program F PublicIO where
 /-- Balance on the fresh channel enforces exactly the old raw assertions and the count bound. -/
 theorem program_balanced_iff (ens : Ensemble F PublicIO) (input : PublicIO F) (data : ProverData F) :
     BalancedInteractions ((check.program ens).circuitOperations.interactionValuesWith (check.channel ens)
-      (Environment.fromInput input data)) ↔ check.CountBound ∧ check.Checks input data := by
+      (Environment.fromInput input data)) ↔ check.Checks input data := by
   change BalancedInteractions ((Verifier.checkZeros (check.channelName ens)
     (check.assertions (varFromOffset PublicIO 0))).circuitOperations.interactionValuesWith
       (Verifier.zeroChannel (check.channelName ens)).toRaw (Environment.fromInput input data)) ↔ _
   rw [Verifier.checkZeros_balanced_iff]
-  simp [CountBound, Checks, assertions, Operations.ConstraintsHold, check.lookups]
+  simp [Checks, assertions, Operations.ConstraintsHold, check.lookups]
 
 /-- Append checks using the existing verifier monad and retain the physical inventory. -/
-def install (ens : Ensemble F PublicIO) : Ensemble F PublicIO where
-  tables := ens.tables
-  unique_names := ens.unique_names
-  channels := ens.channels ++ [check.channel ens]
-  verifier := ens.verifier.andThen (check.program ens)
+def install (ens : Ensemble F PublicIO) : Ensemble F PublicIO :=
+  { ens with
+    channels := ens.channels ++ [check.channel ens]
+    unique_channel_names := by
+      rw [List.map_append, List.nodup_append]
+      refine ⟨ens.unique_channel_names, by simp, ?_⟩
+      intro a ha b hb same
+      have hb' : b = (check.channel ens).name := by simpa using hb
+      apply VerifierChannel.name_not_mem check.name ens
+      rwa [same, hb'] at ha
+    verifier := ens.verifier.andThen (check.program ens)
+    tables_channels := fun table member _ used =>
+      List.mem_append_left _ (ens.tables_channels table member used)
+    verifier_channels := by
+      intro channel member
+      rcases (Verifier.Program.mem_andThen_channels ens.verifier (check.program ens) channel).mp member
+        with old | added
+      · exact List.mem_append_left _ (ens.verifier_channels old)
+      · exact List.mem_append_right _ (Verifier.checkZeros_channels _ _ added) }
 
 private theorem fresh (ens : Ensemble F PublicIO) : VerifierChannel.Fresh check.name ens :=
   VerifierChannel.fresh check.name ens
@@ -187,7 +202,7 @@ theorem installed_check_interactions {ens : Ensemble F PublicIO}
 theorem project_balanced_iff {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness (check.install ens)) :
     witness.BalancedChannels ↔
-      (check.project witness).BalancedChannels ∧ check.CountBound ∧
+      (check.project witness).BalancedChannels ∧
         check.Checks witness.publicInput witness.data := by
   have fresh := check.fresh ens
   constructor
@@ -202,7 +217,7 @@ theorem project_balanced_iff {ens : Ensemble F PublicIO}
     change BalancedInteractions ((check.project witness).interactionsWith selected)
     rw [check.project_interactions witness selected different]
     exact balanced selected (List.mem_append_left _ member)
-  · rintro ⟨original, bound, checked⟩ selected member
+  · rintro ⟨original, checked⟩ selected member
     change selected ∈ ens.channels ++ [check.channel ens] at member
     rcases List.mem_append.mp member with member | member
     · have different : check.channel ens ≠ selected := by
@@ -215,24 +230,87 @@ theorem project_balanced_iff {ens : Ensemble F PublicIO}
       subst selected
       change BalancedInteractions (witness.interactionsWith (check.channel ens))
       rw [check.installed_check_interactions]
-      exact (check.program_balanced_iff ens _ _).mpr ⟨bound, checked⟩
+      exact (check.program_balanced_iff ens _ _).mpr checked
 
-/-- The installed statement adds exactly the public semantic contract to the original statement. -/
-theorem statement_iff (ens : Ensemble F PublicIO)
+/-- The new channel has exactly two physical occurrences for each public assertion. -/
+theorem installed_check_length {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness (check.install ens)) :
+    (witness.interactionsWith (check.channel ens)).length =
+      2 * (check.assertions (varFromOffset PublicIO 0)).length := by
+  rw [check.installed_check_interactions]
+  change ((Verifier.checkZeros (check.channelName ens) (check.assertions (varFromOffset PublicIO 0))).circuitOperations.interactionValuesWith
+    (Verifier.zeroChannel (check.channelName ens)).toRaw _).length = _
+  rw [Verifier.checkZeros_values]
+  simp [List.length_flatMap, List.map_const', Nat.mul_comm]
+
+/-- Installing checks preserves the original height-indexed statement and adds their meaning.
+The static bound is for the additional check channel; the original height capacity remains checked. -/
+theorem statement_iff [ComputableRingChar F] (ens : Ensemble F PublicIO)
     (bound : check.CountBound) (meaning : PublicIO F → Prop)
-    (checks : ∀ input data, check.Checks input data ↔ meaning input) (input : PublicIO F) :
-    (check.install ens).Statement input ↔ ens.Statement input ∧ meaning input := by
+    (checks : ∀ input data, check.Checks input data ↔ meaning input)
+    (input : PublicIO F) (heights : List ℕ) :
+    (check.install ens).Statement .logUp input heights ↔
+      ens.Statement .logUp input heights ∧ meaning input := by
   constructor
-  · rintro ⟨witness, same, constraints, balanced⟩
-    obtain ⟨original, _, checked⟩ := (check.project_balanced_iff witness).mp balanced
-    refine ⟨⟨check.project witness, same,
-      (check.project_constraints witness).mp constraints, original⟩, ?_⟩
-    rw [← same]
-    exact (checks ..).mp checked
-  · rintro ⟨⟨witness, same, constraints, balanced⟩, spec⟩
-    refine ⟨check.lift witness, same, constraints, ?_⟩
-    apply (check.project_balanced_iff (check.lift witness)).mpr
-    exact ⟨balanced, bound, (checks ..).mpr (same ▸ spec)⟩
+  · rintro ⟨fit, witness, same, sameHeights, constraints, balanced⟩
+    have fits : witness.InteractionsFit .logUp :=
+      (witness.interactionsFit_iff .logUp).mp (sameHeights ▸ fit)
+    have logical := EnsembleWitness.balancedChannels_of_balanced fits balanced
+    obtain ⟨_, checked⟩ := (check.project_balanced_iff witness).mp logical
+    have oldFits : (check.project witness).InteractionsFit .logUp := by
+      intro channel member
+      have different : check.channel ens ≠ channel := by
+        intro equal
+        exact check.channel_not_mem ens (equal ▸ member)
+      rw [check.project_interactions witness channel different]
+      exact fits channel (List.mem_append_left _ member)
+    have oldBalanced : (check.project witness).Balanced .logUp := by
+      intro channel member
+      have different : check.channel ens ≠ channel := by
+        intro equal
+        exact check.channel_not_mem ens (equal ▸ member)
+      change LogUpBalanced ((check.project witness).interactionsWith channel)
+      rw [check.project_interactions witness channel different]
+      exact balanced channel (List.mem_append_left _ member)
+    refine ⟨⟨?_, check.project witness, same, sameHeights, constraints, oldBalanced⟩, ?_⟩
+    · rw [← sameHeights]
+      exact ((check.project witness).interactionsFit_iff .logUp).mpr oldFits
+    · exact same ▸ (checks ..).mp checked
+  · rintro ⟨⟨fit, witness, same, sameHeights, constraints, balanced⟩, spec⟩
+    have fits : witness.InteractionsFit .logUp :=
+      (witness.interactionsFit_iff .logUp).mp (sameHeights ▸ fit)
+    have checked : check.Checks witness.publicInput witness.data :=
+      (checks ..).mpr (same ▸ spec)
+    have newFits : (check.lift witness).InteractionsFit .logUp := by
+      intro channel member
+      change channel ∈ ens.channels ++ [check.channel ens] at member
+      rcases List.mem_append.mp member with old | added
+      · have different : check.channel ens ≠ channel := by
+          intro equal
+          exact check.channel_not_mem ens (equal ▸ old)
+        rw [← check.project_interactions (check.lift witness) channel different]
+        exact fits channel old
+      · obtain rfl := List.mem_singleton.mp added
+        rw [check.installed_check_length]
+        simpa only [CountBound, Balance.logUp, ComputableRingChar.char_eq, decide_eq_true_eq] using bound
+    have newBalanced : (check.lift witness).Balanced .logUp := by
+      intro channel member
+      change channel ∈ ens.channels ++ [check.channel ens] at member
+      rcases List.mem_append.mp member with old | added
+      · have different : check.channel ens ≠ channel := by
+          intro equal
+          exact check.channel_not_mem ens (equal ▸ old)
+        change LogUpBalanced ((check.lift witness).interactionsWith channel)
+        rw [← check.project_interactions (check.lift witness) channel different]
+        exact balanced channel old
+      · obtain rfl := List.mem_singleton.mp added
+        change LogUpBalanced ((check.lift witness).interactionsWith (check.channel ens))
+        rw [check.installed_check_interactions]
+        apply Verifier.checkZeros_logUp_of_checks
+        exact checked.1
+    refine ⟨?_, check.lift witness, same, sameHeights, constraints, newBalanced⟩
+    rw [← sameHeights]
+    exact ((check.lift witness).interactionsFit_iff .logUp).mpr newFits
 
 end PublicVerifier
 end Air.Flat

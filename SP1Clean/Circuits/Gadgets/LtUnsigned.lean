@@ -698,14 +698,14 @@ theorem sel_populate {b cc : Word (ZMod p)} :
         · -- all limbs equal
           refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
             simp only [ne_eq, h3, h2, h1, h0, eq_self_iff_true, not_true_eq_false, not_false_eq_true,
-              true_or, or_true, if_true, if_false, Vector.getElem_mk, List.getElem_toArray,
+              true_or, or_true, ite_true, ite_false, Vector.getElem_mk, List.getElem_toArray,
               List.getElem_cons_zero, List.getElem_cons_succ, sub_self, sub_zero, zero_sub, mul_zero,
               zero_mul, mul_one, one_mul, add_zero, zero_add, neg_zero]
         · -- limb 0 differs
           have k := inv_mul_cancel₀ (sub_ne_zero.mpr h0)
           refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
             simp only [ne_eq, h3, h2, h1, h0, eq_self_iff_true, not_true_eq_false, not_false_eq_true,
-              true_or, or_true, if_true, if_false, Vector.getElem_mk, List.getElem_toArray,
+              true_or, or_true, ite_true, ite_false, Vector.getElem_mk, List.getElem_toArray,
               List.getElem_cons_zero, List.getElem_cons_succ, sub_self, sub_zero, zero_sub, mul_zero,
               zero_mul, mul_one, one_mul, add_zero, zero_add, neg_zero] <;>
             first | ring1 | linear_combination k | linear_combination -k
@@ -713,7 +713,7 @@ theorem sel_populate {b cc : Word (ZMod p)} :
         have k := inv_mul_cancel₀ (sub_ne_zero.mpr h1)
         refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
           simp only [ne_eq, h3, h2, h1, eq_self_iff_true, not_true_eq_false, not_false_eq_true,
-            true_or, or_true, if_true, if_false, Vector.getElem_mk, List.getElem_toArray,
+            true_or, or_true, ite_true, ite_false, Vector.getElem_mk, List.getElem_toArray,
             List.getElem_cons_zero, List.getElem_cons_succ, sub_self, sub_zero, zero_sub, mul_zero,
             zero_mul, mul_one, one_mul, add_zero, zero_add, neg_zero] <;>
           first | ring1 | linear_combination k | linear_combination -k
@@ -721,7 +721,7 @@ theorem sel_populate {b cc : Word (ZMod p)} :
       have k := inv_mul_cancel₀ (sub_ne_zero.mpr h2)
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
         simp only [ne_eq, h3, h2, eq_self_iff_true, not_true_eq_false, not_false_eq_true,
-          true_or, or_true, if_true, if_false, Vector.getElem_mk, List.getElem_toArray,
+          true_or, or_true, ite_true, ite_false, Vector.getElem_mk, List.getElem_toArray,
           List.getElem_cons_zero, List.getElem_cons_succ, sub_self, sub_zero, zero_sub, mul_zero,
           zero_mul, mul_one, one_mul, add_zero, zero_add, neg_zero] <;>
         first | ring1 | linear_combination k | linear_combination -k
@@ -729,7 +729,7 @@ theorem sel_populate {b cc : Word (ZMod p)} :
     have k := inv_mul_cancel₀ (sub_ne_zero.mpr h3)
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
       simp only [ne_eq, h3, eq_self_iff_true, not_true_eq_false, not_false_eq_true,
-        true_or, or_true, if_true, if_false, Vector.getElem_mk, List.getElem_toArray,
+        true_or, or_true, ite_true, ite_false, Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_zero, List.getElem_cons_succ, sub_self, sub_zero, zero_sub, mul_zero,
         zero_mul, mul_one, one_mul, add_zero, zero_add, neg_zero] <;>
       first | ring1 | linear_combination k | linear_combination -k

@@ -378,7 +378,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec
   · -- the byte-range evidence
     simp only [RangeSpec, Nat.cast_ofNat]
     intro hr1
-    have hneg : - input_is_real = -1 := neg_inj.mpr hr1
+    have hneg : input_is_real = 1 := hr1
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · simpa only [eCtq, eRc, eCar] using DivRemChip.isU16_of_byteRowSpec (hp0 hneg)
     · simpa only [eCtq, eRc, eCar] using DivRemChip.isU16_of_byteRowSpec (hp1 hneg)
@@ -427,7 +427,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec
       first
         | exact Or.inl rfl
         | trivial
-        | (intro h1 h0; exact off_gate_vacuous bIr h1 h0)
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions CoreSpec := by
   circuit_proof_start [CoreSpec]
@@ -471,7 +470,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Co
       hovcres hisc0res hltbit hopa0 hbpv hcpv ha hb hc hq hqc hr hrc har hac hmax hcnegv hrnegv
       hctq hcarry
   all_goals intro hneg
-  all_goals replace hByte := hByte (neg_inj.mp hneg)
+  all_goals replace hByte := hByte hneg
   all_goals obtain ⟨c0, c1, c2, c3, c4, c5, c6, c7, fAc, fAr, fQ, fR, fCtq⟩ := hByte
   · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eRc, eCar] using c0)
   · exact byteRowSpec_of_isU16 (by simpa only [eCtq, eRc, eCar] using c1)
@@ -565,10 +564,7 @@ private theorem main_requirementsChannelsLawful (input_var : Var DivRemChip.Colu
       (by linear_combination - e367)
     have h_pull_ir (msg : ByteRow (Expression (ZMod p))) :
         (byteChannel.pulledIf input_var.is_real msg).toRaw.Requirements env := by
-      rw [ChannelInteraction.toRaw_requirements]
-      intro h1 h0
-      simp only [pulledIf_mult, circuit_norm] at h1 h0
-      exact off_gate_vacuous bIr h1 h0
+      exact bIr
     simp only [Operations.InChannelsOrRequirements, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, DivRemChip.forAllNoOffset_map_assert, List.not_mem_nil,
       false_or, true_and, and_true]

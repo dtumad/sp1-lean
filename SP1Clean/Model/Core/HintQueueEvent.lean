@@ -53,16 +53,16 @@ theorem HostState.hintEvent_sound {host : HostState} {policy : HostPolicy}
   · have result := facts.2.2.2.2.1
     rw [length] at executed result
     have effect : execution.effect = ⟨host, none⟩ := (Option.some.inj executed).symm
-    simp only [hintEvent, if_pos length, HintQueue.Event.apply?, effect, result,
+    simp only [hintEvent, ite_eq_left length, HintQueue.Event.apply?, effect, result,
       HostState.result, HostIO.hintLength, ↓reduceIte]
   · by_cases read : execution.kind = .hintRead
     · rw [read] at executed
       obtain ⟨bytes, rest, hints, count, _, _, effect⟩ :=
         (host.execute_hintRead_iff policy context execution.arg1 execution.arg2 execution.effect).mp executed
-      simp only [hintEvent, if_neg length, if_pos read, hints, HintQueue.Event.apply?, count,
+      simp only [hintEvent, ite_eq_right length, ite_eq_left read, hints, HintQueue.Event.apply?, count,
         ↓reduceIte, effect]
     · obtain ⟨added, hints⟩ := HostState.executeKind_hintSuffix executed read
-      simp only [hintEvent, if_neg length, if_neg read, HintQueue.Event.apply?, hints,
+      simp only [hintEvent, ite_eq_right length, ite_eq_right read, HintQueue.Event.apply?, hints,
         List.length_append, Nat.add_sub_cancel_right, List.take_left]
 
 end SP1Clean.Model.Core

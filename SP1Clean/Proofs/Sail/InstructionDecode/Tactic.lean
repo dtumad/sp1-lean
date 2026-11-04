@@ -11,7 +11,7 @@ No tactic executes the generated model through the native compiler.
 
 namespace SP1Clean.SailDecode.Symbolic
 
-open LeanRV64D.Defs LeanRV64D.Functions Sail
+open LeanRV64D LeanRV64D.Functions Sail
 open SP1Clean SP1Clean.Soundness.Target SP1Clean.SailDecode
 open SP1Clean.Model.Core.InstructionDecode
 
@@ -50,6 +50,11 @@ private theorem ceCfi (s : SailState) (cfg : SailConfigured s) :
   have h' : currentlyEnabled extension.Ext_Zicfilp s = (pure false : SailM Bool) s := by
     simpa only [bind_pure] using h
   exact h'.trans rfl
+
+/-- The decoder's short-circuit M-or-Zmmul check succeeds from the configured M bit. -/
+private theorem ceMul (s : SailState) (cfg : SailConfigured s) :
+    (currentlyEnabled extension.Ext_M <||> currentlyEnabled extension.Ext_Zmmul) s = .ok true s := by
+  simp only [orM, toBool, bind, EStateM.bind, ceM_apply s cfg.init cfg.misa_m, pure, EStateM.pure]
 
 private theorem run_match_congr {ε σ α β : Type} (r r' : EStateM.Result ε σ α)
     (k : α → σ → EStateM.Result ε σ β) (e : ε → σ → EStateM.Result ε σ β)
@@ -93,6 +98,7 @@ macro_rules
      · sail_decode_guard)
   | (refine (run_result_step _ true _ _ $s (cePause_apply $s)).trans ?_)
   | (refine (run_result_step _ false _ _ $s (ceCfi $s $cfg)).trans ?_)
+  | (refine (run_result_step _ true _ _ $s (ceMul $s $cfg)).trans ?_)
   | (refine (run_result_step _ true _ _ $s (ceM_apply $s ($cfg).init ($cfg).misa_m)).trans ?_)
   | (refine (run_result_step _ true _ _ $s (ceZmmul_apply $s ($cfg).init ($cfg).misa_m)).trans ?_)
   | (refine (run_match_congr _ _ _ _

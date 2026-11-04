@@ -1,6 +1,6 @@
 //! Shared row comparisons against released SP1, preserving every physical interaction.
 
-use super::export_support::{Ledger, RowWitness, Sp1Evaluation};
+use super::export_support::{complete_row, has_open_bus, Ledger, Sp1Evaluation};
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
@@ -42,7 +42,7 @@ pub fn compare<P: Program<NativeField> + GeneratedAirSpec>(
         .map(|value| {
             (
                 value.channel.to_owned(),
-                value.multiplicity.as_canonical_u64(),
+                value.signed_multiplicity().as_canonical_u64(),
                 value
                     .message
                     .iter()
@@ -71,16 +71,14 @@ pub fn check_trace<P: Program<NativeField> + GeneratedAirSpec>(
         <SP1Field as Sp1PrimeField64>::ORDER_U64
     );
     assert_eq!(P::WIDTHS, &[trace.width()]);
-    assert_eq!(<P as Program<NativeField>>::FIXED_WIDTHS, &[0]);
+    assert!(<P as Program<NativeField>>::FIXED_COLUMNS
+        .iter()
+        .all(|columns| columns.is_empty()));
     for (index, sp1) in trace.values.chunks(trace.width()).enumerate() {
         let row = map_row(sp1);
         let input = &row[..P::PROVER_INPUTS];
-        let witness = generate::<NativeField, RowWitness<P>>(&[], input).unwrap();
-        assert_eq!(
-            witness.tables,
-            vec![vec![row.clone()]],
-            "witness row {index}"
-        );
+        let completed = complete_row::<P>(input).unwrap();
+        assert_eq!(completed, row, "witness row {index}");
         assert!(
             compare::<P>(sp1, &row, chip, &format!("SP1 row {index}")),
             "SP1 row {index} must satisfy both AIRs"
@@ -183,10 +181,9 @@ fn check_joint_mutations<P: Program<NativeField> + GeneratedAirSpec>(
 
 pub fn check_open_buses<P: Program<NativeField>>(row: &[NativeField]) {
     let input = &row[..P::PROVER_INPUTS];
-    let error = generate::<NativeField, P>(&[], input).unwrap_err();
-    assert!(matches!(error, WitnessGenerationError::Runtime(_)));
+    assert!(has_open_bus::<P>(input));
     assert!(matches!(
-        generate::<NativeField, RowWitness<P>>(&[], &input[..input.len() - 1]),
+        generate::<NativeField, P>(&[], &input[..input.len() - 1], 1),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
 }

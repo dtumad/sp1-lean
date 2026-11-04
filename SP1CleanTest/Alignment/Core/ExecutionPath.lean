@@ -16,7 +16,7 @@ same two-step execution. These test the semantic interface, not an AIR witness.
 namespace SP1CleanTest.Core.ExecutionPath
 
 open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target
-  LeanRV64D LeanRV64D.Defs
+  LeanRV64D LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 

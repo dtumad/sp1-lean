@@ -25,12 +25,15 @@ execution domain and authenticated boundary obligations remain separate semantic
 namespace SP1Clean.Soundness
 
 open Air.Flat (Table EnsembleWitness)
-open SP1Clean.Ledger (SignedMults pushedMessages pulledMessages
-  balancedInteractions_of_signed_perm)
+open SP1Clean.Ledger (BooleanMults pushedMessages pulledMessages
+  balancedInteractions_of_boolean_perm)
 open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel)
 open SP1Clean.Execution
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+
+/-- Use the field instance consistently when filtering physical interaction counts. -/
+local instance traceBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 local instance traceCompletenessFieldBound : Fact (2 ^ 24 < p) :=
   ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -65,31 +68,34 @@ provider keys: the old signed-message permutation first gives Clean balance, and
 bridge then recovers exact centered-integer balance. -/
 theorem balancedOn_of_signed_perm (channel : RawChannel (ZMod p))
     (hlen : (trace.witness.interactionsWith channel).length < p)
-    (hbin : SignedMults (trace.witness.interactionsWith channel))
+    (hbin : BooleanMults (trace.witness.interactionsWith channel))
     (hperm : (pushedMessages (trace.witness.interactionsWith channel)).Perm
       (pulledMessages (trace.witness.interactionsWith channel))) :
     trace.BalancedOn channel := by
-  refine ⟨hlen, LookupAccessList.isConsistentBalanced_of_balancedInteractions
-    _ _ channel ?_ (List.Perm.refl _)
-      (balancedInteractions_of_signed_perm _ hlen hbin hperm) ?_⟩
+  refine ⟨hlen, LookupAccessList.isConsistentBalanced_of_logUpBalanced
+    _ _ channel ?_ (List.Perm.refl _) hlen ?_ ?_⟩
   · exact fun _ interactionMem =>
       Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith interactionMem
+  · intro message
+    rw [balanceOf_eq_sub_of_isBool (fun i member _ => hbin i member)]
+    rw [← count_activeMessages, ← count_activeMessages]
+    change (activeMessages _ .push).Perm (activeMessages _ .pull) at hperm
+    exact sub_eq_zero.mpr (congrArg (fun count : ℕ => (count : ZMod p)) (hperm.count_eq message))
   · intro access accessMem
     obtain ⟨interaction, interactionMem, rfl⟩ := List.mem_map.mp accessMem
-    change signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-      signedVal interaction.mult = 1
-    have hp : 2 < p := by
-      have := Fact.out (p := 2 ^ 25 < p)
-      omega
-    rcases hbin interaction interactionMem with h | h | h
-    · right; left
-      rw [h, signedVal_is_real hp (Or.inl rfl), ZMod.val_zero, Nat.cast_zero]
-    · right; right
-      rw [h, signedVal_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod,
+    change signedVal interaction.signedMult = -1 ∨ signedVal interaction.signedMult = 0 ∨
+      signedVal interaction.signedMult = 1
+    have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
+    have one : signedVal (1 : ZMod p) = 1 := by
+      rw [signedVal_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod,
         Nat.mod_eq_of_lt (by omega), Nat.cast_one]
-    · left
-      rw [h, signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod,
+    have negOne : signedVal (-1 : ZMod p) = -1 := by
+      rw [signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod,
         Nat.mod_eq_of_lt (by omega), Nat.cast_one]
+    have zero : signedVal (0 : ZMod p) = 0 := by simp [signedVal]
+    rcases hbin interaction interactionMem with h | h <;>
+      cases direction : interaction.direction <;>
+      simp only [Interaction.signedMult, direction, h, neg_zero, zero, one, negOne, or_true, true_or]
 
 /-- The generated trace balances on every registered channel of `sp1Ensemble`. -/
 def Balanced : Prop :=
@@ -202,24 +208,18 @@ theorem balancedOn_exit
     rw [typedEnsembleExitInteractions_eq, syscallInstrsTable_nil trace]
     simp only [List.flatMap_nil, List.append_nil, List.map_append, List.map_flatMap]
     rfl
-  have hbin : SignedMults (trace.witness.interactionsWith Channels.exitChannel.toRaw) := by
+  have hbin : BooleanMults (trace.witness.interactionsWith Channels.exitChannel.toRaw) := by
     rw [rawEq, closed]
     intro i iMem
     rcases List.mem_cons.mp iMem with rfl | iMem
-    · exact Or.inr (Or.inr rfl)
+    · exact Or.inr rfl
     · obtain ⟨row, rowMem, hmem⟩ := List.mem_flatMap.mp iMem
       rw [hhalt row rowMem] at hmem
       rcases List.mem_cons.mp hmem with rfl | hmem
       · exact Or.inl rfl
       rcases List.mem_cons.mp hmem with rfl | hmem
-      · exact Or.inr (Or.inl (by simp [Channel.pushedIfValue]))
+      · exact Or.inr (by simp [Channel.pushedIfValue])
       · exact absurd hmem List.not_mem_nil
-  have two_ne : (2 : ZMod p) ≠ 0 := by
-    intro h
-    have hval := congrArg ZMod.val h
-    rw [show (2 : ZMod p) = ((2 : ℕ) : ZMod p) from by norm_cast,
-      ZMod.val_natCast_of_lt (by omega), ZMod.val_zero] at hval
-    exact absurd hval (by norm_num)
   have haltRowMsgs : ∀ row ∈ (haltTable trace.witness).table,
       pushedMessages [Channels.exitChannel.pushedIfValue
            (haltRow trace.witness.data row).is_real
@@ -236,31 +236,15 @@ theorem balancedOn_exit
            (⟨0⟩ : Channels.ExitMsg (ZMod p))] = [] := by
     intro row rowMem
     have hzero := hhalt row rowMem
-    constructor
-    · rw [SP1Clean.Ledger.pushedMessages_cons, SP1Clean.Ledger.pushedMessages_cons,
-        SP1Clean.Ledger.pushedMessages_nil,
-        if_neg (by simp only [Channel.pushedIfValue, hzero]; exact zero_ne_one),
-        if_pos (by simp only [Channel.pushedIfValue, hzero, sub_zero])]
-      rfl
-    · rw [SP1Clean.Ledger.pulledMessages_cons, SP1Clean.Ledger.pulledMessages_cons,
-        SP1Clean.Ledger.pulledMessages_nil,
-        if_neg (by
-          simp only [Channel.pushedIfValue, hzero]
-          intro h
-          exact absurd (neg_eq_zero.mp h.symm) one_ne_zero),
-        if_neg (by
-          simp only [Channel.pushedIfValue, hzero, sub_zero]
-          intro h
-          exact two_ne (by linear_combination h))]
+    rw [hzero]
+    simp [SP1Clean.Ledger.pushedMessages_cons, SP1Clean.Ledger.pulledMessages_cons,
+      Channel.pushedIfValue]
   have hperm : (pushedMessages
         (trace.witness.interactionsWith Channels.exitChannel.toRaw)).Perm
       (pulledMessages (trace.witness.interactionsWith Channels.exitChannel.toRaw)) := by
     rw [rawEq, closed, SP1Clean.Ledger.pushedMessages_cons, SP1Clean.Ledger.pulledMessages_cons,
-      if_neg (by
-        simp only [Channel.pulledIfValue]
-        intro h
-        exact two_ne (by linear_combination -h)),
-      if_pos (by simp [Channel.pulledIfValue]),
+      ite_eq_right (by simp [Channel.pulledIfValue]),
+      ite_eq_left (by simp [Channel.pulledIfValue]),
       SP1Clean.Ledger.pushedMessages_flatMap, SP1Clean.Ledger.pulledMessages_flatMap]
     rw [List.flatMap_congr (fun row rowMem => (haltRowMsgs row rowMem).1),
       List.flatMap_congr (fun row rowMem => (haltRowMsgs row rowMem).2)]
@@ -281,6 +265,55 @@ theorem balancedOn_exit
 Byte and Program are closed against the literal Clean field interactions, so aggregate provider
 counts may cross the centered half of `ZMod p`.  State and Memory remain token hand-offs.  The only
 capacity premise is Clean's own interaction-list bound on each channel. -/
+theorem canonicalClosure_logUpBalanced_of_handoff
+    (capacity : trace.CanonicalCapacity)
+    (hwf : (trace.canonicalClosure capacity).WellFormed)
+    (hserv : trace.DemandServable)
+    (hnonpos : ∀ key ∈ trace.closingKeyList,
+      LookupAccessList.multiplicitySum trace.skeletonLedger key ≤ 0)
+    (stateKeys memoryKeys : List LookupAccessList.LookupKey)
+    (hstate : (LookupAccessList.active (trace.canonicalClosure capacity).stateLedger).Perm
+      (LookupAccessList.handoff stateKeys))
+    (hmemory : (LookupAccessList.active (trace.canonicalClosure capacity).memoryLedger).Perm
+      (LookupAccessList.handoff memoryKeys))
+    (hhaltClosure : ∀ row ∈ (haltTable (trace.canonicalClosure capacity).witness).table,
+      (haltRow (trace.canonicalClosure capacity).witness.data row).is_real = 0)
+    (hhaltLenClosure : (haltTable (trace.canonicalClosure capacity).witness).table.length = 1)
+    (hexitZero : (trace.canonicalClosure capacity).witness.publicInput.exit_code = 0)
+    (hlen : ∀ channel ∈ (sp1Ensemble (p := p)).channels,
+      ((trace.canonicalClosure capacity).witness.interactionsWith channel).length < p) :
+    (trace.canonicalClosure capacity).witness.Balanced .logUp := by
+  intro channel hchannel
+  change LogUpBalanced ((trace.canonicalClosure capacity).witness.interactionsWith channel)
+  have channelCase := hchannel
+  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelCase
+  rcases channelCase with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · exact LookupAccessList.logUpBalanced_of_isConsistentBalanced _ _ _
+      (fun _ member => Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith member)
+      (List.Perm.refl _)
+      ((trace.canonicalClosure capacity).balancedOn_of_handoff _ hchannel
+        InteractionKind.State rfl stateKeys hstate (hlen _ hchannel)).2
+  · exact trace.canonicalClosure_logUpBalanced capacity hwf hserv hnonpos _ hchannel (Or.inl rfl)
+  · exact trace.canonicalClosure_logUpBalanced capacity hwf hserv hnonpos _ hchannel (Or.inr rfl)
+  · exact LookupAccessList.logUpBalanced_of_isConsistentBalanced _ _ _
+      (fun _ member => Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith member)
+      (List.Perm.refl _)
+      ((trace.canonicalClosure capacity).balancedOn_of_handoff _ hchannel
+        InteractionKind.Memory rfl memoryKeys hmemory (hlen _ hchannel)).2
+  · exact LookupAccessList.logUpBalanced_of_isConsistentBalanced _ _ _
+      (fun _ interactionMem =>
+        Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith interactionMem)
+      (List.Perm.refl _)
+      ((trace.canonicalClosure capacity).balancedOn_exit hhaltClosure hhaltLenClosure hexitZero
+        (hlen _ hchannel)).2
+  · rw [witness_syscallChannel_silent _ (trace.canonicalClosure capacity).witness_syscallTable_nil]
+    intro message
+    simp [balanceOf]
+  · rw [witness_publicValuesChannel_silent _ (trace.canonicalClosure capacity).witness_syscallTable_nil]
+    intro message
+    simp [balanceOf]
+
+/-- The concrete field equations and physical bounds imply all abstract channel guarantees. -/
 theorem canonicalClosure_balancedChannels_of_handoff
     (capacity : trace.CanonicalCapacity)
     (hwf : (trace.canonicalClosure capacity).WellFormed)
@@ -299,27 +332,13 @@ theorem canonicalClosure_balancedChannels_of_handoff
     (hlen : ∀ channel ∈ (sp1Ensemble (p := p)).channels,
       ((trace.canonicalClosure capacity).witness.interactionsWith channel).length < p) :
     (trace.canonicalClosure capacity).witness.BalancedChannels := by
-  intro channel hchannel
-  change BalancedInteractions ((trace.canonicalClosure capacity).witness.interactionsWith channel)
-  have channelCase := hchannel
-  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false] at channelCase
-  rcases channelCase with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact (trace.canonicalClosure capacity).balancedInteractions_of_handoff _ hchannel
-      InteractionKind.State rfl stateKeys hstate (hlen _ hchannel)
-  · exact trace.canonicalClosure_byte_balancedInteractions capacity hwf hserv hnonpos (hlen _ hchannel)
-  · exact trace.canonicalClosure_program_balancedInteractions capacity hwf hserv hnonpos (hlen _ hchannel)
-  · exact (trace.canonicalClosure capacity).balancedInteractions_of_handoff _ hchannel
-      InteractionKind.Memory rfl memoryKeys hmemory (hlen _ hchannel)
-  · exact LookupAccessList.balancedInteractions_of_isConsistentBalanced _ _ _
-      (fun _ interactionMem =>
-        Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith interactionMem)
-      (List.Perm.refl _) (hlen _ hchannel)
-      ((trace.canonicalClosure capacity).balancedOn_exit hhaltClosure hhaltLenClosure hexitZero
-        (hlen _ hchannel)).2
-  · rw [witness_syscallChannel_silent _ (trace.canonicalClosure capacity).witness_syscallTable_nil]
-    exact balancedInteractions_nil
-  · rw [witness_publicValuesChannel_silent _ (trace.canonicalClosure capacity).witness_syscallTable_nil]
-    exact balancedInteractions_nil
+  have raw := trace.canonicalClosure_logUpBalanced_of_handoff capacity hwf hserv hnonpos
+    stateKeys memoryKeys hstate hmemory hhaltClosure hhaltLenClosure hexitZero hlen
+  intro channel member
+  apply (Balance.logUp (F := ZMod p)).balancedInteractions_of_balanced _
+    (by simpa only [Balance.logUp, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n,
+      decide_eq_true_eq] using hlen channel member)
+  exact raw channel member
 
 /-- Integer balance on every registered channel: Byte/Program use provider closure,
 State/Memory use token hand-offs, Exit uses zero-exit Halt padding, and the two syscall channels
@@ -420,13 +439,12 @@ theorem supported_core_generated_trace_complete :
       (SupportedCoreGeneratedTraceRelation (p := p)) :=
   (supported_core_generated_trace_functionalCompleteness (p := p)).complete
 
-/-- The public statement a generated trace proves, in the shape Clean's ensemble layer states:
-`Ensemble.Statement` is the existential over witnesses that `SupportedCoreEnsembleRelation` spells
-out per field. -/
-theorem sp1Ensemble_statement_of_generated_trace
+/-- A generated trace realizes the abstract ensemble relation. A concrete backend additionally
+chooses its balance check and supplies that check's capacity and field-sum obligations. -/
+theorem ensemble_relation_of_generated_trace
     (statement : SupportedCoreStatement p) (trace : SupportedCoreTraceWitness p)
     (valid : SupportedCoreGeneratedTraceRelation statement trace) :
-    (sp1Ensemble (p := p)).Statement statement.publicValues := by
+    ∃ witness, SupportedCoreEnsembleRelation statement witness := by
   obtain ⟨wf, balanced, publicEq, -⟩ := valid
   exact ⟨trace.witness, publicEq, trace.witness_constraints wf, balanced⟩
 
@@ -435,7 +453,7 @@ theorem sp1Ensemble_statement_of_generated_trace
 
 /-- **A trace whose buses balance for the two structural reasons proves the ensemble's public
 statement.** -/
-theorem sp1Ensemble_statement_of_structural_balance
+theorem ensemble_relation_of_structural_balance
     (statement : SupportedCoreStatement p) (trace : SupportedCoreTraceWitness p)
     (wf : trace.WellFormed) (fit : trace.CountsFit) (hsupply : trace.SuppliesDemand)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
@@ -464,7 +482,7 @@ theorem sp1Ensemble_statement_of_structural_balance
     (hlen : ∀ channel ∈ (sp1Ensemble (p := p)).channels,
       (trace.witness.interactionsWith channel).length < p)
     (publicEq : trace.witness.publicInput = statement.publicValues) :
-    (sp1Ensemble (p := p)).Statement statement.publicValues := by
+    ∃ witness, SupportedCoreEnsembleRelation statement witness := by
   let stateKeys := LookupAccessList.chainTokens
     (stateInitToken trace, stateLinks, stateFinalToken trace)
   let memoryKeys := memoryChains.flatMap LookupAccessList.chainTokens

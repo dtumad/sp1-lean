@@ -16,12 +16,9 @@ theorem fixed_names (context : Context) : (fixed context).map (·.table.name) = 
 
 /-- Authenticate every physical table and the complete separate public verifier. -/
 def description (context : Context) :
-    EnsembleCheck ((assembly context).withChannels (channels context)) where
+    EnsembleCheck (assembly context) where
   lookups := fixed context
   lookups_unique := by rw [fixed_names]; decide
   lookups_complete := lookups_complete context
-  channels_unique := channels_unique context
-  channels_complete := channels_complete context
-  verifier_channels_complete := verifier_channels_complete context
 
 end SP1CleanTest.Alignment.InstalledAssembly

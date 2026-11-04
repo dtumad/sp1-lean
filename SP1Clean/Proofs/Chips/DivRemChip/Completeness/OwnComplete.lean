@@ -89,10 +89,10 @@ private lemma overflow_one_of_s64 {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.i
   have hwne : ¬(f[4] + f[5] + f[6] + f[7] = 1) := by rw [hw]; exact zero_ne_one
   have hovb : (ovbWitness 1 B f).is_diff_zero.result = 1 := by
     unfold ovbWitness
-    rw [if_pos rfl, if_neg hwne, isEqualWord_populate_result, if_pos ⟨hb0, hb1, hb2, hb3⟩]
+    rw [ite_eq_left rfl, ite_eq_right hwne, isEqualWord_populate_result, ite_eq_left ⟨hb0, hb1, hb2, hb3⟩]
   have hovc : (ovcWitness 1 C f).is_diff_zero.result = 1 := by
     unfold ovcWitness
-    rw [if_pos rfl, if_neg hwne, isEqualWord_populate_result, if_pos ⟨hc0, hc1, hc2, hc3⟩]
+    rw [ite_eq_left rfl, ite_eq_right hwne, isEqualWord_populate_result, ite_eq_left ⟨hc0, hc1, hc2, hc3⟩]
   unfold populateIsOverflow
   rw [hovb, hovc, hsig]; ring
 
@@ -106,10 +106,10 @@ private lemma overflow_one_of_sW {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.is
   obtain ⟨hc0, hc1⟩ := sW_allOnes_limbs hC hCm
   have hovb : (ovbWitness 1 B f).is_diff_zero.result = 1 := by
     unfold ovbWitness
-    rw [if_pos rfl, if_pos hW, isEqualWord_populate_result, if_pos ⟨hb0, hb1, rfl, rfl⟩]
+    rw [ite_eq_left rfl, ite_eq_left hW, isEqualWord_populate_result, ite_eq_left ⟨hb0, hb1, rfl, rfl⟩]
   have hovc : (ovcWitness 1 C f).is_diff_zero.result = 1 := by
     unfold ovcWitness
-    rw [if_pos rfl, if_pos hW, isEqualWord_populate_result, if_pos ⟨hc0, hc1, rfl, rfl⟩]
+    rw [ite_eq_left rfl, ite_eq_left hW, isEqualWord_populate_result, ite_eq_left ⟨hc0, hc1, rfl, rfl⟩]
   unfold populateIsOverflow
   rw [hovb, hovc, hsig]; ring
 

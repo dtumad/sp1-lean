@@ -23,7 +23,7 @@ The chip `Spec` sources operands from **inputs** `op_b_val` (rs1) / `op_c_val` (
 the RV64 signature `f rs2_val rs1_val`. `advance` is the eight-way flag-dispatched transition.
 `DivRem` carries `Fact (2 ^ 24 < p)`; the bridge derives `Fact (2 ^ 17 < p)` locally. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.DivRemSail
 
 open Sail LeanRV64D LeanRV64D.Functions

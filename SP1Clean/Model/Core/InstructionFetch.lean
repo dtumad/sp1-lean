@@ -10,7 +10,7 @@ fetch result. No existence of a next instruction is imposed on empty or final bo
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs LeanRV64D.Functions SP1Clean.Advance
+open LeanRV64D LeanRV64D.Functions SP1Clean.Advance
 
 /-- The checked source fetches the committed word through official Sail, without any AIR row. -/
 theorem ExecutionSourceValid.fetch_eq {image : ProgramImage} {source : ExecutionSnapshot}

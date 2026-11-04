@@ -1,6 +1,6 @@
 module
 
-public import ToPolyFun.Dynamical.Labeled
+public import PolyFun.PFunctor.Dynamical.Trace
 public import ToClean.Air.CompleteEnsemble
 
 /-! # A flat AIR ensemble realizing a labeled machine
@@ -39,28 +39,30 @@ def Interpretation (m : Labeled.{0, uA, uB, 0} p) (boundary : PublicIO F → m.S
 
 /-- An ensemble realizes a machine: sound and complete for admissible traces at every boundary. -/
 structure Realizes (m : Labeled.{0, uA, uB, 0} p) (ens : Ensemble F PublicIO)
+    (balance : Balance F)
     (boundary : PublicIO F → m.State × m.State)
     (admissible : PublicIO F → List m.Event → Prop) where
-  sound : ens.Soundness (fun _ => True)
+  sound : ens.Soundness balance (fun _ _ => True)
     (fun publicInput => ∃ events, Interpretation m boundary admissible publicInput events)
-  compiler : EnsembleCompiler ens (List m.Event) (Interpretation m boundary admissible)
+  compiler : EnsembleCompiler ens balance (List m.Event) (Interpretation m boundary admissible)
 
 namespace Realizes
 
-variable {m : Labeled.{0, uA, uB, 0} p} {ens : Ensemble F PublicIO}
+variable {m : Labeled.{0, uA, uB, 0} p} {ens : Ensemble F PublicIO} {balance : Balance F}
   {boundary : PublicIO F → m.State × m.State} {admissible : PublicIO F → List m.Event → Prop}
 
 /-- The single statement: raw acceptance is exactly an admissible trace between the boundary
 states. -/
-theorem statement_iff (r : Realizes m ens boundary admissible) (publicInput : PublicIO F) :
-    ens.Statement publicInput ↔
+theorem statement_iff (r : Realizes m ens balance boundary admissible) (publicInput : PublicIO F) :
+    (∃ heights, ens.Statement balance publicInput heights) ↔
       ∃ events, m.Trace (boundary publicInput).1 events (boundary publicInput).2 ∧
-        admissible publicInput events :=
-  (r.compiler.toCompleteEnsemble r.sound).statement_iff publicInput trivial
+        admissible publicInput events := by
+  simpa only [EnsembleCompiler.toCompleteEnsemble, Interpretation, true_and] using
+    (r.compiler.toCompleteEnsemble r.sound).statement_iff publicInput
 
 /-- An accepted public input has a reachable boundary. -/
-theorem reachable_of_statement (r : Realizes m ens boundary admissible) {publicInput : PublicIO F}
-    (accepted : ens.Statement publicInput) :
+theorem reachable_of_statement (r : Realizes m ens balance boundary admissible) {publicInput : PublicIO F}
+    (accepted : ∃ heights, ens.Statement balance publicInput heights) :
     ∃ n, m.toDynSystem.ReachableIn n (boundary publicInput).1 (boundary publicInput).2 := by
   obtain ⟨events, trace, _⟩ := (r.statement_iff publicInput).mp accepted
   exact ⟨events.length, trace.reachableIn⟩

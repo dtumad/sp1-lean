@@ -21,10 +21,10 @@ use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
 
-fixture!(halt_max, "installed_halt_max");
-fixture!(halt_wide, "installed_halt_wide");
-fixture!(halt_zero, "installed_halt_zero");
-fixture!(empty, "installed_empty");
+fixture!(halt_max, installed_halt_max);
+fixture!(halt_wide, installed_halt_wide);
+fixture!(halt_zero, installed_halt_zero);
+fixture!(empty, installed_empty);
 #[test]
 fn complete_halt_rows_and_public_mutations_match_native_checks() {
     check_reference::<halt_zero::Ensemble>(&halt_zero::reference(), 8);
@@ -36,7 +36,7 @@ fn halt_matches_released<P: Program<F>>(reference: &serde_json::Value, exit: u64
     use sp1_core_executor::{events::MemoryRecordEnum, Program as Sp1Program, SyscallCode};
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = generate::<F, P>(&public, &fields(&case["privateInput"]), 1).unwrap();
     assert!(
         witness.tables[57].is_empty(),
         "active HALT must not also emit padding Exit"

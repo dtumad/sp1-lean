@@ -24,7 +24,7 @@ private def target : MemorySnapshot :=
   ⟨source.registers.set 1 123, ⟨[(65536, 9), (65543, 17)]⟩⟩
 
 private def auxiliary : List (Component Fp) :=
-  { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions } :: (sp1ProviderTables (p := SP1Prime)).take 23
+  { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions, generation := MemoryProviderChip.generation } :: (sp1ProviderTables (p := SP1Prime)).take 23
 
 private theorem names (target : MemorySnapshot) :
     (((FinalMemoryEnsemble.inventory (p := SP1Prime)).views.map TransitionView.component ++
@@ -34,8 +34,27 @@ private theorem names (target : MemorySnapshot) :
     StaticTable.component, StaticTable.provider, FinalRegisterValue.membership, InitialMemoryLookup.membership]
   exact of_decide_eq_true rfl
 
+private theorem registered (target : MemorySnapshot) :
+    ∀ component ∈ auxiliary,
+      component.circuit.channels ⊆ Soundness.FinalMemoryChecks.registry target [] := by
+  intro component member channel used
+  fin_cases member
+  · change channel ∈ MemoryProviderChip.circuit.channels at used
+    simp only [GeneralFormalCircuit.channels, MemoryProviderChip.circuit, circuit_norm,
+      List.mem_cons, List.not_mem_nil, or_false] at used
+    simp only [Soundness.FinalMemoryChecks.registry, List.mem_cons, List.not_mem_nil, or_false]
+    tauto
+  all_goals
+    change channel ∈ [Channels.byteChannel.toRaw] at used
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at used
+    simp only [Soundness.FinalMemoryChecks.registry, List.mem_cons, List.not_mem_nil, or_false]
+    tauto
+
 private def assembly (target : MemorySnapshot) :=
   Soundness.FinalMemoryChecks.ensemble source target auxiliary [] (names target)
+    (by simp [Soundness.FinalMemoryChecks.registry, OrderedBoundary.channel, OrderedFinalProvider.channelName,
+      Channels.byteChannel, Channels.memoryChannel, InitialMemoryLookup.membership, FinalRegisterValue.membership,
+      StaticTable.channel, FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw]) (registered target)
 
 /-- The real provider family satisfies the static interface used by the soundness theorem. -/
 theorem resourceInterface (target : MemorySnapshot) : Soundness.FinalMemoryChecks.Interface target auxiliary := by
@@ -117,7 +136,7 @@ private def evaluate (_target : MemorySnapshot) (component : Component Fp) (inpu
     | .lookup .. => false
     | .witness .. | .interact .. => true
   (valid, (FlatOperation.interactions operations).map fun interaction =>
-    (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+    (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
 
 private def evaluateRow (target : MemorySnapshot) (row : Row) : Bool × Ledger :=
   match (assembly target).tables[row.1]? with
@@ -136,10 +155,10 @@ private def byteProvider (entry : String × List Fp × Fp) : Option Row :=
   | _ => some (31, [])
 
 private def verifierLedger (target : MemorySnapshot) : Ledger :=
-  let env : Environment Fp := Environment.fromInput (Input := unit) () (fun _ _ => #[])
+  let env : Environment Fp := Environment.fromInput (Input := unit) () (.empty Fp)
   (assembly target).verifierOperations.interactions.map fun interaction =>
     let value := AbstractInteraction.eval env interaction
-    (value.channel.name, value.msg.toList, value.mult)
+    (value.channel.name, value.msg.toList, value.signedMult)
 
 private def check (target : MemorySnapshot) (rows : List Row) (supplyBytes : Bool := true) : Bool :=
   let initial := (true, verifierLedger target) :: rows.map (evaluateRow target)

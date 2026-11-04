@@ -94,9 +94,9 @@ theorem cComp_toBitVec64 (C : Word (ZMod p)) (f : Vector (ZMod p) 8) (hC : C.isU
     simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ, hval2, decide_eq_true_eq]
     rcases hqcase with hq | hq <;> rw [hq]
-    · rw [if_neg (by omega)]
+    · rw [ite_eq_right (by omega)]
       omega
-    · rw [if_pos (by omega)]
+    · rw [ite_eq_left (by omega)]
       omega
   · -- unsigned W: the zero-filled word is the zero extension of the low 32 bits
     rw [← BitVec.toNat_inj, BitVec.toNat_setWidth, BitVec.toNat_setWidth, hCn]

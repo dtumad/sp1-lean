@@ -61,11 +61,11 @@ theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) mai
   simp only [sub_eq_zero] at same
   rw [same] at gap
   by_cases equal : input_previousHigh = input_currentHigh
-  · simp only [equal, if_true, one_mul, sub_self, zero_mul, add_zero] at gap
+  · simp only [equal, ite_true, one_mul, sub_self, zero_mul, add_zero] at gap
     have order := subtraction_lt _ _ previousLow gap
     simp only [Semantics.clkNat, equal]
     omega
-  · simp only [if_neg equal, zero_mul, sub_zero, one_mul, zero_add] at gap
+  · simp only [ite_eq_right equal, zero_mul, sub_zero, one_mul, zero_add] at gap
     have order := subtraction_lt _ _ previousHigh gap
     simp only [Semantics.clkNat]
     omega
@@ -80,11 +80,11 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
   rw [same]
   simp only [Semantics.clkNat] at order
   by_cases equal : input_previousHigh = input_currentHigh
-  · simp only [equal, if_true, one_mul, sub_self, zero_mul, add_zero]
+  · simp only [equal, ite_true, one_mul, sub_self, zero_mul, add_zero]
     apply subtraction_bound _ _ currentLow
     rw [equal] at order
     omega
-  · simp only [if_neg equal, zero_mul, sub_zero, one_mul, zero_add]
+  · simp only [ite_eq_right equal, zero_mul, sub_zero, one_mul, zero_add]
     have different : input_previousHigh.val ≠ input_currentHigh.val := fun h => equal (ZMod.val_injective p h)
     apply subtraction_bound _ _ currentHigh
     omega

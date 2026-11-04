@@ -47,8 +47,7 @@ theorem populateFE_eval (env : ProverEnvironment (ZMod p))
       (simp only [circuit_norm, Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_zero, List.getElem_cons_succ,
         hA 0 (by omega), hA 1 (by omega), hA 2 (by omega), hA 3 (by omega),
-        hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega)]
-       try ring)
+        hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega)])
   have h := IsZeroWordOperation.populateFE_eval env
     (#v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]])
     (#v[va[0] - vb[0], va[1] - vb[1], va[2] - vb[2], va[3] - vb[3]]) hdiff

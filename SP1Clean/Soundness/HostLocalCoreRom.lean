@@ -21,16 +21,18 @@ local instance instructionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
   {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
 
 private theorem instruction_component (index : Fin 25) :
     (tables (p := p) image source auxiliary)[7 + index.val]'(by rw [tables_length]; omega) =
       (ProtectedLocalCore.tables image source)[7 + index.val]'(by
         rw [ProtectedLocalCore.tables_length]; omega) := by
   rw [core_component image source auxiliary ⟨7 + index.val, by omega⟩,
-    if_neg (show ¬58 = 7 + index.val by omega)]
+    ite_eq_right (show ¬58 = 7 + index.val by omega)]
 
 private theorem instructionRows_physical
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     {decoded : DecodedInstructionRow p}
     (member : decoded ∈ LocalCore.instructionRows (localWitness witness)) :
     ∃ index : Fin 25,
@@ -93,7 +95,7 @@ private theorem instruction_write_authorized (index : Fin 25)
 
 /-- The actual extended AIR bounds every ordinary write byte and excludes instruction bytes. -/
 theorem instructionRows_write_authorized
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (members : ∀ component ∈ auxiliary,
       image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
@@ -127,7 +129,7 @@ theorem instructionRows_write_authorized
 
 /-- ROM exclusion is a consequence of the full bounded byte authorization. -/
 theorem instructionRows_write_permitted
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (members : ∀ component ∈ auxiliary,
       image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)

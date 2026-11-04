@@ -15,18 +15,18 @@ open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.C
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
   {final : HostHintQueue.State (ZMod SP1Prime)} {bankFinal : HostState}
-  {channels : List (RawChannel (ZMod SP1Prime))}
+
 
 /-- The installed assembly has 94 physical tables for every instance. -/
 theorem installed_tables_length :
-    (Installed image source outgoing final bankFinal channels).tables.length = 94 := by
+    (Installed image source outgoing final bankFinal).tables.length = 94 := by
   simp only [Installed, ensemble, ClosedVerifier.install, withReceipts, withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set, base_tables_length]
   rfl
 
 /-- Component selection in the installed assembly by physical position. -/
 abbrev componentAt (index : Fin 94) : Component (ZMod SP1Prime) :=
-  (Installed image source outgoing final bankFinal channels).tables[index.val]'(by
+  (Installed image source outgoing final bankFinal).tables[index.val]'(by
     rw [installed_tables_length]; exact index.isLt)
 
 attribute [local circuit_norm]
@@ -302,7 +302,7 @@ attribute [local circuit_norm] List.append_eq Component.rowOperations
 /-- No legacy lookup at physical component 0. -/
 private theorem lookup_slot_0 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 0).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 0).rowOperations.lookups.map (·.table) = [] := by
   change (SnapshotMemoryEnsemble.registerView (p := SP1Prime) source.sail.memorySnapshot).component.rowOperations.lookups.map (·.table) = []
   have empty : (SnapshotMemoryEnsemble.registerView (p := SP1Prime) source.sail.memorySnapshot).component.operations.lookups = [] := by
     simp only [SnapshotMemoryEnsemble.registerView, OrderedMemoryEnsemble.providerView,
@@ -314,7 +314,7 @@ private theorem lookup_slot_0 :
 /-- No legacy lookup at physical component 1. -/
 private theorem lookup_slot_1 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 1).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 1).rowOperations.lookups.map (·.table) = [] := by
   change (SnapshotMemoryEnsemble.ramView (p := SP1Prime) source.sail.memorySnapshot).component.rowOperations.lookups.map (·.table) = []
   have empty : (SnapshotMemoryEnsemble.ramView (p := SP1Prime) source.sail.memorySnapshot).component.operations.lookups = [] := by
     simp only [SnapshotMemoryEnsemble.ramView, OrderedMemoryEnsemble.providerView,
@@ -326,19 +326,21 @@ private theorem lookup_slot_1 :
 /-- No legacy lookup at physical component 2. -/
 private theorem lookup_slot_2 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 2).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 2).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 3. -/
 private theorem lookup_slot_3 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 3).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 3).rowOperations.lookups.map (·.table) = [] := by
   change ({
       circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit
-      Assumptions := OrderedFinalProvider.registerCircuit.Assumptions
-      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod SP1Prime)).rowOperations.lookups.map (·.table) = []
-  rw [← Component.lookups_eq, FinalMemoryReceipt.lookups]
+      generation := OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRegisterProvider.circuit (p := SP1Prime)).name
+      Assumptions := (FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit).Assumptions } : Component (ZMod SP1Prime)).rowOperations.lookups.map (·.table) = []
+  rw [← Component.lookups_eq]
+  simp only [Component.operations]
+  rw [FinalMemoryReceipt.lookups]
   change (FinalMemoryEnsemble.viewFor (p := SP1Prime) .registers).component.operations.lookups.map (·.table) = []
   rw [FinalMemoryEnsemble.view_lookups]
   rfl
@@ -346,12 +348,14 @@ private theorem lookup_slot_3 :
 /-- No legacy lookup at physical component 4. -/
 private theorem lookup_slot_4 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 4).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 4).rowOperations.lookups.map (·.table) = [] := by
   change ({
       circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit
-      Assumptions := OrderedFinalProvider.ramCircuit.Assumptions
-      circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod SP1Prime)).rowOperations.lookups.map (·.table) = []
-  rw [← Component.lookups_eq, FinalMemoryReceipt.lookups]
+      generation := OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRamProvider.circuit (p := SP1Prime)).name
+      Assumptions := (FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit).Assumptions } : Component (ZMod SP1Prime)).rowOperations.lookups.map (·.table) = []
+  rw [← Component.lookups_eq]
+  simp only [Component.operations]
+  rw [FinalMemoryReceipt.lookups]
   change (FinalMemoryEnsemble.viewFor (p := SP1Prime) .ram).component.operations.lookups.map (·.table) = []
   rw [FinalMemoryEnsemble.view_lookups]
   rfl
@@ -359,14 +363,14 @@ private theorem lookup_slot_4 :
 /-- No legacy lookup at physical component 5. -/
 private theorem lookup_slot_5 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 5).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 5).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 6. -/
 private theorem lookup_slot_6 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 6).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 6).rowOperations.lookups.map (·.table) = [] := by
   change (FixedProgramProvider.Preprocessed.component (p := SP1Prime) image).rowOperations.lookups.map (·.table) = []
   rw [← Component.lookups_eq, FixedProgramProvider.Preprocessed.component_lookups]
   rfl
@@ -374,539 +378,539 @@ private theorem lookup_slot_6 :
 /-- No legacy lookup at physical component 7. -/
 private theorem lookup_slot_7 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 7).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 7).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 8. -/
 private theorem lookup_slot_8 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 8).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 8).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 9. -/
 private theorem lookup_slot_9 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 9).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 9).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 10. -/
 private theorem lookup_slot_10 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 10).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 10).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 11. -/
 private theorem lookup_slot_11 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 11).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 11).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 12. -/
 private theorem lookup_slot_12 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 12).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 12).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 13. -/
 private theorem lookup_slot_13 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 13).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 13).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 14. -/
 private theorem lookup_slot_14 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 14).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 14).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 15. -/
 private theorem lookup_slot_15 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 15).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 15).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 16. -/
 private theorem lookup_slot_16 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 16).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 16).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 17. -/
 private theorem lookup_slot_17 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 17).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 17).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 18. -/
 private theorem lookup_slot_18 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 18).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 18).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 19. -/
 private theorem lookup_slot_19 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 19).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 19).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 20. -/
 private theorem lookup_slot_20 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 20).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 20).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 21. -/
 private theorem lookup_slot_21 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 21).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 21).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 22. -/
 private theorem lookup_slot_22 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 22).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 22).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 23. -/
 private theorem lookup_slot_23 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 23).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 23).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 24. -/
 private theorem lookup_slot_24 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 24).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 24).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 25. -/
 private theorem lookup_slot_25 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 25).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 25).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 26. -/
 private theorem lookup_slot_26 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 26).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 26).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 27. -/
 private theorem lookup_slot_27 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 27).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 27).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 28. -/
 private theorem lookup_slot_28 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 28).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 28).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 29. -/
 private theorem lookup_slot_29 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 29).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 29).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 30. -/
 private theorem lookup_slot_30 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 30).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 30).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 31. -/
 private theorem lookup_slot_31 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 31).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 31).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 32. -/
 private theorem lookup_slot_32 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 32).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 32).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 33. -/
 private theorem lookup_slot_33 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 33).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 33).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 34. -/
 private theorem lookup_slot_34 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 34).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 34).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 35. -/
 private theorem lookup_slot_35 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 35).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 35).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 36. -/
 private theorem lookup_slot_36 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 36).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 36).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 37. -/
 private theorem lookup_slot_37 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 37).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 37).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 38. -/
 private theorem lookup_slot_38 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 38).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 38).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 39. -/
 private theorem lookup_slot_39 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 39).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 39).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 40. -/
 private theorem lookup_slot_40 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 40).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 40).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 41. -/
 private theorem lookup_slot_41 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 41).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 41).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 42. -/
 private theorem lookup_slot_42 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 42).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 42).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 43. -/
 private theorem lookup_slot_43 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 43).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 43).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 44. -/
 private theorem lookup_slot_44 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 44).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 44).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 45. -/
 private theorem lookup_slot_45 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 45).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 45).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 46. -/
 private theorem lookup_slot_46 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 46).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 46).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 47. -/
 private theorem lookup_slot_47 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 47).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 47).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 48. -/
 private theorem lookup_slot_48 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 48).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 48).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 49. -/
 private theorem lookup_slot_49 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 49).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 49).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 50. -/
 private theorem lookup_slot_50 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 50).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 50).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 51. -/
 private theorem lookup_slot_51 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 51).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 51).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 52. -/
 private theorem lookup_slot_52 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 52).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 52).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 53. -/
 private theorem lookup_slot_53 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 53).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 53).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 54. -/
 private theorem lookup_slot_54 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 54).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 54).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 55. -/
 private theorem lookup_slot_55 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 55).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 55).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 56. -/
 private theorem lookup_slot_56 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 56).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 56).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 57. -/
 private theorem lookup_slot_57 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 57).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 57).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 58. -/
 private theorem lookup_slot_58 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 58).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 58).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, Circuit.foldlRange.operations_eq, List.ofFn_succ]
 
 /-- The verifier-fixed membership provider has no legacy lookups. -/
 private theorem lookup_slot_59 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 59).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 59).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- No legacy lookup at physical component 61. -/
 private theorem lookup_slot_61 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 61).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 61).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- The fixed writable-interval provider has no legacy lookup. -/
 private theorem lookup_slot_62 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 62).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 62).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- No legacy lookup at physical component 63. -/
 private theorem lookup_slot_63 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 63).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 63).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 64. -/
 private theorem lookup_slot_64 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 64).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 64).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 65. -/
 private theorem lookup_slot_65 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 65).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 65).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 66. -/
 private theorem lookup_slot_66 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 66).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 66).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 67. -/
 private theorem lookup_slot_67 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 67).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 67).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 68. -/
 private theorem lookup_slot_68 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 68).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 68).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 69. -/
 private theorem lookup_slot_69 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 69).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 69).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 70. -/
 private theorem lookup_slot_70 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 70).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 70).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 71. -/
 private theorem lookup_slot_71 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 71).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 71).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 72. -/
 private theorem lookup_slot_72 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 72).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 72).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 73. -/
 private theorem lookup_slot_73 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 73).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 73).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 74. -/
 private theorem lookup_slot_74 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 74).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 74).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 75. -/
 private theorem lookup_slot_75 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 75).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 75).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 76. -/
 private theorem lookup_slot_76 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 76).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 76).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 77. -/
 private theorem lookup_slot_77 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 77).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 77).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 78. -/
 private theorem lookup_slot_78 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 78).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 78).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 79. -/
 private theorem lookup_slot_79 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 79).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 79).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 80. -/
 private theorem lookup_slot_80 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 80).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 80).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 81. -/
 private theorem lookup_slot_81 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 81).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 81).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 82. -/
 private theorem lookup_slot_82 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 82).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 82).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 83. -/
 private theorem lookup_slot_83 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 83).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 83).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 84. -/
 private theorem lookup_slot_84 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 84).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 84).rowOperations.lookups.map (·.table) = [] := by
   change (HintReadCoverage.component false).rowOperations.lookups.map (·.table) = []
   simp only [HintReadCoverage.component, Component.rowOperations, HintReadWordChip.circuit, Guarded.circuit]
   rw [Guarded.main_lookups]
@@ -915,7 +919,7 @@ private theorem lookup_slot_84 :
 /-- No legacy lookup at physical component 85. -/
 private theorem lookup_slot_85 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 85).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 85).rowOperations.lookups.map (·.table) = [] := by
   change (HintReadCoverage.component true).rowOperations.lookups.map (·.table) = []
   simp only [HintReadCoverage.component, Component.rowOperations, HintReadWordChip.circuit, Guarded.circuit]
   rw [Guarded.main_lookups]
@@ -924,37 +928,38 @@ private theorem lookup_slot_85 :
 /-- No legacy lookup at physical component 86. -/
 private theorem lookup_slot_86 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 86).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 86).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 87. -/
 private theorem lookup_slot_87 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 87).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 87).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 88. -/
 private theorem lookup_slot_88 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 88).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 88).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 89. -/
 private theorem lookup_slot_89 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 89).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 89).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm]
 
 /-- No legacy lookup at physical component 90. -/
 private theorem lookup_slot_90 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 90).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 90).rowOperations.lookups.map (·.table) = [] := by
   change ({
       circuit := FinalRegisterCheck.circuit outgoing
+      generation := FinalRegisterCheck.generation outgoing
       Assumptions := (FinalRegisterCheck.circuit outgoing).Assumptions
       circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod SP1Prime)).rowOperations.lookups.map (·.table) = []
   simp only [Component.rowOperations, FinalRegisterCheck.circuit, Guarded.circuit]
@@ -964,9 +969,10 @@ private theorem lookup_slot_90 :
 /-- No legacy lookup at physical component 91. -/
 private theorem lookup_slot_91 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 91).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 91).rowOperations.lookups.map (·.table) = [] := by
   change ({
       circuit := FinalRamCheck.circuit outgoing
+      generation := FinalRamCheck.generation outgoing
       Assumptions := (FinalRamCheck.circuit outgoing).Assumptions
       circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod SP1Prime)).rowOperations.lookups.map (·.table) = []
   simp only [Component.rowOperations, FinalRamCheck.circuit, Guarded.circuit]
@@ -976,28 +982,28 @@ private theorem lookup_slot_91 :
 /-- The fixed target provider has no legacy lookup. -/
 private theorem lookup_slot_92 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 92).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 92).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- The fixed RAM provider has no legacy lookup. -/
 private theorem lookup_slot_60 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 60).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 60).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- The fixed RAM provider has no legacy lookup. -/
 private theorem lookup_slot_93 :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) 93).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) 93).rowOperations.lookups.map (·.table) = [] := by
   conv_lhs => arg 2; arg 1; arg 1; whnf
   simp [circuit_norm, StaticTable.provider]
 
 /-- Every original component has exactly its listed fixed-table predicates. -/
 theorem lookup_slot (index : Fin 94) :
     (componentAt (image := image) (source := source) (outgoing := outgoing) (final := final)
-      (bankFinal := bankFinal) (channels := channels) index).rowOperations.lookups.map (·.table) = [] := by
+      (bankFinal := bankFinal) index).rowOperations.lookups.map (·.table) = [] := by
   fin_cases index
   · exact lookup_slot_0
   · exact lookup_slot_1
@@ -1096,7 +1102,7 @@ theorem lookup_slot (index : Fin 94) :
 
 /-- Every installed component is lookup-free, including currently unused physical slots. -/
 theorem installed_lookups (component : Component (ZMod SP1Prime))
-    (member : component ∈ (Installed image source outgoing final bankFinal channels).tables) :
+    (member : component ∈ (Installed image source outgoing final bankFinal).tables) :
     component.operations.lookups = [] := by
   obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
   have small : index < 94 := by simpa only [installed_tables_length] using bound

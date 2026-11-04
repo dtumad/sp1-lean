@@ -25,12 +25,12 @@ local instance nativeCompletenessFieldBound : Fact (2 ^ 24 < p) :=
 
 /-- All registered Clean channels balance for the deterministic trace.  Byte/Program use direct
 field-valued canonical closure; State/Memory use the two structural hand-offs. -/
-theorem NativeTraceReady.balancedChannels
+theorem NativeTraceReady.logUpBalanced
     {statement : SupportedCoreStatement p} {execution : Machine.EventExecutionTrace}
     (ready : NativeTraceReady statement execution)
     (publicWellFormed : statement.publicValues.LimbBounds)
     (capacity : (nativeTrace statement execution).witness.ChannelCapacity p) :
-    (nativeTrace statement execution).witness.BalancedChannels := by
+    (nativeTrace statement execution).witness.Balanced .logUp := by
   let compiled := TraceGen.compileExecution statement.program execution
     (nativeInitialClock statement)
   let stateKeys := chainTokens
@@ -38,7 +38,7 @@ theorem NativeTraceReady.balancedChannels
       chronologicalStateLinks (p := p) compiled.routedEvents,
       stateFinalToken (nativeTrace statement execution))
   let memoryKeys := (memoryHandoffChains (p := p) compiled.memoryHistory).flatMap chainTokens
-  exact (nativeBaseTrace statement execution).canonicalClosure_balancedChannels_of_handoff
+  exact (nativeBaseTrace statement execution).canonicalClosure_logUpBalanced_of_handoff
     (nativeBaseTrace_canonicalCapacity statement execution)
     (ready.wellFormed publicWellFormed) ready.demandServable
     (ready.skeletonNonpositive publicWellFormed) stateKeys memoryKeys
@@ -46,6 +46,20 @@ theorem NativeTraceReady.balancedChannels
     ((nativeTrace statement execution).haltTablePadding).2
     ((nativeTrace statement execution).haltTablePadding).1
     ready.exitZero ((Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp capacity)
+
+/-- Native LogUp balance supplies the abstract channel interface used by semantic soundness. -/
+theorem NativeTraceReady.balancedChannels
+    {statement : SupportedCoreStatement p} {execution : Machine.EventExecutionTrace}
+    (ready : NativeTraceReady statement execution)
+    (publicWellFormed : statement.publicValues.LimbBounds)
+    (capacity : (nativeTrace statement execution).witness.ChannelCapacity p) :
+    (nativeTrace statement execution).witness.BalancedChannels := by
+  have raw := ready.logUpBalanced publicWellFormed capacity
+  intro channel member
+  apply (Balance.logUp (F := ZMod p)).balancedInteractions_of_balanced _
+    (by simpa only [Balance.logUp, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n,
+      decide_eq_true_eq] using ((Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp capacity) channel member)
+  exact raw channel member
 
 /-- Functional completeness of the native ensemble on its exact deterministic compiler image.
 The witness map is independent of the proof of admissibility. -/
@@ -142,14 +156,18 @@ statement's public boundary. -/
 theorem sp1Ensemble_statement_of_supported_execution
     (statement : SupportedCoreStatement p) (witness : Machine.CoreShardSemanticWitness)
     (valid : SupportedCoreNativeAdmissibleShardRelation statement witness) :
-    (sp1Ensemble (p := p)).Statement statement.publicValues := by
+    ∃ heights, (sp1Ensemble (p := p)).Statement .logUp statement.publicValues heights := by
   obtain ⟨semantic, ready, fits⟩ := valid
   let execution := witness.evaluatedTrace (supportedCoreShardModel (p := p))
   have publicWellFormed :=
     Execution.SupportedCoreShardExecutionValid.publicValuesWellFormed semantic
-  exact ⟨(nativeTrace statement execution).witness,
-    nativeTrace_witness_publicInput statement execution,
-    ready.constraints publicWellFormed,
-    ready.balancedChannels publicWellFormed fits⟩
+  let generated := (nativeTrace statement execution).witness
+  refine ⟨generated.heights, ?_, generated,
+    nativeTrace_witness_publicInput statement execution, rfl,
+    ready.constraints publicWellFormed, ready.logUpBalanced publicWellFormed fits⟩
+  apply (generated.interactionsFit_iff .logUp).mpr
+  intro channel member
+  simpa only [Balance.logUp, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n,
+    decide_eq_true_eq] using ((Air.Flat.EnsembleWitness.channelCapacity_iff _ _).mp fits) channel member
 
 end SP1Clean.Soundness

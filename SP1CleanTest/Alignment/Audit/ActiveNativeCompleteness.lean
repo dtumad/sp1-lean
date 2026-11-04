@@ -14,7 +14,7 @@ step, semantic projector, event compiler, or JAL trace schema must therefore con
 one concrete non-padding row.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 open LeanRV64D.Functions
 
 namespace SP1Clean.Audit.ActiveNativeCompleteness

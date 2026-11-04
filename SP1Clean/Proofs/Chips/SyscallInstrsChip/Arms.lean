@@ -375,7 +375,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   · rw [hr, one_mul] at h3; exact h3
   · by_cases hlt : (input_word[1]).val < fieldLimbBound
     · exact Or.inl hlt
-    have hbit0 : input_bit = 0 := by rw [hbit, if_neg hlt]
+    have hbit0 : input_bit = 0 := by rw [hbit, ite_eq_right hlt]
     refine Or.inr ⟨?_, ?_⟩
     · rw [hr, one_mul, hbit0] at hc1
       have heq : input_word[1] = ((fieldLimbBound : ℕ) : ZMod p) := by linear_combination -hc1
@@ -400,7 +400,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   · exact ⟨h_bitbool, fun hr => by rw [(h_live hr).1, hbound]⟩
   · exact gate_zero h_rbin (fun hr => gated_of_cases (by
       by_cases hlt : (input_word[1]).val < fieldLimbBound
-      · exact Or.inl (by rw [(h_live hr).1, if_pos hlt]; ring)
+      · exact Or.inl (by rw [(h_live hr).1, ite_eq_left hlt]; ring)
       · refine Or.inr ?_
         rcases (h_live hr).2.2.2 with h | h
         · exact absurd h hlt
@@ -411,7 +411,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
           rw [this]; ring))
   · exact gate_zero h_rbin (fun hr => gated_of_cases (by
       by_cases hlt : (input_word[1]).val < fieldLimbBound
-      · exact Or.inl (by rw [(h_live hr).1, if_pos hlt]; ring)
+      · exact Or.inl (by rw [(h_live hr).1, ite_eq_left hlt]; ring)
       · refine Or.inr ?_
         rcases (h_live hr).2.2.2 with h | h
         · exact absurd h hlt

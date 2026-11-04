@@ -87,7 +87,7 @@ theorem balanceOf_unitPulls
     (encode : Message → Array (ZMod p))
     (pull : Message → Interaction (ZMod p))
     (pull_msg : ∀ message, (pull message).msg = encode message)
-    (pull_mult : ∀ message, (pull message).mult = -1)
+    (pull_mult : ∀ message, (pull message).signedMult = -1)
     (messages : List Message) (target : Array (ZMod p)) :
     balanceOf (unitPulls pull messages) target =
       -((messages.countP fun message => encode message = target : ℕ) : ZMod p) := by
@@ -97,12 +97,12 @@ theorem balanceOf_unitPulls
       rw [unitPulls, List.map_cons, balanceOf_cons, pull_msg, pull_mult]
       simp only [List.countP_cons]
       by_cases h : encode message = target
-      · simp only [h, decide_true, if_true]
+      · simp only [h, decide_true, ite_true]
         rw [show balanceOf (List.map pull messages) target =
           -((messages.countP fun message => encode message = target : ℕ) : ZMod p) from ih]
         push_cast
         ring
-      · simp only [h, decide_false, Bool.false_eq_true, if_false, Nat.add_zero, zero_add]
+      · simp only [h, decide_false, Bool.false_eq_true, ite_false, Nat.add_zero, zero_add]
         exact ih
 
 /-- Aggregate providers contribute the positive natural occurrence count at every concrete message.
@@ -117,7 +117,7 @@ theorem balanceOf_aggregateProviders
     (provider : Message → ℕ → Interaction (ZMod p))
     (provider_msg : ∀ message demand, (provider message demand).msg = encode message)
     (provider_mult : ∀ message demand,
-      (provider message demand).mult = (demand : ZMod p))
+      (provider message demand).signedMult = (demand : ZMod p))
     (messages : List Message) (target : Array (ZMod p)) :
     balanceOf (aggregateProviders provider messages) target =
       ((messages.countP fun message => encode message = target : ℕ) : ZMod p) := by
@@ -138,14 +138,15 @@ theorem balanceOf_unitPulls_append_aggregateProviders
     (pull : Message → Interaction (ZMod p))
     (provider : Message → ℕ → Interaction (ZMod p))
     (pull_msg : ∀ message, (pull message).msg = encode message)
-    (pull_mult : ∀ message, (pull message).mult = -1)
+    (pull_mult : ∀ message, (pull message).signedMult = -1)
     (provider_msg : ∀ message demand, (provider message demand).msg = encode message)
     (provider_mult : ∀ message demand,
-      (provider message demand).mult = (demand : ZMod p))
+      (provider message demand).signedMult = (demand : ZMod p))
     (messages : List Message) (target : Array (ZMod p)) :
     balanceOf (unitPulls pull messages ++ aggregateProviders provider messages) target = 0 := by
-  rw [balanceOf_append,
-    balanceOf_unitPulls encode pull pull_msg pull_mult,
+  simp only [balanceOf, List.filter_append, List.map_append, List.sum_append]
+  change balanceOf (unitPulls pull messages) target + balanceOf (aggregateProviders provider messages) target = 0
+  rw [balanceOf_unitPulls encode pull pull_msg pull_mult,
     balanceOf_aggregateProviders encode provider provider_msg provider_mult]
   exact neg_add_cancel _
 
@@ -160,19 +161,18 @@ theorem balancedInteractions_unitPulls_append_aggregateProviders
     (pull : Message → Interaction (ZMod p))
     (provider : Message → ℕ → Interaction (ZMod p))
     (pull_msg : ∀ message, (pull message).msg = encode message)
-    (pull_mult : ∀ message, (pull message).mult = -1)
+    (pull_mult : ∀ message, (pull message).signedMult = -1)
     (provider_msg : ∀ message demand, (provider message demand).msg = encode message)
     (provider_mult : ∀ message demand,
-      (provider message demand).mult = (demand : ZMod p))
+      (provider message demand).signedMult = (demand : ZMod p))
     (messages : List Message)
     (length_lt :
       (unitPulls pull messages ++ aggregateProviders provider messages).length < p) :
     BalancedInteractions
       (unitPulls pull messages ++ aggregateProviders provider messages) := by
-  constructor
-  · left
-    simpa only [ZMod.ringChar_zmod_n] using length_lt
-  · exact balanceOf_unitPulls_append_aggregateProviders encode pull provider pull_msg pull_mult
+  apply (Balance.logUp (F := ZMod p)).balancedInteractions_of_balanced _
+    (by simpa only [Balance.logUp, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n, decide_eq_true_eq] using length_lt)
+  exact balanceOf_unitPulls_append_aggregateProviders encode pull provider pull_msg pull_mult
       provider_msg provider_mult messages
 
 end SP1Clean.FieldClosure

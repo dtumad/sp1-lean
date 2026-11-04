@@ -25,7 +25,9 @@ def target : MemorySnapshot :=
 def assembly (target : MemorySnapshot) :=
   Soundness.HostFinalMemory.ensemble (p := SP1Prime) image source target
     (SP1Clean.HostHintQueueBoundary.initial []) source.host HostCallReceivers.available
-    (HostHintReadLocal.sourceResources []) [] (Soundness.HostFinalMemory.source_unique_names image source target)
+    (HostHintReadLocal.sourceResources []) (HostFinalMemory.sourceChannels target)
+    (Soundness.HostFinalMemory.source_unique_names image source target)
+    (Soundness.HostFinalMemory.source_registration image source target)
 
 def word (value : ℕ) : Word Fp := Target.bitVecToWord (BitVec.ofNat 64 value)
 def record (address clock value : ℕ) : Channels.MemoryMsg Fp :=
@@ -63,8 +65,8 @@ def builtTables (target : MemorySnapshot) (rows : List Row)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
     (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
     "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program"]
-  let ledger := StaticMembership.demandLedger components inputs channels (fun _ _ => #[]) (ProverHint.empty Fp)
-  StaticMembership.buildTables components inputs ledger (fun _ _ => #[]) (ProverHint.empty Fp)
+  let ledger := StaticMembership.demandLedger components inputs channels (ProverData.empty Fp) (ProverHint.empty Fp)
+  StaticMembership.buildTables components inputs ledger (ProverData.empty Fp) (ProverHint.empty Fp)
     (fun _ => (List.length_map _).le.trans ((List.length_filter_le _ _).trans bounded))
 
 /-- Only committed physical rows determine the verifier's data environment. -/
@@ -82,16 +84,16 @@ def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
   let consumers := witness target input rows bounded
   let providers := consumers.interactions.filterMap fun interaction =>
     SP1CleanTest.Core.LocalCore.Fixture.byteProvider
-      (interaction.channel.name, interaction.msg.toList, interaction.mult)
+      (interaction.channel.name, interaction.msg.toList, interaction.signedMult)
   let completeRows := rows ++ providers
   if completeBounded : completeRows.length ≤ UInt64.size then
   let built := witness target input completeRows completeBounded
   let ledger := built.interactions.map fun interaction =>
-    (interaction.channel.name, interaction.msg.toList, interaction.mult)
+    (interaction.channel.name, interaction.msg.toList, interaction.signedMult)
   let valid := completeRows.all fun row =>
     match installed.tables[row.1]? with
     | none => false
-    | some component => component.fixedColumns.isNone &&
+    | some component => StaticMembership.acceptsSeed component &&
         (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source component row.2).1
   valid && decide (ledger.length < SP1Prime) &&
     ledger.all fun (name, message, _) =>

@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Defs
@@ -287,7 +288,7 @@ theorem completeness :
     fun _ => by
       change ByteRowSpec _; convert byteRow_higher B c0 hbUw 3 (by norm_num) using 2⟩
   · rw [show sllwMsb B c0 F = U16MSBOperation.populate_msb (populateA B c0 F)[1] by
-      rw [sllwMsb, if_pos (show F[1] = 1 from h1)]]
+      rw [sllwMsb, ite_eq_left (show F[1] = 1 from h1)]]
     exact (U16MSBOperation.spec_populate (populateA_val_lt B c0 F hbUw 1 (by norm_num)) 1).2 rfl
   · refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
       simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm, hA0, hA1, hA2, hA3] <;>
@@ -387,11 +388,10 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations,
-    ShiftLeftChip.circuit_main_eq]
+    ((circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [ShiftLeftChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.ALUTypeReader.circuit,
     Readers.ALUTypeReader.main, Readers.RegisterWrite.circuit,
@@ -403,5 +403,10 @@ theorem lookups_empty :
     U16MSBOperation.circuit,
     U16MSBOperation.main, ShiftLeftCore.circuit,
     ShiftLeftCore.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.ShiftLeftChip

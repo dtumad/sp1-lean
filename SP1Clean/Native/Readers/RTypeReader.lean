@@ -297,19 +297,19 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
       h_rac_a h_assumptions.1, h_rac_b h_assumptions.1, h_rac_c h_assumptions.1,
       ⟨fun ht => ?_, fun ht2 => ?_⟩⟩,
     Or.inr h_assumptions.1, Or.inr h_assumptions.1, Or.inr h_assumptions.1,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_⟩
+    htbin,
+    h_assumptions.1,
+    h_assumptions.1,
+    fun h0 => ?_,
+    h_assumptions.1,
+    fun h0 => ?_⟩
   · -- Decode bounds are exactly the structural Program-channel guarantee.
     obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [show input_is_trusted = 1 from ht])
     rw [e 0 (by norm_num)] at hp0; rw [e 1 (by norm_num)] at hp1; rw [e 2 (by norm_num)] at hp2
     exact ⟨ha, hp0, hp1, hp2⟩
   · -- Goal 2: is_real = 1 → isU64 trio + the three pulled records' 24-bit clock bounds — the three
     -- memory pull guarantees (`isU64 ∧ ClkBound`), verbatim.
-    have hneg : - input_is_real = -1 := by rw [show input_is_real = 1 from ht2]
+    have hneg : input_is_real = 1 := by rw [show input_is_real = 1 from ht2]
     exact ⟨(h_mem_a hneg).1, (h_mem_b hneg).1, (h_mem_c hneg).1,
       (h_mem_a hneg).2, (h_mem_b hneg).2, (h_mem_c hneg).2⟩
   · -- Goal 3: push_b requirement — the same prev_value Word as the paired pull (h_mem_b), pushed at
@@ -341,14 +341,14 @@ theorem completeness :
   · -- Completeness proves the structural Program row from the reader's semantic Spec.
     intro ht
     rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
     exact ⟨ha, hp0, hp1, hp2, hbin⟩
   -- mem_pull_a/b/c: each pull's `MemoryMsg.isU64 ∧ MemoryMsg.ClkBound` is read straight off the
   -- `Spec`'s gated six-fact tuple (the message carries the whole `Word`, so no per-limb eval bridging,
   -- and its `clk_low` *is* the block's `prev_low`).
-  · exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).1, (hisu (neg_inj.mp hneg)).2.2.2.1⟩
-  · exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).2.1, (hisu (neg_inj.mp hneg)).2.2.2.2.1⟩
-  · exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).2.2.1, (hisu (neg_inj.mp hneg)).2.2.2.2.2⟩
+  · exact fun hneg => ⟨(hisu hneg).1, (hisu hneg).2.2.2.1⟩
+  · exact fun hneg => ⟨(hisu hneg).2.1, (hisu hneg).2.2.2.2.1⟩
+  · exact fun hneg => ⟨(hisu hneg).2.2.1, (hisu hneg).2.2.2.2.2⟩
 
 /-- The native RTypeReader reader as a Clean `GeneralFormalCircuit`: takes the chip-owned `cols` adapter block,
 composes a `RegisterAccessCols` sub-assertion per operand for the timestamp byte checks, imposes the
@@ -384,8 +384,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
 
 set_option linter.unusedSectionVars false in

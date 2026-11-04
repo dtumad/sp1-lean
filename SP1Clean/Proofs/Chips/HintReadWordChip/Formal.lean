@@ -1,5 +1,6 @@
 import SP1Clean.Native.Chips.HintReadWordChip.Defs
 import ToClean.Circuit.Guarded
+import ToClean.Air.HintIndex
 
 /-! # Soundness and completeness of physical hint word transfers
 
@@ -75,5 +76,13 @@ instance guardSupported (last : Bool) : Guarded.Supported (activeCircuit (p := p
 /-- Disabled padding retains its physical row while requesting no word, Memory or permissions. -/
 def circuit (last : Bool) : GeneralFormalCircuit (ZMod p) RowInput unit :=
   Guarded.circuit (activeCircuit last) inferInstance
+
+/-- A cursor occurrence selects its full private row by the call clock and the 48-bit word
+index. The guard checks the entire previous cursor, including its node and RAM address. -/
+def generation (last : Bool) : Air.Flat.WitnessGeneration.Generation (ZMod p) RowInput :=
+  Witgen.HintIndex.unitDemandKeys (circuit (p := p) last).name stateChannel .push
+    (fun message => [message.clk_high.val * 16777216 + message.clk_low.val,
+      message.index[0].val + message.index[1].val * 65536 + message.index[2].val * 4294967296])
+    (fun input => input.1.previous) (fun input => input.2)
 
 end SP1Clean.HintReadWordChip

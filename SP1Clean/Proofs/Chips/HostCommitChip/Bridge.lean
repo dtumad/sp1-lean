@@ -76,10 +76,10 @@ private theorem executeKind_of_callSpec (deferred : Bool) (slot : Fin 8) (call :
   have bounds := call_bounds deferred slot call valid
   cases deferred
   · simp only [bound, Bool.false_eq_true, ↓reduceIte] at bounds
-    simp only [HostState.executeKind, bounds.1, dif_pos slot.isLt, if_pos bounds.2, execution,
+    simp only [HostState.executeKind, bounds.1, dite_eq_left slot.isLt, ite_eq_left bounds.2, execution,
       Bool.false_eq_true, ↓reduceIte]
   · simp only [bound, ↓reduceIte, lt_min_iff] at bounds
-    simp only [HostState.executeKind, bounds.1, dif_pos slot.isLt, characteristic, if_pos bounds.2,
+    simp only [HostState.executeKind, bounds.1, dite_eq_left slot.isLt, characteristic, ite_eq_left bounds.2,
       execution, ↓reduceIte]
 
 /-- The constrained call and actual register observations determine dispatch on any running
@@ -116,9 +116,9 @@ theorem executeKind_of_spec (deferred : Bool) (slot : Fin 8) (input : Inputs (ZM
   cases deferred
   · simp only [bound, Bool.false_eq_true, ↓reduceIte] at bounds
     simp only [State.apply, Bool.false_eq_true, ↓reduceIte, HostState.executeKind, bounds.1,
-      dif_pos slot.isLt, if_pos bounds.2, next_decode]
+      dite_eq_left slot.isLt, ite_eq_left bounds.2, next_decode]
   · simp only [bound, ↓reduceIte, lt_min_iff] at bounds
     simp only [State.apply, ↓reduceIte, HostState.executeKind, bounds.1,
-      dif_pos slot.isLt, characteristic, if_pos bounds.2, next_decode]
+      dite_eq_left slot.isLt, characteristic, ite_eq_left bounds.2, next_decode]
 
 end SP1Clean.HostCommitChip

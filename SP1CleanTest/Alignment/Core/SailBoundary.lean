@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.HostSailBoundary
 import SP1CleanTest.Alignment.Support.LocalCoreFixture
+import SP1CleanTest.Core.ComponentExport
 
 /-! # Target Sail fields checked by the real verifier subcircuit
 
@@ -10,7 +11,7 @@ from their Memory projection, and range tests precede field conversion.
 
 namespace SP1CleanTest.Alignment.Core.SailBoundary
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core LeanRV64D.Defs
+open Circuit Air.Flat SP1Clean SP1Clean.Model.Core LeanRV64D
 
 private abbrev Fp := ZMod SP1Prime
 private def image := SP1CleanTest.Core.LocalCore.Fixture.image
@@ -24,7 +25,7 @@ private def target : ExecutionSnapshot :=
 
 private def check (target : ExecutionSnapshot) (input : SP1PublicIO Fp := header) : Bool :=
   (SP1CleanTest.Core.LocalCore.Fixture.evaluate image source
-    { circuit := SP1Clean.SailBoundary.circuit source target, Assumptions := (SP1Clean.SailBoundary.circuit source target).Assumptions } (toElements input).toList []).1
+    (SP1CleanTest.Core.ComponentExport.component (SP1Clean.SailBoundary.circuit source target)) (toElements input).toList []).1
 
 /-- The outgoing ADD state supplies the existing header's real PC/clock and preserves its frame. -/
 theorem activeAcceptance : check target = true := by native_decide

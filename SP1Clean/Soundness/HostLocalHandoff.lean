@@ -21,44 +21,50 @@ abbrev Receiver := ReceiverView (HostCallChip.channel (p := p))
 abbrev ensemble (image : ProgramImage) (source : ExecutionSnapshot)
     (receivers : List (Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : ((HostLocalCore.tables image source (receivers.map (·.component) ++ resources)).map (·.circuit.name)).Nodup) :=
-  HostLocalCore.ensemble image source (receivers.map (·.component) ++ resources) channels names
+    (names : ((HostLocalCore.tables image source (receivers.map (·.component) ++ resources)).map (·.circuit.name)).Nodup)
+    (channelNames : ((HostLocalCore.registry image source channels).map (·.name)).Nodup)
+    (tableChannels : ∀ component ∈ receivers.map (·.component) ++ resources,
+      component.circuit.channels ⊆ HostLocalCore.registry image source channels) :=
+  HostLocalCore.ensemble image source (receivers.map (·.component) ++ resources) channels names channelNames tableChannels
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {receivers : List (Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
   {names : ((HostLocalCore.tables image source (receivers.map (·.component) ++ resources)).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source channels).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ receivers.map (·.component) ++ resources,
+    component.circuit.channels ⊆ HostLocalCore.registry image source channels}
 
-def receiverTables (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :=
+def receiverTables (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels)) :=
   (HostLocalCore.auxiliaryTables witness).take receivers.length
 
-def resourceTables (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :=
+def resourceTables (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels)) :=
   (HostLocalCore.auxiliaryTables witness).drop receivers.length
 
-theorem receiverTables_components (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :
+theorem receiverTables_components (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels)) :
     (receiverTables witness).map (·.component) = receivers.map (·.component) := by
   simp only [receiverTables, List.map_take, HostLocalCore.auxiliaryTables_components]
   rw [← List.length_map (as := receivers) (f := fun view : Receiver (p := p) => view.component), List.take_left]
 
-theorem resourceTables_components (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :
+theorem resourceTables_components (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels)) :
     (resourceTables witness).map (·.component) = resources := by
   simp only [resourceTables, List.map_drop, HostLocalCore.auxiliaryTables_components]
   rw [← List.length_map (as := receivers) (f := fun view : Receiver (p := p) => view.component), List.drop_left]
 
-theorem receiverTables_aligned (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :
+theorem receiverTables_aligned (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels)) :
     List.Forall₂ (fun view table => view.component = table.component) receivers (receiverTables witness) :=
   ReceiverView.aligned_of_map_eq _ _ (receiverTables_components witness).symm
 
 /-- A registered handler's actual physical table. -/
-def receiverTable (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+def receiverTable (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (index : Fin receivers.length) : Table (ZMod p) :=
   (receiverTables witness)[index.val]'(by rw [← (receiverTables_aligned witness).length_eq]; exact index.isLt)
 
-theorem receiverTable_mem (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem receiverTable_mem (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (index : Fin receivers.length) : receiverTable witness index ∈ witness.tables :=
   List.mem_of_mem_drop (List.mem_of_mem_take (List.getElem_mem _))
 
-theorem receiverTable_component (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem receiverTable_component (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (index : Fin receivers.length) : (receiverTable witness index).component = receivers[index.val].component := by
   have same := congrArg (fun tables => tables[index.val]?) (receiverTables_components witness)
   simp only [List.getElem?_map, List.getElem?_eq_getElem index.isLt] at same
@@ -66,11 +72,11 @@ theorem receiverTable_component (witness : EnsembleWitness (ensemble image sourc
   exact Option.some.inj same
 
 /-- The complete typed receiver inventory is read from the actual witness, in registration order. -/
-def calls (witness : EnsembleWitness (ensemble image source receivers resources channels names)) :=
+def calls (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels)) :=
   ReceiverView.messages receivers (receiverTables witness)
 
 /-- All installed physical tables are accounted for, including instruction padding. -/
-theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels) :
     witness.interactionsWith HostCallChip.channel.toRaw =
       (HostLocalCore.hostCallTable witness).interactionsWith HostCallChip.channel.toRaw ++
@@ -89,7 +95,7 @@ theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source 
   rw [resourceSilent, List.append_nil]
 
 /-- Complete handler accounting needs only the actual HostCall channel balance. -/
-theorem calls_perm_of_balancedChannel (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem calls_perm_of_balancedChannel (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw) :
     (HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data).Perm (calls witness) := by
@@ -102,7 +108,7 @@ theorem calls_perm_of_balancedChannel (witness : EnsembleWitness (ensemble image
   exact selected
 
 /-- Every handler occurrence corresponds to exactly one active instruction with the same full call. -/
-theorem calls_perm (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem calls_perm (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     (HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data).Perm (calls witness) :=
@@ -110,7 +116,7 @@ theorem calls_perm (witness : EnsembleWitness (ensemble image source receivers r
 
 /-- CPU chronology and HostCall balance transfer uniqueness to every registered handler. -/
 theorem calls_clocks_nodup_of_orderingChannels
-    (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+    (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
@@ -120,7 +126,7 @@ theorem calls_clocks_nodup_of_orderingChannels
     (HostLocalCore.hostCalls_clocks_nodup_of_orderingChannels witness constraints ordering)
 
 /-- CPU ordering rules out duplicate handler clocks across the entire heterogeneous registry. -/
-theorem calls_clocks_nodup (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem calls_clocks_nodup (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (interface : HostLocalCore.AuxiliaryInterface (receivers.map (·.component) ++ resources))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
@@ -130,7 +136,7 @@ theorem calls_clocks_nodup (witness : EnsembleWitness (ensemble image source rec
 
 /-- Select one physical handler from the registered clock inventory without whole-ensemble balance. -/
 theorem receiver_clocks_nodup_of_orderingChannels
-    (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+    (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
@@ -143,7 +149,7 @@ theorem receiver_clocks_nodup_of_orderingChannels
     (calls_clocks_nodup_of_orderingChannels witness silent constraints ordering balanced) index bound
 
 /-- Every physical row of any registered handler inherits the global clock uniqueness. -/
-theorem receiver_clocks_nodup (witness : EnsembleWitness (ensemble image source receivers resources channels names))
+theorem receiver_clocks_nodup (witness : EnsembleWitness (ensemble image source receivers resources channels names channelNames tableChannels))
     (interface : HostLocalCore.AuxiliaryInterface (receivers.map (·.component) ++ resources))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)

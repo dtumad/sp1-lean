@@ -9,7 +9,7 @@ full finite target; lowering the tick or byte ceiling rejects this same semantic
 -/
 
 namespace SP1CleanTest.Core.ShardResources
-open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D.Defs
+open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D
 open FormalModel.Shard
 
 private def image : ProgramImage := ⟨[(65536, 0x73)], 65536, []⟩

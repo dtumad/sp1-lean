@@ -10,7 +10,7 @@ HINT_READ and preserves those full-state fields. No dense Sail memory is evaluat
 
 namespace SP1CleanTest.Core.ExecutionSnapshot
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D.Defs
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 

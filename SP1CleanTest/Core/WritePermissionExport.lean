@@ -51,27 +51,25 @@ def ensemble (rom : ProgramImage) : Ensemble Fp Requests where
       ProgramImage.writePermissionTable, StaticTable.ofRows]
   channels := [WritePermissionProvider.channel.toRaw, rom.writePermissionTable.channel.toRaw]
   verifier := verifier
-
-/-- Route public requests directly; preallocate the complete fixed inventory for count updates. -/
-def config (rom : ProgramImage) : WitnessGeneration.Config Fp where
-  components := [((requestComponent rom).circuit.name, {
-    mode := .demand {
-      channel := WritePermissionProvider.channel.toRaw
-      direction := .pull
-      aggregation := .perOccurrence
-      input := ⟨[.message 0, .message 1, .message 2, .const 1]⟩
-    }
-    padding := { input := Array.replicate 4 0 }
-  }), ((WritePermissionProvider.membershipComponent (p := SP1Prime) rom).circuit.name, {
-    mode := .preallocated {
-      rows := UInt64.ofNat (rom.writePermissionTable (p := SP1Prime)).height
-      input := .ofFExprs #v[.const 0]
-      input_valid := by rfl
-      handlers := [{ interaction := 0, column := 7 }]
-    }
-    padding := { input := Array.replicate 8 0 }
-  })]
-  fuel := 8
+  unique_channel_names := by
+    simp [WritePermissionProvider.channel, Channel.toRaw, StaticTable.channel,
+      ProgramImage.writePermissionTable, StaticTable.ofRows]
+  tables_channels := by
+    intro component member channel used
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · change channel ∈ [rom.writePermissionTable.channel.toRaw,
+        WritePermissionProvider.channel.toRaw] at used
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
+      exact used.elim Or.inr Or.inl
+    · change channel ∈ [rom.writePermissionTable.channel.toRaw] at used
+      exact List.mem_cons_of_mem _ used
+  verifier_channels := by
+    intro channel member
+    simp [Verifier.Program.channels, Verifier.Program.channelsWithGuarantees,
+      Verifier.Program.channelsWithRequirements, Verifier.Program.operations, verifier,
+      circuit_norm] at member
+    simp [member]
 
 /-- Raw acceptance checks every local assertion and both complete channel ledgers. -/
 def description (rom : ProgramImage) : EnsembleCheck (ensemble rom) where
@@ -81,37 +79,19 @@ def description (rom : ProgramImage) : EnsembleCheck (ensemble rom) where
     simp [ensemble, requestComponent, WritePermissionProvider.component,
       WritePermissionProvider.membershipComponent, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, circuit_norm]
-  channels_unique := by
-    simp [ensemble, WritePermissionProvider.channel, Channel.toRaw, StaticTable.channel,
-      ProgramImage.writePermissionTable, StaticTable.ofRows]
-  channels_complete := by
-    intro component member interaction used
-    rw [Component.interactions_eq] at used
-    have declared := component.circuit.channels_subset component.rowInputVar component.rowOffset
-      (List.mem_map_of_mem (f := AbstractInteraction.channel) used)
-    simp only [ensemble, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl
-    · change interaction.channel ∈ [rom.writePermissionTable.channel.toRaw,
-        WritePermissionProvider.channel.toRaw] at declared
-      simp only [ensemble, List.mem_cons, List.not_mem_nil, or_false] at declared ⊢
-      exact declared.elim Or.inr Or.inl
-    · change interaction.channel ∈ [rom.writePermissionTable.channel.toRaw] at declared
-      exact List.mem_cons_of_mem _ declared
-  verifier_channels_complete := by
-    simp [ensemble, Ensemble.verifierOperations, verifier, Verifier.Program.circuitOperations, circuit_norm]
 
 /-- Generate from addresses alone with Clean's shared interpreter and scheduler. -/
 def generate (rom : ProgramImage) (requests : Requests Fp) :
     Except String (EnsembleWitness (ensemble rom)) :=
-  WitnessGeneration.generate (ComponentExport.fixture (ensemble rom)) (config rom)
+  WitnessGeneration.generate (ensemble rom) 8
     requests () |>.mapError toString
 
 /-- Rust emission includes both production components and the fixture's input programs. -/
 def rustExports : List (String × Except String String) :=
   [("write_permission.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble image)) (config image)),
+      (ComponentExport.fixture (ensemble image)) 8),
    ("write_permission_empty.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble emptyImage)) (config emptyImage))]
+      (ComponentExport.fixture (ensemble emptyImage)) 8)]
 
 /-- Boundary addresses, repeats, code bytes and noncanonical field limbs. -/
 def cases : List (String × Requests Fp × Bool) :=

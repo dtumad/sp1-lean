@@ -42,7 +42,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) mai
     memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
   obtain ⟨binary, clock⟩ := h_assumptions
   obtain ⟨timestamp, word⟩ := h_holds
-  refine ⟨?_, fun h1 h0 => off_gate_vacuous binary h1 h0, fun _ h0 => ?_⟩
+  refine ⟨?_, binary, fun h0 => ?_⟩
   · intro real
     have old := word (by rw [real])
     have gap := timestamp binary real
@@ -58,7 +58,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by
   circuit_proof_start [RegisterAccessCols.circuit, ProverAssumptions, Inputs.prior, Inputs.pushed,
     memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-  exact ⟨⟨h_assumptions.1.1, h_assumptions.2.1⟩, fun real => h_assumptions.2.2 (neg_inj.mp real)⟩
+  exact ⟨⟨h_assumptions.1.1, h_assumptions.2.1⟩, fun real => h_assumptions.2.2 real⟩
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   main

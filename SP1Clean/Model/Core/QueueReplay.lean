@@ -53,11 +53,11 @@ theorem HostState.run_queueReplay {host : HostState} {policy : HostPolicy}
       some execution.effect.state.io.hints := by
   have projected := HostState.hintEvent_sound success
   by_cases length : execution.kind = .hintLength
-  · simpa only [HostState.hintEvent, if_pos length, queueCallEvent?, length, ↓reduceIte,
+  · simpa only [HostState.hintEvent, ite_eq_left length, queueCallEvent?, length, ↓reduceIte,
       Option.toList_some, HintQueue.replay?, List.foldlM_cons, List.foldlM_nil,
       bind, pure, Option.bind_fun_some] using projected
   · by_cases read : execution.kind = .hintRead
-    · simpa only [HostState.hintEvent, if_neg length, if_pos read, queueCallEvent?, read,
+    · simpa only [HostState.hintEvent, ite_eq_right length, ite_eq_left read, queueCallEvent?, read,
         SyscallKind.code, BitVec.reduceEq, reduceCtorEq, ↓reduceIte, Option.toList_some,
         HintQueue.replay?, List.foldlM_cons, List.foldlM_nil, bind, pure,
         Option.bind_fun_some] using projected
@@ -67,7 +67,7 @@ theorem HostState.run_queueReplay {host : HostState} {policy : HostPolicy}
         fun equal => length (SyscallKind.code_injective equal)
       have notRead : execution.kind.code ≠ SyscallKind.hintRead.code :=
         fun equal => read (SyscallKind.code_injective equal)
-      simp only [queueCallEvent?, if_neg notLength, if_neg notRead, Option.toList_none,
+      simp only [queueCallEvent?, ite_eq_right notLength, ite_eq_right notRead, Option.toList_none,
         HintQueue.replay?, List.foldlM_nil, same, pure]
 
 /-- Successful ordinary replay preserves the host; successful allowed host replay performs exactly

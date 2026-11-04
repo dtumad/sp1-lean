@@ -104,7 +104,7 @@ private def controlRow {Input Output : TypeMap} [ProvableType Input] [ProvableTy
       byteValid (interaction.msg.map env).toList
   (InitialMemoryLookup.localConstraints image.initialMemory (2 ^ 48) env operations && bytes,
     (interactions.filter (fun interaction => interaction.channel.name == channelName)).map
-      (fun interaction => ((interaction.msg.map env).toList, env interaction.mult)))
+      (fun interaction => ((interaction.msg.map env).toList, (interaction.eval env).signedMult)))
 
 private def controlValid (rows : List (Bool × List (List Fp × Fp))) : Bool :=
   let interactions := rows.flatMap Prod.snd
@@ -266,13 +266,13 @@ private def finalMemoryFlags (program : Var Channels.MemoryMsg Fp → Circuit Fp
   let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
   ((FlatOperation.interactions (circuit.operations (size Channels.MemoryMsg)).toFlat).filter
     (fun interaction => interaction.channel.name == "SP1Memory")).map
-      (fun interaction => (env interaction.mult, interaction.assumeGuarantees))
+      (fun interaction => (env interaction.mult, interaction.direction == .pull))
 
-/-- Finalizers consume the exact negative Memory interaction without a local semantic assumption.
-Value and clock mismatches are still rejected by the paired full-message ledger above. -/
-theorem finalizersDeferMemoryGuarantees :
-    finalMemoryFlags FinalRegisterProvider.main = [(-1, false)] ∧
-      finalMemoryFlags FinalRamProvider.main = [(-1, false)] := by native_decide
+/-- Finalizers emit a unit Memory pull. Address-only proof views provide the separate
+noncircular domain argument; the full-message ledger still rejects value and clock mismatches. -/
+theorem finalizersUseUnitMemoryPulls :
+    finalMemoryFlags FinalRegisterProvider.main = [(1, true)] ∧
+      finalMemoryFlags FinalRamProvider.main = [(1, true)] := by native_decide
 
 private def bootPublic : SP1PublicIO Fp where
   init_clk_0_16 := 1
@@ -297,7 +297,7 @@ private def bootPublic : SP1PublicIO Fp where
   commitDeferredSyscall := 0
 
 private def nativeVerifierLedger (pi : SP1PublicIO Fp) :=
-  let env := Environment.fromInput pi (fun _ _ => #[])
+  let env := Environment.fromInput pi (.empty Fp)
   (Soundness.NativeCore.ensemble image).verifierOperations.interactions.map
     (AbstractInteraction.eval env)
 
@@ -307,9 +307,9 @@ private def checkedVerifierRow (ledger : List (Interaction Fp)) (checkName name 
     interaction.channel.name != "SP1Byte" || byteValid interaction.msg.toList
   let checks := ledger.filter fun interaction => interaction.channel.name == checkName
   let checked := decide (checks.length < SP1Prime) && checks.all fun interaction =>
-    ((checks.filter (fun other => other.msg == interaction.msg)).map (·.mult)).sum == 0
+    ((checks.filter (fun other => other.msg == interaction.msg)).map (·.signedMult)).sum == 0
   (bytes && checked, (ledger.filter (fun interaction => interaction.channel.name == name)).map
-    (fun interaction => (interaction.msg.toList, interaction.mult)))
+    (fun interaction => (interaction.msg.toList, interaction.signedMult)))
 
 private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
     Bool × List (List Fp × Fp) :=
@@ -368,7 +368,7 @@ private def localPublic : SP1PublicIO Fp :=
   { bootPublic with init_clk_0_16 := 17, final_clk_0_16 := 25 }
 
 private def localVerifierLedger (snapshot : ExecutionSnapshot) (pi : SP1PublicIO Fp) :=
-  let env := Environment.fromInput pi (fun _ _ => #[])
+  let env := Environment.fromInput pi (.empty Fp)
   (Soundness.LocalCore.ensemble image snapshot).verifierOperations.interactions.map
     (AbstractInteraction.eval env)
 

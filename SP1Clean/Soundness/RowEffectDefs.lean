@@ -17,7 +17,7 @@ grounding contracts, `Soundness/GroundingAdapter.lean` / `Soundness/ChipContract
 `SP1Clean.Soundness.Target` is unchanged (decoupled from path), so every `RefinesAt`/`RowEffect`/
 `rcvPcOf`/… reference resolves as before. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Soundness.Target
 
 open SP1Clean

@@ -133,158 +133,77 @@ theorem typedEnsembleExitInteractions_eq
   have verifier := stateVerifier_exitInteractions witness.publicInput witness.data
   change typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations exitChannel
     (Environment.fromInput witness.publicInput witness.data) = _ at verifier
-  rw [typedEnsembleInteractionsWith_partition, verifier,
+  have publicEnvironment : witness.data.publicEnvironment =
+      Environment.fromInput witness.publicInput witness.data := rfl
+  rw [typedEnsembleInteractionsWith_partition, publicEnvironment, verifier,
     witness_instructionExitInteractions_eq_nil, witness_providerExitInteractions_eq,
     haltTable_typedExit, syscallInstrsTable_typedExit, List.append_nil]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- One gated hand-off pair contributes exactly one produced message: the reduced word on a real
 row, the zero code on a padding row. -/
-private theorem producedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
+private theorem producedMessages_exitPair {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     producedMessages [TypedInteraction.pushedIfValue exitChannel gate m,
         TypedInteraction.pushedIfValue exitChannel (1 - gate) (⟨0⟩ : ExitMsg (ZMod p))] =
       [if gate = 1 then m else (⟨0⟩ : ExitMsg (ZMod p))] := by
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hbool' : (1 : ZMod p) - gate = 0 ∨ (1 : ZMod p) - gate = 1 := by
-    rcases hbool with h0 | h1
-    · right; rw [h0, sub_zero]
-    · left; rw [h1, sub_self]
-  have hpush1 : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
-  have hpush2 : signedVal ((1 : ZMod p) - gate) = (((1 : ZMod p) - gate).val : ℤ) :=
-    signedVal_is_real hp hbool'
-  unfold producedMessages
-  rcases hbool with h0 | h1
-  · have hval : gate.val = 0 := by rw [h0, ZMod.val_zero]
-    have hval' : ((1 : ZMod p) - gate).val = 1 := by rw [h0, sub_zero, ZMod.val_one]
-    rw [if_neg (by rw [h0]; exact zero_ne_one),
-      List.filter_cons_of_neg (by simp [hpush1, hval]),
-      List.filter_cons_of_pos (by simp [hpush2, hval']),
-      List.filter_nil, List.map_cons, List.map_nil, TypedInteraction.pushedIfValue_message]
-  · have hval : gate.val = 1 := by rw [h1, ZMod.val_one]
-    have hval' : ((1 : ZMod p) - gate).val = 0 := by rw [h1, sub_self, ZMod.val_zero]
-    rw [if_pos h1,
-      List.filter_cons_of_pos (by simp [hpush1, hval]),
-      List.filter_cons_of_neg (by simp [hpush2, hval']),
-      List.filter_nil, List.map_cons, List.map_nil, TypedInteraction.pushedIfValue_message]
+  rcases hbool with rfl | rfl <;>
+    simp [producedMessages, TypedInteraction.pushedIfValue, TypedInteraction.mult,
+      TypedInteraction.message, Channel.pushedIfValue, ProvableType.fromElements_toElements]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- A single gated push produces its message exactly when the gate is live, and consumes nothing.
 This is the syscall table's Exit shape — one push, with no anti-gated companion to balance the
 verifier, which is the whole reason a many-row table cannot inherit the halt table's accounting. -/
-private theorem producedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
+private theorem producedMessages_exitPush {gate : ZMod p}
     (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
     producedMessages [TypedInteraction.pushedIfValue exitChannel gate m] =
       (if gate = 1 then [m] else []) := by
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
-  unfold producedMessages
-  rcases hbool with h0 | h1
-  · rw [List.filter_cons_of_neg (by
-        simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
-        rw [show gate.val = 0 from by rw [h0]; exact ZMod.val_zero]
-        norm_num), List.filter_nil, List.map_nil,
-      if_neg (by rw [h0]; exact zero_ne_one)]
-  · rw [List.filter_cons_of_pos (by
-        simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
-        rw [show gate.val = 1 from by rw [h1]; exact ZMod.val_one p]
-        norm_num), List.filter_nil, List.map_cons, List.map_nil, if_pos h1,
-      TypedInteraction.pushedIfValue_message]
+  rcases hbool with rfl | rfl <;>
+    simp [producedMessages, TypedInteraction.pushedIfValue, TypedInteraction.mult,
+      TypedInteraction.message, Channel.pushedIfValue, ProvableType.fromElements_toElements]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The syscall table's Exit pushes consume nothing. -/
-private theorem consumedMessages_exitPush (hp : 2 < p) {gate : ZMod p}
-    (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
+private theorem consumedMessages_exitPush {gate : ZMod p}
+    (m : ExitMsg (ZMod p)) :
     consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m] = [] := by
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hpush : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
-  have hval : gate.val = 0 ∨ gate.val = 1 := by
-    rcases hbool with h | h
-    · left; rw [h, ZMod.val_zero]
-    · right; rw [h, ZMod.val_one]
-  unfold consumedMessages
-  rw [List.filter_cons_of_neg (by
-      simp only [TypedInteraction.pushedIfValue_mult, hpush, decide_eq_true_eq]
-      rcases hval with h | h <;> rw [h] <;> norm_num),
-    List.filter_nil, List.map_nil]
+  simp [consumedMessages, TypedInteraction.pushedIfValue, TypedInteraction.mult,
+      Channel.pushedIfValue]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- A gated hand-off pair consumes nothing: both entries are pushes. -/
-private theorem consumedMessages_exitPair (hp : 2 < p) {gate : ZMod p}
-    (hbool : gate = 0 ∨ gate = 1) (m : ExitMsg (ZMod p)) :
+private theorem consumedMessages_exitPair {gate : ZMod p}
+    (m : ExitMsg (ZMod p)) :
     consumedMessages [TypedInteraction.pushedIfValue exitChannel gate m,
         TypedInteraction.pushedIfValue exitChannel (1 - gate) (⟨0⟩ : ExitMsg (ZMod p))] = [] := by
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hbool' : (1 : ZMod p) - gate = 0 ∨ (1 : ZMod p) - gate = 1 := by
-    rcases hbool with h0 | h1
-    · right; rw [h0, sub_zero]
-    · left; rw [h1, sub_self]
-  have hpush1 : signedVal gate = (gate.val : ℤ) := signedVal_is_real hp hbool
-  have hpush2 : signedVal ((1 : ZMod p) - gate) = (((1 : ZMod p) - gate).val : ℤ) :=
-    signedVal_is_real hp hbool'
-  have hval : gate.val = 0 ∨ gate.val = 1 := by
-    rcases hbool with h | h
-    · left; rw [h, ZMod.val_zero]
-    · right; rw [h, ZMod.val_one]
-  have hval' : ((1 : ZMod p) - gate).val = 0 ∨ ((1 : ZMod p) - gate).val = 1 := by
-    rcases hbool' with h | h
-    · left; rw [h, ZMod.val_zero]
-    · right; rw [h, ZMod.val_one]
-  unfold consumedMessages
-  rw [List.filter_cons_of_neg (by
-      simp only [TypedInteraction.pushedIfValue_mult, hpush1, decide_eq_true_eq]
-      rcases hval with h | h <;> rw [h] <;> decide),
-    List.filter_cons_of_neg (by
-      simp only [TypedInteraction.pushedIfValue_mult, hpush2, decide_eq_true_eq]
-      rcases hval' with h | h <;> rw [h] <;> decide),
-    List.filter_nil, List.map_nil]
+  simp [consumedMessages, TypedInteraction.pushedIfValue, TypedInteraction.mult,
+      Channel.pushedIfValue]
 
-/-- Every Exit interaction of the witness carries a `{-1, 0, 1}` signed multiplicity. -/
-theorem witness_exitInteractions_signedBinary
+/-- Every Exit interaction has a Boolean count; direction records whether it is a pull or push. -/
+theorem witness_exitInteractions_binary
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness exitChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
-  have : Fact (1 < p) := ⟨by omega⟩
+      IsBool interaction.mult := by
   rw [typedEnsembleExitInteractions_eq]
   intro interaction interactionMem
-  rcases List.mem_append.mp interactionMem with hverifier | htail
-  · rw [List.mem_singleton.mp hverifier]
-    left
-    rw [TypedInteraction.pulledIfValue_mult]
-    calc
-      signedVal (-(1 : ZMod p)) = -((1 : ZMod p).val : ℤ) :=
-        signedVal_neg_is_real hp (Or.inr rfl)
-      _ = -1 := by rw [ZMod.val_one]; norm_num
-  rcases List.mem_append.mp htail with hhalt | hsyscall
-  · obtain ⟨row, rowMem, hmem⟩ := List.mem_flatMap.mp hhalt
-    have hbool := witness_haltRows_selectorBinary witness constraints row rowMem
-    have hbool' : (1 : ZMod p) - (haltRow witness.data row).is_real = 0 ∨
-        (1 : ZMod p) - (haltRow witness.data row).is_real = 1 := by
-      rcases hbool with h0 | h1
-      · right; rw [h0, sub_zero]
-      · left; rw [h1, sub_self]
-    rcases List.mem_cons.mp hmem with rfl | hmem
-    · rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool]
-      rcases hbool with h0 | h1
-      · right; left; rw [h0, ZMod.val_zero]; rfl
-      · right; right; rw [h1, ZMod.val_one]; rfl
-    · rcases List.mem_cons.mp hmem with rfl | hnil
-      · rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool']
-        rcases hbool' with h0 | h1
-        · right; left; rw [h0, ZMod.val_zero]; rfl
-        · right; right; rw [h1, ZMod.val_one]; rfl
-      · exact absurd hnil List.not_mem_nil
-  · obtain ⟨row, rowMem, hmem⟩ := List.mem_flatMap.mp hsyscall
-    have hbool := witness_syscallInstrsRows_haltSelectorBinary witness constraints row rowMem
-    rcases List.mem_cons.mp hmem with rfl | hnil
-    · rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool]
-      rcases hbool with h0 | h1
-      · right; left; rw [h0, ZMod.val_zero]; rfl
-      · right; right; rw [h1, ZMod.val_one]; rfl
-    · exact absurd hnil List.not_mem_nil
+  rcases List.mem_append.mp interactionMem with verifier | rest
+  · rw [List.mem_singleton.mp verifier]
+    exact Or.inr rfl
+  rcases List.mem_append.mp rest with halt | syscall
+  · obtain ⟨row, member, emitted⟩ := List.mem_flatMap.mp halt
+    have binary := witness_haltRows_selectorBinary witness constraints row member
+    rcases List.mem_cons.mp emitted with rfl | emitted
+    · exact binary
+    · rw [List.mem_singleton.mp emitted]
+      change IsBool (1 - (haltRow witness.data row).is_real)
+      rcases binary with inactive | active
+      · simp [IsBool, inactive]
+      · simp [IsBool, active]
+  · obtain ⟨row, member, emitted⟩ := List.mem_flatMap.mp syscall
+    rw [List.mem_singleton.mp emitted]
+    exact witness_syscallInstrsRows_haltSelectorBinary witness constraints row member
 
 /-- Produced Exit messages of the whole witness: exactly one hand-off message per physical Halt
 row (the reduced word when real, the zero code when padding). -/
@@ -300,19 +219,12 @@ theorem witness_exitProduced_eq
         if (syscallInstrsRow witness.data row).is_halt = 1
         then [SyscallInstrsChip.exitMessage (syscallInstrsRow witness.data row)]
         else []) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   rw [typedEnsembleExitInteractions_eq, producedMessages_append, producedMessages_append]
   have hverifier : producedMessages
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] = [] := by
-    have : Fact (1 < p) := ⟨by omega⟩
-    unfold producedMessages
-    rw [List.filter_cons_of_neg (by
-        simp only [TypedInteraction.pulledIfValue_mult,
-          signedVal_neg_is_real hp (Or.inr rfl : (1 : ZMod p) = 0 ∨ (1 : ZMod p) = 1),
-          ZMod.val_one, decide_eq_true_eq]
-        norm_num),
-      List.filter_nil, List.map_nil]
+    simp [producedMessages, TypedInteraction.pulledIfValue, TypedInteraction.mult,
+      Channel.pulledIfValue]
   rw [hverifier, List.nil_append, producedMessages_flatMap, producedMessages_flatMap]
   refine congrArg₂ (· ++ ·) ?_ ?_
   · rw [show ((haltTable witness).table.map fun row =>
@@ -325,33 +237,26 @@ theorem witness_exitProduced_eq
        else (⟨0⟩ : ExitMsg (ZMod p))] from List.map_eq_flatMap ..]
     apply List.flatMap_congr
     intro row rowMem
-    exact producedMessages_exitPair hp
+    exact producedMessages_exitPair
       (witness_haltRows_selectorBinary witness constraints row rowMem) _
   · apply List.flatMap_congr
     intro row rowMem
-    exact producedMessages_exitPush hp
+    exact producedMessages_exitPush
       (witness_syscallInstrsRows_haltSelectorBinary witness constraints row rowMem) _
 
 /-- Consumed Exit messages of the whole witness: exactly the verifier's committed exit code. -/
 theorem witness_exitConsumed_eq
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) :
+    :
     consumedMessages (typedEnsembleInteractionsWith witness exitChannel) =
       [(⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   rw [typedEnsembleExitInteractions_eq, consumedMessages_append]
   have hverifier : consumedMessages
       [TypedInteraction.pulledIfValue exitChannel 1
         (⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] =
       [(⟨witness.publicInput.exit_code⟩ : ExitMsg (ZMod p))] := by
-    have : Fact (1 < p) := ⟨by omega⟩
-    unfold consumedMessages
-    rw [List.filter_cons_of_pos (by
-        simp only [TypedInteraction.pulledIfValue_mult,
-          signedVal_neg_is_real hp (Or.inr rfl : (1 : ZMod p) = 0 ∨ (1 : ZMod p) = 1),
-          ZMod.val_one, decide_eq_true_eq]
-        norm_num),
-      List.filter_nil, List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_message]
+    simp [consumedMessages, TypedInteraction.pulledIfValue, TypedInteraction.mult,
+      TypedInteraction.message, Channel.pulledIfValue, ProvableType.fromElements_toElements]
   have hhalt : consumedMessages ((haltTable witness).table.flatMap fun row =>
       [TypedInteraction.pushedIfValue exitChannel
          (haltRow witness.data row).is_real
@@ -360,18 +265,16 @@ theorem witness_exitConsumed_eq
          (1 - (haltRow witness.data row).is_real)
          (⟨0⟩ : ExitMsg (ZMod p))]) = [] := by
     rw [consumedMessages_flatMap, List.flatMap_eq_nil_iff]
-    intro row rowMem
-    exact consumedMessages_exitPair hp
-      (witness_haltRows_selectorBinary witness constraints row rowMem) _
+    intro row _rowMem
+    exact consumedMessages_exitPair _
   have hsyscall : consumedMessages ((syscallInstrsTable witness).table.flatMap fun row =>
       [TypedInteraction.pushedIfValue exitChannel
          (syscallInstrsRow witness.data row).is_halt
          (SyscallInstrsChip.exitMessage
            (syscallInstrsRow witness.data row))]) = [] := by
     rw [consumedMessages_flatMap, List.flatMap_eq_nil_iff]
-    intro row rowMem
-    exact consumedMessages_exitPush hp
-      (witness_syscallInstrsRows_haltSelectorBinary witness constraints row rowMem) _
+    intro row _rowMem
+    exact consumedMessages_exitPush _
   rw [consumedMessages_append, hverifier, hhalt, hsyscall, List.append_nil, List.append_nil]
 
 /-- The complete Halt and syscall handoff lists together equal the singleton public exit code.
@@ -393,9 +296,9 @@ theorem witness_exitMessages_eq
     (by simp [sp1Ensemble_channels])
   have messagePerm := producedMessages_perm_consumedMessages
     (typedEnsembleInteractionsWith witness exitChannel) channelBalanced
-    (witness_exitInteractions_signedBinary witness constraints)
+    (witness_exitInteractions_binary witness constraints)
   rw [witness_exitProduced_eq witness constraints,
-    witness_exitConsumed_eq witness constraints] at messagePerm
+    witness_exitConsumed_eq witness] at messagePerm
   exact List.perm_singleton.mp messagePerm
 
 /-- **The interim two-contributor invariant.** The Halt table emits one Exit message per physical
@@ -460,7 +363,7 @@ theorem witness_exit_code_zero_of_haltFree
     rw [handoff]
     exact List.mem_singleton_self _
   obtain ⟨row, rowMem, entryEq⟩ := List.mem_map.mp memberZero
-  rw [if_neg (noReal row rowMem)] at entryEq
+  rw [ite_eq_right (noReal row rowMem)] at entryEq
   exact congrArg ExitMsg.value entryEq.symm
 
 /-- **The active Halt row is unique and binds the exit code**: any active Halt row is the whole
@@ -488,7 +391,7 @@ theorem witness_realHaltRows_eq_of_mem
     rw [realHaltRows, tableEq, List.filter_cons_of_pos (by simpa using hReal),
       List.filter_nil]
   refine ⟨realEq, ?_⟩
-  rw [tableEq, List.map_cons, List.map_nil, if_pos hReal] at handoff
+  rw [tableEq, List.map_cons, List.map_nil, ite_eq_left hReal] at handoff
   exact List.cons_eq_cons.mp handoff |>.1
 
 /-- The halting shard's whole physical Halt table is its one active row (the exit hand-off's

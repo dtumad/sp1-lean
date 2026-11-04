@@ -1,3 +1,4 @@
+import Clean.Air.WitnessGeneration.Generation
 import SP1Clean.Model.Channels
 import SP1Clean.Native.Operations.WordRangeCheck
 import Clean.Circuit.Basic
@@ -114,12 +115,27 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec,
       MemoryMsg.isU64, MemoryMsg.ClkBound, Inputs.toMessage]
     obtain ⟨hvalue, hclk, hclkhi, -⟩ := h_holds
-    refine ⟨⟨hvalue, ?_, hclkhi⟩, fun _ _ => ⟨hvalue, ?_⟩⟩ <;>
+    refine ⟨⟨hvalue, ?_, hclkhi⟩, fun _ => ⟨hvalue, ?_⟩⟩ <;>
       simp only [MemoryMsg.ClkBound, hclk, ZMod.val_zero, Nat.two_pow_pos]
   completeness := by
     circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec,
       MemoryMsg.isU64, Inputs.toMessage]
     refine ⟨h_assumptions.1, h_assumptions.2.1, h_assumptions.2.2.1, ?_⟩
     rcases h_assumptions.2.2.2 with h | h <;> simp [h]
+
+/-- Answer only genesis-record requests, preserving one physical row per occurrence.
+The authenticated assembly separately binds the supplied value to its initial snapshot. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := memoryChannel
+    trigger := .pull
+    guard message := .and (.feq (.expr message.clk_high) 0) (.feq (.expr message.clk_low) 0)
+    input message := pure {
+      clk_high := message.clk_high, clk_low := message.clk_low
+      addr0 := message.addr0, addr1 := message.addr1, addr2 := message.addr2
+      value := message.value
+      multiplicity := 1
+    }
+  }
 
 end SP1Clean.MemoryProviderChip

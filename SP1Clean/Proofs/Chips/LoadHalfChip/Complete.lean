@@ -151,8 +151,8 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed) (halign 
   · show (e.toLoadHalfInputs (p := p)).is_lhu * (e.toLoadHalfInputs (p := p)).msb = 0
     rw [MemoryEvent.toLoadHalfInputs_msb, MemoryEvent.toLoadHalfInputs_is_lhu]
     by_cases hop : e.opcode = 30
-    · rw [if_pos hop, zero_mul]
-    · rw [if_neg hop, if_neg (by tauto), mul_zero]
+    · rw [ite_eq_left hop, zero_mul]
+    · rw [ite_eq_right hop, ite_eq_right (by tauto), mul_zero]
   -- the MSB gadget
   · show (e.toLoadHalfInputs (p := p)).msb = 0 ∨ (e.toLoadHalfInputs (p := p)).msb = 1
     rw [MemoryEvent.toLoadHalfInputs_msb]
@@ -162,21 +162,24 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed) (halign 
   · intro hlh
     have hop : e.opcode = 30 := by
       by_contra hne
-      rw [MemoryEvent.toLoadHalfInputs_is_lh, if_neg hne] at hlh
+      rw [MemoryEvent.toLoadHalfInputs_is_lh, ite_eq_right hne] at hlh
       exact zero_ne_one hlh
     show (if e.opcode = 30 ∧ 32768 ≤ memLimb e.prevMem e.addr then (1 : ZMod p) else 0)
       = if 32768 ≤ (((memLimb e.prevMem e.addr : ℕ) : ZMod p)).val then 1 else 0
     rw [ZMod.val_natCast_of_lt (by omega)]
     by_cases hb : 32768 ≤ memLimb e.prevMem e.addr
-    · rw [if_pos ⟨hop, hb⟩, if_pos hb]
-    · rw [if_neg (by tauto), if_neg hb]
+    · rw [ite_eq_left ⟨hop, hb⟩, ite_eq_left hb]
+    · rw [ite_eq_right (by tauto), ite_eq_right hb]
 
 /-! ## The built table -/
 
 /-- The LoadHalf chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- The event rows, before ensemble-level zero padding (see `LoadWordChip/Complete.lean`). -/
 def traceInputs (events : List MemoryEvent) : List (Inputs (ZMod p)) :=
@@ -194,28 +197,34 @@ theorem proverAssumptions_of_mem_traceInputs {events : List MemoryEvent}
 /-- **A real trace builds a valid LoadHalf table.** -/
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.Aligned 2)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees**. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.Aligned 2)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint bounded).interactionsWith channel =
+        hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.LoadHalfChip

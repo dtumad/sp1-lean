@@ -25,7 +25,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The address gadget's witnesses are computable: the limbs from the input operands, the inverse
 from cells this sub-circuit already witnessed. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_input => ?_,
@@ -44,8 +44,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   · have hsel : Expression.eval env.toEnvironment input.is_real
         = Expression.eval env'.toEnvironment input.is_real := by
       simpa [circuit_norm] using Inputs.eval_congr_is_real h_input
-    rw [Witgen.WitgenIR.eval_ofFExprs_one, Witgen.WitgenIR.eval_ofFExprs_one]
-    simp only [Witgen.FExpr.eval, Expression.eval, hsel,
+    simp only [hsel,
       h_agree.get_eq (show n + 1 < 3 + n by omega),
       h_agree.get_eq (show n + 2 < 3 + n by omega)]
   · simp [circuit_norm]

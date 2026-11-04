@@ -247,7 +247,7 @@ theorem active_endpoints_perm {Index : Type*} (indices : List Index)
     (fun row => (view row.1).edge row.2)) at balanced
   exact (channel.gatedTransitionLedger_balanced_iff _ _ _ _ _ (fun row member =>
     (view row.1).activity_binary row.2
-      (readIndexedRows_spec indices view tables aligned valid row member))).mp balanced |>.2
+      (readIndexedRows_spec indices view tables aligned valid row member))).mp balanced
 
 end TransitionView
 end Air.Flat

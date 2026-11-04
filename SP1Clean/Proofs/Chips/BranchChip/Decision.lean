@@ -101,8 +101,8 @@ omit [Fact (2 ^ 17 < p)] in
 private lemma bool_eq_one_sub_ite {x bit : ZMod p} (hx : x = 0 ∨ x = 1) {P : Prop} [Decidable P]
     (hbit : bit = if P then 1 else 0) (h : x = 1 ↔ ¬ P) : x = 1 - bit := by
   by_cases hP : P
-  · rw [hbit, if_pos hP, sub_self]; exact hx.resolve_right fun h1 => h.mp h1 hP
-  · rw [hbit, if_neg hP, sub_zero]; exact h.mpr hP
+  · rw [hbit, ite_eq_left hP, sub_self]; exact hx.resolve_right fun h1 => h.mp h1 hP
+  · rw [hbit, ite_eq_right hP, sub_zero]; exact h.mpr hP
 
 omit [Fact (2 ^ 17 < p)] in
 /-- A binary `x` with `x = 1 ↔ y ≠ 0` (for binary `y`) equals `y`. -/
@@ -215,14 +215,14 @@ lemma branch_conditions_of_decision_eq {rs1 rs2 : Word (ZMod p)}
     obtain ⟨e0, e1, e3, e4, e5⟩ := rest_zero hf hb0 hb1 hb3 hb4 hb5 (by linear_combination hone)
     have hsig1 : b2 + b3 = 1 := by rw [hf, e3]; simp
     rw [hf, e0, e1, e3, e4, e5] at hbrdec
-    simp only [if_pos hsig1] at h_bit
+    simp only [ite_eq_left hsig1] at h_bit
     rw [slt_true_iff]
     exact eq_one_iff_of_ite (x := br) (by linear_combination hbrdec + h_bit)
   · -- BGE: `br = 1 - bit`; `is_signed = 1`; `br = 1 ↔ ¬ rs1 <ₛ rs2`.
     obtain ⟨e0, e1, e2, e4, e5⟩ := rest_zero hf hb0 hb1 hb2 hb4 hb5 (by linear_combination hone)
     have hsig1 : b2 + b3 = 1 := by rw [hf, e2]; simp
     rw [hf, e0, e1, e2, e4, e5] at hbrdec
-    simp only [if_pos hsig1] at h_bit
+    simp only [ite_eq_left hsig1] at h_bit
     rw [slt_false_iff]
     rw [h_bit] at hbrdec
     refine eq_one_iff_of_one_sub_ite (x := br) ?_
@@ -231,14 +231,14 @@ lemma branch_conditions_of_decision_eq {rs1 rs2 : Word (ZMod p)}
     obtain ⟨e0, e1, e2, e3, e5⟩ := rest_zero hf hb0 hb1 hb2 hb3 hb5 (by linear_combination hone)
     have hsig0 : ¬ (b2 + b3 = 1) := by rw [e2, e3, add_zero]; exact zero_ne_one'
     rw [hf, e0, e1, e2, e3, e5] at hbrdec
-    simp only [if_neg hsig0] at h_bit
+    simp only [ite_eq_right hsig0] at h_bit
     rw [ult_true_iff, Word.toBitVec64_toNat hrs1U, Word.toBitVec64_toNat hrs2U]
     exact eq_one_iff_of_ite (x := br) (by linear_combination hbrdec + h_bit)
   · -- BGEU: `br = 1 - bit`; `is_signed = 0`; `br = 1 ↔ ¬ rs1 <ᵤ rs2`.
     obtain ⟨e0, e1, e2, e3, e4⟩ := rest_zero hf hb0 hb1 hb2 hb3 hb4 (by linear_combination hone)
     have hsig0 : ¬ (b2 + b3 = 1) := by rw [e2, e3, add_zero]; exact zero_ne_one'
     rw [hf, e0, e1, e2, e3, e4] at hbrdec
-    simp only [if_neg hsig0] at h_bit
+    simp only [ite_eq_right hsig0] at h_bit
     rw [ult_false_iff, Word.toBitVec64_toNat hrs1U, Word.toBitVec64_toNat hrs2U]
     rw [h_bit] at hbrdec
     refine eq_one_iff_of_one_sub_ite (x := br) ?_

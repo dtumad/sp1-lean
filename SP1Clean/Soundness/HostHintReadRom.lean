@@ -22,10 +22,13 @@ local instance romLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 2
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem source_valid
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ExecutionSourceValid image source := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness
@@ -36,7 +39,7 @@ private theorem source_valid
 theorem GroundingCarrier.frame_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
@@ -52,7 +55,7 @@ theorem GroundingCarrier.frame_prefix (valid : image.Valid)
 theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target)
@@ -64,7 +67,7 @@ theorem GroundingCarrier.readOnly_prefix (valid : image.Valid)
 theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cut : ℕ} {target : ExecutionState}
     (replay : carrier.pairedTrajectory valid cut = some target) :
@@ -75,14 +78,14 @@ theorem GroundingCarrier.romLoaded_prefix (valid : image.Valid)
 theorem GroundingCarrier.fetch_at (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (cut : ℕ) (active : cut < carrier.events.length) :
     ∃ current pc word, carrier.pairedTrajectory valid cut = some current ∧
-      current.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc ∧
+      current.sail.regs.get? LeanRV64D.Register.PC = some pc ∧
       (image.toGuestProgram valid).fetchWord pc = some word ∧
       (LeanRV64D.Functions.fetch ()).run current.sail =
-        .ok (LeanRV64D.Defs.FetchResult.F_Base word) current.sail := by
+        .ok (LeanRV64D.FetchResult.F_Base word) current.sail := by
   have checked := source_valid witness constraints balanced
   obtain ⟨_, path, _⟩ := carrier.execution valid constraints balanced
   exact path.fetch_at valid (carrier.writesPermitted valid constraints balanced)

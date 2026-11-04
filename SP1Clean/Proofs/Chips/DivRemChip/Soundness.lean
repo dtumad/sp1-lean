@@ -284,9 +284,9 @@ private lemma toNat_eq_toInt_add128 (x : BitVec 128) :
     (x.toNat : ℤ) = x.toInt + (if x.toInt < 0 then 2 ^ 128 else 0) := by
   by_cases hm : x.msb = true
   · have h1 : x.toInt < 0 := by rw [BitVec.msb_eq_toInt] at hm; simpa using hm
-    rw [if_pos h1, toInt_eq_toNat_sub128, if_pos hm]; ring
+    rw [ite_eq_left h1, toInt_eq_toNat_sub128, ite_eq_left hm]; ring
   · have h1 : ¬ x.toInt < 0 := by rw [BitVec.msb_eq_toInt] at hm; simpa using hm
-    rw [if_neg h1, toInt_eq_toNat_sub128, if_neg hm]; ring
+    rw [ite_eq_right h1, toInt_eq_toNat_sub128, ite_eq_right hm]; ring
 
 /-- **Signed Euclidean identity from the carry chain.** The signed analogue of
 `euclid_identity_unsigned`: the eight carry-chain limb equations carry the `b_neg`/`rem_neg` sign fills
@@ -403,10 +403,10 @@ lemma euclid_identity_signed
   -- inconsistent sign combinations).
   have hbnd : (2 : ℤ) ^ 126 + 2 ^ 64 + 2 ^ 64 < 2 ^ 128 := by norm_num
   by_cases hsgn : quotient.toBitVec64.toInt * c.toBitVec64.toInt < 0
-  · rw [if_pos hsgn] at hpn; rw [hpn] at hT
+  · rw [ite_eq_left hsgn] at hpn; rw [hpn] at hT
     rcases hbnv01 with h | h <;> rcases hrnv01 with h2 | h2 <;> rcases hc7v01 with h3 | h3 <;>
       simp only [h, h2, h3] at hT ⊢ <;> norm_num at hT hbnd hQbound hbtn hrtn ⊢ <;> omega
-  · rw [if_neg hsgn] at hpn; rw [hpn] at hT
+  · rw [ite_eq_right hsgn] at hpn; rw [hpn] at hT
     rcases hbnv01 with h | h <;> rcases hrnv01 with h2 | h2 <;> rcases hc7v01 with h3 | h3 <;>
       simp only [h, h2, h3] at hT ⊢ <;> norm_num at hT hbnd hQbound hbtn hrtn ⊢ <;> omega
 
@@ -653,9 +653,9 @@ private lemma toNat_eq_toInt_add64 (x : BitVec 64) :
     (x.toNat : ℤ) = x.toInt + (if x.toInt < 0 then 2 ^ 64 else 0) := by
   by_cases hm : x.msb = true
   · have h1 : x.toInt < 0 := by rw [BitVec.msb_eq_toInt] at hm; simpa using hm
-    rw [if_pos h1, toInt_eq_toNat_sub64, if_pos hm]; ring
+    rw [ite_eq_left h1, toInt_eq_toNat_sub64, ite_eq_left hm]; ring
   · have h1 : ¬ x.toInt < 0 := by rw [BitVec.msb_eq_toInt] at hm; simpa using hm
-    rw [if_neg h1, toInt_eq_toNat_sub64, if_neg hm]; ring
+    rw [ite_eq_right h1, toInt_eq_toNat_sub64, ite_eq_right hm]; ring
 
 omit [Fact p.Prime] in
 /-- `toInt` of a 64-bit product whose integer value fits in `[-2^62, 2^62]` is bmod-free (the 64-bit,

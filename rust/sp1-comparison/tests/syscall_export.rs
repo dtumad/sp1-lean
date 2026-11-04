@@ -11,7 +11,7 @@ mod execution;
 
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
-use export_support::{Ledger, RowWitness, Sp1Evaluation};
+use export_support::{complete_row, has_open_bus, Ledger, Sp1Evaluation};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use slop_air::Air;
@@ -220,10 +220,7 @@ fn native(row: &[S]) -> Vec<F> {
 }
 
 fn witness<P: Program<F>>(input: &[S]) -> Vec<F> {
-    let witness = generate::<F, RowWitness<P>>(&[], &native(input)).unwrap();
-    assert_eq!(witness.tables.len(), 1);
-    assert_eq!(witness.tables[0].len(), 1);
-    witness.tables[0][0].clone()
+    complete_row::<P>(&native(input)).unwrap()
 }
 
 fn ledger<P: Program<F>>(row: &[F]) -> Ledger {
@@ -232,7 +229,7 @@ fn ledger<P: Program<F>>(row: &[F]) -> Ledger {
         .map(|entry| {
             (
                 entry.channel.to_owned(),
-                entry.multiplicity.as_canonical_u64(),
+                entry.signed_multiplicity().as_canonical_u64(),
                 entry
                     .message
                     .iter()
@@ -672,22 +669,13 @@ fn generated_padding_and_private_inputs_do_not_claim_closed_execution() {
     let trace = SyscallInstrsChip::<SupervisorMode>::default()
         .generate_trace(&record, &mut ExecutionRecord::default());
     let input = native(&trace.row_slice(0));
-    assert!(matches!(
-        generate::<F, Base>(&[], &input),
-        Err(WitnessGenerationError::Runtime(_))
-    ));
-    assert!(matches!(
-        generate::<F, Core>(&[], &input),
-        Err(WitnessGenerationError::Runtime(_))
-    ));
+    assert!(has_open_bus::<Base>(&input));
+    assert!(has_open_bus::<Core>(&input));
     let mut host_input = input.clone();
     host_input.extend([F::ZERO; 6]);
+    assert!(has_open_bus::<Host>(&host_input));
     assert!(matches!(
-        generate::<F, Host>(&[], &host_input),
-        Err(WitnessGenerationError::Runtime(_))
-    ));
-    assert!(matches!(
-        generate::<F, RowWitness<Host>>(&[], &input),
+        generate::<F, Host>(&[], &input, 1),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
 }

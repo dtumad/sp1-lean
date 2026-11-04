@@ -24,15 +24,17 @@ local instance programLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
 
 /-- The extended AIR authenticates every active Program pull using the fixed image provider. -/
 theorem program_pull_committed (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
-    (active : interaction.mult = -1) (payload : interaction.msg = (toElements message).toArray) :
+    (active : interaction.Pull) (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) := by
   apply LocalCore.program_pull_committed_of_balance valid (localWitness witness)
     (localWitness_constraints witness constraints) ?_
@@ -42,7 +44,7 @@ theorem program_pull_committed (valid : image.Valid)
     exact balanced
   · rwa [localWitness_program witness silent]
 
-private theorem wrapper_program_values (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+private theorem wrapper_program_values (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (physical : Array (ZMod p)) :
     HostCallLedger.producer.operations.interactionValuesWith programChannel.toRaw (Environment.fromArray physical witness.data) =
       [programChannel.pulledIfValue (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real
@@ -63,7 +65,7 @@ private theorem wrapper_program_values (witness : EnsembleWitness (ensemble imag
 
 /-- Every actual wrapper call carries the checked image's ECALL fetch and register indices. -/
 theorem hostCall_program_committed (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data) :
@@ -81,8 +83,7 @@ theorem hostCall_program_committed (valid : image.Valid)
       witness.same_data _ (hostCallTable_mem witness)
     rw [Table.environment, shared, hostCallTable_component, wrapper_program_values witness]
     exact List.mem_cons_self
-  · change -(HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.is_real = -1
-    rw [real]
+  · exact ⟨rfl, real⟩
   · rfl
 
 private theorem local_executionRow_time
@@ -115,7 +116,7 @@ private theorem local_executionRow_time
 /-- The actual CPU prefix determines the next row's clock from the checked incoming source.
 This uses only State/Byte ordering; Memory remains in the extended ledger. -/
 theorem executionRow_time
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints) (ordering : LocalCore.OrderingChannels (localWitness witness))
     {cpu : List (NativeCore.ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (localWitness witness)))
@@ -155,7 +156,7 @@ private theorem registers_of_currency (row : SyscallInstrsChip.Inputs (ZMod p))
 /-- The grounding engine's incoming currency supplies the actual full host-call observations.
 No caller selects register indices or separately authenticates the instruction fetch. -/
 theorem hostCall_registers (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (env : Environment (ZMod p)) (member : env ∈ HostCallLedger.activeRows (hostCallTable witness) witness.data)
@@ -174,7 +175,7 @@ theorem hostCall_registers (valid : image.Valid)
 /-- The actual wrapper instruction has its whole-chip contract and operand bounds within
 the incoming grounding invariant. Program balance remains separate from the full Memory ledger. -/
 theorem hostCall_contract
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (interface : AuxiliaryInterface auxiliary)
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
@@ -207,7 +208,7 @@ theorem hostCall_contract
 /-- The actual host wrapper inherits its instruction row law and semantic clock, using
 incoming operand bounds and the preserved Program and Byte balances. -/
 theorem hostCall_eventLaw
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (interface : AuxiliaryInterface auxiliary)
     (silent : ∀ component ∈ auxiliary, programChannel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)

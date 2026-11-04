@@ -249,11 +249,11 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormedStore)
       MemoryEvent.toStoreByteInputs_offset_bit_zero, highByte_eq]
     rcases (by omega : e.addr % 2 = 0 ∨ e.addr % 2 = 1) with hb | hb
     · rw [show ((e.addr % 2 : ℕ) : ZMod p) = 0 from by rw [hb, Nat.cast_zero],
-        storeByteLimb, if_pos hb]
+        storeByteLimb, ite_eq_left hb]
       push_cast
       linear_combination - hmemcast
     · rw [show ((e.addr % 2 : ℕ) : ZMod p) = 1 from by rw [hb, Nat.cast_one],
-        storeByteLimb, if_neg (by omega)]
+        storeByteLimb, ite_eq_right (by omega)]
       push_cast
       linear_combination - hmemcast
   -- the four read-modify-write gates: the selected limb takes the increment, the others are kept
@@ -299,7 +299,10 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormedStore)
 /-- The StoreByte chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- The event rows, before ensemble-level zero padding (see `StoreWordChip/Complete.lean`). -/
 def traceInputs (events : List MemoryEvent) : List (Inputs (ZMod p)) :=
@@ -317,29 +320,35 @@ theorem proverAssumptions_of_mem_traceInputs {events : List MemoryEvent}
 /-- **A real trace builds a valid StoreByte table.** -/
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — including the two inline byte-bus pulls,
 whose payloads are the committed byte splits. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint bounded).interactionsWith channel =
+        hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.StoreByteChip

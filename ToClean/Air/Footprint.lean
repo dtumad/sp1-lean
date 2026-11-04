@@ -5,7 +5,7 @@ public import ToClean.Air.VerifierExtension
 
 /-! # Exact physical ensemble accounting
 
-Clean's raw balance condition bounds occurrence counts but has no shared interface relating them
+Clean's LogUp capacity check bounds occurrence counts but has no shared interface relating them
 to physical table heights and static circuit interaction widths. This addition counts the literal
 ledger: zero multiplicities, duplicate keys, padding and every verifier interaction all count. The
 native compiler and installed resource verifier consume these equations; no semantic execution
@@ -38,9 +38,6 @@ theorem Table.interactionsWith_length (table : Table F) (channel : RawChannel F)
 namespace EnsembleWitness
 variable {ens : Ensemble F PublicIO}
 
-/-- Exact heights of the committed physical tables. The verifier contributes no physical row. -/
-def tableHeights (witness : EnsembleWitness ens) : List ℕ := witness.tables.map Table.length
-
 /-- Exact per-channel cost, summed over the literal physical inventory. -/
 noncomputable def channelOccurrences (witness : EnsembleWitness ens) (channel : RawChannel F) : ℕ :=
   (ens.verifierOperations.interactionsWith channel).length +
@@ -52,10 +49,6 @@ theorem channelOccurrences_eq_length (witness : EnsembleWitness ens) (channel : 
   simp only [channelOccurrences, EnsembleWitness.interactionsWith, verifierInteractionsWith,
     toTables, Tables.interactionsWith, List.length_append, List.length_flatMap,
     Operations.interactionValuesWith, List.length_map, Table.interactionsWith_length]
-
-/-- Physical height accounting follows the canonical table inventory exactly. -/
-theorem tableHeights_eq (witness : EnsembleWitness ens) :
-    witness.tableHeights = witness.tables.map Table.length := rfl
 
 /-- Separate the verifier's exact cost from every provider, instruction and administrative table. -/
 theorem channelOccurrences_eq (witness : EnsembleWitness ens) (channel : RawChannel F) :
@@ -81,7 +74,7 @@ theorem table_length_le_occurrences (witness : EnsembleWitness ens) {table : Tab
 
 /-- Inclusive physical budgets, measured from actual rows and every registered channel. -/
 def PhysicalFits (witness : EnsembleWitness ens) (rows occurrences : ℕ) : Prop :=
-  (∀ height ∈ witness.tableHeights, height ≤ rows) ∧
+  (∀ height ∈ witness.heights, height ≤ rows) ∧
     ∀ channel ∈ ens.channels, witness.channelOccurrences channel ≤ occurrences
 
 /-- Clean's finite-characteristic capacity condition, over the complete registered-channel list. -/
@@ -100,13 +93,13 @@ theorem PhysicalFits.capacity {witness : EnsembleWitness ens} {rows occurrences 
     witness.ChannelCapacity characteristic :=
   fun channel member => Nat.lt_of_le_of_lt (fits.2 channel member) small
 
-/-- Accepted witnesses already satisfy the exact all-channel finite-field capacity condition. -/
-theorem channelCapacity_of_balanced (witness : EnsembleWitness ens)
-    (balanced : witness.BalancedChannels) (positive : 0 < ringChar F) :
+/-- LogUp's explicit capacity check bounds the complete physical ledger. -/
+theorem channelCapacity_of_interactionsFit [ComputableRingChar F] (witness : EnsembleWitness ens)
+    (fit : witness.InteractionsFit Balance.logUp) :
     witness.ChannelCapacity (ringChar F) := by
   intro channel member
-  rw [channelOccurrences_eq_length]
-  exact (balanced channel member).1.resolve_right (Nat.ne_of_gt positive)
+  rw [channelOccurrences_eq_length, ← ComputableRingChar.char_eq (R := F)]
+  exact of_decide_eq_true (fit channel member)
 
 /-- Adding raw rows has additive cost; field cancellation cannot recover spent occurrence capacity. -/
 theorem table_cost_append (component : Component F) (channel : RawChannel F) (left right : ℕ) :
@@ -120,7 +113,7 @@ theorem physicalFits_iff (witness : EnsembleWitness ens) (rows occurrences : ℕ
       (∀ table ∈ witness.tables, table.length ≤ rows) ∧
         ∀ channel ∈ ens.channels, (ens.verifierOperations.interactionsWith channel).length +
           (witness.tables.map fun table => table.length * table.component.channelWidth channel).sum ≤ occurrences := by
-  simp only [PhysicalFits, tableHeights_eq, List.mem_map,
+  simp only [PhysicalFits, heights, List.mem_map,
     forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, channelOccurrences_eq]
 
 end EnsembleWitness
@@ -129,9 +122,9 @@ namespace PublicVerifier
 variable (check : PublicVerifier F PublicIO) {ens : Ensemble F PublicIO}
 
 /-- Public checks allocate no physical rows, so every physical table height is retained. -/
-theorem project_tableHeights (witness : EnsembleWitness (check.install ens)) :
-    (check.project witness).tableHeights = witness.tableHeights := by
-  simp only [EnsembleWitness.tableHeights_eq, project_tables]
+theorem project_heights (witness : EnsembleWitness (check.install ens)) :
+    (check.project witness).heights = witness.heights := by
+  simp only [EnsembleWitness.heights, project_tables]
 
 /-- Every channel other than the added check channel retains its exact occurrence count. -/
 theorem project_channelOccurrences (witness : EnsembleWitness (check.install ens)) (channel : RawChannel F)
@@ -163,7 +156,7 @@ theorem project_physicalFits (witness : EnsembleWitness (check.install ens)) (ro
   constructor
   · intro fits
     refine ⟨⟨?_, ?_⟩, ?_⟩
-    · simpa only [project_tableHeights] using fits.1
+    · simpa only [project_heights] using fits.1
     · intro channel member
       rw [check.project_channelOccurrences witness channel (different channel member)]
       exact fits.2 channel (List.mem_append_left _ member)
@@ -171,7 +164,7 @@ theorem project_physicalFits (witness : EnsembleWitness (check.install ens)) (ro
       exact fits.2 (check.channel ens) (by simp [install])
   · rintro ⟨fits, bound⟩
     refine ⟨?_, ?_⟩
-    · simpa only [project_tableHeights] using fits.1
+    · simpa only [project_heights] using fits.1
     · intro channel member
       change channel ∈ ens.channels ++ [check.channel ens] at member
       rcases List.mem_append.mp member with member | member
@@ -185,12 +178,14 @@ namespace ClosedVerifier
 variable (closed : ClosedVerifier F) {ens : Ensemble F PublicIO}
 
 /-- Closed boundaries allocate no committed rows; only their verifier ledger changes. -/
-theorem project_tableHeights (witness : EnsembleWitness (closed.install ens)) :
-    (closed.project witness).tableHeights = witness.tableHeights := by
-  simp only [EnsembleWitness.tableHeights_eq, project_tables]
+theorem project_heights {registered : closed.circuit.channels ⊆ ens.channels}
+    (witness : EnsembleWitness (closed.install ens registered)) :
+    (closed.project witness).heights = witness.heights := by
+  simp only [EnsembleWitness.heights, project_tables]
 
 /-- The new check channel retains both occurrences of each assertion, including equal zeros. -/
-theorem installed_channelOccurrences (witness : EnsembleWitness (closed.install ens)) :
+theorem installed_channelOccurrences {registered : closed.circuit.channels ⊆ ens.channels}
+    (witness : EnsembleWitness (closed.install ens registered)) :
     witness.channelOccurrences (closed.channel ens) = 2 * closed.operations.constraints.length := by
   rw [EnsembleWitness.channelOccurrences_eq_length, closed.installed_check_interactions]
   change ((Verifier.checkZeros (closed.channelName ens) closed.operations.constraints).circuitOperations.interactionValuesWith

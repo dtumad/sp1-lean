@@ -57,7 +57,7 @@ the operations actually look up. `Lookup.Contains` reads one data key per lookup
 theorem constraintsHold_congr_of_data_agree {ops : Operations F} {env env' : Environment F}
     (h_get : env.get = env'.get)
     (h_data : ∀ l ∈ ops.lookups,
-      env.data l.table.name l.table.arity = env'.data l.table.name l.table.arity)
+      env.data.tables l.table.name l.table.arity = env'.data.tables l.table.name l.table.arity)
     (h : ops.ConstraintsHold env) : ops.ConstraintsHold env' := by
   refine constraintsHold_congr h_get (fun l hl h_contains => ?_) h
   have h_entry : l.entry.map (Expression.eval env) = l.entry.map (Expression.eval env') := by
@@ -113,7 +113,7 @@ theorem valueFromOffset_congr (M : TypeMap) [ProvableType M] (offset : ℕ)
   exact h _ (by omega)
 
 /-- The canonical row input variable reads only the cells below `size M` — the side condition of
-`FormalCircuitBase.ComputableWitnessesWithData'`, discharged once for the AIR row layout. -/
+`FormalCircuitBase.ComputableWitnesses'`, discharged once for the AIR row layout. -/
 theorem onlyAccessedBelow_varFromOffset_zero (M : TypeMap) [ProvableType M] :
     ProverEnvironment.OnlyAccessedBelow (size M) (F := F)
       (Eval.eval · (varFromOffset (F := F) M 0)) := by
@@ -122,7 +122,7 @@ theorem onlyAccessedBelow_varFromOffset_zero (M : TypeMap) [ProvableType M] :
     fun e => by rw [eval_varFromOffset_prover]; rfl
   intro env env' h
   simp only [h_eval]
-  exact valueFromOffset_congr M 0 fun i _ => h _ (by omega)
+  exact valueFromOffset_congr M 0 fun i _ => h.get_eq (by omega)
 
 end ProvableType
 
@@ -177,7 +177,7 @@ theorem rowInput_buildRow (c : Component F) (input : c.Input F) (data data' : Pr
 witness generation ran in, so the circuit's completeness theorem applies to it directly. -/
 lemma proverEnvironment_buildRow_toEnvironment (c : Component F) (input : c.Input F)
     (data : ProverData F) (hint : ProverHint F) :
-    (ProverEnvironment.fromArrayWithData (c.buildRow input data hint) data
+    (ProverEnvironment.fromArray (c.buildRow input data hint) data
       hint).toEnvironment = Environment.fromArray (c.buildRow input data hint) data := rfl
 
 /-! ## The keystone: a built row satisfies the component's constraints -/
@@ -189,24 +189,24 @@ standard honest-prover side condition) and the semantic input satisfies the circ
 component's full per-row assertion system: `ConstraintsHold` and `FullGuarantees`.
 
 This is `GeneralFormalCircuit.original_full_completeness` transported onto the AIR row layout. The
-chain is: `FormalCircuitBase.computableWitnessesWithData_implies` (with the row input variable reading only
-cells below `size Input`) gives `Circuit.ComputableWitnessesWithData` at the row offset;
+chain is: `FormalCircuitBase.computableWitnesses_implies` (with the row input variable reading only
+cells below `size Input`) gives `Circuit.ComputableWitnesses` at the row offset;
 `Circuit.witgenWithData_usesLocalWitnesses` turns that into an honest environment carrying the
 committed `data`; `original_full_completeness` fires; and `Component.constraintsHold_iff` /
 `guarantees_iff` land the result on `Component.operations`.
 -/
 theorem buildRow_constraintsHold (c : Component F) (input : c.Input F) (data : ProverData F)
-    (hint : ProverHint F) (h_computable : c.circuit.base.ComputableWitnessesWithData)
+    (hint : ProverHint F) (h_computable : c.circuit.base.ComputableWitnesses)
     (h_prover : c.circuit.ProverAssumptions input data hint) :
     c.operations.ConstraintsHold (Environment.fromArray (c.buildRow input data hint) data) ∧
       c.operations.FullGuarantees (Environment.fromArray (c.buildRow input data hint) data) := by
   set inputVar : Var c.Input F := varFromOffset c.Input 0 with h_inputVar
   set env : ProverEnvironment F :=
-    ProverEnvironment.fromArrayWithData (c.buildRow input data hint) data hint with h_env
+    ProverEnvironment.fromArray (c.buildRow input data hint) data hint with h_env
   -- the row input variable only reads cells below the row offset, so the circuit's
-  -- `ComputableWitnessesWithData` obligation applies at that offset
-  have h_computable' : (c.circuit.main inputVar).ComputableWitnessesWithData (size c.Input) :=
-    FormalCircuitBase.computableWitnessesWithData_implies h_computable (size c.Input) inputVar
+  -- `ComputableWitnesses` obligation applies at that offset
+  have h_computable' : (c.circuit.main inputVar).ComputableWitnesses (size c.Input) :=
+    FormalCircuitBase.computableWitnesses_implies h_computable (size c.Input) inputVar
       (ProvableType.onlyAccessedBelow_varFromOffset_zero c.Input)
   -- witness generation against the committed data is therefore honest
   have h_uses : env.UsesLocalWitnesses (size c.Input)
@@ -228,7 +228,7 @@ component's already-bundled soundness theorem; downstream table transports can u
 boundary without reopening a circuit's witness implementation. -/
 theorem buildRow_spec_requirements (c : Component F) (input : c.Input F)
     (data : ProverData F) (hint : ProverHint F)
-    (h_computable : c.circuit.base.ComputableWitnessesWithData)
+    (h_computable : c.circuit.base.ComputableWitnesses)
     (h_prover : c.circuit.ProverAssumptions input data hint)
     (h_assumptions : c.circuit.Assumptions input data) :
     let env := Environment.fromArray (c.buildRow input data hint) data
@@ -285,40 +285,33 @@ theorem buildRow_of_localLength_zero (c : Component F) (input : c.Input F) (data
     (toElements input).toArray)[i]'hbound = _
   simpa using this
 
-/-- Decode the verifier's fixed prefix followed by prover-owned suffix cells. -/
-def fixedInput (c : Component F) (fixed : FixedColumns F) (index : UInt64) (suffix : Array F) :
-    c.Input F :=
-  fromElements (Vector.ofFn fun cell : Fin (size c.Input) =>
-    if cell.val < fixed.width then (fixed.row index)[cell.val]?.getD 0
-    else suffix[cell.val - fixed.width]?.getD 0)
+/-- Initialize a builder's own named input entry from its actual semantic inputs. Other
+entries and the public input remain available during generation; ensemble construction later
+replaces all entries with data derived from the complete committed inventory. -/
+def inputData (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) : ProverData F where
+  tables name arity := if name = c.circuit.name then
+    (inputs.map fun input => rowPrefix arity (toElements input).toArray).toArray
+    else data.tables name arity
+  publicInput := data.publicInput
 
-/-- Honest row generation preserves every verifier-fixed input cell. -/
-theorem buildRow_fixedInput_prefix (c : Component F) (fixed : FixedColumns F)
-    (columns : c.fixedColumns = some fixed) (index : UInt64) (suffix : Array F)
-    (data : ProverData F) (hint : ProverHint F) :
-    (c.buildRow (c.fixedInput fixed index suffix) data hint).extract 0 fixed.width = fixed.row index := by
-  have width : fixed.width ≤ size c.Input := by
-    simpa only [columns, Option.map_some, Option.getD_some] using c.fixed_width_le_input
-  have fixedSize : (fixed.row index).size = fixed.width := by simp [FixedColumns.row]
-  have rowSize : size c.Input ≤ (c.buildRow (c.fixedInput fixed index suffix) data hint).size := by
-    rw [buildRow, Circuit.size_witgenWithData, Vector.size_toArray]
-    omega
-  apply Array.ext
-  · simp only [Array.size_extract, Nat.sub_zero, fixedSize]
-    omega
-  · intro cell left right
-    have bound : cell < fixed.width := by omega
-    have inputBound : cell < (toElements (c.fixedInput fixed index suffix)).toArray.size := by
-      simp only [Vector.size_toArray]
-      omega
-    have cells := Circuit.getElem?_witgenWithData_of_lt
-      (c.circuit.main (varFromOffset c.Input 0)) data hint inputBound
-    change (c.buildRow (c.fixedInput fixed index suffix) data hint)[cell]?.getD 0 =
-      (toElements (c.fixedInput fixed index suffix)).toArray[cell] at cells
-    have generatedBound : cell < (c.buildRow (c.fixedInput fixed index suffix) data hint).size := by omega
-    rw [Array.getElem?_eq_getElem generatedBound] at cells
-    simpa [Array.getElem_extract, fixedInput, ProvableType.toElements_fromElements,
-      bound, Array.getElem?_eq_getElem right] using cells
+/-- The initialized entry satisfies Clean's intrinsic table-input consistency obligation. -/
+theorem inputData_consistent (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) :
+    (c.inputData inputs data).tables c.circuit.name (size c.Input) = (inputs.map toElements).toArray := by
+  simp only [inputData, ↓reduceIte]
+  congr 1
+  apply List.map_congr_left
+  intro input _
+  ext index bound
+  simp [rowPrefix]
+
+/-- A generated row has precisely the supplied typed input as its committed prefix. -/
+theorem rowPrefix_buildRow (c : Component F) (input : c.Input F) (data : ProverData F)
+    (hint : ProverHint F) :
+    rowPrefix (size c.Input) (c.buildRow input data hint) = toElements input := by
+  have same := c.rowInput_buildRow input data data hint
+  change valueFromOffset c.Input 0 (Environment.fromArray _ data) = input at same
+  rw [valueFromOffset_fromArray] at same
+  simpa only [ProvableType.toElements_fromElements] using congrArg toElements same
 
 end Component
 
@@ -329,8 +322,9 @@ namespace Table
 /-- A physical table's literal ledger depends only on its committed cells. Semantic channel
 predicates and lookup constraints still require their own data-transport arguments. -/
 theorem interactionsWith_setData (table : Table F) (data : ProverData F)
-    (channel : RawChannel F) :
-    ({ table with data } : Table F).interactionsWith channel = table.interactionsWith channel := by
+    (consistent : data.tables table.component.circuit.name (size table.component.Input) =
+      table.rowPrefixes (size table.component.Input)) (channel : RawChannel F) :
+    ({ table with data, data_consistent := consistent } : Table F).interactionsWith channel = table.interactionsWith channel := by
   apply congrArg List.flatten
   exact List.map_congr_left fun _ _ => table.component.interactionValuesWith_setData channel
 
@@ -339,7 +333,9 @@ def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
     (hint : ProverHint F) (bounded : inputs.length ≤ UInt64.size)
     (fixed : c.FixedRowsMatch (inputs.map (c.buildRow · data hint)) := by
       preserve_tactic_target
-      trivial) : Table F where
+      trivial)
+    (consistent : data.tables c.circuit.name (size c.Input) = (inputs.map toElements).toArray) :
+    Table F where
   component := c
   table := inputs.map (c.buildRow · data hint)
   data := data
@@ -349,88 +345,55 @@ def build (c : Component F) (inputs : List (c.Input F)) (data : ProverData F)
     obtain ⟨input, _, rfl⟩ := List.mem_map.mp member
     exact c.size_buildRow input data hint
   fixed_rows_match := fixed
-
-/-- Build all verifier-fixed rows using Clean's row witness generator. The suffix is indexed
-by physical row, so duplicate fixed messages and zero-demand rows retain their positions.
-This is a semantic table constructor; channel scheduling remains Clean's responsibility. -/
-def buildPreallocated (c : Component F) (fixed : FixedColumns F)
-    (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
-    (data : ProverData F) (hint : ProverHint F) : Table F :=
-  build c ((List.range fixed.height.toNat).map fun index => c.fixedInput fixed (UInt64.ofNat index) (suffix index))
-    data hint (by simpa only [List.length_map, List.length_range] using Nat.le_of_lt fixed.height.toNat_lt) (by
-      simp only [Component.FixedRowsMatch, columns, FixedColumns.RowsMatch, List.map_map]
-      exact List.map_congr_left fun index _ => c.buildRow_fixedInput_prefix fixed columns (UInt64.ofNat index) _ data hint)
-
-@[simp] theorem buildPreallocated_component (c : Component F) (fixed : FixedColumns F)
-    (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
-    (data : ProverData F) (hint : ProverHint F) :
-    (buildPreallocated c fixed columns suffix data hint).component = c := rfl
-
-@[simp] theorem buildPreallocated_length (c : Component F) (fixed : FixedColumns F)
-    (columns : c.fixedColumns = some fixed) (suffix : ℕ → Array F)
-    (data : ProverData F) (hint : ProverHint F) :
-    (buildPreallocated c fixed columns suffix data hint).length = fixed.height.toNat := by
-  simp [buildPreallocated, build, length]
-
-/-- Build ordinary input rows, or allocate the complete fixed trace with the supplied suffixes.
-The fixed prefix always comes from the component's verifier-owned program. -/
-def buildWithFixed (c : Component F) (inputs : List (c.Input F))
-    (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F)
-    (bounded : inputs.length ≤ UInt64.size) : Table F :=
-  match columns : c.fixedColumns with
-  | none => build c inputs data hint bounded (by simp only [Component.FixedRowsMatch, columns])
-  | some fixed => buildPreallocated c fixed columns (suffix fixed) data hint
-
-@[simp] theorem buildWithFixed_component (c : Component F) (inputs : List (c.Input F))
-    (suffix : FixedColumns F → ℕ → Array F) (data : ProverData F) (hint : ProverHint F) :
-    ∀ bounded, (buildWithFixed c inputs suffix data hint bounded).component = c := by
-  intro bounded
-  unfold buildWithFixed
-  split <;> rfl
+  data_consistent := by
+    rw [consistent, List.map_map]
+    congr 1
+    exact List.map_congr_left fun input _ => (c.rowPrefix_buildRow input data hint).symm
 
 section ConstantHint
 variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hint : ProverHint F)
   (bounded : inputs.length ≤ UInt64.size)
   (fixed : c.FixedRowsMatch (inputs.map (c.buildRow · data hint)))
+  (consistent : data.tables c.circuit.name (size c.Input) = (inputs.map toElements).toArray)
 
-@[simp] lemma build_component : (build c inputs data hint bounded fixed).component = c := rfl
+@[simp] lemma build_component : (build c inputs data hint bounded fixed consistent).component = c := rfl
 
 @[simp] lemma build_table :
-    (build c inputs data hint bounded fixed).table = inputs.map (c.buildRow · data hint) := rfl
+    (build c inputs data hint bounded fixed consistent).table = inputs.map (c.buildRow · data hint) := rfl
 
-@[simp] lemma build_length : (build c inputs data hint bounded fixed).length = inputs.length := List.length_map ..
+@[simp] lemma build_length : (build c inputs data hint bounded fixed consistent).length = inputs.length := List.length_map ..
 
 /-- Generation records the environment used by the row witnesses. -/
-@[simp] theorem build_data : (build c inputs data hint bounded fixed).data = data := rfl
+@[simp] theorem build_data : (build c inputs data hint bounded fixed consistent).data = data := rfl
 
 /-- Honest constant-hint witnesses satisfy the physical constraints at the generation data. -/
-theorem build_constraints (h_computable : c.circuit.base.ComputableWitnessesWithData)
+theorem build_constraints (h_computable : c.circuit.base.ComputableWitnesses)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
-    (build c inputs data hint bounded fixed).Constraints := by
+    (build c inputs data hint bounded fixed consistent).Constraints := by
   intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).1
 
 /-- Honest constant-hint witnesses satisfy the channel guarantees at the generation data. -/
-theorem build_guarantees (h_computable : c.circuit.base.ComputableWitnessesWithData)
+theorem build_guarantees (h_computable : c.circuit.base.ComputableWitnesses)
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
-    (build c inputs data hint bounded fixed).Guarantees := by
+    (build c inputs data hint bounded fixed consistent).Guarantees := by
   intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
   exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).2
 
-/-- The literal per-channel ledger at any evaluation data. -/
-theorem build_interactions (evaluationData : ProverData F) (channel : RawChannel F) :
-    ({ build c inputs data hint bounded fixed with data := evaluationData } : Table F).interactionsWith channel =
+/-- The literal per-channel ledger at the table's consistent evaluation data. -/
+theorem build_interactions (channel : RawChannel F) :
+    (build c inputs data hint bounded fixed consistent).interactionsWith channel =
       inputs.flatMap fun input => c.operations.interactionValuesWith channel
-        (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
+        (Environment.fromArray (c.buildRow input data hint) data) := by
   simp only [interactionsWith, build, environment, List.flatMap_map]
 
-/-- All interaction occurrences at any evaluation data. -/
-theorem build_interactionValues (evaluationData : ProverData F) :
-    ({ build c inputs data hint bounded fixed with data := evaluationData } : Table F).interactions =
+/-- All interaction occurrences at the table's consistent evaluation data. -/
+theorem build_interactionValues :
+    (build c inputs data hint bounded fixed consistent).interactions =
       inputs.flatMap fun input => c.operations.interactionValues
-        (Environment.fromArray (c.buildRow input data hint) evaluationData) := by
+        (Environment.fromArray (c.buildRow input data hint) data) := by
   simp only [interactions, build, environment, List.flatMap_map]
 
 end ConstantHint
@@ -449,11 +412,42 @@ theorem channel_mem_channels_of_mem_interactions (table : Table F) :
 
 end Table
 
+/-- Canonicalizing a table list also preserves the ledger of each physical prefix. -/
+theorem withDerivedData_take_interactionsWith (tables : List (Table F))
+    (unique : (tables.map fun table => table.component.circuit.name).Nodup)
+    (publicInput : Array F) (count : ℕ) (channel : RawChannel F) :
+    ((withDerivedData tables unique publicInput).take count).flatMap (·.interactionsWith channel) =
+      (tables.take count).flatMap (·.interactionsWith channel) := by
+  rw [withDerivedData, ← List.map_take, List.flatMap_map]
+  calc
+    _ = (tables.attach.take count).flatMap (fun table => table.val.interactionsWith channel) := by
+      apply congrArg List.flatten
+      apply List.map_congr_left
+      intro table _
+      exact Table.interactionsWith_setData table.val (deriveProverData tables publicInput)
+        (deriveTables_eq_of_mem tables unique table.property _) channel
+    _ = _ := by
+      change List.flatten ((tables.attach.take count).map _) = _
+      rw [List.map_take, List.attach_map_val (l := tables)
+        (f := fun table => table.interactionsWith channel), ← List.map_take]
+      rfl
+
 /-- Installing canonical data preserves all physical interaction occurrences. Channel predicates
 still require their own data-transport proof; this equality concerns the literal ledger only. -/
-@[simp] theorem withDerivedData_interactionsWith (tables : List (Table F)) (channel : RawChannel F) :
-    (withDerivedData tables).flatMap (·.interactionsWith channel) =
+@[simp] theorem withDerivedData_interactionsWith (tables : List (Table F))
+    (unique : (tables.map fun table => table.component.circuit.name).Nodup)
+    (publicInput : Array F) (channel : RawChannel F) :
+    (withDerivedData tables unique publicInput).flatMap (·.interactionsWith channel) =
       tables.flatMap (·.interactionsWith channel) := by
-  simp only [withDerivedData, List.flatMap_map, Table.interactionsWith_setData]
+  rw [withDerivedData, List.flatMap_map]
+  calc
+    _ = tables.attach.flatMap (fun table => table.val.interactionsWith channel) := by
+      apply congrArg List.flatten
+      apply List.map_congr_left
+      intro table _
+      exact Table.interactionsWith_setData table.val (deriveProverData tables publicInput)
+        (deriveTables_eq_of_mem tables unique table.property _) channel
+    _ = _ := congrArg List.flatten
+      (List.attach_map_val (l := tables) (f := fun table => table.interactionsWith channel))
 
 end Air.Flat

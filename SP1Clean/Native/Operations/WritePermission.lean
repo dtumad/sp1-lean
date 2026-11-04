@@ -140,7 +140,7 @@ def activeCircuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs 
     have ranges := image.writePermissionTable_sound _ member
     have permitted : Permitted image (input_var_address.map (Expression.eval env)) :=
       ⟨bounded, ranges.2.2 _ (lower ⟨ranges.1, bounded⟩) (upper ⟨bounded, ranges.2.1⟩)⟩
-    exact ⟨permitted, fun _ _ => True.intro⟩
+    exact ⟨permitted, fun _ => True.intro⟩
   completeness := by
     circuit_proof_start [activeMain, Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
     have inputEval (i : ℕ) (hi : i < 3) :
@@ -219,6 +219,11 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) RowInput unit
 /-- The installed permission component, with its bundled assumption transport shared by consumers. -/
 def component (image : ProgramImage) : Air.Flat.Component (ZMod p) where
   circuit := circuit image
+  generation := .demand {
+    channel := channel
+    trigger := .pull
+    input address := pure (⟨address.map (fun value => .witness (.expr value))⟩, 1)
+  }
   Assumptions := (circuit image).Assumptions
   circuit_assumptions_of_assumptions := fun _ _ _ _ _ assumed => assumed
 

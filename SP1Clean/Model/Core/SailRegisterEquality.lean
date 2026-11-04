@@ -10,7 +10,7 @@ and absent keys; it does not identify states merely because their integer regist
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 deriving instance ReflBEq, LawfulBEq for WaitReason, HartState, Privilege, misaligned_exception,
   MemoryRegionType, AtomicSupport, Reservability, PMAMisalignedExceptions, PMA, PMA_Region,

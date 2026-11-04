@@ -14,7 +14,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 /-- Input agreement and earlier-cell agreement determine every multiplication witness. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,

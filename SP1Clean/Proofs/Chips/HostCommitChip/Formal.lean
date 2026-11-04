@@ -1,3 +1,4 @@
+import ToClean.Air.HintIndex
 import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
 import ToClean.Circuit.Guarded
 
@@ -113,7 +114,7 @@ instance guardSupported (deferred : Bool) (slot : Fin 8) :
       change interaction ∈ ((main deferred slot input).operations offset).interactionsWith _ at member
       rw [main_public_interactions] at member
       cases deferred <;>
-        simp only [publicInteractions, Bool.false_eq_true, if_false, if_true,
+        simp only [publicInteractions, Bool.false_eq_true, ite_false, ite_true,
           List.mem_cons, List.mem_ofFn, List.not_mem_nil, or_false] at member
       · rcases member with rfl | ⟨index, rfl⟩ <;> rfl
       · rcases member with rfl | rfl <;> rfl)
@@ -121,5 +122,13 @@ instance guardSupported (deferred : Bool) (slot : Fin 8) :
 /-- Inactive padding keeps every physical occurrence and emits only zero multiplicities. -/
 def circuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) RowInput unit :=
   Guarded.circuit (activeCircuit deferred slot) inferInstance
+
+/-- Each authenticated call creates its own commitment update. Private inputs are indexed
+by the full call clock; the complete call and activity cell determine routing. -/
+def generation (deferred : Bool) (slot : Fin 8) :
+    Air.Flat.WitnessGeneration.Generation (ZMod p) RowInput :=
+  Witgen.HintIndex.unitDemand (circuit (p := p) deferred slot).name HostCallChip.channel .push
+    (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
+    (fun input => input.1.call) (fun input => input.2)
 
 end SP1Clean.HostCommitChip

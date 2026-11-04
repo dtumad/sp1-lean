@@ -250,7 +250,7 @@ theorem soundness :
   simp only [circuit_norm] at h_aa
   have c13 : ((13 : ℕ) : ZMod p) = (13 : ZMod p) := by norm_cast
   have h13p : (13 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  have hneg : - input_is_real = -1 := congrArg Neg.neg hr'
+  have hneg : input_is_real = 1 := hr'
   have h_range := h_range hneg
   simp only [byteChannel] at h_range
   rw [← c13] at h_range
@@ -264,8 +264,7 @@ theorem soundness :
   exact ⟨h_aa.1, b0, b1, b2, h_aa.2.2.2.2, by rw [← h_aa.1]; exact hMetadata.1,
     by rw [← h_aa.1]; exact hMetadata.2,
     h_aa.2.1, h_aa.2.2.1, h_aa.2.2.2.1⟩
-  · intro h1 h0
-    exact off_gate_vacuous hbin h1 h0
+  · exact hbin
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **Padding regression.** The literal all-zero operation input satisfies the honest-prover
@@ -367,7 +366,7 @@ theorem completeness :
       simp
   · -- the byte-bus `Range(13)` guarantee: `ByteRowSpec ⟨6, arg, 13, 0⟩ ↔ arg.val < 2^13`.
     intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have h13p : (13 : ℕ) < p := by omega
     have c13 : ((13 : ℕ) : ZMod p) = (13 : ZMod p) := by norm_cast
     simp only [circuit_norm, byteChannel]
@@ -397,10 +396,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Circuits.Types.AddressOperati
       preserve_tactic_target
       simp only [circuit_norm, main, byteChannel]
       refine ⟨List.nil_subset _, ?_⟩
-      intro env hgate hnotone hnotzero
-      rcases bool_of_mul_pred hgate with hzero | hone
-      · exact absurd hzero hnotzero
-      · exact absurd (congrArg Neg.neg hone) hnotone }
+      intro env hgate
+      exact bool_of_mul_pred hgate }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

@@ -161,7 +161,7 @@ private theorem verifierMain_stateInteractions (image : ProgramImage)
 theorem verifier_state_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     typedInteractionValuesWith (ensemble image).verifierOperations stateChannel
-      (Environment.fromInput witness.publicInput witness.data) =
+      witness.data.publicEnvironment =
       [TypedInteraction.pulledIfValue stateChannel 1
         ⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
           witness.publicInput.final_pc0, witness.publicInput.final_pc1,
@@ -178,7 +178,7 @@ theorem verifier_state_interactions {image : ProgramImage}
     Verifier.Program.operations, Operations.interactionsWith, verifierInteractions_interactions,
     sp1StateVerifierProgram, Verifier.ofInteractions_interactions]
   exact congrArg (List.map (AbstractInteraction.eval
-    (Environment.fromInput witness.publicInput witness.data)))
+    witness.data.publicEnvironment))
       (verifierMain_stateInteractions image (varFromOffset SP1PublicIO 0) 0)
 
 private theorem instruction_state_interactions {image : ProgramImage}
@@ -228,27 +228,27 @@ private theorem instruction_selector_binary {image : ProgramImage}
     (instructionRows_constraints witness constraints row member)
 
 /-- State selectors are signed units or zero throughout the combined witness. -/
-theorem state_signedBinary {image : ProgramImage}
+theorem state_binary {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   rw [state_interactions]
   intro interaction member
   simp only [List.mem_append] at member
   rcases member with (((boundary | ordinary) | bump) | halt) | syscall
-  · exact statePair_signed_binary 1 (Or.inr rfl) _ _ interaction boundary
-  · exact statePairs_signedBinary _ _ _ (instruction_selector_binary witness constraints) interaction ordinary
-  · exact statePairs_signedBinary _ _ _
+  · exact statePair_binary 1 (Or.inr rfl) _ _ interaction boundary
+  · exact statePairs_binary _ _ _ (instruction_selector_binary witness constraints) interaction ordinary
+  · exact statePairs_binary _ _ _
       (stateBumpRow_binary _ witness.data (systemTable_component witness 1)
     (witness.same_data _ (systemTable_mem witness 1))
         (systemTable_constraints witness constraints 1)
         (((finishedChannel_guarantees image witness constraints balanced).2) _ (systemTable_mem witness 1)).1)
       interaction bump
-  · exact statePairs_signedBinary _ _ _
+  · exact statePairs_binary _ _ _
       (haltRow_binary _ witness.data (systemTable_component witness 2) (systemTable_constraints witness constraints 2))
       interaction halt
-  · exact statePairs_signedBinary _ _ _
+  · exact statePairs_binary _ _ _
       (syscallRow_binary _ witness.data (systemTable_component witness 3) (systemTable_constraints witness constraints 3))
       interaction syscall
 
@@ -271,7 +271,7 @@ private theorem activeStateEdges_balance {image : ProgramImage}
     rw [typedEnsembleInteractionsWith_raw]
     exact balanced _ (by simp [ensemble, baseEnsemble, sp1Ensemble_channels])
   have pairs := Multiset.coe_eq_coe.mpr (producedMessages_perm_consumedMessages _ raw
-    (state_signedBinary witness constraints balanced))
+    (state_binary witness constraints balanced))
   have ordinary := statePairs_projection _ _ (decodedStateEdge witness.data) (instruction_selector_binary witness constraints)
   have bump := statePairs_projection _ _ (fun physical =>
     let row := stateBumpRow witness.data physical

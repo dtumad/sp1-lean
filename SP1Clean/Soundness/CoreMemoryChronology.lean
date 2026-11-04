@@ -39,7 +39,7 @@ theorem walk_rank_bound {α V : Type*} (edge : α → V × V) (rank : V → ℕ)
 
 -- Keep the decoded table row opaque while projecting the refresh theorem's time conclusion.
 theorem memoryBump_row_order (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation })
     (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {physical : Array (ZMod p)} (member : physical ∈ table.table)
     (real : (memoryBumpRow data physical).is_real = 1)

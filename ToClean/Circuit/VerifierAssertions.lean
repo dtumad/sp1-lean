@@ -22,11 +22,11 @@ namespace Verifier
 variable {F : Type} [FiniteField F]
 
 /-- Verifier composition appends the two literal operation lists. -/
-@[circuit_norm] theorem operations_bind {α β : Type} (program : Verifier F α)
-    (next : α → Verifier F β) :
+@[circuit_norm] theorem operations_bind {α β : Type} (program : VerifierM F α)
+    (next : α → VerifierM F β) :
     (program >>= next).operations = program.operations ++ (next program.1).operations := by
   rcases program with ⟨value, operations⟩
-  simp only [bind_def, Verifier.operations]
+  simp only [VerifierM.bind_def, VerifierM.operations]
   rcases next value with ⟨result, more⟩
   rfl
 
@@ -36,25 +36,22 @@ def zeroChannel (name : String) : Channel F field where
   Guarantees value _ := value = 0
 
 /-- Pull the checked value and supply zero using ordinary verifier primitives. -/
-def checkZero (name : String) (value : Expression F) : Verifier F Unit := do
+def checkZero (name : String) (value : Expression F) : VerifierM F Unit := do
   pull (zeroChannel name) value
   push (zeroChannel name) 0
 
-/-- Balance forces every checked value to zero, with the exact two-occurrences-per-check bound. -/
+/-- Abstract balance forces every checked value to zero. The verifier counts both occurrences. -/
 theorem zero_ledger_iff (name : String) (values : List F) :
     BalancedInteractions (values.flatMap fun value =>
       [(zeroChannel name).pulledValue value, (zeroChannel name).pushedValue 0]) ↔
-      (2 * values.length < ringChar F ∨ ringChar F = 0) ∧ ∀ value ∈ values, value = 0 := by
+      ∀ value ∈ values, value = 0 := by
   rw [Channel.pairedLedger_balanced_iff (zeroChannel name) values (fun value => (value, 0))]
   constructor
-  · rintro ⟨bound, permutation⟩
-    refine ⟨bound, ?_⟩
-    intro value member
+  · intro permutation value member
     have present := permutation.mem_iff.mpr (List.mem_map.mpr ⟨value, member, rfl⟩)
     obtain ⟨_, _, same⟩ := List.mem_map.mp present
     exact same.symm
-  · rintro ⟨bound, zero⟩
-    refine ⟨bound, ?_⟩
+  · intro zero
     have same : values.map (fun _ => (0 : F)) = values.map (fun value => value) := by
       apply List.map_congr_left
       intro value member
@@ -70,10 +67,10 @@ theorem checkZero_values (name : String) (value : Expression F)
   simp [checkZero, circuit_norm, _root_.Operations.interactionValuesWith,
     _root_.Operations.interactionsWith, Channel.pulledValue, Channel.pushedValue,
     AbstractInteraction.eval, ChannelInteraction.toRaw, Channel.pulled,
-    Channel.emitted, Expression.eval, explicit_provable_type]
+    Expression.eval, explicit_provable_type]
 
 /-- Check each expression separately; equal expressions retain separate occurrences. -/
-def checkZeros (name : String) (values : List (Expression F)) : Verifier F Unit :=
+def checkZeros (name : String) (values : List (Expression F)) : VerifierM F Unit :=
   values.forM (checkZero name)
 
 /-- Traversal preserves the operation order and every repeated check. -/
@@ -93,7 +90,7 @@ theorem checkZeros_values (name : String) (values : List (Expression F))
       values.flatMap (fun value =>
         [(zeroChannel name).pulledValue (Expression.eval env value),
           (zeroChannel name).pushedValue 0]) := by
-  simp only [circuitOperations, checkZeros_operations, Operations.circuitOperations,
+  simp only [VerifierM.circuitOperations, checkZeros_operations, Operations.circuitOperations,
     Operations.interactions, List.map_flatMap]
   induction values with
   | nil => simp [circuit_norm, _root_.Operations.interactionValuesWith,
@@ -110,7 +107,7 @@ theorem checkZeros_other_values (name : String) (values : List (Expression F))
     (env : Environment F) (channel : RawChannel F)
     (different : (zeroChannel (F := F) name).toRaw ≠ channel) :
     (checkZeros name values).circuitOperations.interactionValuesWith channel env = [] := by
-  simp only [circuitOperations, checkZeros_operations, Operations.circuitOperations,
+  simp only [VerifierM.circuitOperations, checkZeros_operations, Operations.circuitOperations,
     Operations.interactions, List.map_flatMap]
   induction values with
   | nil => simp [circuit_norm, _root_.Operations.interactionValuesWith,
@@ -121,25 +118,42 @@ theorem checkZeros_other_values (name : String) (values : List (Expression F))
       _root_.Operations.interactions_append, List.filter_append, List.map_append] at ih ⊢
     rw [ih, List.append_nil]
     simp [checkZero, circuit_norm, ChannelInteraction.toRaw, Channel.pulled,
-      Channel.emitted, different]
+      different]
 
-/-- Balanced check interactions are equivalent to all assertions, including the count bound. -/
+/-- Abstract balance of check interactions is equivalent to all assertions. -/
 theorem checkZeros_balanced_iff (name : String) (values : List (Expression F))
     (env : Environment F) :
     BalancedInteractions
       ((checkZeros name values).circuitOperations.interactionValuesWith (zeroChannel name).toRaw env) ↔
-      (2 * values.length < ringChar F ∨ ringChar F = 0) ∧
-        ∀ value ∈ values, Expression.eval env value = 0 := by
+      ∀ value ∈ values, Expression.eval env value = 0 := by
   rw [checkZeros_values]
-  simpa only [List.flatMap_map, Function.comp_def, List.length_map, List.forall_mem_map] using
+  simpa only [List.flatMap_map, Function.comp_def, List.forall_mem_map] using
     zero_ledger_iff name (values.map (Expression.eval env))
+
+/-- Zero-check ledgers have Boolean multiplicities and preserve every repeated occurrence. -/
+theorem checkZeros_isBool (name : String) (values : List (Expression F)) (env : Environment F) :
+    ∀ i ∈ (checkZeros name values).circuitOperations.interactionValuesWith (zeroChannel name).toRaw env,
+      IsBool i.mult := by
+  rw [checkZeros_values]
+  intro i hi
+  obtain ⟨value, _, hi⟩ := List.mem_flatMap.mp hi
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hi
+  rcases hi with rfl | rfl <;> exact .inr rfl
+
+/-- Checked zero assertions imply the concrete LogUp equation, without a capacity premise. -/
+theorem checkZeros_logUp_of_checks (name : String) (values : List (Expression F))
+    (env : Environment F) (checked : ∀ value ∈ values, Expression.eval env value = 0) :
+    LogUpBalanced ((checkZeros name values).circuitOperations.interactionValuesWith
+      (zeroChannel name).toRaw env) :=
+  ((checkZeros_balanced_iff name values env).mpr checked).logUp_of_isBool
+    (checkZeros_isBool name values env)
 
 /-- Local channel guarantees supply exactly the requested zero checks. -/
 theorem checkZeros_guarantees (name : String) (values : List (Expression F))
     (env : Environment F) :
     (checkZeros name values).circuitOperations.FullGuarantees env ↔
       ∀ value ∈ values, Expression.eval env value = 0 := by
-  simp only [circuitOperations, checkZeros_operations, Operations.circuitOperations,
+  simp only [VerifierM.circuitOperations, checkZeros_operations, Operations.circuitOperations,
     Operations.interactions, List.map_flatMap]
   induction values with
   | nil => simp [circuit_norm]
@@ -152,7 +166,7 @@ theorem checkZeros_guarantees (name : String) (values : List (Expression F))
 /-- Every zero check supplies its own outgoing requirement, independently of the checked value. -/
 theorem checkZeros_requirements (name : String) (values : List (Expression F))
     (env : Environment F) : (checkZeros name values).circuitOperations.FullRequirements env := by
-  simp only [circuitOperations, checkZeros_operations, Operations.circuitOperations,
+  simp only [VerifierM.circuitOperations, checkZeros_operations, Operations.circuitOperations,
     Operations.interactions, List.map_flatMap]
   induction values with
   | nil => simp [circuit_norm]
@@ -214,11 +228,32 @@ theorem Program.andThen_values {PublicIO : TypeMap} [ProvableType PublicIO]
     _root_.Operations.interactionValuesWith, _root_.Operations.interactionsWith,
     _root_.Operations.interactions_append, List.filter_append, List.map_append]
 
+/-- Verifier composition covers exactly the channels of its two programs. -/
+theorem Program.mem_andThen_channels {PublicIO : TypeMap} [ProvableType PublicIO]
+    (first second : Program F PublicIO) (channel : RawChannel F) :
+    channel ∈ (first.andThen second).channels ↔
+      channel ∈ first.channels ∨ channel ∈ second.channels := by
+  simp only [Program.channels, Program.channelsWithGuarantees, Program.channelsWithRequirements,
+    Program.operations, andThen, operations_bind, Operations.channelsWithGuarantees,
+    Operations.channelsWithRequirements, List.filterMap_append, List.mem_append]
+  tauto
+
+/-- Every occurrence of a zero-check program uses its dedicated channel. -/
+theorem checkZeros_channels (name : String) (values : List (Expression F)) :
+    (checkZeros name values).operations.channelsWithGuarantees ++
+      (checkZeros name values).operations.channelsWithRequirements ⊆ [(zeroChannel name).toRaw] := by
+  intro channel member
+  simp only [checkZeros_operations, Operations.channelsWithGuarantees,
+    Operations.channelsWithRequirements, List.filterMap_flatMap, List.mem_append,
+    List.mem_flatMap] at member
+  rcases member with ⟨value, _, member⟩ | ⟨value, _, member⟩ <;>
+    simpa [checkZero, circuit_norm, Operations.channelsWithGuarantees,
+      Operations.channelsWithRequirements] using member
+
 /-- The bundled verifier enforces its entire specification through channel balance. -/
 theorem zerosProgram_balanced_iff (name : String) (n : ℕ) (env : Environment F) :
     BalancedInteractions ((zerosProgram (F := F) name n).circuitOperations.interactionValuesWith
       (zeroChannel name).toRaw env) ↔
-      (2 * n < ringChar F ∨ ringChar F = 0) ∧
         (zerosProgram name n).Spec (eval env (varFromOffset (F := F) (fields n) 0)) env.data := by
   simpa [zerosProgram, circuit_norm, explicit_provable_type] using
     checkZeros_balanced_iff name (varFromOffset (fields n) 0).toList env

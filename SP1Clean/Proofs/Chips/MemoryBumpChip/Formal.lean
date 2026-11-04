@@ -1,3 +1,4 @@
+import ToClean.Air.HintIndex
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
@@ -57,12 +58,9 @@ theorem soundness :
   obtain ⟨h_gate, b016, b3248, bpair, bltu, a_cl, a_hieq, a_diff, bdlow, bdhigh, h_mem⟩ := h_holds
   have h_bool := bool_of_mul_pred h_gate
   refine ⟨⟨h_bool, fun hr1 => ?_⟩,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun h1 h0 => off_gate_vacuous h_bool h1 h0,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun h1 h0 => off_gate_vacuous h_bool h1 h0,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun h1 h0 => off_gate_vacuous h_bool h1 h0,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun _ h0 => ?_⟩
+    h_bool, h_bool, h_bool, h_bool, h_bool, h_bool, h_bool, fun h0 => ?_⟩
   · -- the `Spec` consequent on a real row
-    have hneg : -input_is_real = -1 := by rw [hr1]
+    have hneg : input_is_real = 1 := by rw [hr1]
     rw [hr1, one_mul] at a_cl a_hieq a_diff
     obtain ⟨hisu, hclk⟩ := h_mem hneg
     refine ⟨hisu, hclk,
@@ -79,7 +77,7 @@ theorem soundness :
     rwa [val32] at this
   · -- the refreshed push's requirement: same value word as the pull, own canonical limbs
     have hr1 := h_bool.resolve_left h0
-    have hneg : -input_is_real = -1 := by rw [hr1]
+    have hneg : input_is_real = 1 := by rw [hr1]
     obtain ⟨hisu, -⟩ := h_mem hneg
     exact ⟨hisu, clkLow_lt_2pow24
       ((byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact b016 hneg))
@@ -92,8 +90,8 @@ theorem completeness :
   obtain ⟨h_bool, h_gated⟩ := h_assumptions
   rcases h_bool with h0 | h1
   · -- padding row: the gated asserts vanish, the gated pulls fire only off-padding
-    have hne : ∀ {P : Prop}, -input_is_real = -1 → P :=
-      fun h => absurd (neg_inj.mp h) (by rw [h0]; exact zero_ne_one)
+    have hne : ∀ {P : Prop}, input_is_real = 1 → P :=
+      fun h => absurd (h) (by rw [h0]; exact zero_ne_one)
     exact ⟨by rw [h0, zero_mul], hne, hne, hne, hne, by rw [h0, zero_mul],
       by rw [h0, zero_mul], by rw [h0, zero_mul], hne, hne, hne⟩
   · -- real row: everything from the `Spec` tail
@@ -153,8 +151,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       -- refreshed **push** (unnegated multiplicity) is delegated to `channelsWithRequirements`.
       rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
         first
-          | (right; rw [ChannelInteraction.toRaw_requirements]; intro h1 h0;
-             simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_bool h1 h0)
+          | (right; simpa only [circuit_norm, byteChannel, memoryChannel] using h_bool)
           | exact Or.inl List.mem_cons_self
 
 set_option linter.unusedSectionVars false in
@@ -169,11 +166,29 @@ set_option linter.unusedSectionVars false in
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := MemoryBumpChip.circuit (p := p), Assumptions := (MemoryBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, MemoryBumpChip.circuit_main_eq]
-  change Operations.lookups
-    ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-      .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p)) = _
-  simp [circuit_norm]
+    ((MemoryBumpChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat, FlatOperation.lookups, MemoryBumpChip.circuit_main_eq, MemoryBumpChip.main]
+
+
+/-- One refresh per requested register record. The private index uses the complete
+48-bit refreshed clock and five-bit register address, and routing checks all message cells. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  let read (message : Var MemoryMsg (ZMod p)) : Inputs (Witgen.FExpr (ZMod p)) :=
+    Witgen.HintIndex.input (circuit (p := p)).name
+      ((message.clk_high.val * 16777216 + message.clk_low.val) * 32 + message.addr0.val)
+  .demand {
+    channel := memoryChannel
+    trigger := .pull
+    guard message :=
+      let input := read message
+      .and (input.is_real =? 1) (Witgen.HintIndex.messageEq
+        (⟨input.clk_24_32 + input.clk_32_48 * 256,
+          input.clk_0_16 + input.clk_16_24 * 65536, input.addr, 0, 0, input.access.prev_value⟩
+          : MemoryMsg (Witgen.FExpr (ZMod p))) message)
+    input message := pure (fromElements ((toElements (read message)).map
+      Air.Flat.WitnessGeneration.Cell.witness))
+  }
 
 end SP1Clean.MemoryBumpChip

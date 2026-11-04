@@ -9,7 +9,7 @@ preserve the literal Sail register map, not merely its integer-register observat
 
 namespace SP1Clean.Model.Core
 
-open SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D LeanRV64D.Defs
+open SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D LeanRV64D
 
 /-- The exact effect produced by a permitted HALT call. -/
 def HostState.haltExecution (host : HostState) (exit arg2 : BitVec 64) : HostExecution :=

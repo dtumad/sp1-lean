@@ -66,9 +66,9 @@ theorem isZero_of_assert {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZM
   obtain ⟨h_eq, _, h_mul⟩ := h_assert
   by_cases ha : a = 0
   · subst ha
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     linear_combination -h_eq
-  · rw [if_neg ha]
+  · rw [ite_eq_right ha]
     calc cols.result = cols.result * (a * a⁻¹) := by rw [mul_inv_cancel₀ ha, mul_one]
       _ = cols.result * a * a⁻¹ := by ring
       _ = 0 := by rw [h_mul, zero_mul]
@@ -78,7 +78,7 @@ composing word-level completeness needs this to reconstruct the gated inverse co
 theorem inverse_of_assert {a : ZMod p} {cols : Circuits.Types.IsZeroOperation (ZMod p)}
     (h_assert : AssertSpec a cols) (ha : a ≠ 0) : cols.inverse * a = 1 := by
   have hr : cols.result = 0 := by
-    have := isZero_of_assert h_assert; rwa [if_neg ha] at this
+    have := isZero_of_assert h_assert; rwa [ite_eq_right ha] at this
   obtain ⟨h_eq, _, _⟩ := h_assert
   rw [hr] at h_eq
   linear_combination -h_eq
@@ -130,7 +130,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     refine ⟨?_, ?_, ?_⟩
     · by_cases ha : input_a = 0
       · simp [hres, ha]
-      · rw [hres, if_neg ha, hinv ha]; simp
+      · rw [hres, ite_eq_right ha, hinv ha]; simp
     all_goals (rw [hres]; by_cases ha : input_a = 0 <;> simp [ha])
 
 /-- The result `populate a` satisfies the gadget `Spec` for any `is_real`. The composing word-level
@@ -141,7 +141,7 @@ theorem spec_populate (a is_real : ZMod p) :
   by_cases ha : a = 0
   · subst ha; exact ⟨by simp [populate], fun hne => absurd rfl hne⟩
   · refine ⟨by simp [populate, ha], fun _ => ?_⟩
-    simp only [populate, if_neg ha]; exact inv_mul_cancel₀ ha
+    simp only [populate, ite_eq_right ha]; exact inv_mul_cancel₀ ha
 
 /-- SP1's `IsZeroOperation::eval` as a Clean-native `FormalAssertion`. -/
 def circuit : FormalAssertion (ZMod p) Inputs :=

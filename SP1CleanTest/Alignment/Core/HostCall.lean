@@ -60,7 +60,7 @@ private def evaluate (input : Inputs Fp) (corruptSelector := false) :
         interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>
     if env interaction.mult == 0 then none else
-      some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+      some (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
 
 private def row (code : ℕ) : Inputs Fp :=
   let instruction : SyscallInstrsChip.Inputs Fp :=
@@ -153,25 +153,32 @@ private def instructionOfCall (message : HostCallChip.Message Fp) : Inputs Fp :=
       op_c_memory := ⟨message.arg2, ⟨0, message.clk_low + 1⟩⟩
       op_a_value := message.result } }
 
+private def tableOf (component : Component Fp) (inputs : List (component.Input Fp))
+    (bounded : inputs.length ≤ UInt64.size)
+    (fixed : component.FixedRowsMatch (inputs.map (component.buildRow ·
+      (component.inputData inputs (ProverData.empty Fp)) (ProverHint.empty Fp))) := by trivial) : Table Fp :=
+  Table.build component inputs (component.inputData inputs (ProverData.empty Fp)) (ProverHint.empty Fp)
+    bounded fixed (component.inputData_consistent inputs (ProverData.empty Fp))
+
 private def instructionTable (rows : List (Inputs Fp))
     (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
-  Table.build Soundness.HostCallLedger.producer rows (fun _ _ => #[]) (ProverHint.empty Fp) bounded
+  tableOf Soundness.HostCallLedger.producer rows bounded
 
 private def handlerTable (rows : List (HostHintReadChip.Inputs Fp))
     (bounded : rows.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Table Fp :=
-  Table.build Soundness.HostHintReadCoverage.handler rows (fun _ _ => #[]) (ProverHint.empty Fp) bounded
+  tableOf Soundness.HostHintReadCoverage.handler rows bounded
 
 private def handoff (instructions : List (Inputs Fp)) (handlers : List (HostHintReadChip.Inputs Fp))
     (instructionBound : instructions.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide)
     (handlerBound : handlers.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map, List.length_append, List.length_reverse]; decide) : Bool :=
   let tables := [instructionTable instructions instructionBound, handlerTable handlers handlerBound]
-  let data := deriveProverData tables
+  let data := deriveProverData tables #[]
   let ledger := tables.flatMap fun table =>
     table.table.flatMap fun physical =>
       let env := Environment.fromArray physical data
       (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
         if interaction.channel.name == "sp1.native.host_call" then
-          some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult) else none
+          some (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult) else none
   HintReadFixtures.balanced ledger
 
 /-- Physical decoding and the full handoff retain two clock epochs and discard only padding.
@@ -183,7 +190,7 @@ theorem physicalHandoff :
     instructions.all (fun input => (evaluate input).1) = true ∧
       handoff (padding :: instructions ++ [padding]) handlers.reverse = true ∧
       ((Soundness.HostCallLedger.calls (instructionTable (padding :: instructions ++ [padding]))
-        (deriveProverData [instructionTable (padding :: instructions ++ [padding])])).map
+        (deriveProverData [instructionTable (padding :: instructions ++ [padding])] #[])).map
         Soundness.HostCallLedger.clock) = [(0, 1), (1, 1)] := by native_decide
 
 /-- An extra handler or a changed full return word cannot balance one instruction.
@@ -195,7 +202,7 @@ theorem duplicateAndForgedHandoff :
       handoff [instruction] [{ handler with call := { handler.call with result := #v[241, 0, 0, 1] } }] = false ∧
       handoff [instruction, instruction] [handler, handler] = true ∧
       decide (((Soundness.HostCallLedger.calls (instructionTable [instruction, instruction])
-        (deriveProverData [instructionTable [instruction, instruction]])).map
+        (deriveProverData [instructionTable [instruction, instruction]] #[])).map
         Soundness.HostCallLedger.clock).Nodup) = false := by native_decide
 
 private def installed : Table Fp :=
@@ -210,14 +217,14 @@ private def installed : Table Fp :=
 
 private def physicalLedger (table : Table Fp) (name : String) : List (String × List Fp × Fp) :=
   table.table.flatMap fun physical =>
-    let env := Environment.fromArray physical (deriveProverData [table])
+    let env := Environment.fromArray physical (deriveProverData [table] #[])
     (FlatOperation.interactions table.component.rowOperations.toFlat).filterMap fun interaction =>
       if interaction.channel.name == name && env interaction.mult != 0 then
-        some (name, (interaction.msg.map env).toList, env interaction.mult) else none
+        some (name, (interaction.msg.map env).toList, (interaction.eval env).signedMult) else none
 
 private def physicalChecks (table : Table Fp) : Bool :=
   table.table.all fun physical =>
-    let env := Environment.fromArray physical (deriveProverData [table])
+    let env := Environment.fromArray physical (deriveProverData [table] #[])
     table.component.rowOperations.toFlat.all fun operation =>
       match operation with
       | .assert expression => env expression == 0
@@ -257,13 +264,12 @@ private def registeredTables : List (Table Fp) :=
   let views := Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)
   List.ofFn fun index : Fin views.length =>
     if index.val = 0 then handlerTable [hintHandler 1]
-    else if index.val = 2 then Table.build (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
-      [enterMessage] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide))
-    else if index.val = 19 then Table.build (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
-      [lengthHandler] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide))
-    else Table.build views[index].component [] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact Nat.zero_le _) (by
-      have noFixed : views[index].component.fixedColumns = none := by fin_cases index <;> rfl
-      simp only [Component.FixedRowsMatch, noFixed])
+    else if index.val = 2 then tableOf (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
+      [enterMessage] (by exact (show 1 ≤ UInt64.size from by decide))
+    else if index.val = 19 then tableOf (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
+      [lengthHandler] (by exact (show 1 ≤ UInt64.size from by decide))
+    else tableOf views[index].component [] (by exact Nat.zero_le _) (by
+      fin_cases index <;> trivial)
 
 /-- The heterogeneous physical tables retain the exact registered components, without casts. -/
 private theorem registeredTables_components :

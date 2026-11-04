@@ -5,7 +5,7 @@ import SP1Clean.Model.Core.MemorySupport
 /-! # Resource edges independent of witness construction -/
 
 namespace SP1CleanTest.Core.ResourceUsage
-open SP1Clean.Model.Core LeanRV64D.Defs
+open SP1Clean.Model.Core LeanRV64D
 
 private def memory : ByteMemory := ⟨[(32, 7), (32, 9), (33, 0), (64, 8)]⟩
 

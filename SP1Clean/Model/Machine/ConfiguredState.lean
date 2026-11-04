@@ -11,7 +11,7 @@ checked program loader and the concrete execution witnesses. It was previously l
 non-vacuity examples; keeping it in the Model layer lets the execution model own its boot state.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Soundness.Target
 
 open Sail LeanRV64D LeanRV64D.Functions SP1Clean.SailMem
@@ -64,13 +64,13 @@ lemma cfgState_init (pc : BitVec 64) : (configuredState pc).isInitialized := by
 
 lemma cfgState_pc (pc : BitVec 64) : (configuredState pc).regs.get? Register.PC = some pc := by
   simp only [configuredState]
-  rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide), Std.ExtDHashMap.get?_insert,
-    dif_neg (by decide), Std.ExtDHashMap.get?_insert_self]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide), Std.ExtDHashMap.get?_insert,
+    dite_eq_right (by decide), Std.ExtDHashMap.get?_insert_self]
 
 lemma cfgState_priv (pc : BitVec 64) :
     (configuredState pc).regs.get? Register.cur_privilege = some Privilege.Machine := by
   simp only [configuredState]
-  rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide), Std.ExtDHashMap.get?_insert_self]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide), Std.ExtDHashMap.get?_insert_self]
 
 /-- Any register other than the four overridden ones keeps its `fullRegs` default in `configuredState`. -/
 lemma cfgState_get?_other (pc : BitVec 64) (reg : Register)
@@ -78,10 +78,10 @@ lemma cfgState_get?_other (pc : BitVec 64) (reg : Register)
     (h4 : reg ≠ Register.misa) :
     (configuredState pc).regs.get? reg = some (regDefault reg) := by
   simp only [configuredState]
-  rw [Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h3 (beq_iff_eq.mp hc).symm),
-      Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm),
-      Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h4 (beq_iff_eq.mp hc).symm)]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h3 (beq_iff_eq.mp hc).symm),
+      Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm),
+      Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h4 (beq_iff_eq.mp hc).symm)]
   exact get?_fullRegs reg
 
 /-- The `.get` form of `cfgState_get?_other` (for the `isValidMemConfig`/`mie`/`mideleg` fields, which read
@@ -106,9 +106,9 @@ lemma cfgState_misa (pc : BitVec 64) (hmem : Register.misa ∈ (configuredState 
     (configuredState pc).regs.get Register.misa hmem = 4096#64 := by
   have h : (configuredState pc).regs.get? Register.misa = some (4096#64) := by
     simp only [configuredState]
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-        Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-        Std.ExtDHashMap.get?_insert, dif_neg (by decide),
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+        Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+        Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
         Std.ExtDHashMap.get?_insert_self]
   rwa [Std.ExtDHashMap.get?_eq_some_get hmem, Option.some_inj] at h
 
@@ -176,7 +176,7 @@ theorem registersZero_configuredState (pc : BitVec 64) :
   intro idx
   by_cases h0 : idx = 0
   · simp [SailState.get_reg?, h0]
-  · rw [SailState.get_reg?, if_neg h0]
+  · rw [SailState.get_reg?, ite_eq_right h0]
     have hne := reg_idx_ne_overrides idx
     rw [cfgState_get?_other pc _ hne.1 hne.2.1 hne.2.2.1 hne.2.2.2]
     exact regDefault_reg_idx idx

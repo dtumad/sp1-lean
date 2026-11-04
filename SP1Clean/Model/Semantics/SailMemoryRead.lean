@@ -7,7 +7,7 @@ fault results. The split loop is handled at arbitrary fuel, without assuming ali
 -/
 
 namespace SP1Clean.SailMem
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailFrame SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 private theorem readOnly_readByte (source : SailState) (address : ℕ) :
@@ -48,7 +48,7 @@ theorem readOnly_read_ram (source : SailState) (address : physaddr) (width : ℕ
     · exact ReadOnlyAt.throw source _
 
 private theorem readOnly_assert (source : SailState) (condition : Bool) (message : String) :
-    ReadOnlyAt source (LeanRV64D.assert condition message) := by
+    ReadOnlyAt source (PreSail.sail_assert condition message) := by
   cases condition
   · exact ReadOnlyAt.throw source _
   · exact ReadOnlyAt.pure source _
@@ -94,8 +94,7 @@ private theorem readOnly_pma (source : SailState) (cfg : SailConfigured source)
   · intro attributes
     have mag := readOnly_mag source address width attributes store
     cases store <;>
-      simp only [Bool.false_eq_true, ↓reduceIte, LeanRV64D.Functions.not, Bool.not_false,
-        PreSail.assert]
+      simp only [Bool.false_eq_true, ↓reduceIte, LeanRV64D.Functions.not, Bool.not_false]
     all_goals
       apply ReadOnlyAt.bindE (ReadOnlyAt.pure source _)
       intro canAccess
@@ -155,7 +154,7 @@ theorem readOnly_checked_mem_read (source : SailState) (cfg : SailConfigured sou
         · intro value
           exact ReadOnlyAt.pure source _
         · rintro ⟨data, finished, index⟩
-          apply ReadOnlyAt.bindE_of_run (show (LeanRV64D.assert true "loop dummy assert").run source =
+          apply ReadOnlyAt.bindE_of_run (show (PreSail.sail_assert true "loop dummy assert").run source =
             .ok () source from rfl)
           apply ReadOnlyAt.bindE_of_run (run_pmpCheck_none _ _ _ source cfg.init cfg.toValidMemConfig.h_pmp_off)
           apply ReadOnlyAt.bindE_of_run (run_mmio_readable_false source cfg _ _)
@@ -216,7 +215,7 @@ theorem readOnly_mem_write_ea (source : SailState) (cfg : SailConfigured source)
       · intro value
         exact ReadOnlyAt.pure source _
       · rintro ⟨finished, index⟩
-        apply ReadOnlyAt.bindE_of_run (show (LeanRV64D.assert true "loop dummy assert").run source =
+        apply ReadOnlyAt.bindE_of_run (show (PreSail.sail_assert true "loop dummy assert").run source =
           .ok () source from rfl)
         apply ReadOnlyAt.bindE_of_run (run_pmpCheck_none _ _ _ source cfg.init cfg.toValidMemConfig.h_pmp_off)
         exact ReadOnlyAt.pure source _

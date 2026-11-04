@@ -17,12 +17,12 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
-/-- Every physical Memory interaction is disabled or has unit signed multiplicity. -/
+/-- Every physical Memory interaction is disabled or has unit multiplicity. -/
 def MemoryBinary (component : Component (ZMod p)) : Prop :=
   ∀ data physical, component.operations.ConstraintsHold (Environment.fromArray physical data) →
     ∀ interaction ∈ component.operations.interactionValuesWith memoryChannel.toRaw
       (Environment.fromArray physical data),
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1
+      IsBool interaction.mult
 
 omit [Fact (2 ^ 24 < p)] in
 /-- Components with no Memory interactions satisfy the multiplicity condition without constraints. -/
@@ -40,60 +40,68 @@ private theorem instruction_memoryBinary (component : Component (ZMod p))
   obtain ⟨chip, chipMem, rfl⟩ := List.mem_map.mp member
   intro data physical constraints interaction emitted
   obtain ⟨source, sourceMem, rfl⟩ := List.mem_map.mp emitted
-  exact signedVal_binary_of_selector_gated _ _
-    (supportedChip_selectorConstraintShape chip chipMem data physical constraints)
-    (supportedChip_memorySelectorConstraintShape chip chipMem data physical constraints source sourceMem)
+  rcases supportedChip_memorySelectorConstraintShape chip chipMem data physical constraints
+    source sourceMem with zero | selector
+  · exact Or.inl zero
+  · change IsBool (Expression.eval (Environment.fromArray physical data) source.mult)
+    rw [selector]
+    exact supportedChip_selectorConstraintShape chip chipMem data physical constraints
 
+omit [Fact (2 ^ 24 < p)] in
 private theorem memoryBinary_of_gated {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (gate : Var Input (ZMod p) → Expression (ZMod p))
     (gated : ∀ input offset (env : Environment (ZMod p)),
       ∀ interaction ∈ ((circuit.main input).operations offset).interactionsWith memoryChannel.toRaw,
-        env interaction.mult = -(env (gate input)) ∨ env interaction.mult = 0 ∨
+        env interaction.mult = 0 ∨
           env interaction.mult = env (gate input))
     (binary : ∀ input offset env,
       ConstraintsHold.Shallow env ((circuit.main input).operations offset) →
-        env (gate input) = 0 ∨ env (gate input) = 1) : MemoryBinary { circuit, Assumptions := circuit.Assumptions } := by
+        env (gate input) = 0 ∨ env (gate input) = 1) : MemoryBinary { circuit, Assumptions := circuit.Assumptions, generation } := by
   intro data physical constraints interaction member
   have bound := binary (varFromOffset Input 0) (size Input) (Environment.fromArray physical data)
     (shallowConstraints_of_componentConstraints circuit _ constraints)
   rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
   obtain ⟨source, sourceMem, rfl⟩ := List.mem_map.mp member
-  exact signedVal_binary_of_selector_gated _ _ bound
-    (gated (varFromOffset Input 0) (size Input) _ source sourceMem)
+  rcases gated (varFromOffset Input 0) (size Input) _ source sourceMem with zero | selector
+  · exact Or.inl zero
+  · change IsBool ((Environment.fromArray physical data) source.mult)
+    rw [selector]
+    exact bound
 
-private theorem halt_memoryBinary : MemoryBinary ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)) := by
-  apply memoryBinary_of_gated HaltChip.circuit (fun input => input.is_real) ?_
+private theorem halt_memoryBinary : MemoryBinary ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)) := by
+  apply memoryBinary_of_gated HaltChip.circuit HaltChip.generation (fun input => input.is_real) ?_
     HaltChip.selectorBinary_of_shallow
   intro input offset env
   change ∀ interaction ∈ ((HaltChip.main input).operations offset).interactionsWith memoryChannel.toRaw,
-    env interaction.mult = -(env input.is_real) ∨ env interaction.mult = 0 ∨
+    env interaction.mult = 0 ∨
       env interaction.mult = env input.is_real
   rw [HaltChip.interactionsWith_memory_eq]
   simp [HaltChip.exposedMemoryInteractions, Channel.pulledIf, Channel.pushedIf,
-    ChannelInteraction.toRaw, pulledIf_mult, pushedIf_mult, Expression.eval]
+    ChannelInteraction.toRaw, pulledIf_mult, pushedIf_mult]
 
-private theorem syscall_memoryBinary : MemoryBinary ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)) := by
-  apply memoryBinary_of_gated SyscallInstrsChip.circuit (fun input => input.is_real) ?_
+private theorem syscall_memoryBinary : MemoryBinary ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)) := by
+  apply memoryBinary_of_gated SyscallInstrsChip.circuit SyscallInstrsChip.generation (fun input => input.is_real) ?_
     SyscallInstrsChip.selectorBinary_of_shallow
   intro input offset env
   change ∀ interaction ∈ ((SyscallInstrsChip.main input).operations offset).interactionsWith memoryChannel.toRaw,
-    env interaction.mult = -(env input.is_real) ∨ env interaction.mult = 0 ∨
+    env interaction.mult = 0 ∨
       env interaction.mult = env input.is_real
   rw [SyscallInstrsChip.Ledger.syscallInstrsInteractionsWith_memory]
-  simp [ChannelInteraction.toRaw, Expression.eval]
+  simp [ChannelInteraction.toRaw]
 
-private theorem memoryBump_memoryBinary : MemoryBinary ({ circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions } : Component (ZMod p)) := by
-  apply memoryBinary_of_gated MemoryBumpChip.circuit (fun input => input.is_real) ?_
+private theorem memoryBump_memoryBinary : MemoryBinary ({ circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation } : Component (ZMod p)) := by
+  apply memoryBinary_of_gated MemoryBumpChip.circuit MemoryBumpChip.generation (fun input => input.is_real) ?_
     MemoryBumpChip.selectorBinary_of_shallow
   intro input offset env
   change ∀ interaction ∈ ((MemoryBumpChip.main input).operations offset).interactionsWith memoryChannel.toRaw,
-    env interaction.mult = -(env input.is_real) ∨ env interaction.mult = 0 ∨
+    env interaction.mult = 0 ∨
       env interaction.mult = env input.is_real
   rw [memoryBumpMain_memoryInteractions]
   simp [Channel.pulledIf, Channel.pushedIf, ChannelInteraction.toRaw, pulledIf_mult,
-    pushedIf_mult, Expression.eval]
+    pushedIf_mult]
 
 private theorem remainingProvider_memoryBinary (component : Component (ZMod p))
     (member : component ∈ (sp1ProviderTables (p := p)).take 23 ++ sp1ProviderTables.drop 26) :
@@ -136,19 +144,7 @@ theorem interior_memoryBinary (image : ProgramImage) (component : Component (ZMo
   · exact instruction_memoryBinary component member
   · exact remainingProvider_memoryBinary component (List.mem_append.mpr member)
 
-private theorem memory_unitSigns :
-    signedVal (1 : ZMod p) = 1 ∧ signedVal (-1 : ZMod p) = -1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
-  constructor
-  · rw [signedVal_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-    norm_num
-  · rw [signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-    norm_num
-
 omit [Fact (2 ^ 24 < p)] in
-private theorem memory_zeroSign : signedVal (0 : ZMod p) = 0 := by
-  simp [signedVal]
-
 private theorem initial_activeMessages (records : List (ZMod p × MemoryMsg (ZMod p)))
     (binary : ∀ row ∈ records, row.1 = 0 ∨ row.1 = 1) :
     producedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2)) =
@@ -160,14 +156,17 @@ private theorem initial_activeMessages (records : List (ZMod p × MemoryMsg (ZMo
     have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
     rcases binary row (List.mem_cons_self ..) with inactive | active
     · simpa [producedMessages, consumedMessages,
-        inactive, memory_zeroSign] using tail
+        inactive, TypedInteraction.mult, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+        Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.message, ProvableType.fromElements_toElements] using tail
     · simpa [producedMessages, consumedMessages,
-        active, memory_unitSigns.1] using tail
+        active, TypedInteraction.mult, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+        Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.message, ProvableType.fromElements_toElements] using tail
 
+omit [Fact (2 ^ 24 < p)] in
 private theorem final_activeMessages (records : List (ZMod p × MemoryMsg (ZMod p)))
     (binary : ∀ row ∈ records, row.1 = 0 ∨ row.1 = 1) :
-    producedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2)) = [] ∧
-    consumedMessages (records.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2)) =
+    producedMessages (records.map (fun row => TypedInteraction.pulledIfValue memoryChannel row.1 row.2)) = [] ∧
+    consumedMessages (records.map (fun row => TypedInteraction.pulledIfValue memoryChannel row.1 row.2)) =
       (records.filter fun row => decide (row.1 = 1)).map Prod.snd := by
   induction records with
   | nil => simp [producedMessages, consumedMessages]
@@ -175,49 +174,49 @@ private theorem final_activeMessages (records : List (ZMod p × MemoryMsg (ZMod 
     have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
     rcases binary row (List.mem_cons_self ..) with inactive | active
     · simpa [producedMessages, consumedMessages,
-        inactive, memory_zeroSign] using tail
+        inactive, TypedInteraction.mult, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+        Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.message, ProvableType.fromElements_toElements] using tail
     · simpa [producedMessages, consumedMessages,
-        active, memory_unitSigns.2] using tail
+        active, TypedInteraction.mult, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+        Channel.pulledIfValue, Channel.pushedIfValue, TypedInteraction.message, ProvableType.fromElements_toElements] using tail
 
-/-- Boolean boundary activities preserve signed binarity of the complete physical ledger. -/
-theorem memoryBoundary_signedBinary (initial final : List (ZMod p × MemoryMsg (ZMod p)))
+omit [Fact (2 ^ 24 < p)] in
+/-- Boolean boundary activities preserve boolean counts of the complete physical ledger. -/
+theorem memoryBoundary_binary (initial final : List (ZMod p × MemoryMsg (ZMod p)))
     (interior : List (TypedInteraction (memoryChannel (p := p))))
     (initialBinary : ∀ row ∈ initial, row.1 = 0 ∨ row.1 = 1)
     (finalBinary : ∀ row ∈ final, row.1 = 0 ∨ row.1 = 1)
     (binary : ∀ interaction ∈ interior,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1) :
+      IsBool interaction.mult) :
     ∀ interaction ∈ initial.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
-      final.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++ interior,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
+      final.map (fun row => TypedInteraction.pulledIfValue memoryChannel row.1 row.2) ++ interior,
+      IsBool interaction.mult := by
   intro interaction member
   rcases List.mem_append.mp member with boundary | inside
   · rcases List.mem_append.mp boundary with initial | final
     · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp initial
-      rcases initialBinary row rowMem with inactive | active
-      · simp [inactive, memory_zeroSign]
-      · simp [active, memory_unitSigns.1]
+      exact initialBinary row rowMem
     · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp final
-      rcases finalBinary row rowMem with inactive | active
-      · simp [inactive, memory_zeroSign]
-      · simp [active, memory_unitSigns.2]
+      exact finalBinary row rowMem
   · exact binary interaction inside
 
+omit [Fact (2 ^ 24 < p)] in
 /-- Full physical balance gives an active-record permutation without discarding its count bound. -/
 theorem memoryBoundary_records_perm (initial final : List (ZMod p × MemoryMsg (ZMod p)))
     (interior : List (TypedInteraction (memoryChannel (p := p))))
     (initialBinary : ∀ row ∈ initial, row.1 = 0 ∨ row.1 = 1)
     (finalBinary : ∀ row ∈ final, row.1 = 0 ∨ row.1 = 1)
     (binary : ∀ interaction ∈ interior,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1)
+      IsBool interaction.mult)
     (balanced : BalancedInteractions
       ((initial.map (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
-        final.map (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++ interior).map
+        final.map (fun row => TypedInteraction.pulledIfValue memoryChannel row.1 row.2) ++ interior).map
           TypedInteraction.raw)) :
     (((initial.filter fun row => decide (row.1 = 1)).map Prod.snd) ++ producedMessages interior).Perm
       (((final.filter fun row => decide (row.1 = 1)).map Prod.snd) ++ consumedMessages interior) := by
   classical
   have paired := producedMessages_perm_consumedMessages _ balanced
-    (memoryBoundary_signedBinary initial final interior initialBinary finalBinary binary)
+    (memoryBoundary_binary initial final interior initialBinary finalBinary binary)
   simpa only [producedMessages_append, consumedMessages_append,
     (initial_activeMessages _ initialBinary).1, (initial_activeMessages _ initialBinary).2,
     (final_activeMessages _ finalBinary).1, (final_activeMessages _ finalBinary).2,

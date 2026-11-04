@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import SP1Clean.Circuits.Types.BranchChip
 import SP1Clean.Semantics.Specs.Chips.Branch
 import SP1Clean.Proofs.Chips.BranchChip.Populate

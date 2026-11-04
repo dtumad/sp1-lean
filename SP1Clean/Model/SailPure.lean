@@ -16,7 +16,7 @@ family takes its mode flag last and `rem`/`remw` take it first.
 This module replaces the former `riscv-lean` dependency's `SailPure`/`Skeleton`/`SailToRV64` role.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.SailRV64
 

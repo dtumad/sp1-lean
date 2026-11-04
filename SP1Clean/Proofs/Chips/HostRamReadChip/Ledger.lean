@@ -91,6 +91,6 @@ theorem access_balance (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Envir
   rw [access_values]
   simp only [balanceOf_cons]
   by_cases equal : (toElements (Eval.eval env input.ram.message)).toArray = message <;>
-    simp [Channel.pushedValue, Channel.pulledValue, equal, balanceOf]
+    simp [Channel.pushedValue, Channel.pulledValue, equal, balanceOf, Interaction.signedMult]
 
 end SP1Clean.HostRamReadChip

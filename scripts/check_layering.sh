@@ -85,12 +85,12 @@ def module_to_path(mod):
     return mod.replace(".", "/") + ".lean"
 
 files = []
-for root in ("SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"):
+for root in ("SP1Clean", "ToClean", "ToMathlib"):
     for dp, _, fs in os.walk(root):
         for f in fs:
             if f.endswith(".lean"):
                 files.append(os.path.join(dp, f))
-for extra in ("SP1Clean.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"):
+for extra in ("SP1Clean.lean", "ToClean.lean", "ToMathlib.lean"):
     if os.path.exists(extra):
         files.append(extra)
 files.sort()
@@ -101,7 +101,7 @@ unmapped, upward, nsbad = [], [], []
 # Root index modules import the whole world by design; they are the umbrella, not a layer.
 # `SP1Clean/Core.lean` is the sub-index of strata 0-6 (the `SP1Core` library root); check 3 below
 # pins its contents to the map.
-ROOT_INDEX = {"SP1Clean.lean", "SP1Clean/Core.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"}
+ROOT_INDEX = {"SP1Clean.lean", "SP1Clean/Core.lean", "ToClean.lean", "ToMathlib.lean"}
 CORE_INDEX = "SP1Clean/Core.lean"
 CORE_MAX_STRATUM = 6
 
@@ -129,7 +129,7 @@ for path in files:
 
     # 1. direction
     for mod in src_lines:
-        if not mod.startswith(("SP1Clean", "ToClean", "ToMathlib", "ToPolyFun")):
+        if not mod.startswith(("SP1Clean", "ToClean", "ToMathlib")):
             continue          # Mathlib / Clean / Std / Sail are all below everything
         target = module_to_path(mod)
         if not os.path.exists(target):

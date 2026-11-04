@@ -23,6 +23,10 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 private theorem wrapper_frame (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
     (notWrite : Word.toBitVec64 (input.message flag).code ≠ SyscallKind.write.code) :
@@ -31,7 +35,7 @@ private theorem wrapper_frame (input : HostCallChip.Inputs (ZMod p)) (flag : ZMo
     HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat] using notWrite
 
 private theorem inventory_frame
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
@@ -58,7 +62,7 @@ private theorem inventory_frame
       exact wrapper_frame (HostCallLedger.input env) _ (noWrite _ received)
 
 private theorem queue_terminal
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
@@ -91,6 +95,8 @@ private theorem queue_terminal
   exact decoded.trans (replayed.symm.trans actual)
 
 variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 /-- The terminal queue cursor authenticates the actual replay's remaining complete hint bytes. -/
 theorem GroundingCarrier.final_hints (valid : image.Valid)
@@ -159,7 +165,7 @@ theorem source_execution_with_host (valid : image.Valid)
       events.Perm ((LocalCore.executionRows
         (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
-      target.sail.regs.get? LeanRV64D.Defs.Register.PC =
+      target.sail.regs.get? LeanRV64D.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
       (∀ loc message, LocalCore.memoryFinalFrontier
           (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = some message →

@@ -51,10 +51,10 @@ def realizes {ensemble : Ensemble (ZMod p) PublicIO} {limits : ResourceLimits} {
     (valid : image.Valid) {source target : ExecutionSnapshot} {header : PublicIO (ZMod p)}
     (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    Air.Flat.Realizes (sp1Machine p image valid) ensemble (boundary source target)
+    Air.Flat.Realizes (sp1Machine p image valid) ensemble Balance.logUp (boundary source target)
       (admissible limits commitments image valid source target header) where
-  sound publicInput _ accepted :=
-    let ⟨events, interpretation⟩ := sound publicInput trivial accepted
+  sound publicInput heights _ accepted :=
+    let ⟨events, interpretation⟩ := sound publicInput heights trivial accepted
     ⟨events, (interpretation_iff valid).mp interpretation⟩
   compiler :=
     { compile := compiler.compile
@@ -70,7 +70,7 @@ theorem statement_iff_of_realizes {ensemble : Ensemble (ZMod p) PublicIO} {limit
     {header : PublicIO (ZMod p)}
     (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    ensemble.Statement header ↔
+    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔
       ∃ events, StatementExecution limits p commitments image source target events := by
   rw [(realizes valid sound compiler).statement_iff header]
   refine exists_congr fun events => ?_

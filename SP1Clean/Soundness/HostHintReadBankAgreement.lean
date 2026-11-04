@@ -20,6 +20,8 @@ local instance bankAgreementClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 /-- Any replay of the carrier's actual tape ends in the two authenticated bank vectors. -/
 theorem GroundingCarrier.final_banks (valid : image.Valid)
@@ -45,7 +47,7 @@ theorem source_execution_with_banks (valid : image.Valid)
       events.Perm ((LocalCore.executionRows
         (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
-      target.sail.regs.get? LeanRV64D.Defs.Register.PC =
+      target.sail.regs.get? LeanRV64D.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
       (∀ loc message, LocalCore.memoryFinalFrontier
           (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = some message →

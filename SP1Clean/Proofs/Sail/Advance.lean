@@ -14,7 +14,7 @@ The load-bearing goal is **uniformity**: one `sp1Effect` (a function of the comm
 generic `advance_write_core` proof, and thin per-chip adapters — replacing the 25 bespoke per-chip
 Sail-step predicates so the audit surface is a single statement. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Advance
 
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -110,7 +110,7 @@ heartbeat ceiling — the same dependent-cast hazard `Model/SailWrap.lean` docum
 theorem get_reg?_writeBack (s : SailState) (rd : BitVec 5) (rd_ne : rd ≠ 0#5) (v : BitVec 64) :
     SailState.get_reg? ({s with regs := s.regs.insert (reg_idx_to_Register rd) (bitVecToRegidxVal rd v)}) rd
       = some v := by
-  simp only [SailState.get_reg?, Std.ExtDHashMap.get?_insert_self, if_neg (show ¬(rd = 0) from rd_ne),
+  simp only [SailState.get_reg?, Std.ExtDHashMap.get?_insert_self, ite_eq_right (show ¬(rd = 0) from rd_ne),
     bitVecToRegidxVal]
   simp only [eqRec_eq_cast]
   apply cast_eq_iff_heq.mpr
@@ -184,8 +184,8 @@ theorem advance_write_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s
   -- `s_a`'s PC is `s`'s PC (the `nextPC`/`minstret` inserts leave `Register.PC` untouched), so a
   -- pc-dependent execute (`AUIPC`, the jump links) reads the committed pc through `hexec`'s pc-frame.
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hinit_sa
   set s'' := ({s_a with regs := s_a.regs.insert (reg_idx_to_Register rd) (bitVecToRegidxVal rd value)})
     with hs''_def
@@ -193,15 +193,15 @@ theorem advance_write_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   -- the s'' → s register frame off the touched set
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       R ≠ reg_idx_to_Register rd → s''.regs.get? R = s.regs.get? R := fun R h1 h2 h3 => by
-    rw [hs''_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h3 (beq_iff_eq.mp hc).symm),
-      hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hs''_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h3 (beq_iff_eq.mp hc).symm),
+      hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active'' : s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)
       (hrdreg Register.hart_state (by tauto))]; exact cfg.active
@@ -243,18 +243,18 @@ theorem advance_write_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s
     rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some npv := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert,
-        dif_neg (by unfold reg_idx_to_Register; split <;> decide), hsa_def,
+        dite_eq_right (by unfold reg_idx_to_Register; split <;> decide), hsa_def,
         Std.ExtDHashMap.get?_insert_self]
     have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
       have h1 : s'.regs.get? Register.PC = some pc := by
-        rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+        rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
       rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
       exact (Option.some.injEq _ _).mp h1
     rw [hnp]; congr 1
     rw [hnpv_def, hgetPC, sndPc_straightline r hstraight hpc0, ← hrcv]
     simp [BitVec.addInt]
   · -- regs (this is a register-writing chip, `hwrites : commit.writesReg = true` → the write + frame pair)
-    rw [if_pos hwrites]
+    rw [ite_eq_left hwrites]
     refine ⟨?_, ?_⟩
     · -- the op_a write
       intro idx hidx
@@ -317,7 +317,7 @@ theorem advance_of_rtype {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     (fun t hframe _ _ => by
       have := rtype_execute_reaches rs2 rs1 rd op (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- **The W-op chip `advance` — RowView-generic, one call per chip and 32-bit W-op** (`AddwChip`/`SubwChip`,
@@ -362,7 +362,7 @@ theorem advance_of_rtypew {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
     (fun t hframe _ _ => by
       have := rtypew_execute_reaches rs2 rs1 rd op (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- **The I-type chip `advance` — RowView-generic, one call per chip and immediate ALU op** (`AddiChip`,
@@ -410,7 +410,7 @@ theorem advance_of_itype {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     (fun t hframe _ _ => by
       have := itype_execute_reaches imm rs1 rd op (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t
         ((hframe rs1).trans hrs1)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval' hstraight hpc0 hwrites hnomem
 
 /-- The 64-bit shift-immediate `advance`.  Unlike ordinary I-type ALU instructions, Sail represents
@@ -451,7 +451,7 @@ theorem advance_of_shiftitype {prog : GuestProgram} {r : Trace.RowView (ZMod p)}
   have himmbind : (Word.toBitVec64 r.adapter.op_c).setWidth 6 = shamt := by
     rw [show r.adapter.op_c = bitVecToWord (shamt.setWidth 64) from hopc,
       toBitVec64_bitVecToWord]
-    bv_decide
+    simp
   have hval' : Word.toBitVec64 r.rdWrite
       = execute_SHIFTIOP_pure (Word.toBitVec64 r.adapter.op_b_memory.prev_value) shamt op := by
     rw [hval, himmbind]
@@ -464,7 +464,7 @@ theorem advance_of_shiftitype {prog : GuestProgram} {r : Trace.RowView (ZMod p)}
     (fun t hframe _ _ => by
       have := shiftitype_execute_reaches shamt rs1 rd op
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t ((hframe rs1).trans hrs1)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval' hstraight hpc0 hwrites hnomem
 
 /-- The word shift-immediate `advance`, using Sail's distinct `.SHIFTIWOP` instruction and five-bit
@@ -504,7 +504,7 @@ theorem advance_of_shiftiwtype {prog : GuestProgram} {r : Trace.RowView (ZMod p)
   have himmbind : (Word.toBitVec64 r.adapter.op_c).setWidth 5 = shamt := by
     rw [show r.adapter.op_c = bitVecToWord (shamt.setWidth 64) from hopc,
       toBitVec64_bitVecToWord]
-    bv_decide
+    simp
   have hval' : Word.toBitVec64 r.rdWrite
       = execute_SHIFTIWOP_pure (Word.toBitVec64 r.adapter.op_b_memory.prev_value) shamt op := by
     rw [hval, himmbind]
@@ -517,7 +517,7 @@ theorem advance_of_shiftiwtype {prog : GuestProgram} {r : Trace.RowView (ZMod p)
     (fun t hframe _ _ => by
       have := shiftiwtype_execute_reaches shamt rs1 rd op
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t ((hframe rs1).trans hrs1)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval' hstraight hpc0 hwrites hnomem
 
 /-- **The ADDIW chip `advance` — RowView-generic** (the immediate branch of `AddwChip`). The `.ADDIW` twin of
@@ -564,7 +564,7 @@ theorem advance_of_addiw {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     (fun t hframe _ _ => by
       have := execute_ADDIW_reaches imm rs1 rd (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t
         ((hframe rs1).trans hrs1)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval' hstraight hpc0 hwrites hnomem
 
 /-- **The U-type chip `advance` — RowView-generic** (`UTypeChip`, LUI/AUIPC). No register reads (`imm_b =
@@ -599,7 +599,7 @@ theorem advance_of_utype {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     (fun sc hsc => by rw [word_reassemble w]; exact hdecw sc hsc)
     (fun t hframe hpcf _ => by
       have := execute_UTYPE_reaches imm rd op (rcvPcOf (stateAccess r)) t (hpcf.trans hpcread)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval' hstraight hpc0 hwrites hnomem
 
 /-! ## Jumps (computed `next_pc`) — the `execute` sets `nextPC` itself -/
@@ -658,11 +658,11 @@ theorem advance_jump_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
     rw [hsa_def, SailState.get_reg?_insert_of_ne (hxne idx), hs'_def,
       SailState.get_reg?_insert_of_ne (hmne idx)]
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
     have h1 : s'.regs.get? Register.PC = some pc := by
-      rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+      rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
     rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
     exact (Option.some.injEq _ _).mp h1
   have hnpc_sa : s_a.regs.get? Register.nextPC = some (pc + 4#64) := by
@@ -671,7 +671,7 @@ theorem advance_jump_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
   have hcfg_sa : SailConfigured s_a :=
     SailConfigured.congr (SailConfigured.writeMinstret cfg b) hinit_sa (fun R hR => by
       rw [hsa_def, Std.ExtDHashMap.get?_insert,
-          dif_neg (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
+          dite_eq_right (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hnpc_sa hinit_sa hcfg_sa
   set s'' := ({s_a with regs := ((s_a.regs.insert Register.nextPC target).insert
     (reg_idx_to_Register rd) (bitVecToRegidxVal rd link))}) with hs''_def
@@ -679,15 +679,15 @@ theorem advance_jump_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       R ≠ reg_idx_to_Register rd → s''.regs.get? R = s.regs.get? R := fun R h1 h2 h3 => by
-    rw [hs''_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h3 (beq_iff_eq.mp hc).symm),
-      Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hs''_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h3 (beq_iff_eq.mp hc).symm),
+      Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active'' : s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)
       (hrdreg Register.hart_state (by tauto))]; exact cfg.active
@@ -728,11 +728,11 @@ theorem advance_jump_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
   · rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some target := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert,
-        dif_neg (by unfold reg_idx_to_Register; split <;> decide),
+        dite_eq_right (by unfold reg_idx_to_Register; split <;> decide),
         Std.ExtDHashMap.get?_insert_self]
     rw [hnp, htgt]
   · -- regs (register-writing jump: `hwrites` → the link write + frame pair)
-    rw [if_pos hwrites]
+    rw [ite_eq_left hwrites]
     refine ⟨?_, ?_⟩
     · intro idx hidx
       obtain rfl : idx = rd := (ofNat_val_eq_of_cast hidx).symm.trans (ofNat_val_eq_of_cast hrd_a)
@@ -786,7 +786,7 @@ theorem advance_of_jal {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : S
     (fun t _hframe hpcf hnpc hinit _hcfg => by
       have reached := execute_JAL_reaches imm rd (rcvPcOf (stateAccess r)) t hinit
         (hpcf.trans hpcread) hnpc halign'
-      rwa [if_neg hrd_ne] at reached)
+      rwa [ite_eq_right hrd_ne] at reached)
     hrd_ne hopa'.symm hlink htgt hwrites hnomem
 
 /-- **The JALR chip `advance` — RowView-generic.** Over `advance_jump_core` (the config-threaded jump core),
@@ -834,7 +834,7 @@ theorem advance_of_jalr {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
       have reached := execute_JALR_reaches imm rs1 rd (rcvPcOf (stateAccess r))
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t hinit
         hcfgt.toValidMemConfig hnpc ((hframe rs1).trans hrs1) halign'
-      rwa [if_neg hrd_ne] at reached)
+      rwa [ite_eq_right hrd_ne] at reached)
     hrd_ne hopa'.symm hlink htgt hwrites hnomem
 
 
@@ -879,7 +879,7 @@ theorem advance_of_mul {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : S
     (fun t hframe _ _ => by
       have := execute_MUL_reaches rs2 rs1 rd op (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- The **register-writing** MULW chip `advance` (RowView-generic; mirrors `advance_of_divw`).  No
@@ -918,7 +918,7 @@ theorem advance_of_mulw {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
     (fun t hframe _ _ => by
       have := execute_MULW_reaches rs2 rs1 rd (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- The DIV/DIVU chip `advance` (RowView-generic; mirrors `advance_of_rtype`). -/
@@ -956,7 +956,7 @@ theorem advance_of_div {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : S
     (fun t hframe _ _ => by
       have := execute_DIV_reaches rs2 rs1 rd isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- The REM/REMU chip `advance` (RowView-generic; note the bool-first `SailRV64.rem isU op_c op_b`). -/
@@ -994,7 +994,7 @@ theorem advance_of_rem {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : S
     (fun t hframe _ _ => by
       have := execute_REM_reaches rs2 rs1 rd isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- The DIVW/DIVUW chip `advance` (RowView-generic). -/
@@ -1032,7 +1032,7 @@ theorem advance_of_divw {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
     (fun t hframe _ _ => by
       have := execute_DIVW_reaches rs2 rs1 rd isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- The REMW/REMUW chip `advance` (RowView-generic; bool-first `SailRV64.remw isU op_c op_b`). -/
@@ -1070,14 +1070,14 @@ theorem advance_of_remw {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
     (fun t hframe _ _ => by
       have := execute_REMW_reaches rs2 rs1 rd isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-! ## Control-flow (branches): computed next_pc, NO register write (SC Phase 4 · Phase 3a) -/
 
 /-- **The control-flow (branch) ladder core** — the twin of `advance_jump_core` for a **computed
 `next_pc` with NO register write**. The `execute` commits `nextPC := target` only (no `rd` insert), the row
-takes `commit.writesReg = false`, and `RowEffect.regs` discharges via the `if_neg` (frame-only) branch — a
+takes `commit.writesReg = false`, and `RowEffect.regs` discharges via the `ite_eq_right` (frame-only) branch — a
 uniform register frame over ALL indices (no `op_a` split). Everything else — the minstret/fetch/decode/
 `try_step` ladder and the register/ROM/config frames off `{minstret, nextPC}` — mirrors the straight-line/
 jump cores. Serves the branch family (`BTYPE`); the per-chip `hexec` is `execute_BTYPE_reaches`, the target
@@ -1121,11 +1121,11 @@ theorem advance_of_ctrl {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
     rw [hsa_def, SailState.get_reg?_insert_of_ne (hxne idx), hs'_def,
       SailState.get_reg?_insert_of_ne (hmne idx)]
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
     have h1 : s'.regs.get? Register.PC = some pc := by
-      rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+      rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
     rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
     exact (Option.some.injEq _ _).mp h1
   have hnpc_sa : s_a.regs.get? Register.nextPC = some (pc + 4#64) := by
@@ -1133,21 +1133,21 @@ theorem advance_of_ctrl {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
   have hcfg_sa : SailConfigured s_a :=
     SailConfigured.congr (SailConfigured.writeMinstret cfg b) hinit_sa (fun R hR => by
       rw [hsa_def, Std.ExtDHashMap.get?_insert,
-          dif_neg (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
+          dite_eq_right (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hnpc_sa hinit_sa hcfg_sa
   set s'' := ({s_a with regs := s_a.regs.insert Register.nextPC target}) with hs''_def
   have hcp : (LeanRV64D.readReg Register.cur_privilege).run s = .ok Privilege.Machine s := by
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       s''.regs.get? R = s.regs.get? R := fun R h1 h2 => by
-    rw [hs''_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hs''_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active'' : s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
   have hinit'' : SailState.isInitialized s'' := by
@@ -1185,7 +1185,7 @@ theorem advance_of_ctrl {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : 
     have hnp : s''.regs.get? Register.nextPC = some target := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert_self]
     rw [hnp, htgt]
-  · rw [if_neg (by rw [hnowrite]; decide)]
+  · rw [ite_eq_right (by rw [hnowrite]; decide)]
     intro idx
     rw [hxf idx, hs''_def, SailState.get_reg?_insert_of_ne (hxne idx)]
     exact hframe_sa idx
@@ -1237,7 +1237,7 @@ theorem advance_of_jal_x0 {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
     (fun t _hframe hpcf hnpc hinit _hcfg => by
       have reached := execute_JAL_reaches imm 0#5 (rcvPcOf (stateAccess r)) t hinit
         (hpcf.trans hpcread) hnpc halign'
-      rwa [if_pos rfl] at reached)
+      rwa [ite_eq_left rfl] at reached)
     htgt hnowrite hnomem
 
 /-- **JALR into x0.** The source register still comes from the grounded `op_b` pull; the link is
@@ -1293,7 +1293,7 @@ theorem advance_of_jalr_x0 {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s
       have reached := execute_JALR_reaches imm rs1 0#5 (rcvPcOf (stateAccess r))
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t hinit
         hcfgt.toValidMemConfig hnpc ((hframe rs1).trans hrs1) halign'
-      rwa [if_pos rfl] at reached)
+      rwa [ite_eq_left rfl] at reached)
     htgt hnowrite hnomem
 
 /-! ## Loads: `execute_LOAD` reads memory; the register write is sourced from `RefinesAt.mem` (Phase 3b.2) -/
@@ -1324,8 +1324,8 @@ theorem execute_LOAD_reaches_width1 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
   have hread := run_vmem_read_of_width_1' rs1_idx reg_val (BitVec.signExtend 64 imm)
     data₀ t hs h_rs1 h_align' hconfig h_in_range hmem₀
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.assert]
-  simp only [Int.toNat_one, Nat.reduceLeDiff, decide_true, if_true, pure_bind]
+  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
+  simp only [Int.toNat_one, Nat.reduceLeDiff, decide_true, ite_true, pure_bind]
   rw [run_bind_of_run t _ _ hread]
   rw [run_bind_of_run' t _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   rfl
@@ -1384,13 +1384,13 @@ theorem advance_load_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
     rw [hsa_def, SailState.get_reg?_insert_of_ne (hxne idx), hs'_def,
       SailState.get_reg?_insert_of_ne (hmne idx)]
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hmem_sa : s_a.mem = s.mem := by rw [hsa_def, hs'_def]
   have hcfg_sa : SailConfigured s_a :=
     SailConfigured.congr (SailConfigured.writeMinstret cfg b) hinit_sa (fun R hR => by
       rw [hsa_def, Std.ExtDHashMap.get?_insert,
-          dif_neg (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
+          dite_eq_right (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hmem_sa hinit_sa hcfg_sa
   set s'' := ({s_a with regs := s_a.regs.insert (reg_idx_to_Register rd) (bitVecToRegidxVal rd value)})
     with hs''_def
@@ -1398,14 +1398,14 @@ theorem advance_load_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       R ≠ reg_idx_to_Register rd → s''.regs.get? R = s.regs.get? R := fun R h1 h2 h3 => by
-    rw [hs''_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h3 (beq_iff_eq.mp hc).symm),
-      hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hs''_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h3 (beq_iff_eq.mp hc).symm),
+      hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active'' : s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)
       (hrdreg Register.hart_state (by tauto))]; exact cfg.active
@@ -1445,17 +1445,17 @@ theorem advance_load_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s 
   · rw [hPCf]
     have hnp : s''.regs.get? Register.nextPC = some npv := by
       rw [hs''_def, Std.ExtDHashMap.get?_insert,
-        dif_neg (by unfold reg_idx_to_Register; split <;> decide), hsa_def,
+        dite_eq_right (by unfold reg_idx_to_Register; split <;> decide), hsa_def,
         Std.ExtDHashMap.get?_insert_self]
     have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
       have h1 : s'.regs.get? Register.PC = some pc := by
-        rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+        rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
       rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
       exact (Option.some.injEq _ _).mp h1
     rw [hnp]; congr 1
     rw [hnpv_def, hgetPC, sndPc_straightline r hstraight hpc0, ← hrcv]
     simp [BitVec.addInt]
-  · rw [if_pos hwrites]
+  · rw [ite_eq_left hwrites]
     refine ⟨?_, ?_⟩
     · intro idx hidx
       obtain rfl : idx = rd := (ofNat_val_eq_of_cast hidx).symm.trans (ofNat_val_eq_of_cast hrd_a)
@@ -1524,7 +1524,7 @@ theorem advance_of_load_width1 {prog : GuestProgram} {r : Trace.RowView (ZMod p)
       have := execute_LOAD_reaches_width1 imm rs1 rd isU
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) byte t hinit hcfgt.toValidMemConfig
         ((hframe rs1).trans hrs1) h_hi' h_lo' (by rw [hmemf]; exact hmem')
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-! ## Stores: `execute_STORE` writes memory (the first `commit.memWrite = some` chip) (Phase 3b.3) -/
@@ -1550,7 +1550,7 @@ theorem execute_STORE_reaches (imm : BitVec 12) (rs1_idx rs2_idx : BitVec 5)
   have hwrite := run_vmem_write_of_width_1 rs1_idx rs1_val (sign_extend (m := 64) imm)
     (Sail.BitVec.extractLsb rs2_val 7 0) t hs h_rs1 h_aligned hconfig h_in_range
   simp only [execute]
-  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.assert, h_rs2, hwrite,
+  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, h_rs2, hwrite,
     RETIRE_SUCCESS]
 
 /-- **The width-2 `execute_STORE` reaches `Retire_Success`** (SH). The `execute_STORE_reaches` (width 1)
@@ -1573,7 +1573,7 @@ theorem execute_STORE_reaches_width2 (imm : BitVec 12) (rs1_idx rs2_idx : BitVec
   have hwrite := run_vmem_write_of_width_2 rs1_idx rs1_val (sign_extend (m := 64) imm)
     (Sail.BitVec.extractLsb rs2_val 15 0) t hs h_rs1 h_aligned hconfig h_in_range
   simp only [execute]
-  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.assert, h_rs2, hwrite,
+  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, h_rs2, hwrite,
     RETIRE_SUCCESS]
 
 /-- **The width-4 `execute_STORE` reaches `Retire_Success`** (SW). The 4-byte (word) twin: requires
@@ -1599,7 +1599,7 @@ theorem execute_STORE_reaches_width4 (imm : BitVec 12) (rs1_idx rs2_idx : BitVec
   have hwrite := run_vmem_write_of_width_4 rs1_idx rs1_val (sign_extend (m := 64) imm)
     (Sail.BitVec.extractLsb rs2_val 31 0) t hs h_rs1 h_aligned hconfig h_in_range
   simp only [execute]
-  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.assert, h_rs2, hwrite,
+  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, h_rs2, hwrite,
     RETIRE_SUCCESS]
 
 /-- **The width-8 `execute_STORE` reaches `Retire_Success`** (SD). The 8-byte (double-word) twin:
@@ -1636,14 +1636,14 @@ theorem execute_STORE_reaches_width8 (imm : BitVec 12) (rs1_idx rs2_idx : BitVec
   have hext : Sail.BitVec.extractLsb rs2_val 63 0 = rs2_val := by
     simp [Sail.BitVec.extractLsb, BitVec.extractLsb, BitVec.extractLsb']
   simp only [execute]
-  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.assert, h_rs2, hext, hwrite,
+  simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, h_rs2, hext, hwrite,
     RETIRE_SUCCESS]
 
 /-- **The store ladder core** — straight-line PC (`pc+4`), NO register write, ONE contiguous memory
 write (SC Phase 4 · Phase 3b.3; the FIRST chip with `commit.memWrite = some`). A hybrid of
 `advance_write_core` (straight-line pc via `sndPc_straightline`, since the store leaves the staged
 `nextPC = pc+4`) and `advance_of_ctrl` (`commit.writesReg = false`, so `RowEffect.regs` is a pure
-frame via the `if_neg` branch), plus the new `RowEffect.mem` `some mw` branch. The execute writes
+frame via the `ite_eq_right` branch), plus the new `RowEffect.mem` `some mw` branch. The execute writes
 only memory (`{t with mem := writeMem t.mem}`); the byte-range readoff is supplied by `hcov`/`hncov`
 (so this is WIDTH-AGNOSTIC — instantiate `writeMem`/`hcov`/`hncov` per width). Reuses the landed
 `sailStep_of_ladder` + `tail_effect` unchanged (already mem-aware: `s_final.mem = s''.mem`).
@@ -1695,11 +1695,11 @@ theorem advance_of_store {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     rw [hsa_def, SailState.get_reg?_insert_of_ne (hxne idx), hs'_def,
       SailState.get_reg?_insert_of_ne (hmne idx)]
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
     have h1 : s'.regs.get? Register.PC = some pc := by
-      rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+      rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
     rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
     exact (Option.some.injEq _ _).mp h1
   have hnpc_sa : s_a.regs.get? Register.nextPC = some (pc + 4#64) := by
@@ -1707,22 +1707,22 @@ theorem advance_of_store {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
   have hcfg_sa : SailConfigured s_a :=
     SailConfigured.congr (SailConfigured.writeMinstret cfg b) hinit_sa (fun R hR => by
       rw [hsa_def, Std.ExtDHashMap.get?_insert,
-          dif_neg (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
+          dite_eq_right (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hinit_sa hcfg_sa
   set s'' := ({s_a with mem := writeMem s_a.mem}) with hs''_def
   have hcp : (LeanRV64D.readReg Register.cur_privilege).run s = .ok Privilege.Machine s := by
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       s''.regs.get? R = s.regs.get? R := fun R h1 h2 => by
     rw [hs''_def]
     show s_a.regs.get? R = s.regs.get? R
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active'' : s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
   have hinit'' : SailState.isInitialized s'' := by
@@ -1760,7 +1760,7 @@ theorem advance_of_store {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s :
     have hnp : s''.regs.get? Register.nextPC = some (pc + 4#64) := hnpc_sa
     rw [hnp]; congr 1
     rw [sndPc_straightline r hstraight hpc0, ← hrcv]
-  · rw [if_neg (by rw [hnowrite]; decide)]
+  · rw [ite_eq_right (by rw [hnowrite]; decide)]
     intro idx
     rw [hxf idx, hs''_def]
     show SailState.get_reg? s_a idx = SailState.get_reg? s idx
@@ -1800,9 +1800,9 @@ theorem execute_LOAD_reaches_width2 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
   have hread := run_vmem_read_of_width_2' rs1_idx reg_val (BitVec.signExtend 64 imm)
     data₀ data₁ t hs h_rs1 h_align' hconfig h_in_range hmem₀ hmem₁
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.assert]
+  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   rw [show Int.toNat 2 = 2 from rfl]
-  simp only [Nat.reduceLeDiff, decide_true, if_true, pure_bind]
+  simp only [Nat.reduceLeDiff, decide_true, ite_true, pure_bind]
   rw [run_bind_of_run t _ _ hread]
   rw [run_bind_of_run' t _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   rfl
@@ -1869,7 +1869,7 @@ theorem advance_of_load_width2 {prog : GuestProgram} {r : Trace.RowView (ZMod p)
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) byte₀ byte₁ t hinit hcfgt.toValidMemConfig
         ((hframe rs1).trans hrs1) h_aligned' h_hi' h_lo'
         (by rw [hmemf]; exact hmem₀') (by rw [hmemf]; exact hmem₁')
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- **The width-4 `execute_LOAD` reaches `Retire_Success`.** The 4-byte (word) read twin:
@@ -1900,9 +1900,9 @@ theorem execute_LOAD_reaches_width4 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
   have hread := run_vmem_read_of_width_4' rs1_idx reg_val (BitVec.signExtend 64 imm)
     data₀ data₁ data₂ data₃ t hs h_rs1 h_align' hconfig h_in_range hmem₀ hmem₁ hmem₂ hmem₃
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.assert]
+  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   rw [show Int.toNat 4 = 4 from rfl]
-  simp only [Nat.reduceLeDiff, decide_true, if_true, pure_bind]
+  simp only [Nat.reduceLeDiff, decide_true, ite_true, pure_bind]
   rw [run_bind_of_run t _ _ hread]
   rw [run_bind_of_run' t _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   rfl
@@ -1941,9 +1941,9 @@ theorem execute_LOAD_reaches_width8 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
     data₀ data₁ data₂ data₃ data₄ data₅ data₆ data₇ t hs h_rs1 h_align' hconfig h_in_range
     hmem₀ hmem₁ hmem₂ hmem₃ hmem₄ hmem₅ hmem₆ hmem₇
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.assert]
+  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   rw [show Int.toNat 8 = 8 from rfl]
-  simp only [Nat.reduceLeDiff, decide_true, if_true, pure_bind]
+  simp only [Nat.reduceLeDiff, decide_true, ite_true, pure_bind]
   rw [run_bind_of_run t _ _ hread]
   rw [run_bind_of_run' t _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   rfl
@@ -2017,7 +2017,7 @@ theorem advance_of_load_width4 {prog : GuestProgram} {r : Trace.RowView (ZMod p)
         ((hframe rs1).trans hrs1) h_aligned' h_hi' h_lo'
         (by rw [hmemf]; exact hmem₀') (by rw [hmemf]; exact hmem₁')
         (by rw [hmemf]; exact hmem₂') (by rw [hmemf]; exact hmem₃')
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-- **The width-8 load chip `advance`** (LD). The `advance_of_load_width4` twin, but WITHOUT `hpin`:
@@ -2112,7 +2112,7 @@ theorem advance_of_load_width8 {prog : GuestProgram} {r : Trace.RowView (ZMod p)
         (by rw [hmemf]; exact hmem₂') (by rw [hmemf]; exact hmem₃')
         (by rw [hmemf]; exact hmem₄') (by rw [hmemf]; exact hmem₅')
         (by rw [hmemf]; exact hmem₆') (by rw [hmemf]; exact hmem₇')
-      rwa [if_neg hrd_ne] at this)
+      rwa [ite_eq_right hrd_ne] at this)
     hrd_ne hopa'.symm hval hstraight hpc0 hwrites hnomem
 
 /-! ## LoadX0 (load-into-x0, result discarded): the no-write LOAD core + per-width adapters -/
@@ -2120,7 +2120,7 @@ theorem advance_of_load_width8 {prog : GuestProgram} {r : Trace.RowView (ZMod p)
 /-- **The no-write straight-line LOAD core** (SC Phase 4 · LoadX0). The intersection of
 `advance_load_core` (a LOAD execute, so `hexec` receives the memory frame `t.mem = s.mem` and the
 `execute_LOAD` read discharges) and `advance_alu_x0_core` (the write is into `x0`, so `execute I`
-returns the state UNCHANGED — the `if_pos rfl` no-op branch of `execute_LOAD_reaches_widthN` — and the
+returns the state UNCHANGED — the `ite_eq_left rfl` no-op branch of `execute_LOAD_reaches_widthN` — and the
 row is straight-line no-write: `next_pc = pc+4`, `commit.writesReg = false`, `commit.memWrite = none`).
 Identical to `advance_alu_x0_core` except `hexec` additionally receives `t.mem = s.mem` (fed the internal
 `hmem_sa`), so a discarded LOAD's memory read still reduces even though its result is thrown away. -/
@@ -2162,12 +2162,12 @@ theorem advance_load_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} 
     rw [hsa_def, SailState.get_reg?_insert_of_ne (hxne idx), hs'_def,
       SailState.get_reg?_insert_of_ne (hmne idx)]
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hmem_sa : s_a.mem = s.mem := by rw [hsa_def, hs'_def]
   have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
     have h1 : s'.regs.get? Register.PC = some pc := by
-      rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+      rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
     rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
     exact (Option.some.injEq _ _).mp h1
   have hnpc_sa : s_a.regs.get? Register.nextPC = some (pc + 4#64) := by
@@ -2175,19 +2175,19 @@ theorem advance_load_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} 
   have hcfg_sa : SailConfigured s_a :=
     SailConfigured.congr (SailConfigured.writeMinstret cfg b) hinit_sa (fun R hR => by
       rw [hsa_def, Std.ExtDHashMap.get?_insert,
-          dif_neg (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
+          dite_eq_right (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hmem_sa hinit_sa hcfg_sa
   have hcp : (LeanRV64D.readReg Register.cur_privilege).run s = .ok Privilege.Machine s := by
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       s_a.regs.get? R = s.regs.get? R := fun R h1 h2 => by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active_sa : s_a.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
   obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
@@ -2221,14 +2221,14 @@ theorem advance_load_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} 
         retirement_counter hinit_sa increment (hframe_s Register.minstret (by decide) (by decide)) retired⟩ }⟩
   · rw [hPCf, hnpc_sa]; congr 1
     rw [sndPc_straightline r hstraight hpc0, ← hrcv]
-  · rw [if_neg (by rw [hnowrite]; decide)]
+  · rw [ite_eq_right (by rw [hnowrite]; decide)]
     intro idx
     rw [hxf idx]; exact hframe_sa idx
   · exact SailConfigured.congr cfg hinitf hcfg_frame
 
 /-- **The width-1 no-write load chip `advance`** (LoadX0 · LB/LBU). The `advance_of_load_width1` twin
 with the `x0` ending: `op_a = 0` forces `rd = 0#5` (`regidx_bv_inj`), the read value is discarded
-(`if_pos rfl`), `commit.writesReg = false`, `commit.memWrite = none` — no `hval` (the value is thrown
+(`ite_eq_left rfl`), `commit.writesReg = false`, `commit.memWrite = none` — no `hval` (the value is thrown
 away). Uses `decodesLoad'` (no `hpin` needed). -/
 theorem advance_of_load_x0_width1 {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : SailState}
     (isU : Bool) (byte : BitVec 8)
@@ -2280,7 +2280,7 @@ theorem advance_of_load_x0_width1 {prog : GuestProgram} {r : Trace.RowView (ZMod
       have := execute_LOAD_reaches_width1 imm rs1 0#5 isU
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) byte t hinit hcfgt.toValidMemConfig
         ((hframe rs1).trans hrs1) h_hi' h_lo' (by rw [hmemf]; exact hmem')
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **The width-2 no-write load chip `advance`** (LoadX0 · LH/LHU). The `advance_of_load_x0_width1` twin
@@ -2344,7 +2344,7 @@ theorem advance_of_load_x0_width2 {prog : GuestProgram} {r : Trace.RowView (ZMod
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) byte₀ byte₁ t hinit hcfgt.toValidMemConfig
         ((hframe rs1).trans hrs1) h_aligned' h_hi' h_lo'
         (by rw [hmemf]; exact hmem₀') (by rw [hmemf]; exact hmem₁')
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **The width-4 no-write load chip `advance`** (LoadX0 · LW/LWU). The `advance_of_load_x0_width2` twin
@@ -2417,7 +2417,7 @@ theorem advance_of_load_x0_width4 {prog : GuestProgram} {r : Trace.RowView (ZMod
         hcfgt.toValidMemConfig ((hframe rs1).trans hrs1) h_aligned' h_hi' h_lo'
         (by rw [hmemf]; exact hmem₀') (by rw [hmemf]; exact hmem₁')
         (by rw [hmemf]; exact hmem₂') (by rw [hmemf]; exact hmem₃')
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **The width-8 no-write load chip `advance`** (LoadX0 · LD). The `advance_of_load_width8` twin
@@ -2510,7 +2510,7 @@ theorem advance_of_load_x0_width8 {prog : GuestProgram} {r : Trace.RowView (ZMod
         (by rw [hmemf]; exact hmem₂') (by rw [hmemf]; exact hmem₃')
         (by rw [hmemf]; exact hmem₄') (by rw [hmemf]; exact hmem₅')
         (by rw [hmemf]; exact hmem₆') (by rw [hmemf]; exact hmem₇')
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-! ## AluX0 (ALU-into-x0, result discarded): the no-write straight-line core + family adapters -/
@@ -2521,7 +2521,7 @@ stage returns the state UNCHANGED (the `wX_bits 0#5` no-op leaves the register f
 `next_pc = pc+4`, `commit.writesReg = false`, `commit.memWrite = none`.  Purpose-built for ALU
 ops — the `hexec` needs NO memory frame (ALU never touches memory), just the register-file frame
 + pc frame + init + config.  Every AluX0 family adapter plugs in its own `execute_*_reaches`
-lemma at `rd = 0#5` (the `if_pos rfl` no-write branch).  The `RowEffect.regs` uses the `if_neg`
+lemma at `rd = 0#5` (the `ite_eq_left rfl` no-write branch).  The `RowEffect.regs` uses the `ite_eq_right`
 all-index frame read-off (writesReg=false), exactly as `advance_of_ctrl`. -/
 theorem advance_alu_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : SailState}
     (I : instruction) (pc : BitVec 64) (data₀ data₁ data₂ data₃ : BitVec 8)
@@ -2560,12 +2560,12 @@ theorem advance_alu_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {
     rw [hsa_def, SailState.get_reg?_insert_of_ne (hxne idx), hs'_def,
       SailState.get_reg?_insert_of_ne (hmne idx)]
   have hpcf_sa : s_a.regs.get? Register.PC = s.regs.get? Register.PC := by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   have hmem_sa : s_a.mem = s.mem := by rw [hsa_def, hs'_def]
   have hgetPC : s'.regs.get Register.PC (hslr.init Register.PC) = pc := by
     have h1 : s'.regs.get? Register.PC = some pc := by
-      rw [hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact hpc
+      rw [hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact hpc
     rw [Std.ExtDHashMap.get?_eq_some_get (hslr.init Register.PC)] at h1
     exact (Option.some.injEq _ _).mp h1
   have hnpc_sa : s_a.regs.get? Register.nextPC = some (pc + 4#64) := by
@@ -2573,19 +2573,19 @@ theorem advance_alu_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {
   have hcfg_sa : SailConfigured s_a :=
     SailConfigured.congr (SailConfigured.writeMinstret cfg b) hinit_sa (fun R hR => by
       rw [hsa_def, Std.ExtDHashMap.get?_insert,
-          dif_neg (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
+          dite_eq_right (by rcases hR with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)])
   have hexec_sa := hexec s_a hframe_sa hpcf_sa hinit_sa hcfg_sa
   have hcp : (LeanRV64D.readReg Register.cur_privilege).run s = .ok Privilege.Machine s := by
     rw [Sail.run_readReg, cfg.priv]
   have hactive : (s.regs.insert Register.minstret_increment b).get? Register.hart_state
       = some (HartState.HART_ACTIVE ()) := by
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   have hdec : (ext_decode (data₃ ++ data₂ ++ data₁ ++ data₀)).run s' = .ok I s' :=
     hdecgen s' (SailConfigured.writeMinstret cfg b)
   have hframe_s : ∀ R : Register, R ≠ Register.minstret_increment → R ≠ Register.nextPC →
       s_a.regs.get? R = s.regs.get? R := fun R h1 h2 => by
-    rw [hsa_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h2 (beq_iff_eq.mp hc).symm),
-      hs'_def, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => h1 (beq_iff_eq.mp hc).symm)]
+    rw [hsa_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h2 (beq_iff_eq.mp hc).symm),
+      hs'_def, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => h1 (beq_iff_eq.mp hc).symm)]
   have h_active_sa : s_a.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) := by
     rw [hframe_s Register.hart_state (by decide) (by decide)]; exact cfg.active
   obtain ⟨s_final, hrun, hnormal, hPCf, hxf, hmemf, hframef, hinitf, cycles, output, retired⟩ :=
@@ -2619,7 +2619,7 @@ theorem advance_alu_x0_core {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {
         retirement_counter hinit_sa increment (hframe_s Register.minstret (by decide) (by decide)) retired⟩ }⟩
   · rw [hPCf, hnpc_sa]; congr 1
     rw [sndPc_straightline r hstraight hpc0, ← hrcv]
-  · rw [if_neg (by rw [hnowrite]; decide)]
+  · rw [ite_eq_right (by rw [hnowrite]; decide)]
     intro idx
     rw [hxf idx]; exact hframe_sa idx
   · exact SailConfigured.congr cfg hinitf hcfg_frame
@@ -2658,12 +2658,12 @@ theorem advance_of_utype_x0 {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {
     (fun t _hframe hpcf _hinit _hcfg => by
       have reached := execute_UTYPE_reaches imm 0#5 op (rcvPcOf (stateAccess r)) t
         (hpcf.trans hpcread)
-      rwa [if_pos rfl] at reached)
+      rwa [ite_eq_left rfl] at reached)
     hstraight hpc0 hnowrite hnomem
 
 /-- **R-type into x0** (ADD/SUB/XOR/OR/AND/SLL/SRL/SRA/SLT/SLTU, `imm_c = 0`).  Generic over `op`.
 `rd` is forced to `0#5` from the committed `op_a = 0` (via `regidx_bv_inj`, the LoadX0 move), so the
-`rtype_execute_reaches` value drops out (`if_pos rfl`) and the whole row is straight-line no-write. -/
+`rtype_execute_reaches` value drops out (`ite_eq_left rfl`) and the whole row is straight-line no-write. -/
 theorem advance_of_alu_x0_rtype {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : SailState} (op : rop)
     (hcfg : SailConfigured s) (hrom : RomLoaded prog s)
     (hpcread : s.regs.get? Register.PC = some (rcvPcOf (stateAccess r)))
@@ -2696,7 +2696,7 @@ theorem advance_of_alu_x0_rtype {prog : GuestProgram} {r : Trace.RowView (ZMod p
     (fun t hframe _ _ _ => by
       have := rtype_execute_reaches rs2 rs1 0#5 op (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **RTYPEW into x0** (ADDW/SUBW/SLLW/SRLW/SRAW, `imm_c = 0`).  The `execute_RTYPEW` twin of
@@ -2733,7 +2733,7 @@ theorem advance_of_alu_x0_rtypew {prog : GuestProgram} {r : Trace.RowView (ZMod 
     (fun t hframe _ _ _ => by
       have := rtypew_execute_reaches rs2 rs1 0#5 op (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **ITYPE into x0** (ADDI, `imm_c = 1`).  One register read (`rs1` → `op_b`), the immediate in `op_c`. -/
@@ -2766,7 +2766,7 @@ theorem advance_of_alu_x0_itype {prog : GuestProgram} {r : Trace.RowView (ZMod p
     (fun t hframe _ _ _ => by
       have := itype_execute_reaches imm rs1 0#5 op (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t
         ((hframe rs1).trans hrs1)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **Shift-immediate into x0** (`SLLI`/`SRLI`/`SRAI`, `imm_c = 1`).  SP1 uses the same
@@ -2812,7 +2812,7 @@ theorem advance_of_alu_x0_shiftitype {prog : GuestProgram}
       have reached := shiftitype_execute_reaches shamt rs1 0#5 op
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t
         ((hframe rs1).trans hrs1)
-      rwa [if_pos rfl] at reached)
+      rwa [ite_eq_left rfl] at reached)
     hstraight hpc0 hnowrite hnomem
 
 /-- **Word shift-immediate into x0** (`SLLIW`/`SRLIW`/`SRAIW`, `imm_c = 1`). -/
@@ -2856,7 +2856,7 @@ theorem advance_of_alu_x0_shiftiwtype {prog : GuestProgram}
       have reached := shiftiwtype_execute_reaches shamt rs1 0#5 op
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t
         ((hframe rs1).trans hrs1)
-      rwa [if_pos rfl] at reached)
+      rwa [ite_eq_left rfl] at reached)
     hstraight hpc0 hnowrite hnomem
 
 /-- **ADDIW into x0** (`opcode = ADDW`, `imm_c = 1`). -/
@@ -2899,7 +2899,7 @@ theorem advance_of_alu_x0_addiw {prog : GuestProgram}
       have reached := execute_ADDIW_reaches imm rs1 0#5
         (Word.toBitVec64 r.adapter.op_b_memory.prev_value) t
         ((hframe rs1).trans hrs1)
-      rwa [if_pos rfl] at reached)
+      rwa [ite_eq_left rfl] at reached)
     hstraight hpc0 hnowrite hnomem
 
 /-- **DIV/DIVU into x0** (`imm_c = 0`). -/
@@ -2935,7 +2935,7 @@ theorem advance_of_alu_x0_div {prog : GuestProgram} {r : Trace.RowView (ZMod p)}
     (fun t hframe _ _ _ => by
       have := execute_DIV_reaches rs2 rs1 0#5 isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **REM/REMU into x0** (`imm_c = 0`; note the bool-first `SailRV64.rem isU`). -/
@@ -2971,7 +2971,7 @@ theorem advance_of_alu_x0_rem {prog : GuestProgram} {r : Trace.RowView (ZMod p)}
     (fun t hframe _ _ _ => by
       have := execute_REM_reaches rs2 rs1 0#5 isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **DIVW/DIVUW into x0** (`imm_c = 0`). -/
@@ -3007,7 +3007,7 @@ theorem advance_of_alu_x0_divw {prog : GuestProgram} {r : Trace.RowView (ZMod p)
     (fun t hframe _ _ _ => by
       have := execute_DIVW_reaches rs2 rs1 0#5 isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **REMW/REMUW into x0** (`imm_c = 0`; bool-first `SailRV64.remw isU`). -/
@@ -3043,13 +3043,13 @@ theorem advance_of_alu_x0_remw {prog : GuestProgram} {r : Trace.RowView (ZMod p)
     (fun t hframe _ _ _ => by
       have := execute_REMW_reaches rs2 rs1 0#5 isU (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **MUL-family into x0** (MUL/MULH/MULHU/MULHSU, `imm_c = 0`).  Generic over `op : mul_op`
 with the canonicity guard `hcanon` (so the guarded decode fixes the instruction).  `rd` is forced to `0#5`
 from the committed `op_a = 0` (`regidx_bv_inj`), the `execute_MUL_reaches op` value drops out
-(`if_pos rfl`), the whole row is straight-line no-write.  The `.MUL` twin of `advance_of_alu_x0_div`.
+(`ite_eq_left rfl`), the whole row is straight-line no-write.  The `.MUL` twin of `advance_of_alu_x0_div`.
 **Move-2:** now covers **all four** canonical MUL ops incl. the previously-seam MUL/MULHSU — `hcanon`
 replaces the impossible global-injectivity `hpin`, discharged `by decide` at every concrete op. -/
 theorem advance_of_alu_x0_mul {prog : GuestProgram} {r : Trace.RowView (ZMod p)} {s : SailState}
@@ -3085,7 +3085,7 @@ theorem advance_of_alu_x0_mul {prog : GuestProgram} {r : Trace.RowView (ZMod p)}
     (fun t hframe _ _ _ => by
       have := execute_MUL_reaches rs2 rs1 0#5 op (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **MULW into x0** (`imm_c = 0`).  No `mul_op`, so the instruction is fully fixed by the
@@ -3122,7 +3122,7 @@ theorem advance_of_alu_x0_mulw {prog : GuestProgram} {r : Trace.RowView (ZMod p)
     (fun t hframe _ _ _ => by
       have := execute_MULW_reaches rs2 rs1 0#5 (Word.toBitVec64 r.adapter.op_b_memory.prev_value)
         (Word.toBitVec64 r.adapter.op_c_memory.prev_value) t ((hframe rs1).trans hrs1) ((hframe rs2).trans hrs2)
-      rwa [if_pos rfl] at this)
+      rwa [ite_eq_left rfl] at this)
     hstraight hpc0 hnowrite hnomem
 
 /-- **Complete v6.4.0 AluX0 dispatch.**  The Byte-table range fact identifies SP1's dynamic
@@ -3147,7 +3147,7 @@ theorem advance_of_alu_x0_program {prog : GuestProgram}
   have projected' := instrToProgramRow'_some projected
   have isAlu := instrToProgramRow_isCoreAlu_of_opcode_lt projected' (by
     simpa only [programAccess, ProgramAccess.toRow] using hopcode)
-  cases instruction <;> simp only [IsCoreAluInstruction] at isAlu
+  cases instruction <;> rename_i chunk <;> cases chunk <;> simp only [IsCoreAluInstruction] at isAlu
   case ITYPE args =>
     rcases args with ⟨imm, rs1, rd, op⟩
     simp only [instrToProgramRow, Option.some.injEq] at projected'

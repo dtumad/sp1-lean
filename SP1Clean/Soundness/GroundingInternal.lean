@@ -47,8 +47,7 @@ structure SupportedCoreGroundingObligations
   chipContracts : ∀ chip ∈ supportedChips (p := p), ChipGroundingContracts chip
   memoryMultiplicityBinary :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness Channels.memoryChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1
+      IsBool interaction.mult
   paddingMemoryEmpty : ∀ decoded ∈ decodedInstructionRows (p := p) witness.tables,
     (decoded.toChipRow witness.data).is_real ≠ 1 →
       decoded.producedMemoryMessages witness.data = [] ∧
@@ -503,7 +502,7 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
               Semantics.MemoryMsg.timeNat (tc : TimedGrounding.Touch p).1.1 <
                 Semantics.MemoryMsg.timeNat tc.2) := by
     intro decoded decodedMem
-    simp only [touchesOf, dif_pos decodedMem]
+    simp only [touchesOf, dite_eq_left decodedMem]
     exact Classical.choose_spec (alignedExists decoded decodedMem)
   let alignedRow : DecodedInstructionRow p → Semantics.RowFacts p := fun decoded =>
     TimedGrounding.alignedOf (decoded.ordinaryRowFacts witness.data) (touchesOf decoded)
@@ -575,7 +574,7 @@ theorem supportedCore_orderedRows_dynamic_of_obligations
   -- frontiers, plus the MemoryBump table's own refresh pairs.
   have widened := memoryBalance_of_alignsWith witness balanced
     obligations.memoryMultiplicityBinary
-    (initPure witness constraints) (finPure witness constraints) boundary.memoryProviderUnique
+    (initPure witness) (finPure witness) boundary.memoryProviderUnique
     boundary.memoryFinalizeProviderUnique obligations.paddingMemoryEmpty orderedRows exhaustive
     alignedRow aligns
   simp only [syscallInstrs_producedMessages_nil_of_inactive witness constraints
@@ -1972,10 +1971,9 @@ theorem supported_core_witness_grounding
           exact List.mem_singleton.mp rowMem
         rw [rowIsHalt, haltTable_component]
         simp only [Table.environment, haltTable_data]
-        refine channelGuarantees_of_consumedMessages _ Channels.memoryChannel _
-          (by have := Fact.out (p := 2 ^ 25 < p); omega) ?_
+        refine channelGuarantees_of_consumedMessages _ Channels.memoryChannel _ ?_
         have rowConsumed : consumedMessages (typedInteractionValuesWith
-            ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).operations Channels.memoryChannel
+            ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).operations Channels.memoryChannel
             (Environment.fromArray halt witness.data)) =
             [HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x5_memory 5,
              HaltChip.memPulledMessage (haltRow witness.data halt) (haltRow witness.data halt).x10_memory 10,
@@ -1984,7 +1982,7 @@ theorem supported_core_witness_grounding
           rw [haltRealEq] at tableConsumed
           rw [typedTableInteractionsWith, tableEq] at tableConsumed
           simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil] at tableConsumed
-          rw [show (haltTable witness).component = ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p))
+          rw [show (haltTable witness).component = ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p))
             from haltTable_component witness] at tableConsumed
           simpa only [Table.environment, haltTable_data] using tableConsumed
         rw [rowConsumed]

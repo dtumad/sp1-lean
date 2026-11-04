@@ -17,7 +17,7 @@ constructors and unsupported routes fail closed in the outer projection; missing
 values fail closed in the one inner access projection.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Semantics
 
@@ -76,7 +76,7 @@ theorem projectSP1Transition?_components
           | some decoded =>
               simp only [decodeEq, Option.bind_some] at projected
               by_cases imageEq : instructionImageOK decoded = true
-              · rw [if_pos imageEq] at projected
+              · rw [ite_eq_left imageEq] at projected
                 cases keyEq : instructionRouteKey decoded with
                 | none => simp [keyEq] at projected
                 | some key =>
@@ -94,7 +94,7 @@ theorem projectSP1Transition?_components
                         injection projected with viewEq
                         subst view
                         exact ⟨rfl, fetchEq, rfl, imageEq, keyEq, routeEq, rfl⟩
-              · rw [if_neg imageEq] at projected
+              · rw [ite_eq_right imageEq] at projected
                 contradiction
 
 theorem projectSP1Transition?_decode

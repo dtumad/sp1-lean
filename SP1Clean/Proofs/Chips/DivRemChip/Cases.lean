@@ -165,11 +165,11 @@ theorem Unsigned64Evidence.total (rs1 rs2 : BitVec 64) :
   by_cases hc0 : rs2 = 0#64
   · subst hc0
     refine ⟨by simp, fun h => by simp at h, fun _ => ⟨?_, by simp⟩⟩
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     show (-1#64).toNat = 2 ^ 64 - 1
     rw [BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes]
   · have hcz : rs2.toNat ≠ 0 := fun h => hc0 (BitVec.eq_of_toNat_eq (by simp [h]))
-    rw [if_neg hc0]
+    rw [ite_eq_right hc0]
     refine ⟨?_, fun _ => ?_, fun h => absurd h hcz⟩
     · rw [BitVec.udiv_eq, BitVec.umod_eq, BitVec.toNat_udiv, BitVec.toNat_umod]
       exact (Nat.div_add_mod rs1.toNat rs2.toNat).symm

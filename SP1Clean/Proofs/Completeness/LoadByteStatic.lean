@@ -1,3 +1,5 @@
+import ToClean.Air.TableEvaluation
+import ToClean.Air.MessageFilter
 import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete
 import SP1Clean.Proofs.Chips.LoadByteStaticChip.Transport
 import SP1Clean.Proofs.Completeness.ProviderInteractions
@@ -42,19 +44,24 @@ def selectedPush (input : Inputs (ZMod p)) : Interaction (ZMod p) :=
 /-- The old consumer table uses the existing event/witness infrastructure. -/
 def originalTable (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) : Air.Flat.Table (ZMod p) :=
-  Air.Flat.Table.build LoadByteChip.component inputs data hint bounded
+  Air.Flat.Table.buildAt LoadByteChip.component inputs data
+    (LoadByteChip.component.inputData inputs data) hint bounded (by trivial)
+    (Component.inputData_consistent ..)
 
 /-- The replacement changes only the component, preserving the generated cells. -/
 def replacementTable (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) : Air.Flat.Table (ZMod p) :=
-  Air.Flat.Table.build LoadByteStaticChip.component inputs data hint bounded
+  Air.Flat.Table.buildAt LoadByteStaticChip.component inputs data
+    (LoadByteStaticChip.component.inputData inputs data) hint bounded (by trivial)
+    (Component.inputData_consistent ..)
 
 /-- The old assembly's dedicated provider rows; there is one physical row per input, including
 padding. Aggregation is intentionally absent from both sides of this comparison. -/
 def selectedProviderTable (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) : Air.Flat.Table (ZMod p) :=
-  Air.Flat.Table.build ByteChip.U8Range.component (inputs.map selectedProviderInput) data hint
-    (by exact (List.length_map _).le.trans bounded)
+  Air.Flat.Table.buildAt ByteChip.U8Range.component (inputs.map selectedProviderInput) data
+    (ByteChip.U8Range.component.inputData (inputs.map selectedProviderInput) data) hint
+    (by exact (List.length_map _).le.trans bounded) (by trivial) (Component.inputData_consistent ..)
 
 /-- The original assembled table list, with arbitrary shared residual tables. -/
 def originalAssembly (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size) (data : ProverData (ZMod p))
@@ -84,7 +91,7 @@ theorem selected_pair_balance (input : Inputs (ZMod p))
   change _ + (_ + 0) = 0
   rcases binary with h | h <;>
     simp only [selectedPull, selectedPush, Channel.pulledIfValue, Channel.pushedIfValue,
-      h, zero_mul, one_mul, neg_zero] <;> split_ifs <;> simp
+      Interaction.signedMult, h, zero_mul, one_mul, neg_zero] <;> split_ifs <;> simp
 
 /-- The existing U8Range circuit really emits the dedicated push from its built physical row. -/
 theorem providerRow_interactions (input : Inputs (ZMod p)) (data evaluationData : ProverData (ZMod p))
@@ -108,11 +115,11 @@ theorem providerRow_interactions (input : Inputs (ZMod p)) (data evaluationData 
     simp only [circuit_norm]
   rw [roweval]
   simp only [ProvableType.eval_field]
-  rw [eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions } : Component (ZMod p))
+  rw [eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions, generation := ByteChip.U8Range.generation } : Component (ZMod p))
       (selectedProviderInput input) data hint 0 (by change 0 < 3; omega),
-    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions } : Component (ZMod p))
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions, generation := ByteChip.U8Range.generation } : Component (ZMod p))
       (selectedProviderInput input) data hint 1 (by change 1 < 3; omega),
-    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions } : Component (ZMod p))
+    eval_var_buildRow_input_get ({ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions, generation := ByteChip.U8Range.generation } : Component (ZMod p))
       (selectedProviderInput input) data hint 2 (by change 2 < 3; omega)]
   simp only [selectedProviderInput, toElements, ProvableStruct.structToElements_eq,
     ProvableStruct.toComponents]
@@ -147,40 +154,40 @@ theorem consumerRow_interactions_perm (input : Inputs (ZMod p)) (data evaluation
 
 /-- The dedicated provider table emits exactly one named push for every input row. -/
 theorem providerTable_interactions (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
-    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    ({ selectedProviderTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions = inputs.map selectedPush := by
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    (selectedProviderTable inputs bounded data hint).interactions = inputs.map selectedPush := by
   calc
     _ = (inputs.map selectedProviderInput).flatMap
         (fun input : ByteChip.U8Range.Inputs (ZMod p) =>
           ByteChip.U8Range.component.operations.interactionValues (Environment.fromArray
-            (ByteChip.U8Range.component.buildRow input data hint) evaluationData)) :=
-      Air.Flat.Table.build_interactionValues ByteChip.U8Range.component _ data hint
-        (by exact (List.length_map _).le.trans bounded) _ evaluationData
+            (ByteChip.U8Range.component.buildRow input data hint) data)) :=
+      Air.Flat.Table.buildAt_interactionValues ByteChip.U8Range.component _ data _ data hint
+        (by exact (List.length_map _).le.trans bounded) _ _
     _ = inputs.flatMap (fun input => ByteChip.U8Range.component.operations.interactionValues
         (Environment.fromArray (ByteChip.U8Range.component.buildRow
-          (selectedProviderInput input) data hint) evaluationData)) := List.flatMap_map ..
+          (selectedProviderInput input) data hint) data)) := List.flatMap_map ..
     _ = inputs.map selectedPush := by
       simp only [providerRow_interactions]
       exact List.map_eq_flatMap.symm
 
 /-- Table-wide occurrence preservation, without matching or erasing by key. -/
 theorem consumerTable_interactions_perm (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
-    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
-    (({ originalTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions).Perm
-      (inputs.map selectedPull ++ ({ replacementTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions) := by
-  have original : ({ originalTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions =
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
+    ((originalTable inputs bounded data hint).interactions).Perm
+      (inputs.map selectedPull ++ (replacementTable inputs bounded data hint).interactions) := by
+  have original : (originalTable inputs bounded data hint).interactions =
       inputs.flatMap (fun input : Inputs (ZMod p) =>
         LoadByteChip.component.operations.interactionValues
-          (Environment.fromArray (LoadByteChip.component.buildRow input data hint) evaluationData)) :=
-    Air.Flat.Table.build_interactionValues LoadByteChip.component inputs data hint bounded _ evaluationData
-  have replacement : ({ replacementTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions =
+          (Environment.fromArray (LoadByteChip.component.buildRow input data hint) data)) :=
+    Air.Flat.Table.buildAt_interactionValues LoadByteChip.component inputs data _ data hint bounded _ _
+  have replacement : (replacementTable inputs bounded data hint).interactions =
       inputs.flatMap (fun input : Inputs (ZMod p) =>
         LoadByteStaticChip.component.operations.interactionValues (Environment.fromArray
-          (LoadByteStaticChip.component.buildRow input data hint) evaluationData)) :=
-    Air.Flat.Table.build_interactionValues LoadByteStaticChip.component inputs data hint bounded _ evaluationData
+          (LoadByteStaticChip.component.buildRow input data hint) data)) :=
+    Air.Flat.Table.buildAt_interactionValues LoadByteStaticChip.component inputs data _ data hint bounded _ _
   rw [original, replacement]
   have rowPerm := List.Perm.flatMap_left inputs
-    (fun input _ => consumerRow_interactions_perm input data evaluationData hint)
+    (fun input _ => consumerRow_interactions_perm input data data hint)
   exact rowPerm.trans (List.map_append_flatMap_perm inputs selectedPull _).symm
 
 /-- Soundness of the actual selected-provider row authenticates both new lookup entries. -/
@@ -258,9 +265,9 @@ theorem consumerRow_constraints (input : Inputs (ZMod p)) (data evaluationData :
 honest-generator premises. -/
 theorem replacementTable_constraints (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
     (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
-    (consumer : ({ originalTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).Constraints)
-    (provider : ({ selectedProviderTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).Constraints) :
-    ({ replacementTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).Constraints := by
+    (consumer : (originalTable inputs bounded data hint).ConstraintsAt evaluationData)
+    (provider : (selectedProviderTable inputs bounded data hint).ConstraintsAt evaluationData) :
+    (replacementTable inputs bounded data hint).ConstraintsAt evaluationData := by
   intro row member
   obtain ⟨input, inputMem, rfl⟩ := List.mem_map.mp member
   exact consumerRow_constraints input data evaluationData hint
@@ -271,33 +278,33 @@ theorem replacementTable_constraints (inputs : List (Inputs (ZMod p))) (bounded 
 /-- The actual all-channel ledger decomposes into exactly the removed occurrences plus the new
 ledger. Residual tables, including duplicate keys, are literal common suffixes. -/
 theorem assembly_interactions_perm (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
-    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p))) :
     ((originalAssembly inputs bounded data hint residual).flatMap
-      (fun table => ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions)).Perm
+      (fun table => (table).interactions)).Perm
       ((inputs.map selectedPull ++ inputs.map selectedPush) ++
         (replacementAssembly inputs bounded data hint residual).flatMap
-          (fun table => ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions)) := by
+          (fun table => (table).interactions)) := by
   simp only [originalAssembly, replacementAssembly, List.flatMap_cons,
     providerTable_interactions]
-  apply ((consumerTable_interactions_perm inputs bounded data evaluationData hint).append_right _).trans
+  apply ((consumerTable_interactions_perm inputs bounded data hint).append_right _).trans
   simp only [List.append_assoc]
   simpa only [List.append_assoc] using
     List.Perm.append_left (inputs.map selectedPull)
-      ((List.perm_append_comm (l₁ := ({ replacementTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions)
+      ((List.perm_append_comm (l₁ := (replacementTable inputs bounded data hint).interactions)
         (l₂ := inputs.map selectedPush)).append_right
-          (residual.flatMap (fun table => ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions)))
+          (residual.flatMap (fun table => (table).interactions)))
 
 /-- Exactly two physical interaction occurrences disappear per source row, including padding. -/
 theorem assembly_raw_count (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
-    (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
+    (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p))) :
     ((originalAssembly inputs bounded data hint residual).flatMap
-      (fun table => ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions)).length =
+      (fun table => (table).interactions)).length =
       2 * inputs.length +
         ((replacementAssembly inputs bounded data hint residual).flatMap
-          (fun table => ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).interactions)).length := by
-  have h := (assembly_interactions_perm inputs bounded data evaluationData hint residual).length_eq
+          (fun table => (table).interactions)).length := by
+  have h := (assembly_interactions_perm inputs bounded data hint residual).length_eq
   simp only [List.length_append, List.length_map] at h
   omega
 
@@ -326,35 +333,38 @@ private theorem removed_balance (inputs : List (Inputs (ZMod p)))
     · simp [selectedPull, selectedPush, Channel.pulledIfValue, Channel.pushedIfValue, same,
         balanceOf]
 
+/-- Concrete bounded field-sum acceptance used by this replacement theorem. -/
+def BoundedLogUp (interactions : List (Interaction (ZMod p))) : Prop :=
+  interactions.length < p ∧ LogUpBalanced interactions
+
 /-- Complete per-channel balance and its raw-count bound transport from old to new. The reverse
 construction is deliberately not claimed: it may need a larger admissible interaction budget. -/
 theorem assembly_balanced (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
     (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p)))
-    (consumer : ({ originalTable inputs bounded data hint with data := evaluationData } : Air.Flat.Table (ZMod p)).Constraints)
-    (balanced : ∀ channel : RawChannel (ZMod p), BalancedInteractions
+    (consumer : (originalTable inputs bounded data hint).ConstraintsAt evaluationData)
+    (balanced : ∀ channel : RawChannel (ZMod p), BoundedLogUp
       ((originalAssembly inputs bounded data hint residual).flatMap
-        (fun t => ({ t with data := evaluationData } : Air.Flat.Table (ZMod p)).interactionsWith channel))) :
-    ∀ channel : RawChannel (ZMod p), BalancedInteractions
+        (fun t => (t).interactionsWith channel))) :
+    ∀ channel : RawChannel (ZMod p), BoundedLogUp
       ((replacementAssembly inputs bounded data hint residual).flatMap
-        (fun t => ({ t with data := evaluationData } : Air.Flat.Table (ZMod p)).interactionsWith channel)) := by
+        (fun t => (t).interactionsWith channel)) := by
   classical
   have binary : ∀ input ∈ inputs, isReal input = 0 ∨ isReal input = 1 := by
     intro input mem
     exact consumerRow_binary input data evaluationData hint
       (consumer _ (List.mem_map.mpr ⟨input, mem, rfl⟩))
   intro channel
-  have perm := (assembly_interactions_perm inputs bounded data evaluationData hint residual).filter
+  have perm := (assembly_interactions_perm inputs bounded data hint residual).filter
     (fun i => decide (i.channel = channel))
   simp only [List.filter_append, List.filter_flatMap,
     ← Air.Flat.Table.interactionsWith_eq_filter] at perm
-  have old := balancedInteractions_of_perm (balanced channel) perm
+  have old : BoundedLogUp _ := ⟨perm.length_eq ▸ (balanced channel).1,
+    fun message => (balanceOf_perm perm).symm.trans ((balanced channel).2 message)⟩
   refine ⟨?_, ?_⟩
   · have length := old.1
     simp only [List.length_append] at length
-    rcases length with length | characteristicZero
-    · exact Or.inl (Nat.lt_of_le_of_lt (Nat.le_add_left _ _) length)
-    · exact Or.inr characteristicZero
+    exact Nat.lt_of_le_of_lt (Nat.le_add_left _ _) length
   · intro message
     have eq := old.2 message
     rw [balanceOf_append, ← List.filter_append,
@@ -366,14 +376,14 @@ balance suffice for the replacement. Canonical-data agreement is a separate obli
 theorem assembly_acceptance (inputs : List (Inputs (ZMod p))) (bounded : inputs.length ≤ UInt64.size)
     (data evaluationData : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (residual : List (Air.Flat.Table (ZMod p)))
-    (constraints : ∀ table ∈ originalAssembly inputs bounded data hint residual, ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).Constraints)
-    (balanced : ∀ channel : RawChannel (ZMod p), BalancedInteractions
+    (constraints : ∀ table ∈ originalAssembly inputs bounded data hint residual, (table).ConstraintsAt evaluationData)
+    (balanced : ∀ channel : RawChannel (ZMod p), BoundedLogUp
       ((originalAssembly inputs bounded data hint residual).flatMap
-        (fun t => ({ t with data := evaluationData } : Air.Flat.Table (ZMod p)).interactionsWith channel))) :
-    (∀ table ∈ replacementAssembly inputs bounded data hint residual, ({ table with data := evaluationData } : Air.Flat.Table (ZMod p)).Constraints) ∧
-      (∀ channel : RawChannel (ZMod p), BalancedInteractions
+        (fun t => (t).interactionsWith channel))) :
+    (∀ table ∈ replacementAssembly inputs bounded data hint residual, (table).ConstraintsAt evaluationData) ∧
+      (∀ channel : RawChannel (ZMod p), BoundedLogUp
         ((replacementAssembly inputs bounded data hint residual).flatMap
-          (fun t => ({ t with data := evaluationData } : Air.Flat.Table (ZMod p)).interactionsWith channel))) := by
+          (fun t => (t).interactionsWith channel))) := by
   have consumer := constraints _ (List.mem_cons_self)
   have provider := constraints _ (List.mem_cons_of_mem _ List.mem_cons_self)
   refine ⟨?_, assembly_balanced inputs bounded data evaluationData hint residual consumer balanced⟩

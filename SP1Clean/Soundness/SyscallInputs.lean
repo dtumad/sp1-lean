@@ -9,7 +9,7 @@ These lemmas apply to any table carrying the syscall component, independently of
 They do not supply host effects or restrict the complete syscall register to a supported code.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -26,30 +26,20 @@ local instance syscallInputs_fact17 : Fact (2 ^ 17 < p) :=
 
 /-- Rebuild the row's Memory guarantee from its three incoming records. -/
 theorem syscallInstrsRow_memoryGuarantees_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
-    (constraints : table.Constraints)
-    {row : Array (ZMod p)} (rowMem : row ∈ table.table)
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
+    (_constraints : table.Constraints)
+    {row : Array (ZMod p)} (_rowMem : row ∈ table.table)
     (currency : ∀ mp ∈
         (syscallRowFacts (syscallInstrsRow data row)).memPulls,
       MemoryMsg.isU64 (mp : MemoryMsg (ZMod p) × ℕ).1 ∧ MemoryMsg.ClkBound mp.1) :
     table.component.operations.ChannelGuarantees memoryChannel.toRaw
       (Environment.fromArray row data) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-  have hbool := syscallRow_binary table data component constraints row rowMem
-  refine channelGuarantees_of_consumedMessages _ memoryChannel _ hp fun msg msgMem => ?_
+  refine channelGuarantees_of_consumedMessages _ memoryChannel _ fun msg msgMem => ?_
   rw [syscallInstrsRow_typedMemory_of_component table data component, consumedMessages, List.mem_map] at msgMem
   obtain ⟨i, iMem, rfl⟩ := msgMem
-  rw [List.mem_filter, decide_eq_true_eq] at iMem
+  have iMem := List.mem_filter.mp iMem
+  simp only [decide_eq_true_eq] at iMem
   obtain ⟨iList, iPull⟩ := iMem
-  -- A push can never be on the consumed side: its multiplicity is the boolean gate itself.
-  have pushImpossible : ∀ {m : MemoryMsg (ZMod p)},
-      signedVal (TypedInteraction.pushedIfValue memoryChannel
-        (syscallInstrsRow data row).is_real m).mult = -1 → False := by
-    intro m h
-    rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp hbool] at h
-    rcases hbool with h0 | h1
-    · rw [h0, ZMod.val_zero] at h; simp at h
-    · rw [h1, ZMod.val_one] at h; simp at h
   simp only [List.mem_cons, List.not_mem_nil, or_false] at iList
   rcases iList with rfl | rfl | rfl | rfl | rfl | rfl
   · rw [TypedInteraction.pulledIfValue_message]
@@ -61,7 +51,7 @@ theorem syscallInstrsRow_memoryGuarantees_of_component
         (syscallInstrsRow data row))) ?_
     rw [syscallRowFacts_memPulls]
     exact List.mem_cons_self
-  · exact absurd iPull pushImpossible
+  · exact Channel.Direction.noConfusion iPull.1
   · rw [TypedInteraction.pulledIfValue_message]
     refine currency (SyscallInstrsChip.memPulledMessage
       (syscallInstrsRow data row)
@@ -71,7 +61,7 @@ theorem syscallInstrsRow_memoryGuarantees_of_component
         (syscallInstrsRow data row)) + 3) ?_
     rw [syscallRowFacts_memPulls]
     exact List.mem_cons_of_mem _ List.mem_cons_self
-  · exact absurd iPull pushImpossible
+  · exact Channel.Direction.noConfusion iPull.1
   · rw [TypedInteraction.pulledIfValue_message]
     refine currency (SyscallInstrsChip.memPulledMessage
       (syscallInstrsRow data row)
@@ -81,11 +71,11 @@ theorem syscallInstrsRow_memoryGuarantees_of_component
         (syscallInstrsRow data row)) + 2) ?_
     rw [syscallRowFacts_memPulls]
     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
-  · exact absurd iPull pushImpossible
+  · exact Channel.Direction.noConfusion iPull.1
 
 /-- Read the committed ECALL's local Program guarantee at one active physical row. -/
 theorem syscallInstrsRow_programRowSpec_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (program : table.ChannelGuarantees programChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -98,13 +88,13 @@ theorem syscallInstrsRow_programRowSpec_of_component
     (TypedInteraction.pulledIfValue programChannel (syscallInstrsRow data row).is_real
       (SyscallInstrsChip.programMessage (syscallInstrsRow data row)))
     (by rw [syscallInstrsRow_typedProgram_of_component table data component]; exact List.mem_cons_self)
-    (by simpa only [Table.environment, sameData] using programGuarantees) (by rfl)
-    (by rw [TypedInteraction.pulledIfValue_mult, real])
+    (by simpa only [Table.environment, sameData] using programGuarantees)
+    ⟨rfl, real⟩
   simpa only [TypedInteraction.pulledIfValue_message, programChannel] using guarantee
 
 /-- The complete syscall contract and well-formed operand words, derived within incoming currency. -/
 theorem syscallInstrsRow_contract_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (constraints : table.Constraints)
     (byte : table.ChannelGuarantees byteChannel.toRaw)

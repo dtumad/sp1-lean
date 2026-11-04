@@ -169,8 +169,8 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
     refine ⟨member, h_assumptions.1,
       ⟨⟨fun _ => ⟨h_assumptions.1, ranges.1⟩, Or.inr rfl⟩, lowerSpec⟩, ?_,
       ⟨⟨fun _ => ⟨h_assumptions.1, ranges.2.1⟩, Or.inr rfl⟩, upperSpec⟩, ?_⟩
-    · simpa only [if_neg (Nat.not_lt.mpr lowerLe)] using lowerResult
-    · rw [upperResult, if_pos upperLt, sub_self]
+    · simpa only [ite_eq_right (Nat.not_lt.mpr lowerLe)] using lowerResult
+    · rw [upperResult, ite_eq_left upperLt, sub_self]
 
 @[circuit_norm ↓, explicit_circuit_norm] theorem circuitNamed_elaborated (memory : ByteMemory)
     (limit : ℕ) (limitBound : limit < 2 ^ 64) (tableName : String) :

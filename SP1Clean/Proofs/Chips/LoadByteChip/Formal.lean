@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.LoadByteChip.Defs
@@ -113,7 +114,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       input_selected_limb_low_byte.val < 256
         ∧ ((input_selected_limb - input_selected_limb_low_byte) * (256 : ZMod p)⁻¹).val < 256 := by
     intro h1
-    have hneg : -(input_is_lb + input_is_lbu) = -1 := by rw [h1]
+    have hneg : input_is_lb + input_is_lbu = 1 := h1
     have G := hu8 hneg
     have hb := (byteRowSpec_u8range_pair _ _).mp G
     rw [show (2:ℕ)^8 = 256 from by norm_num] at hb
@@ -130,7 +131,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_msb_fact : input_is_lb = 1 →
       (input_msb = 0 ∨ input_msb = 1) ∧ (input_msb = 1 ↔ 128 ≤ input_selected_byte.val) := by
     intro h1
-    have hneg : - input_is_lb = -1 := by rw [h1]
+    have hneg : input_is_lb = 1 := by rw [h1]
     have G := hmsb_rcv hneg
     have := (byteRowSpec_msb _ _).mp G
     exact ⟨this.2.1, this.2.2⟩
@@ -162,8 +163,8 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       ⟨hsel0, hsel1, hsel2, hsel3⟩, hmux_eq, h_op_a_0, h_msbgate, h_lb_bin, h_lbu_bin, h_bin⟩,
     Or.inr h_addr_as,
     Or.inr ⟨h_bin, fun _ => h_pv_isu64, h_clk⟩,
-    fun h1 h0 => off_gate_vacuous h_bin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_lb_bin h1 h0,
+    h_bin,
+    h_lb_bin,
     Or.inr ⟨h_bin, h_bin, h_clk⟩,
     Or.inr ⟨h_bin, h_load_isu64, h_clk.at_four⟩⟩
 
@@ -306,7 +307,7 @@ theorem completeness :
     exact (byteRowSpec_u8range_pair _ _).mpr ⟨hlo_pa, hhi_pa⟩
   · -- MSB receive obligation (real LB row); value is raw (`toRaw` (gated post-#398)).
     intro hneg
-    have hlb : input_is_lb = 1 := neg_inj.mp hneg
+    have hlb : input_is_lb = 1 := hneg
     simp only [byteChannel]
     exact (byteRowSpec_msb _ _).mpr ⟨⟨h_msb_lt, hbyte_pa⟩, h_msb_bin, h_msb_iff hlb⟩
   · exact ⟨hbin, hbin, h_clk⟩
@@ -473,10 +474,10 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    LoadByteChip.circuit_main_eq]
+    ((LoadByteChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [LoadByteChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
     AddrAddOperation.circuit, AddrAddOperation.main,
@@ -486,5 +487,10 @@ theorem lookups_empty :
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_lb + input.is_lbu)
 
 end SP1Clean.LoadByteChip

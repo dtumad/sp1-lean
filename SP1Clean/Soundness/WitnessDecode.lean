@@ -151,15 +151,22 @@ noncomputable def decodeInstructionTables :
       table.table.map (⟨chip, ·⟩) ++ decodeInstructionTables chips tables
   | _, _ => []
 
-/-- Decoding retains physical cells and descriptors, independently of stored prover data. -/
-theorem decodeInstructionTables_setData (chips : List (SupportedChip p))
-    (tables : List (Table (ZMod p))) (data : ProverData (ZMod p)) :
-    decodeInstructionTables chips (tables.map fun table => { table with data }) =
-      decodeInstructionTables chips tables := by
-  induction chips generalizing tables with
-  | nil => simp [decodeInstructionTables]
+/-- Decoding depends only on physical rows, independently of stored prover data. -/
+theorem decodeInstructionTables_congr_rows (chips : List (SupportedChip p))
+    {tables tables' : List (Table (ZMod p))}
+    (rows : tables'.map (·.table) = tables.map (·.table)) :
+    decodeInstructionTables chips tables' = decodeInstructionTables chips tables := by
+  induction chips generalizing tables tables' with
+  | nil => rfl
   | cons chip chips ih =>
-      cases tables <;> simp [decodeInstructionTables, ih]
+      cases tables with
+      | nil => cases tables' <;> simp_all [decodeInstructionTables]
+      | cons table tables =>
+          cases tables' with
+          | nil => simp at rows
+          | cons table' tables' =>
+              simp only [List.map_cons, List.cons.injEq] at rows
+              simp only [decodeInstructionTables, rows.1, ih rows.2]
 
 /-- A decoded row retains both its descriptor's position and the corresponding physical row.
 This provenance survives component extensions whose additional channels are absent from the decoder. -/
@@ -187,10 +194,16 @@ noncomputable def decodedInstructionRows (tables : List (Table (ZMod p))) :
   decodeInstructionTables (supportedChips (p := p)) (tables.take 25)
 
 /-- Canonical data derivation preserves the complete decoded physical instruction stream. -/
-@[simp] theorem decodedInstructionRows_withDerivedData (tables : List (Table (ZMod p))) :
-    decodedInstructionRows (p := p) (withDerivedData tables) = decodedInstructionRows tables := by
-  simp only [decodedInstructionRows, withDerivedData, ← List.map_take,
-    decodeInstructionTables_setData]
+@[simp] theorem decodedInstructionRows_withDerivedData (tables : List (Table (ZMod p)))
+    (unique : (tables.map fun table => table.component.circuit.name).Nodup)
+    (publicInput : Array (ZMod p)) :
+    decodedInstructionRows (p := p) (withDerivedData tables unique publicInput) =
+      decodedInstructionRows tables := by
+  apply decodeInstructionTables_congr_rows
+  rw [List.map_take, List.map_take]
+  congr 1
+  simpa only [List.map_map, Function.comp_def] using
+    congrArg (List.map Prod.snd) (withDerivedData_map tables unique publicInput)
 
 /-- Positional alignment identifies each physical table with its supported circuit descriptor.
 Evaluation data is supplied explicitly to both the decoder and the physical ledger. -/

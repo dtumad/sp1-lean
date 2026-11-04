@@ -34,7 +34,7 @@ instead.
 **Order matters, and it is append-only.** The branches are matched in sequence and several proofs
 close `kindOf "SP1State" = .State` and friends by `rfl` through this chain
 (`Proofs.Completeness.ChipLedger`, `Soundness.AIRCompleteness`), while others count branches with
-`if_neg (by decide)`. New buses go at the end, never inserted. -/
+`ite_eq_right (by decide)`. New buses go at the end, never inserted. -/
 def kindOf (name : String) : InteractionKind :=
   if name = "SP1Memory" then .Memory
   else if name = "SP1Program" then .Program
@@ -69,7 +69,7 @@ lemma signedVal_natCast_of_twice_le (m : ℕ) (hsmall : 2 * m ≤ p) :
     signedVal (m : ZMod p) = (m : ℤ) := by
   have hp : 0 < p := Nat.pos_of_ne_zero (NeZero.out)
   have hm : m < p := by omega
-  rw [signedVal, ZMod.val_natCast_of_lt hm, if_pos hsmall]
+  rw [signedVal, ZMod.val_natCast_of_lt hm, ite_eq_left hsmall]
 
 omit [NeZero p] in
 /-- The `ZMod.val` of a binary `is_real` is `0` or `1`. -/
@@ -83,7 +83,7 @@ omit [NeZero p] in
 candidate values `0`/`1` satisfy `2 * val ≤ p`, so the centered representative is `val` itself). -/
 lemma signedVal_is_real (hp : 2 < p) {is_real : ZMod p} (h : is_real = 0 ∨ is_real = 1) :
     signedVal is_real = (is_real.val : ℤ) := by
-  rcases val_of_binary hp h with hv | hv <;> (simp only [signedVal, hv]; rw [if_pos (by omega)])
+  rcases val_of_binary hp h with hv | hv <;> (simp only [signedVal, hv]; rw [ite_eq_left (by omega)])
 
 omit [NeZero p] in
 /-- For a binary `is_real`, `signedVal (-is_real) = -is_real.val` (the negative/`receive` multiplicity):
@@ -96,7 +96,7 @@ lemma signedVal_neg_is_real (hp : 2 < p) {is_real : ZMod p} (h : is_real = 0 ∨
     have hv : (-1 : ZMod p).val = p - 1 := by
       simpa [ZMod.val_one] using ZMod.val_neg_of_ne_zero (1 : ZMod p)
     simp only [signedVal, hv, ZMod.val_one]
-    rw [if_neg (by omega), Nat.cast_sub (show 1 ≤ p by omega)]
+    rw [ite_eq_right (by omega), Nat.cast_sub (show 1 ≤ p by omega)]
     push_cast; ring
 
 omit [NeZero p] in
@@ -117,8 +117,8 @@ lemma signedVal_neg [Fact p.Prime] (hp : 2 < p) (x : ZMod p) :
     unfold signedVal
     rw [hvneg]
     by_cases h : 2 * x.val ≤ p
-    · rw [if_pos h, if_neg (by omega), Nat.cast_sub (by omega)]; ring
-    · rw [if_neg h, if_pos (by omega), Nat.cast_sub (by omega)]; ring
+    · rw [ite_eq_left h, ite_eq_right (by omega), Nat.cast_sub (by omega)]; ring
+    · rw [ite_eq_right h, ite_eq_left (by omega), Nat.cast_sub (by omega)]; ring
 
 /-- `signedVal` is a **section** of the canonical projection `ℤ → ZMod p`: casting the centered
 representative back recovers the element. This is what lets Clean's *field* channel balance be read as
@@ -137,7 +137,7 @@ omit [NeZero p] in
 the evaluated counterpart of `AbstractInteraction.toAccess`. Bus kind from the channel `name`, the
 table `name`, the message val-projected, and the centered signed multiplicity. -/
 def Interaction.toAccess (i : Interaction (ZMod p)) : LookupAccess :=
-  (kindOf i.channel.name, i.channel.name, i.msg.toList.map ZMod.val, signedVal i.mult)
+  (kindOf i.channel.name, i.channel.name, i.msg.toList.map ZMod.val, signedVal (match i.direction with | .push => i.mult | .pull => -i.mult))
 
 variable [Fact p.Prime]
 
@@ -148,7 +148,8 @@ noncomputable def AbstractInteraction.toAccess (env : Environment (ZMod p))
     (i : AbstractInteraction (ZMod p)) : LookupAccess :=
   (kindOf i.channel.name, i.channel.name,
     (i.msg.map (Expression.eval env)).toList.map ZMod.val,
-    signedVal (Expression.eval env i.mult))
+    signedVal (match i.direction with
+      | .push => Expression.eval env i.mult | .pull => -Expression.eval env i.mult))
 
 /-- Project one evaluated Clean interaction into the Rust-facing orientation used by Rust comparisons. Native Memory and Program channels are dualized because SP1's released AIR sends
 where the proof-oriented Clean circuits pull; State, Byte, and unexpected channels retain their
@@ -200,7 +201,8 @@ private lemma toAccess_toRaw {Message : TypeMap} [ProvableType Message]
     AbstractInteraction.toAccess env i.toRaw =
       (kindOf channel.name, channel.name,
         ((toElements i.msg).toList.map (Expression.eval env)).map ZMod.val,
-        signedVal (Expression.eval env i.mult)) := by
+        signedVal (match i.direction with
+      | .push => Expression.eval env i.mult | .pull => -Expression.eval env i.mult)) := by
   simp only [AbstractInteraction.toAccess, ChannelInteraction.toRaw, Channel.toRaw,
     Vector.toList_map]
 
@@ -297,7 +299,7 @@ lemma toAccess_pullIf_state (env : Environment (ZMod p)) (gate : Expression (ZMo
          (Expression.eval env msg.pc0).val, (Expression.eval env msg.pc1).val,
          (Expression.eval env msg.pc2).val],
         signedVal (Expression.eval env (-gate))) := by
-  simp only [toAccess_toRaw, pulledIf, stateChannel, kindOf, stateMsg_toList, List.map_cons,
+  simp only [eval_neg, toAccess_toRaw, pulledIf, stateChannel, kindOf, stateMsg_toList, List.map_cons,
     List.map_nil]
   rfl
 
@@ -366,7 +368,7 @@ lemma toAccess_pullIf_memory (env : Environment (ZMod p)) (gate : Expression (ZM
          (Expression.eval env msg.value[1]).val, (Expression.eval env msg.value[2]).val,
          (Expression.eval env msg.value[3]).val],
         signedVal (Expression.eval env (-gate))) := by
-  simp only [toAccess_toRaw, pulledIf, memoryChannel, kindOf, memoryMsg_toList, List.map_cons,
+  simp only [eval_neg, toAccess_toRaw, pulledIf, memoryChannel, kindOf, memoryMsg_toList, List.map_cons,
     List.map_nil]
   rfl
 
@@ -409,7 +411,7 @@ lemma toAccess_pullIf_program (env : Environment (ZMod p)) (gate : Expression (Z
          (Expression.eval env msg.op_c[3]).val, (Expression.eval env msg.op_a_0).val,
          (Expression.eval env msg.imm_b).val, (Expression.eval env msg.imm_c).val],
         signedVal (Expression.eval env (-gate))) := by
-  simp only [toAccess_toRaw, pulledIf, programChannel, kindOf, programMsg_toList, List.map_cons,
+  simp only [eval_neg, toAccess_toRaw, pulledIf, programChannel, kindOf, programMsg_toList, List.map_cons,
     List.map_nil]
   rfl
 
@@ -452,7 +454,7 @@ lemma toAccess_pullIf_byte (env : Environment (ZMod p)) (gate : Expression (ZMod
         [(Expression.eval env msg.opcode).val, (Expression.eval env msg.a).val,
          (Expression.eval env msg.b).val, (Expression.eval env msg.c).val],
         signedVal (Expression.eval env (-gate))) := by
-  simp only [toAccess_toRaw, pulledIf, byteChannel, kindOf, byteRow_toList, List.map_cons,
+  simp only [eval_neg, toAccess_toRaw, pulledIf, byteChannel, kindOf, byteRow_toList, List.map_cons,
     List.map_nil]
   rfl
 

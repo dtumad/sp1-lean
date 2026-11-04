@@ -25,25 +25,31 @@ variable {PublicIO : TypeMap} [ProvableType PublicIO]
 
 /-- The complete raw AIR obligation for one witness at a specified public input. -/
 def EnsembleWitness.Valid {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
-    (publicInput : PublicIO F) : Prop :=
-  witness.publicInput = publicInput ∧ witness.Constraints ∧ witness.BalancedChannels
+    (balance : Balance F) (publicInput : PublicIO F) : Prop :=
+  ens.interactionsFit balance witness.heights ∧
+    witness.publicInput = publicInput ∧ witness.Constraints ∧ witness.Balanced balance
 
 /-- A valid witness proves exactly Clean's raw ensemble statement. -/
 theorem EnsembleWitness.Valid.statement {ens : Ensemble F PublicIO}
-    {witness : EnsembleWitness ens} {publicInput : PublicIO F}
-    (valid : witness.Valid publicInput) : ens.Statement publicInput :=
-  ⟨witness, valid⟩
+    {witness : EnsembleWitness ens} {balance : Balance F} {publicInput : PublicIO F}
+    (valid : witness.Valid balance publicInput) : ens.Statement balance publicInput witness.heights :=
+  ⟨valid.1, witness, valid.2.1, rfl, valid.2.2⟩
 
 /-- A formal ensemble with both directions of its semantic contract. -/
 structure CompleteEnsemble (F : Type) [FiniteField F]
-    (PublicIO : TypeMap) [ProvableType PublicIO] extends FormalEnsemble F PublicIO where
-  completeness : ensemble.Completeness Assumptions Spec
+    (PublicIO : TypeMap) [ProvableType PublicIO] (balance : Balance F)
+    extends FormalEnsemble F PublicIO balance where
+  completeness : ensemble.Completeness balance Assumptions Spec
 
 /-- The public statement of a complete ensemble is its semantic specification. -/
-theorem CompleteEnsemble.statement_iff (c : CompleteEnsemble F PublicIO)
-    (publicInput : PublicIO F) (assumptions : c.Assumptions publicInput) :
-    c.ensemble.Statement publicInput ↔ c.Spec publicInput :=
-  ⟨c.soundness publicInput assumptions, c.completeness publicInput assumptions⟩
+theorem CompleteEnsemble.statement_iff {balance : Balance F}
+    (c : CompleteEnsemble F PublicIO balance) (publicInput : PublicIO F) :
+    (∃ heights, c.Assumptions publicInput heights ∧
+      c.ensemble.Statement balance publicInput heights) ↔ c.Spec publicInput := by
+  constructor
+  · rintro ⟨heights, assumptions, statement⟩
+    exact c.soundness publicInput heights assumptions statement
+  · exact c.completeness publicInput
 
 /-- A witness compiler for an independently defined execution relation.
 
@@ -51,18 +57,18 @@ theorem CompleteEnsemble.statement_iff (c : CompleteEnsemble F PublicIO)
 the resulting AIR witness; completeness establishes success for every valid execution. The field
 contains a Lean function, so executable implementations must separately avoid noncomputable code.
 -/
-structure EnsembleCompiler (ens : Ensemble F PublicIO) (Execution : Type)
+structure EnsembleCompiler (ens : Ensemble F PublicIO) (balance : Balance F) (Execution : Type)
     (Executes : PublicIO F → Execution → Prop) where
   compile : PublicIO F → Execution → Option (EnsembleWitness ens)
   sound : ∀ publicInput execution witness, compile publicInput execution = some witness →
-    Executes publicInput execution ∧ witness.Valid publicInput
+    Executes publicInput execution ∧ witness.Valid balance publicInput
   complete : ∀ publicInput execution, Executes publicInput execution →
     ∃ witness, compile publicInput execution = some witness
 
 /-- Successful compilation characterizes the semantic domain, independently of any choice of
 proof of execution validity. -/
-theorem EnsembleCompiler.succeeds_iff {ens : Ensemble F PublicIO} {Execution : Type}
-    {Executes : PublicIO F → Execution → Prop} (c : EnsembleCompiler ens Execution Executes)
+theorem EnsembleCompiler.succeeds_iff {ens : Ensemble F PublicIO} {balance : Balance F} {Execution : Type}
+    {Executes : PublicIO F → Execution → Prop} (c : EnsembleCompiler ens balance Execution Executes)
     (publicInput : PublicIO F) (execution : Execution) :
     (∃ witness, c.compile publicInput execution = some witness) ↔ Executes publicInput execution := by
   constructor
@@ -71,19 +77,19 @@ theorem EnsembleCompiler.succeeds_iff {ens : Ensemble F PublicIO} {Execution : T
   · exact c.complete publicInput execution
 
 /-- Constructive witness compilation supplies the existential direction of AIR correctness. -/
-theorem EnsembleCompiler.completeness {ens : Ensemble F PublicIO} {Execution : Type}
-    {Executes : PublicIO F → Execution → Prop} (c : EnsembleCompiler ens Execution Executes) :
-    ens.Completeness (fun _ => True) (fun publicInput => ∃ execution, Executes publicInput execution) := by
-  rintro publicInput _ ⟨execution, valid⟩
+theorem EnsembleCompiler.completeness {ens : Ensemble F PublicIO} {balance : Balance F} {Execution : Type}
+    {Executes : PublicIO F → Execution → Prop} (c : EnsembleCompiler ens balance Execution Executes) :
+    ens.Completeness balance (fun _ _ => True) (fun publicInput => ∃ execution, Executes publicInput execution) := by
+  rintro publicInput ⟨execution, valid⟩
   obtain ⟨witness, compiled⟩ := c.complete publicInput execution valid
-  exact (c.sound publicInput execution witness compiled).2.statement
+  exact ⟨witness.heights, trivial, (c.sound publicInput execution witness compiled).2.statement⟩
 
 /-- Combine a proved raw-AIR soundness theorem with a complete witness compiler. -/
-def EnsembleCompiler.toCompleteEnsemble {ens : Ensemble F PublicIO} {Execution : Type}
-    {Executes : PublicIO F → Execution → Prop} (c : EnsembleCompiler ens Execution Executes)
-    (soundness : ens.Soundness (fun _ => True)
+def EnsembleCompiler.toCompleteEnsemble {ens : Ensemble F PublicIO} {balance : Balance F} {Execution : Type}
+    {Executes : PublicIO F → Execution → Prop} (c : EnsembleCompiler ens balance Execution Executes)
+    (soundness : ens.Soundness balance (fun _ _ => True)
       (fun publicInput => ∃ execution, Executes publicInput execution)) :
-    CompleteEnsemble F PublicIO where
+    CompleteEnsemble F PublicIO balance where
   ensemble := ens
   Spec publicInput := ∃ execution, Executes publicInput execution
   soundness := soundness

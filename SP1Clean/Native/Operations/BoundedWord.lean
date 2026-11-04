@@ -72,7 +72,7 @@ theorem completeness (bound : ℕ) (fits : bound < 2 ^ 64) :
   rw [← comparisonEq] at compare result
   refine ⟨valueBound, ⟨⟨fun _ => ⟨valueBound, limitBound⟩, Or.inr rfl⟩, compare⟩, ?_⟩
   dsimp only at result
-  rw [result, limit_value bound fits, if_pos boundValue, sub_self]
+  rw [result, limit_value bound fits, ite_eq_left boundValue, sub_self]
 
 @[local circuit_norm] private theorem word_requirements :
     (WordRangeCheck.circuit (p := p)).channelsWithRequirements = [] := rfl

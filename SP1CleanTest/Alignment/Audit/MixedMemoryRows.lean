@@ -41,6 +41,5 @@ theorem syscallPcArmCrossesLimb :
     ZMod.val_natCast_of_lt (by norm_num [SP1Prime])
   norm_num [SyscallInstrsChip.PcArm.Assumptions, SyscallInstrsChip.PcArm.Spec,
     pcBits, low, ZMod.val_one, SP1Prime]
-  decide
 
 end SP1Clean.Audit.MixedMemoryRows

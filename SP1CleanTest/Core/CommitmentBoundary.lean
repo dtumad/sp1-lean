@@ -26,6 +26,8 @@ example : SP1Clean.CommitmentBoundary.deferred (p := SP1Prime) statement =
 example : (CommitmentDeclaration.rows (p := SP1Prime) statement).length = 16 := by decide
 example : (CommitmentDeclaration.encode (p := SP1Prime) statement true 7).flag = 0 := by decide
 example : (CommitmentDeclaration.encode (p := SP1Prime) statement false 7).flag = 1 := by decide
-example : (CommitmentDeclaration.source (p := SP1Prime) statement).fixedColumns.isSome := by decide
+example : (match (CommitmentDeclaration.source (p := SP1Prime) statement).generation with
+    | .preallocated mode => mode.height.toNat == 16
+    | .demand _ => false) = true := by native_decide
 
 end SP1CleanTest.Core.CommitmentBoundary

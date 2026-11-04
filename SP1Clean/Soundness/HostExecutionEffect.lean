@@ -10,7 +10,7 @@ which also prove preservation for whole mixed paths.
 
 namespace SP1Clean.Soundness
 
-open Model.Core Target LeanRV64D.Defs
+open Model.Core Target LeanRV64D
 
 /-- Concrete syscall execution authenticates architectural observations and preserves all other
 registers, configuration, and protected bytes. The RAM write itself remains in the semantic step. -/

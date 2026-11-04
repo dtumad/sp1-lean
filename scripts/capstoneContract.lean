@@ -24,12 +24,14 @@ variable {PublicIO : TypeMap} [ProvableType PublicIO]
 variable (ensemble : Ensemble (ZMod p) PublicIO) (limits : ResourceLimits)
   (commitments : CommitmentStatement) (image : ProgramImage) (source target : ExecutionSnapshot) (header : PublicIO (ZMod p))
 
-example : ensemble.Statement header ↔
+example (heights : List ℕ) : ensemble.Statement Balance.logUp header heights ↔
+    ensemble.interactionsFit Balance.logUp heights ∧
     ∃ witness : EnsembleWitness ensemble,
-      witness.publicInput = header ∧ witness.Constraints ∧ witness.BalancedChannels := Iff.rfl
+      witness.publicInput = header ∧ witness.heights = heights ∧
+        witness.Constraints ∧ witness.Balanced Balance.logUp := Iff.rfl
 
 example : SoundnessTarget ensemble limits commitments image source target header =
-    (∀ publicInput, True → ensemble.Statement publicInput →
+    (∀ publicInput heights, True → ensemble.Statement Balance.logUp publicInput heights →
       ∃ events, publicInput = header ∧
         ((∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
@@ -39,7 +41,7 @@ example : SoundnessTarget ensemble limits commitments image source target header
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 example : CompilerTarget ensemble limits commitments image source target header =
-    EnsembleCompiler ensemble (List ExecutionEvent)
+    EnsembleCompiler ensemble Balance.logUp (List ExecutionEvent)
       (fun publicInput events => publicInput = header ∧
         ((∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
@@ -50,7 +52,7 @@ example : CompilerTarget ensemble limits commitments image source target header 
 
 example (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    ensemble.Statement header ↔ ∃ events, StatementExecution limits p commitments image source target events :=
+    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔ ∃ events, StatementExecution limits p commitments image source target events :=
   SP1Clean.Soundness.Shard.statement_iff sound compiler
 
 end Contract
@@ -78,7 +80,7 @@ def moduleOf (env : Environment) (name : Name) : Name :=
 
 /-- Traverse repository definitions; pinned upstream declarations remain explicit boundary nodes. -/
 def localModule (name : Name) : Bool :=
-  ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"].any
+  ["SP1Clean", "ToClean", "ToMathlib"].any
     (fun rootName => name.toString.startsWith (rootName ++ "."))
 
 /-- Theorem bodies are kernel-checked implementation, rather than definition dependencies. -/

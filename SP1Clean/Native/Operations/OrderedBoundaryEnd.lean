@@ -1,4 +1,5 @@
 import SP1Clean.Native.Operations.OrderedBoundary
+import ToClean.Air.HintIndex
 
 /-! # Closing an ordered boundary inventory
 
@@ -39,6 +40,22 @@ def circuit (name : String) (final : Word (ZMod p)) :
       exact Vector.map_id _
     rw [finalEq]
     exact h_assumptions
+
+/-- The sole terminal input is private; its full predecessor key must match the cursor. -/
+def generation (name : String) : Air.Flat.WitnessGeneration.Generation (ZMod p) TerminalInputs :=
+  .demand {
+    channel := channel name
+    trigger := .push
+    guard message :=
+      let candidate : TerminalInputs (Witgen.FExpr (ZMod p)) :=
+        fromElements (Vector.ofFn fun column => .hintGet s!"sp1.native.{name}.terminal"
+          (size TerminalInputs) 0 column)
+      Witgen.HintIndex.messageEq candidate.previous message
+    input _ := pure (fromElements (Vector.ofFn fun column =>
+      Air.Flat.WitnessGeneration.Cell.witness (.hintGet s!"sp1.native.{name}.terminal"
+        (size TerminalInputs) 0 column)))
+    padding := 0
+  }
 
 def populate (previous final : Word (ZMod p)) : TerminalInputs (ZMod p) :=
   ⟨previous, LtOperationUnsigned.populate previous final⟩

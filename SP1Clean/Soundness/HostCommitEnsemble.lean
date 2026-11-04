@@ -34,22 +34,60 @@ theorem source_apply (deferred : Bool) (source : HostState) :
 
 def ensemble (deferred : Bool) (source : HostState) (auxiliary : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : ((components (p := p) deferred ++ auxiliary).map (·.circuit.name)).Nodup) :
+    (names : ((components (p := p) deferred ++ auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : (((stateChannel deferred).toRaw :: Channels.byteChannel.toRaw ::
+      HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: CommitmentDeclaration.channel.toRaw :: channels).map (·.name)).Nodup)
+    (registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆
+      (stateChannel deferred).toRaw :: Channels.byteChannel.toRaw ::
+        HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: CommitmentDeclaration.channel.toRaw :: channels) :
     Ensemble (ZMod p) (ProvableVector Word 8) where
   tables := components deferred ++ auxiliary
   unique_names := names
   channels := (stateChannel deferred).toRaw :: Channels.byteChannel.toRaw ::
-    HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: channels
+    HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: CommitmentDeclaration.channel.toRaw :: channels
   verifier := HostCommitBoundary.verifierProgram deferred (sourceValues deferred source)
+  unique_channel_names := channelNames
+  tables_channels := by
+    intro component member
+    rcases List.mem_append.mp member with bank | other
+    · obtain ⟨bankView, bankMember, rfl⟩ := List.mem_map.mp bank
+      obtain ⟨index, _, rfl⟩ := List.mem_map.mp bankMember
+      cases index with
+      | none =>
+        change [(stateChannel deferred).toRaw, (stateChannel deferred).toRaw] ⊆ _
+        simp
+      | some slot =>
+        have metadata : (view (p := p) deferred (some slot)).component.circuit.channels =
+            [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw,
+              CommitmentDeclaration.channel.toRaw, HostCallChip.channel.toRaw, (stateChannel deferred).toRaw] ++
+            [CommitmentDeclaration.channel.toRaw, HostCallChip.channel.toRaw,
+              (stateChannel deferred).toRaw, Channels.publicValuesChannel.toRaw] := by
+          cases deferred <;> rfl
+        rw [metadata]
+        simp
+    · exact registered component other
+  verifier_channels := by
+    intro channel member
+    simp [HostCommitBoundary.verifierProgram, Verifier.ofInteractions,
+      HostCommitBoundary.verifierMain, circuit_norm] at member
+    subst channel
+    exact List.mem_cons_self ..
 
 variable {source : HostState} {deferred : Bool} {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
 variable {names : ((components (p := p) deferred ++ auxiliary).map (·.circuit.name)).Nodup}
 
-abbrev Witness := EnsembleWitness (ensemble deferred source auxiliary channels names)
+variable {channelNames : (((stateChannel deferred).toRaw :: Channels.byteChannel.toRaw ::
+  HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: CommitmentDeclaration.channel.toRaw :: channels).map (·.name)).Nodup}
+variable {registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆
+  (stateChannel deferred).toRaw :: Channels.byteChannel.toRaw ::
+    HostCallChip.channel.toRaw :: Channels.publicValuesChannel.toRaw :: CommitmentDeclaration.channel.toRaw :: channels}
+
+abbrev Witness := EnsembleWitness (ensemble deferred source auxiliary channels names channelNames registered)
 
 variable (witness : Witness (p := p) (deferred := deferred) (source := source)
-  (auxiliary := auxiliary) (channels := channels) (names := names))
+  (auxiliary := auxiliary) (channels := channels) (names := names)
+  (channelNames := channelNames) (registered := registered))
 
 def bankTables :=
   witness.tables.take (components (p := p) deferred).length
@@ -91,10 +129,12 @@ theorem interactions_eq
   have verifier : witness.verifierInteractionsWith (stateChannel deferred).toRaw =
       [(stateChannel deferred).pushedValue (HostCommitBoundary.start (sourceValues deferred source)),
        (stateChannel deferred).pulledValue (HostCommitBoundary.final witness.publicInput)] := by
-    simp only [EnsembleWitness.verifierInteractionsWith, Ensemble.verifierOperations, ensemble,
-      Verifier.Program.circuitOperations, Verifier.Program.operations, HostCommitBoundary.verifierProgram]
+    change (HostCommitBoundary.verifierProgram deferred (sourceValues deferred source)).circuitOperations.interactionValuesWith
+      (stateChannel deferred).toRaw witness.data.publicEnvironment = _
+    simp only [Verifier.Program.circuitOperations, Verifier.Program.operations,
+      HostCommitBoundary.verifierProgram]
     rw [Verifier.ofInteractions_values, HostCommitBoundary.verifier_values,
-      ProvableType.eval_fromInput_varFromOffset_zero]
+      ← ProverData.getPublicInput_eq_eval, EnsembleWitness.data_getPublicInput]
   simp only [EnsembleWitness.interactionsWith, verifier, EnsembleWitness.toTables,
     Tables.interactionsWith]
   have split := List.take_append_drop (components (p := p) deferred).length witness.tables
@@ -119,7 +159,7 @@ theorem byte_guarantees
     ∀ table ∈ witness.tables, table.ChannelGuarantees Channels.byteChannel.toRaw := by
   apply (witness.channelGuarantees_of_component_requirements Channels.byteChannel.toRaw constraints
     (balanced _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))) ?_ ?_).2
-  · intro input data
+  · intro data
     apply Ensemble.verifierChannelRequirements_of_not_mem
     simp [ensemble, HostCommitBoundary.verifierProgram, Verifier.ofInteractions,
       HostCommitBoundary.verifierMain, stateChannel, Channels.byteChannel, circuit_norm]

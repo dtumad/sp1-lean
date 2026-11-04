@@ -157,8 +157,8 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
       h_rac_a h_assumptions.1, fun ht => ?_,
       fun ht2 => h_mem_a (by rw [show input_is_real = 1 from ht2])⟩,
     Or.inr h_assumptions.1,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0⟩
+    htbin,
+    h_assumptions.1⟩
   · exact (h_prog (by rw [show input_is_trusted = 1 from ht])).2.2.2.2
   -- Decode bounds are exactly the structural Program-channel guarantee.
   · obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [show input_is_trusted = 1 from ht])
@@ -188,12 +188,12 @@ theorem completeness :
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
     rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
-    exact ⟨ha, hp0, hp1, hp2, hbin (neg_inj.mp ht)⟩
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
+    exact ⟨ha, hp0, hp1, hp2, hbin ht⟩
   · -- mem pull: the guarantee pair (`isU64` of the whole `Word`, `ClkBound` of the message's `clk_low`,
     -- which *is* the block's `prev_low`) is the Spec's op_a conjunct pair verbatim.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => hisu (neg_inj.mp hneg)
+    exact fun hneg => hisu hneg
 
 /-- The native J-type reader as a Clean `GeneralFormalCircuit`: composes a single `RegisterAccessCols`
 for op_a, imposes the zeroing gates, and emits the Program/Memory buses. `op_a_0` booleanity is obtained
@@ -229,8 +229,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         · exact Or.inl List.mem_cons_self }
 
 set_option linter.unusedSectionVars false in

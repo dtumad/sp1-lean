@@ -1,11 +1,11 @@
 name = "sp1-clean-native"
 # The default build is the CORE: strata 0–6 of `scripts/layering.txt` (the generic/semantic layers
 # and the chip circuits with their proofs), reached through the gated root index
-# `SP1Clean/Core.lean` (library `SP1Core`), plus the three upstream-destined libraries. The
+# `SP1Clean/Core.lean` (library `SP1Core`), plus the two upstream-destined libraries. The
 # SP1-alignment strata 7–11 are built through the umbrella `SP1Clean` by the full CI job
 # on every PR, main update and scheduled run. Measurement behind the split:
 # docs/agents/compile-profile-2026-09.md.
-defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
+defaultTargets = ["SP1Core", "ToClean", "ToMathlib"]
 
 # `-j2`: two elaboration threads per `lean` process. Lake runs one `lean` per core (its pool is
 # `LEAN_NUM_THREADS`, default = cores) and each child would otherwise also take every core for
@@ -14,19 +14,19 @@ defaultTargets = ["SP1Core", "ToClean", "ToMathlib", "ToPolyFun"]
 # fork issue #39). Two threads keep most of the async benefit for a single heavy module built alone.
 moreLeanArgs = ["--tstack=400000", "-j2"]
 # `allowNonModules` is set per library below (the `SP1Clean/` and test trees are non-module until
-# their migration), not package-wide, so the three module-mode `To*` libraries are enforced.
+# their migration), not package-wide, so the two module-mode `To*` libraries are enforced.
 
 # `lake lint` driver — Batteries' `runLinter` (what Mathlib, cslib and PolyFun use): every default
 # environment linter (`docBlame`, `defsWithUnderscore`, `unusedArguments`, `simpNF`, …) over the
-# declarations of the four hand-written roots. `lake lint` lints the full tree (the alignment
+# declarations of the three hand-written roots. `lake lint` lints the full tree (the alignment
 # job); the core CI job also lints its index with
-# `lake exe runLinter --no-build SP1Clean.Core ToClean ToMathlib ToPolyFun`. `scripts/nolints.json`
+# `lake exe runLinter --no-build SP1Clean.Core ToClean ToMathlib`. `scripts/nolints.json`
 # is the burn-down list of known findings (`scripts/update_nolints.sh` regenerates it), every entry a
 # debt under AGENTS.md; a permanent exception is a `@[nolint …]` attribute at the site
 # with its reason, never an entry. Needs built oleans (`--no-build` refuses to build them; without
 # it `runLinter` builds what is missing).
 lintDriver = "batteries/runLinter"
-lintDriverArgs = ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"]
+lintDriverArgs = ["SP1Clean", "ToClean", "ToMathlib"]
 
 # `lake test` driver — builds the core test set (`SP1CoreTest`, below). The full `SP1CleanTest`
 # library (alignment-only anchors included) is built by the full CI job on every PR.
@@ -77,21 +77,18 @@ weak.linter.unusedDecidableInType = false      # 10 / 5: `[Decidable …]` hypot
 linter.mathlibStandardSet = true
 
 # Every dependency is an immutable published pin, so a clean clone builds this project. Toolchain is
-# Lean v4.33.1 (see `lean-toolchain`); each pin below is at or compatible with it.
+# Lean v4.35.0 (see `lean-toolchain`); each pin below is at or compatible with it.
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.33.1"
+rev = "v4.35.0"
 
-# Clean's built-in Rust export (upstream PR #446), ported to the installed module/toolchain
-# line, plus canonical routing, empty-table support and the public-only-channel fix. These change existing
-# Component/Ensemble/Verifier declarations and cannot be supplied by an additive layer.
-# Additive adapters remain in ToClean. Return to upstream when it contains these changes
-# on a compatible toolchain; see docs/agents/clean-upstream.md and export campaign #28.
+# Frozen upstream main: canonical generation, reusable keys, shared component modules,
+# and data/hint agreement (Clean #500–503). Keep subsequent upstream work in a separate upgrade.
 [[require]]
 name = "Clean"
-git = "https://github.com/dtumad/clean"
-rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
+git = "https://github.com/Verified-zkEVM/clean"
+rev = "1356fc7fb914535ba87d72b40a3a6922e51afa64"
 
 # Module-mode Sail runtime: upstream tag `v6` (`c816ea7a`, which adds the sequential ArchSem
 # interpreter after `v5`) plus the module-system migration of rems-project/lean-sail#13. That
@@ -100,7 +97,7 @@ rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc"
 [[require]]
 name = "Sail"
 git = "https://github.com/dtumad/lean-sail"
-rev = "6485a3023ae7efb80f1b50907e00519c836f0b36"
+rev = "732e3cbe8cb8870492eacedeb402c3ea1b7bed39"
 
 # PolyFun supplies the `DynSystem`/`Labeled`/`Prefix`/`ReachableIn` machine vocabulary. Lenses and
 # the broader extensible-machine theory are not used; circuit construction and bus proofs remain
@@ -112,7 +109,7 @@ rev = "6485a3023ae7efb80f1b50907e00519c836f0b36"
 [[require]]
 name = "PolyFun"
 git = "https://github.com/Verified-zkEVM/PolyFun"
-rev = "997828ce4c04ccdc01f5f199069e26a6195ef6e7"
+rev = "4f7fe15d685cbed39bb7349280fd6f3da84a22d6"
 
 # ---- Libraries ---------------------------------------------------------------------------------
 # Ownership (Lake `Package.findModule?` = `leanLibs.findSomeRev?`): a module belongs to the LAST
@@ -121,12 +118,11 @@ rev = "997828ce4c04ccdc01f5f199069e26a6195ef6e7"
 # ownership only decides which (identical) configuration a module is built with.
 
 # Upstream-destined libraries, at the BOTTOM of the import DAG: `ToMathlib` imports only Mathlib;
-# `ToPolyFun` imports only PolyFun; `ToClean` imports Clean (and may import the other two, since
-# Clean plans to import PolyFun). NONE may import `SP1Clean` — that is what keeps them genuinely
+# `ToClean` imports Clean and may import ToMathlib and PolyFun. Neither may import `SP1Clean` — that is what keeps them genuinely
 # contributable and makes the terminal step of an accepted upstream PR a plain deletion plus a
-# repoint of the importers. Root indices `ToMathlib.lean`/`ToPolyFun.lean`/`ToClean.lean` are
+# repoint of the importers. Root indices `ToMathlib.lean`/`ToClean.lean` are
 # hand-maintained (this project has no `mk_all`) and gated by `scripts/check_root_index.sh`.
-# All three are module-system libraries, each file in its upstream's header idiom (`module` /
+# Both are module-system libraries, each file in its upstream's header idiom (`module` /
 # `public import` / `public section` for Mathlib-bound theorem files, `@[expose] public section`
 # for PolyFun- and Clean-bound definitions, `public meta section` for tactic/simproc files), so
 # acceptance upstream is a copy; `requiresModuleSystem` makes a non-module file here a warning,
@@ -136,16 +132,12 @@ name = "ToMathlib"
 requiresModuleSystem = true
 
 [[lean_lib]]
-name = "ToPolyFun"
-requiresModuleSystem = true
-
-[[lean_lib]]
 name = "ToClean"
 requiresModuleSystem = true
 
 # Generator-owned sources live outside Git. Run python3 scripts/prepare_sail.py before Lake:
 # it verifies a restored source cache or regenerates with the pinned compiler/config/runtime.
-# The digest authenticates all generated bytes; generation-time module headers preserve bodies.
+# The digest authenticates all generated bytes, including the generator-owned large-variant layout.
 # Auto-implicit settings match the generator. The platform config moves CLINT and signature
 # windows outside native guest memory; see docs/agents/sail-model-provenance.md.
 [[lean_lib]]
@@ -159,7 +151,7 @@ moreLeancArgs = ["-fbracket-depth=500"]
 
 # One generated module, `LeanRV64D.RvfiDii`, built with the legacy `do` elaborator. Its
 # `print_rvfi_exec` (18 consecutive `(pure (print_bits …))` statements) hits the new elaborator's
-# exponential re-elaboration (lean4#13858; fix lean4#13985 pending): 718 s and 15.4 GB on one
+# exponential re-elaboration (lean4#13858; fix lean4#15682 merged after v4.35.0): 718 s and 15.4 GB on one
 # file, the head of a ≈ 60-minute critical path in every cold CI build; the legacy elaborator
 # takes 1.8 s and 1.4 GB (measured 2026-09-21, v4.33.1). The option cannot be library-wide — the
 # legacy elaborator rejects the `← doElem` forms other generated modules use — so this library,
@@ -207,14 +199,14 @@ allowNonModules = true
 name = "SP1CoreTest"
 globs = ["SP1CleanTest.Core.+", "SP1CleanTest.TraceGenTests.+"]
 allowNonModules = true
-leanOptions.weak.linter.style.nativeDecide = false
+leanOptions.weak.linter.style.native = false
 leanOptions.weak.linter.hashCommand = false
 
 [[lean_lib]]
 name = "SP1CleanTest"
 globs = ["SP1CleanTest.+"]
 allowNonModules = true
-leanOptions.weak.linter.style.nativeDecide = false
+leanOptions.weak.linter.style.native = false
 leanOptions.weak.linter.hashCommand = false
 
 # Native exporter with a narrow, Sail-free import closure. Kept outside the proof/test indices:

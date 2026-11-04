@@ -24,7 +24,7 @@ row needs the opposite plus its own `SyscallTransition`.  It is a hypothesis, di
 the caller.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 

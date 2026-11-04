@@ -288,7 +288,6 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem equalityAssertionConstraint_mem
@@ -456,7 +455,7 @@ private theorem postWitness_stateInteractions_eq (input : Var Inputs (ZMod p))
     Channels.stateChannel_eq_memoryChannel_false, not_false_eq_true,
     Operations.interactionsWith_assert, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel,
-    Channels.byteChannel_eq_stateChannel_false, if_false, List.append_nil]
+    Channels.byteChannel_eq_stateChannel_false, ite_false, List.append_nil]
 
 /-- `CPUState` contributes the whole chip's exact State-channel interaction list. -/
 theorem interactionsWith_main_state_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -864,7 +863,7 @@ private theorem postWitness_memoryInteractions_eq (input : Var Inputs (ZMod p)) 
     Channels.memoryChannel_eq_byteChannel_false, not_false_eq_true,
     Operations.interactionsWith_assert, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel,
-    Channels.byteChannel_eq_memoryChannel_false, if_false, List.append_nil,
+    Channels.byteChannel_eq_memoryChannel_false, ite_false, List.append_nil,
     Soundness.aluTypeMemoryInteractions, Soundness.registerWriteMemoryInteractions,
     List.cons_append, List.nil_append]
   simp only [exposedMemoryInteractions, exposedGate, witnessPrefix, Circuit.output,
@@ -926,7 +925,7 @@ private theorem postWitness_programInteractions_eq (input : Var Inputs (ZMod p))
     Channels.programChannel_eq_memoryChannel_false, not_false_eq_true,
     Operations.interactionsWith_assert, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel,
-    Channels.byteChannel_eq_programChannel_false, if_false, List.append_nil,
+    Channels.byteChannel_eq_programChannel_false, ite_false, List.append_nil,
     Soundness.aluTypeProgramMessage, List.nil_append]
   simp only [postWitnessReaderInput, exposedProgramInteractions, exposedGate, exposedOpcode,
     witnessPrefix, Circuit.output, List.map_cons, List.map_nil]
@@ -1301,10 +1300,7 @@ private theorem postWitness_requirementsChannelsLawful (input : Var Inputs (ZMod
       List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
     rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       right <;>
-      rw [ChannelInteraction.toRaw_requirements] <;>
-      intro h1 h0 <;>
-      simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool h1 h0
+      exact h_bool
 
 /-- The folded witness prefix is structurally invisible to Clean's channel-requirement law; the
 law is exactly the post-witness byte/memory argument above. -/

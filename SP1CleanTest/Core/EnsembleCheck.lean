@@ -54,11 +54,27 @@ def verifier : Verifier.Program Fp field where
   Spec _ _ := True
   soundness := by intro _ _; trivial
 
+private def generation : WitnessGeneration.Generation Fp field := .demand {
+  channel := values
+  trigger := .pull
+  input value := pure (.witness (.expr value))
+}
+
 def ensemble : Ensemble Fp field where
-  tables := [{ circuit := provider, Assumptions := (provider).Assumptions }]
+  tables := [{ circuit := provider, generation, Assumptions := (provider).Assumptions }]
   unique_names := by simp
   channels := [values.toRaw]
+  unique_channel_names := by simp
+  tables_channels := by
+    intro table member
+    obtain rfl := List.mem_singleton.mp member
+    change [] ++ [values.toRaw] ⊆ _
+    simp
   verifier := verifier
+  verifier_channels := by
+    intro channel member
+    rw [Verifier.Program.mem_channels_iff, Operations.channels] at member
+    simpa [verifier, circuit_norm] using member
 
 /-- Finite meanings for the physical lookup and both sides of the public channel. -/
 def description : Air.Flat.EnsembleCheck ensemble where
@@ -67,38 +83,32 @@ def description : Air.Flat.EnsembleCheck ensemble where
   lookups_complete := by
     simp [ensemble, Component.lookups_eq, Component.rowOperations, provider, circuit_norm]
     rfl
-  channels_unique := by simp [ensemble]
-  channels_complete := by
-    simp [ensemble, Component.interactions_eq, Component.rowOperations, provider, circuit_norm]
-  verifier_channels_complete := by
-    simp [ensemble, Ensemble.verifierOperations, verifier, Verifier.Program.circuitOperations,
-      circuit_norm]
-
 /-- Static lookups need no prover-supplied data. -/
-def data : ProverData Fp := fun _ _ => #[]
+def data (rows : List Fp) : ProverData Fp :=
+  { publicInput := #[], tables := fun _ arity => (rows.map fun value => Vector.replicate arity value).toArray }
 
 /-- Physical provider rows with the exact public input retained in the verifier. -/
 def witness (publicInput : Fp) (rows : List Fp)
     (bounded : rows.length ≤ UInt64.size := by decide) : EnsembleWitness ensemble :=
   EnsembleWitness.ofTables ensemble
-    [Table.build { circuit := provider, Assumptions := (provider).Assumptions } rows data (ProverHint.empty Fp) bounded] publicInput rfl
+    [Table.build { circuit := provider, generation, Assumptions := (provider).Assumptions } rows (data rows) (ProverHint.empty Fp) bounded (by trivial) rfl] publicInput rfl
 
 /-- Both allowed values accept; malformed membership and boundary inventories reject. -/
 def outcomes : List (String × Bool × Bool) :=
-  [("allowed-seven", true, description.checkWitness SP1Clean.SP1Prime (witness 7 [7])),
-   ("allowed-nine", true, description.checkWitness SP1Clean.SP1Prime (witness 9 [9])),
-   ("forbidden-eight", false, description.checkWitness SP1Clean.SP1Prime (witness 8 [8])),
-   ("missing-provider", false, description.checkWitness SP1Clean.SP1Prime (witness 7 [])),
-   ("duplicate-provider", false, description.checkWitness SP1Clean.SP1Prime (witness 7 [7, 7])),
-   ("wrong-public-input", false, description.checkWitness SP1Clean.SP1Prime (witness 9 [7]))]
+  [("allowed-seven", true, description.checkWitness (witness 7 [7])),
+   ("allowed-nine", true, description.checkWitness (witness 9 [9])),
+   ("forbidden-eight", false, description.checkWitness (witness 8 [8])),
+   ("missing-provider", false, description.checkWitness (witness 7 [])),
+   ("duplicate-provider", false, description.checkWitness (witness 7 [7, 7])),
+   ("wrong-public-input", false, description.checkWitness (witness 9 [7]))]
 
 /-- Every named outcome comes from checking the physical witness. -/
 theorem outcomes_correct : outcomes.all (fun outcome => outcome.2.1 == outcome.2.2) = true := by
   native_decide
 
 /-- The computed positive case proves the actual raw Clean statement. -/
-theorem accepted_statement : ensemble.Statement 7 :=
-  description.statement_of_checkWitness SP1Clean.SP1Prime (witness 7 [7]) (by native_decide)
+theorem accepted_statement : ensemble.Statement Balance.logUp 7 (witness 7 [7]).heights :=
+  description.statement_of_checkWitness (witness 7 [7]) (by native_decide)
 
 instance : Fact (Nat.Prime 3) := ⟨by decide⟩
 
@@ -109,7 +119,7 @@ def tinyChannel : Channel (ZMod 3) field where
 
 /-- Disabled interactions still occupy a position in the physical ledger. -/
 def disabled : Interaction (ZMod 3) :=
-  ⟨tinyChannel.toRaw, 0, #[0], rfl, false⟩
+  ⟨tinyChannel.toRaw, .push, 0, #[0], rfl⟩
 
 /-- Disabled occurrences below the characteristic are admissible. -/
 theorem below_capacity : checkInteractionBalance 3 [disabled, disabled] = true := by native_decide
@@ -117,8 +127,9 @@ theorem below_capacity : checkInteractionBalance 3 [disabled, disabled] = true :
 /-- Multiplicity zero does not bypass the strict characteristic limit. -/
 theorem at_capacity : checkInteractionBalance 3 [disabled, disabled, disabled] = false := by native_decide
 
-/-- The failed capacity check implies failure of the original raw predicate. -/
-theorem disabled_capacity_is_raw : ¬ BalancedInteractions [disabled, disabled, disabled] := by
+/-- The raw LogUp contract includes capacity even when every count is zero. -/
+theorem disabled_capacity_is_raw :
+    ¬ (([disabled, disabled, disabled].length < 3) ∧ LogUpBalanced [disabled, disabled, disabled]) := by
   rw [← checkInteractionBalance_iff 3]
   exact Bool.false_ne_true ∘ (at_capacity.symm.trans ·)
 
@@ -151,25 +162,16 @@ def boundaryDescription : Air.Flat.EnsembleCheck boundaryEnsemble where
   lookups := []
   lookups_unique := by simp
   lookups_complete := by simp [boundaryEnsemble, PublicVerifier.install, Ensemble.empty]
-  channels_unique := by simp [boundaryEnsemble, PublicVerifier.install, Ensemble.empty]
-  channels_complete := by simp [boundaryEnsemble, PublicVerifier.install, Ensemble.empty]
-  verifier_channels_complete := by
-    simp [boundaryEnsemble, PublicVerifier.install, Ensemble.verifierOperations,
-      PublicVerifier.program, PublicVerifier.assertions, publicCheck, assertedVerifier,
-      Ensemble.empty, Verifier.Program.circuitOperations, Verifier.Program.andThen,
-      Verifier.Program.empty, Verifier.checkZeros, Verifier.checkZero, circuit_norm]
-    rfl
-
 /-- Public input is retained even with no prover tables. -/
 def boundaryWitness (value : Fp) : EnsembleWitness boundaryEnsemble :=
   EnsembleWitness.ofTables boundaryEnsemble [] value rfl
 
 /-- The satisfying public assertion accepts. -/
 theorem verifier_accepts :
-    boundaryDescription.checkWitness SP1Clean.SP1Prime (boundaryWitness 7) = true := by native_decide
+    boundaryDescription.checkWitness (boundaryWitness 7) = true := by native_decide
 
 /-- An invalid public assertion rejects independently of any row or balance checks. -/
 theorem verifier_rejects :
-    boundaryDescription.checkWitness SP1Clean.SP1Prime (boundaryWitness 9) = false := by native_decide
+    boundaryDescription.checkWitness (boundaryWitness 9) = false := by native_decide
 
 end SP1CleanTest.Core.EnsembleCheck

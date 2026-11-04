@@ -98,7 +98,7 @@ def circuit (name : String) : GeneralFormalCircuit (ZMod p) Inputs unit where
     refine ⟨previousBound, currentBound,
       ⟨⟨fun _ => ⟨previousBound, currentBound⟩, Or.inr rfl⟩, compare⟩, ?_⟩
     dsimp only at result
-    rw [result, if_pos increases, sub_self]
+    rw [result, ite_eq_left increases, sub_self]
 
 /-- Composing the checked link preserves its exact control pair. -/
 theorem subcircuit_interactions (name : String) (distinct : name ≠ "SP1Byte")

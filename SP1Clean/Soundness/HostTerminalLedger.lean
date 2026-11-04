@@ -56,7 +56,8 @@ private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
   rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
-  · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
+  · have valid := HostHaltChip.row_spec_of_byte env
+      ((Component.constraintsHold_iff env).mp constraints) ((Component.channelGuarantees_iff env _).mp bytes)
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
     rw [HostCallReceivers.halt_message]
     have arg (input : Var HostHaltChip.Inputs (ZMod p)) :
@@ -64,12 +65,12 @@ private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
       rcases input with ⟨⟨_, _, _, _, _, _, _⟩, _⟩
       simp only [circuit_norm]
     have zero : Word.toBitVec64 (0 : Word (ZMod p)) = 0 := by simp [Word.toBitVec64, Word.toNat]
-    rw [receipt?, valid.1, zero, if_pos rfl]
+    rw [receipt?, valid.1, zero, ite_eq_left rfl]
     simp only [Option.toList_some, List.map_cons, List.map_nil]
     simp only [HostCallReceivers.halt, Operations.interactionValuesWith, Component.interactionsWith_eq]
     exact (HostHaltChip.terminal_values _ _ env).trans (by
       rw [arg, eval_varFromOffset_valueFromOffset])
-  · have valid := HostEnterChip.component_spec_of_constraints env constraints
+  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
     have silent : HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.enter (p := p)).component.circuit.channels := by
       intro used
@@ -160,9 +161,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 private theorem controls_interactions
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel byteChannel.toRaw) :
     (controlTables witness).flatMap (·.interactionsWith HostExitBoundary.channel.toRaw) =
@@ -185,7 +190,7 @@ private theorem receipt_none_of_queue (message : HostCallChip.Message (ZMod p))
     intro zero
     simp only [project, zero, queueCallEvent?, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at selected
     contradiction
-  exact if_neg nonzero
+  exact ite_eq_right nonzero
 
 private theorem queue_receipt (row : HostQueueOrder.Row (p := p))
     (valid : (HostQueueOrder.view row.1).component.Spec row.2) :
@@ -201,7 +206,7 @@ private theorem filterMap_right {α β : Type*} (select : α → Option β)
   exact selected
 
 private theorem calls_receipts
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (specs : ∀ table ∈ queueTables witness, table.Spec) :
     ((HostLocalHandoff.calls witness).filterMap receipt?).Perm
       ((ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18)
@@ -213,6 +218,9 @@ private theorem calls_receipts
     (HostQueueOrder.rows_spec _ (queueTables_aligned witness) specs row rowMem)
 
 variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 private theorem auxiliary_controls
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
@@ -295,19 +303,7 @@ theorem interactions
     rw [HostLocalCore.hostCallTable_component]
     exact wrapper_exit_silent
   have split := HostLocalCore.interactions_split_new (HostHintQueueBoundary.projected witness)
-    HostExitBoundary.channel.toRaw (by
-      apply List.mem_cons_of_mem
-      apply List.mem_cons_of_mem
-      apply List.mem_cons_of_mem
-      apply List.mem_append_right
-      apply List.mem_append_left
-      apply List.mem_cons_of_mem
-      apply List.mem_flatMap.mpr
-      refine ⟨HostCallReceivers.halt.component, ?_, ?_⟩
-      · apply List.mem_append_left
-        apply List.mem_map_of_mem
-        simp [HostCallReceivers.available]
-      · simp [HostCallReceivers.halt, HostHaltChip.circuit, circuit_norm]) exit_fresh
+    HostExitBoundary.channel.toRaw (sourceRegistration.boundary (by simp)) exit_fresh
     (by simp [HostExitBoundary.channel, WritePermissionProvider.channel, Channel.toRaw])
     (by simp [HostExitBoundary.channel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])
   rw [wrapper, List.nil_append] at split
@@ -322,9 +318,8 @@ theorem interactions
   have selected := calls_receipts (HostHintQueueBoundary.projected witness)
     (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
   have ledger := HostHintQueueBoundary.interactions_split witness HostExitBoundary.channel.toRaw
-    (List.mem_append_right _ (by
-      simp [HostHintQueueBoundary.boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm]))
-  rw [split, ClosedVerifier.singleton_interactions, ClosedVerifier.operations, HostBoundary.closed_main,
+    (List.mem_append_left _ (sourceRegistration.boundary (by simp)))
+  rw [split, ClosedVerifier.interactionsWith, ClosedVerifier.operations, HostBoundary.closed_main,
     HostBoundary.terminal_values] at ledger
   exact ledger.trans ((selected.symm.map HostExitBoundary.channel.pushedValue).append_right _)
 
@@ -347,7 +342,7 @@ private theorem balanced_receipts (produced : List (Word (ZMod p)))
       (if source = none then target.toList.map HostExitBoundary.encode else []).map
         (HostExitBoundary.channel (p := p)).pulledValue := by
     cases source <;> cases target <;> simp [Channel.pulledIfValue, Channel.pulledValue]
-  apply ((HostExitBoundary.channel.balanced_unit_iff _ _).mp ?_).2
+  apply (HostExitBoundary.channel.balanced_unit_iff _ _).mp
   simpa only [List.filter_append, active, endpoint] using balanced.filter_nonzero
 
 /-- The actual HALT-call inventory is empty or the exact advertised terminal word. -/
@@ -358,12 +353,10 @@ theorem receipts
     ((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap receipt?).Perm
       (if source.host.exitCode = none then bankFinal.exitCode.toList.map HostExitBoundary.encode else []) := by
   apply balanced_receipts
-  apply balancedInteractions_of_perm (balanced HostExitBoundary.channel.toRaw ?_
+  apply BalancedInteractions.of_perm (balanced HostExitBoundary.channel.toRaw ?_
     (HostHintQueueBoundary.visible_of_name _ (by simp [HostExitBoundary.channel, Channel.toRaw])))
     (interactions witness constraints balanced)
-  apply List.mem_append_left
-  apply List.mem_append_right
-  simp [HostHintQueueBoundary.boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm]
+  exact List.mem_append_left _ (List.mem_append_left _ (sourceRegistration.boundary (by simp)))
 
 /-- A stopped source's supplied endpoint must retain its exact optional exit code. -/
 theorem source_status

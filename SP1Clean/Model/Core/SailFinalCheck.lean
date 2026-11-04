@@ -11,7 +11,7 @@ native bindings; this check alone does not assert complete outgoing state equali
 
 namespace SP1Clean.Model.Core.SailSnapshot
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 /-- The registers whose values can change along a supported native execution. -/
 def executionRegister (reg : Register) : Bool :=
@@ -94,7 +94,7 @@ theorem realize_eq_of_observations {source target : SailSnapshot} {actual : Sail
       · exact retirement
       · exact increment
       · have same := (gprs index).trans (observes.1 index).symm
-        simp only [SailState.get_reg?, if_neg nonzero, realize, skeleton] at same
+        simp only [SailState.get_reg?, ite_eq_right nonzero, realize, skeleton] at same
         exact option_transport_injective (reg_idx_must_64 index) same
     · have fixed : executionRegister reg = false := Bool.eq_false_of_not_eq_true mutable
       exact (preserved reg fixed).trans (frame.2.1 reg fixed)

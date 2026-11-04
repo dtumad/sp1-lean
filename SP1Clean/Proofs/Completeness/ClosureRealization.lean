@@ -103,10 +103,10 @@ theorem family_multiplicitySum {Entry : Type} (skeleton : LookupAccessList)
       if k ∈ keys ∧ sel k = true then (providerRecount skeleton k : ℤ) else 0 := by
   rw [family_ledger_eq skeleton keys sel build access hround]
   by_cases hmem : k ∈ keys ∧ sel k = true
-  · rw [if_pos hmem,
+  · rw [ite_eq_left hmem,
       LookupAccessList.multiplicitySum_closingAccesses skeleton (hnodup.filter sel)
         (List.mem_filter.mpr ⟨hmem.1, hmem.2⟩)]
-  · rw [if_neg hmem,
+  · rw [ite_eq_right hmem,
       LookupAccessList.multiplicitySum_closingAccesses_of_not_mem skeleton
         (fun h => hmem (by rw [List.mem_filter] at h; exact ⟨h.1, h.2⟩))]
 
@@ -481,10 +481,10 @@ theorem sum_map_ite_eq_of_mem {α : Type*} [DecidableEq α] {l : List α} (hnd :
         have hzero : (tail.map fun x => if x = head then r else 0).sum = 0 := by
           refine List.sum_eq_zero fun z hz => ?_
           obtain ⟨x, hx, rfl⟩ := List.mem_map.mp hz
-          refine if_neg fun hxa => hhead ?_
+          refine ite_eq_right fun hxa => hhead ?_
           rwa [hxa] at hx
-        rw [if_pos rfl, hzero, add_zero]
-      · rw [if_neg hha, zero_add]
+        rw [ite_eq_left rfl, hzero, add_zero]
+      · rw [ite_eq_right hha, zero_add]
         exact ih htail ((List.mem_cons.mp ha).resolve_left fun h => hha h.symm)
 
 namespace SupportedCoreTraceWitness
@@ -502,7 +502,7 @@ theorem closureRange_contribution (hserv : trace.DemandServable) (k : LookupKey)
   simp only [closureRange_contributionAt trace hserv]
   by_cases hc : k ∈ trace.closingKeyList ∧ IsByteKey k = true ∧ cell k 0 = 6 ∧ cell k 2 < 17
   · obtain ⟨hk, hbyte, h0, h2⟩ := hc
-    rw [if_pos ⟨hk, hbyte, h0, h2⟩]
+    rw [ite_eq_left ⟨hk, hbyte, h0, h2⟩]
     have hconv : ∀ width : RangeChip.Width,
         (if k ∈ trace.closingKeyList ∧ selRange width k = true
           then (trace.providerDemand k : ℤ) else 0) =
@@ -513,17 +513,17 @@ theorem closureRange_contribution (hserv : trace.DemandServable) (k : LookupKey)
       · subst hw
         have hsel : selRange (⟨cell k 2, h2⟩ : RangeChip.Width) k = true := by
           simp [selRange, hbyte, h0]
-        rw [if_pos ⟨hk, hsel⟩, if_pos rfl]
-      · refine (if_neg ?_).trans (if_neg hw).symm
+        rw [ite_eq_left ⟨hk, hsel⟩, ite_eq_left rfl]
+      · refine (ite_eq_right ?_).trans (ite_eq_right hw).symm
         rintro ⟨-, hsel⟩
         simp only [selRange, Bool.and_eq_true, decide_eq_true_eq] at hsel
         exact hw (Fin.ext hsel.2.2.symm)
     rw [List.map_congr_left fun width _ => hconv width, RangeChip.allWidths]
     exact sum_map_ite_eq_of_mem (List.nodup_finRange 17) (List.mem_finRange _) _
-  · rw [if_neg hc]
+  · rw [ite_eq_right hc]
     refine List.sum_eq_zero fun z hz => ?_
     obtain ⟨width, -, rfl⟩ := List.mem_map.mp hz
-    refine if_neg fun h => hc ⟨h.1, ?_⟩
+    refine ite_eq_right fun h => hc ⟨h.1, ?_⟩
     simp only [selRange, Bool.and_eq_true, decide_eq_true_eq] at h
     exact ⟨h.2.1, h.2.2.1, h.2.2.2 ▸ width.isLt⟩
 
@@ -571,7 +571,7 @@ theorem providerLedger_multiplicitySum (hreal : trace.ClosureRealized)
     closureRange_contribution trace hserv, closureRom_contribution trace hserv]
   generalize trace.providerDemand k = demand
   by_cases hk : k ∈ trace.closingKeyList
-  · rw [if_pos hk]
+  · rw [ite_eq_left hk]
     rcases trace.kind_of_mem_closingKeyList hk with hkind | hkind
     · obtain ⟨hbyte, hserve⟩ := hserv.byte k hk hkind
       have hprog : IsProgramKey k = false := isProgramKey_false_of_isByteKey hbyte
@@ -649,7 +649,7 @@ theorem suppliesDemand_of_keys
   by_cases hk : key ∈ trace.providerLedger.map LookupAccessList.keyOf ++ trace.closingKeyList
   · exact h key hk
   · rw [List.mem_append, not_or] at hk
-    rw [if_neg hk.2]
+    rw [ite_eq_right hk.2]
     exact LookupAccessList.multiplicitySum_eq_zero_of_keyOf_ne
       fun a ha hka => hk.1 (hka ▸ List.mem_map_of_mem ha)
 
@@ -668,13 +668,13 @@ theorem byteProgram_balanced (hwf : trace.WellFormed) (hfit : trace.CountsFit)
   rw [fullLedger_multiplicitySum trace hwf hfit,
     LookupAccessList.multiplicitySum_append, hsupply k]
   by_cases hk : k ∈ trace.closingKeyList
-  · rw [if_pos hk]
+  · rw [ite_eq_left hk]
     have hbal := trace.closingAccesses_balances hnonpos hsel
     rw [LookupAccessList.multiplicitySum_append, closingAccesses,
       LookupAccessList.multiplicitySum_closingAccesses _
         (LookupAccessList.closingKeys_nodup _ _) hk] at hbal
     exact hbal
-  · rw [if_neg hk, add_zero]
+  · rw [ite_eq_right hk, add_zero]
     have hk' : k ∉ LookupAccessList.closingKeys trace.skeletonLedger preprocessedKey := hk
     have hbal := trace.closingAccesses_balances hnonpos hsel
     rw [LookupAccessList.multiplicitySum_append, closingAccesses,
@@ -692,11 +692,13 @@ the multiplicity sum at every key that channel can produce.
 theorem fullLedger_eq_witness_interactions :
     trace.fullLedger = trace.witness.interactions.map Interaction.toAccess := by
   simp only [Air.Flat.EnsembleWitness.interactions, List.map_append, List.map_flatMap,
-    witness_tables, witness_data, witness_publicInput, fullLedger, verifierLedger,
+    witness_tables, witness_data, fullLedger, verifierLedger,
     tablesCleanAccesses]
   change trace.verifierLedger ++ tablesCleanAccesses trace.tables =
-    trace.verifierLedger ++ tablesCleanAccesses (Air.Flat.withDerivedData trace.tables)
-  rw [Air.Flat.withDerivedData, tablesCleanAccesses_setData]
+    trace.verifierLedger ++ tablesCleanAccesses
+      (Air.Flat.withDerivedData trace.tables _ (toElements trace.publicValues).toArray)
+  rw [tablesCleanAccesses_withDerivedData]
+
 
 /-- **One channel's ledger and the whole ledger agree at every key that channel could produce.** -/
 theorem fullLedger_multiplicitySum_channel (channel : RawChannel (ZMod p))

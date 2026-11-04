@@ -65,9 +65,9 @@ theorem flatMap_filter_key_perm {κ : Type*} [DecidableEq κ] (keys : List κ) (
       | cons k ks ih =>
         simp only [flatMap_cons, ih, filter_cons]
         by_cases same : key item = k
-        · rw [if_pos same, if_pos (decide_eq_true same.symm)]
+        · rw [ite_eq_left same, ite_eq_left (decide_eq_true same.symm)]
           rfl
-        · rw [if_neg same, if_neg (show ¬decide (k = key item) = true by
+        · rw [ite_eq_right same, ite_eq_right (show ¬decide (k = key item) = true by
             simpa only [decide_eq_true_eq] using Ne.symm same)]
           rfl
     rw [selected, filter_eq, count_eq_one_of_mem unique member]

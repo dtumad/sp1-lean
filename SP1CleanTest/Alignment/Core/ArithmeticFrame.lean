@@ -12,7 +12,7 @@ native evaluation only checks finite source data; parsing reduces in the kernel.
 
 namespace SP1CleanTest.Core.ArithmeticFrame
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D.Defs
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D
 
 private def image (word : BitVec 32) : ProgramImage := ⟨[(65536, word)], 65536, []⟩
 

@@ -19,7 +19,7 @@ verifier's supplied endpoint. Complete supplied-snapshot equality remains open.
 namespace SP1Clean.Soundness.HostHintReadCPU
 
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
-open LeanRV64D.Defs (Register)
+open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}
@@ -28,6 +28,8 @@ local instance finalMemoryLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p 
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 private theorem no_push_of_empty {α : Type*} (events : List α) (facts : α → RowFacts p)
@@ -135,7 +137,7 @@ theorem GroundingCarrier.final_memory_domain (valid : image.Valid)
       source.realize carrier.events = some target) (address : ℕ) (outside : 2 ^ 48 ≤ address) :
     target.sail.mem.get? address = none := by
   rw [carrier.memory_outside valid constraints balanced replay address outside]
-  exact (source.sail.memory.toSailMemory_get? (2 ^ 48) address).trans (if_neg (by omega))
+  exact (source.sail.memory.toSailMemory_get? (2 ^ 48) address).trans (ite_eq_right (by omega))
 
 
 end SP1Clean.Soundness.HostHintReadCPU

@@ -10,7 +10,7 @@ import SP1Clean.Proofs.Sail.Advance
 given the chip's semantic fact `a_val = sext32→64 (op_b + op_c)` and the register/PC reads.
 `addw_pure_eq` relates the Sail pure part to `signExtend 64 (setWidth 32 (b + c))`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.AddwSail
 
 open Sail LeanRV64D LeanRV64D.Functions

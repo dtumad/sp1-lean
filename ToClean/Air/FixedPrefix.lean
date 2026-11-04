@@ -2,31 +2,40 @@ module
 
 public import Clean.Air.FlatComponent
 
-/-! # Decoding a verifier-fixed input prefix
+/-! # Decoding typed fixed cells
 
-Clean's typed fixed-input contract exposes a prefix of the flattened input. A paired circuit
-needs the corresponding first typed value. This lemma transports that equality without any
-condition on the prover-owned suffix or data. Remove it when Clean supplies this decoding rule.
+Clean exposes fixed-cell agreement but lacks a reusable decoding lemma for a typed fixed payload
+paired with a multiplicity. This addition recovers the payload without restricting the count.
 -/
 
 @[expose] public section
 
-namespace Air.Flat
+namespace Air.Flat.WitnessGeneration
 
 variable {F : Type} [FiniteField F]
-variable {Prefix Suffix : TypeMap} [ProvableType Prefix] [ProvableType Suffix]
+variable {Row : TypeMap} [ProvableType Row]
 
-/-- The first typed input of a pair is exactly its verifier-fixed prefix. -/
-theorem FixedInputAt.input_prefix {fixed : FixedColumns F} {i : UInt64}
-    {input : ProvablePair Prefix Suffix F} (width : fixed.width = size Prefix)
-    (fixedInput : FixedInputAt (some fixed) i input) :
-    (toElements input.1).toArray = fixed.row i := by
-  have fixedCells := (fixedInput fixed (by simp)).2
-  change (toElements input.1 ++ toElements input.2).toList.take fixed.width =
-    (fixed.row i).toList at fixedCells
-  rw [Vector.toList_append] at fixedCells
-  have same : (toElements input.1).toList = (fixed.row i).toList := by
-    simpa [width] using fixedCells
-  exact congrArg List.toArray same
+/-- A typed fixed payload paired with the generator-owned multiplicity cell. -/
+def fixedWithMultiplicity (row : Witgen.M F (Row (Witgen.FExpr F))) :
+    Witgen.M F (ProvablePair Row field (Cell F)) := do
+  let value ← row
+  return (fromElements ((toElements value).map .fixed), .multiplicity)
 
-end Air.Flat
+/-- Fixed-cell agreement authenticates the entire typed payload independently of its count. -/
+theorem PreallocatedMode.FixedAt.input_prefix
+    {mode : PreallocatedMode F (ProvablePair Row field)}
+    {row : Witgen.M F (Row (Witgen.FExpr F))} {i : UInt64}
+    {input : ProvablePair Row field F}
+    (program : mode.input .idx = fixedWithMultiplicity row)
+    (fixed : mode.FixedAt i input) : input.1 = row.evalRow i := by
+  simp only [PreallocatedMode.FixedAt, program, fixedWithMultiplicity,
+    Witgen.M.bind_def, Witgen.M.pure_def, toElements, Vector.toList_append, Vector.toList_map,
+    ProvableType.toElements_fromElements, List.forall₂_iff_get] at fixed
+  have h : toElements input.1 = toElements (row.evalRow i) := by
+    ext j hj
+    simpa [List.getElem_append_left, hj, Witgen.M.evalRow, Witgen.eval,
+      Cell.FixedMatches, ProvableType.toElements_fromElements, circuit_norm]
+      using fixed.2 j (by simp; omega) (by simp; omega)
+  simpa [ProvableType.fromElements_toElements] using congrArg (fromElements (M := Row)) h
+
+end Air.Flat.WitnessGeneration

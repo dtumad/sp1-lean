@@ -112,15 +112,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   refine ⟨?spec, ?aluA,
     Or.inr ⟨bool_of_mul_pred h_sum_b, hregW,
       h_clk.at_four⟩,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0⟩
+    (bool_of_mul_pred h_sum_b)⟩
   case spec =>
       intro hreal hsraw
       -- Same discipline inside the conjunct: everything the `refine` above already consumed, the
@@ -199,15 +191,15 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
           + input_isSrlw
           + input_isSraw = 1 := by
         rw [h_srl0, h_sra0, h_srlw0, hsraw]; ring
-      have hsumneg : -(input_isSrl
+      have hsumneg : (input_isSrl
           + input_isSra
           + input_isSrlw
-          + input_isSraw) = -1 := by rw [hsum1]
+          + input_isSraw) = 1 := by rw [hsum1]
       have hbyte_fact : ∀ {v w : ZMod p},
-          (-(input_isSrl
+          ((input_isSrl
               + input_isSra
               + input_isSrlw
-              + input_isSraw) = -1 →
+              + input_isSraw) = 1 →
             byteChannel.Guarantees (⟨6, v, w, 0⟩
               : ByteRow (ZMod p)) env.data) → v.val < 2 ^ w.val := by
         intro v w hb
@@ -313,7 +305,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       rw [hcolsa]
       by_cases hb1 : input_adapter_op_b_memory_prev_value[1].val ≥ 32768
       · -- b_msb = 1 (negative low-32): sign-extended arithmetic word shift.
-        have hbmsb1 : env.get (i₀ + 4) = 1 := by rw [h_msb_eq2, if_pos hb1]
+        have hbmsb1 : env.get (i₀ + 4) = 1 := by rw [h_msb_eq2, ite_eq_left hb1]
         have hlowtrue : (BitVec.extractLsb' 0 32
             (Word.toBitVec64 input_adapter_op_b_memory_prev_value)).msb = true := by
           rw [h_lowmsb]; simp [hb1]
@@ -417,7 +409,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
             exact ShiftRightMath.sraw_dispatch_1_msb1 b_cb0 b_cb1 b_cb2 b_cb3 hcb4 eq_v01 eq_v012 eq_v0123
               lt_ll0 lt_lh0 lt_ll1 lt_lh1 h_b0_dec h_b1_dec
       · -- b_msb = 0 (non-negative low-32): identical to SRLW (logical word shift, then sign-extend).
-        have hbmsb0 : env.get (i₀ + 4) = 0 := by rw [h_msb_eq2, if_neg hb1]
+        have hbmsb0 : env.get (i₀ + 4) = 0 := by rw [h_msb_eq2, ite_eq_right hb1]
         have hlowfalse : (BitVec.extractLsb' 0 32
             (Word.toBitVec64 input_adapter_op_b_memory_prev_value)).msb = false := by
           rw [h_lowmsb]; simp [hb1]

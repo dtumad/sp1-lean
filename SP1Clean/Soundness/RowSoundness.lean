@@ -17,7 +17,7 @@ The resulting API prevents the capstone from assuming `ChipRow.chipSpec` directl
 second operation-level semantics beside the chip circuit.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -240,13 +240,12 @@ theorem DecodedRowStaticInputs.programRowSpec {decoded : DecodedInstructionRow p
   have targetMem : target ∈ decoded.interactionsWith data programChannel := by
     rw [interactions]
     exact List.mem_cons_self
-  have targetNegative : target.mult = -1 := by
-    simp only [target, TypedInteraction.pulledIfValue_mult, real]
+  have targetPull : target.raw.Pull := ⟨rfl, real⟩
   have programGuarantees :=
     inputs.program
   have guarantee := TypedInteraction.guarantee_of_channelGuarantees
     decoded.chip.table.operations programChannel (decoded.environment data) target targetMem
-    programGuarantees (by rfl) targetNegative
+    programGuarantees targetPull
   simpa only [target, TypedInteraction.pulledIfValue_message, programChannel] using guarantee
 
 /-- An active decoded row inherits the structural well-formedness of its exact Program fetch.

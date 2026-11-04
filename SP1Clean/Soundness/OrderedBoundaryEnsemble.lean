@@ -19,17 +19,33 @@ namespace SP1Clean.Soundness.OrderedBoundaryEnsemble
 
 open Circuit Air.Flat RankedGrounding
 
+variable {PublicIO : TypeMap} [ProvableType PublicIO]
+
 variable {p : ℕ} [Fact p.Prime]
 
-def ensemble (name : String) (initial final : Word (ZMod p))
+def ensemble {PublicIO : TypeMap} [ProvableType PublicIO] (name : String) (initial final : Word (ZMod p))
     (views : List (TransitionView (OrderedBoundary.channel (p := p) name)))
     (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
-    (names : ((views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup) :
-    Ensemble (ZMod p) unit where
+    (names : ((views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : (((OrderedBoundary.channel name).toRaw :: channels).map (·.name)).Nodup := by assumption)
+    (registered : ∀ table ∈ views.map (·.component) ++ auxiliary,
+      table.circuit.channels ⊆ (OrderedBoundary.channel name).toRaw :: channels := by assumption) :
+    Ensemble (ZMod p) PublicIO where
   tables := views.map (·.component) ++ auxiliary
   unique_names := names
   channels := (OrderedBoundary.channel name).toRaw :: channels
   verifier := OrderedBoundaryVerifier.verifierProgram name initial final
+  unique_channel_names := channelNames
+  tables_channels := registered
+  verifier_channels := by
+    intro selected member
+    rw [Verifier.Program.mem_channels_iff] at member
+    simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
+      Verifier.Program.operations] at member
+    rw [Operations.channels, Verifier.ofInteractions_interactions] at member
+    simp only [OrderedBoundaryVerifier.main, circuit_norm] at member
+    subst selected
+    exact List.mem_cons_self ..
 
 abbrev PhysicalRow (name : String) :=
   TransitionView (OrderedBoundary.channel (p := p) name) × Environment (ZMod p)
@@ -39,11 +55,15 @@ variable {views : List (TransitionView (OrderedBoundary.channel (p := p) name))}
 variable {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 
 variable {names : ((views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
+variable {channelNames : (((OrderedBoundary.channel name).toRaw :: channels).map (·.name)).Nodup}
+variable {registered : ∀ table ∈ views.map (·.component) ++ auxiliary,
+  table.circuit.channels ⊆ (OrderedBoundary.channel name).toRaw :: channels}
 
-abbrev Witness := EnsembleWitness (ensemble name initial final views auxiliary channels names)
+abbrev Witness := EnsembleWitness (ensemble (PublicIO := PublicIO) name initial final views auxiliary channels names channelNames registered)
 
-variable (witness : Witness (name := name) (initial := initial) (final := final)
-  (views := views) (auxiliary := auxiliary) (channels := channels) (names := names))
+variable (witness : Witness (PublicIO := PublicIO) (name := name) (initial := initial) (final := final)
+  (views := views) (auxiliary := auxiliary) (channels := channels) (names := names)
+  (channelNames := channelNames) (registered := registered))
 
 /-- Every physical row, including disabled padding and its original data context. -/
 def physicalRows :=
@@ -116,7 +136,7 @@ theorem endpointBalanced
   have perm := ((OrderedBoundary.channel name).gatedTransitionLedger_balanced_iff
     initial final (physicalRows witness) (fun row => row.2 row.1.activity)
       (fun row => row.1.edge row.2) binary).mp balanced
-  exact Quot.sound perm.2
+  exact Quot.sound perm
 
 /-- Every active boundary row occurs on one exhaustive strict trail. No caller supplies its
 order, coverage, or distinctness. -/

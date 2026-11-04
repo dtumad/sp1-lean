@@ -65,11 +65,15 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 /-- The current queue is derived at a replayed CPU prefix. Only that preceding prefix must have
 executed; the current call's success is not assumed. The full host state supplies the bytes. -/
 theorem of_prefix
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
@@ -112,12 +116,15 @@ theorem of_prefix
   have equal : hints = current.host.io.hints := Option.some.inj (observed.symm.trans actual)
   exact ⟨store, bounded, equal ▸ binding⟩
 
+
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 /-- In the installed source-record assembly, raw AIR constraints and balance derive the current
 queue at any actual queue syscall. There is no current-queue or record-authentication premise. -/
 theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
@@ -131,18 +138,28 @@ theorem source_current {final : HostHintQueue.State (ZMod p)} {bankFinal : HostS
     (replayed : replayEvents? policy program source.realize (prior.map ExecutionRow.event) = some current) :
     ∃ store, HintQueue.Extends store (HintQueue.ofList source.host.io.hints).1 ∧
       (edge row).1.Binds store current.host.io.hints := by
-  have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have records := HostHintQueueBoundary.record_channels witness balanced
-  have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
-  have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
-  have specs := queue_specs (HostHintQueueBoundary.projected witness) interface _
-    (HostHintQueueBoundary.source_authentication witness constraints) checks records
+  let retained := HostHintQueueBoundary.projected witness
+  have sameData : retained.data = witness.data := HostHintQueueBoundary.projected_data witness
+  have samePublic : retained.publicInput = witness.publicInput := HostHintQueueBoundary.projected_publicInput witness
+  have checks := by
+    exact HostHintQueueBoundary.projected_constraints witness constraints
+  have records := by
+    exact HostHintQueueBoundary.record_channels witness balanced
+  have calls := by
+    exact HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
+  have interface := by
+    exact HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have ordering := by
+    exact HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
+  have specs := by
+    exact queue_specs retained interface _
+      (HostHintQueueBoundary.source_authentication witness constraints) checks records
   obtain ⟨path, exhaustive, walk, history⟩ := HostHintQueueHistory.source_history witness constraints balanced
-  have currentQueue := of_prefix (HostHintQueueBoundary.projected witness) interface checks calls records.byte ordering specs
-    (cpu := cpu) (path := path) (initial := SP1Clean.HostHintQueueBoundary.initial source.host.io.hints)
-    (final := final) (upper := (HintQueue.ofList source.host.io.hints).1)
-  simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at currentQueue
+  have currentQueue := by
+    exact of_prefix retained interface checks calls records.byte ordering specs
+      (cpu := cpu) (path := path) (initial := SP1Clean.HostHintQueueBoundary.initial source.host.io.hints)
+      (final := final) (upper := (HintQueue.ofList source.host.io.hints).1)
+  rw [sameData, samePublic] at currentQueue
   exact currentQueue cpuExhaustive cpuWalk exhaustive walk history prior rest event split row
     (exhaustive.mem_iff.mpr member) clock policy program current replayed
 
@@ -182,7 +199,7 @@ theorem source_membership_silent (image : ProgramImage) (source : ExecutionSnaps
   contradiction
 
 private theorem read_member
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
     (none, env) ∈ TransitionView.readIndexedRows indices (queueTables witness) := by
@@ -212,7 +229,7 @@ private theorem trajectory_at_prefix (policy : HostPolicy) (program : Target.Gue
   simp only [executionTrajectory, ← List.map_take, split, List.take_left]
 
 private theorem registers_of_prefix (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (silent : ∀ component ∈ (HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources), Channels.programChannel.toRaw ∉ component.circuit.channels)
@@ -263,7 +280,7 @@ three current observations; dispatch and write inventory need no prior Memory gu
 theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
@@ -288,39 +305,50 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
       (HostHintReadCoverage.input env).next.Binds store remaining ∧
       current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
         some (HostHintReadChip.execution (HostHintReadCoverage.input env) current.host bytes remaining) ∧
-      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
-          (wordTables (HostHintQueueBoundary.projected witness))
-          (wordTables_aligned (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
+      ((HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
         (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes) := by
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
-  have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have records := HostHintQueueBoundary.record_channels witness balanced
-  have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
-  have cursor := HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced
-  have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
-  have program := HostHintQueueBoundary.projected_core_balancedChannel witness balanced Channels.programChannel.toRaw
-    (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
-  have permissions := HostHintQueueBoundary.projected_permission_balancedChannel witness balanced
-  have registers := registers_of_prefix valid (HostHintQueueBoundary.projected witness) interface
-    (source_program_silent source) checks calls program ordering (cpu := cpu)
-  simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at registers
-  have registers := registers cpuExhaustive cpuWalk prior rest event split env member clock current replayed currency
-  have retainedMember : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
-      (Environment.fromArray · (HostHintQueueBoundary.projected witness).data) := by
-    simpa only [HostHintQueueBoundary.projected_data] using member
+  let retained := HostHintQueueBoundary.projected witness
+  have sameData : retained.data = witness.data := HostHintQueueBoundary.projected_data witness
+  have samePublic : retained.publicInput = witness.publicInput := HostHintQueueBoundary.projected_publicInput witness
+  have interface := by
+    exact HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have checks := by
+    exact HostHintQueueBoundary.projected_constraints witness constraints
+  have records := by
+    exact HostHintQueueBoundary.record_channels witness balanced
+  have calls := by
+    exact HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
+  have cursor := by
+    exact HostHintQueueBoundary.projected_cursor_balancedChannel witness balanced
+  have ordering := by
+    exact HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
+  have program := by
+    exact HostHintQueueBoundary.projected_core_balancedChannel witness balanced Channels.programChannel.toRaw
+      (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
+  have permissions := by
+    exact HostHintQueueBoundary.projected_permission_balancedChannel witness balanced
+  have registers := by
+    exact registers_of_prefix valid retained interface
+      (source_program_silent source) checks calls program ordering (cpu := cpu)
+  rw [sameData, samePublic] at registers
+  have registers := by
+    exact registers cpuExhaustive cpuWalk prior rest event split env member clock current replayed currency
+  have retainedMember : env ∈ (handlerTable retained).table.map
+      (Environment.fromArray · retained.data) := by
+    rw [sameData]
+    exact member
   obtain ⟨store, extension, binding⟩ := source_current witness constraints balanced cpuExhaustive cpuWalk
     prior rest event split (none, env) (by
-      simpa only [HostHintQueueBoundary.projected_data] using
-        (read_member (HostHintQueueBoundary.projected witness) env retainedMember))
+      exact read_member retained env retainedMember)
     clock _ _ current replayed
   rw [read_edge] at binding
-  have execution := run_of_authenticated_witness
-    (HostHintQueueBoundary.projected witness) interface (source_permission_pulls source)
-    (source_membership_silent image source) checks records permissions
-    (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) ordering calls cursor _
-    (HostHintQueueBoundary.source_authentication witness constraints) env retainedMember
-    current.host store extension binding running (.ofSail current.sail) registers.1 registers.2.1 registers.2.2
+  have execution := by
+    exact run_of_authenticated_witness
+      retained interface (source_permission_pulls source)
+      (source_membership_silent image source) checks records permissions
+      (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) ordering calls cursor _
+      (HostHintQueueBoundary.source_authentication witness constraints) env retainedMember
+      current.host store extension binding running (.ofSail current.sail) registers.1 registers.2.1 registers.2.2
   obtain ⟨bytes, remaining, hints, next, executed, writes⟩ := execution
   exact ⟨store, bytes, remaining, extension, hints, next, executed, writes⟩
 
@@ -329,7 +357,7 @@ the preceding replay and AIR. This conclusion requires no Memory-channel guarant
 theorem length_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (cpuExhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))

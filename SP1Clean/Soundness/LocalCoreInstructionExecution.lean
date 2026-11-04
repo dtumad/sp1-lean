@@ -63,7 +63,7 @@ theorem GroundingCarrier.trajectory_ordinary {image : ProgramImage} {source : Ex
   change (carrier.pairedTrajectory valid policy n).map ExecutionState.sail = some state at present
   obtain ⟨whole, paired, sail⟩ := Option.map_eq_some_iff.mp present
   have decoded := instructionRows_decoded valid witness constraints balanced member
-  have atPc : whole.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  have atPc : whole.sail.regs.get? LeanRV64D.Register.PC =
       some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
     rw [sail, program_pc_eq_statePull]
     exact pc

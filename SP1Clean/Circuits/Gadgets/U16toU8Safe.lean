@@ -122,10 +122,8 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   simp only [circuit_norm, byteChannel, ea, el] at h_holds ⊢
   obtain ⟨hr0, hr1, hr2, hr3, _hbool⟩ := h_holds
   -- The four trailing conjuncts are the byte pulls' own `Requirements` — vacuous off-gate.
-  refine ⟨fun hr1eq => ?_, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0⟩
-  have hneg : - input_is_real = -1 := by rw [hr1eq]
+  refine ⟨fun hr1eq => ?_, hbin⟩
+  have hneg : input_is_real = 1 := hr1eq
   have R0 := hr0 hneg; have R1 := hr1 hneg; have R2 := hr2 hneg; have R3 := hr3 hneg
   rw [byteRowSpec_u8range_pair, e8] at R0 R1 R2 R3
   intro i
@@ -149,7 +147,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   simp only [circuit_norm, byteChannel, ea, el]
   refine ⟨?_, ?_, ?_, ?_, by rcases hbin with h | h <;> rw [h] <;> simp⟩
   all_goals intro hneg
-  all_goals have hsp := h_spec (neg_inj.mp hneg)
+  all_goals have hsp := h_spec hneg
   all_goals rw [byteRowSpec_u8range_pair, e8]
   · exact ⟨(hsp 0).1, (hsp 0).2.1⟩
   · exact ⟨(hsp 1).1, (hsp 1).2.1⟩

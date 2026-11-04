@@ -31,7 +31,7 @@ bridge it was first extracted for:
 - The file-scope `simp`/`local simp`/`grind` attribute blocks that make the generated helpers
   reduce during bridge proofs. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 open LeanRV64D.Functions
 -- lean-sail v5 moved the state/monad machinery under `Sail.ConcurrencyInterfaceV1`; the root
 -- `PreSail` namespace it leaves behind is empty, so an unqualified `PreSail.foo` resolves to
@@ -516,23 +516,19 @@ section jump
   2. an `assert` that `target` bit 0 is `0`,
   3. an `if (bit_to_bool (target bit 1)) && (not (← currentlyEnabled Ext_Zca))` guard, else
   4. `set_next_pc target; pure RETIRE_SUCCESS`.
-For `target % 4 = 0` both bit 0 and bit 1 are 0, so the assert passes and `bit_to_bool 0#1 = false`
-short-circuits the `&&` regardless of the Zca read's value. The Zca read still executes monadically
-(reading `misa`), but is state-preserving on `isInitialized s` — handled by
-`SailME_run_readReg_map_writeReg`. The committed control-flow Sail bridges (JAL/JALR/BRANCH) consume this
-to reduce `execute_*`'s `jump_to` to a single `nextPC` write. -/
+For `target % 4 = 0` both low bits are zero. The assertion passes and the generated monadic
+conjunction short-circuits before reading the Zca extension flag. No initialization premise is
+needed for this step. The control-flow bridges use this to reduce `jump_to` to one `nextPC` write. -/
 theorem jump_to_of_mod4_eq_zero (target : BitVec 64) (s : SailState)
-    (hs : SailState.isInitialized s) (h_aligned : target % 4#64 = 0) :
+    (h_aligned : target % 4#64 = 0) :
     EStateM.run (jump_to target) s =
       EStateM.Result.ok LeanRV64D.Functions.RETIRE_SUCCESS
         { s with regs := s.regs.insert Register.nextPC target } := by
   have h0 : target[0] = false := by bv_decide
   have h1 : target[1] = false := by bv_decide
-  have hs_misa : (s.regs.get? Register.misa).isSome := by
-    simp [Std.ExtDHashMap.get?_eq_some_get (hs _)]
-  simp [jump_to, ext_control_check_pc, h0, h1]
-  exact Sail.SailME_run_readReg_map_writeReg s Register.misa Register.nextPC hs_misa target
-    (fun _ => RETIRE_SUCCESS)
+  simp [jump_to, ext_control_check_pc, PreSail.sail_assert, andM, toBool, h0, h1]
+  rfl
+
 
 end jump
 

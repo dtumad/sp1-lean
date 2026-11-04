@@ -8,9 +8,9 @@ mod execution;
 #[path = "support/export.rs"]
 mod export_support;
 
-use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
+use clean_backend::witness_generation::Program;
 use clean_backend::GeneratedAirSpec;
-use export_support::{Ledger, RowWitness, Sp1Evaluation};
+use export_support::{complete_row, has_open_bus, Ledger, Sp1Evaluation};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use serde::Deserialize;
@@ -63,7 +63,7 @@ struct Handler {
     row: fn(&[F]) -> Vec<F>,
     constraints_hold: fn(&[F]) -> bool,
     ledger: fn(&[F]) -> Ledger,
-    rejects_open: fn(&[F]) -> bool,
+    has_open_bus: fn(&[F]) -> bool,
 }
 
 fn handler<P: Program<F> + GeneratedAirSpec>() -> Handler {
@@ -71,12 +71,7 @@ fn handler<P: Program<F> + GeneratedAirSpec>() -> Handler {
     Handler {
         input_width: <P as Program<F>>::PROVER_INPUTS,
         width: P::WIDTHS[0],
-        row: |input| {
-            let witness = generate::<F, RowWitness<P>>(&[], input).unwrap();
-            assert_eq!(witness.tables.len(), 1);
-            assert_eq!(witness.tables[0].len(), 1);
-            witness.tables[0][0].clone()
-        },
+        row: |input| complete_row::<P>(input).unwrap(),
         constraints_hold: |row| P::constraints::<F>(0, row).iter().all(|x| *x == F::ZERO),
         ledger: |row| {
             <P as Program<F>>::interactions(0, row)
@@ -84,7 +79,7 @@ fn handler<P: Program<F> + GeneratedAirSpec>() -> Handler {
                 .map(|entry| {
                     (
                         entry.channel.to_owned(),
-                        entry.multiplicity.as_canonical_u64(),
+                        entry.signed_multiplicity().as_canonical_u64(),
                         entry
                             .message
                             .iter()
@@ -94,12 +89,7 @@ fn handler<P: Program<F> + GeneratedAirSpec>() -> Handler {
                 })
                 .collect()
         },
-        rejects_open: |input| {
-            matches!(
-                generate::<F, P>(&[], input),
-                Err(WitnessGenerationError::Runtime(_))
-            )
-        },
+        has_open_bus: has_open_bus::<P>,
     }
 }
 
@@ -330,7 +320,7 @@ fn twenty_installed_components_match_lean_rows_and_complete_ledgers() {
             "released comparison columns and native field adapter"
         );
         assert!(
-            (handler.rejects_open)(&input),
+            (handler.has_open_bus)(&input),
             "a row cannot close its own external buses"
         );
         let zero = handler.build(&vec![F::ZERO; handler.input_width]);
@@ -681,7 +671,7 @@ fn hint_handlers_match_lean_constructor_rows_and_complete_ledgers() {
         assert!(handler.valid(&row));
         assert_eq!(values(&row), reference.row);
         same_ledger((handler.ledger)(&row), reference.ledger);
-        assert!((handler.rejects_open)(&input));
+        assert!((handler.has_open_bus)(&input));
         assert!(!handler.valid(&handler.build(&vec![F::ZERO; handler.input_width])));
     }
 }
@@ -909,7 +899,7 @@ fn malformed_hint_calls_clocks_and_spans_are_rejected() {
         nonbyte((handlers[2].ledger)(&handlers[2].build(&changed))),
         nonbyte((handlers[2].ledger)(&handlers[2].build(&input)))
     );
-    assert!((handlers[2].rejects_open)(&changed));
+    assert!((handlers[2].has_open_bus)(&changed));
 }
 
 #[test]

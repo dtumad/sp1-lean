@@ -37,7 +37,7 @@ theorem executeKind_of_spec (input : Inputs (ZMod p)) (valid : Spec input)
   obtain ⟨_, _, _, word, below⟩ := valid
   have bounds := lt_min_iff.mp below
   simp only [HostState.executeKind, characteristic, Word.toBitVec64_toNat word,
-    if_pos bounds, execution]
+    ite_eq_left bounds, execution]
 
 /-- Raw handler meaning plus actual register observations determine the entire dispatch. -/
 theorem run_of_spec (input : Inputs (ZMod p)) (valid : Spec input)

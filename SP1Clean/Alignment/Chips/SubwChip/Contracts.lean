@@ -17,7 +17,6 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 /-- Project SUBW's `op_a_0 = 0` assertion while its circuit input remains folded. -/
 private theorem subwInputOpA0_eq_zero_of_mainConstraints
@@ -36,15 +35,15 @@ private theorem subwInputOpA0_eq_zero_of_mainConstraints
 
 /-- SUBW passes its independent R-type adapter input through to the committed output row. -/
 theorem SubwChip.inputOutputAdapter (env : Environment (ZMod p)) :
-    (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter =
-      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter := by
+    (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowInput env).adapter =
+      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowOutput env).adapter := by
   have inputEq : Eval.eval env (varFromOffset SubwChip.Inputs 0) =
-      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset SubwChip.Inputs 0 env
   have outputEq : Eval.eval env
       ((SubwChip.circuit (p := p)).output (varFromOffset SubwChip.Inputs 0)
         (size SubwChip.Inputs)) =
-      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
+      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowOutput env) := by
     simp only [Component.rowOutput, circuit_norm]
   rw [← inputEq, ← outputEq]
   simp only [SubwChip.circuit, circuit_norm]
@@ -53,8 +52,8 @@ theorem SubwChip.inputOutputAdapter (env : Environment (ZMod p)) :
 non-`x0` routing branch. -/
 theorem SubwChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
-    (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
+      ({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).operations.ConstraintsHold env) :
+    (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowInput env).adapter.op_a_0 = 0 := by
   let input : Var SubwChip.Inputs (ZMod p) := varFromOffset SubwChip.Inputs 0
   let offset := size SubwChip.Inputs
   have rowConstraints : Operations.ConstraintsHold env ((SubwChip.main input).operations offset) :=
@@ -62,7 +61,7 @@ theorem SubwChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
   have flagConstraint :=
     subwInputOpA0_eq_zero_of_mainConstraints input offset env rowConstraints
   have inputEq : Eval.eval env input =
-      ({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+      ({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset SubwChip.Inputs 0 env
   rw [← inputEq, SubwChip.eval_inputs, Readers.RTypeReader.eval_opA0]
   exact flagConstraint
@@ -70,11 +69,11 @@ theorem SubwChip.inputOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
 /-- Row-view form of SUBW's physical routing constraint. -/
 theorem SubwChip.rowViewOpA0_eq_zero_of_constraints (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
+      ({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).operations.ConstraintsHold env) :
     (SubwChip.rowView
-      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
-  change (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowInput env)
+      (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
+  change (({ circuit := SubwChip.circuit (p := p), Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
   rw [← SubwChip.inputOutputAdapter env]
   exact SubwChip.inputOpA0_eq_zero_of_constraints env constraints
 

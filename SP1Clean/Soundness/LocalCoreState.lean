@@ -120,7 +120,7 @@ theorem state_interiors {image : ProgramImage} {source : ExecutionSnapshot}
 theorem verifier_state_interactions {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     typedInteractionValuesWith (ensemble image source).verifierOperations stateChannel
-      (Environment.fromInput witness.publicInput witness.data) =
+      witness.data.publicEnvironment =
       [TypedInteraction.pulledIfValue stateChannel 1
         ⟨witness.publicInput.final_clk_high, witness.publicInput.final_clk_low,
           witness.publicInput.final_pc0, witness.publicInput.final_pc1,
@@ -131,7 +131,7 @@ theorem verifier_state_interactions {image : ProgramImage} {source : ExecutionSn
           witness.publicInput.init_pc2⟩] := by
   apply verifier_state_interactions_of_values witness
   change ((LocalSourceBoundary.checker image source).install (baseEnsemble image source)).verifierOperations.interactionValuesWith stateChannel.toRaw
-    (Environment.fromInput witness.publicInput witness.data) = _
+    witness.data.publicEnvironment = _
   rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _
     (by simp [baseEnsemble, sp1Ensemble_channels])]
   simp [baseEnsemble, boundaryVerifier, sp1StateVerifierProgram, OrderedBoundaryVerifier.verifierProgram,
@@ -187,27 +187,27 @@ private theorem instruction_selector_binary {image : ProgramImage} {source : Exe
     (instructionRows_constraints witness constraints row member)
 
 /-- State selectors are signed units or zero throughout the combined witness. -/
-theorem state_signedBinary_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
+theorem state_binary_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   rw [state_interactions]
   intro interaction member
   simp only [List.mem_append] at member
   rcases member with (((boundary | ordinary) | bump) | halt) | syscall
-  · exact statePair_signed_binary 1 (Or.inr rfl) _ _ interaction boundary
-  · exact statePairs_signedBinary _ _ _ (instruction_selector_binary witness constraints) interaction ordinary
-  · exact statePairs_signedBinary _ _ _
+  · exact statePair_binary 1 (Or.inr rfl) _ _ interaction boundary
+  · exact statePairs_binary _ _ _ (instruction_selector_binary witness constraints) interaction ordinary
+  · exact statePairs_binary _ _ _
       (stateBumpRow_binary _ witness.data (systemTable_component witness 1)
     (witness.same_data _ (systemTable_mem witness 1))
         (systemTable_constraints witness constraints 1)
         (byte _ (systemTable_mem witness 1)))
       interaction bump
-  · exact statePairs_signedBinary _ _ _
+  · exact statePairs_binary _ _ _
       (haltRow_binary _ witness.data (systemTable_component witness 2) (systemTable_constraints witness constraints 2))
       interaction halt
-  · exact statePairs_signedBinary _ _ _
+  · exact statePairs_binary _ _ _
       (syscallRow_binary _ witness.data (systemTable_component witness 3) (systemTable_constraints witness constraints 3))
       interaction syscall
 
@@ -230,7 +230,7 @@ private theorem activeStateEdges_balance {image : ProgramImage} {source : Execut
     rw [typedEnsembleInteractionsWith_raw]
     exact channels.state
   have pairs := Multiset.coe_eq_coe.mpr (producedMessages_perm_consumedMessages _ raw
-    (state_signedBinary_of_byte witness constraints channels.byte))
+    (state_binary_of_byte witness constraints channels.byte))
   have ordinary := statePairs_projection _ _ (decodedStateEdge witness.data) (instruction_selector_binary witness constraints)
   have bump := statePairs_projection _ _ (fun physical =>
     let row := stateBumpRow witness.data physical
@@ -273,12 +273,12 @@ theorem state_endpointBalanced_of_orderingChannels {image : ProgramImage} {sourc
   exact activeStateEdges_balance witness constraints channels
 
 /-- Complete witnesses supply the Byte facts used to decode State multiplicities. -/
-theorem state_signedBinary {image : ProgramImage} {source : ExecutionSnapshot}
+theorem state_binary {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 :=
-  state_signedBinary_of_byte witness constraints (orderingChannels_of_balanced witness constraints balanced).byte
+      IsBool interaction.mult :=
+  state_binary_of_byte witness constraints (orderingChannels_of_balanced witness constraints balanced).byte
 
 /-- Complete witnesses supply the State/Byte interface used by endpoint accounting. -/
 theorem state_endpointBalanced {image : ProgramImage} {source : ExecutionSnapshot}

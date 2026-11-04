@@ -1,4 +1,4 @@
-import SP1Clean.Proofs.Chips.HaltChip.Formal
+import SP1Clean.Proofs.Chips.HaltChip.Witgen
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.EnsembleProjection
 
@@ -32,8 +32,8 @@ def circuit : GeneralFormalCircuit (ZMod p) HaltChip.Inputs unit where
   soundness := by circuit_proof_all [main]
   completeness := by circuit_proof_all [main, HaltChip.circuit]
 
-def original : Component (ZMod p) := { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }
-def component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def original : Component (ZMod p) := { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }
+def component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation := HaltChip.generation }
 
 private theorem main_interactions (input : Var HaltChip.Inputs (ZMod p)) (offset : ℕ)
     (selected : RawChannel (ZMod p)) :

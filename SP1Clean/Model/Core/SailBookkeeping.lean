@@ -10,10 +10,10 @@ not execute instructions or define another machine state.
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs LeanRV64D.Functions Machine
+open LeanRV64D LeanRV64D.Functions Machine
 
 /-- The official machine-mode retirement decision, with a total fallback on absent registers.
-Successful interpreter evaluation authenticates both fields and proves agreement. -/
+Successful interpreter evaluation checks the filter when retirement is enabled and proves agreement. -/
 def retirementEnabled (state : SailState) : Bool :=
   (_get_Counterin_IR ((state.regs.get? Register.mcountinhibit).getD 0) == 0#1) &&
     (counter_priv_filter_bit ((state.regs.get? Register.minstretcfg).getD 0) Privilege.Machine == 0#1)
@@ -22,7 +22,7 @@ def retirementEnabled (state : SailState) : Bool :=
 theorem retirementEnabled_of_run {state : SailState} {enabled : Bool}
     (success : (should_inc_minstret Privilege.Machine).run state = .ok enabled state) :
     retirementEnabled state = enabled := by
-  simp only [should_inc_minstret, bind, EStateM.bind, EStateM.run] at success
+  simp only [should_inc_minstret, andM, toBool, bind, EStateM.bind, EStateM.run] at success
   have readInhibit := Sail.run_readReg state Register.mcountinhibit
   simp only [EStateM.run] at readInhibit
   rw [readInhibit] at success
@@ -30,15 +30,22 @@ theorem retirementEnabled_of_run {state : SailState} {enabled : Bool}
   | none => simp only [inhibit] at success; cases success
   | some inhibitValue =>
     simp only [inhibit] at success
-    have readFilter := Sail.run_readReg state Register.minstretcfg
-    simp only [EStateM.run] at readFilter
-    rw [readFilter] at success
-    cases filter : state.regs.get? Register.minstretcfg with
-    | none => simp only [filter] at success; cases success
-    | some filterValue =>
-      simp only [filter] at success
+    cases active : (_get_Counterin_IR inhibitValue == 0#1) with
+    | false =>
+      simp only [active, pure, EStateM.pure] at success
       cases success
-      simp only [retirementEnabled, inhibit, filter, Option.getD_some]
+      simp only [retirementEnabled, inhibit, Option.getD_some, active, Bool.false_and]
+    | true =>
+      simp only [active, pure, EStateM.pure, EStateM.bind] at success
+      have readFilter := Sail.run_readReg state Register.minstretcfg
+      simp only [EStateM.run] at readFilter
+      rw [readFilter] at success
+      cases filter : state.regs.get? Register.minstretcfg with
+      | none => simp only [filter] at success; cases success
+      | some filterValue =>
+        simp only [filter] at success
+        cases success
+        simp only [retirementEnabled, inhibit, filter, Option.getD_some, active, Bool.true_and]
 
 /-- One observation update: only a normally retired ordinary instruction changes these slots. -/
 def retirementTick (values : Bool × Option Bool × Option (BitVec 64)) (ordinary : Bool) :

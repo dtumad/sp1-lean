@@ -43,7 +43,7 @@ concrete words. A *symbolic*-register `ext_decode_RTYPE` would need `bv_decide` 
 which is costly and unnecessary for this scope, so it is deliberately not pursued; the general
 `∀ prog` statement instead keeps `decodedInROM` a Program-channel contract discharged per row. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.SailDecode
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -96,10 +96,10 @@ theorem ceZicfilp_bind_apply {α : Type} (s : SailState) (hs : s.isInitialized)
     simp only [BitVec.toNat_ofNat] at h2 ⊢
     omega
   show ((currentlyEnabled extension.Ext_Zicfilp >>= k) : SailM α).run s = (k false).run s
-  simp only [currentlyEnabled, get_xLPE, hartSupports, _get_Seccfg_MLPE,
+  simp only [andM, orM, toBool, currentlyEnabled, get_xLPE, hartSupports, _get_Seccfg_MLPE,
     bool_bit_backwards, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hpriv', hmlpe,
-    Bool.true_and, Bool.and_false, Bool.false_and, if_false]
+    Bool.true_and, Bool.and_false, Bool.false_and, ite_false]
   rfl
 
 /-! ## The base-family decode witnesses
@@ -316,7 +316,7 @@ theorem ceM_apply (s : SailState) (hs : s.isInitialized)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
     currentlyEnabled extension.Ext_M s = EStateM.Result.ok true s := by
   show (currentlyEnabled extension.Ext_M).run s = .ok true s
-  simp only [currentlyEnabled, hartSupports, pure_bind, bind_assoc,
+  simp only [andM, orM, toBool, currentlyEnabled, hartSupports, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hmisa, Bool.true_and, beq_self_eq_true]
   rfl
 
@@ -326,7 +326,7 @@ theorem ceZmmul_apply (s : SailState) (hs : s.isInitialized)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
     currentlyEnabled extension.Ext_Zmmul s = EStateM.Result.ok true s := by
   show (currentlyEnabled extension.Ext_Zmmul).run s = .ok true s
-  simp only [currentlyEnabled, hartSupports, pure_bind, bind_assoc,
+  simp only [andM, orM, toBool, currentlyEnabled, hartSupports, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hmisa, Bool.true_and, Bool.false_or,
     beq_self_eq_true]
   rfl
@@ -351,10 +351,9 @@ theorem decode_MUL (s : SailState) (hs : s.isInitialized)
         { result_part := VectorHalf.Low, signed_rs1 := Signedness.Signed,
           signed_rs2 := Signedness.Signed }))) _ _ s ?_).trans (by conv_lhs => whnf)
   · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceM_apply s hs hmisa)).trans ?_
-    conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceZmmul_apply s hs hmisa)).trans ?_
-    rfl
+    refine (run_match_step _ true _ _ s ?_).trans (by rfl)
+    simp only [andM, orM, toBool, pure_bind, Bind.bind, EStateM.bind,
+      ceM_apply s hs hmisa, pure, EStateM.pure, Functions.xlen, beq_self_eq_true]
 
 /-- `MULW x1, x2, x3`. -/
 theorem decode_MULW (s : SailState) (hs : s.isInitialized)
@@ -373,10 +372,9 @@ theorem decode_MULW (s : SailState) (hs : s.isInitialized)
       (some (instruction.MULW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5)))
       _ _ s ?_).trans (by conv_lhs => whnf)
   · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceM_apply s hs hmisa)).trans ?_
-    conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceZmmul_apply s hs hmisa)).trans ?_
-    rfl
+    refine (run_match_step _ true _ _ s ?_).trans (by rfl)
+    simp only [andM, orM, toBool, pure_bind, Bind.bind, EStateM.bind,
+      ceM_apply s hs hmisa, pure, EStateM.pure, Functions.xlen, beq_self_eq_true]
 
 /-- `DIV x1, x2, x3` (signed). -/
 theorem decode_DIV (s : SailState) (hs : s.isInitialized)

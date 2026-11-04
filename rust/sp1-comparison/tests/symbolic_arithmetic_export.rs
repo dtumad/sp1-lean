@@ -19,7 +19,7 @@
 extern crate alloc;
 
 use clean_backend::GeneratedAirSpec;
-use p3_air::{Entry as NativeEntry, SymbolicExpression as NativeExpression, SymbolicVariable};
+use p3_air::{BaseEntry as NativeEntry, SymbolicExpression as NativeExpression, SymbolicVariable};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use slop_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, PairBuilder};
@@ -244,7 +244,7 @@ fn evaluate<P: GeneratedAirSpec, C: Air<support::Sp1Evaluation>>(
         .map(|v| {
             (
                 v.channel.to_owned(),
-                v.multiplicity.as_canonical_u64(),
+                v.signed_multiplicity().as_canonical_u64(),
                 v.message
                     .iter()
                     .map(PrimeField64::as_canonical_u64)
@@ -305,9 +305,9 @@ where
         <P as GeneratedAirSpec>::FIELD_ORDER,
         <F as PrimeField64>::ORDER_U64
     );
-    assert_eq!(<P as GeneratedAirSpec>::FIXED_WIDTHS, &[0]);
+    assert_eq!(<P as GeneratedAirSpec>::FIXED_COLUMNS, &[&[] as &[usize]]);
     assert_eq!(P::PUBLIC_VALUES, 0);
-    assert_eq!(P::VERIFIER_INTERACTIONS, 0);
+    assert!(<P as GeneratedAirSpec>::verifier_interactions::<F>(&[]).is_empty());
     assert_eq!(
         <F as PrimeField64>::ORDER_U64,
         <S as Sp1PrimeField64>::ORDER_U64

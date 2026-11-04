@@ -12,7 +12,7 @@ SP1 chip emulation (`sp1_sd`: write `nextPC = pc + 4` and the eight little-endia
 `rs2` into `mem[addr … addr+7]`), via `SailMem.run_vmem_write_of_width_8`. Caller supplies
 register/PC reads and alignment / fits / non-reserved-address facts. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.StoreSail
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -127,7 +127,7 @@ theorem correct_store_double_native
   rw [EStateM.run_bind, run_readReg_of_isInitialized _ _ hs, hpc_get]
   simp only [EStateM.run_bind, run_writeReg]
   rw [show ({ s with regs := s.regs.insert Register.nextPC (pc + 4#64) } : SailState) = sp from rfl]
-  simp [execute_STORE, hse, LeanRV64D.Functions.xlen_bytes, PreSail.assert,
+  simp [execute_STORE, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert,
     hsp_rs2, hext, hwrite]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -207,7 +207,7 @@ private theorem extHashMap_get?_insert_self_sd (m : Std.ExtHashMap Nat (BitVec 8
 private theorem extHashMap_get?_insert_ne_sd (m : Std.ExtHashMap Nat (BitVec 8)) (k a : Nat) (v : BitVec 8)
     (h : k ≠ a) : (m.insert k v).get? a = m.get? a := by
   rw [Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert,
-    if_neg (by simpa using h)]
+    ite_eq_right (by simpa using h)]
 
 /-- **StoreDouble's committed bus view** — opcode `39 = SD`, straight-line, `commit = .store ⟨addr, rs2, 8⟩`
 (8-byte write of the full 64-bit `rs2`). -/

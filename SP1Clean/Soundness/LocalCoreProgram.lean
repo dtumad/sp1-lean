@@ -80,12 +80,12 @@ theorem program_pull_committed_of_balance {image : ProgramImage} (valid : image.
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel programChannel.toRaw)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
-    (active : interaction.mult = -1)
+    (active : interaction.Pull)
     (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
   NativeCore.program_pull_committed_of_sources valid witness constraints
     balanced
-    (by intro input data emitted member
+    (by intro data emitted member
         rw [verifier_program_silent] at member
         exact (List.not_mem_nil member).elim)
     (component_program_source image source) message interaction member active payload
@@ -97,7 +97,7 @@ theorem program_pull_committed {image : ProgramImage} (valid : image.Valid) {sou
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
-    (active : interaction.mult = -1)
+    (active : interaction.Pull)
     (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
   program_pull_committed_of_balance valid witness constraints
@@ -134,7 +134,7 @@ theorem program_row_committed {image : ProgramImage} {source : ExecutionSnapshot
     witness.same_data (programTable witness) tableMem
   simpa only [Table.environment, shared] using
     FixedProgramProvider.Preprocessed.table_committed valid (programTable witness)
-      (programTable_component witness) (witness.dataConsistency_of_mem _ tableMem)
+      (programTable_component witness)
       (constraints _ tableMem) row member
       (by simpa only [Table.environment, shared] using active)
 

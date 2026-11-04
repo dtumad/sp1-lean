@@ -103,9 +103,9 @@ theorem soundness :
     (signed_selector_valid hbeq hbne hblt hbge hbltu hbgeu h_bin).1
   have nextInteract (hr1 : input_is_real = 1) :
       AddOperation.InteractSpec next := by
-    have h0 := h_byte1 (congrArg Neg.neg hr1)
-    have h1 := h_byte2 (congrArg Neg.neg hr1)
-    have h2 := h_byte3 (congrArg Neg.neg hr1)
+    have h0 := h_byte1 hr1
+    have h1 := h_byte2 hr1
+    have h2 := h_byte3 hr1
     simp only [byteChannel] at h0 h1 h2
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
@@ -212,16 +212,14 @@ theorem soundness :
   · intro hr1
     change input_is_real = 1 at hr1
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
-    have hguar := h_byte1 (congrArg Neg.neg hr1)
+    have hguar := h_byte1 hr1
     simp only [byteChannel] at hguar
     rw [← c14] at hguar
     have halign := val_mod_four_of_mul_inv_four_lt
       ((byteRowSpec_range _ SP1Clean.BranchChip.h14p).mp hguar)
     simpa only [Vector.getElem_map, Vector.getElem_mapRange,
       circuit_norm] using halign
-  · refine ⟨⟨h_bin, h_bin, h_clk⟩, ?_, ?_, ?_⟩ <;>
-      intro h1 h0 <;>
-        exact off_gate_vacuous h_bin h1 h0
+  · and_intros <;> first | exact h_bin | exact h_clk
 
 theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions
@@ -760,7 +758,7 @@ theorem completeness :
       · rw [hsumreal, hr1, hbr1]
         simp
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
     rw [← he_br] at hranges
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
@@ -768,7 +766,7 @@ theorem completeness :
     rw [← c14]
     exact (byteRowSpec_range _ SP1Clean.BranchChip.h14p).mpr hranges.1
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
     rw [← he_br] at hranges
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
@@ -776,7 +774,7 @@ theorem completeness :
     rw [← c16]
     exact (byteRowSpec_range _ SP1Clean.sixteen_lt).mpr hranges.2.1
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
     rw [← he_br] at hranges
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat

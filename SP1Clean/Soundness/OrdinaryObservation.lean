@@ -18,13 +18,14 @@ open Circuit Air.Flat SP1Clean.OrdinaryObservation RankedGrounding
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
+variable {generation : WitnessGeneration.DemandMode (ZMod p) Inputs}
 
 /-- Match the field equality used by Clean's gated balance filters. -/
 local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 /-- The actual circuit's pull/push pair supplies the common transition interface. -/
-def view (enabled : Bool) : TransitionView (stateChannel (p := p)) where
-  component := { circuit := circuit enabled, Assumptions := (circuit enabled).Assumptions }
+def view (generation : WitnessGeneration.DemandMode (ZMod p) Inputs) (enabled : Bool) : TransitionView (stateChannel (p := p)) where
+  component := { circuit := circuit enabled, generation := .demand generation, Assumptions := (circuit enabled).Assumptions }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)
@@ -43,7 +44,7 @@ def rank (state : State (ZMod p)) : ℕ := Semantics.clkNat state.clkHigh state.
 
 /-- No projected rows or synthetic receipt ledger is needed to read the unit consumers. -/
 theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) :
+    (registered : table.component = (view generation enabled).component) :
     table.interactionsWith InstructionReceipt.channel.toRaw =
       (rows table data).map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
   simp only [Table.interactionsWith, registered, view, receipt_values, rows, List.map_map]
@@ -51,7 +52,7 @@ theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverD
 
 /-- Observation transitions are the literal evaluated table ledger. -/
 theorem state_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) :
+    (registered : table.component = (view generation enabled).component) :
     table.interactionsWith stateChannel.toRaw = (rows table data).flatMap (fun input =>
       [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next]) := by
   have cells (physical : Array (ZMod p)) :
@@ -62,14 +63,14 @@ theorem state_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverDat
 
 /-- One receipt occurrence is consumed for each physical row, with no padding discount. -/
 theorem receipt_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) :
+    (registered : table.component = (view generation enabled).component) :
     (table.interactionsWith InstructionReceipt.channel.toRaw).length = table.length := by
   rw [receipt_ledger enabled table data registered]
   simp only [rows, List.length_map]
 
 /-- Every consumer contributes two physical observation-channel occurrences. -/
 theorem state_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) :
+    (registered : table.component = (view generation enabled).component) :
     (table.interactionsWith stateChannel.toRaw).length = 2 * table.length := by
   rw [state_ledger enabled table data registered, List.length_flatMap]
   simp [rows, Function.comp_def, List.sum_replicate, Nat.mul_comm]
@@ -80,7 +81,7 @@ the original chip contracts when the components are installed in the mixed ensem
 theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod p))
     (data : ProverData (ZMod p))
     (source : original.component = (supportedChipFor id).table)
-    (enabled : Bool) (registered : consumer.component = (view enabled).component)
+    (enabled : Bool) (registered : consumer.component = (view generation enabled).component)
     (binary : ∀ physical ∈ original.table,
       ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 0 ∨
         ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1)
@@ -99,7 +100,7 @@ theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod
   simpa only [List.map_map, Function.comp_def] using balanced
 
 private theorem rows_spec (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) (valid : table.Spec) :
+    (registered : table.component = (view generation enabled).component) (valid : table.Spec) :
     ∀ input ∈ rows table data, Spec enabled input := by
   intro input member
   change input ∈ table.table.map (fun physical => valueFromOffset Inputs 0 (Environment.fromArray physical data)) at member
@@ -147,7 +148,7 @@ private theorem pc_of_walk (initial final : State (ZMod p)) (path : List (Inputs
 /-- Raw observation balance and local table meaning force one exhaustive ordered history.
 The endpoint parameters are an installation boundary, not capstone caller premises. -/
 theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view enabled).component) (valid : table.Spec)
+    (registered : table.component = (view generation enabled).component) (valid : table.Spec)
     (initial final : State (ZMod p))
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
@@ -161,7 +162,7 @@ theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : Prover
   rw [state_ledger enabled table data registered] at balanced
   have endpoints := (stateChannel.transitionLedger_balanced_iff initial final (rows table data) edge).mp balanced
   have endpointBalance : EndpointBalanced (↑(rows table data)) edge initial final := by
-    simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints.2
+    simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints
   have specs := rows_spec enabled table data registered valid
   have strict : ∀ input ∈ rows table data, rank input.previous < rank input.next :=
     fun input member => (specs input member).1.2.2.2.2

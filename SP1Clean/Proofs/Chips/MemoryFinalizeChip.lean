@@ -1,3 +1,4 @@
+import ToClean.Air.HintIndex
 import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -96,7 +97,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   soundness := by
     circuit_proof_start [Inputs.toMessage]
     have hb : input_multiplicity * (input_multiplicity - 1) = 0 := h_holds.1
-    exact off_gate_vacuous (bool_of_mul_pred hb)
+    exact bool_of_mul_pred hb
   completeness := by
     circuit_proof_start [Inputs.toMessage]
     refine ⟨?_, fun _ => ⟨h_assumptions.1, h_assumptions.2.1⟩⟩
@@ -104,5 +105,20 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   requirementsChannelsLawful := fun input_var i₀ => by
     preserve_tactic_target
     simp only [circuit_norm, main, memoryChannel]; grind
+
+/-- Final records are selected by their full 48-bit address, with the complete record
+checked before routing. The authenticated assembly additionally enforces its final inventory. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  let read (message : Var MemoryMsg (ZMod p)) : Inputs (Witgen.FExpr (ZMod p)) :=
+    Witgen.HintIndex.input (circuit (p := p)).name
+      (message.addr0.val + message.addr1.val * 65536 + message.addr2.val * 4294967296)
+  .demand {
+    channel := memoryChannel
+    trigger := .push
+    guard message := .and ((read message).multiplicity =? 1)
+      (Witgen.HintIndex.messageEq (read message).toMessage message)
+    input message := pure (fromElements ((toElements (read message)).map
+      Air.Flat.WitnessGeneration.Cell.witness))
+  }
 
 end SP1Clean.MemoryFinalizeChip

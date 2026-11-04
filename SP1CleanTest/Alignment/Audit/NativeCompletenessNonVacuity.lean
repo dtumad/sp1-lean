@@ -17,7 +17,7 @@ official Sail transition and checks that its deterministic compiler result is th
 JAL event used by the active AIR witness.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Audit.NativeCompletenessNonVacuity
 
@@ -242,10 +242,11 @@ theorem anchorProgram_pc_start : anchorProgram.pc_start = 65536#64 := by native_
 theorem anchorData_eq_nativeData :
     Commit.dataOfAt anchorProgram (nativeInitialClock stmt) = anchorData := by
   rw [anchor_nativeInitialClock]
-  funext key arity
-  simp only [Commit.dataOfAt, anchorData]
-  split <;> simp_all [anchorProgram_rom, anchorProgram_memImage, anchorProgram_pc_start,
-    Commit.romRowOf, Commit.pcStartRowOf, Commit.initClockRowOf]
+  apply congrArg₂ ProverData.mk
+  · funext key arity
+    split <;> simp_all [anchorProgram_rom, anchorProgram_memImage, anchorProgram_pc_start,
+      Commit.romRowOf, Commit.pcStartRowOf, Commit.initClockRowOf]
+  · rfl
 
 theorem anchorExecution_nativeBaseTrace_eq :
     nativeBaseTrace stmt anchorExecution = concreteBaseTrace := by
@@ -494,17 +495,11 @@ theorem anchorExecution_haltPaddingHeight :
 theorem anchorExecution_zeroRows_rejected (occurrences : ℕ) :
     ¬ (nativeTrace stmt anchorExecution).witness.PhysicalFits 0 occurrences := by
   intro fits
-  have member : { (nativeTrace stmt anchorExecution).providerTableFor .halt with
-      data := (nativeTrace stmt anchorExecution).data } ∈
-      (nativeTrace stmt anchorExecution).witness.tables := by
-    rw [SupportedCoreTraceWitness.witness_tables, withDerivedData]
-    apply List.mem_map.mpr
-    refine ⟨(nativeTrace stmt anchorExecution).providerTableFor .halt, ?_, rfl⟩
-    rw [SupportedCoreTraceWitness.tables]
-    exact List.mem_append_right _ (List.mem_map.mpr ⟨ProviderTableId.halt, by decide, rfl⟩)
-  have bound := ((EnsembleWitness.physicalFits_iff _ _ _).mp fits).1 _ member
-  change ((nativeTrace stmt anchorExecution).providerTableFor .halt).length ≤ 0 at bound
-  rw [anchorExecution_haltPaddingHeight] at bound
+  have member : 1 ∈ (nativeTrace stmt anchorExecution).witness.heights := by
+    rw [← SupportedCoreTraceWitness.physicalHeights_eq]
+    apply List.mem_append_right
+    exact List.mem_map.mpr ⟨ProviderTableId.halt, by decide, rfl⟩
+  have bound := fits.1 1 member
   omega
 
 /-! ## Joint admissibility and capstone consequences -/
@@ -555,7 +550,7 @@ theorem anchorExecution_bounded_roundTrip :
 
 /-- The direct Clean statement consequence is therefore non-vacuous at the concrete boundary. -/
 theorem anchorExecution_yields_ensembleStatement :
-    (sp1Ensemble (p := SP1Prime)).Statement pv := by
+    ∃ heights, (sp1Ensemble (p := SP1Prime)).Statement .logUp pv heights := by
   simpa only [stmt] using
     sp1Ensemble_statement_of_supported_execution stmt anchorSemanticWitness
       anchorExecution_admissible

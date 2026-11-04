@@ -56,7 +56,9 @@ theorem component_membership_source (image : ProgramImage) (source : ExecutionSn
 theorem membership_guarantees {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (members : ∀ component ∈ auxiliary,
       image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
     (constraints : witness.Constraints)
@@ -72,12 +74,14 @@ theorem membership_guarantees {image : ProgramImage} {source : ExecutionSnapshot
 theorem verifier_permission_silent (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
     (names : ((tables image source auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : ((registry image source channels).map (·.name)).Nodup)
+    (tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels)
     (env : Environment (ZMod p)) :
-    (ensemble image source auxiliary channels names).verifierOperations.interactionValuesWith
+    (ensemble image source auxiliary channels names channelNames tableChannels).verifierOperations.interactionValuesWith
       WritePermissionProvider.channel.toRaw env = [] := by
   change ((LocalSourceBoundary.checker image source).install
-    (baseEnsemble image source auxiliary channels names)).verifierOperations.interactionValuesWith _ env = []
-  rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ (by simp [baseEnsemble])]
+    (baseEnsemble image source auxiliary channels names channelNames tableChannels)).verifierOperations.interactionValuesWith _ env = []
+  rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ (by simp [baseEnsemble, registry])]
   apply LocalCore.boundaryVerifier_silent image source
   simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
     SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
@@ -87,7 +91,9 @@ theorem verifier_permission_silent (image : ProgramImage) (source : ExecutionSna
 theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (members : ∀ component ∈ auxiliary,
       image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)
@@ -99,18 +105,20 @@ theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnap
     WritePermissionProvider.Permitted image address := by
   apply WritePermission.pull_permitted_of_sources image witness constraints
     balanced
-    (by intro input data emitted used
+    (by intro data emitted used
         rw [verifier_permission_silent] at used
         exact (List.not_mem_nil used).elim)
     (component_permission_source image source auxiliary pulls)
     (membership_guarantees witness members constraints membershipBalance) address
-    (WritePermissionProvider.channel.pulledValue address) member rfl rfl
+    (WritePermissionProvider.channel.pulledValue address) member ⟨rfl, rfl⟩ rfl
 
 /-- An active physical row request is authenticated by the extended assembly's own ledger. -/
 theorem row_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (pulls : ∀ component ∈ auxiliary, WritePermission.Pulls component)
     (members : ∀ component ∈ auxiliary,
       image.writePermissionTable.channel.toRaw ∉ component.circuit.channelsWithRequirements)

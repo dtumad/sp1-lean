@@ -85,9 +85,8 @@ theorem count_bound [Fact (2 ^ 25 < p)] (statement : CommitmentStatement) :
     (checker (p := p) statement).CountBound := by
   simp only [PublicVerifier.CountBound, PublicVerifier.assertions, checker, circuit, main,
     Gadgets.Equality.circuit, Gadgets.Equality.main, circuit_norm]
-  change 2 * 43 < ringChar (ZMod p) ∨ ringChar (ZMod p) = 0
+  change 2 * 43 < ringChar (ZMod p)
   rw [ZMod.ringChar_zmod_n]
-  left
   have := Fact.out (p := 2 ^ 25 < p)
   omega
 

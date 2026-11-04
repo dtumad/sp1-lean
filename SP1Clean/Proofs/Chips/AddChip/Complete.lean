@@ -91,7 +91,10 @@ A plain `def`, deliberately not an `abbrev`: a reducible spelling makes the elab
 `component.provableInput` against the derived `ProvableType Inputs` instance structurally (a
 `whnf` blow-up on `ProvableStruct.combinedSize`), where the opaque one lets it iota-reduce the
 projection instead. Same shape as the perf doctrine's "make dangerous values opaque". -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- The rows a trace builds: one input row per event, then `padding` zero rows. Kept as a
 definition so the theorems below share one spelling. -/
@@ -120,10 +123,12 @@ to zero on every row, and no static lookup is left unchecked.
 -/
 theorem traceTable_constraints (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed)
-    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+      hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
@@ -131,10 +136,12 @@ Memory, Program and Byte channels carries the payload its channel promises. This
 the row's assertion system the bus/balance layer consumes. -/
 theorem traceTable_guarantees (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed)
-    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-      hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+      hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
@@ -142,12 +149,14 @@ concatenated in row order. Downstream ledger/balance reasoning reads this instea
 built rows again. -/
 theorem traceTable_interactionsWith (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
-        hint bounded).interactionsWith channel =
+        hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.AddChip

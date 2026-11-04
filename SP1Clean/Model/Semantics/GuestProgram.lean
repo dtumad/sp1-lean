@@ -18,7 +18,7 @@ obligations — reference the Soundness-layer trace machinery (`Trace.RowView`),
 `Soundness` and live in `Soundness/RowEffectDefs.lean`. (Namespace is kept `SP1Clean.Soundness.Target`
 so those consumers resolve these unchanged after importing this file.) -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Soundness.Target
 
 open Sail LeanRV64D LeanRV64D.Functions

@@ -122,7 +122,7 @@ theorem sanitizeRom_eq_self (l : List (BitVec 64 × BitVec 32))
         (fun a ha => aligned a (by simp only [List.map_cons, List.mem_cons]; exact Or.inr ha))
         (fun aw haw => inWindow aw (List.mem_cons_of_mem entry haw))
         (fun aw haw => fullWidth aw (List.mem_cons_of_mem entry haw))
-    rw [sanitizeRom, if_pos ⟨alignedHead, windowHead.1, windowHead.2, widthHead⟩, sanitizedRest]
+    rw [sanitizeRom, ite_eq_left ⟨alignedHead, windowHead.1, windowHead.2, widthHead⟩, sanitizedRest]
     congr 1
     apply List.filter_eq_self.mpr
     intro entry' entryMem
@@ -145,16 +145,16 @@ def imageEntryOf (v : Vector (ZMod p) 4) : BitVec 64 × BitVec 8 :=
 
 /-- The raw committed rows, before totalizing/sanitizing their semantic decoder. -/
 def romRowsOf (data : ProverData (ZMod p)) : List (Vector (ZMod p) 5) :=
-  (data "sp1.rom" 5).toList
+  (data.tables "sp1.rom" 5).toList
 
 def imageRowsOf (data : ProverData (ZMod p)) : List (Vector (ZMod p) 4) :=
-  (data "sp1.image" 4).toList
+  (data.tables "sp1.image" 4).toList
 
 def pcStartRowsOf (data : ProverData (ZMod p)) : List (Vector (ZMod p) 3) :=
-  (data "sp1.pc_start" 3).toList
+  (data.tables "sp1.pc_start" 3).toList
 
 def initClockRowsOf (data : ProverData (ZMod p)) : List (Vector (ZMod p) 2) :=
-  (data "sp1.init_clk" 2).toList
+  (data.tables "sp1.init_clk" 2).toList
 
 /-- Every field cell is the canonical representative of a limb of the requested width. -/
 def RowValuesBelow {n : ℕ} (bound : ℕ) (row : Vector (ZMod p) n) : Prop :=
@@ -163,14 +163,14 @@ def RowValuesBelow {n : ℕ} (bound : ℕ) (row : Vector (ZMod p) n) : Prop :=
 /-- The committed entry point (`0` if the key is absent/malformed — the vkey binding pins the honest
 value). -/
 def pcStartOf (data : ProverData (ZMod p)) : BitVec 64 :=
-  match (data "sp1.pc_start" 3).toList with
+  match (data.tables "sp1.pc_start" 3).toList with
   | [v] => BitVec.ofNat 64 (v[0].val + v[1].val * 2 ^ 16 + v[2].val * 2 ^ 32)
   | _ => 0
 
 /-- The committed genesis clock, ℕ-decoded (`1` if absent/malformed, keeping `1 ≤ initClkNat` the
 honest default the boundary vkey assumption also carries). -/
 def initClkNat (data : ProverData (ZMod p)) : ℕ :=
-  match (data "sp1.init_clk" 2).toList with
+  match (data.tables "sp1.init_clk" 2).toList with
   | [v] => v[0].val * 2 ^ 24 + v[1].val
   | _ => 1
 
@@ -267,8 +267,9 @@ def initClockRowOf (initialClock : ℕ) : Vector (ZMod p) 2 :=
 total and proof-independent; every non-reserved key/arity is empty.  `Encodable`,
 `InitialClockEncodable`, and `GuestProgram.WellFormed` are needed only when proving canonicality
 and inverse laws. -/
-def dataOfAt (program : GuestProgram) (initialClock : ℕ) : ProverData (ZMod p) :=
-  fun key arity =>
+def dataOfAt (program : GuestProgram) (initialClock : ℕ) : ProverData (ZMod p) where
+  publicInput := #[]
+  tables := fun key arity =>
     match key, arity with
     | "sp1.rom", 5 => (program.rom.map (romRowOf (p := p))).toArray
     | "sp1.image", 4 => (program.memImage.map (imageRowOf (p := p))).toArray

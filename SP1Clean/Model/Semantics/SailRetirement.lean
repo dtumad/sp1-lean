@@ -7,7 +7,7 @@ They preserve initialization and expose PC, GPR, memory, other-register, runtime
 observations. Instruction-family frame laws supply the execute-stage result separately.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Advance
 
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -89,9 +89,9 @@ theorem minstret_tail_effect (t : SailState) (hinit : t.isInitialized) :
   · rw [run_bind_of_run t _ _ (Sail.run_readReg_of_isInitialized t Register.minstret hinit),
       run_writeReg_bind]
     refine ⟨_, rfl, ?_, (fun idx => ?_), rfl, (fun R hR => ?_), SailState.isInitialized_insert t hinit _ _, rfl, rfl, ?_⟩
-    · rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    · rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
     · exact SailState.get_reg?_insert_of_ne (by unfold reg_idx_to_Register; split <;> decide)
-    · rw [Std.ExtDHashMap.get?_insert, dif_neg (fun hc => hR (beq_iff_eq.mp hc).symm)]
+    · rw [Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => hR (beq_iff_eq.mp hc).symm)]
     · rw [Std.ExtDHashMap.get?_insert_self, Std.ExtDHashMap.get?_eq_some_get (hinit _)]
       simp only [Option.map_some]
   · refine ⟨_, rfl, rfl, fun _ => rfl, rfl, (fun _ _ => rfl), hinit, rfl, rfl, ?_⟩
@@ -149,7 +149,7 @@ theorem tail_bookkeeping (s'' : SailState) (hinit'' : s''.isInitialized) :
   refine ⟨t', hrun, ?_, (fun idx => ?_), hmem', (fun R hRpc hRm => ?_), hinit', cycles, output, ?_⟩
   · rw [hPC', Std.ExtDHashMap.get?_insert_self, Std.ExtDHashMap.get?_eq_some_get (hinit'' _)]
   · rw [hxreg' idx]; exact SailState.get_reg?_insert_PC
-  · rw [hframe' R hRm, Std.ExtDHashMap.get?_insert, dif_neg (fun hc => hRpc (beq_iff_eq.mp hc).symm)]
+  · rw [hframe' R hRm, Std.ExtDHashMap.get?_insert, dite_eq_right (fun hc => hRpc (beq_iff_eq.mp hc).symm)]
   · simpa only [Std.ExtDHashMap.get?_insert, Std.ExtDHashMap.get_insert,
       show (Register.PC == Register.minstret_increment) = false from rfl,
       show (Register.PC == Register.minstret) = false from rfl,

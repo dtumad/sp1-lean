@@ -7,7 +7,7 @@ these same lemmas, while semantic fixtures and frame proofs can use them without
 -/
 
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.SailMem
 
 /-- **The JAL execute stage reaches `Retire_Success`.** `execute (.JAL …)` reads the staged `nextPC` (the
@@ -34,7 +34,7 @@ theorem execute_JAL_reaches (imm : BitVec 21) (rd_idx : BitVec 5) (pc : BitVec 6
   rw [run_readReg_bind_of_isInitialized t Register.nextPC hs, hget_npc]
   rw [run_readReg_bind_of_isInitialized t Register.PC hs, hget_pc]
   rw [run_bind_of_run' t _ (jump_to (pc + sign_extend (m := 64) imm))
-    (ExecutionResult.Retire_Success ()) (jump_to_of_mod4_eq_zero _ t hs halign)]
+    (ExecutionResult.Retire_Success ()) (jump_to_of_mod4_eq_zero _ t halign)]
   simp only [run_bind_of_run' _ _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   split <;> simp_all
 
@@ -65,7 +65,7 @@ theorem execute_JALR_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5) (pc r
   rw [run_bind_of_run t _ rs1_val (by rw [run_rX_bits, h_rs1])]
   simp only [pure_bind]
   rw [run_bind_of_run' t _ _ (ExecutionResult.Retire_Success ())
-    (jump_to_of_mod4_eq_zero _ t hs halign)]
+    (jump_to_of_mod4_eq_zero _ t halign)]
   simp only [run_bind_of_run' _ _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]
   split <;> simp_all
 
@@ -106,7 +106,7 @@ theorem execute_BTYPE_reaches (imm : BitVec 13) (rs1_idx rs2_idx : BitVec 5) (op
   · have hnpc_t := h_taken hc
     have htgt4 : (pc + sign_extend (m := 64) imm) % 4#64 = 0 := by
       rw [← hnpc_t]; apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
-    have hjump := jump_to_of_mod4_eq_zero (pc + sign_extend (m := 64) imm) t hs htgt4
+    have hjump := jump_to_of_mod4_eq_zero (pc + sign_extend (m := 64) imm) t htgt4
     cases op <;> simp only [btypeTaken, beq_iff_eq, bne_iff_ne] at hc <;>
       simp [execute, execute_BTYPE, run_rX_bits, h_rs1, h_rs2,
         Sail.run_readReg_bind_of_isInitialized _ _ hs, hpc_get, RETIRE_SUCCESS, hjump, hnpc_t, hc]

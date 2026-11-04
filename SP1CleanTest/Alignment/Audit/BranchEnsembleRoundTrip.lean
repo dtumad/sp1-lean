@@ -11,7 +11,7 @@ namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Semantics
-open LeanRV64D.Defs LeanRV64D.Functions
+open LeanRV64D LeanRV64D.Functions
 
 /-- Every concrete input seed has a valid physical slot and exact input length. -/
 theorem seeds_present : (seeds? target header consumerSeeds).isSome = true := by native_decide
@@ -28,18 +28,21 @@ def activeWitness : EnsembleWitness (assembly (context target)) := witness targe
 /-- All 95 tables remain installed, including empty instruction and host components. -/
 theorem activeWitness_length : activeWitness.tables.length = 95 := by
   simpa only [activeWitness, witness, EnsembleWitness.ofTables_tables,
-    withDerivedData, List.length_map] using builtTables_length target activeSeeds activeSeeds_bounded
+    withDerivedData, List.length_map, List.length_attach] using builtTables_length target activeSeeds activeSeeds_bounded
 
 /-- Concrete execution of the generic authenticated checker accepts all rows and channels. -/
 theorem active_checked : checkPhysical target header activeSeeds activeSeeds_bounded = true := by native_decide
 
 /-- Raw Clean constraints and all channel balances hold on the original assembled witness. -/
-theorem accepted : activeWitness.Constraints ∧ activeWitness.BalancedChannels :=
-  (checkPhysical_iff target header activeSeeds activeSeeds_bounded).mp active_checked
+theorem accepted : activeWitness.Constraints ∧ activeWitness.BalancedChannels := by
+  obtain ⟨fit, constraints, balance⟩ :=
+    (checkPhysical_iff target header activeSeeds activeSeeds_bounded).mp active_checked
+  exact ⟨constraints, EnsembleWitness.balancedChannels_of_balanced
+    (EnsembleWitness.interactionsFit_of_heights fit) balance⟩
 
 /-- The original assembled Clean relation has this concrete public statement. -/
-theorem statement : (assembly (context target)).Statement header :=
-  ⟨activeWitness, rfl, accepted⟩
+theorem statement : (assembly (context target)).Statement .logUp header activeWitness.heights :=
+  (description (context target)).statement_of_checkWitness activeWitness active_checked
 
 /-- The public header encodes the same ordinary clock and PC endpoints as the official step. -/
 theorem public_endpoints :

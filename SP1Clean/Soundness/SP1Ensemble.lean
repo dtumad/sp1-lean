@@ -122,12 +122,12 @@ instance sp1StateVerifierElaborated :
     simp [circuit_norm, sp1StateVerifierMain, Channels.stateChannel, Channels.byteChannel,
       Channels.exitChannel]
 
-set_option linter.unusedSectionVars false in
+omit [Fact (2 ^ 24 < p)] in
 @[circuit_norm] lemma sp1StateVerifier_channelsWithGuarantees_eq :
     ((sp1StateVerifierElaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
       = [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.exitChannel.toRaw] :=
   rfl
-set_option linter.unusedSectionVars false in
+omit [Fact (2 ^ 24 < p)] in
 @[circuit_norm] lemma sp1StateVerifier_localLength_eq (x : Var SP1PublicIO (ZMod p)) :
     (sp1StateVerifierElaborated (p := p)).localLength x = 0 := rfl
 
@@ -248,11 +248,12 @@ def sp1StateVerifierProgram : Verifier.Program (ZMod p) SP1PublicIO where
     intro interaction member env
     simp only [sp1StateVerifierMain, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-      simp [AbstractInteraction.Requirements, AbstractInteraction.Guarantees, ChannelInteraction.toRaw,
+      simp [AbstractInteraction.Requirements, ChannelInteraction.toRaw,
         Channels.stateChannel, Channels.byteChannel, Channels.exitChannel, Channel.toRaw, circuit_norm])
   Spec input _ := input.LimbBounds
   soundness := by
-    intro env guarantees
+    intro data guarantees
+    let env := data.publicEnvironment
     have original : ((sp1StateVerifierMain (varFromOffset SP1PublicIO 0)).operations 0).FullGuarantees env := by
       simpa only [Operations.FullGuarantees, Verifier.ofInteractions_interactions] using guarantees
     have checked : ((sp1StateVerifierMain (varFromOffset SP1PublicIO 0)).operations 0).ConstraintsHold env := by
@@ -277,7 +278,7 @@ def ensembleTableCount : ℕ := NativeTableId.all.length
 /-- The complete fixed-width realization of SP1's preprocessed Range table, ordered by width
 `0, …, 16`. -/
 def sp1RangeProviderTables : List (Component (ZMod p)) :=
-  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions }
+  RangeChip.allWidths.map fun width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions, generation := RangeChip.generation width }
 
 theorem sp1RangeProviderTables_length : (sp1RangeProviderTables (p := p)).length = 17 := by
   simp [sp1RangeProviderTables, RangeChip.allWidths]
@@ -286,20 +287,20 @@ theorem sp1RangeProviderTables_length : (sp1RangeProviderTables (p := p)).length
 Unlike the identity, this map deliberately imports circuits; it remains total and contains no
 instruction-routing cases. -/
 def providerTableFor : ProviderTableId → Component (ZMod p)
-  | .byte .u8Range => { circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions }
-  | .byte .msb => { circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions }
-  | .byte .andByte => { circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions }
-  | .byte .orByte => { circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions }
-  | .byte .xorByte => { circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions }
-  | .byte .ltu => { circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions }
-  | .range width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions }
-  | .program => { circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions }
-  | .memoryInit => { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions }
-  | .memoryFinalize => { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }
-  | .memoryBump => { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }
-  | .stateBump => { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }
-  | .halt => { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }
-  | .syscallInstrs => { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }
+  | .byte .u8Range => { circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions, generation := ByteChip.U8Range.generation }
+  | .byte .msb => { circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions, generation := ByteChip.MSB.generation }
+  | .byte .andByte => { circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions, generation := ByteChip.AndByte.generation }
+  | .byte .orByte => { circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions, generation := ByteChip.OrByte.generation }
+  | .byte .xorByte => { circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions, generation := ByteChip.XorByte.generation }
+  | .byte .ltu => { circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions, generation := ByteChip.Ltu.generation }
+  | .range width => { circuit := RangeChip.circuitFor width, Assumptions := (RangeChip.circuitFor width).Assumptions, generation := RangeChip.generation width }
+  | .program => { circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions, generation := ProgramProviderChip.generation }
+  | .memoryInit => { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions, generation := MemoryProviderChip.generation }
+  | .memoryFinalize => { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions, generation := MemoryFinalizeChip.generation }
+  | .memoryBump => { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation }
+  | .stateBump => { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions, generation := StateBumpChip.generation }
+  | .halt => { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }
+  | .syscallInstrs => { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }
 
 /-- The 30 boundary/provider tables: six Byte, 17 fixed-width Range, Program ROM, Memory
 init/finalize, MemoryBump, StateBump, Halt and SyscallInstrs. Pushers prove their guarantees
@@ -311,12 +312,12 @@ def sp1ProviderTables : List (Component (ZMod p)) :=
 keeps existing position-sensitive consumers auditable without maintaining a second registry. -/
 theorem sp1ProviderTables_explicit :
     sp1ProviderTables (p := p) =
-      [{ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions }, { circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions }, { circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions },
-       { circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions }, { circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions }, { circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions }] ++
+      [{ circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions, generation := ByteChip.U8Range.generation }, { circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions, generation := ByteChip.MSB.generation }, { circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions, generation := ByteChip.AndByte.generation },
+       { circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions, generation := ByteChip.OrByte.generation }, { circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions, generation := ByteChip.XorByte.generation }, { circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions, generation := ByteChip.Ltu.generation }] ++
         sp1RangeProviderTables ++
-      [{ circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions }, { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions },
-       { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }, { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions },
-       { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }, { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }, { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }] := by
+      [{ circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions, generation := ProgramProviderChip.generation }, { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions, generation := MemoryProviderChip.generation },
+       { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions, generation := MemoryFinalizeChip.generation }, { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation },
+       { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions, generation := StateBumpChip.generation }, { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }, { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }] := by
   rfl
 
 /-- Pointwise positional coverage, including out-of-bounds provider positions. -/
@@ -345,6 +346,129 @@ theorem sp1ProviderTables_stateChannel_not_mem :
       ProgramProviderChip.circuit, MemoryProviderChip.circuit, MemoryFinalizeChip.circuit,
       MemoryBumpChip.circuit, circuit_norm]
 
+/-- Complete registry of channel identities used by the supported machine. -/
+def sp1Channels : List (RawChannel (ZMod p)) :=
+  [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
+     Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
+     Channels.exitChannel.toRaw, Channels.syscallChannel.toRaw,
+     Channels.publicValuesChannel.toRaw]
+
+private theorem instruction_channels (id : InstructionChipId) :
+    (supportedChipFor (p := p) id).table.circuit.channels ⊆ sp1Channels := by
+  cases id with
+  | add =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | addi =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | addw =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | sub =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | subw =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | bitwise =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | lt =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | shiftLeft =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | shiftRight =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | jal =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | jalr =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | branch =>
+      change [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | uType =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | loadByte =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | loadHalf =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | loadWord =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | loadDouble =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | loadX0 =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.memoryChannel.toRaw, Channels.byteChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | storeByte =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.memoryChannel.toRaw, Channels.byteChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | storeHalf =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | storeWord =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | storeDouble =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | mul =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | divRem =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+  | aluX0 =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw, Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.stateChannel.toRaw, Channels.memoryChannel.toRaw] ⊆ sp1Channels (p := p)
+      simp [sp1Channels]
+
+private theorem provider_channels (id : ProviderTableId) :
+    (providerTableFor (p := p) id).circuit.channels ⊆ sp1Channels := by
+  cases id with
+  | byte op =>
+      cases op <;> change [] ++ [Channels.byteChannel.toRaw] ⊆ _
+      all_goals simp [sp1Channels]
+  | range width =>
+      change [] ++ [Channels.byteChannel.toRaw] ⊆ _
+      simp [sp1Channels]
+  | program =>
+      change [] ++ [Channels.programChannel.toRaw] ⊆ _
+      simp [sp1Channels]
+  | memoryInit =>
+      change [] ++ [Channels.memoryChannel.toRaw] ⊆ _
+      simp [sp1Channels]
+  | memoryFinalize =>
+      change [Channels.memoryChannel.toRaw] ++ [] ⊆ _
+      simp [sp1Channels]
+  | memoryBump =>
+      change [Channels.byteChannel.toRaw, Channels.memoryChannel.toRaw] ++
+        [Channels.memoryChannel.toRaw] ⊆ _
+      simp [sp1Channels]
+  | stateBump =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw] ++ [] ⊆ _
+      simp [sp1Channels]
+  | halt =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw,
+        Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.exitChannel.toRaw] ++
+        [Channels.memoryChannel.toRaw] ⊆ _
+      simp [sp1Channels]
+  | syscallInstrs =>
+      change [Channels.byteChannel.toRaw, Channels.stateChannel.toRaw,
+        Channels.programChannel.toRaw, Channels.memoryChannel.toRaw, Channels.exitChannel.toRaw,
+        Channels.syscallChannel.toRaw, Channels.publicValuesChannel.toRaw] ++
+        [Channels.memoryChannel.toRaw] ⊆ _
+      simp [sp1Channels]
+
 /-- The 25 instruction and 30 provider/system tables, seven channels, and boundary verifier.
 State, Byte, Program, and Memory carry the ordinary instruction interactions. Exit binds the public
 exit code. SyscallInstrs also uses SP1's Syscall channel and the native PublicValues channel.
@@ -352,11 +476,25 @@ The current soundness relation restricts SyscallInstrs to inactive rows, making 
 ledgers empty. Its semantic boundary binding is an additional premise beyond `Statement`. -/
 def sp1Ensemble : Ensemble (ZMod p) SP1PublicIO where
   tables := sp1Tables ++ sp1ProviderTables
-  channels :=
-    [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
-     Channels.programChannel.toRaw, Channels.memoryChannel.toRaw,
-     Channels.exitChannel.toRaw, Channels.syscallChannel.toRaw,
-     Channels.publicValuesChannel.toRaw]
+  channels := sp1Channels
+  unique_channel_names := by exact of_decide_eq_true rfl
+  tables_channels := by
+    intro table member
+    rcases List.mem_append.mp member with member | member
+    · obtain ⟨chip, chipMem, rfl⟩ := List.mem_map.mp member
+      obtain ⟨id, _, rfl⟩ := List.mem_map.mp chipMem
+      exact instruction_channels id
+    · obtain ⟨id, _, rfl⟩ := List.mem_map.mp member
+      exact provider_channels id
+  verifier_channels := by
+    intro channel member
+    rw [Verifier.Program.mem_channels_iff] at member
+    simp only [sp1StateVerifierProgram, Verifier.Program.circuitOperations,
+      Verifier.Program.operations] at member
+    rw [Operations.channels, Verifier.ofInteractions_interactions] at member
+    simp only [sp1StateVerifierMain, circuit_norm] at member
+    simp only [sp1Channels, List.mem_cons, List.not_mem_nil, or_false]
+    aesop
   unique_names := by exact of_decide_eq_true rfl
   verifier := sp1StateVerifierProgram
 
@@ -433,7 +571,7 @@ theorem typedEnsembleInteractionsWith_partition
     (channel : Channel (ZMod p) Message) :
     typedEnsembleInteractionsWith witness channel =
       typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations channel
-          (Environment.fromInput witness.publicInput witness.data) ++
+          witness.data.publicEnvironment ++
         decodedWitnessInstructionInteractionsWith witness.data witness.tables channel ++
           (witness.tables.drop 25).flatMap (typedTableInteractionsWith · channel) := by
   rw [decodedWitnessInstructionInteractionsWith_eq_tables]

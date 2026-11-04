@@ -5,7 +5,7 @@ import SP1Clean.Soundness.GenericWalk
 
 The initial and final inventories delimit the complete physical Memory ledger. The interior
 retains ordinary instructions, refreshes, HALT, and syscalls, including active syscall rows.
-Constraints force unit signed multiplicities; count-bounded Clean balance then gives an exact
+Constraints force boolean counts; count-bounded Clean balance then gives an exact
 per-location equation with unique authenticated boundary records. No Memory guarantee or
 execution-order premise is used to establish this equation.
 -/
@@ -44,25 +44,24 @@ private theorem verifier_memory_silent (image : ProgramImage) (env : Environment
     stateChannel, memoryChannel, byteChannel, exitChannel, circuit_norm]
 
 /-- Exact decomposition of the physical ledger into initial records, final records, and all
-remaining interactions. The typed `pushedIfValue (-1)` is the finalizer's negative emission with
-`assumeGuarantees = false`; signed message selection places it on the consumed side. -/
+remaining interactions. The finalizer emits unit pulls; direction is separate from count. -/
 theorem memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     typedEnsembleInteractionsWith witness memoryChannel =
       (InitialMemoryEnsemble.physicalRecords (initialWitness witness)).map
         (fun row => TypedInteraction.pushedIfValue memoryChannel row.1 row.2) ++
       (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map
-        (fun row => TypedInteraction.pushedIfValue memoryChannel (-row.1) row.2) ++
+        (fun row => TypedInteraction.pulledIfValue memoryChannel row.1 row.2) ++
       memoryInterior witness := by
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
   rw [typedEnsembleInteractionsWith_raw, List.map_append, List.map_append, memoryInterior_raw]
   simp only [List.map_map]
   change witness.interactionsWith memoryChannel.toRaw =
     (InitialMemoryEnsemble.physicalRecords (initialWitness witness)).map (fun row => memoryChannel.pushedIfValue row.1 row.2) ++
-    (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map (fun row => memoryChannel.emittedValue (-row.1) row.2) ++ _
+    (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map (fun row => memoryChannel.pulledIfValue row.1 row.2) ++ _
   rw [← initial_memory_interactions witness, ← final_memory_interactions witness]
   change (ensemble image).verifierOperations.interactionValuesWith memoryChannel.toRaw
-    (Environment.fromInput witness.publicInput witness.data) ++
+    witness.data.publicEnvironment ++
     witness.tables.flatMap (·.interactionsWith memoryChannel.toRaw) = _
   rw [verifier_memory_silent, List.nil_append]
   have split := congrArg (List.flatMap (fun t : Table (ZMod p) => t.interactionsWith memoryChannel.toRaw))
@@ -72,11 +71,11 @@ theorem memory_interactions {image : ProgramImage}
   simp only [List.flatMap_append, List.drop_drop] at split splitTail
   rw [← split, ← splitTail, List.append_assoc]
 
-/-- Every interaction of the unchanged interior has signed-unit multiplicity or zero. -/
+/-- Every interaction of the unchanged interior has unit multiplicity or zero. -/
 theorem memoryInterior_signedBinary {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints) :
     ∀ interaction ∈ memoryInterior witness,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   intro interaction member
   have rawMem := List.mem_map_of_mem (f := TypedInteraction.raw) member
   rw [memoryInterior_raw] at rawMem
@@ -99,14 +98,14 @@ theorem memoryInterior_signedBinary {image : ProgramImage}
     rw [silent] at rowMem
     exact (List.not_mem_nil rowMem).elim
 
-/-- Raw constraints force signed-unit multiplicities throughout the combined Memory ledger.
+/-- Raw constraints force unit multiplicities throughout the combined Memory ledger.
 This includes both inventories and all active system rows. -/
 theorem memory_signedBinary {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) (constraints : witness.Constraints) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨ signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   rw [memory_interactions]
-  exact memoryBoundary_signedBinary _ _ _
+  exact memoryBoundary_binary _ _ _
     (initial_physicalRecords_binary witness constraints) (final_physicalRecords_binary witness constraints)
     (memoryInterior_signedBinary witness constraints)
 
@@ -197,7 +196,7 @@ theorem memoryInitialFrontier_liveOK {image : ProgramImage}
   · rw [authentic.2.2.1]
     by_cases zero : timeline.start 0 = 0
     · simpa only [zero] using atStart
-    · simpa only [LocalValueAtG, microValueG, if_pos (Nat.pos_of_ne_zero zero)] using content
+    · simpa only [LocalValueAtG, microValueG, ite_eq_left (Nat.pos_of_ne_zero zero)] using content
   · simpa only [sameLoc] using atStart
   · rw [authentic.2.2.1]
     exact Nat.zero_le _

@@ -192,13 +192,13 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
         (h_mem_a (by rw [ht2])).2, (h_mem_b (by rw [ht2])).2⟩,
       fun ht3 => h_mem_c (by rw [ht3])⟩,
     Or.inr h_assumptions.1, Or.inr h_assumptions.1, Or.inr hcbin,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous hcbin h1 h0,
-    fun _ h0 => ?_⟩
+    htbin,
+    h_assumptions.1,
+    fun h0 => ?_,
+    h_assumptions.1,
+    fun h0 => ?_,
+    hcbin,
+    fun h0 => ?_⟩
   · -- the immediate gates bridge (op_c + op_c_memory.prev_value), as in `ALUTypeReader.soundness`.
     rw [← h_input.1.2.2.2.2.2.1, ← h_input.1.2.2.2.2.2.2.1.1]
     simp only [Vector.getElem_map]; exact ⟨i0, i1, i2, i3⟩
@@ -258,18 +258,18 @@ theorem completeness :
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
     rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
     exact ⟨ha, hp0, hp1, hp2, hbin⟩
   · -- mem pull a: the guarantee pair (whole-`Word` `isU64` + the message's `clk_low`, which *is* the
     -- block's `prev_low`) is read straight off `hisu_ab`'s four-fact tuple.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu_ab (neg_inj.mp hneg)).1, (hisu_ab (neg_inj.mp hneg)).2.2.1⟩
+    exact fun hneg => ⟨(hisu_ab hneg).1, (hisu_ab hneg).2.2.1⟩
   · -- mem pull b
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu_ab (neg_inj.mp hneg)).2.1, (hisu_ab (neg_inj.mp hneg)).2.2.2⟩
+    exact fun hneg => ⟨(hisu_ab hneg).2.1, (hisu_ab hneg).2.2.2⟩
   · -- mem pull c (gated `is_real - imm_c`): its own `Spec` conjunct is already the pair, verbatim.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => hisu_c (neg_inj.mp hneg)
+    exact fun hneg => hisu_c hneg
 
 /-- The native immutable ALU-type reader as a Clean `GeneralFormalCircuit`: composes a `RegisterAccessCols` per
 operand (op_c gated `is_real - imm_c`), imposes the `op_a_0` binary + immediate + read-zeroing gates, and
@@ -305,8 +305,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
 
 end SP1Clean.Readers.ALUTypeReaderImmutable

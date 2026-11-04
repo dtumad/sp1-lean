@@ -46,10 +46,10 @@ theorem Authenticates.extend {old new : Store} {component : Component (ZMod p)}
 /-- The actual fixed node table authenticates its source store; its other channel is silent. -/
 theorem source_node_authenticates (hints : List Bytes) (table : Table (ZMod p))
     (same : table.component = HostHintQueue.source hints)
-    (consistent : table.DataConsistency) (checked : table.Constraints) :
+    (checked : table.Constraints) :
     table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) ∧
     table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) := by
-  refine ⟨HostHintQueue.source_authenticates hints table same consistent checked, ?_⟩
+  refine ⟨HostHintQueue.source_authenticates hints table same checked, ?_⟩
   apply Table.Authenticates.of_component table _ _ ?_ checked
   rw [same]
   apply Component.Authenticates.of_silent
@@ -59,10 +59,10 @@ theorem source_node_authenticates (hints : List Bytes) (table : Table (ZMod p))
 /-- Source word authenticity includes the complete fixed byte inventory and zero-count padding. -/
 theorem source_word_authenticates (hints : List Bytes) (table : Table (ZMod p))
     (same : table.component = HostHintQueue.sourceWord hints)
-    (consistent : table.DataConsistency) (checked : table.Constraints) :
+    (checked : table.Constraints) :
     table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) ∧
     table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) := by
-  refine ⟨?_, HostHintQueue.sourceWord_authenticates hints table same consistent checked⟩
+  refine ⟨?_, HostHintQueue.sourceWord_authenticates hints table same checked⟩
   apply Table.Authenticates.of_component table _ _ ?_ checked
   rw [same]
   apply Component.Authenticates.of_silent
@@ -79,7 +79,7 @@ theorem handler_authenticates (store : Store) :
       (size HostHintReadChip.Inputs)).interactionsWith nodeChannel.toRaw).map _ at member
     rw [HostHintReadChip.main_node_interactions] at member
     obtain rfl := List.mem_singleton.mp member
-    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue])
+    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue, Interaction.Pull, and_self])
   · apply Component.Authenticates.of_pulls
     intro env _ interaction member
     rw [Operations.interactionValuesWith, Component.interactionsWith_eq] at member
@@ -87,7 +87,7 @@ theorem handler_authenticates (store : Store) :
       (size HostHintReadChip.Inputs)).interactionsWith wordChannel.toRaw).map _ at member
     rw [HostHintReadChip.main_word_interactions] at member
     obtain rfl := List.mem_singleton.mp member
-    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue])
+    exact Or.inr (by simp only [Channel.eval_pulled, Channel.pulledValue, Interaction.Pull, and_self])
 
 theorem word_consumer_authenticates (store : Store) (last : Bool) :
     Authenticates store (HintReadCoverage.view (p := p) last).component := by
@@ -107,8 +107,8 @@ theorem word_consumer_authenticates (store : Store) (last : Bool) :
     simp only [HintReadCoverage.rowActivity] at binary
     simp only [Channel.pulledIfValue, varFromOffset_pair, Nat.zero_add]
     rcases binary with inactive | active
-    · exact Or.inl (by rw [inactive, neg_zero])
-    · exact Or.inr (congrArg Neg.neg active)
+    · exact Or.inl inactive
+    · exact Or.inr ⟨rfl, active⟩
 
 theorem hint_length_authenticates (store : Store) (empty : Bool) :
     Authenticates store (HostCallReceivers.hintLength (p := p) empty).component := by
@@ -121,7 +121,7 @@ theorem hint_length_authenticates (store : Store) (empty : Bool) :
     rw [HostHintLengthChip.node_values] at member
     cases empty
     · obtain rfl := List.mem_singleton.mp member
-      exact Or.inr rfl
+      exact Or.inr ⟨rfl, rfl⟩
     · contradiction
   · apply Component.Authenticates.of_silent
     intro used

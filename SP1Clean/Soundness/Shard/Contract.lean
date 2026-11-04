@@ -34,7 +34,7 @@ noncomputable def Interpretation (limits : ResourceLimits) (commitments : Commit
 abbrev SoundnessTarget (ensemble : Ensemble (ZMod p) PublicIO) (limits : ResourceLimits)
     (commitments : CommitmentStatement) (image : ProgramImage)
     (source target : ExecutionSnapshot) (header : PublicIO (ZMod p)) : Prop :=
-  ensemble.Soundness (fun _ => True)
+  ensemble.Soundness Balance.logUp (fun _ _ => True)
     (fun publicInput => ∃ events, Interpretation limits commitments image source target header publicInput events)
 
 /-- Constructive completeness reuses Clean's generic compiler interface. Its domain contains
@@ -42,14 +42,14 @@ neither compiler success nor native row-readiness predicates. Executability is a
 abbrev CompilerTarget (ensemble : Ensemble (ZMod p) PublicIO) (limits : ResourceLimits)
     (commitments : CommitmentStatement) (image : ProgramImage)
     (source target : ExecutionSnapshot) (header : PublicIO (ZMod p)) :=
-  EnsembleCompiler ensemble (List ExecutionEvent) (Interpretation limits commitments image source target header)
+  EnsembleCompiler ensemble Balance.logUp (List ExecutionEvent) (Interpretation limits commitments image source target header)
 
 /-- Filling the two targets yields the existing generic sound-and-complete Clean interface. -/
 def completeEnsemble {ensemble : Ensemble (ZMod p) PublicIO} {limits : ResourceLimits}
     {commitments : CommitmentStatement} {image : ProgramImage} {source target : ExecutionSnapshot} {header : PublicIO (ZMod p)}
     (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    CompleteEnsemble (ZMod p) PublicIO :=
+    CompleteEnsemble (ZMod p) PublicIO Balance.logUp :=
   compiler.toCompleteEnsemble sound
 
 /-- The intended single statement, conditional here on the two unfilled implementation targets. -/
@@ -57,9 +57,9 @@ theorem statement_iff {ensemble : Ensemble (ZMod p) PublicIO} {limits : Resource
     {commitments : CommitmentStatement} {image : ProgramImage} {source target : ExecutionSnapshot} {header : PublicIO (ZMod p)}
     (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    ensemble.Statement header ↔
+    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔
       ∃ events, StatementExecution limits p commitments image source target events := by
   simpa only [completeEnsemble, EnsembleCompiler.toCompleteEnsemble, Interpretation, true_and] using
-    (completeEnsemble sound compiler).statement_iff header trivial
+    (completeEnsemble sound compiler).statement_iff header
 
 end SP1Clean.Soundness.Shard

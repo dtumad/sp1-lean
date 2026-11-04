@@ -27,7 +27,7 @@ def circuit : GeneralFormalCircuit Fp SyscallCodeGuard.Inputs unit where
     circuit_proof_start [SyscallCodeGuard.circuit]
     exact h_assumptions
 
-def component : Component Fp := { circuit, Assumptions := circuit.Assumptions }
+def component : Component Fp := ComponentExport.component circuit
 
 def rustExports : List (String × Except String String) :=
   [("syscall_code_guard.rs", exportRust circuit)]
@@ -44,7 +44,7 @@ def cases : List (String × SyscallCodeGuard.Inputs Fp × Bool) :=
 /-- Reference rows use the production component and Clean's ordinary witness interpreter. -/
 def reference : Lean.Json :=
   Lean.toJson (cases.map fun (name, input, expected) =>
-    let row := component.buildRow input (fun _ _ => #[]) (ProverHint.empty Fp)
+    let row := component.buildRow input (.empty Fp) (ProverHint.empty Fp)
     Lean.Json.mkObj [("name", Lean.toJson name),
       ("input", Lean.toJson ((toElements input).toArray.map (fun (value : Fp) => value.val))),
       ("row", Lean.toJson (row.map (fun (value : Fp) => value.val))), ("accepted", Lean.toJson expected)])

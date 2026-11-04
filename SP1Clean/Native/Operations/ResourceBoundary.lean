@@ -53,9 +53,8 @@ def checker (limits : ResourceLimits) (source target : ExecutionSnapshot) :
 /-- The existing SP1 field bound covers all six public-check occurrences. -/
 theorem count_bound [Fact (2 ^ 25 < p)] (limits : ResourceLimits) (source target : ExecutionSnapshot) :
     (checker (p := p) limits source target).CountBound := by
-  change 2 * 3 < ringChar (ZMod p) ∨ ringChar (ZMod p) = 0
+  change 2 * 3 < ringChar (ZMod p)
   rw [ZMod.ringChar_zmod_n]
-  left
   have := Fact.out (p := 2 ^ 25 < p)
   omega
 

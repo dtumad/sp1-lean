@@ -19,12 +19,12 @@ namespace Air.Flat.Component
 
 open Circuit
 
-variable {F : Type} [FiniteField F] {Input Output : TypeMap}
-variable [ProvableType Input] [ProvableType Output]
+variable {F : Type} [FiniteField F]
 
-theorem rowOutput_mk (circuit : GeneralFormalCircuit F Input Output) (env : Environment F) :
-    ({ circuit, Assumptions := circuit.Assumptions } : Component F).rowOutput env =
-      eval env (circuit.output (varFromOffset Input 0) (size Input)) := rfl
+theorem rowOutput_eq (component : Component F) (env : Environment F) :
+    component.rowOutput env =
+      eval env (component.circuit.output (varFromOffset component.Input 0)
+        (size component.Input)) := rfl
 
 /-- Equal committed cells decode to the same output, independently of the data environment. -/
 theorem rowOutput_congr (component : Component F) {env env' : Environment F}

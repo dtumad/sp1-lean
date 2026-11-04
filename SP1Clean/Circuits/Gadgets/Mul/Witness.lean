@@ -1,5 +1,7 @@
 module
 
+public import Mathlib.Data.List.GetD
+
 public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
 public import SP1Clean.Math.MulCarryChain
 public import SP1Clean.Circuits.Gadgets.U16MSB

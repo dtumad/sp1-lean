@@ -55,6 +55,8 @@ structure SupportedChip (p : ℕ) [Fact p.Prime] [Fact (2 ^ 17 < p)] where
   definitional connection needed by the witness decoder. -/
   circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
     kind.provableInputs kind.provableCols
+  /-- Clean's runtime policy, shared with the feature's semantic table builder. -/
+  generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs
   /-- The circuit contract is exactly the semantic contract registered by `kind`. -/
   spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
     kind.provableInputs kind.provableCols circuit = kind.chipSpec
@@ -75,7 +77,7 @@ def SupportedChip.rdGuard (chip : SupportedChip p) : RdGuard :=
 def SupportedChip.table (chip : SupportedChip p) : Component (ZMod p) :=
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  { circuit := chip.circuit, Assumptions := (chip.circuit).Assumptions }
+  { circuit := chip.circuit, Assumptions := (chip.circuit).Assumptions, generation := chip.generation }
 
 /-- Whether this descriptor claims an instruction dispatch key. -/
 def SupportedChip.claims (chip : SupportedChip p) (opcode : Opcode) (rdIsX0 : Bool) : Bool :=
@@ -90,31 +92,31 @@ variable [Fact (2 ^ 24 < p)]
 /-- Layer-local realization of a neutral instruction-chip identity. All circuit and Sail imports
 stay on this side of the boundary; `Model.InstructionChipId` remains independent of them. -/
 def supportedChipFor : InstructionChipId → SupportedChip p
-  | .add =>        ⟨.add,        AddChip.kind,        AddChip.circuit,        rfl⟩
-  | .addi =>       ⟨.addi,       AddiChip.kind,       AddiChip.circuit,       rfl⟩
-  | .addw =>       ⟨.addw,       AddwChip.kind,       AddwChip.circuit,       rfl⟩
-  | .sub =>        ⟨.sub,        SubChip.kind,        SubChip.circuit,        rfl⟩
-  | .subw =>       ⟨.subw,       SubwChip.kind,       SubwChip.circuit,       rfl⟩
-  | .bitwise =>    ⟨.bitwise,    BitwiseChip.kind,    BitwiseChip.circuit,    rfl⟩
-  | .lt =>         ⟨.lt,         LtChip.kind,         LtChip.circuit,         rfl⟩
-  | .shiftLeft =>  ⟨.shiftLeft,  ShiftLeftChip.kind,  ShiftLeftChip.circuit,  rfl⟩
-  | .shiftRight => ⟨.shiftRight, ShiftRightChip.kind, ShiftRightChip.circuit, rfl⟩
-  | .jal =>        ⟨.jal,        JalChip.kind,        JalChip.circuit,        rfl⟩
-  | .jalr =>       ⟨.jalr,       JalrChip.kind,       JalrChip.circuit,       rfl⟩
-  | .branch =>     ⟨.branch,     BranchChip.kind,     BranchChip.circuit,     rfl⟩
-  | .uType =>      ⟨.uType,      UTypeChip.kind,      UTypeChip.circuit,      rfl⟩
-  | .loadByte =>   ⟨.loadByte,   LoadByteChip.kind,   LoadByteChip.circuit,   rfl⟩
-  | .loadHalf =>   ⟨.loadHalf,   LoadHalfChip.kind,   LoadHalfChip.circuit,   rfl⟩
-  | .loadWord =>   ⟨.loadWord,   LoadWordChip.kind,   LoadWordChip.circuit,   rfl⟩
-  | .loadDouble => ⟨.loadDouble, LoadDoubleChip.kind, LoadDoubleChip.circuit, rfl⟩
-  | .loadX0 =>     ⟨.loadX0,     LoadX0Chip.kind,     LoadX0Chip.circuit,     rfl⟩
-  | .storeByte =>  ⟨.storeByte,  StoreByteChip.kind,  StoreByteChip.circuit,  rfl⟩
-  | .storeHalf =>  ⟨.storeHalf,  StoreHalfChip.kind,  StoreHalfChip.circuit,  rfl⟩
-  | .storeWord =>  ⟨.storeWord,  StoreWordChip.kind,  StoreWordChip.circuit,  rfl⟩
-  | .storeDouble =>⟨.storeDouble,StoreDoubleChip.kind,StoreDoubleChip.circuit,rfl⟩
-  | .mul =>        ⟨.mul,        MulChip.kind,        MulChip.circuit,        rfl⟩
-  | .divRem =>     ⟨.divRem,     DivRemChip.kind,     DivRemChip.circuit,     rfl⟩
-  | .aluX0 =>      ⟨.aluX0,      AluX0Chip.kind,      AluX0Chip.circuit,      rfl⟩
+  | .add =>        ⟨.add,        AddChip.kind,        AddChip.circuit,        AddChip.generation, rfl⟩
+  | .addi =>       ⟨.addi,       AddiChip.kind,       AddiChip.circuit,       AddiChip.generation, rfl⟩
+  | .addw =>       ⟨.addw,       AddwChip.kind,       AddwChip.circuit,       AddwChip.generation, rfl⟩
+  | .sub =>        ⟨.sub,        SubChip.kind,        SubChip.circuit,        SubChip.generation, rfl⟩
+  | .subw =>       ⟨.subw,       SubwChip.kind,       SubwChip.circuit,       SubwChip.generation, rfl⟩
+  | .bitwise =>    ⟨.bitwise,    BitwiseChip.kind,    BitwiseChip.circuit,    BitwiseChip.generation, rfl⟩
+  | .lt =>         ⟨.lt,         LtChip.kind,         LtChip.circuit,         LtChip.generation, rfl⟩
+  | .shiftLeft =>  ⟨.shiftLeft,  ShiftLeftChip.kind,  ShiftLeftChip.circuit,  ShiftLeftChip.generation, rfl⟩
+  | .shiftRight => ⟨.shiftRight, ShiftRightChip.kind, ShiftRightChip.circuit, ShiftRightChip.generation, rfl⟩
+  | .jal =>        ⟨.jal,        JalChip.kind,        JalChip.circuit,        JalChip.generation, rfl⟩
+  | .jalr =>       ⟨.jalr,       JalrChip.kind,       JalrChip.circuit,       JalrChip.generation, rfl⟩
+  | .branch =>     ⟨.branch,     BranchChip.kind,     BranchChip.circuit,     BranchChip.generation, rfl⟩
+  | .uType =>      ⟨.uType,      UTypeChip.kind,      UTypeChip.circuit,      UTypeChip.generation, rfl⟩
+  | .loadByte =>   ⟨.loadByte,   LoadByteChip.kind,   LoadByteChip.circuit,   LoadByteChip.generation, rfl⟩
+  | .loadHalf =>   ⟨.loadHalf,   LoadHalfChip.kind,   LoadHalfChip.circuit,   LoadHalfChip.generation, rfl⟩
+  | .loadWord =>   ⟨.loadWord,   LoadWordChip.kind,   LoadWordChip.circuit,   LoadWordChip.generation, rfl⟩
+  | .loadDouble => ⟨.loadDouble, LoadDoubleChip.kind, LoadDoubleChip.circuit, LoadDoubleChip.generation, rfl⟩
+  | .loadX0 =>     ⟨.loadX0,     LoadX0Chip.kind,     LoadX0Chip.circuit,     LoadX0Chip.generation, rfl⟩
+  | .storeByte =>  ⟨.storeByte,  StoreByteChip.kind,  StoreByteChip.circuit,  StoreByteChip.generation, rfl⟩
+  | .storeHalf =>  ⟨.storeHalf,  StoreHalfChip.kind,  StoreHalfChip.circuit,  StoreHalfChip.generation, rfl⟩
+  | .storeWord =>  ⟨.storeWord,  StoreWordChip.kind,  StoreWordChip.circuit,  StoreWordChip.generation, rfl⟩
+  | .storeDouble =>⟨.storeDouble,StoreDoubleChip.kind,StoreDoubleChip.circuit,StoreDoubleChip.generation, rfl⟩
+  | .mul =>        ⟨.mul,        MulChip.kind,        MulChip.circuit,        MulChip.generation, rfl⟩
+  | .divRem =>     ⟨.divRem,     DivRemChip.kind,     DivRemChip.circuit,     DivRemChip.generation, rfl⟩
+  | .aluX0 =>      ⟨.aluX0,      AluX0Chip.kind,      AluX0Chip.circuit,      AluX0Chip.generation, rfl⟩
 
 /-- Native instruction rows use channels for cross-table checks and contain no Clean lookups. -/
 theorem supportedChipFor_lookups_empty (id : InstructionChipId) :

@@ -263,18 +263,19 @@ dependent registry record. -/
 theorem stateTimeConstraintShape_of_circuit (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (shape : @CircuitStateTimeStep p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
-    StateTimeConstraintShape ⟨id, kind, circuit, spec_eq⟩ := by
+    StateTimeConstraintShape ⟨id, kind, circuit, generation, spec_eq⟩ := by
   let := kind.provableInputs
   let := kind.provableCols
   intro data physical
   dsimp only
   intro guarantees real
-  exact shape.step data physical guarantees real
+  exact shape.step _ data physical guarantees real
 
 /-- Registry-case boilerplate: install the descriptor's retained dependent instances and turn its
 concrete CPU-reader contract into the uniform physical-row clock theorem. -/
@@ -386,7 +387,7 @@ private theorem halt_cpu_subcircuit_mem :
 the finished Byte channel (split from `witness_realHaltRows_timeStep` for the declaration
 elaboration budget). -/
 theorem haltRow_cpuState_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -406,11 +407,11 @@ theorem haltRow_cpuState_bounds_of_component
   have cpuMem : (⟨size HaltChip.Inputs,
       (Readers.CPUState.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) cpuInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, cpuInputDef, inputVarDef]
     exact halt_cpu_subcircuit_mem
   have cpuGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.CPUState.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) cpuInput) cpuMem
     rowGuarantees
   have crossing : (haltRow data row).is_real =
@@ -474,7 +475,7 @@ whole difference between standing in for one arm and dispatching thirteen.
 Public because the walk feed's row contract consumes it outside this file; the halt row's twin below
 stays private because its only consumer is here. -/
 theorem syscallInstrsRow_cpuState_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -496,11 +497,11 @@ theorem syscallInstrsRow_cpuState_bounds_of_component
   have cpuMem : (⟨size SyscallInstrsChip.Inputs,
       (Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, cpuInputDef, inputVarDef]
     exact syscall_cpu_subcircuit_mem
   have cpuGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.CPUState.circuit (p := p)).toSubcircuit (size SyscallInstrsChip.Inputs) cpuInput)
     cpuMem rowGuarantees
   have crossing : (syscallInstrsRow data row).is_real =
@@ -616,7 +617,7 @@ layer, where the chip's full `Spec` is not: `PcArm` is a pure `assertZero` block
 `channelsWithGuarantees` is `[]`, so its `FullGuarantees` obligation is vacuous, and its
 `Assumptions` are just the two selector booleanities the row asserts ungated. -/
 theorem syscallInstrsRow_pcArm_spec_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (constraints : table.Constraints)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table) :
@@ -731,7 +732,7 @@ private theorem halt_x5_subcircuit_mem :
 /-- The `x5` register access's two timestamp byte bounds at one active halt row, from the
 finished Byte channel alone. -/
 private theorem haltRow_x5_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -755,11 +756,11 @@ private theorem haltRow_x5_timestamp_bounds_of_component
   have raMem : (⟨size HaltChip.Inputs,
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, raInputDef, inputVarDef]
     exact halt_x5_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
   have crossing : (haltRow data row).is_real =
@@ -821,7 +822,7 @@ private theorem halt_x10_subcircuit_mem :
 /-- The `x10` register access's two timestamp byte bounds at one active halt row, from the
 finished Byte channel alone. -/
 private theorem haltRow_x10_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -845,11 +846,11 @@ private theorem haltRow_x10_timestamp_bounds_of_component
   have raMem : (⟨size HaltChip.Inputs,
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, raInputDef, inputVarDef]
     exact halt_x10_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
   have crossing : (haltRow data row).is_real =
@@ -911,7 +912,7 @@ private theorem halt_x11_subcircuit_mem :
 /-- The `x11` register access's two timestamp byte bounds at one active halt row, from the
 finished Byte channel alone. -/
 private theorem haltRow_x11_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -935,11 +936,11 @@ private theorem haltRow_x11_timestamp_bounds_of_component
   have raMem : (⟨size HaltChip.Inputs,
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, raInputDef, inputVarDef]
     exact halt_x11_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit (size HaltChip.Inputs) raInput)
     raMem rowGuarantees
   have crossing : (haltRow data row).is_real =
@@ -1002,7 +1003,7 @@ alone: for each of `x5/x10/x11` (access clocks `clk + 4/3/2`), the 16-bit `diff_
 the scaled-high byte bound — exactly the shape `TimeExtraction.prevLow_val_lt_of_accessTimestamp`
 consumes to place each pulled prior strictly before its read-back. -/
 theorem haltRow_accessTimestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -1076,7 +1077,7 @@ private theorem syscall_opA_subcircuit_mem :
 /-- The `op_a_memory` access's two timestamp byte bounds at one active syscall row, from the finished
 Byte channel alone. -/
 private theorem syscallInstrsRow_opA_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -1102,11 +1103,11 @@ private theorem syscallInstrsRow_opA_timestamp_bounds_of_component
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
         (size SyscallInstrsChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, raInputDef, inputVarDef]
     exact syscall_opA_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
@@ -1175,7 +1176,7 @@ private theorem syscall_opB_subcircuit_mem :
 /-- The `op_b_memory` access's two timestamp byte bounds at one active syscall row, from the finished
 Byte channel alone. -/
 private theorem syscallInstrsRow_opB_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -1201,11 +1202,11 @@ private theorem syscallInstrsRow_opB_timestamp_bounds_of_component
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
         (size SyscallInstrsChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, raInputDef, inputVarDef]
     exact syscall_opB_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
@@ -1274,7 +1275,7 @@ private theorem syscall_opC_subcircuit_mem :
 /-- The `op_c_memory` access's two timestamp byte bounds at one active syscall row, from the finished
 Byte channel alone. -/
 private theorem syscallInstrsRow_opC_timestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -1300,11 +1301,11 @@ private theorem syscallInstrsRow_opC_timestamp_bounds_of_component
       (Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
         (size SyscallInstrsChip.Inputs) raInput⟩ :
         (n : ℕ) ×' Subcircuit (ZMod p) n) ∈
-      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations).subcircuits := by
+      (({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations).subcircuits := by
     rw [Component.rowOperations, raInputDef, inputVarDef]
     exact syscall_opC_subcircuit_mem
   have raGuarantees := channelGuarantees_subcircuit_of_mem Channels.byteChannel.toRaw env
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).rowOperations
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).rowOperations
     ((Readers.RegisterAccessCols.circuit (p := p)).toSubcircuit
       (size SyscallInstrsChip.Inputs) raInput)
     raMem rowGuarantees
@@ -1357,7 +1358,7 @@ private theorem syscallInstrsRow_opC_timestamp_bounds
 alone — the Halt twin is `haltRow_accessTimestamp_bounds`, and the access clocks are the same
 `clk + 4/3/2` because both tables model the same upstream `R`-type register adapter. -/
 theorem syscallInstrsRow_accessTimestamp_bounds_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (rowMem : row ∈ table.table)
@@ -1418,7 +1419,7 @@ come from the chip's `Spec` — the `HINT_LEN` arm deliberately leaves the resul
 constrains it. It comes from the chip's own four `Range 16` byte pulls, which is exactly where
 upstream puts it (`air.rs` range-checks the written `op_a` limbs). -/
 theorem syscallInstrsRow_opAValue_isU64_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (tableGuarantees : table.ChannelGuarantees Channels.byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
@@ -1630,7 +1631,8 @@ theorem witness_publicInput_limbBounds
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     SP1StateBoundary.LimbBounds witness.publicInput := by
-  apply (sp1Ensemble (p := p)).verifierSpec_of_verifierGuarantees witness.publicInput witness.data
+  rw [← witness.data_getPublicInput]
+  apply (sp1Ensemble (p := p)).verifierSpec_of_verifierGuarantees witness.data
   have byte := (sp1_finishedChannel_guarantees witness constraints balanced).1.1
   intro interaction member
   have channels : interaction.channel ∈

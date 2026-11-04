@@ -354,8 +354,8 @@ lemma colSum_val (bb cc : Fin 16 → ZMod p)
     apply Finset.sum_congr rfl
     intro i _
     by_cases h : i ≤ k
-    · simp only [if_pos h, Nat.cast_mul, ZMod.natCast_zmod_val]
-    · simp only [if_neg h, Nat.cast_zero]
+    · simp only [ite_eq_left h, Nat.cast_mul, ZMod.natCast_zmod_val]
+    · simp only [ite_eq_right h, Nat.cast_zero]
   have hNlt : N < p := by
     have hbound : N ≤ 16 * 65535 := by
       rw [hN]
@@ -504,28 +504,28 @@ lemma aSelector_eq_resultWord (input : Inputs (ZMod p)) (cols : Circuits.Types.M
         · -- is_mulw = 1 (the other four are 0)
           have hw : input.is_mulw = 1 := by linear_combination hsum - h - hh - hu - hs
           rw [h, hh, hu, hs, hw]
-          simp only [if_pos, if_neg h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
-            or_self, if_true]
+          simp only [ite_eq_left, ite_eq_right h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
+            or_self, ite_true]
         · -- is_mulhsu = 1
           have hw : input.is_mulw = 0 := by linear_combination hsum - h - hh - hu - hs
           rw [h, hh, hu, hs, hw]
-          simp only [if_pos, if_neg h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
-            or_self, if_true]
+          simp only [ite_eq_left, ite_eq_right h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
+            or_self, ite_true]
       · -- is_mulhu = 1
         obtain ⟨_, _, emhsu, emw⟩ := rest_zero (Or.inl h) (Or.inl hh) hmhsu hmw hu (by linear_combination hsum)
         rw [h, hh, hu, emhsu, emw]
-        simp only [if_pos, if_neg h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
-          or_self, if_true]
+        simp only [ite_eq_left, ite_eq_right h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
+          or_self, ite_true]
     · -- is_mulh = 1
       obtain ⟨_, emhu, emhsu, emw⟩ := rest_zero (Or.inl h) hmhu hmhsu hmw hh (by linear_combination hsum)
       rw [h, hh, emhu, emhsu, emw]
-      simp only [if_pos, if_neg h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
-        or_self, if_true]
+      simp only [ite_eq_left, ite_eq_right h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
+        or_self, ite_true]
   · -- is_mul = 1
     obtain ⟨emh, emhu, emhsu, emw⟩ := rest_zero hmh hmhu hmhsu hmw h hsum
     rw [h, emh, emhu, emhsu, emw]
-    simp only [if_pos, if_neg h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
-      or_self, if_true]
+    simp only [ite_eq_left, ite_eq_right h01, one_mul, zero_mul, add_zero, zero_add, true_or, or_true,
+      or_self, ite_true]
 
 /-- Compose a 16-bit limb from its two bytes at the `ℕ`-value level. -/
 lemma byte_compose_val {x lo hi : ZMod p} (hlo : lo.val < 256) (hhi : hi.val < 256)
@@ -793,8 +793,8 @@ lemma signExtend128_toNat (w : Word (ZMod p)) (hw : w.isU64) :
   rw [BitVec.toNat_signExtend, BitVec.toNat_setWidth, Word.toBitVec64_toNat hw,
       Nat.mod_eq_of_lt (show Word.toNat w < 2 ^ 128 by rw [Word.toNat_def]; omega)]
   by_cases hm : (Word.toBitVec64 w).msb = true
-  · rw [if_pos hm, if_pos (hmsb_iff.mp hm)]
-  · rw [if_neg hm, if_neg (fun hc => hm (hmsb_iff.mpr hc))]
+  · rw [ite_eq_left hm, ite_eq_left (hmsb_iff.mp hm)]
+  · rw [ite_eq_right hm, ite_eq_right (fun hc => hm (hmsb_iff.mpr hc))]
 
 -- Ladder-measured 2026-07-28 (same control run as `full_product`, with that lemma pinned high so
 -- its failures could not mask this one): 200000 ok / 40000 ok / 20000 FAIL (`whnf` at this
@@ -918,7 +918,7 @@ theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.Mul
         = #v[productVal cols 0 + productVal cols 1 * 256, productVal cols 2 + productVal cols 3 * 256,
              productVal cols 4 + productVal cols 5 * 256, productVal cols 6 + productVal cols 7 * 256] := by
       unfold resultWord
-      rw [if_neg (by rw [hmw0]; exact zero_ne_one), if_neg (by rw [hmh0, hmhu0, hmhsu0]; simp)]
+      rw [ite_eq_right (by rw [hmw0]; exact zero_ne_one), ite_eq_right (by rw [hmh0, hmhu0, hmhsu0]; simp)]
     have hUresult := hrw ▸ hisU64
     -- The eight low column equations, fed to `low_half`.
     have e0 : (productVal cols 0).val + (carryVal cols 0).val * 256
@@ -1034,7 +1034,7 @@ theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.Mul
     have hcse0 : cols.c_sign_extend = 0 := by rw [h_cse, hmh0]; ring
     have hrw : resultWord input cols = #v[productVal cols 8 + productVal cols 9 * 256, productVal cols 10 + productVal cols 11 * 256, productVal cols 12 + productVal cols 13 * 256, productVal cols 14 + productVal cols 15 * 256] := by
       unfold resultWord
-      rw [if_neg (by rw [hmw0]; exact zero_ne_one), if_pos (Or.inr (Or.inl hmulhu))]
+      rw [ite_eq_right (by rw [hmw0]; exact zero_ne_one), ite_eq_left (Or.inr (Or.inl hmulhu))]
     have hSbb : (byteAt bb 0).val + (byteAt bb 1).val*256^1 + (byteAt bb 2).val*256^2 + (byteAt bb 3).val*256^3 + (byteAt bb 4).val*256^4 + (byteAt bb 5).val*256^5 + (byteAt bb 6).val*256^6 + (byteAt bb 7).val*256^7 + (byteAt bb 8).val*256^8 + (byteAt bb 9).val*256^9 + (byteAt bb 10).val*256^10 + (byteAt bb 11).val*256^11 + (byteAt bb 12).val*256^12 + (byteAt bb 13).val*256^13 + (byteAt bb 14).val*256^14 + (byteAt bb 15).val*256^15 = Word.toNat input.b := by
       rw [hbb_def, extendedBytes_toNat input.b cols.b_lower_byte cols.b_sign_extend hb_low, hbse0]; simp
     have hScc : (byteAt cc 0).val + (byteAt cc 1).val*256^1 + (byteAt cc 2).val*256^2 + (byteAt cc 3).val*256^3 + (byteAt cc 4).val*256^4 + (byteAt cc 5).val*256^5 + (byteAt cc 6).val*256^6 + (byteAt cc 7).val*256^7 + (byteAt cc 8).val*256^8 + (byteAt cc 9).val*256^9 + (byteAt cc 10).val*256^10 + (byteAt cc 11).val*256^11 + (byteAt cc 12).val*256^12 + (byteAt cc 13).val*256^13 + (byteAt cc 14).val*256^14 + (byteAt cc 15).val*256^15 = Word.toNat input.c := by
@@ -1055,7 +1055,7 @@ theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.Mul
     have hcse_eq : cols.c_sign_extend = cols.c_msb := by rw [h_cse, hmulh]; simp
     have hrw : resultWord input cols = #v[productVal cols 8 + productVal cols 9 * 256, productVal cols 10 + productVal cols 11 * 256, productVal cols 12 + productVal cols 13 * 256, productVal cols 14 + productVal cols 15 * 256] := by
       unfold resultWord
-      rw [if_neg (by rw [hmw0]; exact zero_ne_one), if_pos (Or.inl hmulh)]
+      rw [ite_eq_right (by rw [hmw0]; exact zero_ne_one), ite_eq_left (Or.inl hmulh)]
     have hSbb : (byteAt bb 0).val + (byteAt bb 1).val*256^1 + (byteAt bb 2).val*256^2 + (byteAt bb 3).val*256^3 + (byteAt bb 4).val*256^4 + (byteAt bb 5).val*256^5 + (byteAt bb 6).val*256^6 + (byteAt bb 7).val*256^7 + (byteAt bb 8).val*256^8 + (byteAt bb 9).val*256^9 + (byteAt bb 10).val*256^10 + (byteAt bb 11).val*256^11 + (byteAt bb 12).val*256^12 + (byteAt bb 13).val*256^13 + (byteAt bb 14).val*256^14 + (byteAt bb 15).val*256^15 = ((Word.toBitVec64 input.b).signExtend 128).toNat := by
       rw [hbb_def, extendedBytes_toNat input.b cols.b_lower_byte cols.b_sign_extend hb_low, signExtend128_toNat input.b hbU]
       congr 1
@@ -1085,7 +1085,7 @@ theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.Mul
     have hcse0 : cols.c_sign_extend = 0 := by rw [h_cse, hmh0]; ring
     have hrw : resultWord input cols = #v[productVal cols 8 + productVal cols 9 * 256, productVal cols 10 + productVal cols 11 * 256, productVal cols 12 + productVal cols 13 * 256, productVal cols 14 + productVal cols 15 * 256] := by
       unfold resultWord
-      rw [if_neg (by rw [hmw0]; exact zero_ne_one), if_pos (Or.inr (Or.inr hmulhsu))]
+      rw [ite_eq_right (by rw [hmw0]; exact zero_ne_one), ite_eq_left (Or.inr (Or.inr hmulhsu))]
     have hSbb : (byteAt bb 0).val + (byteAt bb 1).val*256^1 + (byteAt bb 2).val*256^2 + (byteAt bb 3).val*256^3 + (byteAt bb 4).val*256^4 + (byteAt bb 5).val*256^5 + (byteAt bb 6).val*256^6 + (byteAt bb 7).val*256^7 + (byteAt bb 8).val*256^8 + (byteAt bb 9).val*256^9 + (byteAt bb 10).val*256^10 + (byteAt bb 11).val*256^11 + (byteAt bb 12).val*256^12 + (byteAt bb 13).val*256^13 + (byteAt bb 14).val*256^14 + (byteAt bb 15).val*256^15 = ((Word.toBitVec64 input.b).signExtend 128).toNat := by
       rw [hbb_def, extendedBytes_toNat input.b cols.b_lower_byte cols.b_sign_extend hb_low, signExtend128_toNat input.b hbU]
       congr 1
@@ -1109,7 +1109,7 @@ theorem mulSemantics_of_raw {input : Inputs (ZMod p)} {cols : Circuits.Types.Mul
     have hbse0 : cols.b_sign_extend = 0 := by rw [h_bse, hmh0, hmhsu0]; ring
     have hcse0 : cols.c_sign_extend = 0 := by rw [h_cse, hmh0]; ring
     have hrw : resultWord input cols = #v[productVal cols 0 + productVal cols 1 * 256, productVal cols 2 + productVal cols 3 * 256, cols.product_msb.msb * 65535, cols.product_msb.msb * 65535] := by
-      unfold resultWord; rw [if_pos hmulw]
+      unfold resultWord; rw [ite_eq_left hmulw]
     have hSbb : (byteAt bb 0).val + (byteAt bb 1).val*256^1 + (byteAt bb 2).val*256^2 + (byteAt bb 3).val*256^3 + (byteAt bb 4).val*256^4 + (byteAt bb 5).val*256^5 + (byteAt bb 6).val*256^6 + (byteAt bb 7).val*256^7 + (byteAt bb 8).val*256^8 + (byteAt bb 9).val*256^9 + (byteAt bb 10).val*256^10 + (byteAt bb 11).val*256^11 + (byteAt bb 12).val*256^12 + (byteAt bb 13).val*256^13 + (byteAt bb 14).val*256^14 + (byteAt bb 15).val*256^15 = Word.toNat input.b := by
       rw [hbb_def, extendedBytes_toNat input.b cols.b_lower_byte cols.b_sign_extend hb_low, hbse0]; simp
     have hScc : (byteAt cc 0).val + (byteAt cc 1).val*256^1 + (byteAt cc 2).val*256^2 + (byteAt cc 3).val*256^3 + (byteAt cc 4).val*256^4 + (byteAt cc 5).val*256^5 + (byteAt cc 6).val*256^6 + (byteAt cc 7).val*256^7 + (byteAt cc 8).val*256^8 + (byteAt cc 9).val*256^9 + (byteAt cc 10).val*256^10 + (byteAt cc 11).val*256^11 + (byteAt cc 12).val*256^12 + (byteAt cc 13).val*256^13 + (byteAt cc 14).val*256^14 + (byteAt cc 15).val*256^15 = Word.toNat input.c := by

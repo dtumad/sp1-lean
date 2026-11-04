@@ -47,26 +47,20 @@ def ensemble (rom : ProgramImage) (n : ℕ) : Ensemble Fp (Requests n) where
   unique_names := by simp
   channels := [programChannel.toRaw]
   verifier := verifier n
-
-/-- A first-match index expressed in Clean's witness IR handles sparse ROMs and repeated padding.
-Clean's scheduler checks the complete selected payload before updating its count. -/
-def config (rom : ProgramImage) : WitnessGeneration.Config Fp where
-  components := [("sp1.native.program.fixed", {
-    mode := .preallocated {
-      rows := UInt64.ofNat (FixedProgramProvider.Preprocessed.height (p := SP1Prime) rom)
-      input := .ofFExprs #v[.const 0]
-      input_valid := by rfl
-      handlers := if (FixedProgramProvider.Preprocessed.rows (p := SP1Prime) rom).isEmpty then [] else [{
-        interaction := 0
-        column := 16
-        rowIndex := some (.messageIndex
-          ((FixedProgramProvider.Preprocessed.rows (p := SP1Prime) rom).map toElements) 0)
-        rowIndex_valid := Witgen.U64Expr.messageIndex_valid _ _
-      }]
-    }
-    padding := { input := Array.replicate 17 0 }
-  })]
-  fuel := 8
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change (FixedProgramProvider.Preprocessed.circuit rom).channels ⊆ _
+    rw [FixedProgramProvider.Preprocessed.circuit_channels]
+  verifier_channels := by
+    intro channel member
+    rw [Verifier.Program.mem_channels_iff, Operations.channels] at member
+    change channel ∈ ((verifier n).circuitOperations.interactions.map (·.channel)) at member
+    simp only [Verifier.Program.circuitOperations, Verifier.Program.operations, verifier,
+      Verifier.ofInteractions_interactions, List.map_map, Function.comp_def] at member
+    obtain ⟨_, _, rfl⟩ := List.mem_map.mp member
+    exact List.mem_singleton.mpr rfl
 
 /-- Raw acceptance covers every constraint and Program occurrence. -/
 def description (rom : ProgramImage) (n : ℕ) : EnsembleCheck (ensemble rom n) where
@@ -76,21 +70,11 @@ def description (rom : ProgramImage) (n : ℕ) : EnsembleCheck (ensemble rom n) 
     simp only [ensemble, List.mem_singleton]
     rintro component rfl
     simp [FixedProgramProvider.Preprocessed.component_lookups]
-  channels_unique := by simp [ensemble]
-  channels_complete := by
-    simp only [ensemble, List.mem_singleton]
-    rintro component rfl
-    simp [FixedProgramProvider.Preprocessed.component, Component.interactions_eq,
-      Component.rowOperations, FixedProgramProvider.Preprocessed.main_interactions, circuit_norm]
-  verifier_channels_complete := by
-    change ∀ i ∈ (verifier n).circuitOperations.interactions, i.channel ∈ _
-    rw [Verifier.Program.circuitOperations, verifier, Verifier.ofInteractions_interactions]
-    simp [ensemble, circuit_norm]
 
 /-- Use Clean's unmodified preallocation and demand scheduling. -/
 def generate (rom : ProgramImage) {n : ℕ} (requests : Requests n Fp) :
     Except String (EnsembleWitness (ensemble rom n)) :=
-  WitnessGeneration.generate (ComponentExport.fixture (ensemble rom n)) (config rom) requests ()
+  WitnessGeneration.generate (ensemble rom n) 8 requests ()
     |>.mapError toString
 
 /-- Two repeated ADDI fetches and one ADD fetch leave ECALL unused. -/
@@ -109,12 +93,12 @@ def sparseRequests : Requests 4 Fp :=
 /-- Active, unused and empty providers all use the built-in Rust emitter. -/
 def rustExports : List (String × Except String String) :=
   [("program_fixed.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble image 3)) (config image)),
+      (ComponentExport.fixture (ensemble image 3)) 8),
    ("program_unused.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble image 0)) (config image)),
+      (ComponentExport.fixture (ensemble image 0)) 8),
    ("program_empty.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble emptyImage 0)) (config emptyImage)),
+      (ComponentExport.fixture (ensemble emptyImage 0)) 8),
    ("program_sparse.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble sparseImage 4)) (config sparseImage))]
+      (ComponentExport.fixture (ensemble sparseImage 4)) 8)]
 
 end SP1CleanTest.Core.ProgramExport

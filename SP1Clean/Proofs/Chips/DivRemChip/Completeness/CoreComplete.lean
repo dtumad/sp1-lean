@@ -49,9 +49,9 @@ theorem mulLowerProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod 
   have hsumArg : ir + 0 + 0 + 0 + 0 = 0 ∨ ir + 0 + 0 + 0 + 0 = 1 := by
     simpa only [add_zero] using hbin
   rcases hbin with h0 | h1
-  · rw [populateMulLower, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+  · rw [populateMulLower, ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
     exact MulOperation.productSpec_zero (populateQuotComp B C f) (cComp C f) a ir 0 0 0 0 h0
-  · rw [populateMulLower, if_pos h1]
+  · rw [populateMulLower, ite_eq_left h1]
     exact MulOperation.productSpec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
       ir 0 0 0 0 ir (Or.inr h1) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl)
       hsumArg
@@ -88,7 +88,7 @@ theorem mulUpperProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod 
     have hgate : ir * (1 - (f[4] + f[5] + f[6] + f[7])) = 1 := by
       rw [hcond.1, he2zero]
       ring_nf
-    rw [populateMulUpper, if_pos hcond]
+    rw [populateMulUpper, ite_eq_left hcond]
     exact MulOperation.productSpec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
       0 (f[0] + f[2]) (f[1] + f[3]) 0 0
       (ir * (1 - (f[4] + f[5] + f[6] + f[7]))) (Or.inl rfl) hd_r hdu_r
@@ -100,7 +100,7 @@ theorem mulUpperProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod 
         · exact absurd ⟨h1, by linear_combination hsum - he20⟩ hcond
         · rw [h1, he21]
           ring_nf
-    rw [populateMulUpper, if_neg hcond]
+    rw [populateMulUpper, ite_eq_right hcond]
     exact MulOperation.productSpec_zero (populateQuotComp B C f) (cComp C f) a
       0 (f[0] + f[2]) (f[1] + f[3]) 0 0 hgate
 
@@ -123,7 +123,7 @@ theorem lowerGlue (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
   rcases hbin with h0 | h1
   · rw [hzero h0 0 (by norm_num), hzero h0 1 (by norm_num), hzero h0 2 (by norm_num),
       hzero h0 3 (by norm_num), populateMulLower,
-      if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+      ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
     simp [MulOperation.zeroCols]
   · exact ⟨hone h1 0 (by norm_num), hone h1 1 (by norm_num), hone h1 2 (by norm_num),
       hone h1 3 (by norm_num)⟩
@@ -153,7 +153,7 @@ theorem upperGlue (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
   rcases hbin with h0 | h1
   · rw [hzero h0 4 (by norm_num), hzero h0 5 (by norm_num), hzero h0 6 (by norm_num),
       hzero h0 7 (by norm_num), populateMulUpper,
-      if_neg (fun hx => absurd (h0.symm.trans hx.1) zero_ne_one)]
+      ite_eq_right (fun hx => absurd (h0.symm.trans hx.1) zero_ne_one)]
     simp [MulOperation.zeroCols]
   · exact ⟨hone h1 hg64 0 (by norm_num), hone h1 hg64 1 (by norm_num),
       hone h1 hg64 2 (by norm_num), hone h1 hg64 3 (by norm_num)⟩
@@ -236,7 +236,7 @@ theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inp
     rw [← hctq] at hglue
     obtain ⟨h0, h1, h2, h3⟩ := hglue
     simp only [MulOperation.resultWord, MulOperation.productVal, zero_ne_one, or_self,
-      if_false, Nat.reduceLT, dif_pos, h0, h1, h2, h3]
+      ite_false, Nat.reduceLT, dite_eq_left, h0, h1, h2, h3]
   · intro hs
     have h64 : f[0] + f[1] + f[2] + f[3] = 1 := by linear_combination hs
     have hglue := upperGlue ir B C f hcU hbin hf0 hf1 hf2 hf3
@@ -249,7 +249,7 @@ theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inp
       · right; linear_combination h64 - h
       · exact Or.inl h
     simp only [MulOperation.resultWord, MulOperation.productVal, zero_ne_one, or_false,
-      if_false, if_pos hhigh, Nat.reduceLT, dif_pos, h0, h1, h2, h3]
+      ite_false, ite_eq_left hhigh, Nat.reduceLT, dite_eq_left, h0, h1, h2, h3]
 
 /-! ## Own-assert evaluator boundary
 

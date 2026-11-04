@@ -111,11 +111,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   simp only [circuit_norm, byteChannel] at h_holds ⊢
   -- The two trailing conjuncts are the byte pulls' own `Requirements` (post-`cedc171b`): each fires only
   -- at an off-gate multiplicity (`-is_real ∉ {0,-1}`), impossible under the binary `Assumptions` — vacuous.
-  refine ⟨fun hr1 => ?_, fun h1 h0 => off_gate_vacuous h_assumptions h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions h1 h0⟩
-  have hneg : - input_is_real = -1 := by rw [hr1]
-  exact ⟨(byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact h_holds.2.1 hneg),
-    ((byteRowSpec_u8range_pair _ _).mp (h_holds.2.2 hneg)).1⟩
+  refine ⟨fun hr1 => ?_, h_assumptions⟩
+  exact ⟨(byteRowSpec_range _ sixteen_lt).mp (by rw [Nat.cast_ofNat]; exact h_holds.2.1 hr1),
+    ((byteRowSpec_u8range_pair _ _).mp (h_holds.2.2 hr1)).1⟩
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   -- The two byte pulls' completeness obligation (their `ByteRowSpec` guarantee) only fires on real rows
@@ -125,10 +123,10 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   refine ⟨?_, ?_, ?_⟩
   · rcases h_assumptions with h | h <;> simp only [h, sub_self, mul_zero, zero_mul]
   · intro hneg
-    simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ sixteen_lt).mpr (h_spec (neg_inj.mp hneg)).1
+    simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ sixteen_lt).mpr (h_spec hneg).1
   · intro hneg
     exact (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_spec (neg_inj.mp hneg)).2, by rw [ZMod.val_zero]; norm_num⟩
+      ⟨(h_spec hneg).2, by rw [ZMod.val_zero]; norm_num⟩
 
 /-- The inner timestamp reader as a Clean `FormalAssertion`: takes the chip-owned `cols` block plus
 `is_real`/`clk_target`, imposes the two `is_real`-gated byte checks, with `Spec` the two byte bounds. -/
@@ -162,10 +160,7 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
         intro interaction h_interaction
         simp only [circuit_norm] at h_interaction
         rcases h_interaction with rfl | rfl <;> right <;>
-          rw [ChannelInteraction.toRaw_requirements] <;>
-          intro h1 h0 <;>
-          simp only [circuit_norm] at h1 h0 <;>
-          exact off_gate_vacuous h_bool h1 h0 }
+          simpa only [circuit_norm, byteChannel] using h_bool }
 
 -- This leaf reader emits only on `byteChannel`, so its interactions are empty on the Memory/Program
 -- channels — the bottom-up base case that lets `RegisterAccessCols`/`RTypeReader` drop this sub-reader's

@@ -1,3 +1,4 @@
+import Clean.Air.WitnessGeneration.Generation
 import SP1Clean.Model.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -129,10 +130,25 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
         input_pc1.val < 2 ^ 16 ∧ input_pc2.val < 2 ^ 16 ∧
         (input_op_a_0 = 0 ∨ input_op_a_0 = 1) :=
       ⟨by simpa using hoa, hp0, hp1, hp2, hbool⟩
-    exact ⟨hrow, fun _ _ => hrow⟩
+    exact ⟨hrow, fun _ => hrow⟩
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, ProgramMsg.RowSpec, Inputs.toMessage]
     obtain ⟨hoa, hp0, hp1, hp2, hbool⟩ := h_assumptions
     exact ⟨by simpa using hoa, hp0, hp1, hp2, hbool⟩
+
+/-- Count full Program requests. The authenticated assembly replaces this unconstrained
+inventory with `FixedProgramProvider` and its verifier-known image. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := programChannel
+    trigger := .pull
+    input message := pure {
+      pc0 := message.pc0, pc1 := message.pc1, pc2 := message.pc2
+      opcode := message.opcode, op_a := message.op_a
+      op_b := message.op_b, op_c := message.op_c
+      op_a_0 := message.op_a_0, imm_b := message.imm_b, imm_c := message.imm_c
+      multiplicity := .multiplicity
+    }
+  }
 
 end SP1Clean.ProgramProviderChip

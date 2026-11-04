@@ -6,8 +6,8 @@ public import Clean.Air.Balance
 
 Clean proves counting facts for constant-multiplicity interactions, but does not expose the
 typed message permutation of a ledger of unit transitions. This addition derives that
-permutation from `BalancedInteractions`, including its characteristic bound, and proves the
-converse. It is independent of row semantics, ordering, and any particular machine.
+permutation from `BalancedInteractions` and proves the converse. Verifier-specific count
+bounds are checked separately on the complete physical ledger. It is independent of row semantics, ordering, and any particular machine.
 
 The intended upstream home is `Clean/Air/Balance.lean`, beside its constant-multiplicity
 counting lemmas. No existing Clean declaration is changed.
@@ -15,17 +15,59 @@ counting lemmas. No existing Clean declaration is changed.
 
 @[expose] public section
 
-/-- Removing disabled interactions preserves balance and weakens its characteristic count bound. -/
+/-- Removing disabled interactions preserves exactly the abstract balance facts.
+Count bounds belong to the chosen verifier balance check, before this projection. -/
+theorem BalancedInteractions.filter_nonzero_iff {F : Type} [FiniteField F]
+    {interactions : List (Interaction F)} :
+    BalancedInteractions (interactions.filter fun i => decide (i.mult ≠ 0)) ↔
+      BalancedInteractions interactions := by
+  have counts (direction : Channel.Direction) (msg : Array F) :
+      activeCount (interactions.filter fun i => decide (i.mult ≠ 0)) direction msg =
+        activeCount interactions direction msg := by
+    simp only [activeCount, List.countP_filter]
+    apply List.countP_congr
+    intro i _
+    simp only [Bool.and_eq_true, decide_eq_true_eq]
+    tauto
+  constructor
+  · intro balanced
+    constructor
+    · intro a ha pull
+      have ha' : a ∈ interactions.filter fun i => decide (i.mult ≠ 0) := by
+        simp [ha, pull.2]
+      obtain ⟨b, hb, msg, push⟩ := balanced.exists_push_of_pull a ha' pull
+      exact ⟨b, (List.mem_filter.mp hb).1, msg, push⟩
+    · intro msg binary
+      rw [← counts .push, ← counts .pull]
+      exact balanced.activeCount_push_eq_activeCount_pull_of_isBool msg
+        (fun i hi => binary i (List.mem_filter.mp hi).1)
+  · intro balanced
+    constructor
+    · intro a ha pull
+      obtain ⟨b, hb, msg, push⟩ :=
+        balanced.exists_push_of_pull a (List.mem_filter.mp ha).1 pull
+      exact ⟨b, by simp [hb, push.1], msg, push⟩
+    · intro msg binary
+      rw [counts, counts]
+      apply balanced.activeCount_push_eq_activeCount_pull_of_isBool
+      intro i hi hmsg
+      by_cases zero : i.mult = 0
+      · exact .inl zero
+      · exact binary i (by simp [hi, zero]) hmsg
+
+/-- Erase zero occurrences only when projecting the physical ledger to active messages. -/
 theorem BalancedInteractions.filter_nonzero {F : Type} [FiniteField F]
     {interactions : List (Interaction F)} (balanced : BalancedInteractions interactions) :
-    BalancedInteractions (interactions.filter fun interaction => decide (interaction.mult ≠ 0)) := by
-  refine ⟨balanced.1.imp (lt_of_le_of_lt (List.length_filter_le ..)) id, ?_⟩
-  intro message
-  have zero : balanceOf (interactions.filter fun interaction => decide (interaction.mult = 0)) message = 0 :=
-    balanceOf_eq_of_const_zero (fun _ member => of_decide_eq_true (List.mem_filter.mp member).2)
-  have split := balanceOf_eq_add_filter (interactions := interactions) (msg := message) (· = 0)
-  rw [balanced.2, zero, zero_add] at split
-  exact split.symm
+    BalancedInteractions (interactions.filter fun i => decide (i.mult ≠ 0)) :=
+  filter_nonzero_iff.mpr balanced
+
+/-- Abstract balance also supplies signed field balance when every multiplicity is Boolean. -/
+theorem BalancedInteractions.logUp_of_isBool {F : Type} [FiniteField F]
+    {interactions : List (Interaction F)} (balanced : BalancedInteractions interactions)
+    (binary : ∀ i ∈ interactions, IsBool i.mult) : LogUpBalanced interactions := by
+  intro msg
+  rw [balanceOf_eq_sub_of_isBool (fun i hi _ => binary i hi),
+    balanced.activeCount_push_eq_activeCount_pull_of_isBool msg (fun i hi _ => binary i hi), sub_self]
 
 namespace Channel
 
@@ -39,30 +81,6 @@ def transitionLedger {Row : Type*} (channel : Channel F Message)
   [channel.pushedValue initial, channel.pulledValue final] ++
     rows.flatMap (fun row => [channel.pulledValue (edge row).1,
       channel.pushedValue (edge row).2])
-
-private theorem balanceOf_pushes (channel : Channel F Message) (messages : List (Message F))
-    (msg : Array F) :
-    balanceOf (messages.map channel.pushedValue) msg =
-      ((messages.map (fun value => (toElements value).toArray)).count msg : F) := by
-  have compare (a : Array F) : decide (a = msg) = (a == msg) := by
-    apply Bool.eq_iff_iff.mpr
-    simp
-  rw [balanceOf_eq_of_const_mult' (mult := (1 : F)) (fun _ member => by
-    obtain ⟨value, _, rfl⟩ := List.mem_map.mp member; rfl), one_mul]
-  congr 1
-  simp only [List.countP_map, List.count_eq_countP, Function.comp_def, pushedValue, compare]
-
-private theorem balanceOf_pulls (channel : Channel F Message) (messages : List (Message F))
-    (msg : Array F) :
-    balanceOf (messages.map channel.pulledValue) msg =
-      - ((messages.map (fun value => (toElements value).toArray)).count msg : F) := by
-  have compare (a : Array F) : decide (a = msg) = (a == msg) := by
-    apply Bool.eq_iff_iff.mpr
-    simp
-  rw [balanceOf_eq_of_const_mult' (mult := (-1 : F)) (fun _ member => by
-    obtain ⟨value, _, rfl⟩ := List.mem_map.mp member; rfl), neg_one_mul]
-  congr 1
-  simp only [List.countP_map, List.count_eq_countP, Function.comp_def, pulledValue, compare]
 
 /-- Collecting unit transition pairs preserves every interaction occurrence. -/
 theorem pairedLedger_perm {Row : Type*} (channel : Channel F Message)
@@ -90,73 +108,69 @@ theorem transitionLedger_perm {Row : Type*} (channel : Channel F Message)
     (split.cons (channel.pulledValue final) |>.cons (channel.pushedValue initial)).trans
       (List.perm_middle.symm.cons _)
 
-/-- Unit field balance is exactly a permutation of typed messages, subject to Clean's own
-non-overflow condition. This applies in arbitrary characteristic, including characteristic zero. -/
+/-- Unit balance is exactly a permutation of typed messages, independently of the
+balance check that supplied the abstract facts. -/
 theorem balanced_unit_iff (channel : Channel F Message) (produced consumed : List (Message F)) :
     BalancedInteractions (produced.map channel.pushedValue ++ consumed.map channel.pulledValue) ↔
-      (produced.length + consumed.length < ringChar F ∨ ringChar F = 0) ∧
-        produced.Perm consumed := by
+      produced.Perm consumed := by
   have encode_injective : Function.Injective (fun value : Message F => (toElements value).toArray) := by
     intro a b equal
     have vectors := Vector.toArray_inj.mp equal
     simpa only [ProvableType.fromElements_toElements] using congrArg fromElements vectors
+  have binary : ∀ i ∈ produced.map channel.pushedValue ++ consumed.map channel.pulledValue,
+      IsBool i.mult := by
+    intro i hi
+    rcases List.mem_append.mp hi with hi | hi <;>
+      obtain ⟨value, _, rfl⟩ := List.mem_map.mp hi <;> exact .inr rfl
+  have messages (direction : Channel.Direction) :
+      activeMessages (produced.map channel.pushedValue ++ consumed.map channel.pulledValue) direction =
+        (if direction = .push then produced else consumed).map
+          (fun value => (toElements value).toArray) := by
+    cases direction <;>
+      simp [activeMessages, List.filter_map, Function.comp_def, pushedValue, pulledValue]
   constructor
   · intro balanced
-    have bound : produced.length + consumed.length < ringChar F ∨ ringChar F = 0 := by
-      simpa only [List.length_append, List.length_map] using balanced.1
-    refine ⟨bound, (List.map_perm_map_iff encode_injective).mp ?_⟩
+    apply (List.map_perm_map_iff encode_injective).mp
     rw [List.perm_iff_count]
     intro msg
-    have zero := balanced.2 msg
-    rw [balanceOf_append, balanceOf_pushes, balanceOf_pulls, ← sub_eq_add_neg,
-      sub_eq_zero] at zero
-    rcases bound with bound | zeroChar
-    · have aBound : (produced.map (fun value => (toElements value).toArray)).count msg < ringChar F :=
-        lt_of_le_of_lt List.count_le_length (by simpa only [List.length_map] using lt_of_le_of_lt (Nat.le_add_right produced.length consumed.length) bound)
-      have bBound : (consumed.map (fun value => (toElements value).toArray)).count msg < ringChar F :=
-        lt_of_le_of_lt List.count_le_length (by simpa only [List.length_map] using lt_of_le_of_lt (Nat.le_add_left consumed.length produced.length) bound)
-      exact (Lean.Grind.IsCharP.natCast_eq_iff_of_lt (ringChar F) aBound bBound).mp zero
-    · rw [CharP.ringChar_zero_iff_CharZero] at zeroChar
-      exact Nat.cast_injective zero
-  · rintro ⟨bound, perm⟩
-    refine ⟨by simpa only [List.length_append, List.length_map] using bound, ?_⟩
-    intro msg
-    rw [balanceOf_append, balanceOf_pushes, balanceOf_pulls,
-      (perm.map (fun value => (toElements value).toArray)).count_eq msg, add_neg_cancel]
+    have counts := balanced.activeCount_push_eq_activeCount_pull_of_isBool msg
+      (fun i hi _ => binary i hi)
+    simpa [← count_activeMessages, messages] using counts
+  · intro perm
+    apply Balance.multiset.balancedInteractions_of_balanced _ rfl
+    refine ⟨binary, ?_⟩
+    simpa [messages] using perm.map (fun value => (toElements value).toArray)
 
 /-- A closed unit-transition ledger has exactly the same produced and consumed typed messages. -/
 theorem pairedLedger_balanced_iff {Row : Type*} (channel : Channel F Message)
     (rows : List Row) (edge : Row → Message F × Message F) :
     BalancedInteractions (rows.flatMap (fun row =>
       [channel.pulledValue (edge row).1, channel.pushedValue (edge row).2])) ↔
-      (2 * rows.length < ringChar F ∨ ringChar F = 0) ∧
-        (rows.map (fun row => (edge row).2)).Perm (rows.map (fun row => (edge row).1)) := by
+      (rows.map (fun row => (edge row).2)).Perm (rows.map (fun row => (edge row).1)) := by
   have perm := channel.pairedLedger_perm rows edge
   have transport : BalancedInteractions (rows.flatMap (fun row =>
       [channel.pulledValue (edge row).1, channel.pushedValue (edge row).2])) ↔
       BalancedInteractions ((rows.map (fun row => channel.pushedValue (edge row).2)) ++
         (rows.map (fun row => channel.pulledValue (edge row).1))) :=
-    ⟨fun valid => balancedInteractions_of_perm valid perm,
-      fun valid => balancedInteractions_of_perm valid perm.symm⟩
+    ⟨fun valid => BalancedInteractions.of_perm valid perm,
+      fun valid => BalancedInteractions.of_perm valid perm.symm⟩
   rw [transport]
-  simpa only [List.map_map, Function.comp_def, List.length_map, two_mul] using
+  simpa only [List.map_map, Function.comp_def] using
     channel.balanced_unit_iff (rows.map fun row => (edge row).2) (rows.map fun row => (edge row).1)
 
 /-- A balanced transition ledger yields the endpoint permutation needed by a ranked walk. -/
 theorem transitionLedger_balanced_iff {Row : Type*} (channel : Channel F Message)
     (initial final : Message F) (rows : List Row) (edge : Row → Message F × Message F) :
     BalancedInteractions (channel.transitionLedger initial final rows edge) ↔
-      (2 * (rows.length + 1) < ringChar F ∨ ringChar F = 0) ∧
-        (initial :: rows.map (fun row => (edge row).2)).Perm
+      (initial :: rows.map (fun row => (edge row).2)).Perm
           (final :: rows.map (fun row => (edge row).1)) := by
   have perm := transitionLedger_perm channel initial final rows edge
   have transport : BalancedInteractions (channel.transitionLedger initial final rows edge) ↔
       BalancedInteractions (((initial :: rows.map (fun row => (edge row).2)).map channel.pushedValue) ++
         ((final :: rows.map (fun row => (edge row).1)).map channel.pulledValue)) :=
-    ⟨fun valid => balancedInteractions_of_perm valid perm,
-      fun valid => balancedInteractions_of_perm valid perm.symm⟩
+    ⟨fun valid => BalancedInteractions.of_perm valid perm,
+      fun valid => BalancedInteractions.of_perm valid perm.symm⟩
   rw [transport, balanced_unit_iff]
-  simp only [List.length_cons, List.length_map, two_mul]
 
 /-- Removing zero contributions from Boolean-gated producers selects their unit occurrences. -/
 theorem pushedIfValues_filter_nonzero {Row : Type*} (channel : Channel F Message)
@@ -189,7 +203,7 @@ theorem pulledIfValues_filter_nonzero {Row : Type*} (channel : Channel F Message
   | cons row rest ih =>
     have tail := ih (fun other member => binary other (List.mem_cons_of_mem _ member))
     rcases binary row (List.mem_cons_self ..) with equal | equal <;>
-      simp only [List.map_cons, List.filter_cons, pulledIfValue, equal, neg_zero, neg_ne_zero, ne_eq,
+      simp only [List.map_cons, List.filter_cons, pulledIfValue, equal, ne_eq,
         not_true_eq_false, decide_false, Bool.false_eq_true, ↓reduceIte,
         zero_ne_one, one_ne_zero, not_false_eq_true, decide_true, List.map_cons,
         pulledValue]
@@ -214,11 +228,11 @@ theorem gated_unit_perm_of_balanced {Row : Type*} (channel : Channel F Message)
     simp [pulledValue]
   have selected := balanced.filter_nonzero
   rw [List.filter_append, producers, consumers] at selected
-  apply ((channel.balanced_unit_iff _ consumed).mp ?_).2
+  apply (channel.balanced_unit_iff _ consumed).mp
   simpa only [List.map_map, Function.comp_def] using selected
 
 /-- Boolean-gated physical producers and consumers match exactly on their active messages.
-The premise retains the characteristic bound on every occurrence, including padding on both sides. -/
+The verifier checks its count bound on the physical ledger, including padding on both sides. -/
 theorem gated_perm_of_balanced {Produced Consumed : Type*} (channel : Channel F Message)
     (produced : List Produced) (produceGate : Produced → F) (produceMessage : Produced → Message F)
     (consumed : List Consumed) (consumeGate : Consumed → F) (consumeMessage : Consumed → Message F)
@@ -232,7 +246,7 @@ theorem gated_perm_of_balanced {Produced Consumed : Type*} (channel : Channel F 
   have selected := balanced.filter_nonzero
   rw [List.filter_append, channel.pushedIfValues_filter_nonzero produced produceGate produceMessage producerBinary,
     channel.pulledIfValues_filter_nonzero consumed consumeGate consumeMessage consumerBinary] at selected
-  apply ((channel.balanced_unit_iff _ _).mp ?_).2
+  apply (channel.balanced_unit_iff _ _).mp
   simpa only [List.map_map, Function.comp_def] using selected
 
 /-- The physical ledger of Boolean-gated transitions, including both disabled occurrences. -/
@@ -289,42 +303,16 @@ theorem gatedTransitionLedger_filter_nonzero {Row : Type*} (channel : Channel F 
   simp only [gatedTransitionLedger, transitionLedger, List.filter_append, pairs]
   simp [pushedValue, pulledValue]
 
-/-- Actual physical balance yields an active endpoint permutation while retaining the
-characteristic bound on every physical occurrence, including padding. -/
+/-- Abstract physical balance is equivalent to an active endpoint permutation. -/
 theorem gatedTransitionLedger_balanced_iff {Row : Type*} (channel : Channel F Message)
     (initial final : Message F) (rows : List Row) (gate : Row → F)
     (edge : Row → Message F × Message F)
     (binary : ∀ row ∈ rows, gate row = 0 ∨ gate row = 1) :
     BalancedInteractions (channel.gatedTransitionLedger initial final rows gate edge) ↔
-      (2 * (rows.length + 1) < ringChar F ∨ ringChar F = 0) ∧
-        (initial :: ((rows.filter fun row => decide (gate row = 1)).map fun row => (edge row).2)).Perm
+      (initial :: ((rows.filter fun row => decide (gate row = 1)).map fun row => (edge row).2)).Perm
           (final :: ((rows.filter fun row => decide (gate row = 1)).map fun row => (edge row).1)) := by
-  constructor
-  · intro balanced
-    have selected := balanced.filter_nonzero
-    rw [channel.gatedTransitionLedger_filter_nonzero initial final rows gate edge binary] at selected
-    exact ⟨by simpa only [gatedTransitionLedger_length] using balanced.1,
-      ((channel.transitionLedger_balanced_iff _ _ _ _).mp selected).2⟩
-  · rintro ⟨bound, permutation⟩
-    have selected : BalancedInteractions
-        (channel.transitionLedger initial final (rows.filter fun row => decide (gate row = 1)) edge) := by
-      apply (channel.transitionLedger_balanced_iff _ _ _ _).mpr
-      refine ⟨?_, permutation⟩
-      rcases bound with bounded | characteristicZero
-      · left
-        have := List.length_filter_le (fun row => decide (gate row = 1)) rows
-        omega
-      · exact Or.inr characteristicZero
-    refine ⟨by simpa only [gatedTransitionLedger_length] using bound, ?_⟩
-    intro message
-    have zero : balanceOf
-        ((channel.gatedTransitionLedger initial final rows gate edge).filter
-          fun interaction => decide (interaction.mult = 0)) message = 0 :=
-      balanceOf_eq_of_const_zero
-        (fun _ member => of_decide_eq_true (List.mem_filter.mp member).2)
-    rw [balanceOf_eq_add_filter (· = 0), zero, zero_add,
-      channel.gatedTransitionLedger_filter_nonzero initial final rows gate edge binary]
-    exact selected.2 message
-
+  rw [← BalancedInteractions.filter_nonzero_iff,
+    channel.gatedTransitionLedger_filter_nonzero initial final rows gate edge binary,
+    channel.transitionLedger_balanced_iff]
 
 end Channel

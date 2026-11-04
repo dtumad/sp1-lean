@@ -2,7 +2,7 @@
 
 use crate::backend;
 use clean_backend::witness_generation::{generate, Program};
-use clean_backend::{prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec};
+use clean_backend::{EnsembleKey, EnsembleShapeError, GeneratedAirSpec};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
@@ -53,7 +53,7 @@ pub fn physical_balance<P: Program<F>>(public: &[F], tables: &[Vec<Vec<F>>]) -> 
             .iter()
             .map(PrimeField64::as_canonical_u64)
             .collect();
-        *messages.entry(message).or_default() += entry.multiplicity;
+        *messages.entry(message).or_default() += entry.signed_multiplicity();
     }
     channels.values().all(|(count, messages)| {
         (*count as u64) < F::ORDER_U64 && messages.values().all(|value| *value == F::ZERO)
@@ -71,8 +71,8 @@ pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
         assert_eq!(component["name"], P::COMPONENT_NAMES[index]);
         assert_eq!(component["width"], P::ROW_WIDTHS[index]);
         assert_eq!(
-            component["fixedWidth"],
-            <P as GeneratedAirSpec>::FIXED_WIDTHS[index]
+            component["fixedColumns"],
+            serde_json::json!(<P as GeneratedAirSpec>::FIXED_COLUMNS[index])
         );
         assert_eq!(component["fixedHeight"], P::FIXED_HEIGHTS[index]);
     }
@@ -82,7 +82,7 @@ pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
         let public = fields(&case["publicInput"]);
         assert_eq!(verifier_reference::<P>(&public), case["verifier"]);
         let private = fields(&case["privateInput"]);
-        let result = generate::<F, P>(&public, &private);
+        let result = generate::<F, P>(&public, &private, 1);
         if let Some(expected) = case.get("witness") {
             let witness = result.unwrap();
             assert_eq!(
@@ -138,13 +138,13 @@ pub fn verifier_reference<P: GeneratedAirSpec>(public: &[F]) -> serde_json::Valu
             .map(|entry| {
                 backend::interaction(
                     entry.channel,
-                    entry.multiplicity.as_canonical_u64(),
+                    entry.signed_multiplicity().as_canonical_u64(),
                     entry
                         .message
                         .iter()
                         .map(PrimeField64::as_canonical_u64)
                         .collect(),
-                    entry.assume_guarantees,
+                    entry.direction == clean_backend::witness_generation::Direction::Pull,
                 )
             })
             .collect(),
@@ -156,7 +156,7 @@ pub fn prove_case<P: Program<F> + GeneratedAirSpec>(
 ) -> (Vec<p3_matrix::dense::RowMajorMatrix<F>>, Vec<F>) {
     assert_eq!(case["accepted"], true);
     let public = fields(&case["publicInput"]);
-    let traces = generate::<F, P>(&public, &fields(&case["privateInput"]))
+    let traces = generate::<F, P>(&public, &fields(&case["privateInput"]), 1)
         .unwrap()
         .into_traces()
         .unwrap();
@@ -169,10 +169,10 @@ pub fn accept_traces<P: GeneratedAirSpec>(
     traces: Vec<p3_matrix::dense::RowMajorMatrix<F>>,
 ) {
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights).unwrap();
-    let config = backend::config_with_log_blowup(4);
-    let (proof, _) = prove_ensemble(&config, &statement, traces, public).unwrap();
-    verify_ensemble(&config, &statement, &proof, public).unwrap();
+    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights, 1).unwrap();
+    let mut key = EnsembleKey::new(backend::config_with_log_blowup(4), 1).unwrap();
+    let proof = key.prove(&statement, traces, public).unwrap();
+    key.verify(&statement, &proof, public).unwrap();
 }
 
 pub fn reject_traces<P: GeneratedAirSpec>(
@@ -180,19 +180,18 @@ pub fn reject_traces<P: GeneratedAirSpec>(
     traces: Vec<p3_matrix::dense::RowMajorMatrix<F>>,
 ) {
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = match clean_backend::GeneratedEnsemble::<F, P>::new(&heights) {
+    let statement = match clean_backend::GeneratedEnsemble::<F, P>::new(&heights, 1) {
         Ok(statement) => statement,
-        Err(EnsembleShapeError::FixedTraceHeight {
-            expected,
-            actual: 0,
-            ..
-        }) if expected > 0 => return,
+        Err(EnsembleShapeError::TraceHeight {
+            component,
+            height: 0,
+        }) if P::FIXED_HEIGHTS[component] > 0 => return,
         Err(error) => panic!("unexpected malformed-shape result: {error:?}"),
     };
-    let config = backend::config_with_log_blowup(4);
     backend::assert_backend_rejection(|| {
-        let (proof, _) = prove_ensemble(&config, &statement, traces, public).unwrap();
-        verify_ensemble(&config, &statement, &proof, public).is_err()
+        let mut key = EnsembleKey::new(backend::config_with_log_blowup(4), 1).unwrap();
+        let proof = key.prove(&statement, traces, public).unwrap();
+        key.verify(&statement, &proof, public).is_err()
     });
 }
 

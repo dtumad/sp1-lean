@@ -486,43 +486,43 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rcases hbin with h0 | h1
     · rw [h0, zero_mul, ovbWitness]
-      simp only [if_neg zero_ne_one]
+      simp only [ite_eq_right zero_ne_one]
       exact IsEqualWordOperation.spec_zero B #v[0, 0, 0, 32768] rfl
     · rcases he2sum with hw0 | hw1
       · rw [h1, hw0]
         norm_num
         rw [ovbWitness]
-        simp only [if_true, hw0, if_neg zero_ne_one]
+        simp only [ite_true, hw0, ite_eq_right zero_ne_one]
         exact IsEqualWordOperation.spec_populate B #v[0, 0, 0, 32768] 1
       · rw [h1, hw1]
         norm_num
         rw [ovbWitness]
-        simp only [if_true, hw1]
+        simp only [ite_true, hw1]
         exact IsEqualWordOperation.spec_populate_offGate B #v[0, 0, 0, 32768]
           #v[B[0], B[1], 0, 0] #v[0, 32768, 0, 0] rfl
   · rcases hbin with h0 | h1
     · rw [h0, zero_mul, ovcWitness]
-      simp only [if_neg zero_ne_one]
+      simp only [ite_eq_right zero_ne_one]
       exact IsEqualWordOperation.spec_zero C #v[65535, 65535, 65535, 65535] rfl
     · rcases he2sum with hw0 | hw1
       · rw [h1, hw0]
         norm_num
         rw [ovcWitness]
-        simp only [if_true, hw0, if_neg zero_ne_one]
+        simp only [ite_true, hw0, ite_eq_right zero_ne_one]
         exact IsEqualWordOperation.spec_populate C #v[65535, 65535, 65535, 65535] 1
       · rw [h1, hw1]
         norm_num
         rw [ovcWitness]
-        simp only [if_true, hw1]
+        simp only [ite_true, hw1]
         exact IsEqualWordOperation.spec_populate_offGate C #v[65535, 65535, 65535, 65535]
           #v[C[0], C[1], 0, 0] #v[65535, 65535, 0, 0] rfl
   · rcases he2sum with hw0 | hw1
     · rw [hw0]
       rcases hbin with h0 | h1
-      · rw [ovbWitness, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+      · rw [ovbWitness, ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_zero (#v[B[0], B[1], 0, 0] : Word (ZMod p))
           #v[0, 32768, 0, 0] rfl
-      · rw [ovbWitness, if_pos h1, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      · rw [ovbWitness, ite_eq_left h1, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_populate_offGate
           (#v[B[0], B[1], 0, 0] : Word (ZMod p)) #v[0, 32768, 0, 0]
           B #v[0, 0, 0, 32768] rfl
@@ -532,16 +532,16 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
           rw [hf] at hw1
           simp at hw1
         · exact h1
-      rw [hw1, ovbWitness, if_pos h1, if_pos hw1]
+      rw [hw1, ovbWitness, ite_eq_left h1, ite_eq_left hw1]
       exact IsEqualWordOperation.spec_populate (#v[B[0], B[1], 0, 0] : Word (ZMod p))
         #v[0, 32768, 0, 0] 1
   · rcases he2sum with hw0 | hw1
     · rw [hw0]
       rcases hbin with h0 | h1
-      · rw [ovcWitness, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+      · rw [ovcWitness, ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_zero (#v[C[0], C[1], 0, 0] : Word (ZMod p))
           #v[65535, 65535, 0, 0] rfl
-      · rw [ovcWitness, if_pos h1, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      · rw [ovcWitness, ite_eq_left h1, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_populate_offGate
           (#v[C[0], C[1], 0, 0] : Word (ZMod p)) #v[65535, 65535, 0, 0]
           C #v[65535, 65535, 65535, 65535] rfl
@@ -551,7 +551,7 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
           rw [hf] at hw1
           simp at hw1
         · exact h1
-      rw [hw1, ovcWitness, if_pos h1, if_pos hw1]
+      rw [hw1, ovcWitness, ite_eq_left h1, ite_eq_left hw1]
       exact IsEqualWordOperation.spec_populate (#v[C[0], C[1], 0, 0] : Word (ZMod p))
         #v[65535, 65535, 0, 0] 1
   · exact IsZeroWordOperation.spec_populate (cComp C f) ir
@@ -560,7 +560,7 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
       exact fun hx => absurd hx zero_ne_one
     · rw [hg1, show wCnegWitness ir C f =
           AddOperation.populate (cComp C f) (populateAbsC C f) from by
-          rw [wCnegWitness, if_pos hg1]]
+          rw [wCnegWitness, ite_eq_left hg1]]
       exact AddOperation.spec_populate (cComp_isU64 hcU f) (populateAbsC_isU64 hcU f) 1
   · rcases hgrneg with hg0 | hg1
     · rw [hg0]
@@ -570,45 +570,45 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
         hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum hg1
       have hRCR : populateRemComp B C f = populateRemainder B C f := by
         unfold populateRemComp remCompBits populateRemainder
-        rw [if_neg (fun hx => absurd (h67.symm.trans hx) zero_ne_one)]
+        rw [ite_eq_right (fun hx => absurd (h67.symm.trans hx) zero_ne_one)]
       rw [hRCR, show wRnegWitness ir B C f =
           AddOperation.populate (populateRemainder B C f) (populateAbsRem B C f) from by
-          rw [wRnegWitness, if_pos hg1]]
+          rw [wRnegWitness, ite_eq_left hg1]]
       exact AddOperation.spec_populate (populateRemainder_isU64 B C f)
         (populateAbsRem_isU64 B C f) 1
   · rcases hltgbool with hg0 | hg1
-    · rw [hg0, ltFlagsWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
-        ltClWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
-        ltNotEqInvWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
-        ltBitWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one)]
+    · rw [hg0, ltFlagsWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
+        ltClWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
+        ltNotEqInvWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
+        ltBitWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one)]
       exact LtOperationUnsigned.spec_zero (populateAbsRem B C f) (populateMaxAbsCOr1 C f) rfl
-    · rw [hg1, ltClWitness, if_pos hg1, ltFlagsWitness, if_pos hg1,
-        ltNotEqInvWitness, if_pos hg1, ltBitWitness, if_pos hg1, ltClWitness, if_pos hg1]
+    · rw [hg1, ltClWitness, ite_eq_left hg1, ltFlagsWitness, ite_eq_left hg1,
+        ltNotEqInvWitness, ite_eq_left hg1, ltBitWitness, ite_eq_left hg1, ltClWitness, ite_eq_left hg1]
       exact LtOperationUnsigned.spec_populate (populateAbsRem_isU64 B C f)
         (populateMaxAbsCOr1_isU64 hcU f)
   · exact ⟨bMsbCell_bool hbU f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
-      rw [bMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      rw [bMsbCell, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
       exact (U16MSBOperation.spec_populate hbU3 1).2 rfl⟩
   · exact ⟨cMsbCell_bool hcU f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
-      rw [cMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      rw [cMsbCell, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
       exact (U16MSBOperation.spec_populate hcU3 1).2 rfl⟩
   · exact ⟨remMsbCell_bool B C f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
-      rw [remMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      rw [remMsbCell, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
       exact (U16MSBOperation.spec_populate hRb3 1).2 rfl⟩
   · exact ⟨bMsbCell_bool hbU f, fun hg => by
-      rw [bMsbCell, if_pos hg]
+      rw [bMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hbU1 1).2 rfl⟩
   · exact ⟨cMsbCell_bool hcU f, fun hg => by
-      rw [cMsbCell, if_pos hg]
+      rw [cMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hcU1 1).2 rfl⟩
   · exact ⟨remMsbCell_bool B C f, fun hg => by
-      rw [remMsbCell, if_pos hg]
+      rw [remMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hRb1 1).2 rfl⟩
   · exact ⟨quotMsbCell_bool B C f, fun hg => by
-      rw [quotMsbCell, if_pos hg]
+      rw [quotMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hQb1 1).2 rfl⟩
 
 end SP1Clean.DivRemChip.CompareComplete

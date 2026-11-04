@@ -19,7 +19,7 @@ The signed division/remainder cases are the ones with content: the model compute
 This module replaces the former `riscv-lean` dependency's `SailPureToInstructions` role.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.RV64
 

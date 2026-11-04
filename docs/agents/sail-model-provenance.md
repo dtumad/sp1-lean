@@ -60,9 +60,20 @@ requires prepared output; `--source-only` checks input pins without it in lightw
 jobs. Fingerprints authenticate the reviewed snapshot; fresh regeneration supplies independent
 evidence. Neither the preparation script nor a cache restore updates the expected fingerprint.
 
-The compiler carries only upstream Sail #1742's module-header patch on the existing compiler
-base; the runtime carries lean-sail #13. Both use published immutable revisions. Consume compatible
-upstream revisions when those changes merge. The module migration preserves generated bodies.
+The compiler carries the module-header adaptation from Sail #1742 on the active `sail2` branch.
+The runtime carries lean-sail #13. Both use published immutable revisions. Generated declarations
+now live directly in `LeanRV64D`; `LeanRV64D.Defs` remains a module filename, not a declaration
+namespace. The generator also adjusts supplementary files that opened the former namespace.
+Consume compatible upstream revisions when these adaptations merge.
+
+Lean 4.35 rejects a flat variant with more than 244 constructors carrying fields during layout
+computation, including noncomputable declarations. The generator splits large variants into
+mutually defined chunks and exposes the original constructor names as match-pattern abbreviations.
+Every alternative and its arguments remain represented, and exhaustive matches still cover all
+alternatives. This is a generator-owned representation workaround; remove it when the pinned Lean
+compiler supports the original flat variants. The generator's large-union regression covers the
+chunk boundary. Generated instruction matches and the complete model must also compile before a
+replacement is accepted.
 
 The narrow RvfiDii legacy-do Lake library is a temporary elaboration workaround (#6), not a
 generated-source modification. Coordinate its replacement with module-system support (#33);

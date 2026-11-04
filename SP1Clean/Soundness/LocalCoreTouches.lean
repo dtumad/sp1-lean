@@ -41,7 +41,7 @@ theorem syscall_program_committed_of_balance {image : ProgramImage} {source : Ex
       syscallInstrsRow_typedProgram_of_component _ witness.data (systemTable_component witness 3)]
     exact List.mem_cons_self
   exact program_pull_committed_of_balance valid witness constraints balanced message interaction emitted
-    (by change -row.is_real = -1; rw [real]) rfl
+    (by exact ⟨rfl, real⟩) rfl
 
 /-- The complete local AIR authenticates every active physical syscall fetch. -/
 theorem syscall_program_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)

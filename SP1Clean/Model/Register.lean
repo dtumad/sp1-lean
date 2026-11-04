@@ -26,7 +26,7 @@ The seam between the generated Sail model and this project's 5-bit register indi
 
 set_option linter.unusedSimpArgs false
 
-open LeanRV64D.Defs
+open LeanRV64D
 -- `SequentialState` and `trivialChoiceSource` both live in `Sail.ConcurrencyInterfaceV1` as of
 -- lean-sail v5 (v4 had them at `PreSail.` and `Sail.` respectively). Neither has a `LeanRV64D.*`
 -- shim in `SpecializationV1.lean`, so they are spelled out here.

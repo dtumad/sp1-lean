@@ -18,7 +18,7 @@ open Circuit Air.Flat Channels Model.Core
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
 /-- The declaration channel is fresh for the local core. -/
 private theorem declaration_fresh :
@@ -32,17 +32,6 @@ private theorem declaration_fresh :
     StaticTable.ofRows, Channel.toRaw] at used
 
 omit [Fact (2 ^ 25 < p)] in
-/-- A fresh verifier channel whose stem differs from the declaration name at its fifth character. -/
-private theorem fresh_ne_declaration (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
-    (long : 4 < stem.toList.length) (declaration : stem.toList[4]? ≠ some 'n') :
-    VerifierChannel.channel stem ens ≠ CommitmentDeclaration.channel.toRaw := by
-  intro same
-  have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-  dsimp only [VerifierChannel.channel, Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-  rw [String.toList_append, List.getElem?_append_left long] at heads
-  exact declaration (heads.trans (by simp [CommitmentDeclaration.channel]))
-
-omit [Fact (2 ^ 25 < p)] in
 /-- A closed boundary that never mentions the declaration channel emits nothing on it. -/
 private theorem closed_silent (closed : ClosedVerifier (ZMod p))
     (silent : CommitmentDeclaration.channel.toRaw ∉ closed.circuit.channels) (env : Environment (ZMod p)) :
@@ -52,33 +41,54 @@ private theorem closed_silent (closed : ClosedVerifier (ZMod p))
 
 /-- No public-verifier layer of the installed assembly emits a declaration. -/
 theorem verifier_declarations_silent (env : Environment (ZMod p)) :
-    (Installed image source outgoing final bankFinal channels).verifierOperations.interactionValuesWith
+    (Installed image source outgoing final bankFinal).verifierOperations.interactionValuesWith
       CommitmentDeclaration.channel.toRaw env = [] := by
-  unfold Installed ensemble
-  rw [ClosedVerifier.install_verifier_interactions_of_ne _ _ _ _ (fresh_ne_declaration _ _
-      (by rw [show (FinalMemoryChangeBoundary.closed (p := p) source.sail.memorySnapshot outgoing).name =
-        "final-memory-change" from rfl]; decide)
-      (by rw [show (FinalMemoryChangeBoundary.closed (p := p) source.sail.memorySnapshot outgoing).name =
-        "final-memory-change" from rfl]; decide)),
+  let registration := source_registration (p := p) image source outgoing
+  let original := HostHintReadLocal.ensemble image source HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)
+    (sourceChannels outgoing) (source_unique_names image source outgoing)
+    registration.unique registration.tables
+  have declared : (CommitmentDeclaration.channel (p := p)).toRaw ∈
+      HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels outgoing) := by
+    simp [HostLocalCore.registry, sourceChannels]
+  have originalDeclared : CommitmentDeclaration.channel.toRaw ∈ original.channels :=
+    List.mem_append_left _ declared
+  have boundaryRegistered : (HostHintQueueBoundary.boundary source final bankFinal).circuit.channels ⊆ original.channels := by
+    intro selected used
+    apply List.mem_append_left _ (registration.boundary ?_)
+    by_contra absent
+    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at absent
+    exact HostHintQueueBoundary.boundary_silent selected absent.1 absent.2.1 absent.2.2.1 absent.2.2.2 used
+  let beforeChanges := withReceipts image source outgoing final bankFinal HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels outgoing)
+    (source_unique_names image source outgoing) registration
+  have changesRegistered : (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot outgoing).circuit.channels ⊆ beforeChanges.channels := by
+    intro selected used
+    apply List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels ?_))
+    have equal : selected = FinalMemoryChange.channel.toRaw := by
+      simp only [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
+        circuit_norm, List.mem_append, List.mem_ofFn, List.mem_singleton] at used
+      rcases used with ⟨_, same⟩ | same
+      · exact same.symm
+      · exact same
+    simp [equal]
+  change ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot outgoing).install
+    beforeChanges changesRegistered).verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = []
+  rw [ClosedVerifier.install_verifier_interactions_of_mem _ beforeChanges changesRegistered env _
+      (List.mem_append_left _ originalDeclared),
     closed_silent _ (by simp [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
       CommitmentDeclaration.channel, FinalMemoryChange.channel, Channel.toRaw, circuit_norm]), List.append_nil]
-  change ((HostHintQueueBoundary.boundary source final bankFinal).install
-    (HostHintReadLocal.ensemble image source HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)
-      channels _)).verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = []
-  rw [ClosedVerifier.install_verifier_interactions_of_ne _ _ _ _ (fresh_ne_declaration _ _
-      (by rw [show (HostHintQueueBoundary.boundary source final bankFinal).name = "host-boundary" from rfl]; decide)
-      (by rw [show (HostHintQueueBoundary.boundary source final bankFinal).name = "host-boundary" from rfl]; decide)),
+  change ((HostHintQueueBoundary.boundary source final bankFinal).install original boundaryRegistered).verifierOperations.interactionValuesWith
+    CommitmentDeclaration.channel.toRaw env = []
+  rw [ClosedVerifier.install_verifier_interactions_of_mem _ original boundaryRegistered env _ originalDeclared,
     closed_silent _ (HostHintQueueBoundary.boundary_silent _
       (by simp [CommitmentDeclaration.channel, HostHintQueue.stateChannel, Channel.toRaw])
       (by simp [CommitmentDeclaration.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [CommitmentDeclaration.channel, HostCommitChip.stateChannel, Channel.toRaw])
       (by simp [CommitmentDeclaration.channel, HostExitBoundary.channel, Channel.toRaw])), List.append_nil]
-  change ((LocalSourceBoundary.checker image source).install (HostLocalCore.baseEnsemble image source _ _ _)).verifierOperations.interactionValuesWith
+  change ((LocalSourceBoundary.checker image source).install (HostLocalCore.baseEnsemble image source _ _ _ _ _)).verifierOperations.interactionValuesWith
     CommitmentDeclaration.channel.toRaw env = []
-  rw [PublicVerifier.install_verifier_interactions _ _ _ _ (fresh_ne_declaration _ _
-    (by rw [show (LocalSourceBoundary.checker (p := p) image source).name = "sp1.local.source" from rfl]; decide)
-    (by rw [show (LocalSourceBoundary.checker (p := p) image source).name = "sp1.local.source" from rfl]; decide))]
+  rw [PublicVerifier.install_verifier_interactions_of_mem _ _ env _ declared]
   exact LocalCore.boundaryVerifier_silent image source _ declaration_fresh env
 
 omit [Fact (2 ^ 25 < p)] in
@@ -111,13 +121,14 @@ private theorem commit_authenticates {property : CommitmentDeclaration.Row (ZMod
   simp only [Channel.pulledIfValue]
   beta_reduce at binary
   rcases binary with inactive | active
-  · exact Or.inl (by rw [inactive, neg_zero])
-  · exact Or.inr (congrArg Neg.neg active)
+  · exact Or.inl inactive
+  · right
+    simpa only [Interaction.Pull, true_and] using active
 
 /-- Only the commitment handlers touch the declaration channel, and they only request. -/
 theorem declaration_sources (property : CommitmentDeclaration.Row (ZMod p) → Prop)
     (component : Component (ZMod p))
-    (member : component ∈ (Installed image source outgoing final bankFinal channels).tables) :
+    (member : component ∈ (Installed image source outgoing final bankFinal).tables) :
     component.Authenticates CommitmentDeclaration.channel property := by
   simp only [Installed, ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install,
     Ensemble.replaceComponent, base, HostHintQueueBoundary.ensemble, HaltPadding.install,

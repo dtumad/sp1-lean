@@ -47,12 +47,12 @@ theorem write_sound (interval : MemoryInterval) (address query : ℕ) (value : B
       simp only [List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl | rfl
       all_goals simp only [Contains] at contains inside ⊢
-      · exact ⟨by omega, by rw [if_neg (by omega)]⟩
-      · exact ⟨by omega, by rw [if_pos (by omega)]⟩
-      · exact ⟨by omega, by rw [if_neg (by omega)]⟩
+      · exact ⟨by omega, by rw [ite_eq_right (by omega)]⟩
+      · exact ⟨by omega, by rw [ite_eq_left (by omega)]⟩
+      · exact ⟨by omega, by rw [ite_eq_right (by omega)]⟩
   · next outside =>
       obtain rfl := List.mem_singleton.mp member
-      exact ⟨inside, by rw [if_neg (by intro equal; subst query; exact outside inside)]⟩
+      exact ⟨inside, by rw [ite_eq_right (by intro equal; subst query; exact outside inside)]⟩
 
 /-- Splitting an interval loses no address. -/
 theorem write_complete (interval : MemoryInterval) (address query : ℕ) (value : BitVec 8)
@@ -231,7 +231,7 @@ theorem intervals_sound (memory : ByteMemory) (limit : ℕ) (interval : MemoryIn
     (member : interval ∈ memory.intervals limit) (query : ℕ) (inside : interval.Contains query) :
     query < limit ∧ memory.read query = interval.value := by
   have facts := (memory.canonicalBelow limit).rawIntervals_sound limit interval member query inside
-  exact ⟨facts.1, by simpa only [canonicalBelow_read, if_pos facts.1] using facts.2⟩
+  exact ⟨facts.1, by simpa only [canonicalBelow_read, ite_eq_left facts.1] using facts.2⟩
 
 /-- Normalization loses no address and adds no caller readiness condition. -/
 theorem intervals_complete (memory : ByteMemory) (limit query : ℕ) (inside : query < limit) :

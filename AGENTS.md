@@ -30,10 +30,9 @@ Organize towards Semantics / Circuits / Machine / Export, with pure contracts be
 implementations and feature-local proofs. Follow Clean's Specs / Types / Gadgets / Air / Backends
 separation where it applies. See [architecture](docs/architecture.md) for the current layout.
 
-`ToClean`, `ToPolyFun` and `ToMathlib` mean **To Upstream**. Keep additive APIs there, in upstream
+`ToClean` and `ToMathlib` mean **To Upstream**. Keep additive APIs there, in upstream
 namespaces, with a module docstring describing the missing upstream capability. They may not
-import SP1Clean: ToMathlib imports Mathlib; ToPolyFun imports PolyFun; ToClean imports Clean and
-may use the other two. Delete the local addition and repoint imports when upstream supplies it.
+import SP1Clean: ToMathlib imports Mathlib; ToClean imports Clean and may use ToMathlib and PolyFun. Delete the local addition and repoint imports when upstream supplies it.
 A fork is justified only for a necessary change to an existing upstream declaration that an
 extension cannot express. Keep the patch minimal and document its upstream exit.
 
@@ -78,7 +77,7 @@ migration supersedes their historical compatibility-preservation guidance.
 ```sh
 python3 scripts/prepare_sail.py
 lake build --wfail --iofail
-lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib ToPolyFun
+lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib
 lake test
 lake lint
 scripts/run_audit.sh

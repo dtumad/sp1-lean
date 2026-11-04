@@ -17,23 +17,27 @@ open Circuit Air.Flat SP1Clean SP1Clean.Channels
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 private def program (PublicIO : TypeMap) [ProvableType PublicIO] :
-    SoundEnsemble (ZMod p) PublicIO :=
-  SoundEnsemble.empty (ZMod p) PublicIO
-    |>.addTable { circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions }
+    SoundEnsemble (ZMod p) PublicIO Balance.logUp :=
+  SoundEnsemble.empty (ZMod p) PublicIO Balance.logUp
+    |>.addChannel programChannel.toRaw
+    |>.addTable { circuit := ProgramProviderChip.circuit, Assumptions := (ProgramProviderChip.circuit).Assumptions, generation := ProgramProviderChip.generation }
+        (by simp [circuit_norm, ProgramProviderChip.circuit])
         (by simp [circuit_norm, ProgramProviderChip.circuit]) (by simp [circuit_norm])
-    |>.addFinishedChannel programChannel.toRaw
+    |>.markFinished programChannel.toRaw
 
 private def memory (PublicIO : TypeMap) [ProvableType PublicIO] :
-    SoundEnsemble (ZMod p) PublicIO :=
-  SoundEnsemble.empty (ZMod p) PublicIO
-    |>.addTable { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions }
+    SoundEnsemble (ZMod p) PublicIO Balance.logUp :=
+  SoundEnsemble.empty (ZMod p) PublicIO Balance.logUp
+    |>.addChannel memoryChannel.toRaw
+    |>.addTable { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions, generation := MemoryProviderChip.generation }
+        (by simp [circuit_norm, MemoryProviderChip.circuit])
         (by simp [circuit_norm, MemoryProviderChip.circuit]) (by simp [circuit_norm])
-    |>.addFinishedChannel memoryChannel.toRaw
+    |>.markFinished memoryChannel.toRaw
 
 private def boundary (PublicIO : TypeMap) [ProvableType PublicIO] :
-    SoundEnsemble (ZMod p) PublicIO :=
+    SoundEnsemble (ZMod p) PublicIO Balance.logUp :=
   memory (p := p) PublicIO
-    |>.addTable { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }
+    |>.addTable { circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions, generation := MemoryFinalizeChip.generation }
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, memory])
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, memory])
         (by simp [circuit_norm, MemoryFinalizeChip.circuit, MemoryProviderChip.circuit, memory])
@@ -48,7 +52,7 @@ theorem memoryFinished (PublicIO : TypeMap) [ProvableType PublicIO] :
 
 theorem boundaryComponents (PublicIO : TypeMap) [ProvableType PublicIO] :
     (boundary (p := p) PublicIO).tables =
-      [{ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions }, { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions }] := rfl
+      [{ circuit := MemoryFinalizeChip.circuit, Assumptions := (MemoryFinalizeChip.circuit).Assumptions, generation := MemoryFinalizeChip.generation }, { circuit := MemoryProviderChip.circuit, Assumptions := (MemoryProviderChip.circuit).Assumptions, generation := MemoryProviderChip.generation }] := rfl
 
 theorem boundaryNames (PublicIO : TypeMap) [ProvableType PublicIO] :
     ((boundary (p := p) PublicIO).tables.map (·.circuit.name)) =

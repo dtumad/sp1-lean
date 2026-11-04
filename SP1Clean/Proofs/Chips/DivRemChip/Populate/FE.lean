@@ -528,14 +528,14 @@ theorem ovbResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [e1, hl1, hl2]
   simp only [ovbWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
     by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
         + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2,
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2,
         IsEqualWordOperation.result_eq_toElements]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2,
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2,
         IsEqualWordOperation.result_eq_toElements]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1]
     rfl
 
 omit [Fact (2 ^ 24 < p)] in
@@ -590,14 +590,14 @@ theorem ovcResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [e1, hl1, hl2]
   simp only [ovcWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
     by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
         + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2,
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2,
         IsEqualWordOperation.result_eq_toElements]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2,
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2,
         IsEqualWordOperation.result_eq_toElements]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1]
     rfl
 
 omit [Fact (2 ^ 24 < p)] in
@@ -1203,8 +1203,8 @@ theorem mulLowerProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [mulProgram_eval]
   simp only [Bool.false_eq_true, ↓reduceIte, Witgen.eval_gateFE, populateMulLower]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1, hinner]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1, MulOperation.fromElements_zero]
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1, hinner]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1, MulOperation.fromElements_zero]
 
 include hWB hWC hUB hUC in
 /-- Evaluating the upper product payload is `populateMulUpper` (under the flag binarities the
@@ -1239,22 +1239,22 @@ theorem mulUpperProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   by_cases h1 : vir = 1
   · by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[1]
         + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[3] = 1
-    · rw [if_pos (by
+    · rw [ite_eq_left (by
           rw [hband, feq_true env _ _ _ hir h1, feq_true env _ _ _ (longSumF_eval selectors env) h2]
           rfl),
-        if_pos ⟨h1, h2⟩, hinner]
-    · rw [if_neg (by
+        ite_eq_left ⟨h1, h2⟩, hinner]
+    · rw [ite_eq_right (by
           rw [hband]
           intro hb
           simp only [Bool.and_eq_true] at hb
           exact feq_false env _ _ _ (longSumF_eval selectors env) h2 hb.2),
-        if_neg (by intro h; exact h2 h.2), MulOperation.fromElements_zero]
-  · rw [if_neg (by
+        ite_eq_right (by intro h; exact h2 h.2), MulOperation.fromElements_zero]
+  · rw [ite_eq_right (by
         rw [hband]
         intro hb
         simp only [Bool.and_eq_true] at hb
         exact feq_false env _ _ _ hir h1 hb.1),
-      if_neg (by intro h; exact h1 h.1), MulOperation.fromElements_zero]
+      ite_eq_right (by intro h; exact h1 h.1), MulOperation.fromElements_zero]
 
 end MulSites
 
@@ -1310,12 +1310,12 @@ theorem ovbFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [ovbFE, Witgen.eval_gateFE, Witgen.eval_iteFE]
   simp only [ovbWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
     by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
         + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2, htrunc]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2, hfull]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1,
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2, htrunc]
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2, hfull]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1,
       IsEqualWordOperation.fromElements_zero]
 
 omit [Fact (2 ^ 24 < p)] in
@@ -1341,12 +1341,12 @@ theorem ovcFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [ovcFE, Witgen.eval_gateFE, Witgen.eval_iteFE]
   simp only [ovcWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
     by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
         + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2, htrunc]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2, hfull]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1,
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2, htrunc]
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2, hfull]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1,
       IsEqualWordOperation.fromElements_zero]
 
 end OvSites
@@ -1473,11 +1473,11 @@ private theorem remAddendU_toNat
     have hrc1 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 1 (by omega)
     have hrc2 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 2 (by omega)
     have hrc3 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 3 (by omega)
-    rw [remAddendU, dif_pos hk4, remAddendNat, dif_pos hk4]
+    rw [remAddendU, dite_eq_left hk4, remAddendNat, dite_eq_left hk4]
     refine ⟨?_, by interval_cases k <;> omega⟩
     interval_cases k <;>
       simp only [circuit_norm, hrc0, hrc1, hrc2, hrc3]
-  · rw [remAddendU, dif_neg (by omega), remAddendNat, dif_neg (by omega)]
+  · rw [remAddendU, dite_eq_right (by omega), remAddendNat, dite_eq_right (by omega)]
     refine ⟨?_, by
       have := Nat.mul_le_mul hrnval (le_refl 65535)
       omega⟩

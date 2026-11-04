@@ -160,7 +160,7 @@ private theorem touch_of_time (input : Inputs (ZMod p)) (ram : RamKey input.push
       ((input.addr0.val + input.addr1.val * 2 ^ 16 + input.addr2.val * 2 ^ 32) / 8)) := by
     unfold MemoryMsg.locOf
     simp only [Inputs.pushed]
-    exact if_neg notRegister
+    exact ite_eq_right notRegister
   refine ⟨rfl, Nat.le_refl _, Nat.le_add_right _ _, Or.inr ?_⟩
   rw [hloc, writeOffset_ram]
   exact time

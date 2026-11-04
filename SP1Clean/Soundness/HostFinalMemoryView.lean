@@ -21,10 +21,11 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
   {names : UniqueNames image source target others resources}
+  {registration : Registration image source target others resources channels}
 
 /-- The original final tables, target consumers and fixed membership providers, without reconstructed rows. -/
 def boundaryTables
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :=
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :=
   [(finalSlot ⟨0, by decide⟩).table witness, (finalSlot ⟨1, by decide⟩).table witness,
    (finalSlot ⟨2, by decide⟩).table witness,
    (checkSlot ⟨0, by decide⟩).table witness, (checkSlot ⟨1, by decide⟩).table witness,
@@ -32,58 +33,67 @@ def boundaryTables
 
 /-- Every boundary table is an unchanged physical table of the complete host assembly. -/
 theorem boundaryTables_subset
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
     boundaryTables witness ⊆ witness.tables := by
   intro table member
   simp only [boundaryTables, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact TableSlot.table_mem _ witness
 
+private theorem boundaryTables_components
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
+    (boundaryTables witness).map (·.component) =
+      (FinalMemoryChecks.ensemble (p := p) source.sail.memorySnapshot target [] []
+        (FinalMemoryChecks.empty_unique_names target)).tables := by
+  simp only [boundaryTables, List.map_cons, List.map_nil, TableSlot.table_component]
+  rfl
+
 /-- Reuse the boundary assembly with canonical data derived from its seven physical tables. -/
 def boundaryWitness
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
     EnsembleWitness (FinalMemoryChecks.ensemble (p := p) source.sail.memorySnapshot target [] []
       (FinalMemoryChecks.empty_unique_names target)) :=
-  EnsembleWitness.ofTables _ (boundaryTables witness) () (by
-    simp only [boundaryTables, List.map_cons, List.map_nil, TableSlot.table_component]
-    rfl)
+  EnsembleWitness.ofTables _ (boundaryTables witness) () (boundaryTables_components witness)
 
 /-- Decode the installed final inventory through the existing ordered boundary decoder. -/
 def finalRecords
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
     List (MemoryMsg (ZMod p)) := FinalMemoryChecks.records (boundaryWitness witness)
 
 /-- The proof view owns no independently supplied rows. -/
 @[simp] theorem boundaryWitness_tables
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
-    (boundaryWitness witness).tables = withDerivedData (boundaryTables witness) := rfl
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
+    (boundaryWitness witness).tables = withDerivedData (boundaryTables witness)
+      (by simpa only [← boundaryTables_components witness, List.map_map, Function.comp_def] using
+        (FinalMemoryChecks.ensemble (p := p) source.sail.memorySnapshot target [] []
+          (FinalMemoryChecks.empty_unique_names target)).unique_names) #[] := rfl
 
 /-- Row assertions survive selection of the boundary inventory. -/
 theorem boundaryWitness_constraints
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (checked : witness.Constraints) : (boundaryWitness witness).Constraints := by
   intro table member row rowMember
   have registered := EnsembleWitness.component_mem_tables_of_mem member
   rw [boundaryWitness_tables, withDerivedData] at member
-  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  obtain ⟨⟨original, originalMember⟩, _, rfl⟩ := List.mem_map.mp member
   exact FinalMemoryChecks.component_constraints_setData original.component registered
     (checked original (boundaryTables_subset witness originalMember) row rowMember)
 
 /-- Byte predicates depend on the retained messages, not the selected canonical data map. -/
 theorem boundaryWitness_byte
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (boundaryWitness witness).tables,
       table.ChannelGuarantees byteChannel.toRaw := by
   intro table member row rowMember interaction emitted same
   rw [boundaryWitness_tables, withDerivedData] at member
-  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  obtain ⟨⟨original, originalMember⟩, _, rfl⟩ := List.mem_map.mp member
   have inherited := guarantees original (boundaryTables_subset witness originalMember)
     row rowMember interaction emitted same
   have eval_eq : Expression.eval (Environment.fromArray row original.data) =
-      Expression.eval (Environment.fromArray row (deriveProverData (boundaryTables witness))) :=
+      Expression.eval (Environment.fromArray row (deriveProverData (boundaryTables witness) #[])) :=
     funext fun expression => Expression.eval_congr
       (env := Environment.fromArray row original.data)
-      (env' := Environment.fromArray row (deriveProverData (boundaryTables witness))) rfl expression
+      (env' := Environment.fromArray row (deriveProverData (boundaryTables witness) #[])) rfl expression
   rcases interaction with ⟨declared, mult, msg, assume⟩
   cases same
   simpa only [AbstractInteraction.Guarantees, Table.environment, eval_eq, byteChannel, Channel.toRaw] using inherited

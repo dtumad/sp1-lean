@@ -36,11 +36,12 @@ theorem profile_of_constraints (input : Var SyscallInstrsChip.Inputs (ZMod p))
   simp only [circuit_norm, SyscallCodeGuard.circuit, memoryEval]
 
 /-- Raw constraints authenticate the native profile even before Memory grounding. -/
-theorem constraints_profile (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
+theorem constraints_profile
+    {generation : WitnessGeneration.Generation (ZMod p) SyscallInstrsChip.Inputs} (env : Environment (ZMod p))
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold env) :
     SyscallCodeGuard.Spec
-      ⟨(({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env).op_a_memory.prev_value,
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env).is_real⟩ := by
+      ⟨(({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env).op_a_memory.prev_value,
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env).is_real⟩ := by
   have spec := profile_of_constraints _ _ env ((Component.constraintsHold_iff env).mp constraints)
   simpa only [Component.rowInput, eval_varFromOffset_valueFromOffset] using spec
 
@@ -56,23 +57,26 @@ theorem main_constraints_original (input : Var SyscallInstrsChip.Inputs (ZMod p)
     GeneralFormalCircuit.WithHint.toSubcircuit, circuit_norm] using original
 
 /-- Strengthening the instruction component preserves every original assertion and lookup. -/
-theorem constraints_original (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env := by
+theorem constraints_original
+    {generation : WitnessGeneration.Generation (ZMod p) SyscallInstrsChip.Inputs} (env : Environment (ZMod p))
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold env) :
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold env := by
   exact (Component.constraintsHold_iff env).mpr
     (main_constraints_original _ _ env ((Component.constraintsHold_iff env).mp constraints))
 
 /-- The additional code assertions change no channel message or multiplicity. -/
-theorem interactions_original :
-    ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.interactions =
-      ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).operations.interactions := by
+theorem interactions_original
+    {generation : WitnessGeneration.Generation (ZMod p) SyscallInstrsChip.Inputs} :
+    ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.interactions =
+      ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation } : Component (ZMod p)).operations.interactions := by
   rw [Component.interactions_eq, Component.interactions_eq]
   simp only [Component.rowOperations, circuit, main, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, FormalAssertion.toSubcircuit_interactions,
     SyscallCodeGuard.circuit, SyscallCodeGuard.main_interactions, List.append_nil]
 
 /-- Six shared products keep the native guard at degree three. -/
-theorem width_eq : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).width =
-    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).width + 6 := rfl
+theorem width_eq
+    {generation : WitnessGeneration.Generation (ZMod p) SyscallInstrsChip.Inputs} : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).width =
+    ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation } : Component (ZMod p)).width + 6 := rfl
 
 end SP1Clean.CoreSyscallChip

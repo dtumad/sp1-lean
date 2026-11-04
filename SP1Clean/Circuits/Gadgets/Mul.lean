@@ -32,8 +32,8 @@ private lemma msb_eq_of_op5 {x lo msb : ZMod p}
   have hxval : x.val = lo.val + ((x - lo) * 256⁻¹).val * 256 := byte_compose_val hlo hhi hreass
   have key : (32768 ≤ x.val) ↔ (128 ≤ ((x - lo) * 256⁻¹).val) := by omega
   rcases hbool with h0 | h1
-  · subst h0; rw [if_neg (fun hx => zero_ne_one (hiff.mpr (key.mp hx)))]
-  · subst h1; rw [if_pos (key.mpr (hiff.mp rfl))]
+  · subst h0; rw [ite_eq_right (fun hx => zero_ne_one (hiff.mpr (key.mp hx)))]
+  · subst h1; rw [ite_eq_left (key.mpr (hiff.mp rfl))]
 
 /-- Reverse of `msb_eq_of_op5` (for completeness): recover the op5 `MSB` byte-row content. -/
 private lemma op5_iff_of_msb_eq {x lo msb : ZMod p}
@@ -97,7 +97,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
       have hcU := U16toU8OperationSafe.isU64_of_decomp hc_low
       obtain ⟨hbU0, hbU1, hbU2, hbU3⟩ := Word.lt_cases_of_isU64 hbU
       obtain ⟨hcU0, hcU1, hcU2, hcU3⟩ := Word.lt_cases_of_isU64 hcU
-      have hneg : - input_is_real = -1 := by rw [hr]
+      have hneg : input_is_real = 1 := by rw [hr]
       obtain ⟨ecar_eq, eprod_eq, ebl_eq, ecl_eq, ebm_eq, ecm_eq, _, _, _⟩ := _hicols
       have eb : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
         intro i hi; rw [← hib, Vector.getElem_map]
@@ -236,9 +236,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
             Vector.getElem_mapRange]
           linear_combination hch15
       · intro k hk
-        interval_cases k <;> simp only [productVal, Nat.reduceLT, dif_pos] <;> assumption
+        interval_cases k <;> simp only [productVal, Nat.reduceLT, dite_eq_left] <;> assumption
       · intro k hk
-        interval_cases k <;> simp only [carryVal, Nat.reduceLT, dif_pos] <;> assumption
+        interval_cases k <;> simp only [carryVal, Nat.reduceLT, dite_eq_left] <;> assumption
       · exact hsdb
       · exact hsdc
       · exact bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hb_bool)
@@ -264,7 +264,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
       apply Vector.ext
       intro i hi
       interval_cases i <;>
-        simp only [aSelector, productVal, Nat.reduceLT, dif_pos, Vector.getElem_mk,
+        simp only [aSelector, productVal, Nat.reduceLT, dite_eq_left, Vector.getElem_mk,
           List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ]
       · linear_combination -haw0 - hal0 - hah0 - input_a[0] * hs
       · linear_combination -haw1 - hal1 - hah1 - input_a[1] * hs
@@ -273,20 +273,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   · -- The 26 direct byte pulls' off-gate requirements (2 op5 MSB + 16 carry + 8 product range)
     -- are all vacuous under the binary `is_real` gate.  The three composed gadgets now expose their
     -- byte channel through canonical Clean metadata, so their interactions do not reappear here.
-    exact ⟨fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0,
-        fun h1 h0 => off_gate_vacuous hir_bin h1 h0, fun h1 h0 => off_gate_vacuous hir_bin h1 h0⟩
+    exact hir_bin
 
 /-- Byte-value bridge: the `k`-th byte of the `ZMod`-level sign/zero-extended operand equals the `ℕ`
 byte stream `extStream` at `k` (used by the witnessed `schoolProduct`/`schoolCarry`). Bytes `0..7` are
@@ -332,7 +319,7 @@ lemma byteAt_extendedBytes_val (w : Word (ZMod p)) (lower : Circuits.Types.U16to
     · show (lower.low_bytes[3]).val = w[3].val % 256; omega
     · show ((w[3] - lower.low_bytes[3]) * 256⁻¹).val = w[3].val / 256; omega
     all_goals exact hsign
-  · rw [byteAt, dif_neg hi16, ZMod.val_zero, extStream,
+  · rw [byteAt, dite_eq_right hi16, ZMod.val_zero, extStream,
       List.getD_eq_default _ _ (by simp only [List.length_cons, List.length_nil]; omega)]
 
 /-- The `ZMod`-level schoolbook column `colSum` over the sign/zero-extended bytes equals the cast of the
@@ -483,7 +470,7 @@ theorem productSpec_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU6
             (extStream c[0].val c[1].val c[2].val c[3].val
               (is_mulh.val * (c[3].val / 32768 % 2)))) k : ℕ) : ZMod p) := by
     intro k hk
-    simp only [productVal, dif_pos hk, populate, Vector.getElem_ofFn, schoolProduct]
+    simp only [productVal, dite_eq_left hk, populate, Vector.getElem_ofFn, schoolProduct]
   have hcarryv : ∀ (k : ℕ), k < 16 → carryVal (populate b c is_mulh is_mulhsu is_mulw) k
       = ((MulCarryChain.carry (MulCarryChain.cpNat
             (extStream b[0].val b[1].val b[2].val b[3].val
@@ -491,7 +478,7 @@ theorem productSpec_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU6
             (extStream c[0].val c[1].val c[2].val c[3].val
               (is_mulh.val * (c[3].val / 32768 % 2)))) k : ℕ) : ZMod p) := by
     intro k hk
-    simp only [carryVal, dif_pos hk, populate, Vector.getElem_ofFn, schoolCarry]
+    simp only [carryVal, dite_eq_left hk, populate, Vector.getElem_ofFn, schoolCarry]
   -- ranges
   have hprod_lt : ∀ k : ℕ, k < 16 →
       (productVal (populate b c is_mulh is_mulhsu is_mulw) k).val < 256 := by
@@ -529,10 +516,10 @@ theorem productSpec_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU6
     intro k hk
     rw [hprodv k hk, hcolsum k hk]
     rcases k with _ | k'
-    · rw [hcarryv 0 hk, if_pos rfl, add_zero]
+    · rw [hcarryv 0 hk, ite_eq_left rfl, add_zero]
       exact MulCarryChain.gate_zero _
     · have hk' : k' < 16 := by omega
-      rw [hcarryv (k' + 1) hk, if_neg (Nat.succ_ne_zero k'), Nat.add_sub_cancel, hcarryv k' hk']
+      rw [hcarryv (k' + 1) hk, ite_eq_right (Nat.succ_ne_zero k'), Nat.add_sub_cancel, hcarryv k' hk']
       exact MulCarryChain.gate_succ _ k'
   -- `product_msb`: boolean unconditionally, and the limb-MSB form under `is_mulw = 1`
   have hpm_msb_eq : (populate b c is_mulh is_mulhsu is_mulw).product_msb.msb
@@ -545,9 +532,9 @@ theorem productSpec_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU6
     have h2 := hprod_lt 2 (by norm_num)
     have h3 := hprod_lt 3 (by norm_num)
     have e2 : productVal (populate b c is_mulh is_mulhsu is_mulw) 2
-        = (populate b c is_mulh is_mulhsu is_mulw).product[2] := dif_pos (by norm_num)
+        = (populate b c is_mulh is_mulhsu is_mulw).product[2] := dite_eq_left (by norm_num)
     have e3 : productVal (populate b c is_mulh is_mulhsu is_mulw) 3
-        = (populate b c is_mulh is_mulhsu is_mulw).product[3] := dif_pos (by norm_num)
+        = (populate b c is_mulh is_mulhsu is_mulw).product[3] := dite_eq_left (by norm_num)
     rw [e2] at h2; rw [e3] at h3
     rw [byte_compose_val h2 h3 rfl]
     omega
@@ -570,7 +557,7 @@ theorem productSpec_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU6
         else 0)
       = if ((populate b c is_mulh is_mulhsu is_mulw).product[2]
             + (populate b c is_mulh is_mulhsu is_mulw).product[3] * 256).val ≥ 32768 then 1 else 0
-  rw [if_pos hw]
+  rw [ite_eq_left hw]
   exact (U16MSBOperation.spec_populate hpm_arg_lt 1).2 rfl
 
 -- Completeness re-runs the same 45-column carry-chain normalization as soundness above, with the
@@ -611,7 +598,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
         input_cols_product_msb_msb * 65535, input_cols_product_msb_msb * 65535] := by
     have hs := sum_eq_one hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum
       (Or.inr (Or.inr (Or.inr (Or.inr hmw))))
-    simpa only [resultWord, hmw, if_pos, productVal, Nat.reduceLT, dif_pos] using h_output hs
+    simpa only [resultWord, hmw, ite_eq_left, productVal, Nat.reduceLT, dite_eq_left] using h_output hs
   have h_low (hmul : input_is_mul = 1) : input_a =
       #v[input_cols_product[0] + input_cols_product[1] * 256,
         input_cols_product[2] + input_cols_product[3] * 256,
@@ -619,8 +606,8 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
         input_cols_product[6] + input_cols_product[7] * 256] := by
     have hs := sum_eq_one hmul_b hmh_b hmhu_b hmhsu_b hmw_b hsum (Or.inl hmul)
     obtain ⟨hmh, hmhu, hmhsu, hmw⟩ := rest_zero hmh_b hmhu_b hmhsu_b hmw_b hmul hs
-    simpa only [resultWord, hmh, hmhu, hmhsu, hmw, zero_ne_one, or_self, if_false,
-      productVal, Nat.reduceLT, dif_pos] using h_output hs
+    simpa only [resultWord, hmh, hmhu, hmhsu, hmw, zero_ne_one, or_self, ite_false,
+      productVal, Nat.reduceLT, dite_eq_left] using h_output hs
   have h_high (hh : input_is_mulh = 1 ∨ input_is_mulhu = 1 ∨ input_is_mulhsu = 1) : input_a =
       #v[input_cols_product[8] + input_cols_product[9] * 256,
         input_cols_product[10] + input_cols_product[11] * 256,
@@ -636,8 +623,8 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       · exact (rest_zero hmul_b hmhu_b hmhsu_b hmw_b h (by linear_combination hs)).2.2.2
       · exact (rest_zero hmul_b hmh_b hmhsu_b hmw_b h (by linear_combination hs)).2.2.2
       · exact (rest_zero hmul_b hmh_b hmhu_b hmw_b h (by linear_combination hs)).2.2.2
-    simpa only [resultWord, hmw, zero_ne_one, if_false, if_pos hh, productVal,
-      Nat.reduceLT, dif_pos] using h_output hs
+    simpa only [resultWord, hmw, zero_ne_one, ite_false, ite_eq_left hh, productVal,
+      Nat.reduceLT, dite_eq_left] using h_output hs
   simp only [eb, ec, ep, ecar, ebl, ecl, ea] at *
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
@@ -661,7 +648,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   · rcases h_cmb with h | h <;> rw [h] <;> ring
   -- 2 op5 `MSB` byte sends: provide the `MSB` byte-row guarantee on a real row
   · refine fun hneg => ?_
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     obtain ⟨hlo3, hhi3, hreass3⟩ := (h_gated hr1).2.1 3
     dsimp only at hlo3 hhi3 hreass3
     obtain ⟨hbool, hiff⟩ := op5_iff_of_msb_eq hlo3 hhi3 hreass3 (h_gated hr1).2.2.2.1
@@ -669,7 +656,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       rcases hbool with h | h <;> rw [h] <;> (first | rw [ZMod.val_zero] | rw [ZMod.val_one]) <;> norm_num
     exact (byteRowSpec_msb _ _).mpr ⟨⟨hmlt, hhi3⟩, hbool, hiff⟩
   · refine fun hneg => ?_
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     obtain ⟨hlo3, hhi3, hreass3⟩ := (h_gated hr1).2.2.1 3
     dsimp only at hlo3 hhi3 hreass3
     obtain ⟨hbool, hiff⟩ := op5_iff_of_msb_eq hlo3 hhi3 hreass3 (h_gated hr1).2.2.2.2.1
@@ -677,39 +664,39 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       rcases hbool with h | h <;> rw [h] <;> (first | rw [ZMod.val_zero] | rw [ZMod.val_one]) <;> norm_num
     exact (byteRowSpec_msb _ _).mpr ⟨⟨hmlt, hhi3⟩, hbool, hiff⟩
   -- 16 carry `slice_range_check_u16` byte pulls
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 0 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 1 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 2 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 3 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 4 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 5 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 6 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 7 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 8 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 9 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 10 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 11 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 12 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 13 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 14 (by norm_num))
-  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated (neg_inj.mp hneg)).1.2.2.1 15 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 0 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 1 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 2 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 3 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 4 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 5 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 6 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 7 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 8 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 9 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 10 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 11 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 12 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 13 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 14 (by norm_num))
+  · exact fun hneg => (byteRowSpec_range _ sixteen_lt).mpr ((h_gated hneg).1.2.2.1 15 (by norm_num))
   -- 8 product `slice_range_check_u8` byte-pair pulls
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 0 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 1 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 0 (by norm_num), (h_gated hneg).1.2.1 1 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 2 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 3 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 2 (by norm_num), (h_gated hneg).1.2.1 3 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 4 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 5 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 4 (by norm_num), (h_gated hneg).1.2.1 5 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 6 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 7 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 6 (by norm_num), (h_gated hneg).1.2.1 7 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 8 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 9 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 8 (by norm_num), (h_gated hneg).1.2.1 9 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 10 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 11 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 10 (by norm_num), (h_gated hneg).1.2.1 11 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 12 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 13 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 12 (by norm_num), (h_gated hneg).1.2.1 13 (by norm_num)⟩
   · exact fun hneg => (byteRowSpec_u8range_pair _ _).mpr
-      ⟨(h_gated (neg_inj.mp hneg)).1.2.1 14 (by norm_num), (h_gated (neg_inj.mp hneg)).1.2.1 15 (by norm_num)⟩
+      ⟨(h_gated hneg).1.2.1 14 (by norm_num), (h_gated hneg).1.2.1 15 (by norm_num)⟩
   -- 4 sign-extend asserts
   · exact h_bsd
   · exact h_csd
@@ -934,10 +921,7 @@ private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)
       bool_of_mul_pred (by simpa only [sub_eq_add_neg] using h_constraints.1)
     have h_pull (msg : ByteRow (Expression (ZMod p))) :
         (byteChannel.pulledIf input_var.is_real msg).toRaw.Requirements env := by
-      rw [ChannelInteraction.toRaw_requirements]
-      intro h1 h0
-      simp only [pulledIf_mult, circuit_norm] at h1 h0
-      exact off_gate_vacuous h_bool h1 h0
+      exact h_bool
     simp only [Operations.InChannelsOrRequirements, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, List.not_mem_nil, false_or, true_and, and_true]
     and_intros

@@ -63,7 +63,7 @@ namespace U8Range
 
 /-- The `U8Range` provider has computable witnesses: two bit decompositions over the two input
 cells. Its multiplicity is an input, not a local witness. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -80,7 +80,7 @@ namespace MSB
 /-- The `MSB` provider has computable witnesses. The one non-constant cell is the high bit of `b`;
 the third bit decomposition reads it back through `2 * b - msb * 256`, which is what the
 `AgreesBelow` premise supplies. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   refine ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -104,7 +104,7 @@ end MSB
 namespace AndByte
 
 /-- The `AND` provider composes the bitwise gadget's input-local witnesses. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
@@ -118,7 +118,7 @@ end AndByte
 namespace OrByte
 
 /-- The `OR` provider composes the bitwise gadget's input-local witnesses. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
@@ -132,7 +132,7 @@ end OrByte
 namespace XorByte
 
 /-- The `XOR` provider composes the bitwise gadget's input-local witnesses. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
@@ -147,7 +147,7 @@ namespace Ltu
 
 /-- The `LTU` provider has computable witnesses — the `MSB` argument verbatim, at the comparison
 bit and `b - c + ltu * 256`. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   refine ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -194,7 +194,7 @@ local instance : Fact (p > 2) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega
 /-- The fixed-width `Range` provider has computable witnesses, at every width: one bit
 decomposition over the single input cell. -/
 theorem computableWitnesses (n : ℕ) (hn : 2 ^ n < p) :
-    (circuit n hn (p := p)).base.ComputableWitnessesWithData := by
+    (circuit n hn (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -203,7 +203,7 @@ theorem computableWitnesses (n : ℕ) (hn : 2 ^ n < p) :
 
 /-- Computable witnesses for every member of the complete `0, …, 16` fixed-width profile. -/
 theorem computableWitnessesFor (width : Width) :
-    (circuitFor width (p := p)).base.ComputableWitnessesWithData :=
+    (circuitFor width (p := p)).base.ComputableWitnesses :=
   computableWitnesses width.val _
 
 end RangeChip
@@ -218,7 +218,7 @@ local instance : Fact (p > 2) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega
 
 /-- The Program-ROM provider has computable witnesses: four bit decompositions over four input
 cells. Its boolean decode gate and explicit multiplicity declare no cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -246,7 +246,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 local instance : Fact (p > 2) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
 /-- The whole-`Word` range check has computable witnesses: four per-limb bit decompositions. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -270,7 +270,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- The memory-init provider has computable witnesses: the whole-`Word` range check's bit
 decompositions. The boolean multiplicity is an explicit input. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   exact FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
@@ -285,7 +285,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The memory-finalize table has computable witnesses vacuously: it declares no local cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   exact Operations.forAllFlat_witnessCongr_of_localLength_zero _ _
     (by simp [circuit, main, circuit_norm])
@@ -302,7 +302,7 @@ namespace StateBumpChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- StateBump has computable witnesses vacuously: the table declares no cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := fun k input env env' =>
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := fun k input env env' =>
   Operations.forAllFlat_witnessCongr_of_localLength_zero _ _ (by simp [circuit, main, circuit_norm])
 
 end StateBumpChip
@@ -312,7 +312,7 @@ namespace MemoryBumpChip
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- MemoryBump has computable witnesses vacuously: the table declares no cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := fun k input env env' =>
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := fun k input env env' =>
   Operations.forAllFlat_witnessCongr_of_localLength_zero _ _ (by simp [circuit, main, circuit_norm])
 
 end MemoryBumpChip

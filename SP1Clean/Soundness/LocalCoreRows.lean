@@ -69,8 +69,8 @@ def systemTable {image : ProgramImage} {source : ExecutionSnapshot} (witness : E
 theorem systemTable_component {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 4) :
     (systemTable witness index).component =
-      ([{ circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }, { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }, { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions },
-        { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }] : List (Component (ZMod p)))[index.val] := by
+      ([{ circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation }, { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions, generation := StateBumpChip.generation }, { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation },
+        { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }] : List (Component (ZMod p)))[index.val] := by
   have same := witness.same_circuits (55 + index.val)
     (by change 55 + index.val < (tables image source).length; rw [tables_length]; omega)
   apply same.symm.trans

@@ -156,7 +156,7 @@ def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Word Mem
     have checked := (h_holds.2 (address_assumptions input h_holds.1.1)).2.2.2 rfl
     have valid := snapshotSpec snapshot input _ _ h_holds.1 checked
     simp only [message, circuit_norm] at valid
-    exact ⟨valid, fun _ _ => ⟨valid.1.1, valid.1.2.1⟩⟩
+    exact ⟨valid, fun _ => ⟨valid.1.1, valid.1.2.1⟩⟩
   completeness := by
     circuit_proof_start [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed, AddressOperation.circuit, addressInput, message]
     exact h_assumptions

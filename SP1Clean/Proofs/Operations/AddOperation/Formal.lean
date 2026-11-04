@@ -34,11 +34,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   simp only [circuit_norm, byteChannel, ev hia, ev hib, ev hiv] at h_holds ⊢
   obtain ⟨hr0, hr1, hr2, hr3, _hbool, hgc0, hgc1, hgc2, hgc3⟩ := h_holds
   -- The four trailing conjuncts are the limb byte pulls' own `Requirements` — vacuous off-gate (`cedc171b`).
-  refine ⟨fun hr1eq => ?_, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0⟩
+  refine ⟨fun hr1eq => ?_, hbin⟩
   obtain ⟨ha, hb⟩ := hab_imp hr1eq
-  have hneg : - input_is_real = -1 := by rw [hr1eq]
+  have hneg : input_is_real = 1 := by rw [hr1eq]
   have R0 := hr0 hneg; have R1 := hr1 hneg; have R2 := hr2 hneg; have R3 := hr3 hneg
   rw [← c16] at R0 R1 R2 R3
   rw [hr1eq, one_mul] at hgc0 hgc1 hgc2 hgc3
@@ -59,8 +57,8 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       (h : Vector.map (Expression.eval env.toEnvironment) w = v) :
       ∀ i (_ : i < 4), Expression.eval env.toEnvironment w[i] = v[i] :=
     fun i _ => by rw [← h, Vector.getElem_map]
-  have key (hneg : - input_is_real = -1) :=
-    Word.lt_cases_of_isU64 (h_spec (neg_inj.mp hneg)).1
+  have key (hneg : input_is_real = 1) :=
+    Word.lt_cases_of_isU64 (h_spec hneg).1
   simp only [circuit_norm, byteChannel, ev hia, ev hib, ev hiv]
   refine ⟨fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, ?_⟩
   · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1
@@ -96,8 +94,7 @@ def circuit : FormalAssertion (ZMod p) Inputs where
     have h_bool : Expression.eval env input_var.is_real = 0 ∨
         Expression.eval env input_var.is_real = 1 :=
       bool_of_mul_pred h_constraints.1
-    refine ⟨?_, ?_, ?_, ?_⟩ <;> intro h1 h0 <;>
-      exact off_gate_vacuous h_bool h1 h0
+    exact h_bool
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

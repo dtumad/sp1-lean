@@ -14,7 +14,7 @@ field-valued instruction event.  Soundness and completeness consume the same pro
 segment whose every fetched instruction routes through the supported profile.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Execution
 
@@ -120,10 +120,10 @@ theorem SupportedSP1Transition.notAboutToExecuteEcall
   rw [wordEq] at decode
   have ecallDecode :
       (ext_decode ECALL_ENC).run located.source =
-        .ok (LeanRV64D.Defs.instruction.ECALL ()) located.source := by
+        .ok (LeanRV64D.instruction.ECALL ()) located.source := by
     simpa [ECALL_ENC] using SailDecode.decode_ECALL located.source cfg.init cfg.priv
       cfg.mseccfg_disabled
-  have instructionEq : view.decoded = LeanRV64D.Defs.instruction.ECALL () := by
+  have instructionEq : view.decoded = LeanRV64D.instruction.ECALL () := by
     have same := (decode located.source cfg).symm.trans ecallDecode
     injection same
   rw [instructionEq] at routed

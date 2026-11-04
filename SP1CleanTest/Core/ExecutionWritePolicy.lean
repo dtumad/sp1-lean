@@ -10,7 +10,7 @@ even under an unrestricted resource profile. Empty identities remain admissible.
 
 namespace SP1CleanTest.Core.ExecutionWritePolicy
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D.Defs
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D
 
 private def image : ProgramImage := ⟨[(65536, 0x00112023)], 65536, []⟩
 

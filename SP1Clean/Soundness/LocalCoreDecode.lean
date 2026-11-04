@@ -108,7 +108,7 @@ theorem instructionRows_program_committed_of_balance {image : ProgramImage} {sou
     rw [DecodedInstructionRow.environment, emitted]
     exact List.mem_singleton_self _
   exact program_pull_committed_of_balance valid witness constraints balanced message interaction pullMem
-    (by change -(row.toChipRow witness.data).is_real = -1; rw [active]) rfl
+    ⟨rfl, active⟩ rfl
 
 /-- The complete local AIR authenticates every active ordinary fetch. -/
 theorem instructionRows_program_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)

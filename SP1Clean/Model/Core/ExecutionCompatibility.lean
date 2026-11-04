@@ -11,7 +11,7 @@ mixed calls. Normal retirement and the complete host endpoint remain properties 
 -/
 
 namespace SP1Clean.Model.Core
-open SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Defs
+open SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D LeanRV64D
 open SP1Clean.Semantics
 
 /-- A real canonical HALT changes Sail only by parking PC; x5 was already zero. -/

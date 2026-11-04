@@ -146,16 +146,16 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormedStore) (ha
     by_cases hlow : e.addr % 8 < 4
     · refine Or.inl ⟨?_, ?_, ?_, ?_, ?_⟩
       · rw [storeWordOffsetBit, Nat.div_eq_of_lt hlow, Nat.cast_zero]
-      · rw [storeWordValue, if_pos hlow, wordOfNat_zero]; simp
-      · rw [storeWordValue, if_pos hlow, wordOfNat_one]; simp
-      · rw [storeWordValue, if_pos hlow, wordOfNat_two]; simp
-      · rw [storeWordValue, if_pos hlow, wordOfNat_three]; simp
+      · rw [storeWordValue, ite_eq_left hlow, wordOfNat_zero]; simp
+      · rw [storeWordValue, ite_eq_left hlow, wordOfNat_one]; simp
+      · rw [storeWordValue, ite_eq_left hlow, wordOfNat_two]; simp
+      · rw [storeWordValue, ite_eq_left hlow, wordOfNat_three]; simp
     · refine Or.inr ⟨?_, ?_, ?_, ?_, ?_⟩
       · rw [storeWordOffsetBit, show e.addr % 8 / 4 = 1 from by omega, Nat.cast_one]
-      · rw [storeWordValue, if_neg hlow, wordOfNat_zero]; simp
-      · rw [storeWordValue, if_neg hlow, wordOfNat_one]; simp
-      · rw [storeWordValue, if_neg hlow, wordOfNat_zero]; simp
-      · rw [storeWordValue, if_neg hlow, wordOfNat_one]; simp
+      · rw [storeWordValue, ite_eq_right hlow, wordOfNat_zero]; simp
+      · rw [storeWordValue, ite_eq_right hlow, wordOfNat_one]; simp
+      · rw [storeWordValue, ite_eq_right hlow, wordOfNat_zero]; simp
+      · rw [storeWordValue, ite_eq_right hlow, wordOfNat_one]; simp
   refine ⟨wordOfNat_isU64 _, wordOfNat_isU64 _, ?_, ?_, ?_, ?_, Or.inr rfl, ⟨?_, ?_, ?_, ?_⟩,
     cpuState_spec e.clk e.pc h.clk_mod _ _ _,
     memoryAccess_spec h.clk_mod h.clk_lt h.prevTsMem_lt,
@@ -189,7 +189,10 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormedStore) (ha
 /-- The StoreWord chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- The event rows of a trace. The current memory-family ensemble API builds exactly this height;
 threading explicit zero padding through that API remains separate work. -/
@@ -211,30 +214,36 @@ comparison, the two readers, and the chip's own read-modify-write and selector g
 zero on every built row, and no static lookup is left unchecked. -/
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore ∧ e.Aligned 4)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
 Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormedStore ∧ e.Aligned 4)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
 concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint bounded).interactionsWith channel =
+        hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.StoreWordChip

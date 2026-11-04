@@ -75,7 +75,7 @@ theorem read_writeBytes_of_outside (memory : ByteMemory) (address query : ℕ)
   | nil => rfl
   | cons byte rest ih =>
       rw [writeBytes, ih]
-      · rw [read_write, if_neg (by simp only [List.length_cons] at outside; omega)]
+      · rw [read_write, ite_eq_right (by simp only [List.length_cons] at outside; omega)]
       · simp only [List.length_cons] at outside
         omega
 
@@ -89,7 +89,7 @@ theorem read_writeBytes_inside (memory : ByteMemory) (address : ℕ)
       cases offset with
       | zero =>
           simp only [writeBytes, Nat.add_zero, List.getElem_cons_zero]
-          rw [read_writeBytes_of_outside _ _ _ _ (Or.inl (by omega)), read_write, if_pos rfl]
+          rw [read_writeBytes_of_outside _ _ _ _ (Or.inl (by omega)), read_write, ite_eq_left rfl]
       | succ offset =>
           simp only [writeBytes, List.getElem_cons_succ]
           rw [show address + (offset + 1) = address + 1 + offset by omega]

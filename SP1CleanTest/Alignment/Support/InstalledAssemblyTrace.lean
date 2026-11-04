@@ -15,7 +15,7 @@ open Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
 
 /-- **The exported native assembly proves a Sail trace.** -/
 theorem trace_of_statement (context : Context) (valid : context.image.Valid) {header : SP1PublicIO Fp}
-    (accepted : (assembly context).Statement header) :
+    (heights : List ℕ) (accepted : (assembly context).Statement .logUp header heights) :
     Shard.SailTrace context.commitments context.image valid context.source context.target context.finalHints
       context.finalHost header :=
   Shard.sail_trace valid accepted

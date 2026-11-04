@@ -18,7 +18,7 @@ the read to the written word. The width-4 analogue of `correct_load_double_nativ
 selected 32-bit half `selected_word` and its high bit `msb` extend (sign for `LW`, zero for `LWU`) to the
 written word `#v[selected_word[0], selected_word[1], 65535·msb, 65535·msb]`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.LoadWordSail
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -197,7 +197,7 @@ theorem correct_load_word_native
   rw [hsp] at hread
   simp [spec_lw, sp1_lw, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hext]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hext]
 
 /-- **End-to-end composition.** From the `LoadWord` chip prover assumptions + decode + register/PC reads
 + the four selected memory bytes, a width-4 Sail `LOAD` (sign-extended for `LW`, zero-extended for `LWU`)
@@ -237,14 +237,14 @@ theorem lw_chip_reaches_sail
     cases hu : is_unsigned with
     | true =>
       have hmsb0 : input.msb = 0 := h_unsigned_msb (by rw [hu])
-      simp only [extend_value, if_true, zero_extend, hmsb0, mul_zero]
+      simp only [extend_value, ite_true, zero_extend, hmsb0, mul_zero]
       exact zeroExtend64_ofNat32_concat _ _ hsel0 hsel1
     | false =>
-      simp only [extend_value, Bool.false_eq_true, if_false, sign_extend, Sail.BitVec.signExtend]
+      simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend, Sail.BitVec.signExtend]
       by_cases hge : input.selected_word[1].val ≥ 32768
-      · rw [hmsb, if_pos hge, mul_one]
+      · rw [hmsb, ite_eq_left hge, mul_one]
         exact signExtend64_ofNat32_concat_of_ge_32768 _ _ hsel0 hsel1 hge
-      · rw [hmsb, if_neg hge, mul_zero]
+      · rw [hmsb, ite_eq_right hge, mul_zero]
         exact signExtend64_ofNat32_concat_of_lt_32768 _ _ hsel0 hsel1 (by omega)
   exact correct_load_word_native rs1_idx rd_idx imm reg_val is_unsigned
     (BitVec.ofNat 8 input.selected_word[0].val) (BitVec.ofNat 8 (input.selected_word[0].val >>> 8))
@@ -281,15 +281,15 @@ lemma loadWord_hval (input : Inputs (ZMod p)) (isU : Bool)
   rcases hcase with ⟨hlw, _, rfl⟩ | ⟨hlwu, hlw, rfl⟩
   · -- LW (signed)
     have hmsbeq := h_lw_msb hlw
-    simp only [extend_value, Bool.false_eq_true, if_false, sign_extend, Sail.BitVec.signExtend]
+    simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend, Sail.BitVec.signExtend]
     by_cases hge : input.selected_word[1].val ≥ 32768
-    · rw [hmsbeq, if_pos hge]; simp only [mul_one]
+    · rw [hmsbeq, ite_eq_left hge]; simp only [mul_one]
       exact (LoadWordSail.signExtend64_ofNat32_concat_of_ge_32768 _ _ hsel0 hsel1 hge).symm
-    · rw [hmsbeq, if_neg hge]; simp only [mul_zero]
+    · rw [hmsbeq, ite_eq_right hge]; simp only [mul_zero]
       exact (LoadWordSail.signExtend64_ofNat32_concat_of_lt_32768 _ _ hsel0 hsel1 (by omega)).symm
   · -- LWU (unsigned): is_lw = 0
     rw [h_lwu_msb hlw]
-    simp only [extend_value, if_true, zero_extend, mul_zero]
+    simp only [extend_value, ite_true, zero_extend, mul_zero]
     exact (LoadWordSail.zeroExtend64_ofNat32_concat _ _ hsel0 hsel1).symm
 
 /-- **LoadWord's committed bus view** — standalone (identical to the former inline `kind.view`).

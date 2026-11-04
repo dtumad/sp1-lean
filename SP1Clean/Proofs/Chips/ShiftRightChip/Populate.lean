@@ -273,7 +273,7 @@ theorem msb_asserts (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 4)
       rw [hz0, hz2, hz3, hb1]; ring
   · by_cases h : f[2] + f[3] = 1
     · rw [h]; ring
-    · rw [srwMsb, if_neg h, mul_zero]
+    · rw [srwMsb, ite_eq_right h, mul_zero]
 
 set_option linter.unusedSectionVars false in
 /-- `byteShiftNat < 4` (each contributing bit is ≤ 1). -/
@@ -346,7 +346,7 @@ theorem place_asserts (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 4)
       have hk2 : byteShiftNat c0 f = 0 ∨ byteShiftNat c0 f = 1 := by
         have := Nat.mod_lt (c0.val >>> 4) (show 0 < 2 by norm_num)
         unfold byteShiftNat
-        rw [h0, h1, if_neg (by rw [zero_add]; exact zero_ne_one)]
+        rw [h0, h1, ite_eq_right (by rw [zero_add]; exact zero_ne_one)]
         omega
       rcases hf2 with h2 | h2
       · rcases hf3 with h3 | h3
@@ -483,7 +483,7 @@ theorem byteShift_expr_eq (c0 : ZMod p) (f : Vector (ZMod p) 4)
       = ((byteShiftNat c0 f : ℕ) : ZMod p) := by
   rcases he14 with h | h <;>
     simp only [ShiftLeftChip.cBits, byteShiftNat, h, Vector.getElem_mk, List.getElem_toArray,
-      List.getElem_cons_zero, List.getElem_cons_succ, if_pos, zero_ne_one, if_false] <;>
+      List.getElem_cons_zero, List.getElem_cons_succ, ite_eq_left, zero_ne_one, ite_false] <;>
     push_cast <;> ring
 
 /-- The eight `shift_u16` selector/boolean asserts plus the gated one-hot sum, in goal form. -/
@@ -577,7 +577,7 @@ theorem populateA_val_lt (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 
     have hlr := fun j hj => limbResult_val_lt b c0 f hb he14 j hj
     have hfill := fill_bound b c0 f hbm 3 (by norm_num) (lr3_lt b c0 f hb he14)
     rcases byteShift_cases c0 f with hbs | hbs | hbs | hbs <;>
-      · simp only [populateA, h14, if_true, hbs, Vector.getElem_mk, List.getElem_toArray,
+      · simp only [populateA, h14, ite_true, hbs, Vector.getElem_mk, List.getElem_toArray,
           List.getElem_cons_zero, List.getElem_cons_succ]
         interval_cases i <;>
           first
@@ -599,7 +599,7 @@ theorem populateA_val_lt (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 
           (U16MSBOperation.populate_msb x * 65535).val < 2 ^ 16 := fun x hx =>
         hmul65535 _ (U16MSBOperation.populate_msb_bool hx)
       by_cases hbs : byteShiftNat c0 f = 0 <;>
-        · simp only [populateA, h14, if_false, h13, if_true, hbs, Vector.getElem_mk,
+        · simp only [populateA, h14, ite_false, h13, ite_true, hbs, Vector.getElem_mk,
             List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ]
           interval_cases i <;>
             first
@@ -608,7 +608,7 @@ theorem populateA_val_lt (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 
               | exact hmul65535 _ hbm
               | exact hsm _ hfill
               | exact hsm _ (hmul65535 _ hbm)
-    · simp only [populateA, h14, h13, if_false]
+    · simp only [populateA, h14, h13, ite_false]
       interval_cases i <;> exact hzero
 
 /-- The witnessed word-variant sign bit is boolean. -/
@@ -1223,7 +1223,7 @@ theorem aF_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvironment (Z
               + (bMsb vb (f.map (Expression.eval env.toEnvironment)) * 65536
                 - bMsb vb (f.map (Expression.eval env.toEnvironment)) * ((2 ^ (16 - c0.val % 16) : ℕ) : ZMod p))
             else bMsb vb (f.map (Expression.eval env.toEnvironment)) * 65535 := by
-        simp only [populateA, Vector.getElem_map, if_neg h64, if_pos hw, hvinv, ← hkeq,
+        simp only [populateA, Vector.getElem_map, ite_eq_right h64, ite_eq_left hw, hvinv, ← hkeq,
           Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
           List.getElem_cons_succ]
         split_ifs <;> rfl
@@ -1264,7 +1264,7 @@ theorem aF_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvironment (Z
               + (bMsb vb (f.map (Expression.eval env.toEnvironment)) * 65536
                 - bMsb vb (f.map (Expression.eval env.toEnvironment)) * ((2 ^ (16 - c0.val % 16) : ℕ) : ZMod p))
             else bMsb vb (f.map (Expression.eval env.toEnvironment)) * 65535 := by
-        simp only [populateA, Vector.getElem_map, if_neg h64, if_pos hw, hvinv, ← hkeq,
+        simp only [populateA, Vector.getElem_map, ite_eq_right h64, ite_eq_left hw, hvinv, ← hkeq,
           Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
           List.getElem_cons_succ]
         split_ifs <;> rfl
@@ -1595,14 +1595,9 @@ theorem aF_congr (f : Vector (Expression (ZMod p)) 4)
         simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
         rcases hx with rfl | rfl | rfl | rfl <;>
           first
-            | rfl
             | exact hlr0
             | exact hlr1
             | exact hlr2
-            | exact hlr3
-            | exact hsum 0
-            | exact hsum 1
-            | exact hsum 2
             | exact hsum 3
             | exact hmf)])
   · have hz : aF f b c0e j = 0 := by

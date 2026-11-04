@@ -22,7 +22,7 @@ local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.ins
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def producer : Component (ZMod p) := { circuit := HostCallChip.circuit, Assumptions := (HostCallChip.circuit).Assumptions }
+def producer : Component (ZMod p) := { circuit := HostCallChip.circuit, Assumptions := (HostCallChip.circuit).Assumptions, generation := HostCallChip.generation }
 
 def input (env : Environment (ZMod p)) : HostCallChip.Inputs (ZMod p) :=
   valueFromOffset HostCallChip.Inputs 0 env
@@ -140,7 +140,7 @@ theorem calls_perm (table : Table (ZMod p)) (data : ProverData (ZMod p)) (compon
       ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
     simpa only [cells] using checked
   rw [channel.pushedIfValues_filter_nonzero _ _ _ binary] at balanced
-  apply (channel.balanced_unit_iff (calls table data) consumed).mp _ |>.2
+  apply (channel.balanced_unit_iff (calls table data) consumed).mp _
   simpa only [calls, activeRows, List.map_map, Function.comp_def] using balanced
 
 /-- A handler cannot duplicate an event clock when its complete calls balance unique producers. -/

@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.SyscallInstrsChip.Defs
@@ -71,7 +72,7 @@ theorem soundness :
     intro i hi
     have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.1
     simpa using this
-  have avU64 : (-input_is_real : ZMod p) = -1 → Word.isU64 input_op_a_value := by
+  have avU64 : (input_is_real : ZMod p) = 1 → Word.isU64 input_op_a_value := by
     intro hneg
     have hp : (2 : ℕ) ^ 17 < p := Fact.out
     refine Word.isU64_of_cases ?_ ?_ ?_ ?_
@@ -83,12 +84,12 @@ theorem soundness :
       exact (byteRowSpec_range (n := 16) _ (by omega)).mp this
     · have := h_ba3 hneg; rw [eav 3 (by norm_num)] at this
       exact (byteRowSpec_range (n := 16) _ (by omega)).mp this
-  have hrealHalt : input_is_halt = 1 → (-input_is_real : ZMod p) = -1 := by
+  have hrealHalt : input_is_halt = 1 → (input_is_real : ZMod p) = 1 := by
     intro hh
     rw [hh, mul_one] at h_padh
     have hr : input_is_real = 1 := by linear_combination h_padh
     rw [hr]
-  have hrealDef : input_is_commit_deferred_result = 1 → (-input_is_real : ZMod p) = -1 := by
+  have hrealDef : input_is_commit_deferred_result = 1 → (input_is_real : ZMod p) = 1 := by
     intro hd
     rw [hd, mul_one] at h_padd
     have hr : input_is_real = 1 := by linear_combination h_padd
@@ -112,8 +113,8 @@ theorem soundness :
     intro res c h
     by_cases hz : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
         - ((c : ℕ) : ZMod p) = 0
-    · exact Or.inr (by rw [h, if_pos hz])
-    · exact Or.inl (by rw [h, if_neg hz])
+    · exact Or.inr (by rw [h, ite_eq_left hz])
+    · exact Or.inl (by rw [h, ite_eq_right hz])
   have pairSum : ∀ (r1 r2 : ZMod p) (c d : ℕ), c < 2 ^ 17 → d < 2 ^ 17 → c ≠ d →
       r1 = (if Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
               - ((c : ℕ) : ZMod p) = 0 then 1 else 0) →
@@ -126,11 +127,11 @@ theorem soundness :
     · by_cases hz2 : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
           - ((d : ℕ) : ZMod p) = 0
       · exact absurd (distinct c d hc hd hne hz1 hz2) not_false
-      · exact Or.inr (by rw [h1, h2, if_pos hz1, if_neg hz2]; ring)
+      · exact Or.inr (by rw [h1, h2, ite_eq_left hz1, ite_eq_right hz2]; ring)
     · by_cases hz2 : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
           - ((d : ℕ) : ZMod p) = 0
-      · exact Or.inr (by rw [h1, h2, if_neg hz1, if_pos hz2]; ring)
-      · exact Or.inl (by rw [h1, h2, if_neg hz1, if_neg hz2]; ring)
+      · exact Or.inr (by rw [h1, h2, ite_eq_right hz1, ite_eq_left hz2]; ring)
+      · exact Or.inl (by rw [h1, h2, ite_eq_right hz1, ite_eq_right hz2]; ring)
   have h_ebin : input_is_real = 1 →
       (input_is_enter_unconstrained_result = 0 ∨ input_is_enter_unconstrained_result = 1) :=
     fun hr => indicator _ enterUnconstrainedCode ((h_ize h_rbin) hr).1
@@ -208,17 +209,17 @@ theorem soundness :
         linear_combination -h_padd
   · and_intros <;>
       first
-        | exact Or.inl rfl
-        | exact Or.inr h_rbin
-        | exact fun _ _ => trivial
-        | exact fun h1 h0 => off_gate_vacuous h_rbin h1 h0
-        | exact fun h1 h0 => off_gate_vacuous h_cbin h1 h0
-        | (intro _ h0
+       | exact Or.inl rfl
+       | exact fun _ => trivial
+       | exact h_rbin
+       | exact h_cbin
+       | exact h_dbin
+        | (solve | (rcases h_rbin with h | h <;> simp [h, h_dbin]))
+        | (intro h0
            have hr : input_is_real = 1 := h_rbin.resolve_left h0
-           have hneg : (-input_is_real : ZMod p) = -1 := by rw [hr]
+           have hneg : (input_is_real : ZMod p) = 1 := by rw [hr]
            refine ⟨?_, ?_⟩
            · first
-               | exact (h_ma hneg).1
                | exact (h_mb hneg).1
                | exact (h_mc hneg).1
                | exact avU64 hneg
@@ -284,14 +285,14 @@ theorem completeness :
     | exact pad_zero h_rbin (fun h => (h_pad h).1)
     | exact pad_zero h_rbin (fun h => (h_pad h).2.1)
     | exact pad_zero h_rbin (fun h => (h_pad h).2.2)
-    | exact h_wA.1 | exact h_wA.2.1 | exact h_wA.2.2.1 | exact h_wA.2.2.2
+    | exact h_wA.2.1 | exact h_wA.2.2.1 | exact h_wA.2.2.2
     | exact h_wS.1 | exact h_wS.2.1 | exact h_wS.2.2.1 | exact h_wS.2.2.2
-    | exact h_pA.1 | exact h_pA.2 | exact h_pS.1 | exact h_pS.2
+    | exact h_pA.2 | exact h_pS.1 | exact h_pS.2
     | exact h_dA | exact h_dS)
   all_goals try (first
-    | exact h_bA.1 | exact h_bA.2 | exact h_bS.1 | exact h_bS.2
+    | exact h_bA.2 | exact h_bS.1 | exact h_bS.2
     | exact h_cA.1 | exact h_cA.2 | exact h_cS.1 | exact h_cS.2
-    | exact h_mA.1 | exact h_mA.2.1 | exact h_mA.2.2.1 | exact h_mA.2.2.2
+    | exact h_mA.2.1  | exact h_mA.2.2.2
     | exact h_mS.1 | exact h_mS.2.1 | exact h_mS.2.2.1 | exact h_mS.2.2.2.1
     | exact h_mS.2.2.2.2.1 | exact h_mS.2.2.2.2.2)
   all_goals try (first
@@ -305,32 +306,31 @@ theorem completeness :
        exact ⟨by rw [(h_res hr).2.2.2.1]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).2.2.2.1⟩)
     | (intro hr
        exact ⟨by rw [(h_res hr).2.2.2.2]; simp [syscallId, sub_eq_zero]; rfl, (h_inv hr).2.2.2.2⟩)
-    | exact h_dA
-    | exact h_dS)
+  )
   all_goals try (first
     | (intro hneg
-       have hr : input_is_real = 1 := neg_inj.mp hneg
+       have hr : input_is_real = 1 := hneg
        exact ⟨(h_pull hr).1, (h_pull hr).2.1, (h_pull hr).2.2.1, (h_pull hr).2.2.2.1,
          (h_pull hr).2.2.2.2.1⟩)
     | (intro hneg
-       have hr : input_is_real = 1 := neg_inj.mp hneg
+       have hr : input_is_real = 1 := hneg
        exact ⟨(h_pull hr).2.2.2.2.2.1, (h_pull hr).2.2.2.2.2.2.1⟩)
     | (intro hneg
-       have hr : input_is_real = 1 := neg_inj.mp hneg
+       have hr : input_is_real = 1 := hneg
        exact ⟨(h_pull hr).2.2.2.2.2.2.2.1, (h_pull hr).2.2.2.2.2.2.2.2.1⟩)
     | (intro hneg
-       have hr : input_is_real = 1 := neg_inj.mp hneg
+       have hr : input_is_real = 1 := hneg
        exact ⟨(h_pull hr).2.2.2.2.2.2.2.2.2.1, (h_pull hr).2.2.2.2.2.2.2.2.2.2.1⟩)
     | exact fun _ => trivial)
   all_goals try (first
     | (intro hneg
        exact (byteRowSpec_u8range_pair _ _).mpr
-         ⟨h_bytes (neg_inj.mp hneg) 0, h_bytes (neg_inj.mp hneg) 1⟩)
+         ⟨h_bytes hneg 0, h_bytes hneg 1⟩)
     | (intro hneg
        exact (byteRowSpec_u8range_pair _ _).mpr
-         ⟨h_bytes (neg_inj.mp hneg) 2, h_bytes (neg_inj.mp hneg) 3⟩))
+         ⟨h_bytes hneg 2, h_bytes hneg 3⟩))
   all_goals (intro hneg
-             have hr : input_is_real = 1 := neg_inj.mp hneg
+             have hr : input_is_real = 1 := hneg
              have h16 : (16 : ℕ) < p := by
                have : (2 : ℕ) ^ 17 < p := Fact.out
                omega
@@ -395,6 +395,12 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
     have hb0 := h_constraints.1 _ List.mem_cons_self
     have hb1 := h_constraints.1 _ (List.mem_cons_of_mem _ List.mem_cons_self)
     simp only [Expression.eval, eval_sub] at hb0 hb1
+    have hb2 := h_constraints.1 _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+    simp only [Expression.eval, eval_sub] at hb2
+    have h_dbool := bool_of_mul_pred hb2
+    have h_dbool_eval : (ProvableStruct.eval env input_var.is_commit_deferred).result = 0 ∨
+        (ProvableStruct.eval env input_var.is_commit_deferred).result = 1 := by
+      simpa only [circuit_norm] using h_dbool
     have h_bool := bool_of_mul_pred hb0
     have h_cbool := bool_of_mul_pred hb1
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
@@ -409,13 +415,12 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
       first
         | exact Or.inl List.mem_cons_self
         | (right
-           rw [ChannelInteraction.toRaw_requirements]
-           intro h1 h0
-           simp only [Expression.eval, neg_one_mul] at h1 h0
            first
-             | exact off_gate_vacuous_neg h_bool h1 h0
-             | exact off_gate_vacuous_neg h_cbool h1 h0
-             | trivial)
+             | exact h_bool
+             | exact h_cbool
+             | exact h_dbool
+             | exact fun _ => trivial
+             | (solve | (rcases h_bool with h | h <;> simp [circuit_norm, h, h_dbool_eval])))
 
 /-- The `SyscallInstrs` row as a bundled circuit — SP1's ECALL table, all thirteen inline arms.
 
@@ -501,10 +506,10 @@ private theorem dispatchArmLookups (input : Var SyscallInstrsChip.DispatchArm.In
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := SyscallInstrsChip.circuit (p := p), Assumptions := (SyscallInstrsChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    SyscallInstrsChip.circuit_main_eq]
+    ((SyscallInstrsChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp only [SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def, assertZero,
     subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,
     Operations.lookups_append, Operations.lookups_assert, Operations.lookups_interact,
@@ -520,5 +525,10 @@ theorem lookups_empty :
     SP1Clean.U16toU8OperationSafe.circuit_localLength,
     u16toU8SafeLookups, isZeroLookups, cpuStateLookups, registerAccessColsLookups, pcArmLookups, commitArmLookups, writeArmLookups, fieldBoundArmLookups, dispatchArmLookups,
     Operations.localLength, Nat.add_zero, List.append_nil]
+
+/-- State demand uses the same relative-clock hint layout as ordinary instructions. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name
+    (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state) (·.is_real)
 
 end SP1Clean.SyscallInstrsChip

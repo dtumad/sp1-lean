@@ -86,8 +86,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs (fields 8) where
       subst interaction
       apply Or.inr
       rw [ChannelInteraction.toRaw_requirements]
-      intro impossible
-      exact (impossible (by simp only [circuit_norm])).elim
+      exact Or.inr rfl
 
 @[circuit_norm, explicit_circuit_norm]
 theorem circuit_localLength (input : Var Inputs (ZMod p)) : circuit.localLength input = 0 := rfl

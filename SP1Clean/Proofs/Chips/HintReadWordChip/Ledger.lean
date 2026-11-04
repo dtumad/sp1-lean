@@ -141,7 +141,7 @@ theorem access_balance (last : Bool) (input : Var Inputs (ZMod p)) (offset : ℕ
   rw [access_values]
   simp only [balanceOf_cons]
   by_cases equal : (toElements (Eval.eval env input.ram.message)).toArray = message <;>
-    simp [Channel.pushedValue, Channel.pulledValue, equal, balanceOf]
+    simp [Channel.pushedValue, Channel.pulledValue, equal, balanceOf, Interaction.signedMult]
 
 /-- Guarding retains each physical state occurrence at the row's activity. -/
 theorem guarded_state_values (last : Bool) (input : Var RowInput (ZMod p))
@@ -153,7 +153,7 @@ theorem guarded_state_values (last : Bool) (input : Var RowInput (ZMod p))
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, state_values, List.map_cons, List.map_nil,
     Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
-    mul_neg, mul_one]
+    mul_one]
 
 /-- Guarding retains each physical word occurrence at the row's activity. -/
 theorem guarded_word_values (last : Bool) (input : Var RowInput (ZMod p))
@@ -163,7 +163,7 @@ theorem guarded_word_values (last : Bool) (input : Var RowInput (ZMod p))
   change ((Guarded.main (activeCircuit last) (guardSupported last) input).operations offset).interactionValuesWith _ env = _
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, word_values, List.map_cons, List.map_nil,
-    Channel.pulledValue, Channel.pulledIfValue, mul_neg, mul_one]
+    Channel.pulledValue, Channel.pulledIfValue, mul_one]
 
 /-- Guarding retains each physical memory occurrence at the row's activity. -/
 theorem guarded_memory_values (last : Bool) (input : Var RowInput (ZMod p))
@@ -175,7 +175,7 @@ theorem guarded_memory_values (last : Bool) (input : Var RowInput (ZMod p))
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, memory_values, List.map_cons, List.map_nil,
     Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
-    mul_neg, mul_one]
+    mul_one]
 
 /-- Guarding retains each physical access occurrence at the row's activity. -/
 theorem guarded_access_values (last : Bool) (input : Var RowInput (ZMod p))
@@ -187,7 +187,7 @@ theorem guarded_access_values (last : Bool) (input : Var RowInput (ZMod p))
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, access_values, List.map_cons, List.map_nil,
     Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
-    mul_neg, mul_one]
+    mul_one]
 
 /-- Disabled rows retain all eight permission occurrences with zero multiplicity. -/
 theorem guarded_permission_values (last : Bool) (input : Var RowInput (ZMod p))
@@ -199,6 +199,6 @@ theorem guarded_permission_values (last : Bool) (input : Var RowInput (ZMod p))
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, Operations.interactionValuesWith, main_permission_interactions,
     List.map_ofFn, Function.comp_def, Channel.eval_pulled, Channel.pulledValue,
-    Channel.pulledIfValue, mul_neg, mul_one]
+    Channel.pulledIfValue, mul_one]
 
 end SP1Clean.HintReadWordChip

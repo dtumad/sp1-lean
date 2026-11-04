@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.JalrChip.Defs
@@ -179,7 +180,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   refine ⟨⟨h_it, h_bin, ?_, ?_, ?_, ?_⟩,
     Or.inr ⟨h_bin, h_bin, h_clk⟩,
     Or.inr ⟨h_bin, ?_, h_clk.at_four⟩,
-    fun h1 h0 => off_gate_vacuous h_bin h1 h0⟩
+    h_bin⟩
   · intro hr1
     have := (h_add1 ⟨fun _ => ⟨hrs1U, h_imm⟩, h_bin⟩ hr1).2
     rw [hrs1eq] at this
@@ -418,7 +419,7 @@ theorem completeness :
       exact (AddOperation.spec_populate (hpceq ▸ h_pcU) h4U
         (input_is_real - input_adapter_op_a_0) hg1).1
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hlsb_val hr1, hav0]
     rw [← c14]
@@ -611,10 +612,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
         simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
         subst interaction
         right
-        rw [ChannelInteraction.toRaw_requirements]
-        intro h1 h0
-        simp only [circuit_norm] at h1 h0
-        exact off_gate_vacuous h_bool h1 h0,
+        exact h_bool,
     -- W11: expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair as chip-owned
     -- interactions (the Clean `VmTables` re-base that motivated the shape was investigated and deferred
     -- — roadmap W11). `next_pc` is the **witnessed** LSB-cleared jump target the chip feeds `CPUState`:
@@ -650,7 +648,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           Operations.interactionsWith_nil, List.nil_append]
         simp only [Operations.interactionsWith_subcircuit, FormalAssertion.toSubcircuit_interactions,
           Gadgets.Equality.main, circuit_norm, List.filter_nil, List.nil_append]
-        simp only [Channels.byteChannel_eq_stateChannel_false, if_false, List.append_nil]
+        simp only [Channels.byteChannel_eq_stateChannel_false, ite_false, List.append_nil]
         simp [Readers.CPUState.stateInteractions, Readers.CPUState.currentMsg,
           Readers.CPUState.nextMsg]
         exact ⟨rfl, rfl⟩
@@ -676,7 +674,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           Operations.interactionsWith_nil, Soundness.iTypeMemoryInteractions,
           Soundness.registerWriteMemoryInteractions, List.cons_append, List.nil_append]
         simp only [circuit_norm]
-        simp only [Channels.byteChannel_eq_memoryChannel_false, if_false,
+        simp only [Channels.byteChannel_eq_memoryChannel_false, ite_false,
           exposedMemoryInteractions, List.map_cons, List.map_nil]
         rfl
       · -- Program branch: compositional — the reader subcircuit keeps its fetch via the
@@ -701,7 +699,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
         simp only [Operations.interactionsWith_subcircuit,
           FormalAssertion.toSubcircuit_interactions, Gadgets.Equality.main, circuit_norm,
           List.filter_nil, List.nil_append]
-        simp only [Channels.byteChannel_eq_programChannel_false, if_false] }
+        simp only [Channels.byteChannel_eq_programChannel_false, ite_false] }
 
 /-- Folded circuit projections used by whole-chip row codecs without unfolding
 the proof-bearing circuit bundle. -/
@@ -939,10 +937,10 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    JalrChip.circuit_main_eq]
+    ((JalrChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [JalrChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.ITypeReader.circuit,
     Readers.ITypeReader.main, Readers.RegisterWrite.circuit,
@@ -951,5 +949,10 @@ theorem lookups_empty :
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, AddOperation.circuit,
     AddOperation.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.JalrChip

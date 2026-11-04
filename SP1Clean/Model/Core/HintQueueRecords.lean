@@ -60,7 +60,7 @@ theorem NodeRecord.Binds.hintLength {store : Store} {record : NodeRecord (ZMod p
     hintLength? store (Address.toNat record.pointer) = some (Word.toBitVec64 record.length) := by
   obtain ⟨node, read, _, length⟩ := binding
   have nonzero := (node?_bound read).1
-  rw [hintLength?, if_neg (by omega), read, Option.map_some, length]
+  rw [hintLength?, ite_eq_right (by omega), read, Option.map_some, length]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Source or earlier allocation metadata remains authenticated after later persistent prepends. -/

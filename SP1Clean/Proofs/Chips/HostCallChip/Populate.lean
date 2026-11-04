@@ -49,7 +49,7 @@ theorem populate_assumptions (instruction : SyscallInstrsChip.Inputs (ZMod p))
       · exact one
     have code : instruction.op_a_memory.prev_value = writeWord := by
       by_contra different
-      simp only [writeFlag, if_neg different, mul_zero] at active
+      simp only [writeFlag, ite_eq_right different, mul_zero] at active
       exact zero_ne_one active
     have clock := (Readers.ClkDiscipline.of_cpuState_spec valid.1.2.1).at_one real
     exact ⟨(valid.2.2 real code).1, (valid.2.2 real code).2, clock⟩

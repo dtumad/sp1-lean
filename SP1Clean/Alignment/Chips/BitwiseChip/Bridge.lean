@@ -11,7 +11,7 @@ emulation given the semantic fact and register/PC reads. `SailWrap.execute_RTYPE
 maps `.AND/.OR/.XOR → &&&/|||/^^^`. Six `bitwise_chip_reaches_sail_*` end-to-end lemmas
 (register + immediate forms) compose `BitwiseChip.Spec`'s opcode-gated conjuncts into the bridge. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.BitwiseSail
 
 open Sail LeanRV64D LeanRV64D.Functions

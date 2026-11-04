@@ -116,7 +116,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_msb_fact : input_is_lb = 1 →
       (input_msb = 0 ∨ input_msb = 1) ∧ (input_msb = 1 ↔ 128 ≤ input_selected_byte.val) := by
     intro h1
-    have hneg : - input_is_lb = -1 := by rw [h1]
+    have hneg : input_is_lb = 1 := by rw [h1]
     have G := hmsb_rcv hneg
     have := (byteRowSpec_msb _ _).mp G
     exact ⟨this.2.1, this.2.2⟩
@@ -148,7 +148,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       ⟨hsel0, hsel1, hsel2, hsel3⟩, hmux_eq, h_op_a_0, h_msbgate, h_lb_bin, h_lbu_bin, h_bin⟩,
     Or.inr h_addr_as,
     Or.inr ⟨h_bin, fun _ => h_pv_isu64, h_clk⟩,
-    fun h1 h0 => off_gate_vacuous h_lb_bin h1 h0,
+    h_lb_bin,
     Or.inr ⟨h_bin, h_bin, h_clk⟩,
     Or.inr ⟨h_bin, h_load_isu64, h_clk.at_four⟩⟩
 
@@ -249,7 +249,7 @@ theorem completeness :
     · simpa only [hone, one_mul] using hhi_pa
   · -- MSB receive obligation (real LB row); value is raw (`toRaw` (gated post-#398)).
     intro hneg
-    have hlb : input_is_lb = 1 := neg_inj.mp hneg
+    have hlb : input_is_lb = 1 := hneg
     simp only [byteChannel]
     exact (byteRowSpec_msb _ _).mpr ⟨⟨h_msb_lt, hbyte_pa⟩, h_msb_bin, h_msb_iff hlb⟩
   · exact ⟨hbin, hbin, h_clk⟩

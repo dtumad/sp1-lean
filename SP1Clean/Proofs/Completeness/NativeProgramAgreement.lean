@@ -18,7 +18,7 @@ stored again in `NativeTraceReady`.
 namespace SP1Clean.Soundness
 
 open Air.Flat Circuit
-open Sail LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Channels
 open SP1Clean.Execution
 open SP1Clean.LookupAccessList
@@ -36,7 +36,12 @@ local instance nativeProgramAgreementFieldBound : Fact (2 ^ 24 < p) :=
 /-- Generated Program-provider rows evaluated at canonical witness data. -/
 theorem SupportedCoreTraceWitness.programProviderTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    programProviderTable trace.witness = { trace.providerTableFor .program with data := trace.data } := rfl
+    tableCleanAccesses (programProviderTable trace.witness) =
+      tableCleanAccesses (trace.providerTableFor .program) := by
+  unfold tableCleanAccesses
+  congr 1
+  rw [Table.interactions_at _ (trace.providerTableFor .program).data]
+  rfl
 
 /-- A generated Program table exposes the literal entry ledger at canonical witness data. -/
 theorem SupportedCoreTraceWitness.programProviderTable_cleanAccesses
@@ -45,8 +50,8 @@ theorem SupportedCoreTraceWitness.programProviderTable_cleanAccesses
     tableCleanAccesses (programProviderTable trace.witness) =
       (trace.providerOccurrences .program).map fun entry =>
         actualProviderAccess (p := p) (programEntryAccess entry) entry.multiplicity := by
-  rw [trace.programProviderTable_witness, tableCleanAccesses_setData]
-  exact program_traceTable_actualAccesses _ _ _ (trace.providerCapacity .program) fits
+  rw [trace.programProviderTable_witness]
+  exact program_traceTable_actualAccesses _ _ _ (trace.providerCapacity .program) (trace.providerDataFor_consistent .program) fits
 
 /-- Canonical Program closure exposes the recounted key list. Keeping the table proof at an
 abstract trace leaves native compiler terms folded in semantic consumers. -/
@@ -91,8 +96,8 @@ theorem msgToken_program_eq_programRowKey (message : ProgramMsg (ZMod p)) :
       ProgramChip.programRowKey (rowOfMsg message) := by
   unfold msgToken ProgramChip.programRowKey rowOfMsg
   rw [programMsg_toList]
-  simp only [List.map_cons, List.map_nil, programChannel, kindOf, if_true]
-  rw [if_neg (by decide)]
+  simp only [List.map_cons, List.map_nil, programChannel, kindOf, ite_true]
+  rw [ite_eq_right (by decide)]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Recovering a typed Program message from a raw Clean interaction preserves its literal ledger

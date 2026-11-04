@@ -16,7 +16,7 @@ program shapes) stays in `Soundness/Decode.lean`, which imports this core. Names
 `SP1Clean.Soundness.Target` is unchanged (decoupled from path), so every
 `instrToProgramRow`/`decodedInROM` reference resolves as before. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Soundness.Target
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -152,7 +152,7 @@ This is the proof-free reason its canonical `routeId` lookup must succeed. -/
 theorem instructionRouteKey_opcode_covered {i : instruction} {key : InstructionRouteKey}
     (keyEq : instructionRouteKey i = some key) :
     key.opcode ≠ Opcode.ECALL ∧ key.opcode ≠ Opcode.EBREAK ∧ key.opcode ≠ Opcode.UNIMP := by
-  cases i <;> simp only [instructionRouteKey] at keyEq
+  cases i <;> rename_i chunk <;> cases chunk <;> simp only [instructionRouteKey] at keyEq
   all_goals first | contradiction | (rw [Option.some.injEq] at keyEq; subst key)
   case UTYPE x =>
     rcases x with ⟨imm, rd, op⟩
@@ -410,7 +410,7 @@ theorem instrToProgramRow_route_agreement {pc : Vector (ZMod p) 3} {i : instruct
       row.opcode = (key.opcode.toNat : ZMod p) ∧
       row.op_a_0 = (if key.opAIsX0 then 1 else 0) ∧
       instructionRouteId i = SP1Clean.routeId key.opcode key.opAIsX0 := by
-  cases i <;> simp only [instrToProgramRow] at projection
+  cases i <;> rename_i chunk <;> cases chunk <;> simp only [instrToProgramRow] at projection
   all_goals first | contradiction | (rw [Option.some.injEq] at projection; subst row)
   all_goals
     refine ⟨_, rfl, rfl, ?_, rfl⟩
@@ -436,7 +436,7 @@ the branch of the dispatcher they implement. -/
 theorem instrToProgramRow_op_a_0 {pc : Vector (ZMod p) 3} {i : instruction}
     {row : ProgramRow (ZMod p)} (h : instrToProgramRow pc i = some row) :
     row.op_a_0 = if row.op_a = 0 then 1 else 0 := by
-  cases i <;> simp_all [instrToProgramRow] <;> rw [← h]
+  cases i <;> rename_i chunk <;> cases chunk <;> simp_all [instrToProgramRow] <;> rw [← h]
 
 /-- Every register-shaped operand in a successfully projected instruction is a genuine five-bit
 register index.  Immediate operands are deliberately excluded by their `imm_b`/`imm_c` gates: their
@@ -447,7 +447,7 @@ theorem instrToProgramRow_register_bounds {pc : Vector (ZMod p) 3} {i : instruct
     row.op_a.val < 32 ∧
       (row.imm_b = 0 → row.op_b[0].val < 32) ∧
       (row.imm_c = 0 → row.op_c[0].val < 32) := by
-  cases i <;> simp only [instrToProgramRow] at h
+  cases i <;> rename_i chunk <;> cases chunk <;> simp only [instrToProgramRow] at h
   all_goals first | contradiction | (rw [Option.some.injEq] at h; subst row)
   all_goals simp [regidxVal_val_lt]
 
@@ -458,7 +458,7 @@ assumption. -/
 theorem instrToProgramRow_immediate_flags_binary {pc : Vector (ZMod p) 3} {i : instruction}
     {row : ProgramRow (ZMod p)} (h : instrToProgramRow pc i = some row) :
     (row.imm_b = 0 ∨ row.imm_b = 1) ∧ (row.imm_c = 0 ∨ row.imm_c = 1) := by
-  cases i <;> simp only [instrToProgramRow] at h
+  cases i <;> rename_i chunk <;> cases chunk <;> simp only [instrToProgramRow] at h
   all_goals first | contradiction | (rw [Option.some.injEq] at h; subst row)
   all_goals simp
 
@@ -479,11 +479,11 @@ theorem instrToProgramRow_immediate_words_isU64 {pc : Vector (ZMod p) 3} {i : in
     {row : ProgramRow (ZMod p)} (h : instrToProgramRow pc i = some row) :
     (row.imm_b = 1 → Word.isU64 row.op_b) ∧
       (row.imm_c = 1 → Word.isU64 row.op_c) := by
-  cases i <;> simp only [instrToProgramRow] at h
+  cases i <;> rename_i chunk <;> cases chunk <;> simp only [instrToProgramRow] at h
   all_goals first | contradiction | (rw [Option.some.injEq] at h; subst row)
   all_goals simp [isU64_bitVecToWord]
   all_goals simp [Word.isU64]
-  all_goals intro i; fin_cases i <;> norm_num
+  all_goals intro i; fin_cases i <;> rename_i chunk <;> cases chunk <;> norm_num
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The R-type projection, unfolded — the committed Program-bus column shape an `RTYPE` decode
@@ -898,7 +898,7 @@ theorem instrToProgramRow_isCoreAlu_of_opcode_lt
   split at projected
   all_goals first | contradiction | (rw [Option.some.injEq] at projected; subst row)
   all_goals simp only [IsCoreAluInstruction]
-  all_goals first | trivial | (
+  all_goals first | (
     apply notLt _ ?_ opcode_lt
     first
     | exact uopOutside _
@@ -952,7 +952,7 @@ theorem decodedInROM.op_a_ne_zero_of_op_a_0_eq_zero
     (h : decodedInROM prog row) (flagZero : row.op_a_0 = 0) : row.op_a ≠ 0 := by
   intro opAZero
   have indicator := h.op_a_0_eq_indicator
-  rw [if_pos opAZero, flagZero] at indicator
+  rw [ite_eq_left opAZero, flagZero] at indicator
   exact zero_ne_one indicator
 
 omit [Fact (2 ^ 17 < p)] in
@@ -962,7 +962,7 @@ theorem decodedInROM.op_a_eq_zero_of_op_a_0_eq_one
     (h : decodedInROM prog row) (flagOne : row.op_a_0 = 1) : row.op_a = 0 := by
   by_contra opANeZero
   have indicator := h.op_a_0_eq_indicator
-  rw [if_neg opANeZero, flagOne] at indicator
+  rw [ite_eq_right opANeZero, flagOne] at indicator
   exact one_ne_zero indicator
 
 /-- **The I-type decode inversion (W7), generic over the op.** The I-type twin of
@@ -2079,21 +2079,21 @@ theorem instrToProgramRow_inv_load {pc : Vector (ZMod p) 3} {i : instruction}
 
 theorem loadOpcode_one (isU : Bool) :
     loadOpcode (1 : word_width) isU = if isU then Opcode.LBU else Opcode.LB := by
-  unfold loadOpcode; rw [if_pos (beq_self_eq_true (1 : word_width))]
+  unfold loadOpcode; rw [ite_eq_left (beq_self_eq_true (1 : word_width))]
 
 theorem loadOpcode_two (isU : Bool) :
     loadOpcode (2 : word_width) isU = if isU then Opcode.LHU else Opcode.LH := by
   unfold loadOpcode
-  rw [if_neg (by decide), if_pos (beq_self_eq_true (2 : word_width))]
+  rw [ite_eq_right (by decide), ite_eq_left (beq_self_eq_true (2 : word_width))]
 
 theorem loadOpcode_four (isU : Bool) :
     loadOpcode (4 : word_width) isU = if isU then Opcode.LWU else Opcode.LW := by
   unfold loadOpcode
-  rw [if_neg (by decide), if_neg (by decide), if_pos (beq_self_eq_true (4 : word_width))]
+  rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left (beq_self_eq_true (4 : word_width))]
 
 theorem loadOpcode_eight (isU : Bool) : loadOpcode (8 : word_width) isU = Opcode.LD := by
   unfold loadOpcode
-  rw [if_neg (by decide), if_neg (by decide), if_neg (by decide)]
+  rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide)]
 
 /-- **`loadOpcode` is injective on the decoder image** {(1,*),(2,*),(4,*),(8,false)}. -/
 theorem loadOpcode_inj_on_valid (w w' : word_width) (u u' : Bool)
@@ -2229,7 +2229,7 @@ kernel never deep-reduces the `word_width = Int` comparison; the `SB.toNat = 36`
 enum `rfl`. Isolates the one Int-literal reduction the store adapter needs. -/
 theorem storeOpcode_one_toNat : (storeOpcode (1 : word_width)).toNat = 36 := by
   have hsb : storeOpcode (1 : word_width) = Opcode.SB := by
-    unfold storeOpcode; rw [if_pos (beq_self_eq_true (1 : word_width))]
+    unfold storeOpcode; rw [ite_eq_left (beq_self_eq_true (1 : word_width))]
   rw [hsb]; rfl
 
 /-- **The width pin for SB.** `storeOpcode` is non-injective at `.SD` (maps everything ∉{1,2,4}
@@ -2249,14 +2249,14 @@ theorem storeOpcode_pin_one (w' : word_width)
 deep-reduction of the `word_width = Int` comparison. -/
 theorem storeOpcode_two_toNat : (storeOpcode (2 : word_width)).toNat = 37 := by
   have hsh : storeOpcode (2 : word_width) = Opcode.SH := by
-    unfold storeOpcode; rw [if_neg (by decide), if_pos (beq_self_eq_true (2 : word_width))]
+    unfold storeOpcode; rw [ite_eq_right (by decide), ite_eq_left (beq_self_eq_true (2 : word_width))]
   rw [hsh]; rfl
 
 /-- `(storeOpcode 4).toNat = 38` (SW). -/
 theorem storeOpcode_four_toNat : (storeOpcode (4 : word_width)).toNat = 38 := by
   have hsw : storeOpcode (4 : word_width) = Opcode.SW := by
-    unfold storeOpcode; rw [if_neg (by decide), if_neg (by decide),
-      if_pos (beq_self_eq_true (4 : word_width))]
+    unfold storeOpcode; rw [ite_eq_right (by decide), ite_eq_right (by decide),
+      ite_eq_left (beq_self_eq_true (4 : word_width))]
   rw [hsw]; rfl
 
 /-- **The width pin for SH.** `storeOpcode` is injective at SB/SH/SW: `(storeOpcode w').toNat =
@@ -2341,7 +2341,7 @@ theorem instrToProgramRow_inv_store {pc : Vector (ZMod p) 3} {i : instruction}
 theorem storeOpcode_eight_toNat : (storeOpcode (8 : word_width)).toNat = 39 := by
   have hsd : storeOpcode (8 : word_width) = Opcode.SD := by
     unfold storeOpcode
-    rw [if_neg (by decide), if_neg (by decide), if_neg (by decide)]
+    rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide)]
   rw [hsd]; rfl
 
 /-- **`storeOpcode` injective on the guarded widths** — including the previously un-pinnable SD
@@ -2411,17 +2411,17 @@ theorem instructionImageOK_of_instrToProgramRow'_some
     {pc : Vector (ZMod p) 3} {i : instruction} {row : ProgramRow (ZMod p)}
     (projected : instrToProgramRow' pc i = some row) :
     instructionImageOK i = true := by
-  cases i with
-  | MUL tuple =>
+  cases i <;> rename_i chunk <;> cases chunk
+  case MUL tuple =>
       rcases tuple with ⟨rs2, rs1, rd, operation⟩
       exact instrToProgramRow'_mul_canonical projected
-  | LOAD tuple =>
+  case LOAD tuple =>
       rcases tuple with ⟨immediate, rs1, rd, isUnsigned, width⟩
       exact instrToProgramRow'_load_valid projected
-  | STORE tuple =>
+  case STORE tuple =>
       rcases tuple with ⟨immediate, rs2, rs1, width⟩
       exact instrToProgramRow'_store_valid projected
-  | _ => rfl
+  all_goals rfl
 
 /-- **The STORE inversion WITHOUT `hpin`** (the `instrToProgramRow_inv_load'` twin for STORE).
 From the *guarded* projection, the opcode column pins the width for the decoder's canonical image —

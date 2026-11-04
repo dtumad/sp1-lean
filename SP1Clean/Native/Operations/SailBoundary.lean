@@ -54,9 +54,8 @@ def checker (source target : ExecutionSnapshot) : PublicVerifier (ZMod p) SP1Pub
 /-- The existing SP1 field bound covers all twelve public-check occurrences. -/
 theorem count_bound [Fact (2 ^ 25 < p)] (source target : ExecutionSnapshot) :
     (checker (p := p) source target).CountBound := by
-  change 2 * 6 < ringChar (ZMod p) ∨ ringChar (ZMod p) = 0
+  change 2 * 6 < ringChar (ZMod p)
   rw [ZMod.ringChar_zmod_n]
-  left
   have := Fact.out (p := 2 ^ 25 < p)
   omega
 

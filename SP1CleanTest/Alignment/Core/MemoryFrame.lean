@@ -13,7 +13,7 @@ and same-value ROM stores. Native evaluation is confined to finite source data a
 
 namespace SP1CleanTest.Core.MemoryFrame
 open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
-open Sail LeanRV64D.Defs LeanRV64D.Functions
+open Sail LeanRV64D LeanRV64D.Functions
 
 private def image (word : BitVec 32) : ProgramImage := ⟨[(65536, word)], 65536, []⟩
 

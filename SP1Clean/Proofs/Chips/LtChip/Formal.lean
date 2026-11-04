@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.LtChip.Defs
@@ -127,7 +128,7 @@ private lemma populate_bit_bool {b cc : Word (ZMod p)} {s r : ZMod p} (hr : r = 
         = (if r = 1 then LtOperationUnsigned.populate
               #v[b[0], b[1], b[2], b[3] + s * 32768 - 65536 * (s * U16MSBOperation.populate_msb b[3])]
               #v[cc[0], cc[1], cc[2], cc[3] + s * 32768 - 65536 * (s * U16MSBOperation.populate_msb cc[3])]
-            else ⟨⟨0⟩, #v[0, 0, 0, 0], 0, #v[0, 0]⟩).u16_compare_operation.bit from rfl, if_pos hr,
+            else ⟨⟨0⟩, #v[0, 0, 0, 0], 0, #v[0, 0]⟩).u16_compare_operation.bit from rfl, ite_eq_left hr,
       show (LtOperationUnsigned.populate _ _).u16_compare_operation.bit
         = U16CompareOperation.populate_bit _ _ from rfl]
   exact U16CompareOperation.populate_bit_bool _ _
@@ -159,7 +160,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     -- `Spec` exposes the semantic bit via `result_semantic`.
     have h_lt_spec := (LtOperationSigned.result_semantic (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1
     rw [hslt] at h_lt_spec
-    simp only [if_true] at h_lt_spec
+    simp only [ite_true] at h_lt_spec
     simp only [resultWord, rv64_slt_eq, toBitVec64_bitWord _ _ h_lt_spec]
   · -- `is_sltu = 1` with the sum-bound + booleans forces `is_slt = 0`
     have h_lt_spec := (LtOperationSigned.result_semantic (h_lt ⟨ha, hb, h_bin, h_slt_bool⟩) hr).1
@@ -172,14 +173,13 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
           (by linear_combination h_gate)
     have h01 : (0 : ZMod p) ≠ 1 := zero_ne_one
     rw [h_slt0] at h_lt_spec
-    simp only [if_neg h01] at h_lt_spec
+    simp only [ite_eq_right h01] at h_lt_spec
     simp only [resultWord, rv64_sltu_eq, Word.toBitVec64_toNat ha,
       Word.toBitVec64_toNat hb, toBitVec64_bitWord _ _ h_lt_spec]
   -- The per-emitter channel-requirement tail: the bare `CPUState` `Assumptions` (the binary gate), the
   -- composed `LtOperationSigned`/`ALUTypeReader` requirements (bare or `[] ∨ Assumptions` disjuncts).
   · and_intros <;>
-      first | exact h_bin | exact ⟨ha, hb, h_bin, h_slt_bool⟩
-            | exact Or.inl rfl
+      first
             | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
             | exact Or.inr ⟨h_bin, (fun hr => isU64_bitWord
                 (bool_of_eq_ite (LtOperationSigned.result_semantic
@@ -547,10 +547,10 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    LtChip.circuit_main_eq]
+    ((LtChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [LtChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ALUTypeReader.circuit, Readers.ALUTypeReader.main,
     Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
@@ -561,5 +561,10 @@ theorem lookups_empty :
     U16MSBOperation.circuit, U16MSBOperation.main,
     U16CompareOperation.circuit, U16CompareOperation.main,
     Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.LtChip

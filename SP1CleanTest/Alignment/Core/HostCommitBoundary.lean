@@ -1,4 +1,5 @@
 import SP1Clean.Soundness.HostCommitEnsemble
+import SP1CleanTest.Core.StaticMembership
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Model.SP1Field
 import Clean.Circuit.WitnessExport
@@ -46,7 +47,7 @@ private def evaluatedWitness {PublicIO : TypeMap} [ProvableType PublicIO]
     {ensemble : Ensemble Fp PublicIO} (built : EnsembleWitness ensemble) : Bool × Ledger :=
   (built.tables.all (tableChecked built.data),
     built.interactions.map fun interaction =>
-      (interaction.channel.name, interaction.msg.toList, interaction.mult))
+      (interaction.channel.name, interaction.msg.toList, interaction.signedMult))
 
 private def balance (ledger : Ledger) : Bool :=
   ledger.length < SP1Prime && ledger.all fun key =>
@@ -67,18 +68,19 @@ private def tableFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
     (eventsBound : events.length ≤ UInt64.size) (terminalsBound : terminals.length ≤ UInt64.size)
     (index : HostCommitBank.Index) : Table Fp :=
   match index with
-  | some selected => Table.build { circuit := HostCommitChip.circuit deferred selected, Assumptions := (HostCommitChip.circuit deferred selected).Assumptions }
-      ((events.filter (fun event => event.1 == selected)).map (fun event => (event.2, 1))) (fun _ _ => #[]) (ProverHint.empty Fp)
+  | some selected => SP1CleanTest.StaticMembership.buildTable ((HostCommitBank.view deferred (some selected)).component)
+      ((events.filter (fun event => event.1 == selected)).map (fun event => (event.2, 1))) [] (.empty Fp) (ProverHint.empty Fp)
       (by exact (List.length_map _).le.trans ((List.length_filter_le ..).trans eventsBound))
-  | none => Table.build { circuit := HostCommitBoundary.terminal deferred, Assumptions := (HostCommitBoundary.terminal deferred).Assumptions } terminals
-      (fun _ _ => #[]) (ProverHint.empty Fp) terminalsBound
+  | none => SP1CleanTest.StaticMembership.buildTable ((HostCommitBank.view deferred none).component) terminals
+      [] (.empty Fp) (ProverHint.empty Fp) terminalsBound
 
 private def witnessFor (deferred : Bool) (source : Model.Core.HostState) (events : List (Fin 8 × Inputs Fp))
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8)
     (eventsBound : events.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map]; decide)
     (terminalsBound : terminals.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map]; decide) :
     EnsembleWitness (HostCommitEnsemble.ensemble (p := SP1Prime) deferred source [] []
-      (by simpa using HostCommitBank.components_unique_names (p := SP1Prime) deferred)) :=
+      (by simpa using HostCommitBank.components_unique_names (p := SP1Prime) deferred)
+      (by cases deferred <;> decide) (by simp)) :=
   EnsembleWitness.ofTables _ (HostCommitBank.indices.map (tableFor deferred events terminals eventsBound terminalsBound))
     publicValues (by
       simp only [List.map_map, HostCommitEnsemble.ensemble, HostCommitBank.components,
@@ -145,15 +147,15 @@ theorem interleavedBanks : [false, true].all (fun deferred =>
   native_decide
 
 private def terminalChecked (deferred : Bool) (state : State Fp) : Bool :=
-  tableChecked (fun _ _ => #[]) (Table.build { circuit := HostCommitBoundary.terminal deferred, Assumptions := (HostCommitBoundary.terminal deferred).Assumptions } [state]
-    (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide)))
+  tableChecked (.empty Fp) (SP1CleanTest.StaticMembership.buildTable ((HostCommitBank.view deferred none).component) [state]
+    [] (.empty Fp) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide)))
 
 /-- The sentinel cannot be reused as an ordinary clock or as another terminal's predecessor. -/
 theorem terminalClocks : [false, true].all (fun deferred =>
     terminalChecked deferred ⟨2 ^ 24 - 1, 2 ^ 24 - 1, Vector.replicate 8 0⟩ &&
-    !(tableChecked (fun _ _ => #[]) (Table.build { circuit := HostCommitChip.circuit deferred 0, Assumptions := (HostCommitChip.circuit deferred 0).Assumptions }
+    !(tableChecked (.empty Fp) (SP1CleanTest.StaticMembership.buildTable ((HostCommitBank.view deferred (some 0)).component)
       [(HostCommitChip.populate deferred ((calls deferred 0)[0]!).call
-        (HostCommitBoundary.final (Vector.replicate 8 0)), 1)] (fun _ _ => #[]) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide)))) &&
+        (HostCommitBoundary.final (Vector.replicate 8 0)), 1)] [] (.empty Fp) (ProverHint.empty Fp) (by exact (show 1 ≤ UInt64.size from by decide)))) &&
     [⟨2 ^ 24, 0, Vector.replicate 8 0⟩, ⟨0, 2 ^ 24, Vector.replicate 8 0⟩,
      ⟨-1, 0, Vector.replicate 8 0⟩, ⟨0, -1, Vector.replicate 8 0⟩].all
        (fun state => !terminalChecked deferred state)) = true := by native_decide

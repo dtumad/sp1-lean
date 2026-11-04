@@ -19,35 +19,36 @@ snapshot. Each commitment call of the path also requests its declaration in the 
 namespace SP1Clean.Soundness.HostFinalMemory
 
 open Circuit Air.Flat Channels Model.Core Semantics
-open LeanRV64D.Defs (Register)
+open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance executionLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance executionClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
 /-- The installed complete-memory assembly with the concrete six-call host registry. -/
 abbrev Installed (image : ProgramImage) (source : ExecutionSnapshot) (outgoing : MemorySnapshot)
-    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (channels : List (RawChannel (ZMod p))) :=
+    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) :=
   ensemble image source outgoing final bankFinal HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) channels (source_unique_names image source outgoing)
+    (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels outgoing)
+    (source_unique_names image source outgoing) (source_registration image source outgoing)
 
 /-- Balance on every registered channel except commitment declarations. The verifier-owned
 statement provider that supplies them is installed above this assembly. -/
-def DeclarationsOpen (witness : EnsembleWitness (Installed image source outgoing final bankFinal channels)) : Prop :=
-  ∀ channel ∈ (Installed image source outgoing final bankFinal channels).channels,
+def DeclarationsOpen (witness : EnsembleWitness (Installed image source outgoing final bankFinal)) : Prop :=
+  ∀ channel ∈ (Installed image source outgoing final bankFinal).channels,
     channel ≠ CommitmentDeclaration.channel.toRaw → witness.BalancedChannel channel
 
 /-- Complete balance in particular balances everything but the declarations. -/
 theorem DeclarationsOpen.of_balancedChannels
-    {witness : EnsembleWitness (Installed image source outgoing final bankFinal channels)}
+    {witness : EnsembleWitness (Installed image source outgoing final bankFinal)}
     (balanced : witness.BalancedChannels) : DeclarationsOpen witness :=
   fun channel member _ => balanced channel member
 
 /-- The Memory proof view balances every channel the host proofs read. -/
-theorem baseWitness_hostBalanced (witness : EnsembleWitness (Installed image source outgoing final bankFinal channels))
+theorem baseWitness_hostBalanced (witness : EnsembleWitness (Installed image source outgoing final bankFinal))
     (balanced : DeclarationsOpen witness) : HostHintQueueBoundary.Balanced (baseWitness witness) := by
   intro channel registered visible
   have receipt (ram : Bool) : channel ≠ (FinalMemoryValue.channel ram).toRaw := by
@@ -56,15 +57,13 @@ theorem baseWitness_hostBalanced (witness : EnsembleWitness (Installed image sou
   apply baseWitness_balancedChannel witness channel registered (receipt false) (receipt true)
     (by rintro rfl; exact visible (by simp [HostHintQueueBoundary.hiddenChannels]))
   apply balanced
-  · simp only [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters,
-      FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.mem_append]
-    exact Or.inl (Or.inl (Or.inl (Or.inl registered)))
+  · exact List.mem_append_left _ registered
   · rintro rfl
     exact visible (by simp [HostHintQueueBoundary.hiddenChannels])
 
 /-- The installed target comparison needs Byte closure and its private Memory channels only. -/
 theorem checkFinal_of_declarationsOpen
-    (witness : EnsembleWitness (Installed image source outgoing final bankFinal channels))
+    (witness : EnsembleWitness (Installed image source outgoing final bankFinal))
     (checked : witness.Constraints) (balanced : DeclarationsOpen witness) :
     source.sail.memorySnapshot.checkFinal outgoing
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
@@ -73,30 +72,22 @@ theorem checkFinal_of_declarationsOpen
       (balanced _ ?_ (by simp [CommitmentDeclaration.channel, Channels.byteChannel, Channel.toRaw])))
   · intro channel member
     apply balanced
-    · simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl | rfl | rfl <;>
-        simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters,
-          FinalReceiptEnsemble.install, Ensemble.replaceComponent,
-          FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, circuit_norm]
-      all_goals apply Or.inl
-      all_goals simp [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
-        ClosedVerifier.install, ClosedVerifier.withInteractions, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
-        HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble,
-        FinalMemoryChecks.checkTables, StaticTable.component, StaticTable.provider, circuit_norm]
+    · apply List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ ?_))
+      obtain ⟨component, present, used⟩ := List.mem_flatMap.mp (check_channels channel member)
+      exact (source_registration image source outgoing).tables component
+        (List.mem_append_right _ (List.mem_append_right _ (List.mem_append_right _ present))) used
     · simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl | rfl | rfl | rfl <;>
         simp [CommitmentDeclaration.channel, FinalMemoryValue.channel, FinalMemoryChange.channel,
           FinalRegisterValue.membership, InitialMemoryLookup.membership, StaticTable.channel, Channel.toRaw]
-  · simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters,
-      FinalReceiptEnsemble.install, Ensemble.replaceComponent, base, HostHintQueueBoundary.ensemble,
-      HaltPadding.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble, HostLocalCore.ensemble,
-      PublicVerifier.install, HostLocalCore.baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]
+  · apply List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ ?_))
+    simp [HostLocalCore.baseEnsemble, HostLocalCore.registry, LocalCore.baseEnsemble, sp1Ensemble_channels]
 
 /-- **Complete-memory execution.** Constraints and balance outside the commitment declarations
 yield one local RISC-V/host path from the complete source. Its final integer registers and entire RAM map are the
 supplied outgoing snapshot; the remaining endpoint observations are those of the host proofs. -/
 theorem source_execution (valid : image.Valid)
-    (witness : EnsembleWitness (Installed image source outgoing final bankFinal channels))
+    (witness : EnsembleWitness (Installed image source outgoing final bankFinal))
     (constraints : witness.Constraints) (balanced : DeclarationsOpen witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧

@@ -153,11 +153,11 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
         (h_mem_a (by rw [show input_is_real = 1 from ht2])).2,
         (h_mem_b (by rw [show input_is_real = 1 from ht2])).2⟩⟩,
     Or.inr h_assumptions.1, Or.inr h_assumptions.1,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_⟩
+    htbin,
+    h_assumptions.1,
+    fun h0 => ?_,
+    h_assumptions.1,
+    fun h0 => ?_⟩
   · exact (h_prog (by rw [show input_is_trusted = 1 from ht])).2.2.2.2
   · -- Decode bounds are exactly the structural Program-channel guarantee.
     obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [show input_is_trusted = 1 from ht])
@@ -200,15 +200,15 @@ theorem completeness :
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
     rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
-    exact ⟨ha, hp0, hp1, hp2, hbin (neg_inj.mp ht)⟩
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
+    exact ⟨ha, hp0, hp1, hp2, hbin ht⟩
   · -- mem pull a: the guarantee pair (whole-`Word` `isU64` + the message `clk_low`, which *is* the block's
     -- `prev_low`) is read straight off the `Spec`'s gated four-fact tuple.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).1, (hisu (neg_inj.mp hneg)).2.2.1⟩
+    exact fun hneg => ⟨(hisu hneg).1, (hisu hneg).2.2.1⟩
   · -- mem pull b
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).2.1, (hisu (neg_inj.mp hneg)).2.2.2⟩
+    exact fun hneg => ⟨(hisu hneg).2.1, (hisu hneg).2.2.2⟩
 
 /-- The native immutable I-type reader as a Clean `GeneralFormalCircuit`: composes a
 `RegisterAccessCols` per operand (both reads), imposes the read-zeroing gates, and emits the
@@ -244,8 +244,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl | rfl | rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
 
 set_option linter.unusedSectionVars false in

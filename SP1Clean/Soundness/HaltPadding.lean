@@ -17,7 +17,11 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 def install (ens : Ensemble (ZMod p) PublicIO)
     (slot : TableSlot ens.tables HaltPaddingChip.original) : Ensemble (ZMod p) PublicIO :=
-  ens.replaceComponent slot HaltPaddingChip.component rfl
+  ens.replaceComponent slot HaltPaddingChip.component rfl (by
+    change HaltPaddingChip.original.circuit.channels ⊆ ens.channels
+    apply ens.tables_channels
+    rw [← slot.component_eq]
+    exact List.getElem_mem _)
 
 variable {ens : Ensemble (ZMod p) PublicIO} {slot : TableSlot ens.tables HaltPaddingChip.original}
 variable (witness : EnsembleWitness (install ens slot))
@@ -36,6 +40,7 @@ def project : EnsembleWitness ens :=
   EnsembleWitness.ofCanonicalTables ens
     (witness.tables.set slot.index.val
       ((witness.tables[slot.index.val]'(bound witness)).withComponent HaltPaddingChip.original
+        (by rw [table_component]; rfl) (by rw [table_component]; rfl)
         (by rw [table_component]; rfl) (by rw [table_component]; rfl)))
     witness.publicInput (by
       rw [List.map_set, Table.withComponent_component, witness.tables_map_component]
@@ -52,7 +57,10 @@ def project : EnsembleWitness ens :=
 
 /-- Both circuits expose exactly the same derived entry at the same registered name. -/
 @[simp] theorem project_data : (project witness).data = witness.data := by
-  apply deriveProverData_set witness.tables ⟨slot.index.val, bound witness⟩
+  change deriveProverData (witness.tables.set slot.index.val _) _ = witness.data
+  unfold deriveProverData EnsembleWitness.data
+  congr 1
+  apply deriveTables_set witness.tables ⟨slot.index.val, bound witness⟩
   · change HaltPaddingChip.original.circuit.name =
       (witness.tables[slot.index.val]'(bound witness)).component.circuit.name
     rw [table_component]
@@ -76,9 +84,10 @@ theorem interactions (channel : RawChannel (ZMod p)) :
     (project witness).interactionsWith channel = witness.interactionsWith channel := by
   have row := Table.withComponent_interactions (witness.tables[slot.index.val]'(bound witness))
     HaltPaddingChip.original (by rw [table_component]; rfl) (by rw [table_component]; rfl)
+        (by rw [table_component]; rfl) (by rw [table_component]; rfl)
     channel (by rw [table_component, HaltPaddingChip.interactions])
   simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
-    EnsembleWitness.toTables, Tables.interactionsWith, project_data, project_publicInput]
+    EnsembleWitness.toTables, Tables.interactionsWith, project_data]
   change ens.verifierOperations.interactionValuesWith channel _ ++
       (witness.tables.set slot.index.val _).flatMap (·.interactionsWith channel) =
     ens.verifierOperations.interactionValuesWith channel _ ++

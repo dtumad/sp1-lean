@@ -10,7 +10,7 @@ with that successor and does not execute ECALL through Sail or assume global Mem
 
 namespace SP1Clean.Soundness
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding LeanRV64D.Defs
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
@@ -93,7 +93,7 @@ private theorem pcPark_configured (state : SailState) (configured : Target.SailC
   have different : ¬ ((Register.PC == reg) = true) := by
     rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
   show (state.regs.insert Register.PC Machine.haltPc).get? reg = state.regs.get? reg
-  rw [Std.ExtDHashMap.get?_insert, dif_neg different]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right different]
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem currency_of_unchanged {trajectory : Trajectory} {initial source target : SailState}

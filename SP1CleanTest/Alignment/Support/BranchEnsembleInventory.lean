@@ -8,19 +8,18 @@ namespace SP1Clean.Audit.BranchEnsemble
 open SP1CleanTest.Alignment.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Model.Core
 
-/-- Check actual physical rows and all original channels after equivalent registry reindexing. -/
+/-- Check actual physical rows and every registered channel, including their capacity bound. -/
 def checkPhysical (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) : Bool :=
-  (description (context target)).checkWitness SP1Prime ((witness target input seeds bounded).withChannels (channels (context target)))
+  (description (context target)).checkWitness (witness target input seeds bounded)
 
 /-- The Boolean checker proves the raw predicates on the original full host assembly. -/
 theorem checkPhysical_iff (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
     checkPhysical target input seeds bounded = true ↔
-      (witness target input seeds bounded).Constraints ∧ (witness target input seeds bounded).BalancedChannels := by
-  rw [checkPhysical, EnsembleCheck.checkWitness_iff]
-  exact and_congr (EnsembleWitness.withChannels_constraints _ _)
-    (EnsembleWitness.withChannels_balanced _ _ (channels_membership (context target)))
+      (assembly (context target)).interactionsFit .logUp (witness target input seeds bounded).heights ∧
+      (witness target input seeds bounded).Constraints ∧ (witness target input seeds bounded).Balanced .logUp :=
+  EnsembleCheck.checkWitness_iff _ _
 
 /-- Reject malformed seeds before construction, then check the original complete physical witness. -/
 def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) : Bool :=

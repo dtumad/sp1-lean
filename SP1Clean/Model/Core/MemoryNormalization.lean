@@ -25,7 +25,7 @@ theorem canonicalBelow_read (memory : ByteMemory) (limit address : ℕ) :
     (memory.canonicalBelow limit).read address =
       if address < limit then memory.read address else 0 := by
   by_cases live : address ∈ memory.supportBelow limit
-  · rw [if_pos ((mem_supportBelow memory limit address).mp live).1]
+  · rw [ite_eq_left ((mem_supportBelow memory limit address).mp live).1]
     apply read_eq_of_mem
     · exact List.mem_map.mpr ⟨address, (Finset.mem_sort (· ≤ ·)).mpr live, rfl⟩
     · intro entry member same

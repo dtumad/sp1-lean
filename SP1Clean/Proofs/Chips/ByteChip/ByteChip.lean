@@ -1,3 +1,4 @@
+import Clean.Air.WitnessGeneration.Generation
 import ToClean.Gadgets.LookupProjection
 import ToClean.Gadgets.BitwiseByte
 import SP1Clean.Model.Channels
@@ -91,7 +92,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   channelsWithRequirements := [byteChannel.toRaw]
   soundness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
-    exact ⟨h_holds, fun _ _ => (byteRowSpec_u8range_pair input_b input_c).mpr h_holds⟩
+    exact ⟨h_holds, fun _ => (byteRowSpec_u8range_pair input_b input_c).mpr h_holds⟩
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions
@@ -100,6 +101,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+
+/-- Count repeated requests for a complete Byte message using Clean's demand mode. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .feq (.expr message.opcode) (.const 3)
+    input message := pure ⟨message.b, message.c, .multiplicity⟩
+  }
 
 end U8Range
 
@@ -199,7 +209,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
         · exact hzero
         · exact False.elim (hlt (hiff.mp hone))
     refine ⟨⟨hb, hvalue⟩,
-      fun _ _ => (byteRowSpec_msb _ _).mpr ⟨⟨?_, hb⟩, hbool, hiff⟩⟩
+      fun _ => (byteRowSpec_msb _ _).mpr ⟨⟨?_, hb⟩, hbool, hiff⟩⟩
     · rcases hbool with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
@@ -211,6 +221,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+
+/-- Count repeated requests for a complete Byte message using Clean's demand mode. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .feq (.expr message.opcode) (.const 5)
+    input message := pure ⟨message.b, .multiplicity⟩
+  }
 
 end MSB
 
@@ -257,7 +276,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     circuit_proof_start [Gadgets.BitwiseByte.circuit, Gadgets.BitwiseByte.Op.apply]
     obtain ⟨⟨hb, hc⟩, hr⟩ := h_holds
     refine ⟨⟨⟨hb, hc⟩, hr⟩,
-      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_zero]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
+      fun _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_zero]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
     · rw [hr]; exact Nat.and_lt_two_pow (n := 8) input_b.val hc
     · rw [ZMod.val_zero, byteOp_zero]; exact hr
   completeness := by
@@ -268,6 +287,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, Gadgets.BitwiseByte.circuit, circuit_norm]
+
+/-- Count repeated requests for a complete Byte message using Clean's demand mode. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .feq (.expr message.opcode) (.const 0)
+    input message := pure ⟨message.b, message.c, .multiplicity⟩
+  }
 
 end AndByte
 
@@ -306,7 +334,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     circuit_proof_start [Gadgets.BitwiseByte.circuit, Gadgets.BitwiseByte.Op.apply]
     obtain ⟨⟨hb, hc⟩, hr⟩ := h_holds
     refine ⟨⟨⟨hb, hc⟩, hr⟩,
-      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_one]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
+      fun _ => (byteRowSpec_byteOp _ _ _ (by rw [ZMod.val_one]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
     · rw [hr]; exact Nat.or_lt_two_pow (n := 8) hb hc
     · rw [ZMod.val_one, byteOp_one]; exact hr
   completeness := by
@@ -317,6 +345,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, Gadgets.BitwiseByte.circuit, circuit_norm]
+
+/-- Count repeated requests for a complete Byte message using Clean's demand mode. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .feq (.expr message.opcode) (.const 1)
+    input message := pure ⟨message.b, message.c, .multiplicity⟩
+  }
 
 end OrByte
 
@@ -355,7 +392,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
     circuit_proof_start [Gadgets.BitwiseByte.circuit, Gadgets.BitwiseByte.Op.apply]
     obtain ⟨⟨hb, hc⟩, hr⟩ := h_holds
     refine ⟨⟨⟨hb, hc⟩, hr⟩,
-      fun _ _ => (byteRowSpec_byteOp _ _ _ (by rw [val_2_zmod_p]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
+      fun _ => (byteRowSpec_byteOp _ _ _ (by rw [val_2_zmod_p]; norm_num)).mpr ⟨⟨?_, hb, hc⟩, ?_⟩⟩
     · rw [hr]; exact Nat.xor_lt_two_pow (n := 8) hb hc
     · rw [val_2_zmod_p, byteOp_two]; exact hr
   completeness := by
@@ -366,6 +403,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, Gadgets.BitwiseByte.circuit, circuit_norm]
+
+/-- Count repeated requests for a complete Byte message using Clean's demand mode. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .feq (.expr message.opcode) (.const 2)
+    input message := pure ⟨message.b, message.c, .multiplicity⟩
+  }
 
 end XorByte
 
@@ -472,7 +518,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
         rcases hbool with hzero | hone
         · exact hzero
         · exact False.elim (hge (hiff.mp hone))
-    refine ⟨⟨⟨hb, hc⟩, hvalue⟩, fun _ _ =>
+    refine ⟨⟨⟨hb, hc⟩, hvalue⟩, fun _ =>
       (byteRowSpec_ltu _ _ _).mpr ⟨⟨?_, hb, hc⟩, hbool, hiff⟩⟩
     rcases hbool with h | h <;> rw [h] <;> simp [ZMod.val_zero, ZMod.val_one]
   completeness := by
@@ -485,6 +531,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs field where
 @[circuit_norm] theorem main_lookupNames (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups.map (·.table.name) = [] := by
   simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+
+/-- Count repeated requests for a complete Byte message using Clean's demand mode. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .feq (.expr message.opcode) (.const 4)
+    input message := pure ⟨message.b, message.c, .multiplicity⟩
+  }
 
 end Ltu
 

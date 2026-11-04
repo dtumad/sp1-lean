@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.MulChip.Defs
@@ -250,7 +251,7 @@ theorem completeness :
     · intro hsum1
       rw [← MulOperation.aSelector_eq_resultWord _ _ hf0' hf1' hf2' hf3' hf4' hsum1]
       simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
-        Vector.getElem_mapRange, Nat.reduceLT, dif_pos]
+        Vector.getElem_mapRange, Nat.reduceLT, dite_eq_left]
       simpa only [circuit_norm, Nat.reduceMod, Nat.add_zero, hmul, hmulh, hmulhu, hmulhsu, hmulw] using
         evalWord4_of_cells (h_env_a 0) (h_env_a 1) (h_env_a 2) (h_env_a 3)
   · -- RegisterWrite's `isU64 value` (the op_a write push): on a real row the witnessed `a` equals the
@@ -287,7 +288,7 @@ theorem completeness :
           = env.get (i₀ + 16 + 16 + 4 + 4 + 1 + 1) := by
         rw [← hcols_eq]; simp only [circuit_norm]
       rw [← MulOperation.aSelector_eq_resultWord _ _ hf0' hf1' hf2' hf3' hf4' hsum1]
-      simp only [MulOperation.aSelector, MulOperation.productVal, Nat.reduceLT, dif_pos,
+      simp only [MulOperation.aSelector, MulOperation.productVal, Nat.reduceLT, dite_eq_left,
         hprod, hpmsb]
       simpa only [circuit_norm, Nat.reduceMod, Nat.add_zero, hmul, hmulh, hmulhu, hmulhsu, hmulw] using
         evalWord4_of_cells (h_env_a 0) (h_env_a 1) (h_env_a 2) (h_env_a 3)
@@ -469,10 +470,10 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations, MulChip.circuit_main_eq]
+    ((circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [MulChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.RTypeReader.circuit,
     Readers.RTypeReader.main, Readers.RegisterWrite.circuit,
@@ -483,5 +484,10 @@ theorem lookups_empty :
     MulOperation.main, U16toU8OperationSafe.circuit,
     U16toU8OperationSafe.main, U16MSBOperation.circuit,
     U16MSBOperation.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.MulChip
