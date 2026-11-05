@@ -1,5 +1,6 @@
 import Lean
 import SP1Clean.Soundness.Shard.Machine
+import SP1Clean.Soundness.Shard.Trace
 
 /-! # Compiled native capstone contract audit
 
@@ -57,6 +58,45 @@ example (sound : SoundnessTarget ensemble limits commitments image source target
 
 end Contract
 
+section NativeTraceContract
+
+open SP1Clean.Soundness SP1Clean.Channels SP1Clean.Semantics
+
+variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
+  {final : HostHintQueue.State (ZMod SP1Prime)} {bankFinal : HostState}
+  {commitments : CommitmentStatement} {header : SP1PublicIO (ZMod SP1Prime)}
+
+-- Pin the headline theorem's application surface independently of its proof.
+example (valid : image.Valid)
+    (fresh : (CommitmentDeclaration.source (p := SP1Prime) commitments).circuit.name ∉
+      (installed image source outgoing final bankFinal).tables.map (·.circuit.name))
+    (registered : CommitmentDeclaration.channel.toRaw ∈
+      (installed image source outgoing final bankFinal).channels)
+    (heights : List ℕ)
+    (accepted : (CommitmentEnsemble.install commitments
+      (installed image source outgoing final bankFinal) fresh registered).Statement .logUp header heights) :
+    SailTrace commitments image valid source outgoing final bankFinal header :=
+  sail_trace valid accepted
+
+example (valid : image.Valid) :
+    SailTrace commitments image valid source outgoing final bankFinal header ↔
+      ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed SP1Prime ∧
+        ∃ (events : List ExecutionEvent) (target : ExecutionState),
+          (sp1Machine SP1Prime image valid).Trace source.realize events target ∧
+          ExecutionPath.WritesPermitted (policy SP1Prime image) (image.toGuestProgram valid)
+            source.realize events ∧ commitments.Matches events ∧
+          Endpoint source outgoing final bankFinal header events target := Iff.rfl
+
+-- These are complete boundary maps, not just values at accessed addresses.
+example {events : List ExecutionEvent} {target : ExecutionState}
+    (endpoint : Endpoint source outgoing final bankFinal header events target) :
+    target.sail.mem = outgoing.memory.toSailMemory (2 ^ 48) ∧
+      (∀ index, target.sail.get_reg? index = some (outgoing.read (.reg index))) ∧
+      target.clock = StateMsg.timeNat (finalBoundaryStateMessage header) :=
+  ⟨endpoint.ram, endpoint.registers, endpoint.clock⟩
+
+end NativeTraceContract
+
 namespace CapstoneContractAudit
 
 open Lean
@@ -66,6 +106,9 @@ def roots : Array Name := #[
   ``SP1Clean.Soundness.Shard.statement_iff,
   ``SP1Clean.Soundness.Shard.SoundnessTarget,
   ``SP1Clean.Soundness.Shard.CompilerTarget,
+  ``SP1Clean.Soundness.Shard.SailTrace,
+  ``SP1Clean.Soundness.Shard.Endpoint,
+  ``SP1Clean.Soundness.Shard.sail_trace,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,

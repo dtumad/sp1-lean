@@ -96,6 +96,43 @@ class SharedInventoryTests(unittest.TestCase):
                         exports.shared_artifact_names(root, expected)
 
 
+class CargoCoverageTests(unittest.TestCase):
+    def package(self):
+        return {"features": {"inventory": [], "clean-export": [],
+                "instruction-export": ["inventory", "clean-export"],
+                "assembly-export": ["instruction-export"], "mprotect": ["inventory"]},
+                "targets": [{"name": name, "kind": ["test"], "required-features": [
+                    "inventory" if name == "release_semantics" else
+                    "assembly-export" if name.startswith("assembly_") else "instruction-export"]}
+                    for name in [*exports.RUST_TESTS, "release_semantics"]]}
+
+    def test_all_targets_owned_and_enabled(self):
+        exports.check_target_coverage(self.package())
+
+    def test_new_auto_discovered_target_cannot_be_silently_omitted(self):
+        package = self.package()
+        package["targets"].append({"name": "forgotten", "kind": ["test"]})
+        with self.assertRaisesRegex(ValueError, "Unassigned or missing"):
+            exports.check_target_coverage(package)
+
+    def test_removed_or_duplicated_target_is_rejected(self):
+        for targets in (self.package()["targets"][:-1], self.package()["targets"] * 2):
+            with self.assertRaisesRegex(ValueError, "Unassigned or missing"):
+                exports.check_target_coverage({**self.package(), "targets": targets})
+
+    def test_target_behind_unselected_feature_is_rejected(self):
+        package = self.package()
+        package["targets"][0]["required-features"] = ["unselected"]
+        with self.assertRaisesRegex(ValueError, "disabled"):
+            exports.check_target_coverage(package)
+
+    def test_inventory_suite_must_be_enabled_independently(self):
+        package = self.package()
+        package["targets"][-1]["required-features"] = ["assembly-export"]
+        with self.assertRaisesRegex(ValueError, "independent inventory"):
+            exports.check_target_coverage(package)
+
+
 class RustCompletionTests(unittest.TestCase):
     @staticmethod
     def binary(name, count):
