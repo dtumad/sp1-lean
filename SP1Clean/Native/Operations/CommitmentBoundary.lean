@@ -28,16 +28,11 @@ def main (statement : CommitmentStatement) (input : Var SP1PublicIO (ZMod p)) : 
 instance elaborated (statement : CommitmentStatement) :
     ElaboratedCircuit (ZMod p) SP1PublicIO unit (main statement) := by elaborate_circuit
 
-private theorem eval_const_vector {n : ℕ} (env : Environment (ZMod p)) (values : Vector (ZMod p) n) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const values) = values := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id values
-
 theorem soundness (statement : CommitmentStatement) :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) (main statement)
       (fun _ _ => True) (fun input _ _ => Spec statement input) := by
   circuit_proof_start [Gadgets.Equality.circuit]
-  rw [eval_const_vector, eval_const_vector] at h_holds
+  simp only [Vector.map_id'] at h_holds
   obtain ⟨valid, publicDigest, deferredDigest, flag, deferredFlag⟩ := h_holds
   refine ⟨?_, publicDigest, deferredDigest, sub_eq_zero.mp flag, sub_eq_zero.mp deferredFlag⟩
   by_contra invalid
@@ -47,7 +42,7 @@ theorem completeness (statement : CommitmentStatement) :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) (main statement)
       (fun input _ _ => Spec statement input) (fun _ _ _ => True) := by
   circuit_proof_start [Gadgets.Equality.circuit]
-  rw [eval_const_vector, eval_const_vector]
+  simp only [Vector.map_id']
   obtain ⟨valid, publicDigest, deferredDigest, flag, deferredFlag⟩ := h_assumptions
   exact ⟨by simp [valid], publicDigest, deferredDigest, sub_eq_zero.mpr flag, sub_eq_zero.mpr deferredFlag⟩
 

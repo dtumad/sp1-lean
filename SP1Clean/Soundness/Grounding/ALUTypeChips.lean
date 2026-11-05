@@ -880,7 +880,7 @@ theorem addwViewOf_rdWrite (env : Environment (ZMod p)) :
   rw [AddwChip.directOutput_eq, AddwChip.eval_columns]
   apply Vector.ext; intro i hi
   interval_cases i <;> simp only [offset, AddwChip.resultWord,
-    Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    Vector.getElem_mapRange, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Addw's completed exposed Memory list evaluates to the canonical conditional six-pack. -/
@@ -1046,7 +1046,7 @@ theorem bitwiseViewOf_rdWrite (env : Environment (ZMod p)) :
   rw [BitwiseChip.directOutput_eq, BitwiseChip.eval_columns]
   apply Vector.ext; intro i hi
   interval_cases i <;> simp only [offset, BitwiseU16Operation.resultWord,
-    Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    Vector.getElem_mapRange, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Bitwise's completed exposed Memory list evaluates to the canonical conditional six-pack. -/
@@ -1385,7 +1385,7 @@ theorem shiftLeftChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     shiftLeftViewOf_state, shiftLeftViewOf_adapter, shiftLeftViewOf_isReal,
     shiftLeftViewOf_rdWrite, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
-  simp only [← vec4_eval, Vector.getElem_mapRange, Expression.eval]
+  rfl
 
 /-- Lift ShiftLeft's six memory interactions to the typed decoded-row boundary. -/
 theorem shiftLeftChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -1585,7 +1585,7 @@ theorem shiftRightChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [rtypePriorMessage, rtypeReadBackMessage, rtypeWriteMessage,
     shiftRightViewOf_state, shiftRightViewOf_adapter, shiftRightViewOf_isReal,
     shiftRightViewOf_rdWrite, Circuits.Types.ALUTypeReader.toAdapterView, circuit_norm]
-  simp only [← vec4_eval, Vector.getElem_mapRange, Expression.eval]
+  rfl
 
 /-- Lift ShiftRight's six memory interactions to the typed decoded-row boundary. -/
 theorem shiftRightChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)

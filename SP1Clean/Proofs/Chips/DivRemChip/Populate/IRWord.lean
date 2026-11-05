@@ -135,7 +135,7 @@ theorem compU_toNat (env : ProverEnvironment (ZMod p)) (x : Witgen.U64Expr (ZMod
     {vC : Word (ZMod p)} (hx : ((x.eval { env := env })).toNat = (Word.toBitVec64 vC).toNat)
     (hUC : vC.isU64) :
     ((compU selectors x).eval { env := env }).toNat
-      = (Word.toBitVec64 (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat := by
+      = (Word.toBitVec64 (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat := by
   rw [cComp_toBitVec64 vC _ hUC]
   have hf4 := flagF_eval selectors env 4 (by omega)
   have hf5 := flagF_eval selectors env 5 (by omega)
@@ -154,7 +154,7 @@ theorem compU_toNat_b (env : ProverEnvironment (ZMod p)) (x : Witgen.U64Expr (ZM
     {vB : Word (ZMod p)} (hx : ((x.eval { env := env })).toNat = (Word.toBitVec64 vB).toNat)
     (hUB : vB.isU64) :
     ((compU selectors x).eval { env := env }).toNat
-      = (Word.toBitVec64 (bComp vB (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat := by
+      = (Word.toBitVec64 (bComp vB (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat := by
   rw [bComp_eq_cComp]
   exact compU_toNat selectors env x hx hUB
 
@@ -181,7 +181,7 @@ theorem quotCompBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZM
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
     ((quotCompBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
-      = (quotCompBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
+      = (quotCompBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat := by
   have hq := quotBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC
   have hf6 := flagF_eval selectors env 6 (by omega)
   have hf7 := flagF_eval selectors env 7 (by omega)
@@ -198,7 +198,7 @@ theorem remCompBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMo
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
     ((remCompBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
-      = (remCompBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
+      = (remCompBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat := by
   have hr := remBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC
   have hf6 := flagF_eval selectors env 6 (by omega)
   have hf7 := flagF_eval selectors env 7 (by omega)
@@ -235,7 +235,7 @@ theorem compF_eval (env : ProverEnvironment (ZMod p)) (C : Word (Expression (ZMo
     (vC : Word (ZMod p))
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUC : vC.isU64) (i : ℕ) (hi : i < 4) :
-    ((compF selectors C)[i]).eval { env := env } = (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+    ((compF selectors C)[i]).eval { env := env } = (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   obtain ⟨u0, u1, u2, u3⟩ := Word.lt_cases_of_isU64 hUC
   have h0 := hWC 0 (by omega); have h1 := hWC 1 (by omega)
   have h2 := hWC 2 (by omega); have h3 := hWC 3 (by omega)
@@ -259,7 +259,7 @@ theorem compF_eval_b (env : ProverEnvironment (ZMod p)) (B : Word (Expression (Z
     (vB : Word (ZMod p))
     (hWB : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment B[i] = vB[i])
     (hUB : vB.isU64) (i : ℕ) (hi : i < 4) :
-    ((compF selectors B)[i]).eval { env := env } = (bComp vB (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+    ((compF selectors B)[i]).eval { env := env } = (bComp vB (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   rw [bComp_eq_cComp]
   exact compF_eval selectors env B vB hWB hUB i hi
 

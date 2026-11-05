@@ -56,17 +56,17 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
     input.adapter.op_b_memory.access_timestamp.prev_low.val < 2 ^ 24 ∧
     input.adapter.op_c_memory.access_timestamp.prev_low.val < 2 ^ 24)
 
-omit [Fact (2 ^ 24 < p)] in
+omit [Fact (Nat.Prime p)] [Fact (2 ^ 24 < p)] in
 /-- Four consecutive evaluated witness cells assemble the word `#v[v0, v1, v2, v3]`.
 Used in completeness to identify the generated register-write word with its selected product slice. -/
 private lemma evalWord4_of_cells {env : Environment (ZMod p)} {o : ℕ} {v0 v1 v2 v3 : ZMod p}
     (h0 : env.get o = v0) (h1 : env.get (o + 1) = v1)
     (h2 : env.get (o + 2) = v2) (h3 : env.get (o + 3) = v3) :
-    Vector.map (Expression.eval env) (Vector.mapRange 4 fun i => var { index := o + i })
+    (Vector.mapRange 4 fun i => env.get (o + i))
       = #v[v0, v1, v2, v3] := by
   apply Vector.ext; intro k hk
   interval_cases k <;>
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, Vector.getElem_mk,
+    simp only [Vector.getElem_mapRange, Vector.getElem_mk,
       List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ] <;>
     assumption
 
@@ -103,7 +103,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- RegisterWrite owes `is_real = 1 → isU64 a`; on a real row `sum = 1` (via `h_rs`), so `a = resultWord`
   -- (`aSelector` linkage) is `isU64` from `result_semantic`.
   have h_a_isU64 : (input_isMul + input_isMulh + input_isMulhu + input_isMulhsu + input_isMulw) = 1 →
-      Word.isU64 (Vector.map (Expression.eval env) (Vector.mapRange 4 fun i => var { index := i₀ + 45 + i })) := by
+      Word.isU64 (Vector.mapRange 4 fun i => env.get (i₀ + 45 + i)) := by
     intro hr
     have hsum1 : input_isMul + input_isMulh + input_isMulhu + input_isMulhsu + input_isMulw = 1 :=
       hr
@@ -149,8 +149,13 @@ theorem completeness :
     hrac_a, hrac_b, hrac_c, hdec, hprevclk⟩ := h_assumptions
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  obtain ⟨-, ⟨-, -, -, -, ⟨hob, -, -⟩, -, hoc, -, -⟩,
-    hmul, hmulh, hmulhu, hmulhsu, hmulw⟩ := h_input
+  have hob := h_input.2.1.2.2.2.2.1.1
+  have hoc := h_input.2.1.2.2.2.2.2.2.1
+  have hmul := h_input.2.2.1
+  have hmulh := h_input.2.2.2.1
+  have hmulhu := h_input.2.2.2.2.1
+  have hmulhsu := h_input.2.2.2.2.2.1
+  have hmulw := h_input.2.2.2.2.2.2
   obtain ⟨-, h_env_cols, h_env_a, -⟩ := h_env
   have hf0' := hf0
   have hf1' := hf1
@@ -250,7 +255,7 @@ theorem completeness :
       simpa only [circuit_norm] using hcols_eq
     · intro hsum1
       rw [← MulOperation.aSelector_eq_resultWord _ _ hf0' hf1' hf2' hf3' hf4' hsum1]
-      simp only [MulOperation.aSelector, MulOperation.productVal, Vector.getElem_map,
+      simp only [MulOperation.aSelector, MulOperation.productVal,
         Vector.getElem_mapRange, Nat.reduceLT, dite_eq_left]
       simpa only [circuit_norm, Nat.reduceMod, Nat.add_zero, hmul, hmulh, hmulhu, hmulhsu, hmulw] using
         evalWord4_of_cells (h_env_a 0) (h_env_a 1) (h_env_a 2) (h_env_a 3)
@@ -261,8 +266,7 @@ theorem completeness :
     have hsum1 : input_isMul + input_isMulh + input_isMulhu + input_isMulhsu + input_isMulw = 1 :=
       hr
     have h_mulspec := MulOperation.productSpec_populate
-      (a := Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 45 + i }))
+      (a := Vector.mapRange 4 fun i => env.get (i₀ + 45 + i))
       (b := input_adapter_op_b_memory_prev_value)
       (c := input_adapter_op_c_memory_prev_value) hbU hcU
       (input_isMul) (input_isMulh) (input_isMulhu) (input_isMulhsu) (input_isMulw)
@@ -270,8 +274,7 @@ theorem completeness :
       hf0' hf1' hf2' hf3' hf4' hsum01'
     obtain ⟨hisU64, _, _, _, _, _⟩ := MulOperation.result_semantic
       ⟨hsum01', hmw', hf0', hf1', hf2', hf3', hf4', hsum01'⟩ h_mulspec hsum1
-    rw [show (Vector.map (Expression.eval env.toEnvironment)
-          (Vector.mapRange 4 fun i => var { index := i₀ + 45 + i }))
+    rw [show (Vector.mapRange 4 fun i => env.get (i₀ + 45 + i))
         = MulOperation.resultWord _ _ from ?_]
     · exact hisU64
     · -- The `a` slices (`h_env_a`) reference the witnessed product columns `env.get (i₀+5+16+j)`, while

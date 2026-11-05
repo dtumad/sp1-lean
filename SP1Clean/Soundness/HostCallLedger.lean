@@ -61,7 +61,7 @@ private theorem main_binary (row : Var HostCallChip.Inputs (ZMod p)) (offset : �
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_memory (memory : Circuits.Types.RegisterAccessCols (Expression (ZMod p)))
     (env : Environment (ZMod p)) :
-    (ProvableStruct.eval env memory).prev_value = memory.prev_value.map (Expression.eval env) := by
+    (ProvableStruct.eval env memory).prev_value = Eval.eval env memory.prev_value := by
   cases memory
   simp only [circuit_norm]
 
@@ -72,7 +72,10 @@ private theorem eval_message (row : Var HostCallChip.Inputs (ZMod p)) (flag : Ex
   rcases row with ⟨instruction, length⟩
   cases instruction
   cases length
-  simp only [Inputs.message, circuit_norm, Vector.map_map, Function.comp_def, eval_memory]
+  simp only [Inputs.message, circuit_norm, eval_memory]
+  apply Vector.ext
+  intro i hi
+  simp only [Vector.getElem_map, ProvableType.getElem_eval_fields]
 
 private theorem main_values (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p)) (constraints : ((HostCallChip.main row).operations offset).ConstraintsHold env) :

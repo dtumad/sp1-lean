@@ -727,21 +727,10 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
       input_is_signed, input_is_real⟩
   apply (spec_iff_evidence (input := row) h_assumptions).2
   obtain ⟨hb_u64, hcc_u64, hir_bin, his_bin⟩ := h_assumptions
-  obtain ⟨hib, hicc, ⟨⟨_, hflags, _, hcl⟩, _, _⟩, _, _⟩ := h_input
-  have eb : ∀ i (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ i (hi : i < 4), Expression.eval env input_var_cc[i] = input_cc[i] := by
-    intro i hi; rw [← hicc]; simp only [Vector.getElem_map]
-  have ef : ∀ i (hi : i < 4),
-      Expression.eval env input_var_cols_result_u16_flags[i] = input_cols_result_u16_flags[i] := by
-    intro i hi; rw [← hflags]; simp only [Vector.getElem_map]
-  have ecl : ∀ i (hi : i < 2), Expression.eval env input_var_cols_result_comparison_limbs[i]
-      = input_cols_result_comparison_limbs[i] := by
-    intro i hi; rw [← hcl]; simp only [Vector.getElem_map]
   obtain ⟨-, -, -, hb3⟩ := Word.lt_cases_of_isU64 hb_u64
   obtain ⟨-, -, -, hc3⟩ := Word.lt_cases_of_isU64 hcc_u64
   obtain ⟨h_msb_b, h_msb_c, h_lt, _, _, hE5, hE7, hE9⟩ := h_holds
-  simp only [eb, ec, ef, ecl, vec4_eta, vec2_eta]
+  simp only [vec4_eta, vec2_eta]
     at h_msb_b h_msb_c h_lt hE5 hE7 hE9 ⊢
   -- the two `U16MSBOperation` sub-assertion `Assumptions` (16-bit operands, `is_signed` binary).
   have hAb : U16MSBOperation.circuit.Assumptions
@@ -783,23 +772,11 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   have h_evidence := (spec_iff_evidence (input := row) h_assumptions).1 h_spec
   obtain ⟨hb_u64, hcc_u64, hir_bin, his_bin⟩ := h_assumptions
   obtain ⟨_, _, hbm_bool, hcm_bool, hg5, hg7, hg9, hbm_eq, hcm_eq, h_uns_spec⟩ := h_evidence
-  obtain ⟨hib, hicc, ⟨⟨_, hflags, _, hcl⟩, _, _⟩, _, _⟩ := h_input
-  have eb : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_cc[i] = input_cc[i] := by
-    intro i hi; rw [← hicc]; simp only [Vector.getElem_map]
-  have ef : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_cols_result_u16_flags[i]
-      = input_cols_result_u16_flags[i] := by
-    intro i hi; rw [← hflags]; simp only [Vector.getElem_map]
-  have ecl : ∀ i (hi : i < 2),
-      Expression.eval env.toEnvironment input_var_cols_result_comparison_limbs[i]
-        = input_cols_result_comparison_limbs[i] := by
-    intro i hi; rw [← hcl]; simp only [Vector.getElem_map]
   obtain ⟨-, -, -, hb3⟩ := Word.lt_cases_of_isU64 hb_u64
   obtain ⟨-, -, -, hc3⟩ := Word.lt_cases_of_isU64 hcc_u64
   have hbtop := adj_top hb3 his_bin hg7 hbm_eq
   have hctop := adj_top hc3 his_bin hg9 hcm_eq
-  simp only [eb, ec, ef, ecl, vec4_eta, vec2_eta]
+  simp only [vec4_eta, vec2_eta]
   refine ⟨⟨⟨fun _ => hb3, his_bin⟩, hbm_bool, hbm_eq⟩,
     ⟨⟨fun _ => hc3, his_bin⟩, hcm_bool, hcm_eq⟩,
     ⟨⟨fun _ => ⟨isU64_top hb_u64 hbtop, isU64_top hcc_u64 hctop⟩, hir_bin⟩, h_uns_spec⟩,

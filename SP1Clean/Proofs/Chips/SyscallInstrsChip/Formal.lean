@@ -55,34 +55,21 @@ theorem soundness :
   have h_cbin := bool_of_mul_pred h_cbool
   have h_dbin := bool_of_mul_pred h_dbool
   have h_hbin := bool_of_mul_pred h_hbool
-  have eoa0 : Expression.eval env input_var_op_a_memory_prev_value[0]
-      = input_op_a_memory_prev_value[0] := by
-    have := congrArg (fun v => v[0]'(by norm_num)) h_input.2.2.1.1; simpa using this
-  have esb0 : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
-      = input_syscall_id_bytes_low_bytes[0] := by
-    have := congrArg (fun v => v[0]'(by norm_num)) h_input.2.2.2.2.2.2.2.2.2.2.2.1
-    simpa using this
   -- The arm sees the row's own expression; `GatesBoolean` states it over the decoded fields.
   have h_tbinE := bool_of_mul_pred h_tbool
-  rw [eoa0, esb0] at h_tbool
   have h_tbin := bool_of_mul_pred h_tbool
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_rbin)
-  have eav : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_a_value[i] = input_op_a_value[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.1
-    simpa using this
   have avU64 : (input_is_real : ZMod p) = 1 → Word.isU64 input_op_a_value := by
     intro hneg
     have hp : (2 : ℕ) ^ 17 < p := Fact.out
     refine Word.isU64_of_cases ?_ ?_ ?_ ?_
-    · have := h_ba0 hneg; rw [eav 0 (by norm_num)] at this
+    · have := h_ba0 hneg
       exact (byteRowSpec_range (n := 16) _ (by omega)).mp this
-    · have := h_ba1 hneg; rw [eav 1 (by norm_num)] at this
+    · have := h_ba1 hneg
       exact (byteRowSpec_range (n := 16) _ (by omega)).mp this
-    · have := h_ba2 hneg; rw [eav 2 (by norm_num)] at this
+    · have := h_ba2 hneg
       exact (byteRowSpec_range (n := 16) _ (by omega)).mp this
-    · have := h_ba3 hneg; rw [eav 3 (by norm_num)] at this
+    · have := h_ba3 hneg
       exact (byteRowSpec_range (n := 16) _ (by omega)).mp this
   have hrealHalt : input_is_halt = 1 → (input_is_real : ZMod p) = 1 := by
     intro hh
@@ -96,8 +83,8 @@ theorem soundness :
     rw [hr]
   -- Two selectors cannot both fire: one identifier cannot equal two distinct codes.
   have distinct : ∀ c d : ℕ, c < 2 ^ 17 → d < 2 ^ 17 → c ≠ d →
-      Expression.eval env input_var_syscall_id_bytes_low_bytes[0] - ((c : ℕ) : ZMod p) = 0 →
-      Expression.eval env input_var_syscall_id_bytes_low_bytes[0] - ((d : ℕ) : ZMod p) = 0 →
+      input_syscall_id_bytes_low_bytes[0] - ((c : ℕ) : ZMod p) = 0 →
+      input_syscall_id_bytes_low_bytes[0] - ((d : ℕ) : ZMod p) = 0 →
       False := by
     intro c d hc hd hne h1 h2
     have hp : (2 : ℕ) ^ 17 < p := Fact.out
@@ -107,28 +94,28 @@ theorem soundness :
     exact hne this
   -- Each selector is the indicator of its code, so it is boolean and at most one fires.
   have indicator : ∀ (res : ZMod p) (c : ℕ),
-      res = (if Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+      res = (if input_syscall_id_bytes_low_bytes[0]
               - ((c : ℕ) : ZMod p) = 0 then 1 else 0) →
       (res = 0 ∨ res = 1) := by
     intro res c h
-    by_cases hz : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+    by_cases hz : input_syscall_id_bytes_low_bytes[0]
         - ((c : ℕ) : ZMod p) = 0
     · exact Or.inr (by rw [h, ite_eq_left hz])
     · exact Or.inl (by rw [h, ite_eq_right hz])
   have pairSum : ∀ (r1 r2 : ZMod p) (c d : ℕ), c < 2 ^ 17 → d < 2 ^ 17 → c ≠ d →
-      r1 = (if Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+      r1 = (if input_syscall_id_bytes_low_bytes[0]
               - ((c : ℕ) : ZMod p) = 0 then 1 else 0) →
-      r2 = (if Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+      r2 = (if input_syscall_id_bytes_low_bytes[0]
               - ((d : ℕ) : ZMod p) = 0 then 1 else 0) →
       (r1 + r2 = 0 ∨ r1 + r2 = 1) := by
     intro r1 r2 c d hc hd hne h1 h2
-    by_cases hz1 : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+    by_cases hz1 : input_syscall_id_bytes_low_bytes[0]
         - ((c : ℕ) : ZMod p) = 0
-    · by_cases hz2 : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+    · by_cases hz2 : input_syscall_id_bytes_low_bytes[0]
           - ((d : ℕ) : ZMod p) = 0
       · exact absurd (distinct c d hc hd hne hz1 hz2) not_false
       · exact Or.inr (by rw [h1, h2, ite_eq_left hz1, ite_eq_right hz2]; ring)
-    · by_cases hz2 : Expression.eval env input_var_syscall_id_bytes_low_bytes[0]
+    · by_cases hz2 : input_syscall_id_bytes_low_bytes[0]
           - ((d : ℕ) : ZMod p) = 0
       · exact Or.inr (by rw [h1, h2, ite_eq_right hz1, ite_eq_left hz2]; ring)
       · exact Or.inl (by rw [h1, h2, ite_eq_right hz1, ite_eq_right hz2]; ring)
@@ -153,7 +140,6 @@ theorem soundness :
     exact h_write ⟨h_rbin, ha0, h_ebin, h_ehsum⟩
   · exact h_pc ⟨h_rbin, h_hbin⟩
   · have hd := h_disp h_tbinE
-    simp only [eoa0, esb0] at hd
     exact hd
   · exact h_fbb ⟨h_hbin, fun hh => (h_mb (hrealHalt hh)).1 1⟩
   · exact h_fbc ⟨h_dbin, fun hd => (h_mc (hrealDef hd)).1 1⟩
@@ -163,9 +149,9 @@ theorem soundness :
     -- already in scope and discarded before this conjunct joined `Spec`.
     have bridge : ∀ c : ℕ,
         (input_syscall_id_bytes_low_bytes[0] = ((c : ℕ) : ZMod p)) ↔
-          (Expression.eval env input_var_syscall_id_bytes_low_bytes[0] - ((c : ℕ) : ZMod p) = 0) := by
+          (input_syscall_id_bytes_low_bytes[0] - ((c : ℕ) : ZMod p) = 0) := by
       intro c
-      rw [esb0, sub_eq_zero]
+      rw [sub_eq_zero]
     refine ⟨h_u16 h_rbin, fun hr => ⟨?_, ?_, ?_, ?_, ?_⟩, fun hr => ⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
     · rw [(h_izh h_rbin hr).1]; exact if_congr (bridge haltCode).symm rfl rfl
     · rw [(h_ize h_rbin hr).1]
@@ -175,29 +161,24 @@ theorem soundness :
     · rw [(h_izd h_rbin hr).1]
       exact if_congr (bridge commitDeferredCode).symm rfl rfl
     · intro hne
-      have h := (h_izh h_rbin hr).2 (by rw [esb0]; exact hne)
-      rw [esb0] at h
+      have h := (h_izh h_rbin hr).2 (by exact hne)
       exact h
     · intro hne
-      have h := (h_ize h_rbin hr).2 (by rw [esb0]; exact hne)
-      rw [esb0] at h
+      have h := (h_ize h_rbin hr).2 (by exact hne)
       exact h
     · intro hne
-      have h := (h_izl h_rbin hr).2 (by rw [esb0]; exact hne)
-      rw [esb0] at h
+      have h := (h_izl h_rbin hr).2 (by exact hne)
       exact h
     · intro hne
-      have h := (h_izc h_rbin hr).2 (by rw [esb0]; exact hne)
-      rw [esb0] at h
+      have h := (h_izc h_rbin hr).2 (by exact hne)
       exact h
     · intro hne
-      have h := (h_izd h_rbin hr).2 (by rw [esb0]; exact hne)
-      rw [esb0] at h
+      have h := (h_izd h_rbin hr).2 (by exact hne)
       exact h
     · linear_combination h_hdef
     · intro h0
       have h0' : input_is_real = 0 := h0
-      rw [eoa0, esb0, h0'] at h_padt
+      rw [h0'] at h_padt
       rw [h0'] at h_padh h_padd
       refine ⟨?_, ?_, ?_⟩
       · show (input_op_a_memory_prev_value[0] - input_syscall_id_bytes_low_bytes[0])
@@ -237,36 +218,6 @@ theorem completeness :
     h_pull, h_bytes⟩ := h_assumptions
   obtain ⟨h_rbin, h_cbin, h_dbin, h_hbin, h_tbin⟩ := h_gates
   obtain ⟨h_split, h_res, h_inv, h_halteq, h_pad⟩ := h_sel
-  have eoa : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_a_memory_prev_value[i]
-        = input_op_a_memory_prev_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.1.1; simpa using this
-  have esb : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_syscall_id_bytes_low_bytes[i]
-        = input_syscall_id_bytes_low_bytes[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.2.1; simpa using this
-  have eav : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_a_value[i] = input_op_a_value[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.1; simpa using this
-  have eob : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_b_memory_prev_value[i]
-        = input_op_b_memory_prev_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1.1; simpa using this
-  have eoc : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_c_memory_prev_value[i]
-        = input_op_c_memory_prev_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.1.1; simpa using this
-  have edw : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_digest_word[i] = input_digest_word[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
-    simpa using this
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env.toEnvironment input_var_state_pc[i] = input_state_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1.2.2.2; simpa using this
-  simp only [epc, eoa, esb, eav, eoc, edw]
   and_intros
   all_goals try (first
     | exact h_rbin

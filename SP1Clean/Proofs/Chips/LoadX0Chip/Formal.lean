@@ -72,22 +72,18 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- seven-way selector sum `isReal`, which the named discipline carries as its `is_real` argument.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
   -- eval→value bridge for the offset bits (the only nested vector field the gates reference in value form).
-  have hmap_ob := h_input.2.2.2.2.2.2.2.2.2.2
-  have eob : ∀ i (hi : i < 3), Expression.eval env input_var_offset_bit[i] = input_offset_bit[i] :=
-    fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.SoundnessAssumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, Expression.eval env input_var_offset_bit[0],
-          Expression.eval env input_var_offset_bit[1], Expression.eval env input_var_offset_bit[2],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, input_offset_bit[0],
+          input_offset_bit[1], input_offset_bit[2],
           input_is_lb + input_is_lbu + input_is_lh + input_is_lhu + input_is_lw +
             input_is_lwu + input_is_ld⟩
         : AddressOperation.Inputs (ZMod p)) :=
     ⟨ha, hb, h_bin⟩
   simp only [AddressOperation.circuit] at h_addr
   have h_addr_spec := h_addr h_addr_as
-  simp only [circuit_norm, eob] at h_addr_spec
+  simp only [circuit_norm] at h_addr_spec
   have h_it := h_itype ⟨h_bin, h_bin, h_clk⟩
   -- the alignment gates, in value form.
-  simp only [eob] at h_al0 h_al1 h_al2
   simp only [isReal, opcodeVal]
   refine ⟨⟨h_addr_spec,
       h_mem ⟨h_bin, fun _ => h_pv_isu64,
@@ -191,23 +187,17 @@ theorem completeness :
   -- G1: the *push*-side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
   simp only [sub_eq_add_neg] at h_oa1 h_oa2
-  have hmap_pc := h_input.2.2.2.2.2.2.2.1.2.2.2
-  have hmap_ob := h_input.2.2.2.2.2.2.2.2.2.2
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
-  have eob : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_offset_bit[i]
-      = input_offset_bit[i] := fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, Expression.eval env.toEnvironment input_var_offset_bit[0],
-          Expression.eval env.toEnvironment input_var_offset_bit[1],
-          Expression.eval env.toEnvironment input_var_offset_bit[2],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, input_offset_bit[0],
+          input_offset_bit[1],
+          input_offset_bit[2],
           input_is_lb + input_is_lbu + input_is_lh + input_is_lhu + input_is_lw +
             input_is_lwu + input_is_ld⟩ : AddressOperation.Inputs (ZMod p)) := by
-    simp only [eob]; exact ⟨ha, hb, hbin, hfit, hob0, hob1, hob2, h_ge, h_off⟩
+    exact ⟨ha, hb, hbin, hfit, hob0, hob1, hob2, h_ge, h_off⟩
   refine ⟨⟨?_, ?_⟩, h_addr_as, ⟨?_, ?_⟩, ⟨?_, ?_⟩,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact hbin
-  · simp only [epc]; exact h_cpu
+  · exact h_cpu
   · exact ⟨hbin, fun _ => h_pv_isu64, h_clk⟩
   · exact h_mem
   · exact ⟨hbin, hbin, h_clk⟩
@@ -220,9 +210,9 @@ theorem completeness :
   · rcases h_b5 with h | h <;> rw [h] <;> simp
   · rcases h_b6 with h | h <;> rw [h] <;> simp
   · rcases hbin with h | h <;> rw [h] <;> simp
-  · simp only [eob]; exact h_al2
-  · simp only [eob]; exact h_al1
-  · simp only [eob]; exact h_al0
+  · exact h_al2
+  · exact h_al1
+  · exact h_al0
   · linear_combination h_oa1
   · linear_combination h_oa2
 

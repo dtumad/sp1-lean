@@ -37,9 +37,9 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
     FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_⟩
   · refine AddrAddOperation.populateIR_congr env env' _ _ (fun i hi => ?_) (fun i hi => ?_)
     · have hv := Inputs.eval_congr_b h_input
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [← Inputs.eval_b, ← Inputs.eval_cc, circuit_norm] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := Inputs.eval_congr_cc h_input
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [← Inputs.eval_b, ← Inputs.eval_cc, circuit_norm] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · simp [circuit_norm]
   · have hsel : Expression.eval env.toEnvironment input.is_real
         = Expression.eval env'.toEnvironment input.is_real := by

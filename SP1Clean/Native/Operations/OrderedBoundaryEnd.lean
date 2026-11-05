@@ -28,18 +28,11 @@ def circuit (name : String) (final : Word (ZMod p)) :
   channelsWithRequirements := [(channel name).toRaw]
   soundness := by
     circuit_proof_start [OrderedBoundary.circuit]
-    have finalEq : Vector.map (Expression.eval env) (Vector.map Expression.const final) = final := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [finalEq] at h_holds
+    simp only [Vector.map_id'] at h_holds
     exact ⟨h_holds.1, h_holds.2.2⟩
   completeness := by
     circuit_proof_start [OrderedBoundary.circuit]
-    have finalEq : Vector.map (Expression.eval env.toEnvironment) (Vector.map Expression.const final) = final := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [finalEq]
-    exact h_assumptions
+    simpa only [Vector.map_id', OrderedBoundary.ProverAssumptions] using h_assumptions
 
 /-- The sole terminal input is private; its full predecessor key must match the cursor. -/
 def generation (name : String) : Air.Flat.WitnessGeneration.Generation (ZMod p) TerminalInputs :=

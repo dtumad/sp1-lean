@@ -295,8 +295,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
     z0, z1, z2, z3, h_mem_a, h_mem_b, h_mem_c⟩ := h_holds
   have htbin := bool_of_mul_pred h_trust
   have hcbin := bool_of_mul_pred h_immbin
-  have e : ∀ i (hi : i < 3), Expression.eval env input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   -- G1: the op_c **push** is gated by `is_real - imm_c`, but the chip-supplied clock bounds are gated on
   -- plain `is_real` (see `Assumptions`). The immediate gate `(is_real - 1) * imm_c = 0` — available here as
   -- the in-circuit `h_immc` — bridges the two: off a real row it forces `imm_c = 0`, so the op_c
@@ -325,13 +323,9 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
     fun h0 => ?_,
     hcbin,
     fun h0 => ?_⟩
-  · -- the four immediate gates: bridge `input_cols_op_c[i]` / `…prev_value[i]` (value-level) to the
-    -- `Expression.eval env …[i]` form `h_holds` carries, via the `h_input` Word equalities + `getElem_map`.
-    rw [← h_input.1.2.2.2.2.2.1, ← h_input.1.2.2.2.2.2.2.1.1]
-    simp only [Vector.getElem_map]; exact ⟨i0, i1, i2, i3⟩
+  · exact ⟨i0, i1, i2, i3⟩
   · -- Decode bounds are exactly the structural Program-channel guarantee.
     obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [ht])
-    rw [e 0 (by norm_num)] at hp0; rw [e 1 (by norm_num)] at hp1; rw [e 2 (by norm_num)] at hp2
     exact ⟨ha, hp0, hp1, hp2⟩
   · -- push_b requirement — same whole-`Word` prev_value as the paired pull (h_mem_b), pushed at
     -- `clk_low + 3`, whose `ClkBound` is the chip-supplied assumption.
@@ -355,29 +349,17 @@ theorem completeness :
   -- `hbin`/`htrust` carry `{record}.field` projections (the `ProverAssumptionsD`/Contracts `Spec`
   -- reassembly); `dsimp` iota-reduces them to the destructured atoms so the `rw`-gates below match.
   dsimp only at hbin htrust
-  -- Align the `Spec`'s HSub (`-`) hyps with the goal's `circuit_norm` `+ -` form, and bridge the immediate
-  -- gates' `input_cols_op_c[i]` (value) to the `Expression.eval env …[i]` form via the `h_input` Word eqs.
-  have eoc : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment (input_var_cols_op_c[i]'hi) = input_cols_op_c[i]'hi := by
-    intro i hi; rw [← h_input.1.2.2.2.2.2.1, Vector.getElem_map]
-  have epv : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment (input_var_cols_op_c_memory_prev_value[i]'hi)
-        = input_cols_op_c_memory_prev_value[i]'hi := by
-    intro i hi; rw [← h_input.1.2.2.2.2.2.2.1.1, Vector.getElem_map]
-  have e : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   refine ⟨⟨hreal, hrac_a⟩, ⟨hreal, hrac_b⟩, ⟨h_immbin_or, hrac_c⟩,
     ?_, h_immc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, z0, z1, z2, z3, ?_, ?_, ?_⟩
   · rcases hbin with h | h <;> rw [h] <;> simp
   · rcases h_immbin_or with h | h <;> rw [h] <;> simp
-  · simp only [eoc, epv]; exact i0
-  · simp only [eoc, epv]; exact i1
-  · simp only [eoc, epv]; exact i2
-  · simp only [eoc, epv]; exact i3
+  · exact i0
+  · exact i1
+  · exact i2
+  · exact i3
   · rcases htrust with h | h <;> rw [h] <;> simp     -- `is_trusted` gate
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
-    rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
     obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
     exact ⟨ha, hp0, hp1, hp2, hbin⟩
   · -- mem pull a: the guarantee pair (whole-`Word` `isU64` + the message's `clk_low`, which *is* the

@@ -109,10 +109,6 @@ theorem completeness :
   -- G1: the *push*-side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
   -- eval→value bridge for the nested `pc` vector the CPUState `Spec` references.
-  have hmap_pc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc
-      = input_state_pc := h_input.2.1.2.2.2
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
       (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, 0, 0,
         input_is_real⟩ : AddressOperation.Inputs (ZMod p)) :=
@@ -122,7 +118,7 @@ theorem completeness :
     ⟨⟨hbin, fun hr => (h_it.2.2.2.2.2 hr).1,
         h_clk⟩, h_mem⟩,
     ⟨⟨hbin, hbin, h_clk⟩, h_it⟩, ?_⟩
-  · simp only [epc 0 (by omega), epc 1 (by omega), epc 2 (by omega)]; exact h_cpu
+  · exact h_cpu
   · rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- StoreDouble's exact Memory-channel interaction list — the store-family shape: the composed

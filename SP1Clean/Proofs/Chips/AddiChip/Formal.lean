@@ -48,16 +48,16 @@ theorem completeness :
   obtain ⟨ha, hb, ha_prev, hbin, hop_a_0, h_cpu, hrac_a, hrac_b, hdec, hprevclk⟩ := h_assumptions
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  obtain ⟨-, -, -, -, -, -, ⟨hob, -, -⟩, hoc⟩ := h_input
+  have hob := h_input.2.2.2.2.2.2.1.1
+  have hoc := h_input.2.2.2.2.2.2.2
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
   have hbeq := (vec4_eval env.toEnvironment input_var_adapter_op_b_memory_prev_value).trans hob
   have hceq := (vec4_eval env.toEnvironment input_var_adapter_op_c_imm).trans hoc
-  have hval : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var {index := i₀ + i}) : Word (ZMod p))
+  have hval : (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p))
       = AddOperation.populate input_adapter_op_b_memory_prev_value input_adapter_op_c_imm := by
     rw [← AddOperation.populateIR_eval env _ _ _ _ hbeq hceq ha hb]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     -- `h_env` now bundles the chip's `value` witness-gen equations with the GFC `ITypeReader`
     -- subcircuit's completeness obligation (SC Phase 2pre) — the witness equations are `h_env.1`.
     -- `exact` crosses the struct-projection defeq gap between the destructured names and the

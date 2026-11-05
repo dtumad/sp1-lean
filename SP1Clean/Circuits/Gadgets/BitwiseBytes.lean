@@ -88,15 +88,7 @@ set_option linter.unusedSectionVars false in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hopcode, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, hir, _, _⟩ := h_input
-  have ea : ∀ i (hi : i < 8), Expression.eval env input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  have eb : ∀ i (hi : i < 8), Expression.eval env input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have er : ∀ i (hi : i < 8),
-      Expression.eval env input_var_cols_result[i] = input_cols_result[i] := by
-    intro i hi; rw [← hir]; simp only [Vector.getElem_map]
-  simp only [circuit_norm, byteChannel, ea, eb, er] at h_holds ⊢
+  simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨hg0, hg1, hg2, hg3, hg4, hg5, hg6, hg7, _hbool⟩ := h_holds
   -- The eight trailing conjuncts are the byte pulls' own `Requirements` — vacuous off-gate.
   refine ⟨fun h1 => ?_, hbin⟩
@@ -117,15 +109,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hopcode, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, hir, _, _⟩ := h_input
   have hp : 2 ^ 17 < p := Fact.out
-  have ea : ∀ i (hi : i < 8), Expression.eval env.toEnvironment input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  have eb : ∀ i (hi : i < 8), Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have er : ∀ i (hi : i < 8),
-      Expression.eval env.toEnvironment input_var_cols_result[i] = input_cols_result[i] := by
-    intro i hi; rw [← hir]; simp only [Vector.getElem_map]
   have key : input_is_real = 1 → ∀ i : Fin 8,
       ByteRowSpec (⟨input_opcode, input_cols_result[↑i], input_a[↑i], input_b[↑i]⟩ : ByteRow (ZMod p)) := by
     intro hr1 i
@@ -140,7 +124,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       · rw [h, byteOp_two]; exact hxor (by rw [← hcast, h]; norm_num) i
     exact (byteRowSpec_byteOp _ _ _ hopcode).mpr
       ⟨⟨by rw [hres]; exact byteOp_lt256 _ _ _ hb.1 hb.2, hb.1, hb.2⟩, hres⟩
-  simp only [circuit_norm, byteChannel, ea, eb, er]
+  simp only [circuit_norm, byteChannel]
   refine ⟨fun hn => key hn 0, fun hn => key hn 1,
     fun hn => key hn 2, fun hn => key hn 3,
     fun hn => key hn 4, fun hn => key hn 5,

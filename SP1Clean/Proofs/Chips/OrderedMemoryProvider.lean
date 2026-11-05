@@ -138,9 +138,7 @@ def activeCircuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
   channelsWithRequirements := provider.channelsWithRequirements ++ [(OrderedBoundary.channel name).toRaw]
   soundness := by
     circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
-    have one : Vector.map (Expression.eval env) (Vector.map Expression.const (oneWord (p := p))) =
-        oneWord := by simp only [Vector.map_map, Function.comp_def, Expression.eval]; exact Vector.map_id _
-    rw [one] at h_holds
+    simp only [Vector.map_id'] at h_holds
     have valid := binds _ _ _ (h_holds.1 h_assumptions)
     have canonicalRecord := canonical _ valid
     -- `circuit_norm` puts the record's projections in the constraint form the goal carries
@@ -153,11 +151,7 @@ def activeCircuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     exact ⟨⟨valid, h_holds.2.1, key⟩, Or.inr h_assumptions⟩
   completeness := by
     circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
-    have one : Vector.map (Expression.eval env.toEnvironment)
-        (Vector.map Expression.const (oneWord (p := p))) = oneWord := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [one]
+    simp only [Vector.map_id']
     have spec := (h_env.1 h_assumptions.1).1 h_assumptions.2.1
     have valid := binds _ _ _ spec
     have canonicalRecord := canonical _ valid

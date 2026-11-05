@@ -240,25 +240,22 @@ the pair loops. -/
 
 theorem eval_statePc {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
-    (ProvableStruct.eval env cols).pc = Vector.map (Expression.eval env) cols.pc := by
+    (ProvableStruct.eval env cols).pc = Eval.eval env cols.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.CPUState.eval_cols]
-  exact ProvableType.eval_fields env _
 
 theorem eval_opCImm {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
-    (ProvableStruct.eval env cols).op_c_imm = Vector.map (Expression.eval env) cols.op_c_imm := by
+    (ProvableStruct.eval env cols).op_c_imm = Eval.eval env cols.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.ITypeReader.eval_cols]
-  exact ProvableType.eval_fields env _
 
 theorem eval_prevValue {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     (ProvableStruct.eval env cols).prev_value
-      = Vector.map (Expression.eval env) cols.prev_value := by
+      = Eval.eval env cols.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Readers.RTypeReader.eval_registerAccessCols]
-  exact ProvableType.eval_fields env _
 
 /-! Input-level operand projections (plain lemmas, applied by `rw` in the `ComputableWitnesses`
 proof — deliberately NOT `@[circuit_norm]`, so no simp set ever renormalizes the struct evals). -/
@@ -266,36 +263,32 @@ proof — deliberately NOT `@[circuit_norm]`, so no simp set ever renormalizes t
 theorem eval_statePcIn {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).state.pc
-      = Vector.map (Expression.eval env) input.state.pc := by
+      = Eval.eval env input.state.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.CPUState.eval_cols]
-  exact ProvableType.eval_fields env _
 
 theorem eval_opCImmIn {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_c_imm
-      = Vector.map (Expression.eval env) input.adapter.op_c_imm := by
+      = Eval.eval env input.adapter.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols]
-  exact ProvableType.eval_fields env _
 
 theorem eval_rs1In {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_a_memory.prev_value
-      = Vector.map (Expression.eval env) input.adapter.op_a_memory.prev_value := by
+      = Eval.eval env input.adapter.op_a_memory.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
-  exact ProvableType.eval_fields env _
 
 theorem eval_rs2In {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_memory.prev_value
-      = Vector.map (Expression.eval env) input.adapter.op_b_memory.prev_value := by
+      = Eval.eval env input.adapter.op_b_memory.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
-  exact ProvableType.eval_fields env _
 
 /-- Value interpretation of the comparison witness used to compute the branch decision. -/
 def populateComparison (input : Inputs (ZMod p)) : Circuits.Types.LtOperationSigned (ZMod p) :=

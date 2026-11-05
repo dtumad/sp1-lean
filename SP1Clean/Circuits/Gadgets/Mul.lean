@@ -53,18 +53,11 @@ set_option linter.unusedSimpArgs false in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start [ProductSpec]
   obtain ⟨hir_bin, hmw_real, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assumptions
-  obtain ⟨hib, hic, _hicols, hir, _him_mul, _him_mulh, _him_mulhu, _him_mulhsu, _him_mulw, hia⟩ := h_input
   obtain ⟨_gate, hA, hB, hpm, hb_bool, hc_bool, hb5, hc5, hcF0, hcF1, hcF2, hcF3, hcF4, hcF5, hcF6, hcF7, hcF8, hcF9, hcF10,
     hcF11, hcF12, hcF13, hcF14, hcF15, hpG0, hpG1, hpG2, hpG3, hpG4, hpG5, hpG6, hpG7,
     hsdb, hsdc, himpb, himpc, hch0, hch1, hch2, hch3, hch4, hch5, hch6, hch7, hch8, hch9, hch10,
     hch11, hch12, hch13, hch14, hch15,
     haw0, hal0, hah0, haw1, hal1, hah1, haw2, hal2, hah2, haw3, hal3, hah3⟩ := h_holds
-  have ea : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia, Vector.getElem_map]
-  have eproduct : ∀ (i : ℕ) (hi : i < 16),
-      Expression.eval env input_var_cols_product[i] = input_cols_product[i] := by
-    intro i hi; rw [← _hicols.2.1, Vector.getElem_map]
-  simp only [ea, eproduct] at haw0 hal0 hah0 haw1 hal1 hah1 haw2 hal2 hah2 haw3 hal3 hah3
   have ha1 (hmw : input_is_mulw = 1) :
       input_a[1] = input_cols_product[2] + input_cols_product[3] * 256 := by
     have h := haw1
@@ -78,17 +71,12 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
         bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hb_bool),
         bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hc_bool),
         (hpm ⟨fun hmw => by
-          obtain ⟨_, eprod_eq, _, _, _, _, _, _, _⟩ := _hicols
           have hr1 : input_is_real = 1 := hmw_real hmw
-          have ep2 : Expression.eval env input_var_cols_product[2] = input_cols_product[2] := by
-            rw [← eprod_eq, Vector.getElem_map]
-          have ep3 : Expression.eval env input_var_cols_product[3] = input_cols_product[3] := by
-            rw [← eprod_eq, Vector.getElem_map]
           have pb2 : input_cols_product[2].val < 2 ^ 8 := by
-            rw [← ep2]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).1
+            exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).1
           have pb3 : input_cols_product[3].val < 2 ^ 8 := by
-            rw [← ep3]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).2
-          rw [ea 1 (by omega), ha1 hmw, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩).1,
+            exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 (by rw [hr1]))).2
+          rw [ha1 hmw, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩).1,
         ?_⟩
       intro hr
       have hb_low := (hA hir_bin) hr
@@ -98,74 +86,53 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
       obtain ⟨hbU0, hbU1, hbU2, hbU3⟩ := Word.lt_cases_of_isU64 hbU
       obtain ⟨hcU0, hcU1, hcU2, hcU3⟩ := Word.lt_cases_of_isU64 hcU
       have hneg : input_is_real = 1 := by rw [hr]
-      obtain ⟨ecar_eq, eprod_eq, ebl_eq, ecl_eq, ebm_eq, ecm_eq, _, _, _⟩ := _hicols
-      have eb : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-        intro i hi; rw [← hib, Vector.getElem_map]
-      have ec : ∀ (i : ℕ) (hi : i < 4), Expression.eval env input_var_c[i] = input_c[i] := by
-        intro i hi; rw [← hic, Vector.getElem_map]
-      have ep : ∀ (i : ℕ) (hi : i < 16),
-          Expression.eval env input_var_cols_product[i] = input_cols_product[i] := by
-        intro i hi; rw [← eprod_eq, Vector.getElem_map]
-      have ecar : ∀ (i : ℕ) (hi : i < 16),
-          Expression.eval env input_var_cols_carry[i] = input_cols_carry[i] := by
-        intro i hi; rw [← ecar_eq, Vector.getElem_map]
-      have ebl : ∀ (i : ℕ) (hi : i < 4),
-          Expression.eval env input_var_cols_b_lower_byte_low_bytes[i]
-            = input_cols_b_lower_byte_low_bytes[i] := by
-        intro i hi; rw [← ebl_eq, Vector.getElem_map]
-      have ecl : ∀ (i : ℕ) (hi : i < 4),
-          Expression.eval env input_var_cols_c_lower_byte_low_bytes[i]
-            = input_cols_c_lower_byte_low_bytes[i] := by
-        intro i hi; rw [← ecl_eq, Vector.getElem_map]
-      have cb0 : input_cols_carry[0].val < 2 ^ 16 := by rw [← ecar 0 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF0 hneg)
-      have cb1 : input_cols_carry[1].val < 2 ^ 16 := by rw [← ecar 1 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF1 hneg)
-      have cb2 : input_cols_carry[2].val < 2 ^ 16 := by rw [← ecar 2 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF2 hneg)
-      have cb3 : input_cols_carry[3].val < 2 ^ 16 := by rw [← ecar 3 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF3 hneg)
-      have cb4 : input_cols_carry[4].val < 2 ^ 16 := by rw [← ecar 4 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF4 hneg)
-      have cb5 : input_cols_carry[5].val < 2 ^ 16 := by rw [← ecar 5 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF5 hneg)
-      have cb6 : input_cols_carry[6].val < 2 ^ 16 := by rw [← ecar 6 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF6 hneg)
-      have cb7 : input_cols_carry[7].val < 2 ^ 16 := by rw [← ecar 7 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF7 hneg)
-      have cb8 : input_cols_carry[8].val < 2 ^ 16 := by rw [← ecar 8 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF8 hneg)
-      have cb9 : input_cols_carry[9].val < 2 ^ 16 := by rw [← ecar 9 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF9 hneg)
-      have cb10 : input_cols_carry[10].val < 2 ^ 16 := by rw [← ecar 10 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF10 hneg)
-      have cb11 : input_cols_carry[11].val < 2 ^ 16 := by rw [← ecar 11 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF11 hneg)
-      have cb12 : input_cols_carry[12].val < 2 ^ 16 := by rw [← ecar 12 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF12 hneg)
-      have cb13 : input_cols_carry[13].val < 2 ^ 16 := by rw [← ecar 13 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF13 hneg)
-      have cb14 : input_cols_carry[14].val < 2 ^ 16 := by rw [← ecar 14 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF14 hneg)
-      have cb15 : input_cols_carry[15].val < 2 ^ 16 := by rw [← ecar 15 (by omega)]; exact (byteRowSpec_range _ sixteen_lt).mp (hcF15 hneg)
-      have pb0 : input_cols_product[0].val < 2 ^ 8 := by rw [← ep 0 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).1
-      have pb1 : input_cols_product[1].val < 2 ^ 8 := by rw [← ep 1 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).2
-      have pb2 : input_cols_product[2].val < 2 ^ 8 := by rw [← ep 2 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).1
-      have pb3 : input_cols_product[3].val < 2 ^ 8 := by rw [← ep 3 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).2
-      have pb4 : input_cols_product[4].val < 2 ^ 8 := by rw [← ep 4 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).1
-      have pb5 : input_cols_product[5].val < 2 ^ 8 := by rw [← ep 5 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).2
-      have pb6 : input_cols_product[6].val < 2 ^ 8 := by rw [← ep 6 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).1
-      have pb7 : input_cols_product[7].val < 2 ^ 8 := by rw [← ep 7 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).2
-      have pb8 : input_cols_product[8].val < 2 ^ 8 := by rw [← ep 8 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).1
-      have pb9 : input_cols_product[9].val < 2 ^ 8 := by rw [← ep 9 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).2
-      have pb10 : input_cols_product[10].val < 2 ^ 8 := by rw [← ep 10 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).1
-      have pb11 : input_cols_product[11].val < 2 ^ 8 := by rw [← ep 11 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).2
-      have pb12 : input_cols_product[12].val < 2 ^ 8 := by rw [← ep 12 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).1
-      have pb13 : input_cols_product[13].val < 2 ^ 8 := by rw [← ep 13 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).2
-      have pb14 : input_cols_product[14].val < 2 ^ 8 := by rw [← ep 14 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).1
-      have pb15 : input_cols_product[15].val < 2 ^ 8 := by rw [← ep 15 (by omega)]; exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).2
-      simp only [hr, one_mul, id_eq, ep, ecar, ebl, ecl, eb, ec] at hch0 hch1 hch2 hch3 hch4 hch5 hch6 hch7 hch8 hch9 hch10 hch11 hch12 hch13 hch14 hch15
-      have hpmspec := hpm ⟨fun hmw => by rw [ea 1 (by omega), ha1 hmw, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩
+      have cb0 : input_cols_carry[0].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF0 hneg)
+      have cb1 : input_cols_carry[1].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF1 hneg)
+      have cb2 : input_cols_carry[2].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF2 hneg)
+      have cb3 : input_cols_carry[3].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF3 hneg)
+      have cb4 : input_cols_carry[4].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF4 hneg)
+      have cb5 : input_cols_carry[5].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF5 hneg)
+      have cb6 : input_cols_carry[6].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF6 hneg)
+      have cb7 : input_cols_carry[7].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF7 hneg)
+      have cb8 : input_cols_carry[8].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF8 hneg)
+      have cb9 : input_cols_carry[9].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF9 hneg)
+      have cb10 : input_cols_carry[10].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF10 hneg)
+      have cb11 : input_cols_carry[11].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF11 hneg)
+      have cb12 : input_cols_carry[12].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF12 hneg)
+      have cb13 : input_cols_carry[13].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF13 hneg)
+      have cb14 : input_cols_carry[14].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF14 hneg)
+      have cb15 : input_cols_carry[15].val < 2 ^ 16 := by exact (byteRowSpec_range _ sixteen_lt).mp (hcF15 hneg)
+      have pb0 : input_cols_product[0].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).1
+      have pb1 : input_cols_product[1].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG0 hneg)).2
+      have pb2 : input_cols_product[2].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).1
+      have pb3 : input_cols_product[3].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG1 hneg)).2
+      have pb4 : input_cols_product[4].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).1
+      have pb5 : input_cols_product[5].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG2 hneg)).2
+      have pb6 : input_cols_product[6].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).1
+      have pb7 : input_cols_product[7].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG3 hneg)).2
+      have pb8 : input_cols_product[8].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).1
+      have pb9 : input_cols_product[9].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG4 hneg)).2
+      have pb10 : input_cols_product[10].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).1
+      have pb11 : input_cols_product[11].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG5 hneg)).2
+      have pb12 : input_cols_product[12].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).1
+      have pb13 : input_cols_product[13].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG6 hneg)).2
+      have pb14 : input_cols_product[14].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).1
+      have pb15 : input_cols_product[15].val < 2 ^ 8 := by exact ((byteRowSpec_u8range_pair _ _).mp (hpG7 hneg)).2
+      simp only [hr, one_mul, id_eq] at hch0 hch1 hch2 hch3 hch4 hch5 hch6 hch7 hch8 hch9 hch10 hch11 hch12 hch13 hch14 hch15
+      have hpmspec := hpm ⟨fun hmw => by rw [ha1 hmw, byte_compose_val pb2 pb3 rfl]; omega, hmw_b⟩
       have hmsb_bool : input_cols_product_msb_msb = 0 ∨ input_cols_product_msb_msb = 1 := hpmspec.1
       have hmsb : input_is_mulw = 1 → input_cols_product_msb_msb =
           if (input_cols_product[2] + input_cols_product[3] * 256).val ≥ 32768 then 1 else 0 := by
-        intro h; have := hpmspec.2 h; rwa [ea 1 (by omega), ha1 h] at this
+        intro h; have := hpmspec.2 h; rwa [ha1 h] at this
       have hb_msb : input_cols_b_msb = if input_b[3].val ≥ 32768 then 1 else 0 := by
         obtain ⟨hlo3, hhi3, hreass3⟩ := hb_low 3
         dsimp only at hlo3 hhi3 hreass3
         have hg := (byteRowSpec_msb _ _).mp (hb5 hneg)
-        simp only [circuit_norm, eb, ebl, ebm_eq, ← sub_eq_add_neg] at hg
         exact msb_eq_of_op5 hlo3 hhi3 hreass3 hg.2.1 hg.2.2
       have hc_msb : input_cols_c_msb = if input_c[3].val ≥ 32768 then 1 else 0 := by
         obtain ⟨hlo3, hhi3, hreass3⟩ := hc_low 3
         dsimp only at hlo3 hhi3 hreass3
         have hg := (byteRowSpec_msb _ _).mp (hc5 hneg)
-        simp only [circuit_norm, ec, ecl, ecm_eq, ← sub_eq_add_neg] at hg
         exact msb_eq_of_op5 hlo3 hhi3 hreass3 hg.2.1 hg.2.2
       refine ⟨?_, hb_low, hc_low, hb_msb, hc_msb, hmsb_bool, hmsb⟩
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -566,32 +533,7 @@ set_option linter.unusedSimpArgs false in
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start [ProductSpec]
   obtain ⟨hir_bin, hmw_real, hmul_b, hmh_b, hmhu_b, hmhsu_b, hmw_b, hsum⟩ := h_assumptions
-  obtain ⟨hib, hic, hicols, _hir, _him_mul, _him_mulh, _him_mulhu, _him_mulhsu, _him_mulw, hia⟩ := h_input
   obtain ⟨⟨h_bsd, h_csd, h_bmb, h_cmb, h_pmb, h_gated⟩, h_output⟩ := h_spec
-  obtain ⟨ecar_eq, eprod_eq, ebl_eq, ecl_eq, _ebm, _ecm, _epm, _ebse, _ecse⟩ := hicols
-  have eb : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib, Vector.getElem_map]
-  have ec : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_c[i] = input_c[i] := by
-    intro i hi; rw [← hic, Vector.getElem_map]
-  have ep : ∀ (i : ℕ) (hi : i < 16),
-      Expression.eval env.toEnvironment input_var_cols_product[i] = input_cols_product[i] := by
-    intro i hi; rw [← eprod_eq, Vector.getElem_map]
-  have ecar : ∀ (i : ℕ) (hi : i < 16),
-      Expression.eval env.toEnvironment input_var_cols_carry[i] = input_cols_carry[i] := by
-    intro i hi; rw [← ecar_eq, Vector.getElem_map]
-  have ebl : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_cols_b_lower_byte_low_bytes[i]
-        = input_cols_b_lower_byte_low_bytes[i] := by
-    intro i hi; rw [← ebl_eq, Vector.getElem_map]
-  have ecl : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_cols_c_lower_byte_low_bytes[i]
-        = input_cols_c_lower_byte_low_bytes[i] := by
-    intro i hi; rw [← ecl_eq, Vector.getElem_map]
-  have ea : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia, Vector.getElem_map]
   have h_word (hmw : input_is_mulw = 1) : input_a =
       #v[input_cols_product[0] + input_cols_product[1] * 256,
         input_cols_product[2] + input_cols_product[3] * 256,
@@ -625,7 +567,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       · exact (rest_zero hmul_b hmh_b hmhu_b hmw_b h (by linear_combination hs)).2.2.2
     simpa only [resultWord, hmw, zero_ne_one, ite_false, ite_eq_left hh, productVal,
       Nat.reduceLT, dite_eq_left] using h_output hs
-  simp only [eb, ec, ep, ecar, ebl, ecl, ea] at *
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -638,10 +579,9 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     · have hr1 : input_is_real = 1 := hmw_real hmw
       have pb2 : input_cols_product[2].val < 2 ^ 8 := (h_gated hr1).1.2.1 2 (by norm_num)
       have pb3 : input_cols_product[3].val < 2 ^ 8 := (h_gated hr1).1.2.1 3 (by norm_num)
-      rw [h_word hmw]
-      change (input_cols_product[2] + input_cols_product[3] * 256).val < 2 ^ 16
+      simp only [h_word hmw, circuit_norm]
       rw [byte_compose_val pb2 pb3 rfl]; omega
-    · rw [h_word hmw]
+    · simp only [h_word hmw, circuit_norm]
       exact (h_gated (hmw_real hmw)).2.2.2.2.2.2 hmw
   -- 2 ungated `b_msb`/`c_msb` booleanity asserts (from the Spec's ungated bool)
   · rcases h_bmb with h | h <;> rw [h] <;> ring

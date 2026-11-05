@@ -87,8 +87,8 @@ private theorem read_of_bytes (memory : ByteMemory) (address : Word (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_word (env : Environment (ZMod p)) (bytes : Vector (Expression (ZMod p)) 8) :
-    (Word.ofBytes bytes).map (Expression.eval env) =
-      Word.ofBytes (bytes.map (Expression.eval env)) := by
+    Eval.eval env (Word.ofBytes bytes) =
+      Word.ofBytes (Eval.eval env bytes) := by
   ext index bound
   interval_cases index <;> simp only [Word.ofBytes, circuit_norm]
 
@@ -118,24 +118,19 @@ def circuitNamed (memory : ByteMemory) (tableName : String) : GeneralFormalCircu
   ProverAssumptions input _ _ := ProverAssumptions input
   soundness := by
     circuit_proof_start [InitialMemoryLookup.circuitNamed, AddOperation.circuit]
-    have atOffset (index : Fin 7) :
-        (Vector.map Expression.const (offset (p := p) index)).map (Expression.eval env) = offset index := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    simp only [atOffset] at h_holds
+    simp only [Vector.map_id'] at h_holds
     rw [eval_word]
     apply read_of_bytes memory input _
       (Fin.cases input (fun index =>
-        (Vector.mapRange 4 fun limb => var ⟨i₀ + 89 + index.val * 93 + limb⟩).map
-          (Expression.eval env))) rfl
+        (Vector.mapRange 4 fun limb => env.get (i₀ + 89 + index.val * 93 + limb)))) rfl
     · intro index
       induction index using Fin.cases with
       | zero =>
-        simp only [Fin.cases_zero, Fin.val_zero, Vector.getElem_map]
+        simp only [Fin.cases_zero, Fin.val_zero, circuit_norm]
         rw [Vector.getElem_append_left (by decide)]
         exact h_holds.1
       | succ i =>
-        simp only [Fin.cases_succ, Fin.val_succ, Vector.getElem_map]
+        simp only [Fin.cases_succ, Fin.val_succ, circuit_norm]
         rw [Vector.getElem_append_right (by omega) (by omega)]
         simpa only [Nat.add_sub_cancel, circuit_norm] using (h_holds.2 i).2
     · intro index
@@ -148,20 +143,15 @@ def circuitNamed (memory : ByteMemory) (tableName : String) : GeneralFormalCircu
           using (addition rfl).2
   completeness := by
     circuit_proof_start [InitialMemoryLookup.circuitNamed, AddOperation.circuit]
-    have atOffset (index : Fin 7) :
-        (Vector.map Expression.const (offset (p := p) index)).map (Expression.eval env.toEnvironment) = offset index := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    simp only [atOffset]
+    simp only [Vector.map_id']
     refine ⟨⟨h_assumptions.1, by omega⟩, ?_⟩
     intro index
     have sumEq :
-        (Vector.mapRange 4 fun limb => var ⟨i₀ + 89 + index.val * 93 + limb⟩).map
-            (Expression.eval env.toEnvironment) = AddOperation.populate input (offset index) := by
+        (Vector.mapRange 4 fun limb => env.get (i₀ + 89 + index.val * 93 + limb)) = AddOperation.populate input (offset index) := by
       have generated := AddOperation.populateIR_eval env input_var (Vector.map Expression.const (offset index))
         input (offset index)
         ((vec4_eval env.toEnvironment input_var).trans h_input)
-        ((vec4_eval env.toEnvironment _).trans (atOffset index))
+        ((vec4_eval env.toEnvironment _).trans (by simp only [circuit_norm, Vector.map_id']))
         h_assumptions.1 (isU64_bitVecToWord _)
       ext limb bound
       simpa only [circuit_norm, generated] using (h_env.2 index).1 ⟨limb, bound⟩

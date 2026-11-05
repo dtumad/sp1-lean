@@ -27,9 +27,9 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   · refine MulOperation.populateFE_congr_flat env env' _ _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_ ?_
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
-      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [circuit_norm, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
-      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [circuit_norm, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · simpa only [Inputs.eval_isMulh, ProvableType.eval_field] using congrArg (fun r : Inputs (ZMod p) => r.isMulh) h_input
     · simpa only [Inputs.eval_isMulhsu, ProvableType.eval_field] using congrArg (fun r : Inputs (ZMod p) => r.isMulhsu) h_input
     · simpa only [Inputs.eval_isMulw, ProvableType.eval_field] using congrArg (fun r : Inputs (ZMod p) => r.isMulw) h_input

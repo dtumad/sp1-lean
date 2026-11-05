@@ -753,19 +753,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   let row : Inputs (ZMod p) :=
     ⟨input_b, input_cc, ⟨⟨input_cols_u16_compare_operation_bit⟩, input_cols_u16_flags,
       input_cols_not_eq_inv, input_cols_comparison_limbs⟩, input_is_real⟩
-  obtain ⟨hib, hicc, hicols, hir⟩ := h_input
-  obtain ⟨_hibit, hiflags, _hineinv, hicl⟩ := hicols
-  have eb : ∀ i (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ i (hi : i < 4), Expression.eval env input_var_cc[i] = input_cc[i] := by
-    intro i hi; rw [← hicc]; simp only [Vector.getElem_map]
-  have ef : ∀ i (hi : i < 4),
-      Expression.eval env input_var_cols_u16_flags[i] = input_cols_u16_flags[i] := by
-    intro i hi; rw [← hiflags]; simp only [Vector.getElem_map]
-  have ecl : ∀ i (hi : i < 2),
-      Expression.eval env input_var_cols_comparison_limbs[i] = input_cols_comparison_limbs[i] := by
-    intro i hi; rw [← hicl]; simp only [Vector.getElem_map]
-  simp only [eb, ec, ef, ecl] at h_holds ⊢
   obtain ⟨h_cmp, hE1, hE6, hE8, hE10, hE12, hE14, hE19, hE27, hE35, hE43, hE48, hE49, hE54⟩ := h_holds
   -- the composed `U16Compare` assertion's `Assumptions` (cl ranges on a real row, via the cores).
   have hCmpAs : U16CompareOperation.circuit.Assumptions
@@ -801,19 +788,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   let row : Inputs (ZMod p) :=
     ⟨input_b, input_cc, ⟨⟨input_cols_u16_compare_operation_bit⟩, input_cols_u16_flags,
       input_cols_not_eq_inv, input_cols_comparison_limbs⟩, input_is_real⟩
-  obtain ⟨hib, hicc, hicols, hir⟩ := h_input
-  obtain ⟨_hibit, hiflags, _hineinv, hicl⟩ := hicols
-  have eb : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_cc[i] = input_cc[i] := by
-    intro i hi; rw [← hicc]; simp only [Vector.getElem_map]
-  have ef : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_cols_u16_flags[i] = input_cols_u16_flags[i] := by
-    intro i hi; rw [← hiflags]; simp only [Vector.getElem_map]
-  have ecl : ∀ i (hi : i < 2),
-      Expression.eval env.toEnvironment input_var_cols_comparison_limbs[i]
-        = input_cols_comparison_limbs[i] := by
-    intro i hi; rw [← hicl]; simp only [Vector.getElem_map]
   have h_evidence : ConstraintEvidence row :=
     (spec_iff_evidence ⟨hbcc_imp, hbin⟩).mp h_spec
   dsimp only [row] at h_evidence
@@ -835,7 +809,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   have hCmpSpec : U16CompareOperation.circuit.Spec
       ⟨input_cols_comparison_limbs[0], input_cols_comparison_limbs[1],
         ⟨input_cols_u16_compare_operation_bit⟩, input_is_real⟩ := ⟨hbitbool, hbitord⟩
-  simp only [eb, ec, ef, ecl]
   refine ⟨⟨hCmpAs, hCmpSpec⟩, ?_, ?_, ?_, ?_, ?_, ?_, by linear_combination hs3,
     by linear_combination hs2, by linear_combination hs1, by linear_combination hs0,
     by linear_combination hcl0eq, by linear_combination hcl1eq, by linear_combination hinv⟩

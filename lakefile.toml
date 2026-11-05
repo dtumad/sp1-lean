@@ -83,12 +83,12 @@ name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.35.0"
 
-# Frozen upstream main: canonical generation, reusable keys, shared component modules,
-# and data/hint agreement (Clean #500–503). Keep subsequent upstream work in a separate upgrade.
+# Frozen upstream main: confluent vector/struct evaluation (#451), following the
+# canonical generation, reusable keys and shared printing migration (#500–503).
 [[require]]
 name = "Clean"
 git = "https://github.com/Verified-zkEVM/clean"
-rev = "1356fc7fb914535ba87d72b40a3a6922e51afa64"
+rev = "2ca265f5c402d71911e4a2c865ea29c8e03fbef2"
 
 # Module-mode Sail runtime: upstream tag `v6` (`c816ea7a`, which adds the sequential ArchSem
 # interpreter after `v5`) plus the module-system migration of rems-project/lean-sail#13. That

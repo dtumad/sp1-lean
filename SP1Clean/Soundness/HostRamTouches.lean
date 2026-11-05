@@ -87,7 +87,7 @@ private theorem local_bounds (input : Var Inputs (ZMod p))
     rcases input with ⟨access, high, low0, low1, addr0, addr1, addr2, value⟩
     simp only [FinalRamProvider.addressInput, Inputs.pushed, MemoryBoundary.address, circuit_norm]
   rw [evaluated] at checked
-  have addressEq : Vector.map (Expression.eval env) (MemoryBoundary.address input.pushed) =
+  have addressEq : Eval.eval env (MemoryBoundary.address input.pushed) =
       MemoryBoundary.address (eval env input).pushed := by
     rcases input with ⟨access, high, low0, low1, addr0, addr1, addr2, value⟩
     simp only [Inputs.pushed, MemoryBoundary.address, circuit_norm]

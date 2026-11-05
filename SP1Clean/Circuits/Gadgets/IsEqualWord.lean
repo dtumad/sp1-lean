@@ -169,20 +169,18 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hsub, _hbool⟩ := h_holds
-  obtain ⟨hia, hib, -⟩ := h_input
   have S := hsub h_assumptions
   change IsZeroWordOperation.Spec _ at S
   refine ⟨?_, Or.inl rfl⟩
-  simpa only [diff, ← hia, ← hib, Vector.getElem_map, sub_eq_add_neg] using S
+  simpa only [diff, sub_eq_add_neg] using S
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
-  obtain ⟨hia, hib, -⟩ := h_input
   refine ⟨⟨h_assumptions, ?_⟩, ?_⟩
   · have hs := h_spec
     simp only [diff] at hs
     change IsZeroWordOperation.Spec _
-    simpa only [← hia, ← hib, Vector.getElem_map] using hs
+    simpa only [circuit_norm] using hs
   · rcases h_assumptions with h | h <;> simp [h]
 
 /-- The witnessed columns `populate a b` satisfy the gadget `Spec` for any `is_real` — it delegates to

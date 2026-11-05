@@ -199,9 +199,9 @@ theorem completeness :
   have hbool : ∀ x : ZMod p, x = 0 ∨ x = 1 → x * (x - 1) = 0 := by
     rintro x (h | h) <;> rw [h] <;> simp
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
-  have hpvb : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_memory_prev_value
+  have hpvb : Eval.eval env.toEnvironment input_var_adapter_op_b_memory_prev_value
       = input_adapter_op_b_memory_prev_value := h_input.2.1.2.2.2.2.1.1
-  have hpvc : Vector.map (Expression.eval env.toEnvironment)
+  have hpvc : Eval.eval env.toEnvironment
       input_var_adapter_op_c_memory_prev_value = input_adapter_op_c_memory_prev_value :=
     h_input.2.1.2.2.2.2.2.2.1.1
   have hreal : Expression.eval env.toEnvironment (input_var_isSlt + input_var_isSltu)

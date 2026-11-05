@@ -98,25 +98,25 @@ theorem completeness :
   have hcpv := h_input.2.1.2.2.2.2.2.2.1.1
   have himm_eval := h_input.2.1.2.2.2.2.2.2.2
   have hbpv_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_b_memory_prev_value =
         input_adapter_op_b_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]; exact hbpv
+    exact hbpv
   have hapv := h_input.2.1.2.1.1
   have hopc := h_input.2.1.2.2.2.2.2.1
   have hapv_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_a_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_a_memory_prev_value =
         input_adapter_op_a_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]; exact hapv
+    exact hapv
   have hopc_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c = input_adapter_op_c := by
-    rw [← CircuitType.eval_var_fields]; exact hopc
+      Eval.eval env.toEnvironment input_var_adapter_op_c = input_adapter_op_c := by
+    exact hopc
   have hcpv_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_c_memory_prev_value =
         input_adapter_op_c_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]; exact hcpv
+    exact hcpv
   have hpc_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_state_pc = input_state_pc := by
-    rw [← CircuitType.eval_var_fields]; exact hpc
+      Eval.eval env.toEnvironment input_var_state_pc = input_state_pc := by
+    exact hpc
   have ec0 : Expression.eval env.toEnvironment input_var_adapter_op_c_memory_prev_value[0]
       = input_adapter_op_c_memory_prev_value[0] := by
     rw [ProvableType.getElem_eval_fields, hcpv]
@@ -140,7 +140,7 @@ theorem completeness :
   -- The witness stream is the exportable IR; the family eval lemmas rewrite each pinned
   -- obligation to the value-level witness functions (the operands folded through `heb`/`ec0`).
   let selectors := #v[input_var_isSll, input_var_isSllw]
-  have hselectors : selectors.map (Expression.eval env.toEnvironment) = #v[input_isSll, input_isSllw] := by
+  have hselectors : Eval.eval env.toEnvironment selectors = #v[input_isSll, input_isSllw] := by
     simp only [selectors, circuit_norm, h_input]
   have hAIRa := populateAIR_eval env input_var_adapter_op_b_memory_prev_value
     input_var_adapter_op_c_memory_prev_value[0] selectors input_adapter_op_b_memory_prev_value
@@ -237,7 +237,7 @@ theorem completeness :
   simp +instances only [main, circuit_norm, h_input, Inputs.is_real]
   simp only [hA0, hA1, hA2, hA3, hcb0, hcb1, hcb2, hcb3, hcb4, hcb5, hv0, hv1, hv2,
     hlo0, hlo1, hlo2, hlo3, hhi0, hhi1, hhi2, hhi3, hmsbc, hfl2,
-    hapv_map, hbpv_map, hopc_map, hcpv_map, hpc_map, ec0, epc0, epc1, epc2]
+    ]
   refine ⟨⟨hbin, h_cpu⟩,
     ⟨⟨fun _ => populateA_val_lt B c0 F hbUw 1 (by norm_num), hf1⟩,
       sllwMsb_bool B c0 F hbUw, fun h1 => ?_⟩,
@@ -257,7 +257,7 @@ theorem completeness :
     by rcases hf0 with h | h <;> rw [h] <;> simp,
     by rcases hf1 with h | h <;> rw [h] <;> simp,
     ⟨trivial, by
-      simp only [ShiftLeftCore.circuit, ShiftLeftChip.CoreSpec, circuit_norm, Vector.getElem_map,
+      simp only [ShiftLeftCore.circuit, ShiftLeftChip.CoreSpec, circuit_norm,
         Vector.getElem_mapRange, hA0, hA1, hA2, hA3, hcb0, hcb1, hcb2, hcb3, hcb4, hcb5, hs0, hs1,
         hs2, hs3, hlo0, hlo1, hlo2, hlo3, hhi0, hhi1, hhi2, hhi3, hlr0, hlr1, hlr2, hlr3]
       exact ⟨hcba0, hcba1, hcba2, hcba3, hcba4, hcba5,
@@ -291,7 +291,7 @@ theorem completeness :
       rw [sllwMsb, ite_eq_left (show F[1] = 1 from h1)]]
     exact (U16MSBOperation.spec_populate (populateA_val_lt B c0 F hbUw 1 (by norm_num)) 1).2 rfl
   · refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
-      simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm, hA0, hA1, hA2, hA3] <;>
+      simp only [Vector.getElem_mapRange, circuit_norm, hA0, hA1, hA2, hA3] <;>
       first
         | exact populateA_val_lt B c0 F hbUw 0 (by norm_num)
         | exact populateA_val_lt B c0 F hbUw 1 (by norm_num)

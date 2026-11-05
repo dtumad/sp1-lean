@@ -33,15 +33,15 @@ private lemma evalSub (env : Environment (ZMod p)) (a b : Expression (ZMod p)) :
 
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
-/-- Pointwise form of a `Vector.map (Expression.eval env)` pin, i.e. one of the vector-valued
+/-- Pointwise form of a `Eval.eval env` pin, i.e. one of the vector-valued
 `circuit_proof_start` `h_input` components read at a single index. The three transport proofs below
 need 176 such instances between them; each is only ever consumed as a `simp only` rewrite rule, so
 the inferred type is exactly the hand-written ascription this replaces. -/
 private lemma eval_getElem {n : ℕ} {env : Environment (ZMod p)}
     {v : Vector (Expression (ZMod p)) n} {w : Vector (ZMod p) n}
-    (h : Vector.map (Expression.eval env) v = w) (i : ℕ) (hi : i < n) :
+    (h : Eval.eval env v = w) (i : ℕ) (hi : i < n) :
     Expression.eval env v[i] = w[i] := by
-  rw [← h, Vector.getElem_map]
+  rw [ProvableType.getElem_eval_fields, h]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- **Var↔value transport for the own-assert tail.** Mapping `Expression.eval` over the
@@ -80,22 +80,22 @@ theorem ownAsserts_map_eval (env : Environment (ZMod p)) (colsV : Var DivRemChip
     (pIsc0 : Expression.eval env colsV.is_c_0.result = cols.is_c_0.result)
     (pLtb : Expression.eval env colsV.remainder_lt_operation.u16_compare_operation.bit = cols.remainder_lt_operation.u16_compare_operation.bit)
     (pOpa0 : Expression.eval env colsV.adapter.op_a_0 = cols.adapter.op_a_0)
-    (vBpv : Vector.map (Expression.eval env) colsV.adapter.op_b_memory.prev_value = cols.adapter.op_b_memory.prev_value)
-    (vCpv : Vector.map (Expression.eval env) colsV.adapter.op_c_memory.prev_value = cols.adapter.op_c_memory.prev_value)
-    (vA : Vector.map (Expression.eval env) colsV.a = cols.a)
-    (vB : Vector.map (Expression.eval env) colsV.b = cols.b)
-    (vC : Vector.map (Expression.eval env) colsV.c = cols.c)
-    (vQ : Vector.map (Expression.eval env) colsV.quotient = cols.quotient)
-    (vQC : Vector.map (Expression.eval env) colsV.quotient_comp = cols.quotient_comp)
-    (vR : Vector.map (Expression.eval env) colsV.remainder = cols.remainder)
-    (vRC : Vector.map (Expression.eval env) colsV.remainder_comp = cols.remainder_comp)
-    (vAR : Vector.map (Expression.eval env) colsV.abs_remainder = cols.abs_remainder)
-    (vAC : Vector.map (Expression.eval env) colsV.abs_c = cols.abs_c)
-    (vMax : Vector.map (Expression.eval env) colsV.max_abs_c_or_1 = cols.max_abs_c_or_1)
-    (vCnegV : Vector.map (Expression.eval env) colsV.c_neg_operation.value = cols.c_neg_operation.value)
-    (vRnegV : Vector.map (Expression.eval env) colsV.rem_neg_operation.value = cols.rem_neg_operation.value)
-    (vCtq : Vector.map (Expression.eval env) colsV.c_times_quotient = cols.c_times_quotient)
-    (vCarry : Vector.map (Expression.eval env) colsV.carry = cols.carry) :
+    (vBpv : Eval.eval env colsV.adapter.op_b_memory.prev_value = cols.adapter.op_b_memory.prev_value)
+    (vCpv : Eval.eval env colsV.adapter.op_c_memory.prev_value = cols.adapter.op_c_memory.prev_value)
+    (vA : Eval.eval env colsV.a = cols.a)
+    (vB : Eval.eval env colsV.b = cols.b)
+    (vC : Eval.eval env colsV.c = cols.c)
+    (vQ : Eval.eval env colsV.quotient = cols.quotient)
+    (vQC : Eval.eval env colsV.quotient_comp = cols.quotient_comp)
+    (vR : Eval.eval env colsV.remainder = cols.remainder)
+    (vRC : Eval.eval env colsV.remainder_comp = cols.remainder_comp)
+    (vAR : Eval.eval env colsV.abs_remainder = cols.abs_remainder)
+    (vAC : Eval.eval env colsV.abs_c = cols.abs_c)
+    (vMax : Eval.eval env colsV.max_abs_c_or_1 = cols.max_abs_c_or_1)
+    (vCnegV : Eval.eval env colsV.c_neg_operation.value = cols.c_neg_operation.value)
+    (vRnegV : Eval.eval env colsV.rem_neg_operation.value = cols.rem_neg_operation.value)
+    (vCtq : Eval.eval env colsV.c_times_quotient = cols.c_times_quotient)
+    (vCarry : Eval.eval env colsV.carry = cols.carry) :
     (DivRemChip.ownAsserts colsV).map (Expression.eval env)
       = DivRemChip.ownAsserts cols := by
   have gvBpv := eval_getElem vBpv
@@ -156,22 +156,22 @@ theorem ownAssertsHold_of_forall (env : Environment (ZMod p)) {colsV : Var DivRe
     (pIsc0 : Expression.eval env colsV.is_c_0.result = cols.is_c_0.result)
     (pLtb : Expression.eval env colsV.remainder_lt_operation.u16_compare_operation.bit = cols.remainder_lt_operation.u16_compare_operation.bit)
     (pOpa0 : Expression.eval env colsV.adapter.op_a_0 = cols.adapter.op_a_0)
-    (vBpv : Vector.map (Expression.eval env) colsV.adapter.op_b_memory.prev_value = cols.adapter.op_b_memory.prev_value)
-    (vCpv : Vector.map (Expression.eval env) colsV.adapter.op_c_memory.prev_value = cols.adapter.op_c_memory.prev_value)
-    (vA : Vector.map (Expression.eval env) colsV.a = cols.a)
-    (vB : Vector.map (Expression.eval env) colsV.b = cols.b)
-    (vC : Vector.map (Expression.eval env) colsV.c = cols.c)
-    (vQ : Vector.map (Expression.eval env) colsV.quotient = cols.quotient)
-    (vQC : Vector.map (Expression.eval env) colsV.quotient_comp = cols.quotient_comp)
-    (vR : Vector.map (Expression.eval env) colsV.remainder = cols.remainder)
-    (vRC : Vector.map (Expression.eval env) colsV.remainder_comp = cols.remainder_comp)
-    (vAR : Vector.map (Expression.eval env) colsV.abs_remainder = cols.abs_remainder)
-    (vAC : Vector.map (Expression.eval env) colsV.abs_c = cols.abs_c)
-    (vMax : Vector.map (Expression.eval env) colsV.max_abs_c_or_1 = cols.max_abs_c_or_1)
-    (vCnegV : Vector.map (Expression.eval env) colsV.c_neg_operation.value = cols.c_neg_operation.value)
-    (vRnegV : Vector.map (Expression.eval env) colsV.rem_neg_operation.value = cols.rem_neg_operation.value)
-    (vCtq : Vector.map (Expression.eval env) colsV.c_times_quotient = cols.c_times_quotient)
-    (vCarry : Vector.map (Expression.eval env) colsV.carry = cols.carry) :
+    (vBpv : Eval.eval env colsV.adapter.op_b_memory.prev_value = cols.adapter.op_b_memory.prev_value)
+    (vCpv : Eval.eval env colsV.adapter.op_c_memory.prev_value = cols.adapter.op_c_memory.prev_value)
+    (vA : Eval.eval env colsV.a = cols.a)
+    (vB : Eval.eval env colsV.b = cols.b)
+    (vC : Eval.eval env colsV.c = cols.c)
+    (vQ : Eval.eval env colsV.quotient = cols.quotient)
+    (vQC : Eval.eval env colsV.quotient_comp = cols.quotient_comp)
+    (vR : Eval.eval env colsV.remainder = cols.remainder)
+    (vRC : Eval.eval env colsV.remainder_comp = cols.remainder_comp)
+    (vAR : Eval.eval env colsV.abs_remainder = cols.abs_remainder)
+    (vAC : Eval.eval env colsV.abs_c = cols.abs_c)
+    (vMax : Eval.eval env colsV.max_abs_c_or_1 = cols.max_abs_c_or_1)
+    (vCnegV : Eval.eval env colsV.c_neg_operation.value = cols.c_neg_operation.value)
+    (vRnegV : Eval.eval env colsV.rem_neg_operation.value = cols.rem_neg_operation.value)
+    (vCtq : Eval.eval env colsV.c_times_quotient = cols.c_times_quotient)
+    (vCarry : Eval.eval env colsV.carry = cols.carry) :
     OwnAssertsHold cols := by
   intro x hx
   rw [← ownAsserts_map_eval env colsV cols pDiv pDivu pRem pRemu pDivw pRemw pDivuw pRemuw pIr pIrnw pOv pBn pBnno pBnnno pRn pCn pAce pAre pRcm pBm pRm pCm pQm pOvb pOvc pIsc0 pLtb pOpa0 vBpv vCpv vA vB vC vQ vQC vR vRC vAR vAC vMax vCnegV vRnegV vCtq vCarry] at hx
@@ -212,22 +212,22 @@ theorem forall_of_ownAssertsHold (env : Environment (ZMod p)) {colsV : Var DivRe
     (pIsc0 : Expression.eval env colsV.is_c_0.result = cols.is_c_0.result)
     (pLtb : Expression.eval env colsV.remainder_lt_operation.u16_compare_operation.bit = cols.remainder_lt_operation.u16_compare_operation.bit)
     (pOpa0 : Expression.eval env colsV.adapter.op_a_0 = cols.adapter.op_a_0)
-    (vBpv : Vector.map (Expression.eval env) colsV.adapter.op_b_memory.prev_value = cols.adapter.op_b_memory.prev_value)
-    (vCpv : Vector.map (Expression.eval env) colsV.adapter.op_c_memory.prev_value = cols.adapter.op_c_memory.prev_value)
-    (vA : Vector.map (Expression.eval env) colsV.a = cols.a)
-    (vB : Vector.map (Expression.eval env) colsV.b = cols.b)
-    (vC : Vector.map (Expression.eval env) colsV.c = cols.c)
-    (vQ : Vector.map (Expression.eval env) colsV.quotient = cols.quotient)
-    (vQC : Vector.map (Expression.eval env) colsV.quotient_comp = cols.quotient_comp)
-    (vR : Vector.map (Expression.eval env) colsV.remainder = cols.remainder)
-    (vRC : Vector.map (Expression.eval env) colsV.remainder_comp = cols.remainder_comp)
-    (vAR : Vector.map (Expression.eval env) colsV.abs_remainder = cols.abs_remainder)
-    (vAC : Vector.map (Expression.eval env) colsV.abs_c = cols.abs_c)
-    (vMax : Vector.map (Expression.eval env) colsV.max_abs_c_or_1 = cols.max_abs_c_or_1)
-    (vCnegV : Vector.map (Expression.eval env) colsV.c_neg_operation.value = cols.c_neg_operation.value)
-    (vRnegV : Vector.map (Expression.eval env) colsV.rem_neg_operation.value = cols.rem_neg_operation.value)
-    (vCtq : Vector.map (Expression.eval env) colsV.c_times_quotient = cols.c_times_quotient)
-    (vCarry : Vector.map (Expression.eval env) colsV.carry = cols.carry) :
+    (vBpv : Eval.eval env colsV.adapter.op_b_memory.prev_value = cols.adapter.op_b_memory.prev_value)
+    (vCpv : Eval.eval env colsV.adapter.op_c_memory.prev_value = cols.adapter.op_c_memory.prev_value)
+    (vA : Eval.eval env colsV.a = cols.a)
+    (vB : Eval.eval env colsV.b = cols.b)
+    (vC : Eval.eval env colsV.c = cols.c)
+    (vQ : Eval.eval env colsV.quotient = cols.quotient)
+    (vQC : Eval.eval env colsV.quotient_comp = cols.quotient_comp)
+    (vR : Eval.eval env colsV.remainder = cols.remainder)
+    (vRC : Eval.eval env colsV.remainder_comp = cols.remainder_comp)
+    (vAR : Eval.eval env colsV.abs_remainder = cols.abs_remainder)
+    (vAC : Eval.eval env colsV.abs_c = cols.abs_c)
+    (vMax : Eval.eval env colsV.max_abs_c_or_1 = cols.max_abs_c_or_1)
+    (vCnegV : Eval.eval env colsV.c_neg_operation.value = cols.c_neg_operation.value)
+    (vRnegV : Eval.eval env colsV.rem_neg_operation.value = cols.rem_neg_operation.value)
+    (vCtq : Eval.eval env colsV.c_times_quotient = cols.c_times_quotient)
+    (vCarry : Eval.eval env colsV.carry = cols.carry) :
     ∀ e ∈ DivRemChip.ownAsserts colsV, Expression.eval env e = 0 := by
   intro e he
   have hx : Expression.eval env e ∈ (DivRemChip.ownAsserts colsV).map (Expression.eval env) :=
@@ -305,12 +305,50 @@ def Assumptions (_cols : DivRemChip.Columns (ZMod p)) : Prop := True
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec := by
   circuit_proof_start [CoreSpec]
   clear h_assumptions
-  obtain ⟨-, ⟨-, -, hopa0, -, ⟨hbpv, -, -⟩, -, ⟨hcpv, -, -⟩⟩, ha, hb, hc, hq, hqc, hrc, hr,
-    har, hac, hmax, hctq, ⟨-, -, -, -, -, -, -, -, -⟩, ⟨-, -, -, -, -, -, -, -, -⟩,
-    hcnegv, hrnegv, ⟨hltbit, -, -, -⟩, hcarry, ⟨-, -, -, -, -, -, hisc0res⟩, hdiv, hdivu, hrem,
-    hremu, hdivw, hremw, hdivuw, hremuw, hov, ⟨-, -, -, -, -, -, hovbres⟩,
-    ⟨-, -, -, -, -, -, hovcres⟩, hbm, hrm, hcm, hqm, hbn, hbnno, hbnnno, hirnw, hrn, hcn, hace,
-    hare, hir, hrcm⟩ := h_input
+  have hopa0 := h_input.2.1.2.2.1
+  have hbpv := h_input.2.1.2.2.2.2.1.1
+  have hcpv := h_input.2.1.2.2.2.2.2.2.1
+  have ha := h_input.2.2.1
+  have hb := h_input.2.2.2.1
+  have hc := h_input.2.2.2.2.1
+  have hq := h_input.2.2.2.2.2.1
+  have hqc := h_input.2.2.2.2.2.2.1
+  have hrc := h_input.2.2.2.2.2.2.2.1
+  have hr := h_input.2.2.2.2.2.2.2.2.1
+  have har := h_input.2.2.2.2.2.2.2.2.2.1
+  have hac := h_input.2.2.2.2.2.2.2.2.2.2.1
+  have hmax := h_input.2.2.2.2.2.2.2.2.2.2.2.1
+  have hctq := h_input.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hcnegv := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrnegv := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hltbit := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.1
+  have hcarry := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hisc0res := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.2.2.2.2.2.2
+  have hdiv := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hdivu := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrem := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hremu := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hdivw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hremw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hdivuw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hremuw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hov := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hovbres := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.2.2.2.2.2.2
+  have hovcres := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.2.2.2.2.2.2
+  have hbm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hcm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hqm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hbn := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hbnno := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hbnnno := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hirnw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrn := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hcn := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hace := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hare := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hir := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrcm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
   obtain ⟨hMulLo, hMulUp, hOwn,
     hp0, hp1, hp2, hp3, hp4, hp5, hp6, hp7, hp8, hp9, hp10, hp11, hp12, hp13, hp14, hp15,
     hp16, hp17, hp18, hp19, hp20, hp21, hp22, hp23, hp24, hp25, hp26, hp27, hp28, hp29,
@@ -364,7 +402,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec
   have eAr := eval_getElem har
   have eQ := eval_getElem hq
   have eR := eval_getElem hr
-  simp only [eCtq] at hSpecLo hSpecUp
   refine ⟨⟨?_, ?_, ?_, ?_⟩, ?_⟩
   · exact ⟨hSpecLo, hSpecUp⟩
   · -- the raw own-assert bundle, transported to the evaluated row
@@ -431,12 +468,50 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CoreSpec
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions CoreSpec := by
   circuit_proof_start [CoreSpec]
   clear h_assumptions
-  obtain ⟨-, ⟨-, -, hopa0, -, ⟨hbpv, -, -⟩, -, ⟨hcpv, -, -⟩⟩, ha, hb, hc, hq, hqc, hrc, hr,
-    har, hac, hmax, hctq, ⟨-, -, -, -, -, -, -, -, -⟩, ⟨-, -, -, -, -, -, -, -, -⟩,
-    hcnegv, hrnegv, ⟨hltbit, -, -, -⟩, hcarry, ⟨-, -, -, -, -, -, hisc0res⟩, hdiv, hdivu, hrem,
-    hremu, hdivw, hremw, hdivuw, hremuw, hov, ⟨-, -, -, -, -, -, hovbres⟩,
-    ⟨-, -, -, -, -, -, hovcres⟩, hbm, hrm, hcm, hqm, hbn, hbnno, hbnnno, hirnw, hrn, hcn, hace,
-    hare, hir, hrcm⟩ := h_input
+  have hopa0 := h_input.2.1.2.2.1
+  have hbpv := h_input.2.1.2.2.2.2.1.1
+  have hcpv := h_input.2.1.2.2.2.2.2.2.1
+  have ha := h_input.2.2.1
+  have hb := h_input.2.2.2.1
+  have hc := h_input.2.2.2.2.1
+  have hq := h_input.2.2.2.2.2.1
+  have hqc := h_input.2.2.2.2.2.2.1
+  have hrc := h_input.2.2.2.2.2.2.2.1
+  have hr := h_input.2.2.2.2.2.2.2.2.1
+  have har := h_input.2.2.2.2.2.2.2.2.2.1
+  have hac := h_input.2.2.2.2.2.2.2.2.2.2.1
+  have hmax := h_input.2.2.2.2.2.2.2.2.2.2.2.1
+  have hctq := h_input.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hcnegv := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrnegv := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hltbit := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.1
+  have hcarry := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hisc0res := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.2.2.2.2.2.2
+  have hdiv := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hdivu := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrem := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hremu := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hdivw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hremw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hdivuw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hremuw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hov := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hovbres := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.2.2.2.2.2.2
+  have hovcres := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1.2.2.2.2.2.2
+  have hbm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hcm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hqm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hbn := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hbnno := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hbnnno := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hirnw := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrn := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hcn := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hace := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hare := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hir := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hrcm := h_input.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
   obtain ⟨hProduct, hOwnH, hSelection, hRange⟩ := h_spec
   unfold ProductSpec at hProduct
   obtain ⟨hSpecLo, hSpecUp⟩ := hProduct

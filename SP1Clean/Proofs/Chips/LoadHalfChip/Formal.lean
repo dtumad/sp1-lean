@@ -97,25 +97,15 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- slot `clk_low + 1`, `ITypeReader`'s op_b read-back `clk_low + 3`, and `RegisterWrite`'s op_a write
   -- `clk_low + 4`. The offset is left to unification, so this never names the destructured state columns.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
-  -- eval→value bridges for the nested vector fields the sub-`Spec`s / selection gates reference.
-  have hmap_ob : Vector.map (Expression.eval env) input_var_offset_bit = input_offset_bit :=
-    h_input.2.2.2.2.2.1
-  have hmap_pv : Vector.map (Expression.eval env) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.2.1.1
-  have eob : ∀ i (hi : i < 2), Expression.eval env input_var_offset_bit[i] = input_offset_bit[i] :=
-    fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  simp only [eob, epv] at hsel0 hsel1 hsel2 hsel3
   have h_it := h_itype ⟨h_bin, h_bin, h_clk⟩
   have h_addr_as : AddressOperation.SoundnessAssumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, Expression.eval env input_var_offset_bit[0],
-          Expression.eval env input_var_offset_bit[1],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, input_offset_bit[0],
+          input_offset_bit[1],
           input_is_lh + input_is_lhu⟩ : AddressOperation.Inputs (ZMod p)) :=
     ⟨ha, hb, h_bin⟩
   simp only [AddressOperation.circuit] at h_addr
   have h_addr_spec := h_addr h_addr_as
-  simp only [circuit_norm, eob] at h_addr_spec
+  simp only [circuit_norm] at h_addr_spec
   have hob0 : input_offset_bit[0] = 0 ∨ input_offset_bit[0] = 1 := h_addr_spec.2.1
   have hob1 : input_offset_bit[1] = 0 ∨ input_offset_bit[1] = 1 := h_addr_spec.2.2.1
   -- `selected_half < 2^16` on a real row: it equals one of the four 16-bit limbs by the offset corner.
@@ -235,24 +225,10 @@ theorem completeness :
   simp only [isReal] at hbin
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  -- eval→value bridges for the nested vectors the reader/gadget `Spec`s reference.
-  have hmap_pc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc
-      = input_state_pc := h_input.2.2.1.2.2.2
-  have hmap_ob : Vector.map (Expression.eval env.toEnvironment) input_var_offset_bit
-      = input_offset_bit := h_input.2.2.2.2.2.1
-  have hmap_pv : Vector.map (Expression.eval env.toEnvironment) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.2.1.1
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
-  have eob : ∀ i (hi : i < 2), Expression.eval env.toEnvironment input_var_offset_bit[i]
-      = input_offset_bit[i] := fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, Expression.eval env.toEnvironment input_var_offset_bit[0],
-          Expression.eval env.toEnvironment input_var_offset_bit[1],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, input_offset_bit[0],
+          input_offset_bit[1],
           input_is_lh + input_is_lhu⟩ : AddressOperation.Inputs (ZMod p)) := by
-    simp only [eob]
     exact ⟨ha, hb, hbin, hfit, Or.inl rfl, hob0, hob1, h_ge, by simpa using h_off⟩
   have h_sel_lt : input_selected_half.val < 2 ^ 16 :=
     sel_lt_of_corners hob0 hob1 hsel0 hsel1 hsel2 hsel3 hpv0 hpv1 hpv2 hpv3
@@ -269,7 +245,7 @@ theorem completeness :
     ⟨?_, ?_⟩, ⟨?_, ?_⟩,
     ?_, ?_, ?_, ?_, h_op_a_0, ?_, ?_, ?_, ?_⟩
   · exact hbin
-  · simp only [epc]; exact h_cpu
+  · exact h_cpu
   · exact ⟨hbin, fun _ => h_pv_isu64, h_clk⟩
   · exact h_mem
   · exact h_msb_spec
@@ -277,10 +253,10 @@ theorem completeness :
   · exact h_it
   · exact ⟨hbin, fun _ => h_load_isu64, h_clk.at_four⟩
   · trivial
-  · simp only [eob, epv]; exact hsel0
-  · simp only [eob, epv]; exact hsel1
-  · simp only [eob, epv]; exact hsel2
-  · simp only [eob, epv]; exact hsel3
+  · exact hsel0
+  · exact hsel1
+  · exact hsel2
+  · exact hsel3
   · exact h_msbgate
   · rcases h_lh_bin with h | h <;> rw [h] <;> simp
   · rcases h_lhu_bin with h | h <;> rw [h] <;> simp

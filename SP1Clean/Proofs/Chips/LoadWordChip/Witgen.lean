@@ -34,20 +34,18 @@ adding them cannot perturb the chip's (large) soundness and completeness proofs.
 theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
-      = Vector.map (Expression.eval env) input.op_b_val := by
+      = Eval.eval env input.op_b_val := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Inputs.op_b_val, eval_inputs, Readers.ITypeReader.eval_cols,
     Readers.evalRegisterAccessColumns]
-  exact ProvableType.eval_fields env _
 
 /-- The sign-extended offset immediate, evaluated. -/
 theorem eval_opCImm {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_imm
-      = Vector.map (Expression.eval env) input.op_c_imm := by
+      = Eval.eval env input.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Inputs.op_c_imm, eval_inputs, Readers.ITypeReader.eval_cols]
-  exact ProvableType.eval_fields env _
 
 /-- LoadWord's row has computable witnesses: the four address cells come from the composed
 `AddressOperation`, whose input row is a function of this row's own input cells. -/

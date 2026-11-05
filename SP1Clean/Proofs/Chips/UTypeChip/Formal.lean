@@ -50,15 +50,13 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_op_a_0 (hr : input_is_real = 1) :
       input_adapter_op_a_0 = 0 ∨ input_adapter_op_a_0 = 1 :=
     h_jt.2.1 hr
-  have hpc : Vector.map (Expression.eval env) input_var_state_pc = input_state_pc := h_input.2.1.2.2.2
-  have epc : ∀ i (hi : i < 3), Expression.eval env input_var_state_pc[i] = input_state_pc[i] :=
-    fun i hi => by rw [← hpc]; simp only [Vector.getElem_map]
+  have hpc : Eval.eval env input_var_state_pc = input_state_pc := h_input.2.1.2.2.2
   have ha0 : env.get i₀ = input_is_auipc * input_state_pc[0] := by
-    rw [epc 0 (by omega)] at h_ad0; exact sub_eq_zero.mp h_ad0
+    exact sub_eq_zero.mp h_ad0
   have ha1 : env.get (i₀ + 1) = input_is_auipc * input_state_pc[1] := by
-    rw [epc 1 (by omega)] at h_ad1; exact sub_eq_zero.mp h_ad1
+    exact sub_eq_zero.mp h_ad1
   have ha2 : env.get (i₀ + 2) = input_is_auipc * input_state_pc[2] := by
-    rw [epc 2 (by omega)] at h_ad2; exact sub_eq_zero.mp h_ad2
+    exact sub_eq_zero.mp h_ad2
   have haddend0 : input_is_auipc = 0 →
       (#v[env.get i₀, env.get (i₀ + 1), env.get (i₀ + 2), 0] : Word (ZMod p)) = #v[0, 0, 0, 0] := by
     intro h; rw [ha0, ha1, ha2, h]; simp
@@ -109,22 +107,22 @@ theorem completeness :
     h_assumptions
   -- G1: the *push* side clock bound, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  obtain ⟨_, ⟨_, _, _, hpc⟩, ⟨_, _, h_a0, hob, _⟩, hiau⟩ := h_input
+  have hpc := h_input.2.1.2.2.2
+  have h_a0 := h_input.2.2.1.2.2.1
+  have hob := h_input.2.2.1.2.2.2.1
+  have hiau := h_input.2.2.2
   -- `h_env` now bundles the addend/add-result witness equations with the GFC `JTypeReader` subcircuit's
   -- completeness obligation (SC Phase 2pre); the witness equations are `he_addend`/`he_addval`.
   obtain ⟨he_addend, he_addval, -, _⟩ := h_env
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env.toEnvironment input_var_state_pc[i] = input_state_pc[i] :=
-    fun i hi => by rw [← hpc]; simp only [Vector.getElem_map]
-  have hg0 : env.get i₀ = input_is_auipc * Expression.eval env.toEnvironment input_var_state_pc[0] := by
-    simpa [circuit_norm, hiau] using he_addend 0
-  have hg1 : env.get (i₀ + 1) = input_is_auipc * Expression.eval env.toEnvironment input_var_state_pc[1] := by
-    simpa [circuit_norm, hiau] using he_addend 1
-  have hg2 : env.get (i₀ + 2) = input_is_auipc * Expression.eval env.toEnvironment input_var_state_pc[2] := by
-    simpa [circuit_norm, hiau] using he_addend 2
-  have hAeq : (#v[input_is_auipc * Expression.eval env.toEnvironment input_var_state_pc[0],
-        input_is_auipc * Expression.eval env.toEnvironment input_var_state_pc[1],
-        input_is_auipc * Expression.eval env.toEnvironment input_var_state_pc[2], 0] : Word (ZMod p))
+  have hg0 : env.get i₀ = input_is_auipc * input_state_pc[0] := by
+    simpa [circuit_norm, h_input] using he_addend 0
+  have hg1 : env.get (i₀ + 1) = input_is_auipc * input_state_pc[1] := by
+    simpa [circuit_norm, h_input] using he_addend 1
+  have hg2 : env.get (i₀ + 2) = input_is_auipc * input_state_pc[2] := by
+    simpa [circuit_norm, h_input] using he_addend 2
+  have hAeq : (#v[input_is_auipc * input_state_pc[0],
+        input_is_auipc * input_state_pc[1],
+        input_is_auipc * input_state_pc[2], 0] : Word (ZMod p))
       = #v[env.get i₀, env.get (i₀ + 1), env.get (i₀ + 2), 0] := by rw [hg0, hg1, hg2]
   have hbeq : (#v[Expression.eval env.toEnvironment input_var_adapter_op_b_imm[0],
         Expression.eval env.toEnvironment input_var_adapter_op_b_imm[1],
@@ -138,11 +136,10 @@ theorem completeness :
       rw [e]; refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;> simp
     · have e : (#v[env.get i₀, env.get (i₀ + 1), env.get (i₀ + 2), 0] : Word (ZMod p))
           = #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0] := by
-        rw [hg0, hg1, hg2, h, epc 0 (by omega), epc 1 (by omega), epc 2 (by omega)]; simp
+        rw [hg0, hg1, hg2, h]; simp
       rw [e]; exact h_pcU
   have hval_off (hop0 : input_adapter_op_a_0 = 0) :
-      (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 3 + i }) : Word (ZMod p))
+      (Vector.mapRange 4 fun i => env.get (i₀ + 3 + i) : Word (ZMod p))
       = AddOperation.populate #v[env.get i₀, env.get (i₀ + 1), env.get (i₀ + 2), 0]
           input_adapter_op_b_imm := by
     -- The addend operand of the witness IR is the *input* product `is_auipc * pc`; `hAeq` is what
@@ -150,21 +147,20 @@ theorem completeness :
     rw [← AddOperation.populateIRGated_eval_off env input_var_adapter_op_a_0
       #v[input_var_is_auipc * input_var_state_pc[0], input_var_is_auipc * input_var_state_pc[1],
          input_var_is_auipc * input_var_state_pc[2], 0]
-      input_var_adapter_op_b_imm _ _ (by simpa [circuit_norm, hiau] using hAeq) hbeq hA_U h_imm
+      input_var_adapter_op_b_imm _ _ (by simpa [circuit_norm, h_input] using hAeq) hbeq hA_U h_imm
       (h_a0.trans hop0)]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact he_addval ⟨i, hi⟩
   have hval_on (hop1 : input_adapter_op_a_0 = 1) :
-      (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var { index := i₀ + 3 + i }) : Word (ZMod p))
+      (Vector.mapRange 4 fun i => env.get (i₀ + 3 + i) : Word (ZMod p))
         = #v[0, 0, 0, 0] := by
     rw [← AddOperation.populateIRGated_eval_on env input_var_adapter_op_a_0
       #v[input_var_is_auipc * input_var_state_pc[0], input_var_is_auipc * input_var_state_pc[1],
          input_var_is_auipc * input_var_state_pc[2], 0]
       input_var_adapter_op_b_imm (by rw [h_a0, hop1]; exact one_ne_zero)]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact he_addval ⟨i, hi⟩
   have h_gate2 : input_is_real - input_adapter_op_a_0 = 0 ∨ input_is_real - input_adapter_op_a_0 = 1 := by
     rcases h_op0 with h0 | ⟨hr, h1⟩
@@ -185,7 +181,7 @@ theorem completeness :
     rcases h_op0 with h0 | ⟨_, h1⟩
     · rw [h0, zero_mul]
     · have hi := congrArg (fun v : Word (ZMod p) => v[(i : ℕ)]) (hval_on h1)
-      simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] at hi
+      simp only [Vector.getElem_mapRange, circuit_norm] at hi
       rw [h1, one_mul, hi]
       fin_cases i <;> rfl
   refine ⟨⟨h_bin, h_cpu⟩, ⟨⟨fun _ => ⟨hA_U, h_imm⟩, h_gate2⟩, ?_⟩,

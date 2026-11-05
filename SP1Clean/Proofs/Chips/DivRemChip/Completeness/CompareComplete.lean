@@ -146,39 +146,29 @@ private theorem inputs_eq_of_views {F : Type} {x y : DivRemCompare.Inputs F}
 private theorem evaluatedWordView_eq (env : ProverEnvironment (ZMod p))
     (input : Var SP1Clean.DivRemChip.Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
-    (hbpv : Vector.map (Expression.eval env.toEnvironment)
+    (hbpv : Eval.eval env.toEnvironment
       input.adapter.op_b_memory.prev_value = B)
-    (hcpv : Vector.map (Expression.eval env.toEnvironment)
+    (hcpv : Eval.eval env.toEnvironment
       input.adapter.op_c_memory.prev_value = C)
-    (hCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) :
+    (hCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + i) :
         Word (ZMod p)) = cComp C f)
-    (hABSCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i }) :
+    (hABSCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i)) :
         Word (ZMod p)) = populateAbsC C f)
-    (hABSRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) :
+    (hABSRvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i)) :
         Word (ZMod p)) = populateAbsRem B C f)
-    (hRCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + i }) : Word (ZMod p)) = populateRemComp B C f)
-    (hMAXvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + i }) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
-    (hRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) :
+    (hRCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + i)) : Word (ZMod p)) = populateRemComp B C f)
+    (hMAXvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + i)) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
+    (hRvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i) :
         Word (ZMod p)) = populateRemainder B C f)
-    (hQvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) :
+    (hQvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i) :
         Word (ZMod p)) = populateQuotient B C f) :
     wordView (Eval.eval env (DivRemCompare.Inputs.ofCols (populatedRowAt input off))) =
       wordView (honestInputs ir B C f) := by
+  simp only [circuit_norm] at hbpv hcpv
   unfold wordView
   simp +instances only [DivRemCompare.Inputs.ofCols, populatedRowAt,
     honestInputs, circuit_norm, hbpv, hcpv, hCvec, hABSCvec, hABSRvec, hRCvec,
@@ -227,23 +217,15 @@ private theorem evaluatedScalarView_eq (env : ProverEnvironment (ZMod p))
 private theorem evaluatedOperationView_eq (env : ProverEnvironment (ZMod p))
     (input : Var SP1Clean.DivRemChip.Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
-    (hWCNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wCnegWitness ir C f)
-    (hWRNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wRnegWitness ir B C f)
-    (hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 2 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i }) : Vector (ZMod p) 2) =
+    (hWCNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wCnegWitness ir C f)
+    (hWRNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wRnegWitness ir B C f)
+    (hLTCLvec : ((Vector.mapRange 2 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i)) : Vector (ZMod p) 2) =
         ltClWitness ir B C f)
-    (hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i }) : Vector (ZMod p) 4) =
+    (hLTFvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i)) : Vector (ZMod p) 4) =
         ltFlagsWitness ir B C f)
     (hNEI : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4) = (ltNotEqInvWitness ir B C f)[0])
@@ -289,62 +271,43 @@ theorem evaluatedInputs_eq (env : ProverEnvironment (ZMod p))
     (input : Var SP1Clean.DivRemChip.Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
     (hir : Expression.eval env.toEnvironment input.is_real = ir)
-    (hbpv : Vector.map (Expression.eval env.toEnvironment)
+    (hbpv : Eval.eval env.toEnvironment
       input.adapter.op_b_memory.prev_value = B)
-    (hcpv : Vector.map (Expression.eval env.toEnvironment)
+    (hcpv : Eval.eval env.toEnvironment
       input.adapter.op_c_memory.prev_value = C)
     (hfl4 : Expression.eval env.toEnvironment input.selectors[3] = f[4]) (hfl5 : Expression.eval env.toEnvironment input.selectors[4] = f[5])
     (hfl6 : Expression.eval env.toEnvironment input.selectors[5] = f[6]) (hfl7 : Expression.eval env.toEnvironment input.selectors[6] = f[7])
     (hSC4 : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
       ir * (1 - (f[4] + f[5] + f[6] + f[7])))
-    (hCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) :
+    (hCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + i) :
         Word (ZMod p)) = cComp C f)
-    (hABSCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i }) :
+    (hABSCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i)) :
         Word (ZMod p)) = populateAbsC C f)
-    (hABSRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) :
+    (hABSRvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i)) :
         Word (ZMod p)) = populateAbsRem B C f)
-    (hRCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + i }) : Word (ZMod p)) = populateRemComp B C f)
-    (hMAXvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + i }) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
-    (hWCNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wCnegWitness ir C f)
-    (hWRNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wRnegWitness ir B C f)
-    (hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 2 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i }) : Vector (ZMod p) 2) =
+    (hRCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + i)) : Word (ZMod p)) = populateRemComp B C f)
+    (hMAXvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + i)) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
+    (hWCNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wCnegWitness ir C f)
+    (hWRNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wRnegWitness ir B C f)
+    (hLTCLvec : ((Vector.mapRange 2 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i)) : Vector (ZMod p) 2) =
         ltClWitness ir B C f)
-    (hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i }) : Vector (ZMod p) 4) =
+    (hLTFvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i)) : Vector (ZMod p) 4) =
         ltFlagsWitness ir B C f)
     (hNEI : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4) = (ltNotEqInvWitness ir B C f)[0])
     (hBIT : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1) = (ltBitWitness ir B C f)[0])
-    (hRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) :
+    (hRvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i) :
         Word (ZMod p)) = populateRemainder B C f)
-    (hQvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) :
+    (hQvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i) :
         Word (ZMod p)) = populateQuotient B C f)
     (hBM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4) = bMsbCell B f)

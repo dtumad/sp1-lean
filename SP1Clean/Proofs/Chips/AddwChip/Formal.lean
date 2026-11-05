@@ -63,7 +63,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
         | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
         | exact Or.inr ⟨h_bin, (fun hr => by
             have hisu := ((h_addspec hr).2 hr).1
-            simp only [AddwOperation.resultWord, Vector.getElem_map, Vector.getElem_mapRange,
+            simp only [AddwOperation.resultWord, Vector.getElem_mapRange,
               circuit_norm] at hisu ⊢
             exact hisu), h_clk.at_four⟩
 
@@ -75,20 +75,20 @@ theorem completeness :
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
   -- `op_c_memory` is grouped since `imm_c` is the final field of the ALU adapter block.
-  obtain ⟨-, -, -, -, -, -, ⟨hob, -, -⟩, -, ⟨hoc, -, -⟩, -⟩ := h_input
+  have hob := h_input.2.2.2.2.2.2.1.1
+  have hoc := h_input.2.2.2.2.2.2.2.2.1.1
   -- `h_env` now bundles the chip's `value`/`msb` witness-gen equations with the GFC `ALUTypeReader`
   -- subcircuit's completeness obligation (SC Phase 2pre) — discard the trailing reader obligation.
   obtain ⟨-, h_env_val, h_env_msb, -⟩ := h_env
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
   have hbeq := (vec4_eval env.toEnvironment input_var_adapter_op_b_memory_prev_value).trans hob
   have hceq := (vec4_eval env.toEnvironment input_var_adapter_op_c_memory_prev_value).trans hoc
-  have hval : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 2 fun i => var { index := i₀ + i }) : Vector (ZMod p) 2)
+  have hval : (Vector.mapRange 2 fun i => env.get (i₀ + i) : Vector (ZMod p) 2)
       = AddwOperation.addwValueWitness input_adapter_op_b_memory_prev_value
           input_adapter_op_c_memory_prev_value := by
     rw [← AddwOperation.valueIR_eval env _ _ _ _ hbeq hceq ha hb]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact h_env_val ⟨i, hi⟩
   have hmsbeq : env.get (i₀ + 2) = AddwOperation.addwMsbWitness input_adapter_op_b_memory_prev_value
       input_adapter_op_c_memory_prev_value := by
@@ -127,7 +127,7 @@ theorem completeness :
     have hisu := ((AddwOperation.spec_populate ha hb input_is_real).2 hr).1
     have e0 := congrArg (fun v => v[0]) hval
     have e1 := congrArg (fun v => v[1]) hval
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] at e0 e1
+    simp only [Vector.getElem_mapRange, circuit_norm] at e0 e1
     simp only [AddwOperation.resultWord, AddwOperation.populate] at hisu
     simp only [e0, e1, hmsbeq]
     exact hisu

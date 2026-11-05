@@ -55,33 +55,15 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- `ITypeReaderImmutable`'s two read-back pushes (`clk_low + 4` / `+ 3`). The offset is left to
   -- unification, so this line never names the destructured state columns.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
-  -- eval→value bridges for the nested vectors the RMW equations / subcircuit input reference.
-  have hmap_ob : Vector.map (Expression.eval env) input_var_offset_bit = input_offset_bit :=
-    h_input.2.2.2.2.1
-  have hmap_sv : Vector.map (Expression.eval env) input_var_store_value = input_store_value :=
-    h_input.2.2.2.2.2
-  have hmap_pv : Vector.map (Expression.eval env) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.1.1
-  have hmap_oap : Vector.map (Expression.eval env) input_var_adapter_op_a_memory_prev_value
-      = input_adapter_op_a_memory_prev_value := h_input.2.2.1.2.1.1
-  have eob : ∀ i (hi : i < 2), Expression.eval env input_var_offset_bit[i] = input_offset_bit[i] :=
-    fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have esv : ∀ i (hi : i < 4), Expression.eval env input_var_store_value[i] = input_store_value[i] :=
-    fun i hi => by rw [← hmap_sv]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have eoap0 : Expression.eval env input_var_adapter_op_a_memory_prev_value[0]
-      = input_adapter_op_a_memory_prev_value[0] := by rw [← hmap_oap]; simp only [Vector.getElem_map]
-  simp only [esv, epv, eoap0, eob] at hr0 hr1 hr2 hr3
   have h_it := h_itype ⟨h_bin, h_bin, h_clk⟩
   have h_addr_as : AddressOperation.SoundnessAssumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, Expression.eval env input_var_offset_bit[0],
-          Expression.eval env input_var_offset_bit[1],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, input_offset_bit[0],
+          input_offset_bit[1],
           input_is_real⟩ : AddressOperation.Inputs (ZMod p)) :=
     ⟨ha, hb, h_bin⟩
   simp only [AddressOperation.circuit] at h_addr
   have h_addr_spec := h_addr h_addr_as
-  simp only [circuit_norm, eob] at h_addr_spec
+  simp only [circuit_norm] at h_addr_spec
   refine ⟨⟨h_addr_spec,
     h_mem ⟨h_bin, h_sv, h_clk⟩, h_it,
     ⟨sub_eq_zero.mp hr0, sub_eq_zero.mp hr1, sub_eq_zero.mp hr2, sub_eq_zero.mp hr3⟩, h_bin⟩, ?_⟩
@@ -163,43 +145,22 @@ theorem completeness :
   have h_sv := hp13.2
   -- G1: the *push*-side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  have hmap_pc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc
-      = input_state_pc := h_input.2.1.2.2.2
-  have hmap_ob : Vector.map (Expression.eval env.toEnvironment) input_var_offset_bit
-      = input_offset_bit := h_input.2.2.2.2.1
-  have hmap_sv : Vector.map (Expression.eval env.toEnvironment) input_var_store_value
-      = input_store_value := h_input.2.2.2.2.2
-  have hmap_pv : Vector.map (Expression.eval env.toEnvironment) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.1.1
-  have hmap_oap : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_a_memory_prev_value
-      = input_adapter_op_a_memory_prev_value := h_input.2.2.1.2.1.1
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
-  have eob : ∀ i (hi : i < 2), Expression.eval env.toEnvironment input_var_offset_bit[i]
-      = input_offset_bit[i] := fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have esv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_store_value[i]
-      = input_store_value[i] := fun i hi => by rw [← hmap_sv]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have eoap0 : Expression.eval env.toEnvironment input_var_adapter_op_a_memory_prev_value[0]
-      = input_adapter_op_a_memory_prev_value[0] := by rw [← hmap_oap]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, Expression.eval env.toEnvironment input_var_offset_bit[0],
-          Expression.eval env.toEnvironment input_var_offset_bit[1],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, input_offset_bit[0],
+          input_offset_bit[1],
           input_is_real⟩ : AddressOperation.Inputs (ZMod p)) := by
-    simp only [eob]
     exact ⟨ha, hb, hbin, hfit, Or.inl rfl, hob0, hob1, h_ge, by simpa using h_off⟩
   refine ⟨⟨?_, ?_⟩, h_addr_as, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · exact hbin
-  · simp only [epc]; exact h_cpu
+  · exact h_cpu
   · exact ⟨hbin, h_sv, h_clk⟩
   · exact h_mem
   · exact ⟨hbin, hbin, h_clk⟩
   · exact h_it
-  · simp only [esv, epv, eoap0, eob]; exact sub_eq_zero_of_eq hr0
-  · simp only [esv, epv, eoap0, eob]; exact sub_eq_zero_of_eq hr1
-  · simp only [esv, epv, eoap0, eob]; exact sub_eq_zero_of_eq hr2
-  · simp only [esv, epv, eoap0, eob]; exact sub_eq_zero_of_eq hr3
+  · exact sub_eq_zero_of_eq hr0
+  · exact sub_eq_zero_of_eq hr1
+  · exact sub_eq_zero_of_eq hr2
+  · exact sub_eq_zero_of_eq hr3
   · rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- StoreHalf's exact Memory-channel interaction list — the store-family shape: the composed

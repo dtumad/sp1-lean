@@ -40,10 +40,10 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
     · have hv := congrArg
         (fun r : Inputs (ZMod p) => r.adapter.op_b_memory.prev_value) h_input
       simp only [eval_rs1Prev] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_c_imm) h_input
       simp only [eval_opCImm] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · -- the link value: `pc ++ 0` plus the literal 4 (constant limbs), gated by activity and `op_a_0`
     have hpc : ∀ (j : ℕ) (hj : j < 3),
         Expression.eval env.toEnvironment input.state.pc[j]
@@ -51,7 +51,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
       intro j hj
       have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
       simp only [eval_statePc] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hoa0 : Expression.eval env.toEnvironment input.adapter.op_a_0
         = Expression.eval env'.toEnvironment input.adapter.op_a_0 := by
       have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_a_0) h_input

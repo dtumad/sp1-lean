@@ -182,7 +182,7 @@ def zerosProgram (name : String) (n : ℕ) : Program F (fields n) where
   soundness := by
     intro env guarantees
     rw [checkZeros_guarantees] at guarantees
-    simpa [circuit_norm, explicit_provable_type] using guarantees
+    simpa only [ProvableType.eval_fields, Vector.toList_map, List.forall_mem_map] using guarantees
 
 /-- Compose bundled verifier programs and retain both semantic specifications. -/
 def Program.andThen {PublicIO : TypeMap} [ProvableType PublicIO]
@@ -255,7 +255,8 @@ theorem zerosProgram_balanced_iff (name : String) (n : ℕ) (env : Environment F
     BalancedInteractions ((zerosProgram (F := F) name n).circuitOperations.interactionValuesWith
       (zeroChannel name).toRaw env) ↔
         (zerosProgram name n).Spec (eval env (varFromOffset (F := F) (fields n) 0)) env.data := by
-  simpa [zerosProgram, circuit_norm, explicit_provable_type] using
-    checkZeros_balanced_iff name (varFromOffset (fields n) 0).toList env
+  change _ ↔ ∀ value ∈ (eval env (varFromOffset (F := F) (fields n) 0)).toList, value = 0
+  rw [ProvableType.eval_fields, Vector.toList_map, List.forall_mem_map]
+  exact checkZeros_balanced_iff name (varFromOffset (fields n) 0).toList env
 
 end Verifier

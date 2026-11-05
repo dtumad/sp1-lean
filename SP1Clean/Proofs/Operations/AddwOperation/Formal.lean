@@ -32,17 +32,9 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨ha, hb, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, ⟨hiv, _⟩, _⟩ := h_input
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
   have h65536 : (2 : ℕ) ^ 16 = 65536 := by norm_num
-  have ea : ∀ i (hi : i < 4), Expression.eval env input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  have eb : ∀ i (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ev : ∀ i (hi : i < 2),
-      Expression.eval env input_var_cols_value[i] = input_cols_value[i] := by
-    intro i hi; rw [← hiv]; simp only [Vector.getElem_map]
-  simp only [circuit_norm, byteChannel, ea, eb, ev] at h_holds ⊢
+  simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨h_msb, hr0, hr1, _hgate, hgc0, hgc1⟩ := h_holds
   -- the U16MSB sub-assertion's `Assumptions` (gated `value[1] < 2^16` from the `value[1]` byte pull).
   have h_msb_as : U16MSBOperation.circuit.Assumptions
@@ -70,15 +62,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨ha, hb, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, ⟨hiv, _⟩, _⟩ := h_input
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
-  have ev : ∀ i (hi : i < 2),
-      Expression.eval env.toEnvironment input_var_cols_value[i] = input_cols_value[i] := by
-    intro i hi; rw [← hiv]; simp only [Vector.getElem_map]
-  have ea : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  have eb : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
   -- the converse facts, all valid only on real rows
   have key : input_is_real = 1 →
       (input_cols_value[0].val < 2 ^ 16 ∧ input_cols_value[1].val < 2 ^ 16) ∧
@@ -91,7 +75,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       List.getElem_cons_zero, List.getElem_cons_succ] at hUv0 hUv1
     obtain ⟨h_raw, h_msbval⟩ := carries_of_addwSemantics ha hb hU hbveq
     exact ⟨⟨hUv0, hUv1⟩, h_raw, h_msbval⟩
-  simp only [circuit_norm, byteChannel, ea, eb, ev]
+  simp only [circuit_norm, byteChannel]
   refine ⟨⟨⟨fun hr1 => (key hr1).1.2, hbin⟩, ⟨h_spec.1, fun hr1 => (key hr1).2.2⟩⟩, ?_, ?_, ?_, ?_, ?_⟩
   · refine fun hneg => ?_
     rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1.1

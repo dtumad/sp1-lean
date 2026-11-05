@@ -126,24 +126,12 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Output where
   ProverAssumptions input _ _ := ProverAssumptions input
   soundness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, Inputs.rest, eval_output]
-    have valueEval (index : ℕ) (bound : index < 4) :
-        Expression.eval env input_var_value[index] = input_value[index] := by
-      simpa only [Vector.getElem_map] using congrArg (fun value : Word (ZMod p) => value[index]) h_input.1
-    have quotientEval (index : ℕ) (bound : index < 3) :
-        Expression.eval env input_var_quotients[index] = input_quotients[index] := by
-      simpa only [Vector.getElem_map] using congrArg (fun value : fields 3 (ZMod p) => value[index]) h_input.2
-    simp only [valueEval, quotientEval, Nat.reduceMod] at h_holds ⊢
+    simp only [Nat.reduceMod] at h_holds ⊢
     obtain ⟨q0, r0, q1, r1, q2, r2, top⟩ := h_holds
     exact spec_of_parts ⟨input_value, input_quotients⟩ q0 r0 q1 r1 q2 r2 top
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, Inputs.rest]
-    have valueEval (index : ℕ) (bound : index < 4) :
-        Expression.eval env input_var_value[index] = input_value[index] := by
-      simpa only [Vector.getElem_map] using congrArg (fun value : Word (ZMod p) => value[index]) h_input.1
-    have quotientEval (index : ℕ) (bound : index < 3) :
-        Expression.eval env input_var_quotients[index] = input_quotients[index] := by
-      simpa only [Vector.getElem_map] using congrArg (fun value : fields 3 (ZMod p) => value[index]) h_input.2
-    simp only [valueEval, quotientEval, Nat.reduceMod]
+    simp only [Nat.reduceMod]
     obtain ⟨word, bound, populated⟩ := h_assumptions
     have checks := populate_checks _ word bound
     rw [← populated] at checks

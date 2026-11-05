@@ -146,8 +146,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
     programChannel] at h_holds h_assumptions ⊢
   obtain ⟨h_rac_a, h_trust, h_prog, z0, z1, z2, z3, h_mem_a⟩ := h_holds
   have htbin := bool_of_mul_pred h_trust
-  have e : ∀ i (hi : i < 3), Expression.eval env input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   -- Spec: decode bounds (from program pull) + op_a `isU64` **and** its prior record's 24-bit clock bound
   -- (from the memory pull — the whole-`Word` message and the message's `clk_low` *being* the block's
   -- `prev_low` make the pull guarantee pair the Spec conjunct pair verbatim). Requirements: rac (Or.inr),
@@ -162,7 +160,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
   · exact (h_prog (by rw [show input_is_trusted = 1 from ht])).2.2.2.2
   -- Decode bounds are exactly the structural Program-channel guarantee.
   · obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [show input_is_trusted = 1 from ht])
-    rw [e 0 (by norm_num)] at hp0; rw [e 1 (by norm_num)] at hp1; rw [e 2 (by norm_num)] at hp2
     exact ⟨ha, hp0, hp1, hp2⟩
 
 theorem completeness :
@@ -181,13 +178,10 @@ theorem completeness :
   -- `hbin`/`htrust` carry `{record}.field` projections; `dsimp` iota-reduces them to the destructured
   -- atoms so the `rw`-gates below match.
   dsimp only at hbin htrust
-  have e : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   refine ⟨⟨hreal, hrac_a⟩, ?_, ?_, z0, z1, z2, z3, ?_⟩
   · rcases htrust with h | h <;> rw [h] <;> simp   -- `is_trusted` gate
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
-    rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
     obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
     exact ⟨ha, hp0, hp1, hp2, hbin ht⟩
   · -- mem pull: the guarantee pair (`isU64` of the whole `Word`, `ClkBound` of the message's `clk_low`,

@@ -124,29 +124,24 @@ theorem completeness :
   have hcpv := h_input.2.1.2.2.2.2.2.2.1.1
   have himm_eval := h_input.2.1.2.2.2.2.2.2.2
   have hbpv_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_b_memory_prev_value =
         input_adapter_op_b_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]
     exact hbpv
   have hapv := h_input.2.1.2.1.1
   have hopc := h_input.2.1.2.2.2.2.2.1
   have hapv_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_a_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_a_memory_prev_value =
         input_adapter_op_a_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]
     exact hapv
   have hopc_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c = input_adapter_op_c := by
-    rw [← CircuitType.eval_var_fields]
+      Eval.eval env.toEnvironment input_var_adapter_op_c = input_adapter_op_c := by
     exact hopc
   have hcpv_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_c_memory_prev_value =
         input_adapter_op_c_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]
     exact hcpv
   have hpc_map :
-      Vector.map (Expression.eval env.toEnvironment) input_var_state_pc = input_state_pc := by
-    rw [← CircuitType.eval_var_fields]
+      Eval.eval env.toEnvironment input_var_state_pc = input_state_pc := by
     exact hpc
   have ec0 : Expression.eval env.toEnvironment input_var_adapter_op_c_memory_prev_value[0]
       = input_adapter_op_c_memory_prev_value[0] := by
@@ -175,7 +170,7 @@ theorem completeness :
   have hsum : input_isSrl + input_isSra + input_isSrlw + input_isSraw =
       F[0] + F[1] + F[2] + F[3] := rfl
   let selectors := #v[input_var_isSrl, input_var_isSra, input_var_isSrlw, input_var_isSraw]
-  have hselectors : selectors.map (Expression.eval env.toEnvironment) = F := by
+  have hselectors : Eval.eval env.toEnvironment selectors = F := by
     simp only [selectors, F, circuit_norm, h_input]
   -- Flag facts for the family eval lemmas (the placement block below re-derives its own copies
   -- over the `set` aliases).
@@ -319,8 +314,8 @@ theorem completeness :
   simp +instances only [main, circuit_norm, h_input, Inputs.is_real]
   simp only [hA0, hA1, hA2, hA3, hbm, hsw, hcb0, hcb1, hcb2, hcb3, hcb4, hcb5, hsram, hv0, hv1,
     hv2, hlo0, hlo1, hlo2, hlo3, hhi0, hhi1, hhi2, hhi3,
-    hfl4, hapv_map, hbpv_map, hopc_map, hcpv_map, hpc_map,
-    heb1, heb3, ec0, epc0, epc1, epc2]
+    hfl4,
+    ]
   have hbUw : Word.isU64 B := hbU
   obtain ⟨hbU0, hbU1, hbU2, hbU3⟩ := Word.lt_cases_of_isU64 hbUw
   obtain ⟨ho0, ho1, ho2, ho3⟩ := one_hot_resolve F hf0 hf1 hf2 hf3 hsum01
@@ -384,7 +379,7 @@ theorem completeness :
       change F[3] * (F[3] - 1) = 0
       rcases hf3 with h | h <;> rw [h] <;> simp,
     ⟨trivial, by
-      simp only [ShiftRightCore.circuit, ShiftRightChip.CoreSpec, circuit_norm, Vector.getElem_map,
+      simp only [ShiftRightCore.circuit, ShiftRightChip.CoreSpec, circuit_norm,
         Vector.getElem_mapRange, hA0, hA1, hA2, hA3, hcb0, hcb1, hcb2, hcb3, hcb4, hcb5,
         hlo0, hlo1, hlo2, hlo3, hhi0, hhi1, hhi2, hhi3, hlr0, hlr1, hlr2, hlr3,
         hs0, hs1, hs2, hs3]
@@ -431,7 +426,7 @@ theorem completeness :
       (populateA_val_lt B c0 F hbUw hf0 hf1 hf2 hf3 hsum01 1 (by norm_num)) 1).2 rfl
   · -- `RegisterWrite` write value `a = populateA` is `U64` (each limb `< 2^16`, `populateA_val_lt`).
     refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
-      simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm, hA0, hA1, hA2, hA3]
+      simp only [Vector.getElem_mapRange, circuit_norm, hA0, hA1, hA2, hA3]
     · exact populateA_val_lt B c0 F hbUw hf0 hf1 hf2 hf3 hsum01 0 (by norm_num)
     · exact populateA_val_lt B c0 F hbUw hf0 hf1 hf2 hf3 hsum01 1 (by norm_num)
     · exact populateA_val_lt B c0 F hbUw hf0 hf1 hf2 hf3 hsum01 2 (by norm_num)

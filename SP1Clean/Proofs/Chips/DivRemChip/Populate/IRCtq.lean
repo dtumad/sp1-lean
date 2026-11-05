@@ -128,46 +128,46 @@ classes' two's-complement corrections — the `mulh`-from-`umulh` identity, disc
 sign case. -/
 theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
     (hq : ((q.eval { env := env })).toNat
-      = (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat)
+      = (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat)
     (hc : ((c.eval { env := env })).toNat
-      = (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat)
+      = (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat)
     (k : ℕ) (hk : k < 8) :
     ((ctqLimbU selectors q c k).eval { env := env }).toNat
-      = ctqLimbNat B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) k := by
+      = ctqLimbNat B C (selectorFlags (Eval.eval env.toEnvironment selectors)) k := by
   -- opaque the two operand values (fvars, not `set` lets — the kernel must never unfold
   -- them back into the word terms inside the product congruences)
-  obtain ⟨qN, hqN⟩ : ∃ n, (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat = n :=
+  obtain ⟨qN, hqN⟩ : ∃ n, (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat = n :=
     ⟨_, rfl⟩
-  obtain ⟨cN, hcN⟩ : ∃ n, (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat = n := ⟨_, rfl⟩
+  obtain ⟨cN, hcN⟩ : ∃ n, (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat = n := ⟨_, rfl⟩
   rw [hqN] at hq
   rw [hcN] at hc
-  have hqNlt : qN < 2 ^ 64 := hqN ▸ (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).isLt
-  have hcNlt : cN < 2 ^ 64 := hcN ▸ (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).isLt
-  have hP128 : (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat < 2 ^ 128 :=
-    (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).isLt
+  have hqNlt : qN < 2 ^ 64 := hqN ▸ (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors)))).isLt
+  have hcNlt : cN < 2 ^ 64 := hcN ▸ (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors)))).isLt
+  have hP128 : (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat < 2 ^ 128 :=
+    (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).isLt
   -- the low slice: `ctqProd` truncates to the wrapping product in every class
-  have hlow : (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat % 2 ^ 64 = qN * cN % 2 ^ 64 := by
-    have h := congrArg BitVec.toNat (ctqProd_setWidth B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
+  have hlow : (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat % 2 ^ 64 = qN * cN % 2 ^ 64 := by
+    have h := congrArg BitVec.toNat (ctqProd_setWidth B C (selectorFlags (Eval.eval env.toEnvironment selectors)))
     rw [BitVec.toNat_setWidth, BitVec.toNat_mul, hqN, hcN] at h
     exact h
   -- the high slice: the sign-dispatched `mulh` value
-  have hhi : (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat / 2 ^ 64
-      = if (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4]
-          + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5] = 1
+  have hhi : (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat / 2 ^ 64
+      = if (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] + (selectorFlags (Eval.eval env.toEnvironment selectors))[4]
+          + (selectorFlags (Eval.eval env.toEnvironment selectors))[5] = 1
         then (qN * cN / 2 ^ 64 + (2 ^ 64 - qN / 2 ^ 63 * cN % 2 ^ 64)
               + (2 ^ 64 - cN / 2 ^ 63 * qN % 2 ^ 64)) % 2 ^ 64
         else qN * cN / 2 ^ 64 := by
-    have hmq : (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).msb
+    have hmq : (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors)))).msb
         = decide (2 ^ 63 ≤ qN) := hqN ▸ BitVec.msb_eq_decide _
-    have hmc : (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).msb
+    have hmc : (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors)))).msb
         = decide (2 ^ 63 ≤ cN) := hcN ▸ BitVec.msb_eq_decide _
     have hprod_le : qN * cN ≤ (2 ^ 64 - 1) * (2 ^ 64 - 1) :=
       Nat.mul_le_mul (by omega) (by omega)
     unfold ctqProd
     split
     · -- signed classes: expand the sign extensions and case the two msbs
-      show (BitVec.signExtend 128 (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))
-            * BitVec.signExtend 128 (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))).toNat
+      show (BitVec.signExtend 128 (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors))))
+            * BitVec.signExtend 128 (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors))))).toNat
           / 2 ^ 64
           = (qN * cN / 2 ^ 64 + (2 ^ 64 - qN / 2 ^ 63 * cN % 2 ^ 64)
               + (2 ^ 64 - cN / 2 ^ 63 * qN % 2 ^ 64)) % 2 ^ 64
@@ -188,8 +188,8 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
          rw [show qN / 2 ^ 63 = 1 from by omega, show cN / 2 ^ 63 = 1 from by omega]] <;>
         simp only [Nat.zero_mul, Nat.one_mul, Nat.mul_zero, hqN, hcN] <;>
         omega
-    · show (BitVec.setWidth 128 (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))
-            * BitVec.setWidth 128 (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))).toNat / 2 ^ 64
+    · show (BitVec.setWidth 128 (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors))))
+            * BitVec.setWidth 128 (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors))))).toNat / 2 ^ 64
           = qN * cN / 2 ^ 64
       rw [BitVec.toNat_mul, BitVec.toNat_setWidth_of_le (by norm_num),
         BitVec.toNat_setWidth_of_le (by norm_num), hqN, hcN]
@@ -202,7 +202,7 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
       simp only [circuit_norm, hq, hc, Nat.shiftRight_eq_div_pow]
     rw [hpush]
     have : qN * cN % 2 ^ 64 / 2 ^ (16 * k) % 65536
-        = (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat / 2 ^ (16 * k) % 65536 := by
+        = (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat / 2 ^ (16 * k) % 65536 := by
       interval_cases k <;> omega
     rw [this]
     norm_num
@@ -214,7 +214,7 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
     have hf4 := flagF_eval selectors env 4 (by omega)
     have hf5 := flagF_eval selectors env 5 (by omega)
     have hHiEval : ((ctqHiU selectors q c).eval { env := env }).toNat
-        = (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat / 2 ^ 64 := by
+        = (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat / 2 ^ 64 := by
       rw [hhi]
       have hmq01 : qN / 2 ^ 63 = 0 ∨ qN / 2 ^ 63 = 1 := by omega
       have hmc01 : cN / 2 ^ 63 = 0 ∨ cN / 2 ^ 63 = 1 := by omega
@@ -233,11 +233,11 @@ theorem ctqLimbU_toNat (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
   -- assemble: shift the high value into the limb
     have hpush : ((ctqHiU selectors q c >>> (16 * (k - 4)) % 65536 : Witgen.U64Expr (ZMod p)).eval
         { env := env }).toNat
-        = (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat / 2 ^ 64 / 2 ^ (16 * (k - 4)) % 65536 := by
+        = (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat / 2 ^ 64 / 2 ^ (16 * (k - 4)) % 65536 := by
       simp only [circuit_norm, hHiEval, Nat.shiftRight_eq_div_pow]
     rw [hpush]
-    have : (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat / 2 ^ 64 / 2 ^ (16 * (k - 4)) % 65536
-        = (ctqProd B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat / 2 ^ (16 * k) % 65536 := by
+    have : (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat / 2 ^ 64 / 2 ^ (16 * (k - 4)) % 65536
+        = (ctqProd B C (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat / 2 ^ (16 * k) % 65536 := by
       rw [Nat.div_div_eq_div_mul, ← pow_add, show 64 + 16 * (k - 4) = 16 * k from by omega]
     rw [this]
     norm_num
@@ -249,12 +249,12 @@ def ctqLimbF (q c : Witgen.U64Expr (ZMod p)) (k : ℕ) : Witgen.FExpr (ZMod p) :
 /-- Evaluating a committed limb cell is the corresponding `populateCtq` cell. -/
 theorem ctqLimbF_eval (q c : Witgen.U64Expr (ZMod p)) (B C : Word (ZMod p))
     (hq : ((q.eval { env := env })).toNat
-      = (Word.toBitVec64 (populateQuotComp B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat)
+      = (Word.toBitVec64 (populateQuotComp B C (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat)
     (hc : ((c.eval { env := env })).toNat
-      = (Word.toBitVec64 (cComp C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat)
+      = (Word.toBitVec64 (cComp C (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat)
     (k : ℕ) (hk : k < 8) :
     ((ctqLimbF selectors q c k).eval { env := env })
-      = (populateCtq B C (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[k] := by
+      = (populateCtq B C (selectorFlags (Eval.eval env.toEnvironment selectors)))[k] := by
   have h := ctqLimbU_toNat selectors env q c B C hq hc k hk
   simp only [ctqLimbF, circuit_norm, FiniteField.fromNat, h, populateCtq, Vector.getElem_ofFn]
 

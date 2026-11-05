@@ -40,6 +40,7 @@ theorem HaltChip.codeZero_of_shallow
   have z1 : Expression.eval env value5[1] = 0 := zeros 1
   have z2 : Expression.eval env value5[2] = 0 := zeros 2
   have z3 : Expression.eval env value5[3] = 0 := zeros 3
+  simp only [circuit_norm] at z0 z1 z2 z3
   simp only [Word.toBitVec64, Word.toNat, circuit_norm, z0, z1, z2, z3,
     ZMod.val_zero, zero_mul, add_zero]
   rfl
@@ -67,6 +68,7 @@ theorem HaltChip.exitHighZero_of_shallow
   have z1 : Expression.eval env value10[1] = 0 := zeros 0
   have z2 : Expression.eval env value10[2] = 0 := zeros 1
   have z3 : Expression.eval env value10[3] = 0 := zeros 2
+  simp only [circuit_norm] at z1 z2 z3
   simp only [circuit_norm, z1, z2, z3, and_self]
 
 omit [Fact (2 ^ 25 < p)] in

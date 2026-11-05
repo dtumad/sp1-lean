@@ -41,7 +41,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_trio := h_rspec.2.2.2.2.2.2
   have h_as : SubwOperation.circuit.Assumptions
       { a := input_adapter_op_b_memory_prev_value, b := input_adapter_op_c_memory_prev_value,
-        cols := ⟨Vector.map (Expression.eval env) (Vector.mapRange 2 fun i => var { index := i₀ + i }),
+        cols := ⟨Vector.mapRange 2 fun i => env.get (i₀ + i),
           ⟨env.get (i₀ + 2)⟩⟩, is_real := input_is_real } :=
     ⟨fun hr => ⟨(h_trio hr).2.1, (h_trio hr).2.2.1⟩, h_bin⟩
   -- The `RegisterWrite` op_a write push owes `isU64` of the sign-extended write word `[v0, v1, msb·65535,
@@ -71,20 +71,20 @@ theorem completeness :
     h_assumptions
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  obtain ⟨-, -, -, -, -, -, ⟨hob, -, -⟩, -, hoc, -, -⟩ := h_input
+  have hob := h_input.2.2.2.2.2.2.1.1
+  have hoc := h_input.2.2.2.2.2.2.2.2.1
   -- `h_env` now bundles the `value`/`msb` witness-gen equations with the GFC `RTypeReader` subcircuit's
   -- completeness obligation (its third component); the witness equations are the first two.
   obtain ⟨-, h_env_val, h_env_msb, -⟩ := h_env
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
   have hbeq := (vec4_eval env.toEnvironment input_var_adapter_op_b_memory_prev_value).trans hob
   have hceq := (vec4_eval env.toEnvironment input_var_adapter_op_c_memory_prev_value).trans hoc
-  have hval : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 2 fun i => var { index := i₀ + i }) : Vector (ZMod p) 2)
+  have hval : (Vector.mapRange 2 fun i => env.get (i₀ + i) : Vector (ZMod p) 2)
       = SubwOperation.subwValueWitness input_adapter_op_b_memory_prev_value
           input_adapter_op_c_memory_prev_value := by
     rw [← SubwOperation.valueIR_eval env _ _ _ _ hbeq hceq ha hb]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact h_env_val ⟨i, hi⟩
   have hmsbeq : env.get (i₀ + 2)
       = SubwOperation.subwMsbWitness input_adapter_op_b_memory_prev_value

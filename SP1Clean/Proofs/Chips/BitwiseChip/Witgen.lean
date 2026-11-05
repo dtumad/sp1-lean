@@ -30,9 +30,9 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   · refine BitwiseU16Operation.populateFE_congr_flat env env' _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
-      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [circuit_norm, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
-      simpa [circuit_norm, Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [circuit_norm, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hx := congrArg (fun r : Inputs (ZMod p) => r.isXor) h_input
       have ho := congrArg (fun r : Inputs (ZMod p) => r.isOr) h_input
       have ha := congrArg (fun r : Inputs (ZMod p) => r.isAnd) h_input

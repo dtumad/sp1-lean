@@ -36,7 +36,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
       intro j hj
       have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
       simp only [eval_statePc] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hsel : Expression.eval env.toEnvironment input.is_auipc
         = Expression.eval env'.toEnvironment input.is_auipc := by
       have hv := Inputs.eval_congr_is_auipc h_input
@@ -55,7 +55,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
       intro j hj
       have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
       simp only [eval_statePc] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hsel : Expression.eval env.toEnvironment input.is_auipc
         = Expression.eval env'.toEnvironment input.is_auipc := by
       have hv := Inputs.eval_congr_is_auipc h_input
@@ -70,7 +70,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
         simp [Expression.eval, hsel, hpc 0 (by omega), hpc 1 (by omega), hpc 2 (by omega)]
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_b_imm) h_input
       simp only [eval_opBImm] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]

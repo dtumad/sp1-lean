@@ -68,13 +68,13 @@ theorem part_checks (last : Bool) (input : Inputs (ZMod p)) (valid : Spec last i
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_asWord (env : Environment (ZMod p)) (address : fields 3 (Expression (ZMod p))) :
-    Vector.map (Expression.eval env) (Address.asWord address) =
-      Address.asWord (Vector.map (Expression.eval env) address) := by
+    Eval.eval env (Address.asWord address) =
+      Address.asWord (Eval.eval env address) := by
   simp only [Address.asWord, circuit_norm]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_increment (env : Environment (ZMod p)) (last : Bool) :
-    Vector.map (Expression.eval env) (increment (F := Expression (ZMod p)) last) = increment last := by
+    Eval.eval env (increment (F := Expression (ZMod p)) last) = increment last := by
   cases last <;> simp only [increment, circuit_norm]
 
 omit [Fact (2 ^ 17 < p)] in

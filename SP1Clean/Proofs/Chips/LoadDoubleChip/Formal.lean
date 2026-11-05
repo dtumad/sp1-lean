@@ -56,12 +56,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
   -- bridge the loaded-word `wv*` (the `ITypeReader` write value) from `eval` to value form: it is the
   -- nested `memory_access.prev_value` (which `ITypeReader.Spec`'s zeroing gates reference).
-  have hmap : Vector.map (Expression.eval env) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.1
-  have ev : ∀ i (hi : i < 4), Expression.eval env input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap]; simp only [Vector.getElem_map]
   have h_it := h_itype ⟨h_bin, h_bin, h_clk⟩
-  rw [ev 0 (by omega), ev 1 (by omega), ev 2 (by omega), ev 3 (by omega)] at h_it
   have h_addr_as : AddressOperation.SoundnessAssumptions
       (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, 0, 0,
         input_is_real⟩ : AddressOperation.Inputs (ZMod p)) :=
@@ -130,15 +125,6 @@ theorem completeness :
   have h_it := hp9.2
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  -- eval→value bridges for the nested vector fields the reader `Spec`s reference (`pc`, the loaded word).
-  have hmap_pv : Vector.map (Expression.eval env.toEnvironment) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.1
-  have hmap_pc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc
-      = input_state_pc := h_input.2.1.2.2.2
-  have epv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
       (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, 0, 0,
         input_is_real⟩ : AddressOperation.Inputs (ZMod p)) :=
@@ -149,8 +135,8 @@ theorem completeness :
     ⟨⟨hbin, hbin, h_clk⟩, ?_⟩,
     ⟨⟨hbin, fun _ => h_pv_isu64, h_clk.at_four⟩, trivial⟩,
     h_op_a_0, ?_⟩
-  · simp only [epc 0 (by omega), epc 1 (by omega), epc 2 (by omega)]; exact h_cpu
-  · simp only [epv 0 (by omega), epv 1 (by omega), epv 2 (by omega), epv 3 (by omega)]; exact h_it
+  · exact h_cpu
+  · exact h_it
   · rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- LoadDouble's exact Memory-channel interaction list — the first RAM-access family shape: the

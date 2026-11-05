@@ -25,21 +25,19 @@ omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem eval_opBPrev {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_memory.prev_value
-      = Vector.map (Expression.eval env) input.adapter.op_b_memory.prev_value := by
+      = Eval.eval env input.adapter.op_b_memory.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.RTypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
-  exact ProvableType.eval_fields env _
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 private theorem eval_opCPrev {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_c_memory.prev_value
-      = Vector.map (Expression.eval env) input.adapter.op_c_memory.prev_value := by
+      = Eval.eval env input.adapter.op_c_memory.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.RTypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
-  exact ProvableType.eval_fields env _
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The input facts every payload congruence consumes, projected once from the
@@ -63,14 +61,14 @@ private theorem inputFacts {env env' : ProverEnvironment (ZMod p)}
   · have hv := congrArg
       (fun r : Inputs (ZMod p) => r.adapter.op_b_memory.prev_value) h_input
     rw [eval_opBPrev env.toEnvironment input, eval_opBPrev env'.toEnvironment input] at hv
-    simpa using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
+    simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
   · have hv := congrArg
       (fun r : Inputs (ZMod p) => r.adapter.op_c_memory.prev_value) h_input
     rw [eval_opCPrev env.toEnvironment input, eval_opCPrev env'.toEnvironment input] at hv
-    simpa using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
+    simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
   · exact Inputs.eval_congr_is_real h_input
   · have hv := Inputs.eval_congr_selectors h_input
-    simpa only [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 7 => v[i]'hi) hv
+    simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 7 => v[i]'hi) hv
 
 end Orientation
 

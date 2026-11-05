@@ -21,12 +21,6 @@ def ProverAssumptions (deferred : Bool) (slot : Fin 8) (input : Inputs (ZMod p))
   Spec deferred slot input ∧ input.comparison =
     LtOperationUnsigned.populate input.call.arg2 (BoundedWord.limit (bound p deferred))
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem eval_zero (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const (0 : Word (ZMod p))) = 0 := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
-
 theorem soundness (deferred : Bool) (slot : Fin 8) :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) (main deferred slot)
       (fun _ _ => True) (fun input _ _ => Spec deferred slot input) := by
@@ -40,7 +34,7 @@ theorem soundness (deferred : Bool) (slot : Fin 8) :
     · simpa only [codeWord, circuit_norm] using code
     · simpa only [slotWord, circuit_norm] using index
     · simpa only [codeWord, circuit_norm] using result
-    · simpa only [eval_zero] using length
+    · simpa only [Vector.map_id'] using length
 
 theorem completeness (deferred : Bool) (slot : Fin 8) :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) (main deferred slot)
@@ -55,7 +49,7 @@ theorem completeness (deferred : Bool) (slot : Fin 8) :
     · simpa only [codeWord, circuit_norm] using code
     · simpa only [slotWord, circuit_norm] using index
     · simpa only [codeWord, circuit_norm] using result
-    · simpa only [eval_zero] using length
+    · simpa only [Vector.map_id'] using length
 
 /-- The semantic transition performed by an active commitment row. -/
 def activeCircuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) Inputs unit where

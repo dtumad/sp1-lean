@@ -49,13 +49,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   obtain ⟨sameHigh, sameMiddle, gap⟩ := h_holds
   simp only [sub_eq_zero] at sameHigh sameMiddle
   rw [sameHigh, sameMiddle] at gap
-  have lowerEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_lower[index] = input_lower[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.1
-  have upperEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_upper[index] = input_upper[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.2
-  simp only [lowerEval, upperEval] at gap
   have l0 : input_lower[0].val < 2 ^ 16 := lower 0
   have l1 : input_lower[1].val < 2 ^ 16 := lower 1
   have l2 : input_lower[2].val < 2 ^ 16 := lower 2
@@ -86,13 +79,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   obtain ⟨sameHigh, sameMiddle⟩ := h_env
   simp only [sub_eq_zero] at sameHigh sameMiddle
   rw [sameHigh, sameMiddle]
-  have lowerEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_lower[index] = input_lower[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.1
-  have upperEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_upper[index] = input_upper[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.2
-  simp only [lowerEval, upperEval]
   have l0 : input_lower[0].val < 2 ^ 16 := lower 0
   have l1 : input_lower[1].val < 2 ^ 16 := lower 1
   have l2 : input_lower[2].val < 2 ^ 16 := lower 2

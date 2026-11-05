@@ -116,13 +116,15 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
       ProverAssumptions, membership, StaticTable.channel]
     have inputEval (i : ℕ) (hi : i < 4) :
         (input_var.map Witgen.FExpr.expr)[i].eval { env := env } = input[i] := by
-      simpa only [Vector.getElem_map, Witgen.FExpr.eval] using
+      simpa only [Vector.getElem_map, Witgen.FExpr.eval, ProvableType.getElem_eval_fields,
+        circuit_norm] using
         congrArg (fun word : Word (ZMod p) => word[i]) h_input
     obtain ⟨interval, found⟩ := Option.isSome_iff_exists.mp
       ((memory.intervalAt?_isSome_iff limit (Word.toNat input)).mpr h_assumptions.2)
     have selection := memory.intervalAt?_sound limit (Word.toNat input) interval found
     have generated := intervalIR_eval env memory limit limitBound input_var input
-      (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval] using inputEval i hi)
+      (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval, ProvableType.getElem_eval_fields,
+        circuit_norm] using inputEval i hi)
       h_assumptions.1 interval found
     have cells : (Vector.mapRange 9 fun i => env.get (i₀ + i)) =
         toElements (interval.encode (p := p)) := by
@@ -139,11 +141,13 @@ def circuitNamed (memory : ByteMemory) (limit : ℕ) (limitBound : limit < 2 ^ 6
     dsimp only at lowerEq upperEq
     have lowerWitness := h_env.2.1.trans
       (comparisonFE_eval { env := env } _ _ input (interval.encode (p := p)).lower inputEval
-        (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval] using
+        (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval, ProvableType.getElem_eval_fields,
+        circuit_norm] using
           congrArg (fun word : Word (ZMod p) => word[i]) lowerEq))
     have upperWitness := h_env.2.2.trans
       (comparisonFE_eval { env := env } _ _ input (interval.encode (p := p)).upper inputEval
-        (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval] using
+        (by intro i hi; simpa only [Vector.getElem_map, Witgen.FExpr.eval, ProvableType.getElem_eval_fields,
+        circuit_norm] using
           congrArg (fun word : Word (ZMod p) => word[i]) upperEq))
     have lowerBit := congrArg (fun cols : Circuits.Types.LtOperationUnsigned (ZMod p) =>
       cols.u16_compare_operation.bit) lowerWitness

@@ -294,9 +294,9 @@ variable (env : ProverEnvironment (ZMod p))
 
 /-- Evaluating a derived flag is the corresponding `selectorFlags` cell. -/
 theorem flagF_eval (k : ℕ) (hk : k < 8) :
-    Witgen.FExpr.eval { env := env } (flagF selectors k) = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k]'hk := by
+    Witgen.FExpr.eval { env := env } (flagF selectors k) = (selectorFlags (Eval.eval env.toEnvironment selectors))[k]'hk := by
   interval_cases k <;>
-    (simp only [flagF, selectorF, selectorFlags, circuit_norm, Vector.getElem_map, Vector.getElem_mk,
+    (simp only [flagF, selectorF, selectorFlags, circuit_norm, Vector.getElem_mk,
       List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ])
 
 end WordAndFlagsEval
@@ -363,7 +363,7 @@ theorem quotBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
     ((quotBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
-      = (quotBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
+      = (quotBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat := by
   have hb := wordU_toNat env B vB hWB hUB
   have hc := wordU_toNat env C vC hWC hUC
   have hlo32b := low32U_toNat env (wordU B) hb
@@ -400,7 +400,7 @@ theorem remBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p)
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
     ((remBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
-      = (remBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
+      = (remBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat := by
   have hb := wordU_toNat env B vB hWB hUB
   have hc := wordU_toNat env C vC hWC hUC
   have hlo32b := low32U_toNat env (wordU B) hb

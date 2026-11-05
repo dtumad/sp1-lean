@@ -131,21 +131,21 @@ def activeCircuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs 
     circuit_proof_start [activeMain, Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
     subst input_address
     obtain ⟨member, low, middle, high, lower, upper⟩ := h_holds
-    have bounded : Address.Bounded (input_var_address.map (Expression.eval env)) := by
+    have bounded : Address.Bounded (Eval.eval env input_var_address) := by
       intro index
       fin_cases index
       · simpa using low
       · simpa using middle
       · simpa using high
     have ranges := image.writePermissionTable_sound _ member
-    have permitted : Permitted image (input_var_address.map (Expression.eval env)) :=
+    have permitted : Permitted image (Eval.eval env input_var_address) :=
       ⟨bounded, ranges.2.2 _ (lower ⟨ranges.1, bounded⟩) (upper ⟨bounded, ranges.2.1⟩)⟩
     exact ⟨permitted, fun _ => True.intro⟩
   completeness := by
     circuit_proof_start [activeMain, Gadgets.ToBits.rangeCheck, AddressOrder.circuit, StaticTable.channel]
     have inputEval (i : ℕ) (hi : i < 3) :
         (input_var_address.map Witgen.FExpr.expr)[i].eval { env := env } = input_address[i] := by
-      simpa only [Vector.getElem_map, Witgen.FExpr.eval] using
+      simpa only [Vector.getElem_map, Witgen.FExpr.eval, circuit_norm] using
         congrArg (fun address : fields 3 (ZMod p) => address[i]) h_input
     obtain ⟨interval, found⟩ := Option.isSome_iff_exists.mp
       ((image.writableIntervalAt?_isSome_iff (Address.toNat input_address)).mpr h_assumptions.2)
@@ -155,11 +155,6 @@ def activeCircuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Inputs 
     have upperEq := congrArg WritePermissionInterval.upper selected
     dsimp only at lowerEq upperEq
     rw [selected, lowerEq, upperEq]
-    have addressEval (i : ℕ) (hi : i < 3) :
-        Expression.eval env.toEnvironment input_var_address[i] = input_address[i] := by
-      simpa only [Vector.getElem_map] using
-        congrArg (fun address : fields 3 (ZMod p) => address[i]) h_input
-    simp only [addressEval]
     have selection := image.writableIntervalAt?_sound _ interval found
     have endpoints := image.writableIntervals_sound interval selection.1
     have member := (image.writePermissionTable_spec (WritePermissionInterval.encode (p := p) interval)).mpr

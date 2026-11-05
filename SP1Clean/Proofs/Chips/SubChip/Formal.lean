@@ -55,16 +55,16 @@ theorem completeness :
     h_assumptions
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  obtain ⟨-, -, -, -, -, -, ⟨hob, -, -⟩, -, hoc, -, -⟩ := h_input
+  have hob := h_input.2.2.2.2.2.2.1.1
+  have hoc := h_input.2.2.2.2.2.2.2.2.1
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
   have hbeq := (vec4_eval env.toEnvironment input_var_adapter_op_b_memory_prev_value).trans hob
   have hceq := (vec4_eval env.toEnvironment input_var_adapter_op_c_memory_prev_value).trans hoc
-  have hval : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var {index := i₀ + i}) : Word (ZMod p))
+  have hval : (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p))
       = SubOperation.populate input_adapter_op_b_memory_prev_value input_adapter_op_c_memory_prev_value := by
     rw [← SubOperation.populateIR_eval env _ _ _ _ hbeq hceq ha hb]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     -- `h_env` now bundles the chip's `value` witness-gen equations with the GFC `RTypeReader`
     -- subcircuit's completeness obligation — the witness equations are `h_env.1`.  `exact` crosses
     -- the struct-projection defeq gap between the destructured names and the `Inputs.op_b_val`/

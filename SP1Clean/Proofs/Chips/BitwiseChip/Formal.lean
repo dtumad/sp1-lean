@@ -178,7 +178,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
             | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
             | exact Or.inr ⟨h_bin, (fun hr => by
                 have hisu := BitwiseU16Operation.resultWord_isU64 hr (h_bw ⟨hop3, h_bin⟩) hop_cases
-                simp only [BitwiseU16Operation.resultWord, Vector.getElem_map,
+                simp only [BitwiseU16Operation.resultWord,
                   circuit_norm] at hisu ⊢
                 exact hisu), h_clk.at_four⟩
 
@@ -200,9 +200,9 @@ theorem completeness :
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
   -- The witness hint computed `populate` at the *eval-of-var* operands; `h_input` identifies those with
   -- the value-form operands, normalising the hint's `populate` to match `spec_populate`.
-  have hpvb : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_memory_prev_value
+  have hpvb : Eval.eval env.toEnvironment input_var_adapter_op_b_memory_prev_value
       = input_adapter_op_b_memory_prev_value := h_input.2.1.2.2.2.2.1.1
-  have hpvc : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_c_memory_prev_value
+  have hpvc : Eval.eval env.toEnvironment input_var_adapter_op_c_memory_prev_value
       = input_adapter_op_c_memory_prev_value := h_input.2.1.2.2.2.2.2.2.1.1
   simp only [Inputs.op_b_val, Inputs.op_c_val] at h_env_cols
   -- `circuit_norm` states the witness condition as one struct equation; read it cell by cell.

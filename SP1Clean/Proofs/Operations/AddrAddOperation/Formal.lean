@@ -26,13 +26,9 @@ def Assumptions (input : Inputs (ZMod p)) : Prop :=
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨ha, hb, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, hiv, _⟩ := h_input
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
   have h65536 : (2 : ℕ) ^ 16 = 65536 := by norm_num
-  have ev {n : ℕ} {w : Vector (Expression (ZMod p)) n} {v : Vector (ZMod p) n}
-      (h : Vector.map (Expression.eval env) w = v) :
-      ∀ i (_ : i < n), Expression.eval env w[i] = v[i] := fun i _ => by rw [← h, Vector.getElem_map]
-  simp only [circuit_norm, byteChannel, ev hia, ev hib, ev hiv] at h_holds ⊢
+  simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨hr0, hr1, hr2, _hbool, hgc0, hgc1, hgc2, hgc3⟩ := h_holds
   -- The three trailing conjuncts are the limb byte pulls' own `Requirements` — vacuous off-gate.
   refine ⟨fun hr1eq => ?_, hbin⟩
@@ -55,14 +51,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨ha, hb, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, hiv, _⟩ := h_input
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
-  have ev {n : ℕ} {w : Vector (Expression (ZMod p)) n} {v : Vector (ZMod p) n}
-      (h : Vector.map (Expression.eval env.toEnvironment) w = v) :
-      ∀ i (_ : i < n), Expression.eval env.toEnvironment w[i] = v[i] :=
-    fun i _ => by rw [← h, Vector.getElem_map]
   have key (hneg : input_is_real = 1) := h_spec hneg
-  simp only [circuit_norm, byteChannel, ev hia, ev hib, ev hiv]
+  simp only [circuit_norm, byteChannel]
   refine ⟨fun hneg => ?_, fun hneg => ?_, fun hneg => ?_, ?_⟩
   · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.1
   · rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).2.2.1

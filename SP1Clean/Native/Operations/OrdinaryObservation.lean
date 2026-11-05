@@ -47,7 +47,7 @@ theorem increment_bits (enabled : Bool) :
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_increment (enabled : Bool) (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (increment enabled) = increment enabled := by
+    Eval.eval env (increment (R := Expression (ZMod p)) enabled) = increment enabled := by
   cases enabled <;> simp only [increment, circuit_norm]
 
 /-- Local arithmetic and ordering follow from the composed circuit contracts. -/

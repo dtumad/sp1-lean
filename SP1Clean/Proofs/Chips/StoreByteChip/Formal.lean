@@ -72,21 +72,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- unification, so this line never names the destructured state columns.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
   simp only [circuit_norm, byteChannel] at hreg_rcv hmem_rcv
-  have hmap_oap := h_input.2.2.1.2.1.1
-  have hmap_pv := h_input.2.2.2.1.1
-  have hmap_ob := h_input.2.2.2.2.1
-  have hmap_sv := h_input.2.2.2.2.2.2.2.2.2
-  have eoap0 : Expression.eval env input_var_adapter_op_a_memory_prev_value[0]
-      = input_adapter_op_a_memory_prev_value[0] := by rw [← hmap_oap]; simp only [Vector.getElem_map]
-  have eob : ∀ i (hi : i < 3), Expression.eval env input_var_offset_bit[i] = input_offset_bit[i] :=
-    fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have esv : ∀ i (hi : i < 4), Expression.eval env input_var_store_value[i] = input_store_value[i] :=
-    fun i hi => by rw [← hmap_sv]; simp only [Vector.getElem_map]
-  simp only [eob, epv] at hsel0 hsel1 hsel2 hsel3
-  simp only [eob] at hincr
-  simp only [esv, epv, eob] at hr0 hr1 hr2 hr3
   -- the real-row byte bounds, from the two inline U8Range-pair receives.
   have h_bytes : input_is_real = 1 →
       input_register_low_byte.val < 256 ∧
@@ -98,18 +83,18 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have Gr := hreg_rcv hneg; have Gm := hmem_rcv hneg
     have hbr := (byteRowSpec_u8range_pair _ _).mp Gr
     have hbm := (byteRowSpec_u8range_pair _ _).mp Gm
-    rw [show (2:ℕ)^8 = 256 from by norm_num, eoap0] at hbr
+    rw [show (2:ℕ)^8 = 256 from by norm_num] at hbr
     rw [show (2:ℕ)^8 = 256 from by norm_num] at hbm
     exact ⟨hbr.1, hbr.2, hbm.1, hbm.2⟩
   have h_addr_as : AddressOperation.SoundnessAssumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, Expression.eval env input_var_offset_bit[0],
-          Expression.eval env input_var_offset_bit[1], Expression.eval env input_var_offset_bit[2],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, input_offset_bit[0],
+          input_offset_bit[1], input_offset_bit[2],
           input_is_real⟩
         : AddressOperation.Inputs (ZMod p)) :=
     ⟨ha, hb, h_bin⟩
   simp only [AddressOperation.circuit] at h_addr
   have h_addr_spec := h_addr h_addr_as
-  simp only [circuit_norm, eob] at h_addr_spec
+  simp only [circuit_norm] at h_addr_spec
   have h_it := h_itype ⟨h_bin, h_bin, h_clk⟩
   refine ⟨⟨h_addr_spec,
       h_mem ⟨h_bin, h_sv, h_clk⟩, h_it,
@@ -218,50 +203,35 @@ theorem completeness :
   have h_sv := hp19.2
   -- G1: the *push*-side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  have hmap_pc := h_input.2.1.2.2.2
-  have hmap_oap := h_input.2.2.1.2.1.1
-  have hmap_pv := h_input.2.2.2.1.1
-  have hmap_ob := h_input.2.2.2.2.1
-  have hmap_sv := h_input.2.2.2.2.2.2.2.2.2
-  have eoap0 : Expression.eval env.toEnvironment input_var_adapter_op_a_memory_prev_value[0]
-      = input_adapter_op_a_memory_prev_value[0] := by rw [← hmap_oap]; simp only [Vector.getElem_map]
   simp only [regHigh, memHigh] at hreghi_pa hmemhi_pa
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
-  have eob : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_offset_bit[i]
-      = input_offset_bit[i] := fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have esv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_store_value[i]
-      = input_store_value[i] := fun i hi => by rw [← hmap_sv]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, Expression.eval env.toEnvironment input_var_offset_bit[0],
-          Expression.eval env.toEnvironment input_var_offset_bit[1],
-          Expression.eval env.toEnvironment input_var_offset_bit[2],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, input_offset_bit[0],
+          input_offset_bit[1],
+          input_offset_bit[2],
           input_is_real⟩ : AddressOperation.Inputs (ZMod p)) := by
-    simp only [eob]; exact ⟨ha, hb, hbin, hfit, hob0, hob1, hob2, h_ge, h_off⟩
+    exact ⟨ha, hb, hbin, hfit, hob0, hob1, hob2, h_ge, h_off⟩
   refine ⟨⟨?_, ?_⟩, h_addr_as, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact hbin
-  · simp only [epc]; exact h_cpu
+  · exact h_cpu
   · exact ⟨hbin, h_sv, h_clk⟩
   · exact h_mem
   · exact ⟨hbin, hbin, h_clk⟩
   · exact h_it
   · intro _
-    simp only [byteChannel]; rw [eoap0]
+    simp only [byteChannel]
     exact (byteRowSpec_u8range_pair _ _).mpr ⟨hreg_pa, hreghi_pa⟩
   · intro _
     simp only [byteChannel]
     exact (byteRowSpec_u8range_pair _ _).mpr ⟨hmem_pa, hmemhi_pa⟩
-  · simp only [eob, epv]; exact hsel0
-  · simp only [eob, epv]; exact hsel1
-  · simp only [eob, epv]; exact hsel2
-  · simp only [eob, epv]; exact hsel3
-  · simp only [eob]; exact sub_eq_zero_of_eq hincr_pa
-  · simp only [esv, eob, epv]; exact sub_eq_zero_of_eq hr0
-  · simp only [esv, eob, epv]; exact sub_eq_zero_of_eq hr1
-  · simp only [esv, eob, epv]; exact sub_eq_zero_of_eq hr2
-  · simp only [esv, eob, epv]; exact sub_eq_zero_of_eq hr3
+  · exact hsel0
+  · exact hsel1
+  · exact hsel2
+  · exact hsel3
+  · exact sub_eq_zero_of_eq hincr_pa
+  · exact sub_eq_zero_of_eq hr0
+  · exact sub_eq_zero_of_eq hr1
+  · exact sub_eq_zero_of_eq hr2
+  · exact sub_eq_zero_of_eq hr3
   · rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- StoreByte's exact Memory-channel interaction list — the store-family shape: the composed
