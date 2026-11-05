@@ -31,7 +31,7 @@ class ProfileRunnerTests(unittest.TestCase):
 import json, os, sys
 with open(os.environ["CALLS"], "a") as output:
     output.write(json.dumps(sys.argv[1:]) + "\\n")
-if sys.argv[1] == "build":
+if "build" in sys.argv[1:]:
     sys.exit(int(os.environ.get("FAIL_BUILD", "0")))
 if sys.argv[1] == "env":
     if os.environ.get("FAIL_ENV"):
@@ -91,7 +91,7 @@ raise SystemExit("profiling must not signal unrelated processes")
         result = self.run_profile()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual(calls, [["build", "--wfail", "--iofail", "SP1Clean", "SP1CleanTest",
+        self.assertEqual(calls, [["--no-cache", "build", "--wfail", "--iofail", "SP1Clean", "SP1CleanTest",
                                   "ToClean", "ToMathlib"], ["env"]])
         self.assertFalse(self.kill_marker.exists())
         records = self.measurements()

@@ -80,7 +80,7 @@ mkdir -p "$OUTDIR"
 #    only the core, so warm the full library. Run solo; never stop another process here.
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   echo ">>> Warming cache: strict full build"
-  if ! lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib; then
+  if ! lake --no-cache build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib; then
     echo "!!! warm build failed — fix the build before profiling. Aborting." >&2
     exit 1
   fi
