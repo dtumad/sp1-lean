@@ -42,9 +42,11 @@ def validate_report(name, result, revision, dirty):
                        "duplicate-authentication-row", "changed-untouched-register", "empty-identity",
                        "malformed-seed-index", "malformed-seed-length"]
         values = [True, False, False, False, False, True, False, False]
+        # 620 table declarations from the independently checked componentChannelIndices;
+        # 132 verifier declarations. The canonical registry has 32 unique names.
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 95, "uniqueChannels": 32, "registeredChannelOccurrences": 304,
+                    "tableCount": 95, "uniqueChannels": 32, "declaredChannelOccurrences": 620 + 132,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and
