@@ -225,7 +225,7 @@ def timed_run(command, log, env):
 def prepare(driver, env):
     driver.mkdir(parents=True, exist_ok=True)
     identity = source_identity()
-    build = timed_run(["lake", "build", "--wfail", "--iofail", "ensembleExport"],
+    build = timed_run(["lake", "--no-cache", "build", "--wfail", "--iofail", "ensembleExport"],
                       driver / "build.log", env)
     if "Build completed successfully" not in build:
         raise RuntimeError(f"Incomplete dependency build; see {driver}/build.log")
@@ -314,7 +314,51 @@ def rust_groups():
         name: {name: count} for name, count in RUST_TESTS.items() if name.startswith("assembly_")}}
 
 
+def check_target_coverage(package):
+    """Reconcile the runner with Cargo's independently discovered integration targets."""
+    targets = [target for target in package["targets"] if "test" in target["kind"]]
+    names = [target["name"] for target in targets]
+    expected = set(RUST_TESTS) | {"release_semantics"}
+    if len(names) != len(set(names)) or set(names) != expected:
+        raise ValueError(f"Unassigned or missing Cargo test targets: {set(names) ^ expected}")
+    features = package["features"]
+
+    def enabled(initial):
+        result, pending = set(), list(initial)
+        while pending:
+            feature = pending.pop()
+            if feature in result:
+                continue
+            if feature not in features:
+                raise ValueError(f"Unknown local Cargo feature: {feature}")
+            result.add(feature)
+            pending.extend(f for f in features[feature] if not f.startswith("dep:") and "/" not in f)
+        return result
+
+    for configuration in ([], ["mprotect"]):
+        for group, tests in rust_groups().items():
+            active = enabled(["instruction-export", *configuration] +
+                             ([] if group == "components" else ["assembly-export"]))
+            for target in targets:
+                if target["name"] in tests and not set(target.get("required-features", [])) <= active:
+                    raise ValueError(f"Cargo target is disabled in {group}: {target['name']}")
+    inventory = next(target for target in targets if target["name"] == "release_semantics")
+    if not set(inventory.get("required-features", [])) <= enabled(["inventory"]):
+        raise ValueError("release_semantics is disabled in its independent inventory suite")
+
+
+def check_cargo_targets():
+    metadata = json.loads(subprocess.check_output(
+        ["cargo", "metadata", "--locked", "--no-deps", "--format-version", "1",
+         "--manifest-path", str(ROOT / "rust/sp1-comparison/Cargo.toml")], text=True))
+    packages = [p for p in metadata["packages"] if p["name"] == "sp1-clean-comparison"]
+    if len(packages) != 1:
+        raise ValueError("Expected exactly one comparison package in Cargo metadata")
+    check_target_coverage(packages[0])
+
+
 def compare_rust(out, env, group="all", configuration="all"):
+    check_cargo_targets()
     groups = rust_groups()
     if group != "all":
         groups = {group: groups[group]}
