@@ -22,7 +22,7 @@ The reserved multi-shard vocabulary (`EventShardLayout`, `LastExecutionHalts`,
 `SP1ExecutionRelation`) composes shards along an authenticated ledger and is a separate,
 recursion-dependent target. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 

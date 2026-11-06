@@ -75,25 +75,16 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- `clk_low + 4`. The offset is left to unification, so this never names the destructured state columns.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
   simp only [circuit_norm, byteChannel] at hmsb_rcv
-  -- eval→value bridges (extracted directly from `h_input`; `tauto` over this context is too slow).
-  have hmap_pv := h_input.2.2.2.2.1.1
-  have hmap_ob := h_input.2.2.2.2.2.1
-  have eob : ∀ i (hi : i < 3), Expression.eval env input_var_offset_bit[i] = input_offset_bit[i] :=
-    fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.SoundnessAssumptions
       (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm,
-        Expression.eval env input_var_offset_bit[0], Expression.eval env input_var_offset_bit[1],
-        Expression.eval env input_var_offset_bit[2],
+        input_offset_bit[0], input_offset_bit[1],
+        input_offset_bit[2],
         input_is_lb + input_is_lbu⟩ : AddressOperation.Inputs (ZMod p)) :=
     ⟨ha, hb, h_bin⟩
   simp only [AddressOperation.circuit] at h_addr
   have h_addr_spec := h_addr h_addr_as
-  simp only [circuit_norm, eob] at h_addr_spec
+  simp only [circuit_norm] at h_addr_spec
   have hob0 : input_offset_bit[0] = 0 ∨ input_offset_bit[0] = 1 := h_addr_spec.1
-  simp only [eob, epv] at hsel0 hsel1 hsel2 hsel3
-  simp only [eob] at hmux
   -- the byte-mux equation in value form.
   have hmux_eq : input_selected_byte = input_offset_bit[0]
       * ((input_selected_limb - input_selected_limb_low_byte) * (256 : ZMod p)⁻¹)
@@ -116,7 +107,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   have h_msb_fact : input_is_lb = 1 →
       (input_msb = 0 ∨ input_msb = 1) ∧ (input_msb = 1 ↔ 128 ≤ input_selected_byte.val) := by
     intro h1
-    have hneg : - input_is_lb = -1 := by rw [h1]
+    have hneg : input_is_lb = 1 := by rw [h1]
     have G := hmsb_rcv hneg
     have := (byteRowSpec_msb _ _).mp G
     exact ⟨this.2.1, this.2.2⟩
@@ -148,7 +139,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       ⟨hsel0, hsel1, hsel2, hsel3⟩, hmux_eq, h_op_a_0, h_msbgate, h_lb_bin, h_lbu_bin, h_bin⟩,
     Or.inr h_addr_as,
     Or.inr ⟨h_bin, fun _ => h_pv_isu64, h_clk⟩,
-    fun h1 h0 => off_gate_vacuous h_lb_bin h1 h0,
+    h_lb_bin,
     Or.inr ⟨h_bin, h_bin, h_clk⟩,
     Or.inr ⟨h_bin, h_load_isu64, h_clk.at_four⟩⟩
 
@@ -207,26 +198,17 @@ theorem completeness :
   have h_mem := hp22.1
   have hp23 := hp22.2
   have h_it := hp23
-  have hmap_pc := h_input.2.2.1.2.2.2
-  have hmap_pv := h_input.2.2.2.2.1.1
-  have hmap_ob := h_input.2.2.2.2.2.1
   simp only [isReal] at hbin
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
   have h_msb_lt : input_msb.val < 256 := by
     rcases h_msb_bin with h | h <;> rw [h] <;> simp [ZMod.val_one]
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
-  have eob : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_offset_bit[i]
-      = input_offset_bit[i] := fun i hi => by rw [← hmap_ob]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
-      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, Expression.eval env.toEnvironment input_var_offset_bit[0],
-          Expression.eval env.toEnvironment input_var_offset_bit[1],
-          Expression.eval env.toEnvironment input_var_offset_bit[2],
+      (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, input_offset_bit[0],
+          input_offset_bit[1],
+          input_offset_bit[2],
           input_is_lb + input_is_lbu⟩ : AddressOperation.Inputs (ZMod p)) := by
-    simp only [eob]; exact ⟨ha, hb, hbin, hfit, hob0, hob1, hob2, h_ge, h_off⟩
+    exact ⟨ha, hb, hbin, hfit, hob0, hob1, hob2, h_ge, h_off⟩
   -- the loaded word `#v[selected_byte + 65280·msb, 65535·msb, 65535·msb, 65535·msb]` (op_a write value) is
   -- `isU64`: `selected_byte < 256` (prover) + `msb ∈ {0,1}` (prover) bound every limb `< 2^16`.
   have h_msb_val : (65535 * input_msb : ZMod p).val < 2 ^ 16 := by
@@ -238,7 +220,7 @@ theorem completeness :
   refine ⟨⟨?_, ?_⟩, h_addr_as, ⟨?_, ?_⟩, ?_, ?_, ?_, ⟨?_, ?_⟩, ⟨?_, ?_⟩,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact hbin
-  · simp only [epc]; exact h_cpu
+  · exact h_cpu
   · exact ⟨hbin, fun _ => h_pv_isu64, h_clk⟩
   · exact h_mem
   · rcases hbin with hzero | hone
@@ -249,18 +231,18 @@ theorem completeness :
     · simpa only [hone, one_mul] using hhi_pa
   · -- MSB receive obligation (real LB row); value is raw (`toRaw` (gated post-#398)).
     intro hneg
-    have hlb : input_is_lb = 1 := neg_inj.mp hneg
+    have hlb : input_is_lb = 1 := hneg
     simp only [byteChannel]
     exact (byteRowSpec_msb _ _).mpr ⟨⟨h_msb_lt, hbyte_pa⟩, h_msb_bin, h_msb_iff hlb⟩
   · exact ⟨hbin, hbin, h_clk⟩
   · exact h_it
   · exact ⟨hbin, fun _ => h_load_isu64, h_clk.at_four⟩
   · trivial
-  · simp only [eob, epv]; exact hsel0
-  · simp only [eob, epv]; exact hsel1
-  · simp only [eob, epv]; exact hsel2
-  · simp only [eob, epv]; exact hsel3
-  · simp only [eob]; exact sub_eq_zero_of_eq hmux_pa
+  · exact hsel0
+  · exact hsel1
+  · exact hsel2
+  · exact hsel3
+  · exact sub_eq_zero_of_eq hmux_pa
   · exact h_op_a_0
   · rcases h_lbu_bin with hzero | hone
     · rw [hzero, zero_mul]

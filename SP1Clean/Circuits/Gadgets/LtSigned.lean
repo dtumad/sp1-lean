@@ -42,13 +42,13 @@ private lemma adj_limb {x : ZMod p} (hx : x.val < 2 ^ 16) :
       ∧ (x + 32768 - 65536 * (if 32768 ≤ x.val then (1 : ZMod p) else 0)).val < 2 ^ 16 := by
   have hp : (131072 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
   by_cases hsign : 32768 ≤ x.val
-  · simp only [if_pos hsign, mul_one]
+  · simp only [ite_eq_left hsign, mul_one]
     have hval : (x + 32768 - 65536 : ZMod p).val = x.val - 32768 := by
       have e : ((x.val - 32768 : ℕ) : ZMod p) = x + 32768 - 65536 := by
         rw [Nat.cast_sub (by omega), ZMod.natCast_zmod_val]; push_cast; ring
       rw [← e]; exact ZMod.val_natCast_of_lt (show x.val - 32768 < p by omega)
     rw [hval]; refine ⟨by omega, by omega⟩
-  · simp only [if_neg hsign, mul_zero, sub_zero]
+  · simp only [ite_eq_right hsign, mul_zero, sub_zero]
     have hval : (x + 32768 : ZMod p).val = x.val + 32768 := by
       have e : ((x.val + 32768 : ℕ) : ZMod p) = x + 32768 := by
         push_cast [ZMod.natCast_zmod_val]; ring
@@ -68,12 +68,12 @@ private lemma adj_bias {b : Word (ZMod p)} (hb : b.isU64) :
   simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ] at hval ⊢
   by_cases hsign : 32768 ≤ b[3].val
-  · rw [if_neg (by omega : ¬ 2 * (b[0].val + b[1].val * 2 ^ 16 + b[2].val * 2 ^ 32
+  · rw [ite_eq_right (by omega : ¬ 2 * (b[0].val + b[1].val * 2 ^ 16 + b[2].val * 2 ^ 32
         + b[3].val * 2 ^ 48) < 2 ^ 64)]
-    simp only [if_pos hsign] at hval ⊢; push_cast at hval ⊢; omega
-  · rw [if_pos (by omega : 2 * (b[0].val + b[1].val * 2 ^ 16 + b[2].val * 2 ^ 32
+    simp only [ite_eq_left hsign] at hval ⊢; push_cast at hval ⊢; omega
+  · rw [ite_eq_left (by omega : 2 * (b[0].val + b[1].val * 2 ^ 16 + b[2].val * 2 ^ 32
         + b[3].val * 2 ^ 48) < 2 ^ 64)]
-    simp only [if_neg hsign] at hval ⊢; push_cast at hval ⊢; omega
+    simp only [ite_eq_right hsign] at hval ⊢; push_cast at hval ⊢; omega
 
 /-- Transfer: with the two top limbs biased by their sign bits, the **unsigned** `<` of the biased
 words is the **signed** `<` (`toInt`) of the originals. -/
@@ -600,7 +600,7 @@ private theorem result_of_evidence {input : Inputs (ZMod p)}
     have hbit := LtOperationUnsigned.result_semantic h_uns hir
     refine ⟨?_, ?_⟩
     · rw [hbit.1]
-      simp only [hs0, if_neg h01, Word.toNat_def, Vector.getElem_mk, List.getElem_toArray,
+      simp only [hs0, ite_eq_right h01, Word.toNat_def, Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_zero, List.getElem_cons_succ]
       rfl
     · rw [toBitVec64_eq_iff hb hcc]
@@ -699,9 +699,9 @@ private theorem evidence_populate {b cc : Word (ZMod p)} {is_signed is_real : ZM
   · -- the composed `LtOperationUnsigned.Spec` on the sign-adjusted words
     by_cases hr1 : is_real = 1
     · subst hr1
-      rw [if_pos rfl]
+      rw [ite_eq_left rfl]
       exact LtOperationUnsigned.spec_populate (isU64_top hb hbtop) (isU64_top hcc hctop)
-    · rw [if_neg hr1]
+    · rw [ite_eq_right hr1]
       have hr0 : is_real = 0 := Or.resolve_right hr_bin hr1
       subst hr0
       -- all-zero unsigned columns satisfy `LtOperationUnsigned.Spec` at `is_real = 0`
@@ -727,21 +727,10 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
       input_is_signed, input_is_real⟩
   apply (spec_iff_evidence (input := row) h_assumptions).2
   obtain ⟨hb_u64, hcc_u64, hir_bin, his_bin⟩ := h_assumptions
-  obtain ⟨hib, hicc, ⟨⟨_, hflags, _, hcl⟩, _, _⟩, _, _⟩ := h_input
-  have eb : ∀ i (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ i (hi : i < 4), Expression.eval env input_var_cc[i] = input_cc[i] := by
-    intro i hi; rw [← hicc]; simp only [Vector.getElem_map]
-  have ef : ∀ i (hi : i < 4),
-      Expression.eval env input_var_cols_result_u16_flags[i] = input_cols_result_u16_flags[i] := by
-    intro i hi; rw [← hflags]; simp only [Vector.getElem_map]
-  have ecl : ∀ i (hi : i < 2), Expression.eval env input_var_cols_result_comparison_limbs[i]
-      = input_cols_result_comparison_limbs[i] := by
-    intro i hi; rw [← hcl]; simp only [Vector.getElem_map]
   obtain ⟨-, -, -, hb3⟩ := Word.lt_cases_of_isU64 hb_u64
   obtain ⟨-, -, -, hc3⟩ := Word.lt_cases_of_isU64 hcc_u64
   obtain ⟨h_msb_b, h_msb_c, h_lt, _, _, hE5, hE7, hE9⟩ := h_holds
-  simp only [eb, ec, ef, ecl, vec4_eta, vec2_eta]
+  simp only [vec4_eta, vec2_eta]
     at h_msb_b h_msb_c h_lt hE5 hE7 hE9 ⊢
   -- the two `U16MSBOperation` sub-assertion `Assumptions` (16-bit operands, `is_signed` binary).
   have hAb : U16MSBOperation.circuit.Assumptions
@@ -783,23 +772,11 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   have h_evidence := (spec_iff_evidence (input := row) h_assumptions).1 h_spec
   obtain ⟨hb_u64, hcc_u64, hir_bin, his_bin⟩ := h_assumptions
   obtain ⟨_, _, hbm_bool, hcm_bool, hg5, hg7, hg9, hbm_eq, hcm_eq, h_uns_spec⟩ := h_evidence
-  obtain ⟨hib, hicc, ⟨⟨_, hflags, _, hcl⟩, _, _⟩, _, _⟩ := h_input
-  have eb : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_cc[i] = input_cc[i] := by
-    intro i hi; rw [← hicc]; simp only [Vector.getElem_map]
-  have ef : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_cols_result_u16_flags[i]
-      = input_cols_result_u16_flags[i] := by
-    intro i hi; rw [← hflags]; simp only [Vector.getElem_map]
-  have ecl : ∀ i (hi : i < 2),
-      Expression.eval env.toEnvironment input_var_cols_result_comparison_limbs[i]
-        = input_cols_result_comparison_limbs[i] := by
-    intro i hi; rw [← hcl]; simp only [Vector.getElem_map]
   obtain ⟨-, -, -, hb3⟩ := Word.lt_cases_of_isU64 hb_u64
   obtain ⟨-, -, -, hc3⟩ := Word.lt_cases_of_isU64 hcc_u64
   have hbtop := adj_top hb3 his_bin hg7 hbm_eq
   have hctop := adj_top hc3 his_bin hg9 hcm_eq
-  simp only [eb, ec, ef, ecl, vec4_eta, vec2_eta]
+  simp only [vec4_eta, vec2_eta]
   refine ⟨⟨⟨fun _ => hb3, his_bin⟩, hbm_bool, hbm_eq⟩,
     ⟨⟨fun _ => hc3, his_bin⟩, hcm_bool, hcm_eq⟩,
     ⟨⟨fun _ => ⟨isU64_top hb_u64 hbtop, isU64_top hcc_u64 hctop⟩, hir_bin⟩, h_uns_spec⟩,

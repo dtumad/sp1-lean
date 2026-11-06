@@ -23,17 +23,20 @@ registered by the same host assembly as every other resource. -/
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources) : Ensemble (ZMod p) SP1PublicIO :=
+    (names : UniqueNames image source target others resources)
+    (registration : Registration image source target others resources channels) : Ensemble (ZMod p) SP1PublicIO :=
   HostHintQueueBoundary.ensemble image source final bankFinal others
     (resources ++ FinalMemoryChecks.checkTables target) channels names
+    registration.unique registration.tables registration.boundary
 
 /-- The original core and handler positions are unchanged; four resource tables are added. -/
 theorem base_tables_length (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources) :
-    (base image source target final bankFinal others resources channels names).tables.length =
+    (names : UniqueNames image source target others resources)
+    (registration : Registration image source target others resources channels) :
+    (base image source target final bankFinal others resources channels names registration).tables.length =
       70 + others.length + resources.length := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
     ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
@@ -48,9 +51,10 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
   {names : UniqueNames image source target others resources}
+  {registration : Registration image source target others resources channels}
 
 private theorem base_boundary_component (index : Fin 6) :
-    (base image source target final bankFinal others resources channels names).tables[index.val]'(by
+    (base image source target final bankFinal others resources channels names registration).tables[index.val]'(by
       rw [base_tables_length]; omega) =
       (LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; omega) := by
   change ((HostLocalCore.tables image source
@@ -60,7 +64,7 @@ private theorem base_boundary_component (index : Fin 6) :
           rw [List.length_set, HostLocalCore.tables_length]; have := index.isLt; omega) = _
   rw [List.getElem_set_ne (by have := index.isLt; omega : 57 ≠ index.val),
     HostLocalCore.core_component image source _ ⟨index.val, by have := index.isLt; omega⟩,
-    if_neg (by have := index.isLt; omega : 58 ≠ index.val)]
+    ite_eq_right (by have := index.isLt; omega : 58 ≠ index.val)]
   simp only [ProtectedLocalCore.tables]
   rw [List.getElem_append_left (by simp only [List.length_set, LocalCore.tables_length]; have := index.isLt; omega)]
   rw [List.getElem_set_ne (by have := index.isLt; omega : 28 ≠ index.val),
@@ -69,36 +73,40 @@ private theorem base_boundary_component (index : Fin 6) :
     List.getElem_set_ne (by have := index.isLt; omega : 25 ≠ index.val)]
 
 private theorem base_register_component :
-    (base image source target final bankFinal others resources channels names).tables[3]'(by rw [base_tables_length]; omega) =
-      { circuit := OrderedFinalProvider.registerCircuit, Assumptions := (OrderedFinalProvider.registerCircuit).Assumptions,
-        circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } :=
-  (base_boundary_component (index := ⟨3, by decide⟩)).trans (by rfl)
+    (base image source target final bankFinal others resources channels names registration).tables[3]'(by rw [base_tables_length]; omega) =
+      { circuit := OrderedFinalProvider.registerCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRegisterProvider.circuit (p := p)).name), Assumptions := (OrderedFinalProvider.registerCircuit).Assumptions,
+        circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
+  rw [base_boundary_component (index := ⟨3, by decide⟩)]
+  rfl
 
 private theorem base_ram_component :
-    (base image source target final bankFinal others resources channels names).tables[4]'(by rw [base_tables_length]; omega) =
-      { circuit := OrderedFinalProvider.ramCircuit, Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions,
-        circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } :=
-  (base_boundary_component (index := ⟨4, by decide⟩)).trans (by rfl)
+    (base image source target final bankFinal others resources channels names registration).tables[4]'(by rw [base_tables_length]; omega) =
+      { circuit := OrderedFinalProvider.ramCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRamProvider.circuit (p := p)).name), Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions,
+        circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
+  rw [base_boundary_component (index := ⟨4, by decide⟩)]
+  rfl
 
 /-- Publish complete receipts at the original register-finalizer position. -/
 @[reducible] def withRegisters (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources) :=
-  FinalReceiptEnsemble.install (base image source target final bankFinal others resources channels names)
+    (names : UniqueNames image source target others resources)
+    (registration : Registration image source target others resources channels) :=
+  FinalReceiptEnsemble.install (base image source target final bankFinal others resources channels names registration)
     false OrderedFinalProvider.registerCircuit
     ⟨⟨3, by rw [base_tables_length]; omega⟩, base_register_component⟩
+    (List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels (by simp))))
 
 private theorem withRegisters_ram_component :
-    (withRegisters image source target final bankFinal others resources channels names).tables[4]'(by
+    (withRegisters image source target final bankFinal others resources channels names registration).tables[4]'(by
       simp only [withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         List.length_set, base_tables_length]
       omega) =
-      { circuit := OrderedFinalProvider.ramCircuit, Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions,
+      { circuit := OrderedFinalProvider.ramCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRamProvider.circuit (p := p)).name), Assumptions := (OrderedFinalProvider.ramCircuit).Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
-  change ((base image source target final bankFinal others resources channels names).tables.set 3
-    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
+  change ((base image source target final bankFinal others resources channels names registration).tables.set 3
+    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRegisterProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h })[4]'(by
       rw [List.length_set, base_tables_length]; omega) = _
   rw [List.getElem_set_ne (by decide : 3 ≠ 4)]
@@ -109,22 +117,34 @@ private theorem withRegisters_ram_component :
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources) :=
-  FinalReceiptEnsemble.install (withRegisters image source target final bankFinal others resources channels names)
+    (names : UniqueNames image source target others resources)
+    (registration : Registration image source target others resources channels) :=
+  FinalReceiptEnsemble.install (withRegisters image source target final bankFinal others resources channels names registration)
     true OrderedFinalProvider.ramCircuit
     ⟨⟨4, by
       simp only [withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
         List.length_set, base_tables_length]
       omega⟩, withRegisters_ram_component⟩
+    (List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels (by simp))))
 
 /-- The source-to-target change inventory is fixed by the supplied complete snapshots. -/
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (target : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources) : Ensemble (ZMod p) SP1PublicIO :=
+    (names : UniqueNames image source target others resources)
+    (registration : Registration image source target others resources channels) : Ensemble (ZMod p) SP1PublicIO :=
   (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).install
-    (withReceipts image source target final bankFinal others resources channels names)
+    (withReceipts image source target final bankFinal others resources channels names registration) (by
+      intro channel used
+      apply List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels ?_))
+      have same : channel = FinalMemoryChange.channel.toRaw := by
+        simp only [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
+          circuit_norm, List.mem_append, List.mem_ofFn, List.mem_singleton] at used
+        rcases used with ⟨_, same⟩ | same
+        · exact same.symm
+        · exact same
+      simp [same])
 
 /-- The original host table block before the target consumers and fixed membership providers, prior to the padding wrapper. -/
 def beforeChecks (image : ProgramImage) (source : ExecutionSnapshot)
@@ -142,7 +162,7 @@ theorem prefix_length (image : ProgramImage) (source : ExecutionSnapshot)
   omega
 
 /-- The target consumers are genuine appended resources in the unchanged host table layout. -/
-theorem base_tables_eq : (base image source target final bankFinal others resources channels names).tables =
+theorem base_tables_eq : (base image source target final bankFinal others resources channels names registration).tables =
     (beforeChecks image source others resources ++ FinalMemoryChecks.checkTables target).set 57 HaltPaddingChip.component := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
     ClosedVerifier.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
@@ -151,17 +171,17 @@ theorem base_tables_eq : (base image source target final bankFinal others resour
   rfl
 
 /-- Both wrappers act on the original finalizers; appended targets are retained literally. -/
-theorem tables_eq : (ensemble image source target final bankFinal others resources channels names).tables =
+theorem tables_eq : (ensemble image source target final bankFinal others resources channels names registration).tables =
     (((beforeChecks image source others resources ++ FinalMemoryChecks.checkTables target).set 57 HaltPaddingChip.component).set 3
-      { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
+      { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRegisterProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }).set 4
-      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions,
+      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRamProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.ramCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
   simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, base_tables_eq]
 
 /-- Typed registration of each target validator or fixed provider survives all three unrelated table replacements. -/
-def checkSlot (index : Fin 4) : TableSlot (ensemble image source target final bankFinal others resources channels names).tables
+def checkSlot (index : Fin 4) : TableSlot (ensemble image source target final bankFinal others resources channels names registration).tables
     ((FinalMemoryChecks.checkTables (p := p) target)[index.val]'(by
       simpa only [FinalMemoryChecks.checkTables, List.length_cons, List.length_nil] using index.isLt)) := by
   let slot := (TableSlot.ofIndex (FinalMemoryChecks.checkTables (p := p) target)
@@ -172,14 +192,14 @@ def checkSlot (index : Fin 4) : TableSlot (ensemble image source target final ba
     rw [prefix_length]
     omega
   exact (((slot.setOther 57 HaltPaddingChip.component (by omega)).setOther 3
-    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
+    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRegisterProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } (by change 3 ≠ slot.index.val; omega)).setOther 4
-      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions,
+      { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRamProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.ramCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } (by change 4 ≠ slot.index.val; omega)).cast tables_eq.symm
 
 /-- The three original finalizer positions, with the two receipt wrappers installed. -/
 def finalSlot (index : Fin 3) : TableSlot
-    (ensemble image source target final bankFinal others resources channels names).tables
+    (ensemble image source target final bankFinal others resources channels names registration).tables
     ((FinalMemoryChecks.ensemble (p := p) source.sail.memorySnapshot target [] []
       (FinalMemoryChecks.empty_unique_names target)).tables[index.val]'(by
       rw [FinalMemoryChecks.tables_eq]; simp; omega)) := by
@@ -187,10 +207,10 @@ def finalSlot (index : Fin 3) : TableSlot
     simp only [ensemble, ClosedVerifier.install, withReceipts, withRegisters,
       FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set, base_tables_length]
     omega⟩, ?_⟩
-  change (((base image source target final bankFinal others resources channels names).tables.set 3
-    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
+  change (((base image source target final bankFinal others resources channels names registration).tables.set 3
+    { circuit := FinalMemoryReceipt.circuit false OrderedFinalProvider.registerCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRegisterProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.registerCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h }).set 4
-    { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, Assumptions := OrderedFinalProvider.ramCircuit.Assumptions,
+    { circuit := FinalMemoryReceipt.circuit true OrderedFinalProvider.ramCircuit, generation := (OrderedMemoryProvider.generation OrderedFinalProvider.channelName (FinalRamProvider.circuit (p := p)).name), Assumptions := OrderedFinalProvider.ramCircuit.Assumptions,
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h })[3 + index.val]'(by
       rw [List.length_set, List.length_set, base_tables_length]; omega) = _
   fin_cases index <;> dsimp only
@@ -203,23 +223,23 @@ def finalSlot (index : Fin 3) : TableSlot
     rfl
 
 /-- Retain all physical tables while viewing the old verifier without its new change demand. -/
-def receiptWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
-    EnsembleWitness (withReceipts image source target final bankFinal others resources channels names) :=
+def receiptWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
+    EnsembleWitness (withReceipts image source target final bankFinal others resources channels names registration) :=
   (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).project witness
 
 /-- Forget only the RAM receipt, keeping its physical table and original constraints. -/
-def registerWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
-    EnsembleWitness (withRegisters image source target final bankFinal others resources channels names) :=
+def registerWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
+    EnsembleWitness (withRegisters image source target final bankFinal others resources channels names registration) :=
   FinalReceiptEnsemble.project (receiptWitness witness)
 
 /-- The existing host proof view includes both added target consumers. No rows are removed. -/
-def baseWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
-    EnsembleWitness (base image source target final bankFinal others resources channels names) :=
+def baseWitness (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
+    EnsembleWitness (base image source target final bankFinal others resources channels names registration) :=
   FinalReceiptEnsemble.project (registerWitness witness)
 
 /-- Raw acceptance supplies every original host assertion and fixed lookup. -/
 theorem baseWitness_constraints
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (checked : witness.Constraints) : (baseWitness witness).Constraints := by
   have raw : (receiptWitness witness).Constraints :=
     ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).project_constraints witness).mp checked
@@ -230,7 +250,7 @@ theorem baseWitness_constraints
 
 /-- Original table arrays remain byte-for-byte identical through the receipt proof views. -/
 theorem baseWitness_rows
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
     (baseWitness witness).tables.map (·.table) = witness.tables.map (·.table) := by
   have registers := FinalReceiptEnsemble.project_rows (registerWitness witness)
   have ram := FinalReceiptEnsemble.project_rows (receiptWitness witness)
@@ -239,7 +259,7 @@ theorem baseWitness_rows
 
 /-- Receipt wrappers preserve the names and inputs defining canonical prover data. -/
 theorem baseWitness_data
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
     (baseWitness witness).data = witness.data := by
   have inner : (registerWitness witness).data = witness.data := by
     unfold registerWitness
@@ -250,7 +270,7 @@ theorem baseWitness_data
 
 /-- The complete original header remains attached to the same physical instruction rows. -/
 theorem baseWitness_publicInput
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration)) :
     (baseWitness witness).publicInput = witness.publicInput := by
   have inner : (registerWitness witness).publicInput = witness.publicInput := by
     unfold registerWitness
@@ -261,7 +281,7 @@ theorem baseWitness_publicInput
 
 /-- Guarantees transfer on every original channel independently of its projected balance. -/
 theorem baseWitness_channelGuarantees
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (channel : RawChannel (ZMod p))
     (registers : channel ≠ (FinalMemoryValue.channel false).toRaw)
     (ram : channel ≠ (FinalMemoryValue.channel true).toRaw)
@@ -272,7 +292,7 @@ theorem baseWitness_channelGuarantees
 
 /-- Existing host proofs inherit Byte guarantees from the complete physical acceptance argument. -/
 theorem baseWitness_byte
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (guarantees : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw) :
     ∀ table ∈ (baseWitness witness).tables, table.ChannelGuarantees byteChannel.toRaw :=
   baseWitness_channelGuarantees witness byteChannel.toRaw
@@ -281,7 +301,7 @@ theorem baseWitness_byte
 
 /-- Original channel occurrences survive both receipt wrappers exactly. -/
 theorem baseWitness_interactions
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (channel : RawChannel (ZMod p))
     (registers : channel ≠ (FinalMemoryValue.channel false).toRaw)
     (ram : channel ≠ (FinalMemoryValue.channel true).toRaw) :
@@ -293,9 +313,9 @@ theorem baseWitness_interactions
 Registration also separates them from the verifier's fresh assertion channel. The target
 validators remain in this view, so their Byte demand is retained. -/
 theorem baseWitness_balancedChannel
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (channel : RawChannel (ZMod p))
-    (registered : channel ∈ (base image source target final bankFinal others resources channels names).channels)
+    (registered : channel ∈ (base image source target final bankFinal others resources channels names registration).channels)
     (registers : channel ≠ (FinalMemoryValue.channel false).toRaw)
     (ram : channel ≠ (FinalMemoryValue.channel true).toRaw)
     (changes : channel ≠ FinalMemoryChange.channel.toRaw)
@@ -303,7 +323,7 @@ theorem baseWitness_balancedChannel
   change BalancedInteractions ((baseWitness witness).interactionsWith channel)
   rw [baseWitness_interactions witness channel registers ram]
   exact (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).project_balancedChannel
-    witness channel (List.mem_append_left _ (List.mem_append_left _ registered))
+    witness channel registered
     (by simp [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
       circuit_norm, changes]) balanced
 

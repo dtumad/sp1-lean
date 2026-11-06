@@ -123,7 +123,7 @@ lemma absRemainder_lt_absC {cols : Columns (ZMod p)} (hir : cols.is_real = 1)
       ((1 : ZMod p) - cols.remainder_lt_operation.u16_compare_operation.bit) = 0) :
     cols.abs_remainder.toNat < cols.abs_c.toNat := by
   have hzeroResult := IsZeroWordOperation.result_semantic hisZero hir
-  rw [if_neg hcnz] at hzeroResult
+  rw [ite_eq_right hcnz] at hzeroResult
   have hrcm : cols.remainder_check_multiplicity = 1 := by
     rw [hzeroResult, hir] at e305; linear_combination -e305
   have hmax0 : cols.max_abs_c_or_1[0] = cols.abs_c[0] := by
@@ -142,7 +142,7 @@ lemma absRemainder_lt_absC {cols : Columns (ZMod p)} (hir : cols.is_real = 1)
   rw [hbit1] at hbit
   have hcmpMax : cols.abs_remainder.toNat < cols.max_abs_c_or_1.toNat := by
     by_contra hnot
-    rw [if_neg hnot] at hbit
+    rw [ite_eq_right hnot] at hbit
     exact one_ne_zero hbit
   simpa [hmaxEq] using hcmpMax
 

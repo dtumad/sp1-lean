@@ -15,10 +15,11 @@ generated namespaces, memory result types and every symbolically reduced proof. 
 
 | Choice | Reason | Exit |
 |---|---|---|
-| Module-mode Sail pair | Runtime #13 and generator #1742 supply module support while preserving exposed bodies | Consume compatible upstream revisions after those changes merge |
+| Module-mode Sail pair | Runtime #13 and generator #1742 supply module support; supplementary namespace openings follow the generated declarations | Consume compatible upstream revisions after those changes merge |
+| Chunked Sail variants | Lean 4.35 rejects the instruction variant’s flat constructor layout | A pinned Lean/compiler pair that accepts the flat layout, with full model and pattern-match validation |
 | LeanRV64DRvfi library / legacy do | Avoids exponential discarded-action elaboration in generated RvfiDii | #6: pinned Lean/backend fix, regenerated/validated model and measured build |
 | Non-module SP1 consumers | Handwritten visibility migration follows the prepared module-mode Sail pair | #33: complete consumer migration and public/private trust checks |
-| Current toolchain | The pinned Clean/PolyFun/Sail graph is validated together | Deliberate coordinated compatibility review; never bare lake update |
+| Current toolchain | The pinned Clean/PolyFun/Sail graph must be validated together | Deliberate coordinated compatibility review; never bare lake update |
 
 ## Useful proof details
 

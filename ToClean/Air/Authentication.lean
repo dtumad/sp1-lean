@@ -5,7 +5,7 @@ public import ToClean.Circuit.InteractionRecovery
 
 /-! # Authenticating typed records through the complete interaction ledger
 
-Clean's balance theorem finds a matching nonzero, non-pull interaction for each unit pull.
+Clean's balance theorem finds a matching `Interaction.Push` for each unit pull.
 It does not package the component-local provenance of that matching record. `Authenticates`
 supplies this interface without strengthening channel guarantees: a property of actual source
 records transports through the witness's count-bounded ledger to every requested record.
@@ -22,22 +22,22 @@ open Circuit
 
 variable {F : Type} [FiniteField F] {Record : TypeMap} [ProvableType Record]
 
-/-- Every active non-pull emission has the stated typed meaning, as a consequence of raw constraints. -/
+/-- Every interaction classified as a push has the stated typed meaning, as a consequence of raw constraints. -/
 def Component.Authenticates (component : Component F) (channel : Channel F Record)
     (property : Record F → Prop) : Prop :=
   ∀ env, component.operations.ConstraintsHold env →
     ∀ interaction ∈ component.operations.interactionValuesWith channel.toRaw env,
-      interaction.mult ≠ 0 → interaction.mult ≠ -1 →
+      interaction.Push →
         ∃ record, interaction.msg = (toElements record).toArray ∧ property record
 
 theorem Component.Authenticates.of_pulls (component : Component F) (channel : Channel F Record)
     (property : Record F → Prop)
     (pulls : ∀ env, component.operations.ConstraintsHold env →
       ∀ interaction ∈ component.operations.interactionValuesWith channel.toRaw env,
-        interaction.mult = 0 ∨ interaction.mult = -1) :
+        interaction.mult = 0 ∨ interaction.Pull) :
     component.Authenticates channel property := by
-  intro env checked interaction member nonzero notPull
-  exact ((pulls env checked interaction member).elim nonzero notPull).elim
+  intro env checked interaction member push
+  exact (Interaction.not_push_iff.mpr (pulls env checked interaction member) push).elim
 
 theorem Component.Authenticates.of_silent (component : Component F) (channel : Channel F Record)
     (property : Record F → Prop) (silent : channel.toRaw ∉ component.circuit.channels) :
@@ -52,8 +52,8 @@ theorem Component.Authenticates.of_silent (component : Component F) (channel : C
 theorem Component.Authenticates.mono {component : Component F} {channel : Channel F Record}
     {property next : Record F → Prop} (authenticated : component.Authenticates channel property)
     (implies : ∀ record, property record → next record) : component.Authenticates channel next := by
-  intro env checked interaction member nonzero notPull
-  obtain ⟨record, payload, valid⟩ := authenticated env checked interaction member nonzero notPull
+  intro env checked interaction member push
+  obtain ⟨record, payload, valid⟩ := authenticated env checked interaction member push
   exact ⟨record, payload, implies record valid⟩
 
 /-- Authentication of actual physical sources may depend on facts established elsewhere in the
@@ -62,15 +62,15 @@ def Table.Authenticates (table : Table F) (channel : Channel F Record)
     (property : Record F → Prop) : Prop :=
   ∀ physical ∈ table.table,
     ∀ interaction ∈ table.component.operations.interactionValuesWith channel.toRaw (table.environment physical),
-      interaction.mult ≠ 0 → interaction.mult ≠ -1 →
+      interaction.Push →
         ∃ record, interaction.msg = (toElements record).toArray ∧ property record
 
 /-- Transport physical source authentication through a semantic implication. -/
 theorem Table.Authenticates.mono {table : Table F} {channel : Channel F Record}
     {property next : Record F → Prop} (authenticated : table.Authenticates channel property)
     (implies : ∀ record, property record → next record) : table.Authenticates channel next := by
-  intro row member interaction emitted active notPull
-  obtain ⟨record, payload, valid⟩ := authenticated row member interaction emitted active notPull
+  intro row member interaction emitted push
+  obtain ⟨record, payload, valid⟩ := authenticated row member interaction emitted push
   exact ⟨record, payload, implies record valid⟩
 
 /-- Unconditional component-local source proofs authenticate every constrained row of a table. -/
@@ -85,11 +85,11 @@ theorem authenticated_pull_of_tables (tables : List (Table F))
     (sources : ∀ table ∈ tables, table.Authenticates channel property)
     (balanced : BalancedInteractions (tables.flatMap (·.interactionsWith channel.toRaw))) (record : Record F)
     (member : channel.pulledValue record ∈ tables.flatMap (·.interactionsWith channel.toRaw)) : property record := by
-  obtain ⟨provider, providerMem, samePayload, nonzero, notPull⟩ :=
-    exists_push_of_pull _ balanced (channel.pulledValue record) member rfl
+  obtain ⟨provider, providerMem, samePayload, push⟩ :=
+    balanced.exists_push_of_pull (channel.pulledValue record) member ⟨rfl, rfl⟩
   obtain ⟨table, tableMem, providerMem⟩ := List.mem_flatMap.mp providerMem
   obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp providerMem
-  obtain ⟨actual, payload, valid⟩ := sources table tableMem physical physicalMem provider emitted nonzero notPull
+  obtain ⟨actual, payload, valid⟩ := sources table tableMem physical physicalMem provider emitted push
   have equal := congrArg (fromElements (M := Record))
     (Vector.toArray_inj.mp (payload.symm.trans samePayload))
   simp only [ProvableType.fromElements_toElements] at equal
@@ -102,21 +102,21 @@ retaining the count bound of the complete ledger. -/
 theorem EnsembleWitness.authenticated_pull (witness : EnsembleWitness assembly)
     (channel : Channel F Record) (property : Record F → Prop)
     (verifier : ∀ interaction ∈ witness.verifierInteractionsWith channel.toRaw,
-      interaction.mult ≠ 0 → interaction.mult ≠ -1 →
+      interaction.Push →
         ∃ record, interaction.msg = (toElements record).toArray ∧ property record)
     (sources : ∀ component ∈ assembly.tables, component.Authenticates channel property)
     (constraints : witness.Constraints)
     (balanced : witness.BalancedChannel channel.toRaw) (record : Record F)
     (member : channel.pulledValue record ∈ witness.interactionsWith channel.toRaw) : property record := by
-  obtain ⟨provider, providerMem, samePayload, nonzero, notPull⟩ :=
-    exists_push_of_pull _ balanced (channel.pulledValue record) member rfl
+  obtain ⟨provider, providerMem, samePayload, push⟩ :=
+    balanced.exists_push_of_pull (channel.pulledValue record) member ⟨rfl, rfl⟩
   have authenticated : ∃ actual, provider.msg = (toElements actual).toArray ∧ property actual := by
     rcases EnsembleWitness.mem_interactionsWith.mp providerMem with emitted | ⟨table, tableMem, emitted⟩
-    · exact verifier provider emitted nonzero notPull
+    · exact verifier provider emitted push
     · obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp emitted
       exact Table.Authenticates.of_component table channel property
         (sources _ (EnsembleWitness.component_mem_tables_of_mem tableMem)) (constraints table tableMem)
-        physical physicalMem provider emitted nonzero notPull
+        physical physicalMem provider emitted push
   obtain ⟨actual, payload, valid⟩ := authenticated
   have equal := congrArg (fromElements (M := Record))
     (Vector.toArray_inj.mp (payload.symm.trans samePayload))
@@ -127,17 +127,15 @@ private theorem guarantees_of_authenticated_pull (channel : Channel F Record)
     (interaction : Interaction F) (same : interaction.channel = channel.toRaw) (data : ProverData F)
     (authenticated : ∀ record, interaction = channel.pulledValue record → channel.Guarantees record data) :
     interaction.Guarantees data := by
-  rcases interaction with ⟨raw, mult, message, width, assume⟩
+  rcases interaction with ⟨raw, direction, mult, message, width⟩
   dsimp only at same
   cases same
-  intro assumed pulled
-  change mult = -1 at pulled
-  change assume = true at assumed
-  subst mult
-  cases assume
-  · contradiction
-  · apply authenticated (fromElements (M := Record) ⟨message, width⟩)
-    simp only [Channel.pulledValue, ProvableType.toElements_fromElements]
+  intro pulled unit
+  change direction = .pull at pulled
+  change mult = 1 at unit
+  subst direction mult
+  apply authenticated (fromElements (M := Record) ⟨message, width⟩)
+  simp only [Channel.pulledValue, ProvableType.toElements_fromElements]
 
 /-- Typed pull authentication discharges guarantees of the public verifier and every
 physical table against the same canonical prover data. -/
@@ -145,7 +143,7 @@ theorem EnsembleWitness.channelGuarantees_of_authenticated_pulls (witness : Ense
     (channel : Channel F Record)
     (authenticated : ∀ record, channel.pulledValue record ∈ witness.interactionsWith channel.toRaw →
       channel.Guarantees record witness.data) :
-    assembly.VerifierChannelGuarantees witness.publicInput witness.data channel.toRaw ∧
+    assembly.VerifierChannelGuarantees witness.data channel.toRaw ∧
       ∀ table ∈ witness.tables, table.ChannelGuarantees channel.toRaw := by
   have guarantees : ∀ interaction ∈ witness.interactionsWith channel.toRaw,
       interaction.Guarantees witness.data := by

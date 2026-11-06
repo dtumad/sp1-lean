@@ -88,25 +88,24 @@ private theorem eval_startDivision (env : Environment (ZMod p)) (input : Var Inp
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_asWord (env : Environment (ZMod p)) (address : fields 3 (Expression (ZMod p))) :
-    Vector.map (Expression.eval env) (Address.asWord address) =
-      Address.asWord (Vector.map (Expression.eval env) address) := by
+    Eval.eval env (Address.asWord address) =
+      Address.asWord (Eval.eval env address) := by
   simp only [Address.asWord, circuit_norm]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_minimum (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const (minimum (p := p))) = minimum := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
+    Eval.eval env (Vector.map Expression.const (minimum (p := p))) = minimum := by
+  simp only [circuit_norm, Vector.map_id']
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_rounded (env : Environment (ZMod p)) (output : Var AddressDiv8.Output (ZMod p)) :
-    Vector.map (Expression.eval env) output.rounded = (ProvableStruct.eval env output).rounded := by
+    Eval.eval env output.rounded = (ProvableStruct.eval env output).rounded := by
   rcases output with ⟨quotient, remainder, rounded⟩
   simp only [circuit_norm]
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem eval_quotient (env : Environment (ZMod p)) (output : Var AddressDiv8.Output (ZMod p)) :
-    Vector.map (Expression.eval env) output.quotient = (ProvableStruct.eval env output).quotient := by
+    Eval.eval env output.quotient = (ProvableStruct.eval env output).quotient := by
   rcases output with ⟨quotient, remainder, rounded⟩
   simp only [circuit_norm]
 

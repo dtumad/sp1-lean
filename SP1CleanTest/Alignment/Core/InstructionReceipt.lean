@@ -92,7 +92,7 @@ theorem actualConsumer :
 private def installed :=
     HostOrdinaryReceipts.ensemble (p := SP1Prime) image source source
       (HostHintQueueBoundary.initial []) HostCallReceivers.available
-      (HostHintReadLocal.sourceResources []) []
+      (HostHintReadLocal.sourceResources source.host.io.hints) (HostFinalMemory.sourceChannels source.sail.memorySnapshot)
       (HostFinalMemory.source_unique_names image source source.sail.memorySnapshot)
 
 private def storeFixtures : List (ℕ × List Fp) :=

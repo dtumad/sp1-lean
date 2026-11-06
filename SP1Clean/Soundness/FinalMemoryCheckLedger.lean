@@ -18,6 +18,9 @@ variable {names : (((FinalMemoryEnsemble.inventory (p := p)).views.map Transitio
       (checkTables (p := p) target ++ auxiliary)).map
         (fun component : Component (ZMod p) => component.circuit.name)).Nodup}
 
+variable {channelNames : ((registry (p := p) target channels).map (·.name)).Nodup}
+variable {registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry target channels}
+
 open scoped Classical
 
 omit [Fact (2 ^ 17 < p)] in
@@ -30,12 +33,13 @@ private theorem single_interaction (table : Table (ZMod p)) (component : Compone
   exact List.map_eq_flatMap.symm
 
 /-- Every physical register receipt occurrence retains its activity coefficient. -/
-theorem register_pulls (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+theorem register_pulls (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) :
     (registerSlot.table witness).interactionsWith (FinalMemoryValue.channel false).toRaw =
       (registerPhysicalInputs witness).map (fun input => (FinalMemoryValue.channel false).pulledIfValue input.2 input.1.record) := by
   rw [single_interaction _ _ (registerSlot.table_component witness) (FinalMemoryValue.channel false).toRaw
     (fun env => let input := ({
       circuit := FinalRegisterCheck.circuit target
+      generation := FinalRegisterCheck.generation target
       Assumptions := (FinalRegisterCheck.circuit target).Assumptions
       circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod p)).rowInput env
       (FinalMemoryValue.channel false).pulledIfValue input.2 input.1.record) ?_]
@@ -50,12 +54,13 @@ theorem register_pulls (witness : EnsembleWitness (ensemble source target auxili
     simp only [Component.rowInput, ← eval_varFromOffset_valueFromOffset, circuit_norm]
 
 /-- Every physical ram receipt occurrence retains its activity coefficient. -/
-theorem ram_pulls (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+theorem ram_pulls (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) :
     (ramSlot.table witness).interactionsWith (FinalMemoryValue.channel true).toRaw =
       (ramPhysicalInputs witness).map (fun input => (FinalMemoryValue.channel true).pulledIfValue input.2 input.1.record) := by
   rw [single_interaction _ _ (ramSlot.table_component witness) (FinalMemoryValue.channel true).toRaw
     (fun env => let input := ({
       circuit := FinalRamCheck.circuit target
+      generation := FinalRamCheck.generation target
       Assumptions := (FinalRamCheck.circuit target).Assumptions
       circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod p)).rowInput env
       (FinalMemoryValue.channel true).pulledIfValue input.2 input.1.record) ?_]
@@ -70,13 +75,14 @@ theorem ram_pulls (witness : EnsembleWitness (ensemble source target auxiliary c
     simp only [Component.rowInput, ← eval_varFromOffset_valueFromOffset, circuit_norm]
 
 /-- Every physical register change occurrence retains its activity coefficient. -/
-theorem register_changes (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+theorem register_changes (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) :
     (registerSlot.table witness).interactionsWith FinalMemoryChange.channel.toRaw =
       (registerPhysicalInputs witness).map (fun input => FinalMemoryChange.channel.pushedIfValue (input.2 * input.1.selected)
         (FinalMemoryChange.key false input.1.record)) := by
   rw [single_interaction _ _ (registerSlot.table_component witness) FinalMemoryChange.channel.toRaw
     (fun env => let input := ({
       circuit := FinalRegisterCheck.circuit target
+      generation := FinalRegisterCheck.generation target
       Assumptions := (FinalRegisterCheck.circuit target).Assumptions
       circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod p)).rowInput env
       FinalMemoryChange.channel.pushedIfValue (input.2 * input.1.selected)
@@ -92,13 +98,14 @@ theorem register_changes (witness : EnsembleWitness (ensemble source target auxi
     simp only [Component.rowInput, ← eval_varFromOffset_valueFromOffset, circuit_norm]
 
 /-- Every physical ram change occurrence retains its activity coefficient. -/
-theorem ram_changes (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+theorem ram_changes (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) :
     (ramSlot.table witness).interactionsWith FinalMemoryChange.channel.toRaw =
       (ramPhysicalInputs witness).map (fun input => FinalMemoryChange.channel.pushedIfValue (input.2 * input.1.selected)
         (FinalMemoryChange.key true input.1.record)) := by
   rw [single_interaction _ _ (ramSlot.table_component witness) FinalMemoryChange.channel.toRaw
     (fun env => let input := ({
       circuit := FinalRamCheck.circuit target
+      generation := FinalRamCheck.generation target
       Assumptions := (FinalRamCheck.circuit target).Assumptions
       circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } : Component (ZMod p)).rowInput env
       FinalMemoryChange.channel.pushedIfValue (input.2 * input.1.selected)
@@ -114,8 +121,8 @@ theorem ram_changes (witness : EnsembleWitness (ensemble source target auxiliary
     simp only [Component.rowInput, ← eval_varFromOffset_valueFromOffset, circuit_norm]
 
 private theorem table_silent {component : Component (ZMod p)}
-    (slot : TableSlot (ensemble source target auxiliary channels names).tables component)
-    (witness : EnsembleWitness (ensemble source target auxiliary channels names)) (channel : RawChannel (ZMod p))
+    (slot : TableSlot (ensemble source target auxiliary channels names channelNames registered).tables component)
+    (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) (channel : RawChannel (ZMod p))
     (absent : (component.circuit.channels.map RawChannel.name).contains channel.name = false) :
     (slot.table witness).interactionsWith channel = [] := by
   apply Table.interactionsWith_nil_of_channel_not_mem
@@ -126,21 +133,21 @@ private theorem table_silent {component : Component (ZMod p)}
   contradiction
 
 /-- The verifier's only non-ordering interactions are the fixed complete change demand. -/
-theorem verifier_values (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem verifier_values (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (channel : RawChannel (ZMod p))
     (notOrdering : channel ≠ (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw) :
     witness.verifierInteractionsWith channel =
       if channel = FinalMemoryChange.channel.toRaw then
         (source.changes target).map (fun loc => FinalMemoryChange.channel.pulledValue (FinalMemoryChange.encode loc))
       else [] := by
-  change ((base target auxiliary channels names).verifier.andThen
+  change ((base target auxiliary channels names channelNames registered).verifier.andThen
     ((FinalMemoryChangeBoundary.closed source target).program
-      (base target auxiliary channels names))).circuitOperations.interactionValuesWith channel
+      (base target auxiliary channels names channelNames registered))).circuitOperations.interactionValuesWith channel
         (Environment.fromInput witness.publicInput witness.data) = _
   rw [Verifier.Program.andThen_values]
-  have original : (base target auxiliary channels names).verifierOperations.interactionValuesWith channel
+  have original : (base target auxiliary channels names channelNames registered).verifierOperations.interactionValuesWith channel
       (Environment.fromInput witness.publicInput witness.data) = [] := by
-    change (OrderedBoundaryVerifier.verifierProgram OrderedFinalProvider.channelName
+    change (OrderedBoundaryVerifier.verifierProgram (PublicIO := unit) OrderedFinalProvider.channelName
       OrderedMemoryEnsemble.startKey OrderedMemoryEnsemble.endKey).circuitOperations.interactionValuesWith channel _ = []
     simp only [Verifier.Program.circuitOperations, Verifier.Program.operations,
       OrderedBoundaryVerifier.verifierProgram]
@@ -152,12 +159,13 @@ theorem verifier_values (witness : EnsembleWitness (ensemble source target auxil
     FinalMemoryChangeBoundary.raw_constraints _ _
   simp only [Verifier.Program.circuitOperations, Verifier.Program.operations, ClosedVerifier.program,
     Verifier.operations_bind, noAssertions, Verifier.checkZeros_operations, List.flatMap_nil, List.append_nil]
-  rw [← Verifier.circuitOperations, ClosedVerifier.emit_values]
+  change (FinalMemoryChangeBoundary.closed source target).emit.circuitOperations.interactionValuesWith channel _ = _
+  rw [ClosedVerifier.emit_values]
   simp only [ClosedVerifier.operations, FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
     FinalMemoryChangeBoundary.values, List.map_map, Function.comp_def]
 
 /-- The complete register receipt ledger, in physical row order. -/
-theorem register_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem register_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) :
     witness.interactionsWith (FinalMemoryValue.channel false).toRaw =
       (FinalReceiptEnsemble.physicalRecords (FinalMemoryReceipts.registerWitness (receiptWitness witness))).map
@@ -165,7 +173,7 @@ theorem register_ledger (witness : EnsembleWitness (ensemble source target auxil
         (registerPhysicalInputs witness).map (fun input => (FinalMemoryValue.channel false).pulledIfValue input.2 input.1.record) := by
   rw [private_interactions witness _ (interface.receipts false), verifier_values witness _ (by
     simp [FinalMemoryValue.channel, OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw])]
-  rw [if_neg (by simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])]
+  rw [ite_eq_right (by simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])]
   rw [table_silent ramFinalSlot witness _ (by rfl), table_silent terminalSlot witness _ (by rfl),
     table_silent ramSlot witness _ (by rfl), table_silent membershipSlot witness _ (by rfl), table_silent ramMembershipSlot witness _ (by rfl), register_pulls]
   rw [← registerFinalTable_eq]
@@ -175,7 +183,7 @@ theorem register_ledger (witness : EnsembleWitness (ensemble source target auxil
     (FinalMemoryReceipts.register_receipts (receiptWitness witness))
 
 /-- The complete RAM receipt ledger, in physical row order. -/
-theorem ram_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem ram_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) :
     witness.interactionsWith (FinalMemoryValue.channel true).toRaw =
       (FinalReceiptEnsemble.physicalRecords (receiptWitness witness)).map
@@ -183,7 +191,7 @@ theorem ram_ledger (witness : EnsembleWitness (ensemble source target auxiliary 
         (ramPhysicalInputs witness).map (fun input => (FinalMemoryValue.channel true).pulledIfValue input.2 input.1.record) := by
   rw [private_interactions witness _ (interface.receipts true), verifier_values witness _ (by
     simp [FinalMemoryValue.channel, OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw])]
-  rw [if_neg (by simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])]
+  rw [ite_eq_right (by simp [FinalMemoryValue.channel, FinalMemoryChange.channel, Channel.toRaw])]
   rw [table_silent registerFinalSlot witness _ (by rfl), table_silent terminalSlot witness _ (by rfl),
     table_silent registerSlot witness _ (by rfl), table_silent membershipSlot witness _ (by rfl), table_silent ramMembershipSlot witness _ (by rfl), ram_pulls]
   rw [← ramFinalTable_eq]
@@ -193,7 +201,7 @@ theorem ram_ledger (witness : EnsembleWitness (ensemble source target auxiliary 
     (FinalMemoryReceipts.ram_receipts (receiptWitness witness))
 
 /-- Register receipt balance matches every finalizer record with exactly one validator input. -/
-theorem register_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem register_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balance : witness.BalancedChannel (FinalMemoryValue.channel false).toRaw) :
     ((registerInputs witness).map (·.record)).Perm
       (FinalReceiptEnsemble.records (FinalMemoryReceipts.registerWitness (receiptWitness witness))) := by
@@ -212,7 +220,7 @@ theorem register_receipts_perm_of_balancedChannel (witness : EnsembleWitness (en
   convert matched using 3 <;> (funext row; congr 1)
 
 /-- RAM receipt balance preserves complete values, addresses, and timestamps. -/
-theorem ram_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem ram_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balance : witness.BalancedChannel (FinalMemoryValue.channel true).toRaw) :
     ((ramInputs witness).map (fun input => input.record)).Perm
       (FinalReceiptEnsemble.records (receiptWitness witness)) := by
@@ -231,31 +239,33 @@ theorem ram_receipts_perm_of_balancedChannel (witness : EnsembleWitness (ensembl
   convert matched using 3 <;> (funext row; congr 1)
 
 /-- The full accepted assembly supplies the registered register receipt balance. -/
-theorem register_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem register_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((registerInputs witness).map (·.record)).Perm
       (FinalReceiptEnsemble.records (FinalMemoryReceipts.registerWitness (receiptWitness witness))) :=
   register_receipts_perm_of_balancedChannel witness interface checked (balanced _ (by
-    simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent]))
+    change _ ∈ registry target channels ++ [_]
+    apply List.mem_append_left
+    simp [registry]))
 
 /-- The full accepted assembly supplies the registered RAM receipt balance. -/
-theorem ram_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem ram_receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((ramInputs witness).map (fun input => input.record)).Perm
       (FinalReceiptEnsemble.records (receiptWitness witness)) :=
   ram_receipts_perm_of_balancedChannel witness interface checked (balanced _ (by
-    simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent]))
+    change _ ∈ registry target channels ++ [_]
+    apply List.mem_append_left
+    simp [registry]))
 
 /-- The complete physical target-check inventory retains each row's location kind and activity. -/
-def validationRows (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+def validationRows (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) :
     List (FinalMemoryChangeCoverage.PhysicalRow p) :=
   (registerPhysicalInputs witness).map (fun input => ((false, input.1), input.2)) ++
     (ramPhysicalInputs witness).map (fun input => ((true, ⟨input.1.record, input.1.selected⟩), input.2))
 
 /-- Active semantic checks are a proved projection of the same physical validation inventory. -/
-theorem activeValidationRows (witness : EnsembleWitness (ensemble source target auxiliary channels names)) :
+theorem activeValidationRows (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered)) :
     FinalMemoryChangeCoverage.activeRows (validationRows witness) =
       (registerInputs witness).map (fun input => (false, input)) ++
         (ramInputs witness).map (fun input => (true, ⟨input.record, input.selected⟩)) := by
@@ -263,7 +273,7 @@ theorem activeValidationRows (witness : EnsembleWitness (ensemble source target 
     List.filter_append, List.filter_map, List.map_append, List.map_map, Function.comp_def]
 
 /-- Physical activity is derived from the target-check assertions before closing any channel. -/
-theorem validationRows_binary (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem validationRows_binary (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (checked : witness.Constraints) :
     ∀ row ∈ validationRows witness, row.2 = 0 ∨ row.2 = 1 := by
   intro row member
@@ -274,7 +284,7 @@ theorem validationRows_binary (witness : EnsembleWitness (ensemble source target
     exact ramPhysicalInputs_binary witness checked input present
 
 /-- Receipt balances and constrained activity identify the validated final inventory. -/
-theorem receipts_perm_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem receipts_perm_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints)
     (balanced : ∀ ram, witness.BalancedChannel (FinalMemoryValue.channel ram).toRaw) :
     ((FinalMemoryChangeCoverage.activeRows (validationRows witness)).map fun row => row.2.record).Perm (records witness) := by
@@ -284,23 +294,24 @@ theorem receipts_perm_of_channels (witness : EnsembleWitness (ensemble source ta
       (ram_receipts_perm_of_balancedChannel witness interface checked (balanced true))
 
 /-- Complete receipt balance identifies the validated inventory with the original final decoder. -/
-theorem receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem receipts_perm (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     ((FinalMemoryChangeCoverage.activeRows (validationRows witness)).map fun row => row.2.record).Perm (records witness) := by
   apply receipts_perm_of_channels witness interface checked
   intro ram
   apply balanced
-  cases ram <;> simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
-    FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent]
+  change _ ∈ registry target channels ++ [_]
+  apply List.mem_append_left
+  cases ram <;> simp [registry]
 
 /-- Every physical change occurrence is accounted for, including the verifier and disabled rows. -/
-theorem changes_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem changes_ledger (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) :
     (witness.interactionsWith FinalMemoryChange.channel.toRaw).Perm
       (FinalMemoryChangeCoverage.ledger source target (validationRows witness)) := by
   rw [private_interactions witness _ interface.changes, verifier_values witness _ (by
     simp [FinalMemoryChange.channel, OrderedBoundary.channel, OrderedFinalProvider.channelName, Channel.toRaw])]
-  rw [if_pos rfl, table_silent registerFinalSlot witness _ (by rfl),
+  rw [ite_eq_left rfl, table_silent registerFinalSlot witness _ (by rfl),
     table_silent ramFinalSlot witness _ (by rfl), table_silent terminalSlot witness _ (by rfl),
     table_silent membershipSlot witness _ (by rfl), table_silent ramMembershipSlot witness _ (by rfl), register_changes, ram_changes]
   simp only [FinalMemoryChangeCoverage.ledger, validationRows, List.map_append,
@@ -308,16 +319,18 @@ theorem changes_ledger (witness : EnsembleWitness (ensemble source target auxili
   exact List.perm_append_comm.trans (List.Perm.of_eq (List.append_assoc ..))
 
 /-- Exact transport of the canonical change ledger needs only that channel's actual balance. -/
-theorem changes_balanced_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem changes_balanced_of_balancedChannel (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (balanced : witness.BalancedChannel FinalMemoryChange.channel.toRaw) :
     BalancedInteractions (FinalMemoryChangeCoverage.ledger source target (validationRows witness)) :=
-  balancedInteractions_of_perm balanced (changes_ledger witness interface)
+  BalancedInteractions.of_perm balanced (changes_ledger witness interface)
 
 /-- Actual full-ensemble balance closes the complete change ledger. -/
-theorem changes_balanced (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem changes_balanced (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (balanced : witness.BalancedChannels) :
     BalancedInteractions (FinalMemoryChangeCoverage.ledger source target (validationRows witness)) := by
   apply changes_balanced_of_balancedChannel witness interface (balanced _ ?_)
-  exact List.mem_append_left _ (List.mem_append_right _ (List.mem_append_right _ (List.mem_cons_self ..)))
+  change _ ∈ registry target channels ++ [_]
+  apply List.mem_append_left
+  simp [registry]
 
 end SP1Clean.Soundness.FinalMemoryChecks

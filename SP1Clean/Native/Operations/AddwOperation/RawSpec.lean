@@ -139,7 +139,7 @@ theorem carries_of_addwSemantics {a b : Word (ZMod p)} {cols : Columns (ZMod p)}
     · rw [← hv1def]; omega
   -- split on the sign bit
   by_cases hcond : (BitVec.setWidth 32 (Word.toBitVec64 a + Word.toBitVec64 b)).msb = true
-  · rw [if_pos hcond] at hbvN
+  · rw [ite_eq_left hcond] at hbvN
     have hmsbge : 2 ^ 31 ≤ (a[0].val + b[0].val + (a[1].val + b[1].val) * 2 ^ 16) % 2 ^ 32 := by
       have h := hcond
       rw [BitVec.msb_eq_decide, decide_eq_true_eq, BitVec.toNat_setWidth, hsum32] at h
@@ -148,13 +148,13 @@ theorem carries_of_addwSemantics {a b : Word (ZMod p)} {cols : Columns (ZMod p)}
         = (a[0].val + b[0].val + (a[1].val + b[1].val) * 2 ^ 16) % 2 ^ 32 := by omega
     have hge : v1.val ≥ 32768 := by omega
     refine ⟨hcarries hlow, ?_⟩
-    rw [if_pos hge]
+    rw [ite_eq_left hge]
     have hMval : M = 65535 := by omega
     have hvaleq : (m * 65535 : ZMod p).val = (65535 : ZMod p).val := by
       rw [hMdef, hMval, val_65535_zmod_p]
     have hmul : m * 65535 = (1 : ZMod p) * 65535 := by rw [one_mul]; exact (ZMod.val_injective _) hvaleq
     exact mul_right_cancel₀ val_65535_ne_zero hmul
-  · rw [if_neg hcond] at hbvN
+  · rw [ite_eq_right hcond] at hbvN
     have hmsblt : (a[0].val + b[0].val + (a[1].val + b[1].val) * 2 ^ 16) % 2 ^ 32 < 2 ^ 31 := by
       have h := hcond
       rw [BitVec.msb_eq_decide, decide_eq_true_eq, BitVec.toNat_setWidth, hsum32] at h
@@ -163,7 +163,7 @@ theorem carries_of_addwSemantics {a b : Word (ZMod p)} {cols : Columns (ZMod p)}
         = (a[0].val + b[0].val + (a[1].val + b[1].val) * 2 ^ 16) % 2 ^ 32 := by omega
     have hlt : ¬ v1.val ≥ 32768 := by omega
     refine ⟨hcarries hlow, ?_⟩
-    rw [if_neg hlt]
+    rw [ite_eq_right hlt]
     have hMval : M = 0 := by omega
     have hvaleq : (m * 65535 : ZMod p).val = (0 : ZMod p).val := by
       rw [hMdef, hMval, ZMod.val_zero]

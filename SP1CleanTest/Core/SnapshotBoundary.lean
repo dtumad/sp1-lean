@@ -1,3 +1,4 @@
+import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Model.SP1Field
 import ToClean.Air.FiniteLookup
@@ -44,7 +45,7 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
         byteValid (interaction.msg.map env).toList
     | .witness .. => true
   let ledger := (FlatOperation.interactions operations).map fun interaction =>
-    (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult)
+    (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult)
   (valid && StaticMembership.check snapshot.registerTable ledger (SnapshotRegisterProvider.membership_height_lt_uint64 snapshot) &&
       StaticMembership.check (InitialMemoryLookup.membership snapshot.memory (2 ^ 48) "sp1.native.initial_memory") ledger
         (InitialMemoryLookup.membership_height_lt_uint64 snapshot.memory "sp1.native.initial_memory"),

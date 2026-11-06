@@ -11,7 +11,7 @@ store proofs, without defining another supported-instruction profile.
 -/
 
 namespace SP1Clean.Advance
-open LeanRV64D.Defs SP1Clean.Soundness.Target
+open LeanRV64D SP1Clean.Soundness.Target
 
 /-- A permitted supported ordinary retirement preserves configuration and every protected byte.
 The outgoing PC need not fetch unless a subsequent step executes. -/

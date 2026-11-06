@@ -41,32 +41,24 @@ def Spec (input : Inputs (ZMod p)) : Prop :=
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hab_imp, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, ⟨hiv, _⟩, _⟩ := h_input
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
   have h65536 : (2 : ℕ) ^ 16 = 65536 := by norm_num
-  have ea : ∀ i (hi : i < 4), Expression.eval env input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  have eb : ∀ i (hi : i < 4), Expression.eval env input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
-  have ev : ∀ i (hi : i < 2),
-      Expression.eval env input_var_cols_value[i] = input_cols_value[i] := by
-    intro i hi; rw [← hiv]; simp only [Vector.getElem_map]
-  simp only [circuit_norm, byteChannel, ea, eb, ev] at h_holds ⊢
+  simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨h_msb, hr0, hr1, _hgate, hgc0, hgc1⟩ := h_holds
   have h_msb_as : U16MSBOperation.circuit.Assumptions
       (⟨input_cols_value[1], ⟨input_cols_msb_msb⟩, input_is_real⟩ : U16MSBOperation.Inputs (ZMod p)) := by
     refine ⟨fun hr1eq => ?_, hbin⟩
-    have R1 := hr1 (by rw [show input_is_real = 1 from hr1eq] : - input_is_real = -1)
+    have R1 := hr1 (by rw [show input_is_real = 1 from hr1eq] : input_is_real = 1)
     rw [← c16] at R1
     show input_cols_value[1].val < 2 ^ 16
     exact (byteRowSpec_range _ sixteen_lt).mp R1
   -- The two direct byte pulls are vacuous off-gate. The composed MSB gadget now exposes its empty
   -- requirement list through canonical metadata, so its local assumption does not leak into this tail.
   refine ⟨⟨(h_msb h_msb_as).1, ?_⟩,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0⟩
+    hbin⟩
   intro hr1eq
   obtain ⟨ha, hb⟩ := hab_imp hr1eq
-  have hneg : - input_is_real = -1 := by rw [hr1eq]
+  have hneg : input_is_real = 1 := by rw [hr1eq]
   have R0 := hr0 hneg; have R1 := hr1 hneg
   rw [← c16] at R0 R1
   rw [hr1eq, one_mul] at hgc0 hgc1
@@ -88,15 +80,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hab_imp, hbin⟩ := h_assumptions
-  obtain ⟨hia, hib, ⟨hiv, _⟩, _⟩ := h_input
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
-  have ev : ∀ i (hi : i < 2),
-      Expression.eval env.toEnvironment input_var_cols_value[i] = input_cols_value[i] := by
-    intro i hi; rw [← hiv]; simp only [Vector.getElem_map]
-  have ea : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  have eb : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_b[i] = input_b[i] := by
-    intro i hi; rw [← hib]; simp only [Vector.getElem_map]
   have key : input_is_real = 1 →
       (input_cols_value[0].val < 2 ^ 16 ∧ input_cols_value[1].val < 2 ^ 16) ∧
       RawSpec input_a input_b ⟨input_cols_value, ⟨input_cols_msb_msb⟩⟩ ∧
@@ -109,12 +93,12 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
       List.getElem_cons_zero, List.getElem_cons_succ] at hUv0 hUv1
     obtain ⟨h_raw, h_msbval⟩ := carries_of_subwSemantics ha hb hU hbveq
     exact ⟨⟨hUv0, hUv1⟩, h_raw, h_msbval⟩
-  simp only [circuit_norm, byteChannel, ea, eb, ev]
+  simp only [circuit_norm, byteChannel]
   refine ⟨⟨⟨fun hr1 => (key hr1).1.2, hbin⟩, ⟨h_spec.1, fun hr1 => (key hr1).2.2⟩⟩, ?_, ?_, ?_, ?_, ?_⟩
   · refine fun hneg => ?_
-    rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key (neg_inj.mp hneg)).1.1
+    rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1.1
   · refine fun hneg => ?_
-    rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key (neg_inj.mp hneg)).1.2
+    rw [← c16]; exact (byteRowSpec_range _ sixteen_lt).mpr (key hneg).1.2
   · -- SP1's ungated `is_real` boolean gate `is_real * (is_real - 1) = 0`
     rcases hbin with h | h <;> rw [h] <;> simp
   · rcases hbin with h0 | h1

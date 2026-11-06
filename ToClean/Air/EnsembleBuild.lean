@@ -20,33 +20,33 @@ namespace Air.Flat
 variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 
 /-- Canonical data depends on names and input rows, not the rest of each component's circuit. -/
-theorem deriveProverData_congr {left right : List (Table F)}
+theorem deriveTables_congr_entries {left right : List (Table F)}
     (same : List.Forall₂ (fun a b => a.component.circuit.name = b.component.circuit.name ∧
-      ∀ arity, a.proverRows arity = b.proverRows arity) left right) :
-    deriveProverData left = deriveProverData right := by
+      ∀ arity, a.rowPrefixes arity = b.rowPrefixes arity) left right) :
+    deriveTables left = deriveTables right := by
   induction same with
   | nil => rfl
   | cons head _ ih =>
     funext name arity
-    simp only [deriveProverData, head.1, Table.proverRows] at *
+    simp only [deriveTables, head.1, Table.rowPrefixes] at *
     split
     · exact head.2 arity
     · exact congrFun (congrFun ih name) arity
 
 /-- Dropping a suffix preserves every data key absent from that suffix. -/
-theorem deriveProverData_append_of_not_mem (left right : List (Table F)) (name : String)
+theorem deriveTables_append_of_not_mem (left right : List (Table F)) (name : String)
     (absent : ∀ table ∈ right, table.component.circuit.name ≠ name) (arity : ℕ) :
-    deriveProverData (left ++ right) name arity = deriveProverData left name arity := by
-  have empty : deriveProverData right name arity = #[] := by
+    deriveTables (left ++ right) name arity = deriveTables left name arity := by
+  have empty : deriveTables right name arity = #[] := by
     induction right with
     | nil => rfl
     | cons table tail ih =>
-      simp only [deriveProverData, if_neg (absent table (by simp))]
+      simp only [deriveTables, ite_eq_right (absent table (by simp))]
       exact ih (fun next member => absent next (List.mem_cons_of_mem _ member))
   induction left with
   | nil => exact empty
   | cons table tail ih =>
-    simp only [List.cons_append, deriveProverData]
+    simp only [List.cons_append, deriveTables]
     split
     · rfl
     · exact ih
@@ -54,8 +54,8 @@ theorem deriveProverData_append_of_not_mem (left right : List (Table F)) (name :
 /-- Every arity of a named data entry is determined by its actual physical table. -/
 theorem EnsembleWitness.data_of_mem_table {ens : Ensemble F PublicIO}
     (witness : EnsembleWitness ens) {table : Table F} (member : table ∈ witness.tables) (arity : ℕ) :
-    witness.data table.component.circuit.name arity = table.proverRows arity := by
-  apply deriveProverData_eq_of_mem witness.tables _ member arity
+    witness.data.tables table.component.circuit.name arity = table.rowPrefixes arity := by
+  apply deriveTables_eq_of_mem witness.tables _ member arity
   have unique := ens.unique_names
   rw [← witness.tables_map_component, List.map_map] at unique
   exact unique
@@ -65,8 +65,36 @@ theorem EnsembleWitness.data_eq_of_common_table {ens : Ensemble F PublicIO}
     {OtherIO : TypeMap} [ProvableType OtherIO] {other : Ensemble F OtherIO}
     (first : EnsembleWitness ens) (second : EnsembleWitness other) {table : Table F}
     (firstMember : table ∈ first.tables) (secondMember : table ∈ second.tables) (arity : ℕ) :
-    first.data table.component.circuit.name arity = second.data table.component.circuit.name arity := by
+    first.data.tables table.component.circuit.name arity = second.data.tables table.component.circuit.name arity := by
   rw [first.data_of_mem_table firstMember, second.data_of_mem_table secondMember]
+
+/-- Canonical table names inherit the ensemble's uniqueness certificate. -/
+theorem EnsembleWitness.tables_unique_names {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness ens) :
+    (witness.tables.map fun table => table.component.circuit.name).Nodup := by
+  simpa only [← witness.tables_map_component, List.map_map, Function.comp_def] using ens.unique_names
+
+/-- Recanonicalizing a prefix preserves the original component and every physical row. -/
+theorem withDerivedData_take_origin (tables : List (Table F))
+    (unique : (tables.map fun table => table.component.circuit.name).Nodup)
+    (publicInput : Array F) (count : ℕ) (table : Table F)
+    (member : table ∈ (withDerivedData tables unique publicInput).take count) :
+    ∃ original ∈ tables.take count, table.component = original.component ∧
+      table.table = original.table ∧ table.data = deriveProverData tables publicInput := by
+  have mapped := List.mem_map_of_mem (f := fun table : Table F => (table.component, table.table)) member
+  rw [List.map_take, withDerivedData_map, ← List.map_take] at mapped
+  obtain ⟨original, present, equal⟩ := List.mem_map.mp mapped
+  refine ⟨original, present, (congrArg Prod.fst equal).symm, (congrArg Prod.snd equal).symm, ?_⟩
+  obtain ⟨entry, _, rfl⟩ := List.mem_map.mp (show table ∈ (withDerivedData tables unique publicInput) from
+    List.mem_of_mem_take member)
+  rfl
+
+/-- Height-derived capacity is exactly capacity of every complete physical channel ledger. -/
+theorem EnsembleWitness.interactionsFit_iff {ens : Ensemble F PublicIO}
+    (witness : EnsembleWitness ens) (balance : Balance F) :
+    ens.interactionsFit balance witness.heights ↔ witness.InteractionsFit balance := by
+  simp only [Ensemble.interactionsFit, List.all_eq_true, EnsembleWitness.InteractionsFit]
+  exact forall₂_congr fun channel member => by rw [witness.length_interactionsWith member]
 
 /-- Change only ensemble metadata while retaining already-canonical tables and public input. -/
 def EnsembleWitness.withEnsemble {ens : Ensemble F PublicIO} (witness : EnsembleWitness ens)
@@ -82,7 +110,7 @@ def EnsembleWitness.withEnsemble {ens : Ensemble F PublicIO} (witness : Ensemble
 /-- Assemble an inventory whose stored environments are already canonical. -/
 def EnsembleWitness.ofCanonicalTables (ens : Ensemble F PublicIO) (tables : List (Table F))
     (publicInput : PublicIO F) (hmap : tables.map (·.component) = ens.tables)
-    (canonical : ∀ table ∈ tables, table.data = deriveProverData tables) :
+    (canonical : ∀ table ∈ tables, table.data = deriveProverData tables (toElements publicInput).toArray) :
     EnsembleWitness ens where
   tables
   publicInput
@@ -96,35 +124,40 @@ def EnsembleWitness.ofCanonicalTables (ens : Ensemble F PublicIO) (tables : List
 /-- Assemble the public input and physical tables in the ensemble's declared order. -/
 def EnsembleWitness.ofTables (ens : Ensemble F PublicIO) (tables : List (Table F))
     (publicInput : PublicIO F) (hmap : tables.map (·.component) = ens.tables) :
-    EnsembleWitness ens where
-  tables := withDerivedData tables
-  publicInput := publicInput
-  same_length := by simp only [withDerivedData, List.length_map]; rw [← hmap, List.length_map]
-  same_circuits := by
-    intro i hi
-    have same : (withDerivedData tables).map (·.component) = ens.tables :=
-      (withDerivedData_map_component tables).trans hmap
-    have hi' : i < ((withDerivedData tables).map (·.component)).length := by rw [same]; exact hi
-    rw [← List.getElem_of_eq same hi', List.getElem_map]
-  same_data := withDerivedData_data tables
+    EnsembleWitness ens := by
+  have unique : (tables.map fun table => table.component.circuit.name).Nodup := by
+    simpa only [← hmap, List.map_map, Function.comp_def] using ens.unique_names
+  exact ofCanonicalTables ens (withDerivedData tables unique (toElements publicInput).toArray)
+    publicInput ((withDerivedData_map_component tables unique _).trans hmap)
+    (withDerivedData_data tables unique _)
 
 /-- Construction installs the canonical environment without changing rows or their positions. -/
 @[simp] theorem EnsembleWitness.ofTables_tables (ens : Ensemble F PublicIO)
     (tables : List (Table F)) (publicInput : PublicIO F)
     (hmap : tables.map (·.component) = ens.tables) :
-    (EnsembleWitness.ofTables ens tables publicInput hmap).tables = withDerivedData tables := rfl
+    (EnsembleWitness.ofTables ens tables publicInput hmap).tables =
+      withDerivedData tables (by
+        simpa only [← hmap, List.map_map, Function.comp_def] using ens.unique_names)
+        (toElements publicInput).toArray := rfl
 
 /-- Canonicalizing the data keeps every physical row in its original position. -/
-@[simp] theorem withDerivedData_map_table (tables : List (Table F)) :
-    (withDerivedData tables).map (·.table) = tables.map (·.table) := by
-  simp [withDerivedData]
+@[simp] theorem withDerivedData_map_table (tables : List (Table F))
+    (unique : (tables.map fun table => table.component.circuit.name).Nodup)
+    (publicInput : Array F) :
+    (withDerivedData tables unique publicInput).map (·.table) = tables.map (·.table) := by
+  simp [withDerivedData, List.map_attach_eq_pmap, List.map_pmap, List.pmap_eq_map]
 
-/-- The environment is derived from the supplied committed rows. -/
+/-- The environment includes both the committed input rows and the actual public input. -/
 @[simp] theorem EnsembleWitness.ofTables_data (ens : Ensemble F PublicIO)
     (tables : List (Table F)) (publicInput : PublicIO F)
     (hmap : tables.map (·.component) = ens.tables) :
-    (EnsembleWitness.ofTables ens tables publicInput hmap).data = deriveProverData tables :=
-  deriveProverData_map_data tables _
+    (EnsembleWitness.ofTables ens tables publicInput hmap).data =
+      deriveProverData tables (toElements publicInput).toArray := by
+  have unique : (tables.map fun table => table.component.circuit.name).Nodup := by
+    simpa only [← hmap, List.map_map, Function.comp_def] using ens.unique_names
+  change deriveProverData (withDerivedData tables unique (toElements publicInput).toArray) _ = _
+  rw [deriveProverData, deriveTables_congr (withDerivedData_map tables unique _)]
+  rfl
 
 /-- Construction preserves the public input. -/
 @[simp] theorem EnsembleWitness.ofTables_publicInput (ens : Ensemble F PublicIO)

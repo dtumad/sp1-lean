@@ -16,13 +16,13 @@ use fixture::fixture;
 mod execution;
 
 use clean_backend::witness_generation::{generate, Program};
-use clean_backend::{prove_ensemble, verify_ensemble, GeneratedAirSpec};
+use clean_backend::{EnsembleKey, GeneratedAirSpec};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
 
-fixture!(hint_word_padding, "installed_hint_word_padding");
-fixture!(hint_read, "installed_hint_read");
+fixture!(hint_word_padding, installed_hint_word_padding);
+fixture!(hint_read, installed_hint_read);
 #[test]
 fn complete_hint_read_matches_native_rows_and_rejects_malformed_consumers() {
     check_reference::<hint_read::Ensemble>(&hint_read::reference(), 7);
@@ -45,6 +45,7 @@ fn hint_target_words_match_released<P: Program<F>>(reference: &serde_json::Value
     let witness = generate::<F, P>(
         &fields(&case["publicInput"]),
         &fields(&case["privateInput"]),
+        0,
     )
     .unwrap();
     let bytes = (0..length)
@@ -108,11 +109,11 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
     reference: &serde_json::Value,
     guarded: &[usize],
 ) {
-    use p3_air::{Entry, SymbolicExpression, SymbolicVariable};
+    use p3_air::{BaseEntry as Entry, SymbolicExpression, SymbolicVariable};
 
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = generate::<F, P>(&public, &fields(&case["privateInput"]), 1).unwrap();
     let mut tables = witness.tables.clone();
     let activity = |component: usize| {
         let hint = &<P as Program<F>>::HINT_TABLES[component];
@@ -120,9 +121,13 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
         hint.width - 1
     };
     for &component in guarded {
-        assert_eq!(P::HINT_TABLES[component].rows, 3);
+        // Three indexed inputs follow the reserved missing-key row.
+        assert_eq!(P::HINT_TABLES[component].rows, 4);
         assert_eq!(tables[component].len(), 4);
         let enabled = activity(component);
+        assert!(tables[component][..3]
+            .iter()
+            .all(|row| row[enabled] == F::ONE));
         assert_eq!(tables[component][3][enabled], F::ZERO);
         tables[component][3].fill(F::from_u64(17));
         tables[component][3][enabled] = F::ZERO;
@@ -139,7 +144,7 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
     padded.tables = tables;
     let traces = padded.into_traces().unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights).unwrap();
+    let statement = clean_backend::GeneratedEnsemble::<F, P>::new(&heights, 1).unwrap();
     // Active host-call constraints have degree ten; their quotient needs a 16x LDE.
     // Read the actual emitted constraints so that this fixture detects degree drift.
     let mut max_degree = 0;
@@ -164,12 +169,12 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
         );
     }
     assert_eq!(max_degree, 10);
-    let config = backend::config_with_log_blowup(4);
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let mut key = EnsembleKey::new(backend::config_with_log_blowup(4), 1).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
     let mut wrong_public = public.clone();
     wrong_public[7] += F::ONE;
-    assert!(verify_ensemble(&config, &statement, &proof, &wrong_public).is_err());
+    assert!(key.verify(&statement, &proof, &wrong_public).is_err());
     // Non-Boolean activity is constrained even when all child cells are padding.
     for &component in guarded {
         let mut row = witness.tables[component][3].clone();
@@ -210,8 +215,9 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
         let column = row * changed[component].width() + activity(component);
         changed[component].values[column] = enabled;
         backend::assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, changed, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(backend::config_with_log_blowup(4), 1).unwrap();
+            let proof = key.prove(&statement, changed, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
 }

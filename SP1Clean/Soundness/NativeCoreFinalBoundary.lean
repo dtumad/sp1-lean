@@ -36,9 +36,24 @@ theorem final_unique_names (image : ProgramImage) :
 /-- The unchanged physical suffix, with its own canonical data and fixed ordering verifier.
 The omitted initialization tables are silent on the final ordering channel. -/
 def finalWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
-    EnsembleWitness (FinalMemoryEnsemble.ensemble (p := p) (afterFinalTables image ++ [ramMembership image]) []
-      (by simpa only [afterInitialTables_eq, List.append_assoc] using final_unique_names (p := p) image)) :=
-  EnsembleWitness.ofTables _ (witness.tables.drop 3) () (by
+    EnsembleWitness (FinalMemoryEnsemble.ensemble (PublicIO := SP1PublicIO) (p := p) (afterFinalTables image ++ [ramMembership image])
+      ((OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw :: (baseEnsemble image).channels.drop 2)
+      (by simpa only [afterInitialTables_eq, List.append_assoc] using final_unique_names (p := p) image)
+      (by
+        have names := (baseEnsemble (p := p) image).unique_channel_names
+        change ((OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw.name ::
+          (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw.name :: _).Nodup at names
+        exact (List.Perm.swap _ _ _).nodup_iff.mp names)
+      (by
+        intro table member channel used
+        have inParent : table ∈ (baseEnsemble (p := p) image).tables := by
+          change table ∈ (InitialMemoryEnsemble.views image).map (·.component) ++
+            (afterInitialTables image ++ [ramMembership image])
+          apply List.mem_append_right
+          simpa only [afterInitialTables_eq, List.append_assoc] using member
+        have support := (baseEnsemble image).tables_channels table inParent used
+        simpa only [baseEnsemble, List.drop, List.mem_cons, or_left_comm] using support)) :=
+  EnsembleWitness.ofTables _ (witness.tables.drop 3) witness.publicInput (by
     rw [List.map_drop, witness.tables_map_component]
     change (tables image).drop 3 =
       FinalMemoryEnsemble.inventory.views.map (·.component) ++ (afterFinalTables image ++ [ramMembership image])
@@ -58,21 +73,24 @@ theorem finalTables_spec {image : ProgramImage} (witness : EnsembleWitness (ense
     simpa only [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
       OrderedBoundaryEnsemble.ensemble, List.take_left', List.length_map] using mapped
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
-  change table ∈ (withDerivedData (witness.tables.drop 3)).take
+  change table ∈ (withDerivedData (witness.tables.drop 3)
+      (by rw [List.map_drop]; exact witness.tables_unique_names.drop) (toElements witness.publicInput).toArray).take
     (FinalMemoryEnsemble.inventory (p := p)).views.length at member
-  rw [withDerivedData, ← List.map_take] at member
-  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  obtain ⟨original, originalMember, componentEq, rowsEq, dataEq⟩ :=
+    withDerivedData_take_origin _ _ _ _ table member
+  rw [componentEq] at same
   intro row rowMem
-  change original.component.Spec (Environment.fromArray row (deriveProverData (witness.tables.drop 3)))
+  rw [rowsEq] at rowMem
+  change table.component.Spec (Environment.fromArray row table.data)
+  rw [componentEq, dataEq]
   have tableMem : original ∈ witness.tables := List.mem_of_mem_drop (List.mem_of_mem_take originalMember)
   have byte := ((finishedChannel_guarantees image witness constraints balanced).2 original tableMem).1 row rowMem
   have checked := constraints original tableMem row rowMem
   have shared : original.data = witness.data := witness.same_data original tableMem
   rw [Table.environment, shared] at byte checked
-  change view.component = original.component at same
   rw [← same] at byte checked ⊢
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
-  exact FinalMemoryEnsemble.view_spec_setData id row witness.data (deriveProverData (witness.tables.drop 3))
+  exact FinalMemoryEnsemble.view_spec_setData id row witness.data (deriveProverData (witness.tables.drop 3) (toElements witness.publicInput).toArray)
     (FinalMemoryEnsemble.view_spec id _ checked byte)
 
 /-- Every consumed final record has a canonical location, independently of its value and clock. -/
@@ -188,14 +206,15 @@ theorem finalWitness_interactions {image : ProgramImage}
         equal.symm ▸ List.mem_cons_of_mem _ (List.mem_cons_self ..))
   simp only [EnsembleWitness.interactionsWith, EnsembleWitness.verifierInteractionsWith,
     EnsembleWitness.toTables, Tables.interactionsWith]
-  rw [show (finalWitness witness).tables = withDerivedData (witness.tables.drop 3) from rfl,
+  rw [show (finalWitness witness).tables = withDerivedData (witness.tables.drop 3)
+      (by rw [List.map_drop]; exact witness.tables_unique_names.drop) (toElements witness.publicInput).toArray from rfl,
     withDerivedData_interactionsWith, suffix]
   dsimp only [Ensemble.verifierOperations, ensemble]
   rw [verifierProgram_values,
     Verifier.checkZeros_other_values _ _ _ _ different, List.append_nil, verifier_final_interactions]
   apply congrArg (fun front => front ++ (witness.tables.drop 3).flatMap
     (·.interactionsWith (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw))
-  change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
+  change (OrderedBoundaryVerifier.verifierProgram (PublicIO := SP1PublicIO) _ _ _).circuitOperations.interactionValuesWith _ _ = _
   simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
     Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
@@ -220,18 +239,18 @@ theorem final_records_locations_nodup {image : ProgramImage}
       simp [InitialMemoryLookup.membership, StaticTable.channel, OrderedBoundary.channel,
         OrderedFinalProvider.channelName, Channel.toRaw]
 
-/-- The final inventory is precisely the negative Memory ledger of its three physical tables. -/
+/-- The final inventory is precisely the Memory pull ledger of its three physical tables. -/
 theorem final_memory_interactions {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) :
     ((witness.tables.drop 3).take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
       (FinalMemoryEnsemble.physicalRecords (finalWitness witness)).map
-        (fun row => memoryChannel.emittedValue (-row.1) row.2) :=
+        (fun row => memoryChannel.pulledIfValue row.1 row.2) :=
 by
   have ledger := FinalMemoryEnsemble.memory_interactions_eq (finalWitness witness)
-  change ((withDerivedData (witness.tables.drop 3)).take 3).flatMap
+  change ((withDerivedData (witness.tables.drop 3)
+      (by rw [List.map_drop]; exact witness.tables_unique_names.drop) (toElements witness.publicInput).toArray).take 3).flatMap
     (·.interactionsWith memoryChannel.toRaw) = _ at ledger
-  simpa only [withDerivedData, ← List.map_take, List.flatMap_map, Function.comp_def,
-    Table.interactionsWith_setData] using ledger
+  simpa only [withDerivedData_take_interactionsWith] using ledger
 
 /-- Final activity follows from raw constraints, including after canonical-data projection. -/
 theorem final_physicalRecords_binary {image : ProgramImage}
@@ -245,16 +264,18 @@ theorem final_physicalRecords_binary {image : ProgramImage}
     simpa only [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
       OrderedBoundaryEnsemble.ensemble, List.take_left', List.length_map] using mapped
   obtain ⟨view, viewMem, same⟩ := List.mem_map.mp componentMem
-  change table ∈ (withDerivedData (witness.tables.drop 3)).take
+  change table ∈ (withDerivedData (witness.tables.drop 3)
+      (by rw [List.map_drop]; exact witness.tables_unique_names.drop) (toElements witness.publicInput).toArray).take
     (FinalMemoryEnsemble.inventory (p := p)).views.length at member
-  rw [withDerivedData, ← List.map_take] at member
-  obtain ⟨original, originalMember, rfl⟩ := List.mem_map.mp member
+  obtain ⟨original, originalMember, componentEq, rowsEq, dataEq⟩ :=
+    withDerivedData_take_origin _ _ _ _ table member
+  rw [componentEq] at same
   intro row rowMem
-  change original.component.operations.ConstraintsHold
-    (Environment.fromArray row (deriveProverData (witness.tables.drop 3)))
+  rw [rowsEq] at rowMem
+  change table.component.operations.ConstraintsHold (Environment.fromArray row table.data)
+  rw [componentEq, dataEq]
   apply Component.constraintsHold_setData original.component ?_
     (constraints original (List.mem_of_mem_drop (List.mem_of_mem_take originalMember)) row rowMem)
-  change view.component = original.component at same
   rw [← same]
   obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
   exact FinalMemoryEnsemble.view_lookups id

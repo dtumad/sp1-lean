@@ -204,10 +204,13 @@ private theorem length_event (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZM
   simp only [HostExecution.toEvent, HostHintLengthChip.execution, HostExecution.nextPc,
     reduceCtorEq, ↓reduceIte, arg1, arg2, result, pc, stamp, ← raw, ← next]
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem source_memory_effect
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -216,10 +219,7 @@ private theorem source_memory_effect
       (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
     (host : HostState) (bytes : Bytes) (remaining : List Bytes)
-    (inventory : ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
-      (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env)
-        (wordTables (HostHintQueueBoundary.projected witness))
-        (wordTables_aligned (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
+    (inventory : ((HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables (HostHintQueueBoundary.projected witness)))).map HintReadWrites.produced).Perm
       (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) bytes))
     (state : SailState) (pc : BitVec 64) :
     (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
@@ -253,7 +253,7 @@ antecedents are the incoming State and operand currency supplied by timed ground
 theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -349,7 +349,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
   change (image.toGuestProgram valid).fetchWord
     (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
       some Target.ECALL_ENC at fetched
-  change current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  change current.sail.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (event.facts witness.data).statePull) at atPc
   have sourcePc : StateMsg.pcBits (event.facts witness.data).statePull =
       StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction) := by
@@ -392,7 +392,7 @@ added-word footprint follows from authenticated HINT_READ ownership and CPU cloc
 theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -473,7 +473,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
   change (image.toGuestProgram valid).fetchWord
     (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) =
       some Target.ECALL_ENC at fetched
-  change current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  change current.sail.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (event.facts witness.data).statePull) at atPc
   have sourcePc : StateMsg.pcBits (event.facts witness.data).statePull =
       StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction) := by
@@ -608,7 +608,7 @@ private theorem syscall_state_push (row : SyscallInstrsChip.Inputs (ZMod p))
     (program : Target.GuestProgram) (trajectory : Trajectory) (next : SailState) (timeline : Timeline) (n : ℕ)
     (after : trajectory (n + 1) = some next)
     (time : StateMsg.timeNat (syscallRowFacts row).statePush = timeline.start (n + 1))
-    (pc : next.regs.get? LeanRV64D.Defs.Register.PC = some (syscallEventOfRow row).nextPc)
+    (pc : next.regs.get? LeanRV64D.Register.PC = some (syscallEventOfRow row).nextPc)
     (loaded : Target.RomLoaded program next) (configured : Target.SailConfigured next) :
     LocalStateTruthG program trajectory timeline (syscallRowFacts row).statePush :=
   ⟨n + 1, next, after, time, pc, loaded, configured⟩
@@ -619,7 +619,7 @@ in the original extended ledger. Handler-specific dispatch is the remaining prem
 theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -741,7 +741,7 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
 private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -785,7 +785,7 @@ from this witness; no semantic effect or successful-current-step premise is supp
 theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -818,7 +818,7 @@ from this witness; no semantic effect or successful-current-step premise is supp
 theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -856,7 +856,7 @@ both HINT_LEN variants are coordinated internally on the same complete execution
 theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))

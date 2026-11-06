@@ -32,7 +32,7 @@ Two conventions worth stating, because both are load-bearing:
 namespace SP1Clean.Semantics
 
 open Sail LeanRV64D LeanRV64D.Functions
-open LeanRV64D.Defs
+open LeanRV64D
 open SP1Clean.Soundness.Target
 open SP1Clean.Channels (StateMsg MemoryMsg)
 

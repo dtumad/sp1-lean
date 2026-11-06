@@ -112,7 +112,7 @@ theorem ExecutionPath.exit_receipts {policy : HostPolicy} {program : GuestProgra
   induction path with
   | nil state => cases state.host.exitCode <;> simp
   | @cons source middle target event events step tail ih =>
-      rw [step.running, if_pos rfl]
+      rw [step.running, ite_eq_left rfl]
       cases event with
       | ordinary =>
           have running : middle.host.exitCode = none := step.host_exit.trans step.running

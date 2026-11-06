@@ -13,7 +13,7 @@ An event contains the instruction-row observations.  `SyscallTransition` combine
 by that row with an explicit handler relation, which owns effects that are not determined by the
 instruction AIR (hint data, precompile memory effects, host I/O, and so on). -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Machine
 

@@ -73,9 +73,8 @@ def checker (image : ProgramImage) (source : ExecutionSnapshot) :
 /-- The existing SP1 field bound covers every physical check occurrence. -/
 theorem count_bound [Fact (2 ^ 24 < p)] (image : ProgramImage) (source : ExecutionSnapshot) :
     (checker (p := p) image source).CountBound := by
-  change 2 * 8 < ringChar (ZMod p) ∨ ringChar (ZMod p) = 0
+  change 2 * 8 < ringChar (ZMod p)
   rw [ZMod.ringChar_zmod_n]
-  left
   have := Fact.out (p := 2 ^ 24 < p)
   omega
 

@@ -13,7 +13,7 @@ duplicate implementations or compatibility wrappers after consumers migrate.
 
 | Addition | Purpose |
 |---|---|
-| AgreesBelowWithData / WitnessGenerationData | Data/hint-preserving witness construction; agreement of cells alone does not justify dataGet/hintGet |
+| WitnessGenerationData | Honest witness construction at arbitrary committed data; upstream reference/honesty theorems still specialize to empty data |
 | TableBuild / EnsembleBuild | Typed row/table/ensemble construction with actual ledger and verifier proofs |
 | EnsembleCheck / FiniteLookup | Authenticated finite lookup inventory and executable raw-witness acceptance |
 | Realizes / CompleteEnsemble / EnsembleCompiler | Machine interpretation and constructive equivalence interfaces |
@@ -25,11 +25,9 @@ These are reusable additions, not alternate SP1 semantics. Their concrete consum
 whether an abstraction earns its place. When upstream accepts an API, migrate imports and delete
 the local copy.
 
-Clean #450 addresses canonical data/hint agreement. Its counterexample explains why strengthening
-the original computability predicate can require an upstream modification. The current local
-extension states its stronger obligation explicitly without changing Clean's existing theorems.
-The construction fork proposed in SP1 PR #111 was closed during consolidation; useful proof work
-remains in its linked history rather than adding that broad fork pin.
+Clean #503 supplies canonical data/hint agreement, taking over #450. Computability proofs use
+upstream `AgreesBelow` and `ComputableWitnesses` directly. The composition lemmas and honesty
+extension remain additive; remove them when upstream supplies their full statements.
 
 ## Built-in Rust export
 
@@ -41,18 +39,16 @@ Representation changes to canonical Component/Ensemble/Witgen objects may need a
 new adapters and supporting lemmas belong in ToClean. Scheduler support is not scheduler
 completeness or final-data agreement. Preserve those proof obligations explicitly.
 
-The current fork also preserves empty dynamic tables when the generation minimum is zero.
-This changes the canonical scheduler and Rust statement/prover APIs: indexed empty tables
-remain in the witness inventory, fixed heights stay mandatory, and only nonempty AIRs enter
-Plonky3. It cannot be supplied by an additive adapter without replacing the scheduler. Remove
-the patch when compatible upstream APIs provide these semantics; active-table padding and
-general generation completeness remain separate obligations.
+The selected upstream main revision supplies typed routing, public-input/table-height statements,
+empty dynamic tables, reusable proving keys (#501), and shared component printing (#502).
+No Clean fork patch remains in the dependency graph. Empty tables retain their physical inventory
+positions; only nonempty AIRs enter the Plonky3 batch. Fixed heights remain mandatory.
 
-See [export](../export.md) and #28/#29 for the live migration. Upstream submissions are separate
-from maintaining reproducible reviewed code in this fork; issue/PR history owns submission status.
+The Lean and Rust backend pins must identify the same immutable revision. Complete an upgrade's
+strict builds and fresh export/comparison checks before selecting another upstream batch. Open
+#494 (resource histories and closed channels), #426 (bundled computability), and #480 (generator
+completeness) are follow-up candidates, not capabilities assumed by this pin. In particular,
+channel-level guarantees do not replace exhaustive SP1 execution and mutable-resource grounding.
 
-Clean #398's conditional push/pull support is already inherited from upstream main; it is not
-a remaining fork patch. Switching back to a pinned main commit also requires #446's ensemble
-export/scheduler APIs and the routing, public-only-channel and empty-table fixes described
-above. The vendored Plonky3 batch-STARK code belongs to #446's public-lookup integration,
-separately from #398; replace it only when the upstream backend supplies that interface.
+See [export](../export.md) and #28/#29 for the integration contracts. Scheduler completeness,
+final-data agreement, and correctness of printed Rust remain separate obligations.

@@ -22,7 +22,7 @@ local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.ins
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def producer : Component (ZMod p) := { circuit := HostCallChip.circuit, Assumptions := (HostCallChip.circuit).Assumptions }
+def producer : Component (ZMod p) := { circuit := HostCallChip.circuit, Assumptions := (HostCallChip.circuit).Assumptions, generation := HostCallChip.generation }
 
 def input (env : Environment (ZMod p)) : HostCallChip.Inputs (ZMod p) :=
   valueFromOffset HostCallChip.Inputs 0 env
@@ -61,7 +61,7 @@ private theorem main_binary (row : Var HostCallChip.Inputs (ZMod p)) (offset : �
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_memory (memory : Circuits.Types.RegisterAccessCols (Expression (ZMod p)))
     (env : Environment (ZMod p)) :
-    (ProvableStruct.eval env memory).prev_value = memory.prev_value.map (Expression.eval env) := by
+    (ProvableStruct.eval env memory).prev_value = Eval.eval env memory.prev_value := by
   cases memory
   simp only [circuit_norm]
 
@@ -72,7 +72,10 @@ private theorem eval_message (row : Var HostCallChip.Inputs (ZMod p)) (flag : Ex
   rcases row with ⟨instruction, length⟩
   cases instruction
   cases length
-  simp only [Inputs.message, circuit_norm, Vector.map_map, Function.comp_def, eval_memory]
+  simp only [Inputs.message, circuit_norm, eval_memory]
+  apply Vector.ext
+  intro i hi
+  simp only [Vector.getElem_map, ProvableType.getElem_eval_fields]
 
 private theorem main_values (row : Var HostCallChip.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p)) (constraints : ((HostCallChip.main row).operations offset).ConstraintsHold env) :
@@ -140,7 +143,7 @@ theorem calls_perm (table : Table (ZMod p)) (data : ProverData (ZMod p)) (compon
       ProvableType.valueFromOffset_congr _ _ (fun _ _ => rfl)
     simpa only [cells] using checked
   rw [channel.pushedIfValues_filter_nonzero _ _ _ binary] at balanced
-  apply (channel.balanced_unit_iff (calls table data) consumed).mp _ |>.2
+  apply (channel.balanced_unit_iff (calls table data) consumed).mp _
   simpa only [calls, activeRows, List.map_map, Function.comp_def] using balanced
 
 /-- A handler cannot duplicate an event clock when its complete calls balance unique producers. -/

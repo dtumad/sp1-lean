@@ -27,11 +27,11 @@ private theorem wrapper_receipt (input : HostCallChip.Inputs (ZMod p)) (flag : Z
   by_cases h : Word.toBitVec64 input.instruction.op_a_memory.prev_value = 0
   · have h' := h
     simp only [Word.toBitVec64, Word.toNat] at h'
-    simp only [h, h', if_true, Option.map_some]
+    simp only [h, h', ite_true, Option.map_some]
     rfl
   · have h' := h
     simp only [Word.toBitVec64, Word.toNat] at h'
-    simp only [h, h', if_false, Option.map_none]
+    simp only [h, h', ite_false, Option.map_none]
 
 private theorem inventory_receipts (instructions : List (DecodedInstructionRow p))
     (wrappers : List (Environment (ZMod p))) :
@@ -49,6 +49,8 @@ private theorem inventory_receipts (instructions : List (DecodedInstructionRow p
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
   {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 /-- Every semantic HALT receipt is exactly one authenticated physical handler receipt. -/
 theorem GroundingCarrier.terminal_receipts
@@ -104,10 +106,10 @@ theorem GroundingCarrier.final_terminal (valid : image.Valid)
   · have semantic := path.exit_receipts
     change carrier.events.filterMap (hostExitAfter none) =
       (if source.host.exitCode = none then target.host.exitCode.toList else []) at semantic
-    rw [if_pos running] at semantic
+    rw [ite_eq_left running] at semantic
     have ledger := (HostTerminalLedger.receipts witness constraints balanced).map
       (fun word => (Word.toBitVec64 word).setWidth 32)
-    rw [if_pos running] at ledger
+    rw [ite_eq_left running] at ledger
     have decoded : (bankFinal.exitCode.toList.map (HostExitBoundary.encode (p := p))).map
         (fun word => (Word.toBitVec64 word).setWidth 32) = bankFinal.exitCode.toList := by
       simp only [List.map_map, Function.comp_def, decode_exit, List.map_id_fun', id_eq]

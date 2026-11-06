@@ -26,12 +26,12 @@ def install (limits : ResourceLimits) (source target : ExecutionSnapshot)
 
 /-- Raw acceptance changes by exactly the necessary endpoint checks, in both directions. -/
 theorem statement_iff [Fact (2 ^ 25 < p)] (limits : ResourceLimits) (source target : ExecutionSnapshot)
-    (base : Ensemble (ZMod p) SP1PublicIO) (input : SP1PublicIO (ZMod p)) :
-    (install limits source target base).Statement input ↔
-      base.Statement input ∧ ResourceBoundary.Spec limits source target input :=
+    (base : Ensemble (ZMod p) SP1PublicIO) (input : SP1PublicIO (ZMod p)) (heights : List ℕ) :
+    (install limits source target base).Statement .logUp input heights ↔
+      base.Statement .logUp input heights ∧ ResourceBoundary.Spec limits source target input :=
   (ResourceBoundary.checker limits source target).statement_iff base
     (ResourceBoundary.count_bound limits source target)
-    (ResourceBoundary.Spec limits source target) (ResourceBoundary.checks_iff limits source target) input
+    (ResourceBoundary.Spec limits source target) (ResourceBoundary.checks_iff limits source target) input heights
 
 /-- Completeness can add the resource circuit using only the semantic domain and header encoding. -/
 theorem checks_of_admissible {limits : ResourceLimits} {image : ProgramImage}
@@ -46,48 +46,48 @@ local instance resourceClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out 
 
 /-- The current six-call complete-memory assembly with actual endpoint-resource enforcement. -/
 def ensemble (limits : ResourceLimits) (image : ProgramImage) (source target : ExecutionSnapshot)
-    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (channels : List (RawChannel (ZMod p))) :
+    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) :
     Ensemble (ZMod p) SP1PublicIO :=
-  install limits source target (HostFinalMemory.Installed image source target.sail.memorySnapshot final bankFinal channels)
+  install limits source target (HostFinalMemory.Installed image source target.sail.memorySnapshot final bankFinal)
 
 /-- A derived proof view retains every table of the original installed assembly. -/
 def baseWitness {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod p))}
-    (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels)) :
-    EnsembleWitness (HostFinalMemory.Installed image source target.sail.memorySnapshot final bankFinal channels) :=
+
+    (witness : EnsembleWitness (ensemble limits image source target final bankFinal)) :
+    EnsembleWitness (HostFinalMemory.Installed image source target.sail.memorySnapshot final bankFinal) :=
   (ResourceBoundary.checker limits source target).project witness
 
 /-- Original constraints remain available without unfolding the resource verifier at consumers. -/
 theorem baseWitness_constraints {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod p))}
-    (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
+
+    (witness : EnsembleWitness (ensemble limits image source target final bankFinal))
     (constraints : witness.Constraints) : (baseWitness witness).Constraints :=
   ((ResourceBoundary.checker limits source target).project_constraints witness).mp constraints
 
 /-- Original balances retain exactly their physical occurrence counts. -/
 theorem baseWitness_balanced {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod p))}
-    (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
+
+    (witness : EnsembleWitness (ensemble limits image source target final bankFinal))
     (balanced : witness.BalancedChannels) : (baseWitness witness).BalancedChannels :=
   (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).1
 
 /-- The actual added raw assertions establish the endpoint resource contract. -/
 theorem resource_spec {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod p))}
-    (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
+
+    (witness : EnsembleWitness (ensemble limits image source target final bankFinal))
     (balanced : witness.BalancedChannels) : ResourceBoundary.Spec limits source target witness.publicInput :=
   (ResourceBoundary.checks_iff ..).mp
-    (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).2.2
+    (((ResourceBoundary.checker limits source target).project_balanced_iff witness).mp balanced).2
 
 /-- The proof view leaves the public input unchanged. -/
 @[simp] theorem baseWitness_publicInput {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod p))}
-    (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels)) :
+
+    (witness : EnsembleWitness (ensemble limits image source target final bankFinal)) :
     (baseWitness witness).publicInput = witness.publicInput :=
   (ResourceBoundary.checker limits source target).project_publicInput witness
 
@@ -96,8 +96,8 @@ The actual target is deliberately distinguished from the supplied snapshot until
 its integer registers and RAM are already the supplied target's. -/
 theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
     {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod p))} (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble limits image source target final bankFinal channels))
+    (valid : image.Valid)
+    (witness : EnsembleWitness (ensemble limits image source target final bankFinal))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ events actual, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events actual ∧
@@ -108,7 +108,7 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
         source.realize events) .ticks ≤ limits.ticks ∧
       8 * events.length ≤ target.clock - source.clock ∧
       ResourceBoundary.Spec limits source target witness.publicInput ∧
-      actual.sail.regs.get? LeanRV64D.Defs.Register.PC =
+      actual.sail.regs.get? LeanRV64D.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
       (∀ index, actual.sail.get_reg? index = some (target.sail.memorySnapshot.read (.reg index))) ∧
       actual.sail.mem = target.sail.memorySnapshot.memory.toSailMemory (2 ^ 48) := by

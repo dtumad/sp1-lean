@@ -10,7 +10,7 @@ outside the finite ROM: source validity does not invent a fetch obligation at an
 
 namespace SP1CleanTest.Core.InstructionFetch
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Functions
 
 private def image : ProgramImage := ⟨[(65536, 0x00008067)], 65536, []⟩
 

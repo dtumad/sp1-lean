@@ -1,3 +1,4 @@
+import SP1CleanTest.Alignment.Support.SharedAssemblyExport
 import SP1CleanTest.Alignment.Support.InstalledAssemblyReference
 import SP1CleanTest.Alignment.Support.OrdinaryAssemblyFixture
 import SP1CleanTest.Alignment.Support.HintProgramFixture
@@ -26,9 +27,12 @@ def instances : List (String × Except String (Context × List Seed × SP1Public
 
 /-- Native rows and the full physical ledger; endpoint and terminal mutations must reject. -/
 def reference (context : Context) (consumers : List Seed) (header : SP1PublicIO Fp) : IO Json := do
-  let input := InstalledAssemblyExport.privateInput context consumers
+  let prepared ← match InstalledAssemblyExport.prepare context consumers with
+    | .ok value => pure value
+    | .error message => throw (IO.userError message)
+  let input := prepared.data
   let base : fields input.size Fp := ⟨input, rfl⟩
-  let some terminal := (InstalledAssemblyExport.hintTables context consumers)[88]?
+  let some terminal := prepared.samples[88]?
     | throw (IO.userError "missing bank terminal")
   let changed := Vector.ofFn fun index : Fin input.size =>
     input[index] + if index.val == terminal.offset then 1 else 0
@@ -37,17 +41,17 @@ def reference (context : Context) (consumers : List Seed) (header : SP1PublicIO 
       ("wrong-final-clock", { header with final_clk_0_16 := header.final_clk_0_16 + 1 }, base, false),
       ("changed-terminal-clock", header, changed, false)].mapM
       fun (name, publicInput, privateInput, expected) =>
-        installedCase context consumers name publicInput privateInput expected
+        installedCase context prepared name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
 
 /-- Emit only through Clean's built-in backend and record the checked Lean witness. -/
-def write (out : System.FilePath) : IO Unit := do
+def write (state : IO.Ref SharedAssemblyExport.State) (out : System.FilePath) : IO Unit := do
   for (name, prepared) in instances do
     let (context, consumers, header) ← match prepared with
       | .ok value => pure value
       | .error error => throw (IO.userError s!"{name}: {error}")
-    match InstalledAssemblyExport.exportRust context consumers with
-    | .ok rust => IO.FS.writeFile (out / s!"{name}.rs") rust
+    match InstalledAssemblyExport.exportProgram context consumers with
+    | .ok program => SharedAssemblyExport.write state out name program
     | .error error => throw (IO.userError s!"{name}: {error}")
     let value ← reference context consumers header
     IO.FS.writeFile (out / s!"{name}.reference.json") value.compress

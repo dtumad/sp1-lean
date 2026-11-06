@@ -119,7 +119,7 @@ lemma populateMulLower_product_pair (B C : Word (ZMod p)) (f : Vector (ZMod p) 8
         = (populateMulLower ir B C f).product[2 * k]'(by omega)
           + (populateMulLower ir B C f).product[2 * k + 1]'(by omega) * 256 := by
   intro h1 k hk
-  rw [populateMulLower, if_pos h1]
+  rw [populateMulLower, ite_eq_left h1]
   have hloU : Word.isU64 (#v[(populateCtq B C f)[0], (populateCtq B C f)[1],
       (populateCtq B C f)[2], (populateCtq B C f)[3]] : Word (ZMod p)) := by
     apply Word.isU64_of_cases <;>
@@ -154,7 +154,7 @@ lemma populateMulUpper_product_pair (B C : Word (ZMod p)) (f : Vector (ZMod p) 8
         = (populateMulUpper ir B C f).product[8 + 2 * k]'(by omega)
           + (populateMulUpper ir B C f).product[8 + 2 * k + 1]'(by omega) * 256 := by
   intro h1 hg k hk
-  rw [populateMulUpper, if_pos ⟨h1, hg⟩]
+  rw [populateMulUpper, ite_eq_left ⟨h1, hg⟩]
   have hhiU : Word.isU64 (#v[(populateCtq B C f)[4], (populateCtq B C f)[5],
       (populateCtq B C f)[6], (populateCtq B C f)[7]] : Word (ZMod p)) := by
     apply Word.isU64_of_cases <;>
@@ -230,17 +230,16 @@ lemma populateCtq_padding (k : ℕ) (hk : k < 8) :
       List.getElem_cons_succ]
     rw [hb0, hc1]
     norm_num
-    decide
   have hqc : populateQuotComp (#v[0, 0, 0, 0] : Word (ZMod p)) #v[1, 0, 0, 0]
       #v[0, 1, 0, 0, 0, 0, 0, 0] = wordOfBits 0 := by
     simp only [populateQuotComp, quotCompBits, Vector.getElem_mk, List.getElem_toArray,
       List.getElem_cons_zero, List.getElem_cons_succ]
-    simp only [if_neg (show ¬((0 : ZMod p) + 0 = 1) by norm_num), hqb]
+    simp only [ite_eq_right (show ¬((0 : ZMod p) + 0 = 1) by norm_num), hqb]
   have hprod : ctqProd (#v[0, 0, 0, 0] : Word (ZMod p)) #v[1, 0, 0, 0]
       #v[0, 1, 0, 0, 0, 0, 0, 0] = 0 := by
     simp only [ctqProd, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
       List.getElem_cons_succ]
-    simp only [if_neg (show ¬((0 : ZMod p) + 0 + 0 + 0 = 1) by norm_num), hqc, wordOfBits_toBitVec64]
+    simp only [ite_eq_right (show ¬((0 : ZMod p) + 0 + 0 + 0 = 1) by norm_num), hqc, wordOfBits_toBitVec64]
     simp
   simp [populateCtq, ctqLimbNat, hprod]
 

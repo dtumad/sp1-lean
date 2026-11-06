@@ -38,8 +38,8 @@ structure CircuitStateTimeStep {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop where
-  step : ∀ data physical,
-    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  step : ∀ (generation : WitnessGeneration.Generation (ZMod p) Input) data physical,
+    let component : Component (ZMod p) := { circuit := circuit, generation, Assumptions := (circuit).Assumptions }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.ChannelGuarantees byteChannel.toRaw env →
@@ -161,11 +161,10 @@ theorem Readers.CPUState.bounds_of_byteGuarantees
         second, List.mem_cons]
     · rfl
   have h13p : (13 : ℕ) < p := lt_trans (Nat.lt_two_pow_self) Readers.CPUState.hn13
-  have negReal : -(Expression.eval env input.is_real) = -1 := by rw [real]
-  have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = -1 := by
-    simpa only [first, circuit_norm] using negReal
-  have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = -1 := by
-    simpa only [second, circuit_norm] using negReal
+  have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = 1 := by
+    simpa only [first, circuit_norm] using real
+  have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = 1 := by
+    simpa only [second, circuit_norm] using real
   have firstSpec : ByteRowSpec (Eval.eval env first.msg) := by
     have typed := (ChannelInteraction.toRaw_guarantees env first).mp firstGuarantee
     have guarantee := typed (by rfl) (by simpa only [circuit_norm] using firstMult)
@@ -237,11 +236,10 @@ theorem Readers.RegisterAccessTimestamp.bounds_of_byteGuarantees
     · simp only [Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
         circuit_norm, second, List.mem_cons]
     · rfl
-  have negReal : -(Expression.eval env input.is_real) = -1 := by rw [real]
-  have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = -1 := by
-    simpa only [first, circuit_norm] using negReal
-  have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = -1 := by
-    simpa only [second, circuit_norm] using negReal
+  have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = 1 := by
+    simpa only [first, circuit_norm] using real
+  have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = 1 := by
+    simpa only [second, circuit_norm] using real
   have firstSpec : ByteRowSpec (Eval.eval env first.msg) := by
     have typed := (ChannelInteraction.toRaw_guarantees env first).mp firstGuarantee
     have guarantee := typed (by rfl) (by simpa only [circuit_norm] using firstMult)
@@ -300,11 +298,10 @@ theorem Readers.MemoryAccess.diffBounds_of_byteGuarantees
     · simp only [Readers.MemoryAccess.circuit, Readers.MemoryAccess.main,
         circuit_norm, second, List.mem_cons]
     · rfl
-  have negReal : -(Expression.eval env input.is_real) = -1 := by rw [real]
-  have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = -1 := by
-    simpa only [first, circuit_norm] using negReal
-  have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = -1 := by
-    simpa only [second, circuit_norm] using negReal
+  have firstMult : (fun x => Expression.eval env x) first.toRaw.mult = 1 := by
+    simpa only [first, circuit_norm] using real
+  have secondMult : (fun x => Expression.eval env x) second.toRaw.mult = 1 := by
+    simpa only [second, circuit_norm] using real
   have firstSpec : ByteRowSpec (Eval.eval env first.msg) := by
     have typed := (ChannelInteraction.toRaw_guarantees env first).mp firstGuarantee
     have guarantee := typed (by rfl) (by simpa only [circuit_norm] using firstMult)
@@ -785,8 +782,8 @@ theorem circuitStateTimeStep_of_cpuStateContract {Input Output : TypeMap}
   unfold CircuitCPUStateTimeContract at contract
   dsimp only at contract
   obtain ⟨cpuOffset, cpuInput, cpuMem, binding⟩ := contract
-  intro data physical
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  intro generation data physical
+  let component : Component (ZMod p) := { circuit := circuit, generation, Assumptions := (circuit).Assumptions }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input

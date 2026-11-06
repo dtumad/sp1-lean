@@ -1,4 +1,5 @@
 import SP1Clean.Native.Operations.OrderedBoundary
+import ToClean.Air.HintIndex
 
 /-! # Closing an ordered boundary inventory
 
@@ -27,18 +28,27 @@ def circuit (name : String) (final : Word (ZMod p)) :
   channelsWithRequirements := [(channel name).toRaw]
   soundness := by
     circuit_proof_start [OrderedBoundary.circuit]
-    have finalEq : Vector.map (Expression.eval env) (Vector.map Expression.const final) = final := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [finalEq] at h_holds
+    simp only [Vector.map_id'] at h_holds
     exact ⟨h_holds.1, h_holds.2.2⟩
   completeness := by
     circuit_proof_start [OrderedBoundary.circuit]
-    have finalEq : Vector.map (Expression.eval env.toEnvironment) (Vector.map Expression.const final) = final := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [finalEq]
-    exact h_assumptions
+    simpa only [Vector.map_id', OrderedBoundary.ProverAssumptions] using h_assumptions
+
+/-- The sole terminal input is private; its full predecessor key must match the cursor. -/
+def generation (name : String) : Air.Flat.WitnessGeneration.Generation (ZMod p) TerminalInputs :=
+  .demand {
+    channel := channel name
+    trigger := .push
+    guard message :=
+      let candidate : TerminalInputs (Witgen.FExpr (ZMod p)) :=
+        fromElements (Vector.ofFn fun column => .hintGet s!"sp1.native.{name}.terminal"
+          (size TerminalInputs) 0 column)
+      Witgen.HintIndex.messageEq candidate.previous message
+    input _ := pure (fromElements (Vector.ofFn fun column =>
+      Air.Flat.WitnessGeneration.Cell.witness (.hintGet s!"sp1.native.{name}.terminal"
+        (size TerminalInputs) 0 column)))
+    padding := 0
+  }
 
 def populate (previous final : Word (ZMod p)) : TerminalInputs (ZMod p) :=
   ⟨previous, LtOperationUnsigned.populate previous final⟩

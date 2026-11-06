@@ -20,14 +20,9 @@ namespace SP1CleanTest.Core.HostControlExport
 
 open Circuit Air.Flat SP1Clean ComponentExport
 
-private def description {Input : TypeMap} [ProvableType Input]
-    (circuit : GeneralFormalCircuit Fp Input unit) : Ensemble Fp unit :=
-  { ensemble { circuit, Assumptions := circuit.Assumptions } with channels := circuit.channels }
-
 private def exportCircuit {Input : TypeMap} [ProvableType Input]
     (circuit : GeneralFormalCircuit Fp Input unit) : Except String String :=
-  Backends.Plonky3.Print.ensembleToRust (fixture (description circuit) Input)
-    (config { circuit, Assumptions := circuit.Assumptions })
+  exportRust circuit
 
 private def commitName (deferred : Bool) (slot : Fin 8) : String :=
   s!"host_{if deferred then "deferred" else "commit"}_{slot.val}"
@@ -55,15 +50,15 @@ private def previous : HostCommitChip.State Fp :=
 
 private def rowReference {Input : TypeMap} [ProvableType Input]
     (name : String) (circuit : GeneralFormalCircuit Fp Input unit) (input : Input Fp) : Lean.Json :=
-  let component : Component Fp := { circuit, Assumptions := circuit.Assumptions }
-  let data : ProverData Fp := fun _ _ => #[]
+  let component := ComponentExport.component circuit
+  let data : ProverData Fp := .empty Fp
   let row := component.buildRow input data (ProverHint.empty Fp)
   let interactions := component.rowOperations.interactionValues (Environment.fromArray row data)
   Lean.Json.mkObj [("name", Lean.toJson name),
     ("input", Lean.toJson ((toElements input).toArray.map (·.val))),
     ("row", Lean.toJson (row.map (·.val))),
     ("ledger", Lean.toJson (interactions.map fun interaction =>
-      Lean.Json.arr #[Lean.toJson interaction.channel.name, Lean.toJson interaction.mult.val,
+      Lean.Json.arr #[Lean.toJson interaction.channel.name, Lean.toJson interaction.signedMult.val,
         Lean.toJson (interaction.msg.toList.map (·.val))]))]
 
 /-- Lean constructor references authenticate the Rust field adapter and every physical occurrence. -/

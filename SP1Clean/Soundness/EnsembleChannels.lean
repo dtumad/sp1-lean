@@ -497,7 +497,7 @@ theorem syscallInstrsProvider_channels_subset :
 /-- **Every boundary/provider table stays on the core five, except the `SyscallInstrs` table.** -/
 theorem sp1ProviderTables_channels_subset_core : ∀ c ∈ sp1ProviderTables (p := p),
     c.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
-      c = ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)) := by
+      c = ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)) := by
   intro c hc
   rw [sp1ProviderTables_explicit, List.mem_append, List.mem_append] at hc
   rcases hc with (hc | hc) | hc
@@ -589,7 +589,7 @@ theorem sp1Ensemble_tables_channels_subset_core_of_ne (i : ℕ)
 theorem sp1Ensemble_tables_channels_subset_core :
     ∀ component ∈ (sp1Ensemble (p := p)).tables,
       component.circuit.channels ⊆ sp1CoreChannels (p := p) ∨
-        component = ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)) := by
+        component = ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)) := by
   intro component hc
   rw [sp1Ensemble_tables, List.mem_append] at hc
   rcases hc with hc | hc
@@ -690,13 +690,7 @@ theorem witness_publicValuesChannel_silent (witness : EnsembleWitness (sp1Ensemb
 omit [Fact (2 ^ 24 < p)] in
 /-- The empty interaction list balances: nothing was sent and nothing was received. -/
 theorem balancedInteractions_nil :
-    BalancedInteractions ([] : List (Interaction (ZMod p))) := by
-  constructor
-  · left
-    rw [List.length_nil, ZMod.ringChar_zmod_n]
-    exact (Fact.out (p := p.Prime)).pos
-  · intro msg
-    rfl
+    BalancedInteractions ([] : List (Interaction (ZMod p))) := BalancedInteractions.nil
 
 /-- **The seven buses have seven distinct names**, so a channel name identifies its channel.
 
@@ -1167,7 +1161,6 @@ theorem sp1ProviderTables_exitChannel_not_mem (k : ℕ)
   | exact rangeProvider_exitChannel_not_mem _
   | exact programProvider_exitChannel_not_mem
   | exact memoryInitProvider_exitChannel_not_mem
-  | exact memoryFinalizeProvider_exitChannel_not_mem
   | exact memoryBumpProvider_exitChannel_not_mem
   | exact stateBumpProvider_exitChannel_not_mem
 

@@ -1,4 +1,4 @@
-import ToPolyFun.Dynamical.Labeled
+import PolyFun.PFunctor.Dynamical.Trace
 import SP1Clean.FormalModel.Shard
 /-! # The SP1 shard as a PolyFun labeled machine
 

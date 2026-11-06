@@ -108,6 +108,6 @@ theorem instructionRows_program_committed {image : ProgramImage} (valid : image.
     rw [DecodedInstructionRow.environment, emitted]
     exact List.mem_singleton_self _
   exact program_pull_committed valid witness constraints balanced message interaction pullMem
-    (by change -(row.toChipRow witness.data).is_real = -1; rw [active]) rfl
+    ⟨rfl, active⟩ rfl
 
 end SP1Clean.Soundness.NativeCore

@@ -198,7 +198,7 @@ theorem eval_eqWordBlock_eq (env : Environment (ZMod p)) (off : ℕ)
       Circuits.Types.IsEqualWordOperation (ZMod p)) = wit := by
   refine eqWord_cols_eq_of_pins env off _ wit ?_ hpop
   intro i hi
-  simp only [ProvableType.toElements_fromElements, Vector.getElem_map,
+  simp only [ProvableType.toElements_fromElements,
     Vector.getElem_mapRange, circuit_norm]
 
 set_option linter.unusedSectionVars false in
@@ -212,7 +212,7 @@ theorem eval_isZeroBlock_eq (env : Environment (ZMod p)) (off : ℕ)
       Circuits.Types.IsZeroWordOperation (ZMod p)) = wit := by
   refine isZero_cols_eq_of_pins env off _ wit ?_ hpop
   intro i hi
-  simp only [ProvableType.toElements_fromElements, Vector.getElem_map,
+  simp only [ProvableType.toElements_fromElements,
     Vector.getElem_mapRange, circuit_norm]
 
 set_option linter.unusedSectionVars false in
@@ -229,7 +229,7 @@ theorem eval_eqWordFieldsBlock_eq (env : Environment (ZMod p)) (off : ℕ)
   rw [ProvableType.eval_fromElements]
   refine eqWord_cols_eq_of_pins env off _ wit ?_ hpop
   intro i hi
-  simp only [ProvableType.toElements_fromElements, Vector.getElem_map,
+  simp only [ProvableType.toElements_fromElements,
     Vector.getElem_mapRange, circuit_norm]
 
 set_option linter.unusedSectionVars false in
@@ -244,7 +244,7 @@ theorem eval_isZeroFieldsBlock_eq (env : Environment (ZMod p)) (off : ℕ)
   rw [ProvableType.eval_fromElements]
   refine isZero_cols_eq_of_pins env off _ wit ?_ hpop
   intro i hi
-  simp only [ProvableType.toElements_fromElements, Vector.getElem_map,
+  simp only [ProvableType.toElements_fromElements,
     Vector.getElem_mapRange, circuit_norm]
 
 set_option linter.unusedSectionVars false in

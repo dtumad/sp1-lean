@@ -49,7 +49,7 @@ theorem initialStateTruth_of_checks {image : ProgramImage} {source : ExecutionSn
   have encoding := source_state_encoding_of_checks witness sourceChecks
   refine ⟨0, source.sail.realize, initial, encoding.1.trans start.symm, ?_,
     checked.romLoaded, checked.configured⟩
-  change source.sail.realize.regs.get? LeanRV64D.Defs.Register.PC =
+  change source.sail.realize.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (initialBoundaryStateMessage witness.publicInput))
   rw [encoding.2]
   exact checked.pc
@@ -128,7 +128,7 @@ theorem memoryInitialFrontier_liveOK_of_channels {image : ProgramImage} {source 
   · rw [same, authentic.2.2.1]
     by_cases zero : timeline.start 0 = 0
     · simpa only [zero] using atStart
-    · simpa only [LocalValueAtG, microValueG, if_pos (Nat.pos_of_ne_zero zero)] using content
+    · simpa only [LocalValueAtG, microValueG, ite_eq_left (Nat.pos_of_ne_zero zero)] using content
   · rw [authentic.2.2.1]
     exact Nat.zero_le _
 

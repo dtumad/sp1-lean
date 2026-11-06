@@ -127,8 +127,8 @@ echo "== A2 proof-deferral inventory (gate: none) =="
 # library. Conditional theorem hypotheses and relation parameters are audited at the statement
 # boundary instead of being disguised as proof deferrals.
 sorry_re='(^[[:space:]]*sorry[[:space:]]*$)|(:=[[:space:]]*sorry)|(=>[[:space:]]*sorry)|(^[[:space:]]*stop([[:space:]]|$))'
-actual=$(grep -rlE "$sorry_re" SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest --include='*.lean' | sort)
-grep -rnE "$sorry_re" SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest --include='*.lean'
+actual=$(grep -rlE "$sorry_re" SP1Clean ToClean ToMathlib SP1CleanTest --include='*.lean' | sort)
+grep -rnE "$sorry_re" SP1Clean ToClean ToMathlib SP1CleanTest --include='*.lean'
 if [ -z "$actual" ]; then
   echo "PASS: no proof deferrals"
 else
@@ -137,7 +137,7 @@ fi
 
 echo
 echo "== A2 axiom declarations (gate: none in project proof/test libraries) =="
-if grep -rnE '^[[:space:]]*axiom[[:space:]]' SP1Clean ToClean ToMathlib ToPolyFun SP1CleanTest --include='*.lean'; then
+if grep -rnE '^[[:space:]]*axiom[[:space:]]' SP1Clean ToClean ToMathlib SP1CleanTest --include='*.lean'; then
   echo "FAIL: unexpected axiom declaration(s) above"; fail=1
 else
   echo "PASS: no axiom declarations"

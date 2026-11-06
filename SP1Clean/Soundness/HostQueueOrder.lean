@@ -48,7 +48,13 @@ def readView : TransitionView (stateChannel (p := p)) where
     rfl
 
 def lengthView (empty : Bool) : TransitionView (stateChannel (p := p)) where
-  component := { circuit := HostHintLengthChip.circuit empty, Assumptions := (HostHintLengthChip.circuit empty).Assumptions }
+  component := {
+    circuit := HostHintLengthChip.circuit empty
+    Assumptions := (HostHintLengthChip.circuit empty).Assumptions
+    generation := Witgen.HintIndex.unitDemand (HostHintLengthChip.circuit (p := p) empty).name
+      HostCallChip.channel .push
+      (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
+      (fun input => input.call) (fun _ => 1) }
   edge env := let row := valueFromOffset HostHintLengthChip.Inputs 0 env; (row.previous, row.next)
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
@@ -126,7 +132,7 @@ theorem ordered (tables : List (Table (ZMod p)))
     (TransitionView.readIndexedRows indices tables) edge) at balanced
   have endpoints := (stateChannel.transitionLedger_balanced_iff _ _ _ _).mp balanced
   have balance : EndpointBalanced (↑(TransitionView.readIndexedRows indices tables)) edge initial final := by
-    simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints.2
+    simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints
   obtain ⟨path, walk, exhaustive⟩ := exists_exhaustiveTrail_of_endpointBalanced
     (↑(TransitionView.readIndexedRows indices tables)) edge time initial final
     balance (fun row member =>
@@ -158,7 +164,7 @@ theorem rows_nil_of_balanced (tables : List (Table (ZMod p)))
   rw [interactions tables aligned] at balanced
   have closed := (stateChannel.pairedLedger_balanced_iff
     (TransitionView.readIndexedRows indices tables) edge).mp balanced
-  exact nil_of_strict_balance edge time _ closed.2
+  exact nil_of_strict_balance edge time _ closed
     (fun row member => view_strict row.1 row.2 (rows_spec tables aligned valid row member))
 
 /-- The present queue clock encoding cannot represent a queue handler at event time zero.

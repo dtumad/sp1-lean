@@ -163,20 +163,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
     z0, z1, z2, z3, h_mem_a, h_mem_b, h_mem_c⟩ := h_holds
   have htbin := bool_of_mul_pred h_trust
   have hcbin := bool_of_mul_pred h_immbin
-  have e : ∀ i (hi : i < 3), Expression.eval env input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
-  -- bridge the four op_a read-zeroing gates from per-limb `eval` form to value form. The memory pull
-  -- guarantees / push requirements need no bridge: they are whole-`Word` `isU64`s of the message's
-  -- `value` field with the eval already substituted away — `h_mem_a/b/c` feed the `Spec` and push goals.
-  have eva : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env (input_var_cols_op_a_memory_prev_value[i]'hi)
-        = input_cols_op_a_memory_prev_value[i]'hi := by
-    intro i hi; rw [← h_input.1.2.1.1, Vector.getElem_map]
-  rw [eva 0 (by norm_num)] at z0; rw [eva 1 (by norm_num)] at z1
-  rw [eva 2 (by norm_num)] at z2; rw [eva 3 (by norm_num)] at z3
-  -- G1: the op_c **push** is gated by `is_real - imm_c`, but the chip-supplied clock bounds are gated on
-  -- plain `is_real` (see `Assumptions`). The in-circuit immediate gate `h_immc` bridges the two: off a real
-  -- row it forces `imm_c = 0`, so an op_c multiplicity of `1` means the row is real.
   have hreal_of_c : input_is_real - input_cols_imm_c = 1 → input_is_real = 1 := by
     intro htc
     refine h_assumptions.1.resolve_left fun h => ?_
@@ -192,19 +178,16 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
         (h_mem_a (by rw [ht2])).2, (h_mem_b (by rw [ht2])).2⟩,
       fun ht3 => h_mem_c (by rw [ht3])⟩,
     Or.inr h_assumptions.1, Or.inr h_assumptions.1, Or.inr hcbin,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous hcbin h1 h0,
-    fun _ h0 => ?_⟩
-  · -- the immediate gates bridge (op_c + op_c_memory.prev_value), as in `ALUTypeReader.soundness`.
-    rw [← h_input.1.2.2.2.2.2.1, ← h_input.1.2.2.2.2.2.2.1.1]
-    simp only [Vector.getElem_map]; exact ⟨i0, i1, i2, i3⟩
+    htbin,
+    h_assumptions.1,
+    fun h0 => ?_,
+    h_assumptions.1,
+    fun h0 => ?_,
+    hcbin,
+    fun h0 => ?_⟩
+  · exact ⟨i0, i1, i2, i3⟩
   · -- Decode bounds are exactly the structural Program-channel guarantee.
     obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [ht])
-    rw [e 0 (by norm_num)] at hp0; rw [e 1 (by norm_num)] at hp1; rw [e 2 (by norm_num)] at hp2
     exact ⟨ha, hp0, hp1, hp2⟩
   · -- push_a: read-back value = op_a prev, from the paired pull; push clock `clk_low + 4`.
     have ht : input_is_real = 1 := h_assumptions.1.resolve_left h0
@@ -229,47 +212,29 @@ theorem completeness :
   -- `hbin`/`h_immbin_or`/`htrust` carry `{record}.field` projections (the `ProverAssumptionsD`/Contracts
   -- `Spec` reassembly); `dsimp` iota-reduces them to the destructured atoms so the `rw`-gates below match.
   dsimp only at hbin h_immbin_or htrust
-  -- bridges: op_a `prev_value` limbs (the read-zeroing gates) and op_c (immediate gates); the memory
-  -- pulls need none (their `isU64` obligations are whole-`Word`, eval already substituted away).
-  have eva : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment (input_var_cols_op_a_memory_prev_value[i]'hi)
-        = input_cols_op_a_memory_prev_value[i]'hi := by
-    intro i hi; rw [← h_input.1.2.1.1, Vector.getElem_map]
-  rw [← eva 0 (by norm_num)] at z0; rw [← eva 1 (by norm_num)] at z1
-  rw [← eva 2 (by norm_num)] at z2; rw [← eva 3 (by norm_num)] at z3
-  have eoc : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment (input_var_cols_op_c[i]'hi) = input_cols_op_c[i]'hi := by
-    intro i hi; rw [← h_input.1.2.2.2.2.2.1, Vector.getElem_map]
-  have epv : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment (input_var_cols_op_c_memory_prev_value[i]'hi)
-        = input_cols_op_c_memory_prev_value[i]'hi := by
-    intro i hi; rw [← h_input.1.2.2.2.2.2.2.1.1, Vector.getElem_map]
-  have e : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   refine ⟨⟨hreal, hrac_a⟩, ⟨hreal, hrac_b⟩, ⟨h_immbin_or, hrac_c⟩,
     ?_, h_immc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, z0, z1, z2, z3, ?_, ?_, ?_⟩
   · rcases hbin with h | h <;> rw [h] <;> simp
   · rcases h_immbin_or with h | h <;> rw [h] <;> simp
-  · simp only [eoc, epv]; exact i0
-  · simp only [eoc, epv]; exact i1
-  · simp only [eoc, epv]; exact i2
-  · simp only [eoc, epv]; exact i3
+  · exact i0
+  · exact i1
+  · exact i2
+  · exact i3
   · rcases htrust with h | h <;> rw [h] <;> simp     -- `is_trusted` gate
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
-    rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
     exact ⟨ha, hp0, hp1, hp2, hbin⟩
   · -- mem pull a: the guarantee pair (whole-`Word` `isU64` + the message's `clk_low`, which *is* the
     -- block's `prev_low`) is read straight off `hisu_ab`'s four-fact tuple.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu_ab (neg_inj.mp hneg)).1, (hisu_ab (neg_inj.mp hneg)).2.2.1⟩
+    exact fun hneg => ⟨(hisu_ab hneg).1, (hisu_ab hneg).2.2.1⟩
   · -- mem pull b
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu_ab (neg_inj.mp hneg)).2.1, (hisu_ab (neg_inj.mp hneg)).2.2.2⟩
+    exact fun hneg => ⟨(hisu_ab hneg).2.1, (hisu_ab hneg).2.2.2⟩
   · -- mem pull c (gated `is_real - imm_c`): its own `Spec` conjunct is already the pair, verbatim.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => hisu_c (neg_inj.mp hneg)
+    exact fun hneg => hisu_c hneg
 
 /-- The native immutable ALU-type reader as a Clean `GeneralFormalCircuit`: composes a `RegisterAccessCols` per
 operand (op_c gated `is_real - imm_c`), imposes the `op_a_0` binary + immediate + read-zeroing gates, and
@@ -305,8 +270,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
 
 end SP1Clean.Readers.ALUTypeReaderImmutable

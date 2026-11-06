@@ -8,7 +8,7 @@ Instruction families discharge its direct-execution and preservation obligations
 -/
 
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- Initialization supplies an actual value for every architectural GPR, including x0. -/
@@ -30,7 +30,7 @@ theorem SailConfigured.writeNextPC {source : SailState} (configured : SailConfig
     (pc : BitVec 64) : SailConfigured { source with regs := source.regs.insert Register.nextPC pc } := by
   apply SailConfigured.congr configured (source.isInitialized_insert configured.init _ _)
   rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
-    rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
 
 /-- A GPR write, or a discarded x0 write, preserves the platform configuration. -/
 theorem SailConfigured.writeGPR {source : SailState} (configured : SailConfigured source)
@@ -41,7 +41,7 @@ theorem SailConfigured.writeGPR {source : SailState} (configured : SailConfigure
   · exact configured
   · apply SailConfigured.congr configured (source.isInitialized_insert configured.init _ _)
     rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
-      rw [Std.ExtDHashMap.get?_insert, dif_neg (by unfold reg_idx_to_Register; split <;> decide)]
+      rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by unfold reg_idx_to_Register; split <;> decide)]
 
 /-- Compose an execute stage observing the actual incoming registers, memory and staged successor
 with official retirement, retaining an arbitrary predicate on its resulting memory. -/
@@ -181,7 +181,8 @@ theorem normal_memory_of_observed_direct_execute {program : GuestProgram} {sourc
     all_goals
       change EStateM.Result.ok (Step.Step_Execute (_, zero_extend word)) afterExecute =
         EStateM.Result.ok (Step.Step_Execute (.Retire_Success (), bits)) post at rest
-      cases rest <;> exact ⟨rfl, rfl⟩
+      cases rest
+    all_goals exact ⟨rfl, rfl⟩
   obtain ⟨rfl, rfl⟩ := returned
   obtain ⟨actual, tailRun, _, _, memoryTail, registers, initialized, _⟩ := tail_bookkeeping _ afterCfg.init
   rw [tryStep_eq_of_hart_active source 0 increment bits afterExecute markedCfg.active incrementRun

@@ -1,3 +1,4 @@
+import ToClean.Air.HintIndex
 import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
 import ToClean.Circuit.Guarded
 
@@ -20,12 +21,6 @@ def ProverAssumptions (deferred : Bool) (slot : Fin 8) (input : Inputs (ZMod p))
   Spec deferred slot input ∧ input.comparison =
     LtOperationUnsigned.populate input.call.arg2 (BoundedWord.limit (bound p deferred))
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem eval_zero (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const (0 : Word (ZMod p))) = 0 := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
-
 theorem soundness (deferred : Bool) (slot : Fin 8) :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) (main deferred slot)
       (fun _ _ => True) (fun input _ _ => Spec deferred slot input) := by
@@ -39,7 +34,7 @@ theorem soundness (deferred : Bool) (slot : Fin 8) :
     · simpa only [codeWord, circuit_norm] using code
     · simpa only [slotWord, circuit_norm] using index
     · simpa only [codeWord, circuit_norm] using result
-    · simpa only [eval_zero] using length
+    · simpa only [Vector.map_id'] using length
 
 theorem completeness (deferred : Bool) (slot : Fin 8) :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) (main deferred slot)
@@ -54,7 +49,7 @@ theorem completeness (deferred : Bool) (slot : Fin 8) :
     · simpa only [codeWord, circuit_norm] using code
     · simpa only [slotWord, circuit_norm] using index
     · simpa only [codeWord, circuit_norm] using result
-    · simpa only [eval_zero] using length
+    · simpa only [Vector.map_id'] using length
 
 /-- The semantic transition performed by an active commitment row. -/
 def activeCircuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) Inputs unit where
@@ -113,7 +108,7 @@ instance guardSupported (deferred : Bool) (slot : Fin 8) :
       change interaction ∈ ((main deferred slot input).operations offset).interactionsWith _ at member
       rw [main_public_interactions] at member
       cases deferred <;>
-        simp only [publicInteractions, Bool.false_eq_true, if_false, if_true,
+        simp only [publicInteractions, Bool.false_eq_true, ite_false, ite_true,
           List.mem_cons, List.mem_ofFn, List.not_mem_nil, or_false] at member
       · rcases member with rfl | ⟨index, rfl⟩ <;> rfl
       · rcases member with rfl | rfl <;> rfl)
@@ -121,5 +116,13 @@ instance guardSupported (deferred : Bool) (slot : Fin 8) :
 /-- Inactive padding keeps every physical occurrence and emits only zero multiplicities. -/
 def circuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) RowInput unit :=
   Guarded.circuit (activeCircuit deferred slot) inferInstance
+
+/-- Each authenticated call creates its own commitment update. Private inputs are indexed
+by the full call clock; the complete call and activity cell determine routing. -/
+def generation (deferred : Bool) (slot : Fin 8) :
+    Air.Flat.WitnessGeneration.Generation (ZMod p) RowInput :=
+  Witgen.HintIndex.unitDemand (circuit (p := p) deferred slot).name HostCallChip.channel .push
+    (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
+    (fun input => input.1.call) (fun input => input.2)
 
 end SP1Clean.HostCommitChip

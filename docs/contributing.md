@@ -11,7 +11,7 @@ python3 scripts/prepare_sail.py
 lake exe cache get
 lake build --wfail --iofail
 lake test
-lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib ToPolyFun backendGadgets
+lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib backendGadgets
 lake lint
 scripts/run_audit.sh
 python3 scripts/check_examples.py

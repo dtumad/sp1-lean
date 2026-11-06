@@ -21,7 +21,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 POLICY = ROOT / "scripts/trust_policy.json"
-MAIN_ROOTS = ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"]
+MAIN_ROOTS = ["SP1Clean", "ToClean", "ToMathlib"]
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
 SCANNER = Path("scripts/PolyFunAxiomSweep.lean")
 NATIVE = re.compile(r"^(.+)\._native\.(native_decide|bv_decide)$")

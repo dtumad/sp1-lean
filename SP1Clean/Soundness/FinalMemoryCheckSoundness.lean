@@ -20,6 +20,9 @@ variable {names : (((FinalMemoryEnsemble.inventory (p := p)).views.map Transitio
       (checkTables (p := p) target ++ auxiliary)).map
         (fun component : Component (ZMod p) => component.circuit.name)).Nodup}
 
+variable {channelNames : ((registry (p := p) target channels).map (·.name)).Nodup}
+variable {registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry target channels}
+
 private theorem register_key (record : MemoryMsg (ZMod p)) (valid : FinalRegisterValue.Spec target record) :
     FinalMemoryChange.key false record = FinalMemoryChange.encode (MemoryMsg.locOf record) := by
   have location : MemoryMsg.locOf record = .reg (BitVec.ofNat 5 record.addr0.val) := by
@@ -47,7 +50,7 @@ private theorem ram_key (record : MemoryMsg (ZMod p)) (valid : MemoryBoundary.Ra
 
 /-- RAM-domain provenance is inherited from the matched physical finalizer, not assumed by
 the target checker or supplied independently of the receipt ledger. -/
-theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints)
     (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balanced : witness.BalancedChannel (FinalMemoryValue.channel true).toRaw) :
@@ -64,7 +67,7 @@ theorem ramInputs_finalSpec_of_channels (witness : EnsembleWitness (ensemble sou
 
 /-- Target comparison uses Byte guarantees, fixed target membership and complete receipt balances.
 All facts concern the original physical rows; the enclosing assembly proves them from acceptance. -/
-theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints)
     (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (receipts : ∀ ram, witness.BalancedChannel (FinalMemoryValue.channel ram).toRaw)
@@ -100,32 +103,40 @@ theorem checkFinal_of_channels (witness : EnsembleWitness (ensemble source targe
       exact ram_key _ (ramInputs_finalSpec_of_channels witness interface checked byte (receipts true) input present)
 
 /-- The full accepted assembly derives RAM address provenance from its actual finalizer. -/
-theorem ramInputs_finalSpec (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem ramInputs_finalSpec (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∀ input ∈ ramInputs witness, MemoryBoundary.RamFinalSpec input.record :=
   ramInputs_finalSpec_of_channels witness interface checked (byte_guarantees witness interface checked balanced)
-    (balanced _ (by simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent]))
+    (balanced _ (by
+      change _ ∈ registry target channels ++ [_]
+      apply List.mem_append_left
+      simp [registry]))
 
 /-- Raw constraints and complete channel balance imply complete target Memory validation.
 There is no witness-supplied inventory, readiness predicate, or endpoint-comparison premise. -/
-theorem checkFinal (witness : EnsembleWitness (ensemble source target auxiliary channels names))
+theorem checkFinal (witness : EnsembleWitness (ensemble source target auxiliary channels names channelNames registered))
     (interface : Interface target auxiliary) (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     source.checkFinal target
       ((records witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true := by
   apply checkFinal_of_channels witness interface checked (byte_guarantees witness interface checked balanced)
   · intro ram
     apply balanced
-    cases ram <;> simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent]
-  · exact balanced _ (List.mem_append_left _ (List.mem_append_right _ (List.mem_append_right _ (List.mem_cons_self ..))))
+    change _ ∈ registry target channels ++ [_]
+    apply List.mem_append_left
+    cases ram <;> simp [registry]
+  · apply balanced
+    change _ ∈ registry target channels ++ [_]
+    apply List.mem_append_left
+    simp [registry]
 
   · intro channel known
     apply balanced
     simp only [membershipChannels, List.mem_cons, List.not_mem_nil, or_false] at known
     rcases known with rfl | rfl
-    all_goals simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, base, FinalMemoryReceipts.ensemble,
-      FinalMemoryReceipts.withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
-      FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble, OrderedBoundaryEnsemble.ensemble]
+    all_goals
+      change _ ∈ registry target channels ++ [_]
+      apply List.mem_append_left
+      simp [registry]
+
 
 end SP1Clean.Soundness.FinalMemoryChecks

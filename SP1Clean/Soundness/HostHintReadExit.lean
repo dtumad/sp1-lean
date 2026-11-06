@@ -21,6 +21,8 @@ local instance exitLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 private theorem source_exit_silent :
     ∀ component ∈ (HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
@@ -70,7 +72,7 @@ private theorem halt_selector (row : SyscallInstrsChip.Inputs (ZMod p))
   have field : SyscallInstrsChip.syscallId row = ((SyscallInstrsChip.haltCode : ℕ) : ZMod p) :=
     (syscallId_field_iff row selectors real (by decide : 0 < 256)).mp id
   have selected : row.is_halt_zero.result = 1 := by
-    rw [(selectors.2.1 real).1, if_pos field]
+    rw [(selectors.2.1 real).1, ite_eq_left field]
   rw [selectors.2.2.2.1, selected, real, one_mul]
 
 private theorem GroundingCarrier.halt_field (valid : image.Valid)

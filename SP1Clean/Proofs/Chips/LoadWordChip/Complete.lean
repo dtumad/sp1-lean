@@ -153,12 +153,12 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed) (halign 
     by_cases hlow : e.addr % 8 < 4
     · refine Or.inl ⟨?_, ?_, ?_⟩
       · rw [loadWordOffsetBit, Nat.div_eq_of_lt hlow, Nat.cast_zero]
-      · rw [loadWordSelected, if_pos hlow, wordOfNat_zero]; rfl
-      · rw [loadWordSelected, if_pos hlow, wordOfNat_one]; rfl
+      · rw [loadWordSelected, ite_eq_left hlow, wordOfNat_zero]; rfl
+      · rw [loadWordSelected, ite_eq_left hlow, wordOfNat_one]; rfl
     · refine Or.inr ⟨?_, ?_, ?_⟩
       · rw [loadWordOffsetBit, show e.addr % 8 / 4 = 1 from by omega, Nat.cast_one]
-      · rw [loadWordSelected, if_neg hlow, wordOfNat_two]; rfl
-      · rw [loadWordSelected, if_neg hlow, wordOfNat_three]; rfl
+      · rw [loadWordSelected, ite_eq_right hlow, wordOfNat_two]; rfl
+      · rw [loadWordSelected, ite_eq_right hlow, wordOfNat_three]; rfl
   refine ⟨wordOfNat_isU64 _, wordOfNat_isU64 _, ?_, ?_, ?_, ?_, wordOfNat_isU64 _, ?_, ?_, ?_,
     iTypeReaderCols_op_a_0_eq_zero hi.opA_ne_zero, ⟨?_, ?_, ?_, ?_⟩, ?_, ⟨?_, ?_⟩,
     cpuState_spec e.clk e.pc hi.clk_mod _ _ _,
@@ -217,8 +217,8 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed) (halign 
   · show (e.toLoadWordInputs (p := p)).msb * ((e.toLoadWordInputs (p := p)).is_lw - 1) = 0
     rw [MemoryEvent.toLoadWordInputs_msb, MemoryEvent.toLoadWordInputs_is_lw]
     by_cases hop : e.opcode = 31
-    · rw [if_pos hop, sub_self, mul_zero]
-    · rw [if_neg hop, if_neg (by tauto), zero_mul]
+    · rw [ite_eq_left hop, sub_self, mul_zero]
+    · rw [ite_eq_right hop, ite_eq_right (by tauto), zero_mul]
   -- the MSB gadget: the bit is built from the selected high limb, and is binary either way
   · show (e.toLoadWordInputs (p := p)).msb = 0 ∨ (e.toLoadWordInputs (p := p)).msb = 1
     rw [MemoryEvent.toLoadWordInputs_msb]
@@ -228,22 +228,25 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed) (halign 
   · intro hlw
     have hop : e.opcode = 31 := by
       by_contra hne
-      rw [MemoryEvent.toLoadWordInputs_is_lw, if_neg hne] at hlw
+      rw [MemoryEvent.toLoadWordInputs_is_lw, ite_eq_right hne] at hlw
       exact zero_ne_one hlw
     show (if e.opcode = 31 ∧ 32768 ≤ loadWordSelectedHigh e.prevMem e.addr then (1 : ZMod p)
         else 0)
       = if 32768 ≤ ((loadWordSelected (p := p) e.prevMem e.addr)[1]).val then 1 else 0
     rw [hsw1, ZMod.val_natCast_of_lt (by omega)]
     by_cases hb : 32768 ≤ loadWordSelectedHigh e.prevMem e.addr
-    · rw [if_pos ⟨hop, hb⟩, if_pos hb]
-    · rw [if_neg (by tauto), if_neg hb]
+    · rw [ite_eq_left ⟨hop, hb⟩, ite_eq_left hb]
+    · rw [ite_eq_right (by tauto), ite_eq_right hb]
 
 /-! ## The built table -/
 
 /-- The LoadWord chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- The event rows of a trace. The current memory-family ensemble API builds exactly this height;
 threading explicit zero padding through that API remains separate work. -/
@@ -265,30 +268,36 @@ comparison, the MSB gadget, the two readers, the register write, and the chip's 
 selector gates — evaluates to zero on every built row, and no static lookup is left unchecked. -/
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.Aligned 4)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
 Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.Aligned 4)
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
 concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint bounded).interactionsWith channel =
+        hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.LoadWordChip

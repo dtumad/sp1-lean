@@ -30,7 +30,7 @@ private theorem initialSailState_regs (input : ProgramImage) :
 /-- Every guest byte has its canonical initial value; missing sparse-image bytes are zero. -/
 theorem initialSailState_memory (input : ProgramImage) (address : ℕ) (bound : address < 2 ^ 48) :
     input.initialSailState.mem.get? address = some (input.initialMemory.read address) := by
-  exact (input.initialMemory.toSailMemory_get? (2 ^ 48) address).trans (if_pos bound)
+  exact (input.initialMemory.toSailMemory_get? (2 ^ 48) address).trans (ite_eq_left bound)
 
 /-- Sparse initial-memory words agree with the actual Sail memory used by timed grounding. -/
 theorem initialSailState_word (input : ProgramImage) (address : BitVec 64)
@@ -59,7 +59,7 @@ theorem initialSailState_loaded (input : ProgramImage) (valid : input.Valid) :
     rw [initialSailState_regs]
     exact cfgState_init input.entry reg
   pc := by
-    change input.initialSailState.regs.get? LeanRV64D.Defs.Register.PC = some input.entry
+    change input.initialSailState.regs.get? LeanRV64D.Register.PC = some input.entry
     rw [initialSailState_regs]
     exact cfgState_pc input.entry
   configured := input.initialSailState_configured

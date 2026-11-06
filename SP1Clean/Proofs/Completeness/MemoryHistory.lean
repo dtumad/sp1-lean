@@ -258,9 +258,9 @@ private theorem count_memoryHistoryAt (stream : List MemoryHistoryAccess) (loc :
     (memoryHistoryAt stream loc).count target =
       if target.loc = loc then stream.count target else 0 := by
   by_cases accepted : target.loc = loc
-  · rw [if_pos accepted]
+  · rw [ite_eq_left accepted]
     exact List.count_filter (by simp [accepted])
-  · rw [if_neg accepted, List.count_eq_zero_of_not_mem]
+  · rw [ite_eq_right accepted, List.count_eq_zero_of_not_mem]
     simp [memoryHistoryAt, accepted]
 
 private theorem sum_map_ite_of_nodup {loc : MemLoc} (count : ℕ) :

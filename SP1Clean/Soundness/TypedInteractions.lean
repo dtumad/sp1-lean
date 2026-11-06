@@ -103,7 +103,7 @@ theorem message_eq_iff {channel : Channel F Message}
   exact ⟨congrArg Vector.toArray, fun h => Vector.toArray_inj.mp h⟩
 
 @[simp] theorem pulledIfValue_mult (channel : Channel F Message) (enabled : F) (msg : Message F) :
-    (pulledIfValue channel enabled msg).mult = -enabled := rfl
+    (pulledIfValue channel enabled msg).mult = enabled := rfl
 
 @[simp] theorem pushedIfValue_mult (channel : Channel F Message) (enabled : F) (msg : Message F) :
     (pushedIfValue channel enabled msg).mult = enabled := rfl
@@ -140,26 +140,18 @@ theorem eval_pulledIf (channel : Channel F Message) (env : Environment F)
   simpa only [CircuitType.eval_expr] using
     (Channel.eval_pulledIf (channel := channel) (enabled := enabled) (msg := msg) (env := env))
 
-/-- A nonzero positive interaction that satisfies Clean's raw requirement proves the typed channel
-predicate for its recovered message. This is the push-side dual of consuming a channel guarantee. -/
-theorem guarantee_of_requirements {p : ℕ} [Fact p.Prime]
-    {Message : TypeMap} [ProvableType Message]
-    {channel : Channel (ZMod p) Message} (interaction : TypedInteraction channel)
-    (data : ProverData (ZMod p)) (hp : 2 < p)
+/-- An active push satisfying Clean's requirement proves its typed channel predicate. -/
+theorem guarantee_of_requirements {channel : Channel F Message}
+    (interaction : TypedInteraction channel) (data : ProverData F)
     (requirements : interaction.raw.Requirements data)
-    (positive : signedVal interaction.mult = 1) :
+    (push : interaction.raw.direction = .push) (active : interaction.mult ≠ 0) :
     channel.Guarantees interaction.message data := by
-  obtain ⟨⟨rawChannel, mult, message, sameSize, assumes⟩, channelEq⟩ := interaction
+  obtain ⟨⟨rawChannel, direction, mult, message, sameSize⟩, channelEq⟩ := interaction
   dsimp only at channelEq
   subst rawChannel
-  change signedVal mult = 1 at positive
-  have multOne : mult = 1 := by rw [← intCast_signedVal mult, positive]; norm_num
-  change channel.toRaw.Requirements mult ⟨message, sameSize⟩ data at requirements
-  simp only [Channel.toRaw] at requirements
-  let : Fact (ringChar (ZMod p) ≠ 2) := ⟨by rw [ZMod.ringChar_zmod_n]; omega⟩
-  have multNeNeg : mult ≠ -1 := by rw [multOne]; exact one_ne_neg_one
-  have guarantee := requirements multNeNeg (by simp [multOne])
-  simpa only [TypedInteraction.message, Interaction.msgVector] using guarantee
+  change direction = .push at push
+  subst direction
+  exact requirements active
 
 end TypedInteraction
 
@@ -226,8 +218,9 @@ theorem typedTableInteractionsWith_eq_flatMap (table : Table F) (data : ProverDa
 
 /-- Replacing stored evaluation data preserves the literal typed interaction list. -/
 @[simp] theorem typedTableInteractionsWith_setData (table : Table F) (data : ProverData F)
-    (channel : Channel F Message) :
-    typedTableInteractionsWith { table with data } channel =
+    (consistent : data.tables table.component.circuit.name (size table.component.Input) =
+      table.rowPrefixes (size table.component.Input)) (channel : Channel F Message) :
+    typedTableInteractionsWith { table with data, data_consistent := consistent } channel =
       typedTableInteractionsWith table channel := by
   rw [typedTableInteractionsWith_eq_flatMap _ data,
     typedTableInteractionsWith_eq_flatMap table data]
@@ -244,7 +237,7 @@ noncomputable def typedEnsembleInteractionsWith {PublicIO : TypeMap} [ProvableTy
     {ensemble : Ensemble F PublicIO} (witness : EnsembleWitness ensemble)
     (channel : Channel F Message) : List (TypedInteraction channel) :=
   typedInteractionValuesWith ensemble.verifierOperations channel
-      (.fromInput witness.publicInput witness.data) ++
+      witness.data.publicEnvironment ++
     witness.tables.flatMap (typedTableInteractionsWith · channel)
 
 /-- Erasure agrees exactly with Clean's ensemble-level channel interaction list. -/
@@ -270,42 +263,25 @@ local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.ins
 variable {Message : TypeMap} [ProvableType Message]
 variable {channel : Channel (ZMod p) Message}
 
-/-- The centered value of the canonical pull multiplicity `-1`.  Every active-pull argument in this
-module descends through it. -/
-private lemma signedVal_neg_one (hp : 2 < p) : signedVal (-1 : ZMod p) = -1 := by
-  rw [signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod,
-    Nat.mod_eq_of_lt (by omega)]
-  norm_num
-
-/-- The signed multiplicity at one typed message.  Equality is checked on the channel's canonical
-element encoding, so this is exactly Clean's `balanceOf` with a typed key. -/
-noncomputable def typedMultiplicitySum (interactions : List (TypedInteraction channel))
-    (msg : Message (ZMod p)) : ℤ :=
-  ((interactions.filter fun interaction =>
-      interaction.raw.msg = (toElements msg).toArray).map fun interaction =>
-        signedVal interaction.mult).sum
-
-/-- Active positive contributions, retaining their typed messages. -/
+/-- Active unit pushes, retaining typed messages and every repeated occurrence. -/
 noncomputable def producedMessages (interactions : List (TypedInteraction channel)) :
     List (Message (ZMod p)) :=
-  (interactions.filter fun interaction => signedVal interaction.mult = 1).map
-    TypedInteraction.message
+  (interactions.filter fun interaction =>
+    interaction.raw.direction = .push ∧ interaction.mult = 1).map TypedInteraction.message
 
-/-- Active negative contributions, retaining their typed messages. -/
+/-- Active unit pulls, using Clean's direction and multiplicity directly. -/
 noncomputable def consumedMessages (interactions : List (TypedInteraction channel)) :
     List (Message (ZMod p)) :=
-  (interactions.filter fun interaction => signedVal interaction.mult = -1).map
-    TypedInteraction.message
+  (interactions.filter fun interaction =>
+    interaction.raw.direction = .pull ∧ interaction.mult = 1).map TypedInteraction.message
 
-/-- An exact typed interaction with active pull multiplicity contributes its recovered message to
-`consumedMessages`. -/
+/-- A unit pull contributes its exact message to the consumed occurrence list. -/
 theorem TypedInteraction.message_mem_consumedMessages
     (interaction : TypedInteraction channel) (interactions : List (TypedInteraction channel))
-    (member : interaction ∈ interactions) (negative : signedVal interaction.mult = -1) :
+    (member : interaction ∈ interactions) (pull : interaction.raw.Pull) :
     interaction.message ∈ consumedMessages interactions := by
   unfold consumedMessages
-  refine List.mem_map.mpr ⟨interaction, List.mem_filter.mpr ⟨member, ?_⟩, rfl⟩
-  simpa only [decide_eq_true_eq] using negative
+  exact List.mem_map.mpr ⟨interaction, List.mem_filter.mpr ⟨member, by exact decide_eq_true pull⟩, rfl⟩
 
 /-- An active syntactic `pulledIf` retained by an operation list contributes its evaluated message
 to that exact list's consumed typed messages.  This packages the proof-irrelevant typed wrapper and
@@ -316,7 +292,7 @@ theorem eval_pulledIf_message_mem_consumedMessages (ops : Operations (ZMod p))
     (enabled : Expression (ZMod p)) (msg : Message (Expression (ZMod p)))
     (member : (channel.pulledIf enabled msg).toRaw ∈
       ops.interactionsWith channel.toRaw)
-    (hp : 2 < p) (active : Expression.eval env enabled = 1) :
+    (active : Expression.eval env enabled = 1) :
     Eval.eval env msg ∈ consumedMessages (typedInteractionValuesWith ops channel env) := by
   let abstract := (channel.pulledIf enabled msg).toRaw
   let typed := TypedInteraction.eval channel env abstract
@@ -326,11 +302,11 @@ theorem eval_pulledIf_message_mem_consumedMessages (ops : Operations (ZMod p))
   have typedEq : typed = TypedInteraction.pulledIfValue channel
       (Expression.eval env enabled) (Eval.eval env msg) := by
     simpa only [typed, abstract] using TypedInteraction.eval_pulledIf channel env enabled msg
-  have negative : signedVal typed.mult = -1 := by
-    rw [typedEq, TypedInteraction.pulledIfValue_mult, active]
-    exact signedVal_neg_one hp
+  have pull : typed.raw.Pull := by
+    simp only [typedEq, TypedInteraction.pulledIfValue_raw, Interaction.Pull,
+      Channel.pulledIfValue, active, and_self]
   have messageMem :=
-    TypedInteraction.message_mem_consumedMessages typed _ typedMem negative
+    TypedInteraction.message_mem_consumedMessages typed _ typedMem pull
   simpa only [typedEq, TypedInteraction.pulledIfValue_message] using messageMem
 
 /-- A finished channel guarantee may be specialized to any exact active syntactic pull in the
@@ -350,7 +326,7 @@ theorem guarantee_of_eval_pulledIf_mem (ops : Operations (ZMod p))
   rw [ChannelInteraction.toRaw_guarantees] at pulled
   apply pulled
   · rfl
-  · simp only [Channel.pulledIf, pulledIf_mult, eval_neg, active]
+  · simp only [Channel.pulledIf, pulledIf_mult, active]
 
 /-- Erase the dependent raw-channel representation after a typed wrapper has fixed its channel.
 Pattern-matching the wrapper is important here: rewriting `raw.channel` directly gives Lean an
@@ -358,13 +334,12 @@ ill-typed dependent motive because the raw message vector is indexed by that cha
 theorem TypedInteraction.guarantee_of_rawGuarantees
     (channel : Channel (ZMod p) Message) (interaction : TypedInteraction channel)
     (data : ProverData (ZMod p)) (rawGuarantees : interaction.raw.Guarantees data)
-    (assumes : interaction.raw.assumeGuarantees)
-    (negative : interaction.mult = -1) :
+    (pull : interaction.raw.Pull) :
     channel.Guarantees interaction.message data := by
-  obtain ⟨⟨rawChannel, mult, message, sameSize, assumeRaw⟩, channelEq⟩ := interaction
+  obtain ⟨⟨rawChannel, direction, mult, message, sameSize⟩, channelEq⟩ := interaction
   dsimp only at channelEq
   subst rawChannel
-  exact rawGuarantees assumes negative
+  exact rawGuarantees pull.1 pull.2
 
 /-- A typed evaluated interaction inherits its channel predicate from Clean's finished
 `ChannelGuarantees` whenever it is an assumption-carrying active pull.  Unlike
@@ -375,15 +350,14 @@ theorem TypedInteraction.guarantee_of_channelGuarantees
     (env : Environment (ZMod p)) (interaction : TypedInteraction channel)
     (member : interaction ∈ typedInteractionValuesWith ops channel env)
     (guarantees : ops.ChannelGuarantees channel.toRaw env)
-    (assumes : interaction.raw.assumeGuarantees)
-    (negative : interaction.mult = -1) :
+    (pull : interaction.raw.Pull) :
     channel.Guarantees interaction.message env.data := by
   unfold typedInteractionValuesWith at member
   obtain ⟨⟨abstract, abstractMem⟩, -, rfl⟩ := List.mem_map.mp member
   rw [Operations.ChannelGuarantees, ← Operations.forall_interactionsWith_iff] at guarantees
   have evaluated : (abstract.eval env).Guarantees env.data :=
     AbstractInteraction.eval_guarantees.mpr (guarantees abstract abstractMem)
-  exact TypedInteraction.guarantee_of_rawGuarantees channel _ env.data evaluated assumes negative
+  exact TypedInteraction.guarantee_of_rawGuarantees channel _ env.data evaluated pull
 
 /-- Full parent constraints restrict to the flattened constraints of any retained subcircuit.
 This is the constraint analogue of `channelGuarantees_subcircuit_of_mem`; it is useful when a
@@ -448,7 +422,7 @@ theorem constraintsHold_assertionSubcircuit_of_mem {Input : TypeMap}
 
 /-- Clean requirements on a physical table prove the typed predicate of each exact active push. -/
 theorem guarantee_of_mem_producedTableMessages (table : Table (ZMod p))
-    (channel : Channel (ZMod p) Message) (hp : 2 < p)
+    (channel : Channel (ZMod p) Message)
     (requirements : table.ChannelRequirements channel.toRaw) (msg : Message (ZMod p))
     (member : msg ∈ producedMessages (typedTableInteractionsWith table channel)) :
     channel.Guarantees msg table.data := by
@@ -463,39 +437,35 @@ theorem guarantee_of_mem_producedTableMessages (table : Table (ZMod p))
     (Table.channelRequirements_iff_forall table channel.toRaw).mp requirements
       interaction.raw rawMem
   rw [← messageEq]
-  exact interaction.guarantee_of_requirements table.data hp rawRequirements positive
+  exact interaction.guarantee_of_requirements table.data rawRequirements positive.1 (by rw [positive.2]; exact one_ne_zero)
 
 /-- If every active typed pull message satisfies the typed channel predicate, then the original
 operation list has Clean's exact `ChannelGuarantees`.  This transports semantic grounding back to
 the circuit theorem without replacing or reinterpreting its interaction list. -/
 theorem channelGuarantees_of_consumedMessages (ops : Operations (ZMod p))
     (channel : Channel (ZMod p) Message) (env : Environment (ZMod p))
-    (hp : 2 < p)
     (guarantees : ∀ msg ∈ consumedMessages (typedInteractionValuesWith ops channel env),
       channel.Guarantees msg env.data) :
     ops.ChannelGuarantees channel.toRaw env := by
   rw [Operations.ChannelGuarantees, ← Operations.forall_interactionsWith_iff]
   intro interaction interactionMem
   have channelEq := Operations.channel_eq_of_mem_interactionsWith interactionMem
-  obtain ⟨rawChannel, mult, message, assumes⟩ := interaction
+  obtain ⟨rawChannel, direction, mult, message⟩ := interaction
   dsimp only at channelEq
   subst rawChannel
   simp only [AbstractInteraction.Guarantees, Channel.toRaw]
-  intro _ pullMult
+  intro pullDirection pullMult
   let interaction : AbstractInteraction (ZMod p) :=
-    ⟨channel.toRaw, mult, message, assumes⟩
+    ⟨channel.toRaw, direction, mult, message⟩
   have currentMem : interaction ∈ ops.interactionsWith channel.toRaw := by
     simpa only [interaction] using interactionMem
   let typed := TypedInteraction.eval channel env interaction
     (Operations.channel_eq_of_mem_interactionsWith currentMem)
   have typedMem : typed ∈ typedInteractionValuesWith ops channel env :=
     mem_typedInteractionValuesWith ops channel env currentMem
-  have pullSigned : signedVal typed.mult = -1 := by
-    change signedVal (Expression.eval env interaction.mult) = -1
-    rw [pullMult]
-    exact signedVal_neg_one hp
+  have pull : typed.raw.Pull := ⟨pullDirection, pullMult⟩
   have messageMem :=
-    TypedInteraction.message_mem_consumedMessages typed _ typedMem pullSigned
+    TypedInteraction.message_mem_consumedMessages typed _ typedMem pull
   have grounded := guarantees typed.message messageMem
   have messageEq : typed.message =
       fromElements (message.map (Expression.eval env)) := by
@@ -512,181 +482,69 @@ theorem channelGuarantees_of_consumedMessages (ops : Operations (ZMod p))
     consumedMessages (left ++ right) = consumedMessages left ++ consumedMessages right := by
   simp [consumedMessages, List.filter_append]
 
-/-- A list of integers in `{-1, 0, 1}` has sum bounded by its length. -/
-private theorem abs_sum_le_length (values : List ℤ)
-    (binary : ∀ value ∈ values, value = -1 ∨ value = 0 ∨ value = 1) :
-    |values.sum| ≤ values.length := by
-  induction values with
-  | nil => simp
-  | cons value values ih =>
-      have valueBound : |value| ≤ 1 := by
-        rcases binary value (by simp) with h | h | h <;> simp [h]
-      have tailBound := ih (fun x hx => binary x (List.mem_cons_of_mem value hx))
-      have sumBound : |value + values.sum| ≤ |value| + |values.sum| :=
-        abs_add_le value values.sum
-      simp only [List.sum_cons, List.length_cons, Nat.cast_add, Nat.cast_one]
-      omega
-
-/-- Casting a signed list sum back into `ZMod p` distributes over the list. -/
-private theorem intCast_list_sum (values : List ℤ) :
-    ((values.sum : ℤ) : ZMod p) = (values.map fun value : ℤ => (value : ZMod p)).sum := by
-  induction values with
-  | nil => simp
-  | cons value values ih => simp [ih]
-
-/-- Clean field balance implies exact integer balance at every typed message when multiplicities are
-binary.  The proof uses Clean's interaction-count bound to exclude modular wraparound. -/
-theorem typedMultiplicitySum_eq_zero_of_balanced
-    (interactions : List (TypedInteraction channel))
-    (balanced : BalancedInteractions (interactions.map TypedInteraction.raw))
-    (binary : ∀ interaction ∈ interactions,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1) :
-    ∀ msg, typedMultiplicitySum interactions msg = 0 := by
-  have lengthLt : interactions.length < p := by
-    rcases balanced.1 with lengthLt | characteristicZero
-    · simpa only [List.length_map, ZMod.ringChar_zmod_n] using lengthLt
-    · rw [ZMod.ringChar_zmod_n] at characteristicZero
-      exact absurd characteristicZero (Fact.out (p := p.Prime)).ne_zero
-  intro msg
-  have castZero : ((typedMultiplicitySum interactions msg : ℤ) : ZMod p) = 0 := by
-    calc
-      ((typedMultiplicitySum interactions msg : ℤ) : ZMod p) =
-          ((interactions.filter fun interaction =>
-            interaction.raw.msg = (toElements msg).toArray).map
-              fun interaction => interaction.mult).sum := by
-        unfold typedMultiplicitySum
-        rw [intCast_list_sum, List.map_map]
-        exact congrArg List.sum (List.map_congr_left fun interaction _ =>
-          intCast_signedVal interaction.mult)
-      _ = balanceOf (interactions.map TypedInteraction.raw) (toElements msg).toArray := by
-        unfold balanceOf
-        rw [List.filter_map, List.map_map]
-        rfl
-      _ = 0 := balanced.2 _
-  have divides : (p : ℤ) ∣ typedMultiplicitySum interactions msg :=
-    (ZMod.intCast_zmod_eq_zero_iff_dvd _ p).mp castZero
-  have sumBound : |typedMultiplicitySum interactions msg| ≤
-      (interactions.filter fun interaction =>
-        interaction.raw.msg = (toElements msg).toArray).length := by
-    unfold typedMultiplicitySum
-    have bound := abs_sum_le_length
-      ((interactions.filter fun interaction =>
-        interaction.raw.msg = (toElements msg).toArray).map fun interaction =>
-          signedVal interaction.mult) (by
-        intro value valueMem
-        obtain ⟨interaction, interactionMem, rfl⟩ := List.mem_map.mp valueMem
-        exact binary interaction (List.mem_of_mem_filter interactionMem))
-    simpa only [List.length_map] using bound
-  have filteredLength :
-      (interactions.filter fun interaction =>
-        interaction.raw.msg = (toElements msg).toArray).length ≤ interactions.length :=
-    List.length_filter_le _ _
-  exact Int.eq_zero_of_abs_lt_dvd divides (by omega)
-
-@[simp] private theorem typedMultiplicitySum_cons
-    (interaction : TypedInteraction channel) (interactions : List (TypedInteraction channel))
-    (msg : Message (ZMod p)) :
-    typedMultiplicitySum (interaction :: interactions) msg =
-      (if interaction.raw.msg = (toElements msg).toArray then signedVal interaction.mult else 0) +
-        typedMultiplicitySum interactions msg := by
-  by_cases same : interaction.raw.msg = (toElements msg).toArray <;>
-    simp [typedMultiplicitySum, same]
-
-/-- If a balanced channel is split into pull-only consumers and arbitrary providers, every active
-consumer pull has a matching nonzero provider interaction.  Provider multiplicities need not be
-binary: Clean's own balance theorem finds a matching non-pull, and the consumer shape forces that
-interaction into the provider suffix. -/
+/-- A pull-only consumer prefix cannot contain the provider matching an active pull.
+The provider may count repeated demand in a single physical row. -/
 theorem provider_matches_active_pull
     (consumers providers : List (TypedInteraction channel))
     (balanced : BalancedInteractions ((consumers ++ providers).map TypedInteraction.raw))
     (consumerShape : ∀ interaction ∈ consumers,
-      interaction.mult = 0 ∨ interaction.mult = -1)
+      interaction.mult = 0 ∨ interaction.raw.Pull)
     (target : TypedInteraction channel) (targetMem : target ∈ consumers)
-    (targetPull : target.mult = -1) :
+    (targetPull : target.raw.Pull) :
     ∃ provider ∈ providers,
       provider.message = target.message ∧ provider.mult ≠ 0 := by
-  have targetRawMem : target.raw ∈
-      (consumers ++ providers).map TypedInteraction.raw :=
+  have targetRawMem : target.raw ∈ (consumers ++ providers).map TypedInteraction.raw :=
     List.mem_map.mpr ⟨target, List.mem_append_left providers targetMem, rfl⟩
-  have targetRawPull : target.raw.mult = -1 := by
-    simpa only [TypedInteraction.mult] using targetPull
-  obtain ⟨rawProvider, rawProviderMem, sameMessage, providerNeZero, providerNePull⟩ :=
-    exists_push_of_pull _ balanced target.raw targetRawMem targetRawPull
-  rw [List.map_append] at rawProviderMem
-  rcases List.mem_append.mp rawProviderMem with consumerMem | providerMem
-  · obtain ⟨consumer, consumerMem, consumerRaw⟩ := List.mem_map.mp consumerMem
-    have providerMult : rawProvider.mult = consumer.mult := by
-      simpa only [TypedInteraction.mult] using congrArg Interaction.mult consumerRaw.symm
-    rcases consumerShape consumer consumerMem with zero | pull
-    · exact (providerNeZero (providerMult.trans zero)).elim
-    · exact (providerNePull (providerMult.trans pull)).elim
-  · obtain ⟨provider, providerMem, providerRaw⟩ := List.mem_map.mp providerMem
-    refine ⟨provider, providerMem, ?_, ?_⟩
-    · rw [TypedInteraction.message_eq_iff]
-      exact (congrArg Interaction.msg providerRaw).trans
-        (sameMessage.trans (TypedInteraction.message_toElements target).symm)
-    · exact fun providerZero =>
-        providerNeZero ((congrArg Interaction.mult providerRaw).symm.trans providerZero)
+  obtain ⟨rawProvider, rawProviderMem, sameMessage, providerPush⟩ :=
+    balanced.exists_push_of_pull target.raw targetRawMem targetPull
+  obtain ⟨provider, providerMem, rfl⟩ := List.mem_map.mp rawProviderMem
+  rcases List.mem_append.mp providerMem with consumerMem | providerMem
+  · rcases consumerShape provider consumerMem with zero | pull
+    · exact (providerPush.1 zero).elim
+    · exact (providerPush.2 pull.1 pull.2).elim
+  · refine ⟨provider, providerMem, ?_, providerPush.1⟩
+    rw [TypedInteraction.message_eq_iff]
+    exact sameMessage.trans (TypedInteraction.message_toElements target).symm
 
-@[simp] private theorem producedMessages_cons
-    (interaction : TypedInteraction channel) (interactions : List (TypedInteraction channel)) :
-    producedMessages (interaction :: interactions) =
-      if signedVal interaction.mult = 1 then
-        interaction.message :: producedMessages interactions
-      else producedMessages interactions := by
-  by_cases positive : signedVal interaction.mult = 1 <;>
-    simp [producedMessages, positive]
+/-- Encoding the selected typed occurrences recovers Clean's active message inventory. -/
+private theorem activeMessages_eq_typed (interactions : List (TypedInteraction channel))
+    (binary : ∀ interaction ∈ interactions, IsBool interaction.mult)
+    (direction : Channel.Direction) :
+    activeMessages (interactions.map TypedInteraction.raw) direction =
+      ((if direction = .push then producedMessages interactions else consumedMessages interactions).map
+        fun message => (toElements message).toArray) := by
+  simp only [activeMessages, List.filter_map, List.map_map, Function.comp_def]
+  cases direction <;> simp only [↓reduceIte, Channel.Direction.pull_eq_push_iff,
+    producedMessages, consumedMessages, List.map_map, Function.comp_def,
+    TypedInteraction.message_toElements]
+  all_goals
+    apply congrArg (List.map (fun interaction : TypedInteraction channel => interaction.raw.msg))
+    apply List.filter_congr
+    intro interaction member
+    have countBool : interaction.raw.mult = 0 ∨ interaction.raw.mult = 1 := binary interaction member
+    rcases countBool with h | h <;> simp [TypedInteraction.mult, h]
 
-@[simp] private theorem consumedMessages_cons
-    (interaction : TypedInteraction channel) (interactions : List (TypedInteraction channel)) :
-    consumedMessages (interaction :: interactions) =
-      if signedVal interaction.mult = -1 then
-        interaction.message :: consumedMessages interactions
-      else consumedMessages interactions := by
-  by_cases negative : signedVal interaction.mult = -1 <;>
-    simp [consumedMessages, negative]
-
-private theorem typedMultiplicitySum_eq_counts [DecidableEq (Message (ZMod p))]
-    (interactions : List (TypedInteraction channel))
-    (binary : ∀ interaction ∈ interactions,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1) (msg : Message (ZMod p)) :
-    typedMultiplicitySum interactions msg =
-      (producedMessages interactions).count msg - (consumedMessages interactions).count msg := by
-  induction interactions with
-  | nil => simp [typedMultiplicitySum, producedMessages, consumedMessages]
-  | cons interaction interactions ih =>
-      have headBinary := binary interaction (by simp)
-      have tailBinary : ∀ i ∈ interactions,
-          signedVal i.mult = -1 ∨ signedVal i.mult = 0 ∨ signedVal i.mult = 1 :=
-        fun i hi => binary i (List.mem_cons_of_mem interaction hi)
-      have ih' := ih tailBinary
-      by_cases same : interaction.raw.msg = (toElements msg).toArray
-      · have messageEq : interaction.message = msg :=
-          (TypedInteraction.message_eq_iff interaction msg).2 same
-        rw [typedMultiplicitySum_cons, producedMessages_cons, consumedMessages_cons]
-        rcases headBinary with head | head | head <;> simp [same, messageEq, head, ih'] <;> omega
-      · have messageNe : interaction.message ≠ msg := fun equal =>
-          same ((TypedInteraction.message_eq_iff interaction msg).1 equal)
-        rw [typedMultiplicitySum_cons, producedMessages_cons, consumedMessages_cons]
-        rcases headBinary with head | head | head <;> simp [same, messageNe, head, ih']
-
-/-- For a balanced typed channel with binary multiplicities, active pushes are a permutation of
-active pulls as typed messages.  This is the production balance interface used by State, Program,
-and Memory grounding. -/
-theorem producedMessages_perm_consumedMessages [DecidableEq (Message (ZMod p))]
+/-- Abstract Clean balance gives an exact permutation when every physical count is Boolean.
+Count bounds stay with the verifier's chosen balance check; this transport needs no modular
+integer reconstruction or extra capacity premise. -/
+theorem producedMessages_perm_consumedMessages
     (interactions : List (TypedInteraction channel))
     (balanced : BalancedInteractions (interactions.map TypedInteraction.raw))
-    (binary : ∀ interaction ∈ interactions,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1) :
+    (binary : ∀ interaction ∈ interactions, IsBool interaction.mult) :
     (producedMessages interactions).Perm (consumedMessages interactions) := by
+  have encoding : Function.Injective (fun message : Message (ZMod p) => (toElements message).toArray) := by
+    intro a b same
+    have same := Vector.toArray_inj.mp same
+    simpa only [ProvableType.fromElements_toElements] using congrArg fromElements same
+  apply (List.map_perm_map_iff encoding).mp
   rw [List.perm_iff_count]
-  intro msg
-  have zero := typedMultiplicitySum_eq_zero_of_balanced interactions balanced binary msg
-  rw [typedMultiplicitySum_eq_counts interactions binary msg] at zero
-  omega
+  intro message
+  have counts := balanced.activeCount_push_eq_activeCount_pull_of_isBool message (by
+    intro interaction member _
+    obtain ⟨typed, typedMem, rfl⟩ := List.mem_map.mp member
+    exact binary typed typedMem)
+  simpa only [← count_activeMessages, activeMessages_eq_typed interactions binary,
+    ↓reduceIte, Channel.Direction.pull_eq_push_iff] using counts
 
 end TypedBalance
 

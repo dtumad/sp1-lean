@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.StoreWordChip.Defs
@@ -54,20 +55,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- `ITypeReaderImmutable`'s two read-back pushes (`clk_low + 4` / `+ 3`). The offset is left to
   -- unification, so this line never names the destructured state columns.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
-  -- eval→value bridges for the nested vectors the RMW equations reference.
-  have hmap_sv : Vector.map (Expression.eval env) input_var_store_value = input_store_value :=
-    h_input.2.2.2.2.2
-  have hmap_pv : Vector.map (Expression.eval env) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.1.1
-  have hmap_oap : Vector.map (Expression.eval env) input_var_adapter_op_a_memory_prev_value
-      = input_adapter_op_a_memory_prev_value := h_input.2.2.1.2.1.1
-  have esv : ∀ i (hi : i < 4), Expression.eval env input_var_store_value[i] = input_store_value[i] :=
-    fun i hi => by rw [← hmap_sv]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have eoap : ∀ i (hi : i < 2), Expression.eval env input_var_adapter_op_a_memory_prev_value[i]
-      = input_adapter_op_a_memory_prev_value[i] := fun i hi => by rw [← hmap_oap]; simp only [Vector.getElem_map]
-  simp only [esv, epv, eoap 0 (by omega), eoap 1 (by omega)] at hr0 hr1 hr2 hr3
   have h_it := h_itype ⟨h_bin, h_bin, h_clk⟩
   have h_addr_as : AddressOperation.SoundnessAssumptions
       (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, 0,
@@ -146,22 +133,6 @@ theorem completeness :
   have h_sv := hp11.2
   -- G1: the *push*-side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  have hmap_pc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc
-      = input_state_pc := h_input.2.1.2.2.2
-  have hmap_sv : Vector.map (Expression.eval env.toEnvironment) input_var_store_value
-      = input_store_value := h_input.2.2.2.2.2
-  have hmap_pv : Vector.map (Expression.eval env.toEnvironment) input_var_memory_access_prev_value
-      = input_memory_access_prev_value := h_input.2.2.2.1.1
-  have hmap_oap : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_a_memory_prev_value
-      = input_adapter_op_a_memory_prev_value := h_input.2.2.1.2.1.1
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
-  have esv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_store_value[i]
-      = input_store_value[i] := fun i hi => by rw [← hmap_sv]; simp only [Vector.getElem_map]
-  have epv : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_memory_access_prev_value[i]
-      = input_memory_access_prev_value[i] := fun i hi => by rw [← hmap_pv]; simp only [Vector.getElem_map]
-  have eoap : ∀ i (hi : i < 2), Expression.eval env.toEnvironment input_var_adapter_op_a_memory_prev_value[i]
-      = input_adapter_op_a_memory_prev_value[i] := fun i hi => by rw [← hmap_oap]; simp only [Vector.getElem_map]
   have h_off' : (0 : ZMod p).val + 2 * (0 : ZMod p).val + 4 * input_offset_bit.val
       = (Word.toNat input_adapter_op_b_memory_prev_value + Word.toNat input_adapter_op_c_imm) % 2 ^ 48 % 8 := by
     simp only [ZMod.val_zero]; omega
@@ -178,15 +149,15 @@ theorem completeness :
     ⟨ha, hb, hbin, hfit, Or.inl rfl, Or.inl rfl, h_off_bin, h_ge, h_off'⟩
   refine ⟨⟨?_, ?_⟩, h_addr_as, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
   · exact hbin
-  · simp only [epc]; exact h_cpu
+  · exact h_cpu
   · exact ⟨hbin, h_sv, h_clk⟩
   · exact h_mem
   · exact ⟨hbin, hbin, h_clk⟩
   · exact h_it
-  · simp only [esv, epv, eoap 0 (by omega)]; exact sub_eq_zero_of_eq hr0
-  · simp only [esv, epv, eoap 1 (by omega)]; exact sub_eq_zero_of_eq hr1
-  · simp only [esv, epv, eoap 0 (by omega)]; exact sub_eq_zero_of_eq hr2
-  · simp only [esv, epv, eoap 1 (by omega)]; exact sub_eq_zero_of_eq hr3
+  · exact sub_eq_zero_of_eq hr0
+  · exact sub_eq_zero_of_eq hr1
+  · exact sub_eq_zero_of_eq hr2
+  · exact sub_eq_zero_of_eq hr3
   · rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- StoreWord's exact Memory-channel interaction list — the store-family shape: the composed
@@ -329,10 +300,10 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    StoreWordChip.circuit_main_eq]
+    ((StoreWordChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [StoreWordChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
     AddrAddOperation.circuit, AddrAddOperation.main,
@@ -341,5 +312,10 @@ theorem lookups_empty :
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.StoreWordChip

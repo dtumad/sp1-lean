@@ -45,7 +45,7 @@ inductive ExecutionStep (policy : HostPolicy) (program : GuestProgram) :
 theorem HostState.step_observations {host nextHost : HostState} {policy : HostPolicy}
     {program : GuestProgram} {clock : ℕ} {source target : SailState} {event : CoreSyscallEvent}
     (success : host.step policy program clock source = some (nextHost, target, event)) :
-    ∃ pc execution, source.regs.get? LeanRV64D.Defs.Register.PC = some pc ∧
+    ∃ pc execution, source.regs.get? LeanRV64D.Register.PC = some pc ∧
       program.fetchWord pc = some ECALL_ENC ∧
       host.run policy (.ofSail source) = some execution ∧
       nextHost = execution.effect.state ∧ target = execution.apply source pc ∧
@@ -60,7 +60,7 @@ theorem HostState.step_observations {host nextHost : HostState} {policy : HostPo
 /-- Construct a host step from observations and the concrete dispatcher result. -/
 theorem HostState.step_of_run {host : HostState} {policy : HostPolicy} {program : GuestProgram}
     {source : SailState} {pc : BitVec 64} {execution : HostExecution}
-    (atPc : source.regs.get? LeanRV64D.Defs.Register.PC = some pc)
+    (atPc : source.regs.get? LeanRV64D.Register.PC = some pc)
     (fetched : program.fetchWord pc = some ECALL_ENC)
     (loaded : InstructionBytes.check source.mem.get? pc ECALL_ENC = true)
     (ran : host.run policy (.ofSail source) = some execution) (clock : ℕ) :

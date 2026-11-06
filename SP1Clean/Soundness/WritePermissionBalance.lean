@@ -6,7 +6,7 @@ import ToClean.Circuit.InteractionRecovery
 
 A permission row proves writability from its assertions and authenticated fixed-interval membership. Count-bounded balance
 then authenticates every unit pull, provided the public verifier and every other component emit only
-zero or unit-negative permission interactions. This separates the generic matching argument from the concrete assembly's
+inactive or unit pull permission interactions. This separates the generic matching argument from the concrete assembly's
 exhaustive source classification and from the store's byte-footprint proof.
 -/
 
@@ -20,7 +20,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def Pulls (component : Component (ZMod p)) : Prop :=
   ∀ data physical, component.operations.ConstraintsHold (Environment.fromArray physical data) →
     ∀ interaction ∈ component.operations.interactionValuesWith WritePermissionProvider.channel.toRaw
-      (Environment.fromArray physical data), interaction.mult = 0 ∨ interaction.mult = -1
+      (Environment.fromArray physical data), interaction.mult = 0 ∨ interaction.Pull
 
 omit [Fact (2 ^ 17 < p)] in
 theorem pulls_of_silent (component : Component (ZMod p))
@@ -106,22 +106,23 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
     {assembly : Ensemble (ZMod p) Public} (image : ProgramImage)
     (witness : EnsembleWitness assembly) (constraints : witness.Constraints)
     (balance : BalancedInteractions (witness.interactionsWith WritePermissionProvider.channel.toRaw))
-    (verifier : ∀ (input : Public (ZMod p)) (data : ProverData (ZMod p)),
+    (verifier : ∀ (data : ProverData (ZMod p)),
       ∀ interaction ∈ assembly.verifierOperations.interactionValuesWith
-      WritePermissionProvider.channel.toRaw (Environment.fromInput input data),
-      interaction.mult = 0 ∨ interaction.mult = -1)
+      WritePermissionProvider.channel.toRaw data.publicEnvironment,
+      interaction.mult = 0 ∨ interaction.Pull)
     (sources : ∀ component ∈ assembly.tables,
       component = (WritePermissionProvider.component image : Component (ZMod p)) ∨ Pulls component)
     (membership : ∀ table ∈ witness.tables,
       table.ChannelGuarantees image.writePermissionTable.channel.toRaw)
     (address : fields 3 (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith WritePermissionProvider.channel.toRaw)
-    (active : interaction.mult = -1) (payload : interaction.msg = (toElements address).toArray) :
+    (active : interaction.Pull) (payload : interaction.msg = (toElements address).toArray) :
     WritePermissionProvider.Permitted image address := by
   obtain ⟨provider, providerMem, samePayload, nonzero, notPull⟩ :=
-    exists_push_of_pull _ balance interaction member active
+    balance.exists_push_of_pull interaction member active
+  have notUnitPull : ¬ provider.Pull := fun h => notPull h.1 h.2
   rcases EnsembleWitness.mem_interactionsWith.mp providerMem with verifierMem | ⟨table, tableMem, providerMem⟩
-  · exact ((verifier witness.publicInput witness.data provider verifierMem).elim nonzero notPull).elim
+  · exact ((verifier witness.data provider verifierMem).elim nonzero notUnitPull).elim
   · obtain ⟨physical, physicalMem, emitted⟩ := List.mem_flatMap.mp providerMem
     have checked := constraints table tableMem physical physicalMem
     simp only [Table.environment, witness.same_data table tableMem] at emitted checked
@@ -140,6 +141,6 @@ theorem pull_permitted_of_sources {Public : TypeMap} [ProvableType Public]
       have addressEq := congrArg (fromElements (M := fields 3)) (Vector.toArray_inj.mp same)
       simp only [ProvableType.fromElements_toElements] at addressEq
       exact Eq.mp (congrArg (WritePermissionProvider.Permitted image) addressEq) permitted
-    · exact ((pulls witness.data physical checked provider emitted).elim nonzero notPull).elim
+    · exact ((pulls witness.data physical checked provider emitted).elim nonzero notUnitPull).elim
 
 end SP1Clean.Soundness.WritePermission

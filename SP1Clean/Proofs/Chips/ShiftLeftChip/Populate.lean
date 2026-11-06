@@ -169,7 +169,7 @@ theorem byteShift_expr_eq (c0 : ZMod p) (f : Vector (ZMod p) 2) (hf0 : f[0] = 0 
     (cBits c0)[4] + (cBits c0)[5] * 2 * f[0] = ((byteShiftNat c0 f : ℕ) : ZMod p) := by
   rcases hf0 with h | h <;>
     simp only [cBits, byteShiftNat, h, Vector.getElem_mk, List.getElem_toArray,
-      List.getElem_cons_zero, List.getElem_cons_succ, if_pos, zero_ne_one, if_false] <;>
+      List.getElem_cons_zero, List.getElem_cons_succ, ite_eq_left, zero_ne_one, ite_false] <;>
     push_cast <;> ring
 
 set_option linter.unusedSectionVars false in
@@ -336,7 +336,7 @@ theorem place_asserts (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 2)
       have hk2 : byteShiftNat c0 f = 0 ∨ byteShiftNat c0 f = 1 := by
         have := Nat.mod_lt (c0.val >>> 4) (show 0 < 2 by norm_num)
         unfold byteShiftNat
-        rw [if_neg (by rw [hf0]; exact zero_ne_one)]
+        rw [ite_eq_right (by rw [hf0]; exact zero_ne_one)]
         omega
       rcases hk2 with hbs | hbs <;>
         · simp only [populateA, sllwMsb, shiftU16, hf0, hf1, hbs]
@@ -398,18 +398,18 @@ theorem populateA_val_lt (b : Word (ZMod p)) (c0 : ZMod p) (f : Vector (ZMod p) 
     have hcases : byteShiftNat c0 f = 0 ∨ byteShiftNat c0 f = 1 ∨ byteShiftNat c0 f = 2
         ∨ byteShiftNat c0 f = 3 := by omega
     rcases hcases with hbs | hbs | hbs | hbs <;>
-      · simp only [populateA, h0, hbs, if_true]
+      · simp only [populateA, h0, hbs, ite_true]
         interval_cases i <;>
           first | exact hlr _ (by norm_num) | exact hzero
   · by_cases h1 : f[1] = 1
     · by_cases hbs : byteShiftNat c0 f = 0 <;>
-        · simp only [populateA, h0, h1, hbs, if_true, if_false]
+        · simp only [populateA, h0, h1, hbs, ite_true, ite_false]
           interval_cases i <;>
             first
               | exact hlr _ (by norm_num)
               | exact hzero
               | exact hmsb _ (hlr _ (by norm_num))
-    · simp only [populateA, h0, h1, if_false]
+    · simp only [populateA, h0, h1, ite_false]
       interval_cases i <;> exact hzero
 
 /-- The witnessed SLLW sign bit is boolean. -/
@@ -712,21 +712,21 @@ omit [Fact (2 ^ 17 < p)] in
 selectors). -/
 theorem byteShiftU_toNat (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) (c0 : ZMod p)
     (hc0 : Expression.eval env.toEnvironment c0e = c0) (hb : c0.val < 2 ^ 16) :
-    ((byteShiftU c0e f).eval { env := env }).toNat = byteShiftNat c0 (f.map (Expression.eval env.toEnvironment)) := by
-  simp only [byteShiftU, byteShiftNat, circuit_norm, hc0, Vector.getElem_map, apply_ite UInt64.toNat]
+    ((byteShiftU c0e f).eval { env := env }).toNat = byteShiftNat c0 (Eval.eval env.toEnvironment f) := by
+  simp only [byteShiftU, byteShiftNat, circuit_norm, hc0, apply_ite UInt64.toNat]
   split_ifs <;> omega
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluating the byte-shift selector is `shiftU16`. -/
 theorem shiftU16IR_eval (env : ProverEnvironment (ZMod p)) (c0e : Expression (ZMod p)) (f : Vector (Expression (ZMod p)) 2) (c0 : ZMod p)
     (hc0 : Expression.eval env.toEnvironment c0e = c0) (hb : c0.val < 2 ^ 16) :
-    (shiftU16IR c0e f).eval env = shiftU16 c0 (f.map (Expression.eval env.toEnvironment)) := by
+    (shiftU16IR c0e f).eval env = shiftU16 c0 (Eval.eval env.toEnvironment f) := by
   have hbs := byteShiftU_toNat env c0e f c0 hc0 hb
   apply Vector.ext
   intro i hi
   simp only [shiftU16IR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
-  interval_cases i <;> simp only [shiftU16, circuit_norm, Vector.getElem_map, hbs]
+  interval_cases i <;> simp only [shiftU16, circuit_norm, hbs]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The u64 split modulus evaluates to `2^(16 − bitShift)` (`Nat.two_pow_shiftRight`). -/
@@ -855,7 +855,7 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
     (hc0 : Expression.eval env.toEnvironment c0e = c0)
     (hbU : vb.isU64) (hb : c0.val < 2 ^ 16) (j : ℕ) (hj : j < 4) :
     Witgen.FExpr.eval { env := env } (aF b c0e f j)
-      = (populateA vb c0 (f.map (Expression.eval env.toEnvironment)))[j] := by
+      = (populateA vb c0 (Eval.eval env.toEnvironment f))[j] := by
   have hp17 : (2 : ℕ) ^ 17 < p := Fact.out
   have hbs := byteShiftU_toNat env c0e f c0 hc0 hb
   have hlr := lrF_eval env b c0e vb c0 hW hc0 hbU hb
@@ -863,8 +863,8 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
     simp only [limbResult, Vector.getElem_map]
     rw [ZMod.val_natCast_of_lt (lt_trans (limbResultNat_lt vb c0 hbU i hi) (by omega))]
     exact limbResultNat_lt vb c0 hbU i hi
-  have hk4 : byteShiftNat c0 (f.map (Expression.eval env.toEnvironment)) < 4 := byteShiftNat_lt c0 _
-  set k := byteShiftNat c0 (f.map (Expression.eval env.toEnvironment)) with hkeq
+  have hk4 : byteShiftNat c0 (Eval.eval env.toEnvironment f) < 4 := byteShiftNat_lt c0 _
+  set k := byteShiftNat c0 (Eval.eval env.toEnvironment f) with hkeq
   clear_value k
   have hlo1 : Witgen.FExpr.eval { env := env } (loF1 b c0e f)
       = if k = 0 then (limbResult vb c0)[1] else (limbResult vb c0)[0] := by
@@ -877,41 +877,41 @@ theorem aF_eval (env : ProverEnvironment (ZMod p))
       = U16MSBOperation.populate_msb
           (if k = 0 then (limbResult vb c0)[1] else (limbResult vb c0)[0]) := by
     rw [U16MSBOperation.populate_msbF_eval _ _ (by rw [hlo1]; exact hlo1v), hlo1]
-  interval_cases j <;> by_cases hf0 : Expression.eval env.toEnvironment f[0] = 1
+  interval_cases j <;> by_cases hf0 : (Eval.eval env.toEnvironment f)[0] = 1
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1, hbs]
+  · by_cases hf1 : (Eval.eval env.toEnvironment f)[1] = 1
+    · simp only [aF, populateA, circuit_norm, hf0, hf1, hbs]
       split_ifs <;> first | omega | norm_num [hlr 0 (by omega), hlr 1 (by omega)]
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
+  · by_cases hf1 : (Eval.eval env.toEnvironment f)[1] = 1
+    · simp only [aF, populateA, circuit_norm, hf0, hf1]
       rw [hlo1]
       split_ifs <;> first | omega | norm_num [hlr 0 (by omega), hlr 1 (by omega)]
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1, hmsb]
+  · by_cases hf1 : (Eval.eval env.toEnvironment f)[1] = 1
+    · simp only [aF, populateA, circuit_norm, hf0, hf1, hmsb]
       split_ifs <;> first | omega | norm_num
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, hf0, hf1]
   · interval_cases k <;>
-      simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hbs,
+      simp only [aF, populateA, circuit_norm, hf0, hbs,
         Witgen.FExpr.evalList, hlr 0 (by omega), hlr 1 (by omega), hlr 2 (by omega),
         hlr 3 (by omega)] <;>
       norm_num [← hkeq]
-  · by_cases hf1 : Expression.eval env.toEnvironment f[1] = 1
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1, hmsb]
+  · by_cases hf1 : (Eval.eval env.toEnvironment f)[1] = 1
+    · simp only [aF, populateA, circuit_norm, hf0, hf1, hmsb]
       split_ifs <;> first | omega | norm_num
-    · simp only [aF, populateA, circuit_norm, Vector.getElem_map, hf0, hf1]
+    · simp only [aF, populateA, circuit_norm, hf0, hf1]
 
 /-- Evaluating the result word is `populateA`. -/
 theorem populateAIR_eval (env : ProverEnvironment (ZMod p))
@@ -920,7 +920,7 @@ theorem populateAIR_eval (env : ProverEnvironment (ZMod p))
     (hW : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment b[i] = vb[i])
     (hc0 : Expression.eval env.toEnvironment c0e = c0)
     (hbU : vb.isU64) (hb : c0.val < 2 ^ 16) :
-    (populateAIR b c0e f).eval env = populateA vb c0 (f.map (Expression.eval env.toEnvironment)) := by
+    (populateAIR b c0e f).eval env = populateA vb c0 (Eval.eval env.toEnvironment f) := by
   apply Vector.ext
   intro i hi
   simp only [populateAIR]
@@ -935,19 +935,19 @@ theorem sllwMsbIR_eval (env : ProverEnvironment (ZMod p))
     (hW : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment b[i] = vb[i])
     (hc0 : Expression.eval env.toEnvironment c0e = c0)
     (hbU : vb.isU64) (hb : c0.val < 2 ^ 16) :
-    (sllwMsbIR b c0e f).eval env = #v[sllwMsb vb c0 (f.map (Expression.eval env.toEnvironment))] := by
+    (sllwMsbIR b c0e f).eval env = #v[sllwMsb vb c0 (Eval.eval env.toEnvironment f)] := by
   have ha1 := aF_eval env b c0e f vb c0 hW hc0 hbU hb 1 (by omega)
-  have ha1v := populateA_val_lt vb c0 (f.map (Expression.eval env.toEnvironment)) hbU 1 (by omega)
+  have ha1v := populateA_val_lt vb c0 (Eval.eval env.toEnvironment f) hbU 1 (by omega)
   have hmsbA : Witgen.FExpr.eval { env := env }
       (U16MSBOperation.populate_msbF (aF b c0e f 1))
-      = U16MSBOperation.populate_msb (populateA vb c0 (f.map (Expression.eval env.toEnvironment)))[1] := by
+      = U16MSBOperation.populate_msb (populateA vb c0 (Eval.eval env.toEnvironment f))[1] := by
     rw [U16MSBOperation.populate_msbF_eval _ _ (by rw [ha1]; exact ha1v), ha1]
   apply Vector.ext
   intro i hi
   simp only [sllwMsbIR]
   rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
   interval_cases i
-  simp only [sllwMsb, circuit_norm, Vector.getElem_map, hmsbA]
+  simp only [sllwMsb, circuit_norm, hmsbA]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The immediate-selector witness evaluates to the product of its inputs. -/
@@ -957,7 +957,7 @@ theorem sllwImmIR_eval (env : ProverEnvironment (ZMod p))
       #v[Expression.eval env.toEnvironment isSllw * Expression.eval env.toEnvironment imm_c] := by
   ext i hi
   interval_cases i
-  simp only [sllwImmIR, Witgen.WitgenIR.getElem_eval_ofFExprs, circuit_norm]
+  simp only [sllwImmIR, circuit_norm]
 
 /-! ### Congruence lemmas (environment-locality — the `ComputableWitnesses` counterparts; no
 bounds, `-Witgen.u64Wrap` per the fold rule) -/

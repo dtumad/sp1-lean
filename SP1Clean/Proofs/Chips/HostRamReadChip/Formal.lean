@@ -21,7 +21,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) mai
   circuit_proof_start [HostRamAccessChip.circuit, Gadgets.Equality.circuit,
     HostRamAccessChip.channel, channel, Inputs.message, HostRamAccessChip.Inputs.clockLow]
   have valid := Spec.message (input := ⟨_⟩) h_holds
-  exact ⟨h_holds, fun _ _ => valid⟩
+  exact ⟨h_holds, fun _ => valid⟩
 
 theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by

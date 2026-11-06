@@ -18,7 +18,7 @@ the read merely has to succeed (via `run_vmem_read_of_width_N'`), after which th
 `wX_bits (.Regidx 0#5)` write collapse to nothing. Four width-core lemmas (1/2/4/8 bytes, each generic in
 `is_unsigned`) feed the seven per-opcode theorems `correct_loadX0_{lb,lbu,lh,lhu,lw,lwu,ld}`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.LoadX0Sail
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -113,7 +113,7 @@ theorem loadX0_w1 (is_unsigned : Bool)
   rw [hsp] at hread
   simp [specX0, sp1_loadX0, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem loadX0_w2 (is_unsigned : Bool)
@@ -147,7 +147,7 @@ theorem loadX0_w2 (is_unsigned : Bool)
   rw [hsp] at hread
   simp [specX0, sp1_loadX0, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem loadX0_w4 (is_unsigned : Bool)
@@ -187,7 +187,7 @@ theorem loadX0_w4 (is_unsigned : Bool)
   rw [hsp] at hread
   simp [specX0, sp1_loadX0, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem loadX0_w8 (is_unsigned : Bool)
@@ -235,7 +235,7 @@ theorem loadX0_w8 (is_unsigned : Bool)
   rw [hsp] at hread
   simp [specX0, sp1_loadX0, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread]
 
 /-! ## The seven per-opcode correctness theorems
 

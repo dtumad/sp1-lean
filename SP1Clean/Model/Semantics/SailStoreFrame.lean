@@ -8,7 +8,7 @@ follows actual virtual/physical checks and split writes through normal Sail reti
 -/
 
 namespace SP1Clean.Advance
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- Virtual stores preserve registers and protected bytes, including fault outcomes. -/
@@ -36,7 +36,7 @@ theorem vmem_write_addr_frame (readOnly : ℕ → Bool) (source : SailState) (cf
     bind_assoc, run_SailME_liftM_bind] at rest
   rw [run_bind_of_run source _ _
     (run_translateAddr_store_of_isInitialized address source cfg.init cfg.toValidMemConfig)] at rest
-  simp only [is_store_conditional, beq_self_eq_true, PreSail.assert, ↓reduceIte, pure_bind,
+  simp only [is_store_conditional, beq_self_eq_true, PreSail.sail_assert, ↓reduceIte, pure_bind,
     bind_assoc, run_SailME_liftM_bind] at rest
   obtain ⟨middle, validated, checked, suffix⟩ := run_bind_success _ _ source target result rest
   have same := readOnly_mem_write_ea source cfg _ _ validated middle checked
@@ -99,7 +99,7 @@ theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState
   obtain ⟨base, observed, allowed⟩ := (Model.Core.InstructionWrite.check_store_iff
     readOnly source.get_reg? imm (.Regidx rs2) (.Regidx rs1) width valid).mp permission
   obtain ⟨data, dataRead⟩ := initialized_gpr source cfg.init rs2
-  simp only [execute, execute_STORE, PreSail.assert] at ran
+  simp only [execute, execute_STORE, PreSail.sail_assert] at ran
   split at ran
   · simp only [pure_bind] at ran
     rw [run_bind_of_run source _ data (by rw [run_rX_bits, dataRead])] at ran

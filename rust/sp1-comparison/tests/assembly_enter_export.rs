@@ -24,7 +24,7 @@ mod host;
 use host::released_host_air;
 use sp1_core_executor::{Instruction, Opcode, Program as Sp1Program, SyscallCode};
 
-fixture!(enter, "installed_enter");
+fixture!(enter, installed_enter);
 
 fn addi(rd: u8, rs: u64, immediate: u64) -> Instruction {
     Instruction::new(Opcode::ADDI, rd, rs, immediate, false, true)
@@ -48,7 +48,7 @@ fn enter_uses_the_released_constrained_replay() {
     let reference = enter::reference();
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = enter::generate(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = enter::generate(&public, &fields(&case["privateInput"]), 1).unwrap();
     let mut code = vec![];
     execution::load_constant(&mut code, 5, 3);
     execution::load_constant(&mut code, 11, 17);

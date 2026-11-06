@@ -109,9 +109,9 @@ theorem double_emission (input : Var StoreDoubleChip.Inputs (ZMod p)) (offset : 
     quiet, List.nil_append, Circuit.forEach.operations_eq, List.ofFn_succ, List.ofFn_zero,
     List.flatten_cons, List.flatten_nil, List.append_nil, Vector.getElem_range]
 
-theorem byte_pulls : Pulls ({ circuit := ProtectedStore.byte (p := p), Assumptions := (ProtectedStore.byte (p := p)).Assumptions } : Component (ZMod p)) := by
+theorem byte_pulls : Pulls ({ circuit := ProtectedStore.byte (p := p), generation := StoreByteChip.generation, Assumptions := (ProtectedStore.byte (p := p)).Assumptions } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions, generation := StoreByteChip.generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.byte_constraints,
       ProtectedStore.byte_lookups] using constraints
@@ -124,12 +124,12 @@ theorem byte_pulls : Pulls ({ circuit := ProtectedStore.byte (p := p), Assumptio
     (size StoreByteChip.Inputs)).interactionsWith WritePermissionProvider.channel.toRaw).map _ at member
   rw [byte_emission] at member
   obtain rfl := List.mem_singleton.mp member
-  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
+  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, Interaction.Pull, true_and]
   simpa only [circuit_norm] using binary
 
-theorem half_pulls : Pulls ({ circuit := ProtectedStore.half (p := p), Assumptions := (ProtectedStore.half (p := p)).Assumptions } : Component (ZMod p)) := by
+theorem half_pulls : Pulls ({ circuit := ProtectedStore.half (p := p), generation := StoreHalfChip.generation, Assumptions := (ProtectedStore.half (p := p)).Assumptions } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions, generation := StoreHalfChip.generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.half_constraints,
       ProtectedStore.half_lookups] using constraints
@@ -143,12 +143,12 @@ theorem half_pulls : Pulls ({ circuit := ProtectedStore.half (p := p), Assumptio
   rw [half_emission] at member
   obtain ⟨emitted, emissionMem, rfl⟩ := List.mem_map.mp member
   obtain ⟨index, rfl⟩ := List.mem_ofFn.mp emissionMem
-  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
+  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, Interaction.Pull, true_and]
   simpa only [circuit_norm] using binary
 
-theorem word_pulls : Pulls ({ circuit := ProtectedStore.word (p := p), Assumptions := (ProtectedStore.word (p := p)).Assumptions } : Component (ZMod p)) := by
+theorem word_pulls : Pulls ({ circuit := ProtectedStore.word (p := p), generation := StoreWordChip.generation, Assumptions := (ProtectedStore.word (p := p)).Assumptions } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions, generation := StoreWordChip.generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.word_constraints,
       ProtectedStore.word_lookups] using constraints
@@ -162,12 +162,12 @@ theorem word_pulls : Pulls ({ circuit := ProtectedStore.word (p := p), Assumptio
   rw [word_emission] at member
   obtain ⟨emitted, emissionMem, rfl⟩ := List.mem_map.mp member
   obtain ⟨index, rfl⟩ := List.mem_ofFn.mp emissionMem
-  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
+  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, Interaction.Pull, true_and]
   simpa only [circuit_norm] using binary
 
-theorem double_pulls : Pulls ({ circuit := ProtectedStore.double (p := p), Assumptions := (ProtectedStore.double (p := p)).Assumptions } : Component (ZMod p)) := by
+theorem double_pulls : Pulls ({ circuit := ProtectedStore.double (p := p), generation := StoreDoubleChip.generation, Assumptions := (ProtectedStore.double (p := p)).Assumptions } : Component (ZMod p)) := by
   intro data physical constraints interaction member
-  have checked : ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions, generation := StoreDoubleChip.generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data) := by
     simpa only [Operations.ConstraintsHold, ProtectedStore.double_constraints,
       ProtectedStore.double_lookups] using constraints
@@ -181,7 +181,7 @@ theorem double_pulls : Pulls ({ circuit := ProtectedStore.double (p := p), Assum
   rw [double_emission] at member
   obtain ⟨emitted, emissionMem, rfl⟩ := List.mem_map.mp member
   obtain ⟨index, rfl⟩ := List.mem_ofFn.mp emissionMem
-  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, neg_eq_zero, neg_inj]
+  simp only [Channel.eval_pulledIf, Channel.pulledIfValue, Interaction.Pull, true_and]
   simpa only [circuit_norm] using binary
 
 end SP1Clean.Soundness.WritePermission

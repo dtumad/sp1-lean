@@ -44,11 +44,12 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
   rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
-  · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
+  · have valid := HostHaltChip.row_spec_of_byte env
+      ((Component.constraintsHold_iff env).mp constraints) ((Component.channelGuarantees_iff env _).mp bytes)
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
     rw [HostCallReceivers.halt_message]
     exact Or.inl valid.1
-  · have valid := HostEnterChip.component_spec_of_constraints env constraints
+  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
     rw [HostCallReceivers.enter_message]
     exact Or.inr (Or.inl valid.1)
@@ -114,12 +115,13 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
   rcases member with ((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩
-  · have valid := HostHaltChip.component_spec_of_byte env constraints bytes
+  · have valid := HostHaltChip.row_spec_of_byte env
+      ((Component.constraintsHold_iff env).mp constraints) ((Component.channelGuarantees_iff env _).mp bytes)
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
     rw [HostCallReceivers.halt_message] at observed ⊢
     exact ⟨_, HostHaltChip.run_of_spec _ valid host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
-  · have valid := HostEnterChip.component_spec_of_constraints env constraints
+  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
     rw [HostCallReceivers.enter_message] at observed ⊢
     exact ⟨_, HostEnterChip.run_of_spec _ valid host running policy context
@@ -229,21 +231,25 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 /-- Physical control and commitment handlers in the installed receiver prefix. -/
 def controlTables
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :=
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :=
   ((HostLocalHandoff.receiverTables witness).drop 1).take 18
 
 /-- Every selected control table is an original physical table of the witness. -/
 theorem controlTables_mem
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (table : Table (ZMod p)) (member : table ∈ controlTables witness) : table ∈ witness.tables :=
   List.mem_of_mem_drop (List.mem_of_mem_take (List.mem_of_mem_drop (List.mem_of_mem_take member)))
 
 /-- Complete calls split into queue handlers and the retained control/commitment inventory. -/
 theorem calls_split
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     (HostLocalHandoff.calls witness).Perm
       ((TransitionView.readIndexedRows indices (queueTables witness)).map call ++
         ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness)) := by
@@ -269,7 +275,7 @@ theorem calls_split
     (List.Perm.of_eq (List.append_assoc _ _ _).symm)
 
 private theorem control_calls
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw) :
     ∀ message ∈ ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness),
@@ -287,7 +293,7 @@ private theorem control_calls
 dispatch succeeds on the observed registers of any running host. Control dispatch modifies
 the actual host state, independently of later authentication of its complete outgoing snapshot. -/
 theorem calls_run_or_queue
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
     (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
@@ -351,7 +357,7 @@ private theorem projection_of_split {Message Row Label : Type*}
 /-- The complete installed receiver inventory excludes WRITE and projects to precisely the
 physical queue-handler actions. No successful host execution is a premise. -/
 theorem calls_projection
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
     (specs : ∀ table ∈ queueTables witness, table.Spec) :

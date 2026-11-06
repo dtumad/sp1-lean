@@ -20,9 +20,12 @@ local instance bankLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p :=
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
   {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 abbrev Witness := EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
   HostCallReceivers.available (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-    (HostFinalMemory.source_unique_names image source outgoing))
+    (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)
 
 private def start (deferred : Bool) : ℕ := if deferred then 11 else 3
 private def gap (deferred : Bool) : ℕ := if deferred then 7 else 14
@@ -69,10 +72,10 @@ private theorem bankTables_eq (deferred : Bool)
     Function.comp_def, TableSlot.table, HostTableRegistry.installedBankSlot_index]
   rw [← List.ofFn_eq_map]
   cases deferred <;>
-    simp only [selected, start, gap, Bool.false_eq_true, if_false, if_true, Nat.reduceAdd] <;>
+    simp only [selected, start, gap, Bool.false_eq_true, ite_false, ite_true, Nat.reduceAdd] <;>
     rw [slice_eq_ofFn _ _ 8 (by omega), slice_eq_ofFn _ _ 1 (by omega)] <;>
     simp only [List.ofFn_succ, List.ofFn_zero, List.getElem_drop, HostTableRegistry.bankPosition,
-      Bool.false_eq_true, if_false, if_true, Fin.val_zero, Fin.val_succ, Nat.add_zero, Nat.reduceAdd,
+      Bool.false_eq_true, ite_false, ite_true, Fin.val_zero, Fin.val_succ, Nat.add_zero, Nat.reduceAdd,
       Nat.add_assoc]
 
 /-- The original physical receiver prefix is retained under verifier projection. -/
@@ -123,7 +126,7 @@ theorem calls_eq_slot_tables (deferred : Bool)
   rw [receiver_tables]
   simp only [List.drop_take, List.take_take]
   cases deferred <;> simpa only [bankTables_eq, selected, start, indices, Bool.false_eq_true,
-    if_false, if_true, Nat.reduceSub, min_eq_left (by decide : 8 ≤ 18),
+    ite_false, ite_true, Nat.reduceSub, min_eq_left (by decide : 8 ≤ 18),
     min_eq_left (by decide : 8 ≤ 10), List.ofFn_eq_map] using read
 
 theorem tables_aligned (deferred : Bool)
@@ -235,18 +238,7 @@ theorem interactions (deferred : Bool)
     exact wrapper_bank_silent deferred
   have split := HostLocalCore.interactions_split_new (HostHintQueueBoundary.projected witness)
     (HostCommitChip.stateChannel deferred).toRaw (by
-      apply List.mem_cons_of_mem
-      apply List.mem_cons_of_mem
-      apply List.mem_cons_of_mem
-      apply List.mem_append_right
-      apply List.mem_append_left
-      apply List.mem_cons_of_mem
-      apply List.mem_flatMap.mpr
-      refine ⟨{ circuit := HostCommitBoundary.terminal deferred, Assumptions := (HostCommitBoundary.terminal deferred).Assumptions }, ?_, ?_⟩
-      · apply List.mem_append_right
-        apply List.mem_append_right
-        cases deferred <;> simp [sourceResources]
-      · simp [HostCommitBoundary.terminal, circuit_norm]) (bank_fresh deferred)
+      exact sourceRegistration.boundary (by cases deferred <;> simp)) (bank_fresh deferred)
     (by cases deferred <;> simp [HostCommitChip.stateChannel, WritePermissionProvider.channel, Channel.toRaw])
     (by cases deferred <;> simp [HostCommitChip.stateChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])
   rw [wrapper, List.nil_append] at split
@@ -254,9 +246,8 @@ theorem interactions (deferred : Bool)
       witness.tables.drop 63 := HostHintQueueBoundary.projected_drop witness 63 (by decide)
   rw [tail, auxiliary_interactions] at split
   have ledger := HostHintQueueBoundary.interactions_split witness (HostCommitChip.stateChannel deferred).toRaw
-    (List.mem_append_right _ (by cases deferred <;>
-      simp [HostHintQueueBoundary.boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm]))
-  rw [split, ClosedVerifier.singleton_interactions, ClosedVerifier.operations, HostBoundary.closed_main,
+    (List.mem_append_left _ (sourceRegistration.boundary (by cases deferred <;> simp)))
+  rw [split, ClosedVerifier.interactionsWith, ClosedVerifier.operations, HostBoundary.closed_main,
     HostBoundary.bank_values] at ledger
   exact ledger.trans (List.perm_append_comm ..)
 
@@ -283,11 +274,9 @@ theorem ordered_history (deferred : Bool)
   have member : (HostCommitChip.stateChannel deferred).toRaw ∈
       (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
         (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-        (HostFinalMemory.source_unique_names image source outgoing)).channels := by
-    apply List.mem_append_left
-    apply List.mem_append_right
-    cases deferred <;> simp [HostHintQueueBoundary.boundary, HostBoundary.closed, HostBoundary.circuit, circuit_norm]
-  have bank := balancedInteractions_of_perm (balanced _ member (HostHintQueueBoundary.visible_of_name _ (by
+        (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary).channels := by
+    exact List.mem_append_left _ (List.mem_append_left _ (sourceRegistration.boundary (by cases deferred <;> simp)))
+  have bank := BalancedInteractions.of_perm (balanced _ member (HostHintQueueBoundary.visible_of_name _ (by
     cases deferred <;> simp [HostCommitChip.stateChannel, Channel.toRaw]))) (interactions deferred witness)
   have history := HostCommitBank.ordered_history deferred (bankTables deferred witness)
     (HostCommitEnsemble.sourceValues deferred source.host) (HostCommitEnsemble.sourceValues deferred bankFinal)

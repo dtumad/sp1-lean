@@ -30,10 +30,12 @@ def byte : GeneralFormalCircuit (ZMod p) StoreByteChip.Inputs StoreByteChip.Colu
   Assumptions := StoreByteChip.Assumptions
   Spec := StoreByteChip.Spec
   ProverAssumptions := StoreByteChip.ProverAssumptions
-  channelsWithRequirements := StoreByteChip.circuit.channelsWithRequirements
+  channelsWithRequirements := WritePermissionProvider.channel.toRaw ::
+    StoreByteChip.circuit.channelsWithRequirements
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreByteChip.circuit]
-    exact ⟨h_holds h_assumptions, h_assumptions⟩
+    have spec := h_holds h_assumptions
+    exact ⟨spec, h_assumptions, spec.2.2.2.2.2.2.2⟩
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreByteChip.circuit]
     exact h_assumptions
@@ -49,10 +51,12 @@ def half : GeneralFormalCircuit (ZMod p) StoreHalfChip.Inputs StoreHalfChip.Colu
   Assumptions := StoreHalfChip.Assumptions
   Spec := StoreHalfChip.Spec
   ProverAssumptions := StoreHalfChip.ProverAssumptions
-  channelsWithRequirements := StoreHalfChip.circuit.channelsWithRequirements
+  channelsWithRequirements := WritePermissionProvider.channel.toRaw ::
+    StoreHalfChip.circuit.channelsWithRequirements
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreHalfChip.circuit]
-    exact ⟨h_holds h_assumptions, h_assumptions⟩
+    have spec := h_holds h_assumptions
+    exact ⟨spec, h_assumptions, spec.2.2.2.2⟩
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreHalfChip.circuit]
     exact h_assumptions
@@ -68,10 +72,12 @@ def word : GeneralFormalCircuit (ZMod p) StoreWordChip.Inputs StoreWordChip.Colu
   Assumptions := StoreWordChip.Assumptions
   Spec := StoreWordChip.Spec
   ProverAssumptions := StoreWordChip.ProverAssumptions
-  channelsWithRequirements := StoreWordChip.circuit.channelsWithRequirements
+  channelsWithRequirements := WritePermissionProvider.channel.toRaw ::
+    StoreWordChip.circuit.channelsWithRequirements
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreWordChip.circuit]
-    exact ⟨h_holds h_assumptions, h_assumptions⟩
+    have spec := h_holds h_assumptions
+    exact ⟨spec, h_assumptions, spec.2.2.2.2⟩
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreWordChip.circuit]
     exact h_assumptions
@@ -87,67 +93,77 @@ def double : GeneralFormalCircuit (ZMod p) StoreDoubleChip.Inputs StoreDoubleChi
   Assumptions := StoreDoubleChip.Assumptions
   Spec := StoreDoubleChip.Spec
   ProverAssumptions := StoreDoubleChip.ProverAssumptions
-  channelsWithRequirements := StoreDoubleChip.circuit.channelsWithRequirements
+  channelsWithRequirements := WritePermissionProvider.channel.toRaw ::
+    StoreDoubleChip.circuit.channelsWithRequirements
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreDoubleChip.circuit]
-    exact ⟨h_holds h_assumptions, h_assumptions⟩
+    have spec := h_holds h_assumptions
+    exact ⟨spec, h_assumptions, spec.2.2.2⟩
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreDoubleChip.circuit]
     exact h_assumptions
 
 /-- The permission requests preserve the original physical row width. -/
-theorem byte_width :
-    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).width =
-      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).width := rfl
+theorem byte_width
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreByteChip.Inputs} :
+    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).width =
+      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).width := rfl
 
 /-- All original assertions remain byte-for-byte unchanged. -/
-theorem byte_constraints :
-    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints =
-      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints := by
+theorem byte_constraints
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreByteChip.Inputs} :
+    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints =
+      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, byte, circuit_norm]
 
 /-- The extension introduces no additional fixed lookup. -/
-theorem byte_lookups :
-    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups =
-      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups := by
+theorem byte_lookups
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreByteChip.Inputs} :
+    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups =
+      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, byte, circuit_norm]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
-theorem byte_interactions (selected : RawChannel (ZMod p))
+theorem byte_interactions
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreByteChip.Inputs} (selected : RawChannel (ZMod p))
     (different : selected ≠ WritePermissionProvider.channel.toRaw) :
-    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
-      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
+    ({ circuit := byte (p := p), Assumptions := (byte (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
+      ({ circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
   simp only [Air.Flat.Component.interactionsWith_eq, Air.Flat.Component.rowOperations, byte, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions]
   simp only [Ne.symm different, ↓reduceIte, List.append_nil]
   rfl
 
 /-- The permission requests preserve the original physical row width. -/
-theorem half_width :
-    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).width =
-      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).width := rfl
+theorem half_width
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreHalfChip.Inputs} :
+    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).width =
+      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).width := rfl
 
 /-- All original assertions remain byte-for-byte unchanged. -/
-theorem half_constraints :
-    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints =
-      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints := by
+theorem half_constraints
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreHalfChip.Inputs} :
+    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints =
+      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, half, circuit_norm,
     Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- The extension introduces no additional fixed lookup. -/
-theorem half_lookups :
-    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups =
-      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups := by
+theorem half_lookups
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreHalfChip.Inputs} :
+    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups =
+      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, half, circuit_norm,
     Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
-theorem half_interactions (selected : RawChannel (ZMod p))
+theorem half_interactions
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreHalfChip.Inputs} (selected : RawChannel (ZMod p))
     (different : selected ≠ WritePermissionProvider.channel.toRaw) :
-    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
-      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
+    ({ circuit := half (p := p), Assumptions := (half (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
+      ({ circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
   simp only [Air.Flat.Component.interactionsWith_eq, Air.Flat.Component.rowOperations, half, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
@@ -155,31 +171,35 @@ theorem half_interactions (selected : RawChannel (ZMod p))
   rfl
 
 /-- The permission requests preserve the original physical row width. -/
-theorem word_width :
-    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).width =
-      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).width := rfl
+theorem word_width
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreWordChip.Inputs} :
+    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).width =
+      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).width := rfl
 
 /-- All original assertions remain byte-for-byte unchanged. -/
-theorem word_constraints :
-    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints =
-      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints := by
+theorem word_constraints
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreWordChip.Inputs} :
+    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints =
+      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, word, circuit_norm,
     Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- The extension introduces no additional fixed lookup. -/
-theorem word_lookups :
-    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups =
-      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups := by
+theorem word_lookups
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreWordChip.Inputs} :
+    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups =
+      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, word, circuit_norm,
     Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
-theorem word_interactions (selected : RawChannel (ZMod p))
+theorem word_interactions
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreWordChip.Inputs} (selected : RawChannel (ZMod p))
     (different : selected ≠ WritePermissionProvider.channel.toRaw) :
-    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
-      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
+    ({ circuit := word (p := p), Assumptions := (word (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
+      ({ circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
   simp only [Air.Flat.Component.interactionsWith_eq, Air.Flat.Component.rowOperations, word, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
@@ -187,31 +207,35 @@ theorem word_interactions (selected : RawChannel (ZMod p))
   rfl
 
 /-- The permission requests preserve the original physical row width. -/
-theorem double_width :
-    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).width =
-      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).width := rfl
+theorem double_width
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreDoubleChip.Inputs} :
+    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).width =
+      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).width := rfl
 
 /-- All original assertions remain byte-for-byte unchanged. -/
-theorem double_constraints :
-    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints =
-      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.constraints := by
+theorem double_constraints
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreDoubleChip.Inputs} :
+    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints =
+      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.constraints := by
   simp only [Air.Flat.Component.constraints_eq, Air.Flat.Component.rowOperations, double, circuit_norm,
     Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- The extension introduces no additional fixed lookup. -/
-theorem double_lookups :
-    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups =
-      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups := by
+theorem double_lookups
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreDoubleChip.Inputs} :
+    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups =
+      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.lookups := by
   simp only [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, double, circuit_norm,
     Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]
 
 /-- Every pre-existing interaction ledger is preserved by the store extension. -/
-theorem double_interactions (selected : RawChannel (ZMod p))
+theorem double_interactions
+    {generation : Air.Flat.WitnessGeneration.Generation (ZMod p) StoreDoubleChip.Inputs} (selected : RawChannel (ZMod p))
     (different : selected ≠ WritePermissionProvider.channel.toRaw) :
-    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
-      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
+    ({ circuit := double (p := p), Assumptions := (double (p := p)).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected =
+      ({ circuit := StoreDoubleChip.circuit, Assumptions := (StoreDoubleChip.circuit).Assumptions, generation } : Air.Flat.Component (ZMod p)).operations.interactionsWith selected := by
   simp only [Air.Flat.Component.interactionsWith_eq, Air.Flat.Component.rowOperations, double, circuit_norm,
     GeneralFormalCircuit.toSubcircuit_interactions, Circuit.forEach.operations_eq,
     List.ofFn_succ, List.ofFn_zero, List.flatten_cons, List.flatten_nil, List.append_nil]

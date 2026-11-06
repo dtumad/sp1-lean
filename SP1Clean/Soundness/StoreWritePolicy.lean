@@ -15,7 +15,7 @@ so a same-value write cannot disappear from the permission obligation.
 
 namespace SP1Clean.Soundness.Target
 
-open Model.Core Semantics LeanRV64D.Defs
+open Model.Core Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -34,7 +34,7 @@ private theorem address_spec_value (input : AddressOperation.Inputs (ZMod p))
 /-- Reconcile the exact committed store interval with its official decoded operands. -/
 theorem store_permittedAt {image : ProgramImage} {program : GuestProgram}
     {row : Trace.RowView (ZMod p)} {source : SailState}
-    (width : LeanRV64D.Defs.word_width) (validWidth : storeWidthOK width = true)
+    (width : LeanRV64D.word_width) (validWidth : storeWidthOK width = true)
     (decoded : decodedInROM program (programAccess row).toRow)
     (pc : source.regs.get? Register.PC = some (pcBitsOfRow (programAccess row).toRow))
     (opcode : row.opcode = ((storeOpcode width).toNat : ZMod p))
@@ -68,7 +68,7 @@ end SP1Clean.Soundness.Target
 
 namespace SP1Clean.StoreByteChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D.Defs
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -95,7 +95,7 @@ end SP1Clean.StoreByteChip
 
 namespace SP1Clean.StoreHalfChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D.Defs
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -122,7 +122,7 @@ end SP1Clean.StoreHalfChip
 
 namespace SP1Clean.StoreWordChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D.Defs
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -149,7 +149,7 @@ end SP1Clean.StoreWordChip
 
 namespace SP1Clean.StoreDoubleChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D.Defs
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

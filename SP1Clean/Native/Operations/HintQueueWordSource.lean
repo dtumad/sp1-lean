@@ -30,7 +30,7 @@ theorem sourceWordInventory_of_limits (hints : List Bytes) (limit : ℕ)
   have fits : hints.length + (hints.map List.length).sum < 2 ^ 48 := by
     norm_num at bounded ⊢
     omega
-  simp only [sourceWordInventory, if_pos fits]
+  simp only [sourceWordInventory, ite_eq_left fits]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Every retained word has the original immutable source meaning. -/
@@ -66,13 +66,13 @@ def sourceWord (hints : List Bytes) : Component (ZMod p) :=
 
 /-- Physical source rows authenticate both field representation and exact immutable bytes. -/
 theorem sourceWord_authenticates (hints : List Bytes) (table : Table (ZMod p))
-    (same : table.component = sourceWord hints) (consistent : table.DataConsistency)
+    (same : table.component = sourceWord hints)
     (constraints : table.Constraints) :
     table.Authenticates wordChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) := by
   apply ((sourceWordInventory hints).payload_authenticates wordChannel
     (fun record member _ => (sourceWordTable_sound hints record
       (sourceWordInventory_spec hints record member)).1)
-    (sourceWord_height_lt_uint64 hints) table same consistent constraints).mono
+    (sourceWord_height_lt_uint64 hints) table same constraints).mono
   intro record member
   exact sourceWordTable_sound hints record (sourceWordInventory_spec hints record member)
 

@@ -19,45 +19,28 @@ private theorem boundary_programPulls (image : ProgramImage) (component : Compon
     (member : component ∈ (InitialMemoryEnsemble.views image).map (·.component) ++
       FinalMemoryEnsemble.inventory.views.map (·.component)) : ProgramPulls component := by
   apply programPulls_of_silent
-  simp only [InitialMemoryEnsemble.views, OrderedMemoryEnsemble.Inventory.views,
-    FinalMemoryEnsemble.inventory, List.map_cons, List.map_nil, List.mem_append,
-    List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with (rfl | rfl | rfl) | (rfl | rfl | rfl)
-  · change programChannel.toRaw ∉
-      [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
-        byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-        memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel,
-      memoryChannel, byteChannel, Channel.toRaw]
-  · change programChannel.toRaw ∉
-      ((InitialMemoryRead.circuit (p := p) image.initialMemory).channelsWithGuarantees ++
-        List.replicate 2 byteChannel.toRaw ++
-        [(OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw] ++
-        List.replicate 4 byteChannel.toRaw ++
-        [memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw])
-    simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel,
-      memoryChannel, byteChannel, InitialMemoryRead.circuit, InitialMemoryLookup.membership,
-      StaticTable.channel, circuit_norm]
-  · change programChannel.toRaw ∉
-      [byteChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
-        (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel, byteChannel, Channel.toRaw]
-  · change programChannel.toRaw ∉
-      [byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-        byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-        memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, programChannel,
-      memoryChannel, byteChannel, Channel.toRaw]
-  · change programChannel.toRaw ∉
-      [byteChannel.toRaw, byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-        byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-        memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, programChannel,
-      memoryChannel, byteChannel, Channel.toRaw]
-  · change programChannel.toRaw ∉
-      [byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-    simp [OrderedBoundary.channel, OrderedFinalProvider.channelName, programChannel, byteChannel, Channel.toRaw]
+  intro used
+  rcases List.mem_append.mp member with initial | final
+  · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp initial
+    simp only [InitialMemoryEnsemble.views, List.mem_cons, List.not_mem_nil, or_false] at viewMem
+    rcases viewMem with rfl | rfl | rfl
+    · have support := InitialMemoryEnsemble.view_channels_subset image .registers used
+      simp [programChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+        OrderedInitialProvider.channelName, InitialMemoryLookup.membership, StaticTable.channel,
+        Channel.toRaw] at support
+    · have support := InitialMemoryEnsemble.view_channels_subset image .ram used
+      simp [programChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+        OrderedInitialProvider.channelName, InitialMemoryLookup.membership, StaticTable.channel,
+        Channel.toRaw] at support
+    · have support := InitialMemoryEnsemble.view_channels_subset image .terminal used
+      simp [programChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+        OrderedInitialProvider.channelName, InitialMemoryLookup.membership, StaticTable.channel,
+        Channel.toRaw] at support
+  · obtain ⟨view, viewMem, rfl⟩ := List.mem_map.mp final
+    obtain ⟨id, _, rfl⟩ := List.mem_map.mp viewMem
+    have support := FinalMemoryEnsemble.view_channels_subset (p := p) id used
+    simp [programChannel, byteChannel, memoryChannel, OrderedBoundary.channel,
+      OrderedFinalProvider.channelName, Channel.toRaw] at support
 
 /-- The computed ROM is the only possible non-pull Program contributor in this assembly. -/
 theorem component_program_source (image : ProgramImage) (component : Component (ZMod p))
@@ -100,12 +83,12 @@ theorem program_pull_committed {image : ProgramImage} (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (message : ProgramMsg (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith programChannel.toRaw)
-    (active : interaction.mult = -1)
+    (active : interaction.Pull)
     (payload : interaction.msg = (toElements message).toArray) :
     Target.committedInROM (image.toGuestProgram valid) (rowOfMsg message) :=
   program_pull_committed_of_sources valid witness constraints
     (balanced programChannel.toRaw (by simp [ensemble, baseEnsemble, sp1Ensemble_channels]))
-    (by intro input data emitted member
+    (by intro data emitted member
         rw [verifier_program_silent] at member
         exact (List.not_mem_nil member).elim)
     (component_program_source image) message interaction member active payload

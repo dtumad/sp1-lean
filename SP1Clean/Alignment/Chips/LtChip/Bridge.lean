@@ -11,7 +11,7 @@ import SP1Clean.Proofs.Sail.Advance
 semantic RV64 `sltu`/`slt` facts into the respective Sail executions. `lt_chip_reaches_sail` proves
 the flag-dispatched conjunction from the chip `Spec`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.LtSail
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -45,8 +45,8 @@ theorem execute_RTYPE_pure_sltu (x y : BitVec 64) :
   simp only [execute_RTYPE_pure, RV64.sltu, zero_extend, Sail.BitVec.zeroExtend,
     bool_to_bit, bool_bit_forwards, zopz0zI_u, BitVec.toNatInt, BitVec.toNat_setWidth,
     BitVec.toNat_ofBool, BitVec.ult]
-  by_cases h : x.toNat < y.toNat <;> simp_all [Nat.cast_lt] <;>
-    cases h2 : x.toNat <b y.toNat <;> rfl
+  by_cases h : x.toNat < y.toNat <;> simp_all [Nat.cast_lt]
+  cases h2 : x.toNat <b y.toNat <;> rfl
 
 set_option linter.unnecessarySeqFocus false in
 /-- The Sail `SLT` pure part is the clean RV64 `slt` (operand order `rs2 rs1`): both place the

@@ -12,7 +12,7 @@ semantic `a_val = op_b + signExtend(imm)` and the rs1/PC reads. `execute_ITYPE`'
 is `wX_bits rd (rX_bits rs1 + signExtend imm)`, closed by `simp` with the auto
 `run_rX_bits`/`run_wX_bits` lemmas. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.AddiSail
 
 open Sail LeanRV64D LeanRV64D.Functions

@@ -1,3 +1,4 @@
+import Clean.Air.Balance
 import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Native.Operations.HintQueueSource
 import SP1Clean.Native.Operations.HintQueueWordSource
@@ -63,19 +64,20 @@ def ensemble (source : Source Row) (n : ℕ) : Ensemble Fp (ProvableVector Row n
   unique_names := by simp
   channels := [source.channel.toRaw]
   verifier := verifier source n
-
-/-- Clean initializes fixed fields and updates only the final count column. -/
-def config (source : Source Row) (n : ℕ) : WitnessGeneration.Config Fp where
-  components := [((component source).circuit.name, {
-    mode := .preallocated {
-      rows := UInt64.ofNat source.table.height
-      input := .ofFExprs #v[.const 0]
-      input_valid := by rfl
-      handlers := [{ interaction := 0, column := size Row + 1 }]
-    }
-    padding := { input := Array.replicate (size Row + 2) 0 }
-  })]
-  fuel := 2 * n + 2
+  unique_channel_names := by simp
+  tables_channels := by
+    intro row member
+    obtain rfl := List.mem_singleton.mp member
+    change [source.channel.toRaw] ⊆ _
+    simp
+  verifier_channels := by
+    intro channel member
+    rw [Verifier.Program.mem_channels_iff, Operations.channels] at member
+    change channel ∈ ((verifier source n).circuitOperations.interactions.map (·.channel)) at member
+    simp only [Verifier.Program.circuitOperations, Verifier.Program.operations, verifier,
+      Verifier.ofInteractions_interactions, List.map_map, Function.comp_def] at member
+    obtain ⟨_, _, rfl⟩ := List.mem_map.mp member
+    exact List.mem_singleton.mpr rfl
 
 /-- The executable relation checks all source assertions and complete counted occurrences. -/
 def description (source : Source Row) (n : ℕ) : EnsembleCheck (ensemble source n) where
@@ -84,29 +86,20 @@ def description (source : Source Row) (n : ℕ) : EnsembleCheck (ensemble source
   lookups_complete := by
     simp [ensemble, component, Component.lookups_eq, Component.rowOperations,
       StaticTable.payloadComponent, StaticTable.payloadProvider, circuit_norm]
-  channels_unique := by simp [ensemble]
-  channels_complete := by
-    simp [ensemble, component, Component.interactions_eq, Component.rowOperations,
-      StaticTable.payloadComponent, StaticTable.payloadProvider, circuit_norm]
-  verifier_channels_complete := by
-    change ∀ interaction ∈ (verifier source n).circuitOperations.interactions, interaction.channel ∈ _
-    rw [Verifier.Program.circuitOperations, verifier, Verifier.ofInteractions_interactions]
-    simp [ensemble, circuit_norm]
-
 /-- Generate the fixed inventory and counts entirely through Clean's shared scheduler. -/
 def generate (source : Source Row) (requests : List (Row Fp)) :
     Except String (EnsembleWitness (ensemble source requests.length)) :=
-  WitnessGeneration.generate (ComponentExport.fixture (ensemble source requests.length))
-    (config source requests.length) ⟨requests.toArray, by simp⟩ () |>.mapError toString
+  WitnessGeneration.generate (ensemble source requests.length)
+    (2 * requests.length + 2) ⟨requests.toArray, by simp⟩ () |>.mapError toString
 
 /-- Source-only regressions expose the actual table ledger, including every zero count. -/
 def observe (source : Source Row) (record : Row Fp) : Bool × List (String × List Fp × Fp) :=
   match generate source [record] with
   | .error _ => (false, [])
   | .ok witness =>
-      ((description source 1).checkWitness SP1Prime witness,
+      ((description source 1).checkWitness witness,
         witness.tables.flatMap fun table => table.interactions.map fun interaction =>
-          (interaction.channel.name, interaction.msg.toList, interaction.mult))
+          (interaction.channel.name, interaction.msg.toList, interaction.signedMult))
 
 /-- Uneven, aligned and empty hints exercise padding and reversed physical node identities. -/
 def hints : List Bytes := [[17, 34, 51, 68, 85, 102, 119, 136, 153, 170],
@@ -115,16 +108,16 @@ def hints : List Bytes := [[17, 34, 51, 68, 85, 102, 119, 136, 153, 170],
 /-- Emit both source kinds with two public requests, and their unused and empty-source forms. -/
 def rustExports : List (String × Except String String) :=
   [("hint_nodes.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble (nodes hints) 2)) (config (nodes hints) 2)),
+      (ComponentExport.fixture (ensemble (nodes hints) 2)) (2 * 2 + 2)),
    ("hint_words.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble (words hints) 2)) (config (words hints) 2)),
+      (ComponentExport.fixture (ensemble (words hints) 2)) (2 * 2 + 2)),
    ("hint_nodes_unused.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble (nodes hints) 0)) (config (nodes hints) 0)),
+      (ComponentExport.fixture (ensemble (nodes hints) 0)) (2 * 0 + 2)),
    ("hint_words_unused.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble (words hints) 0)) (config (words hints) 0)),
+      (ComponentExport.fixture (ensemble (words hints) 0)) (2 * 0 + 2)),
    ("hint_nodes_empty.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble (nodes []) 2)) (config (nodes []) 2)),
+      (ComponentExport.fixture (ensemble (nodes []) 2)) (2 * 2 + 2)),
    ("hint_words_empty.rs", Backends.Plonky3.Print.ensembleToRust
-      (ComponentExport.fixture (ensemble (words []) 2)) (config (words []) 2))]
+      (ComponentExport.fixture (ensemble (words []) 2)) (2 * 2 + 2))]
 
 end SP1CleanTest.Core.HintSourceExport

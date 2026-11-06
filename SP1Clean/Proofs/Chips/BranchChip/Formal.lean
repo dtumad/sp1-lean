@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.BranchChip.Core
@@ -74,10 +75,7 @@ private theorem main_requirementsChannelsLawful
     simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
     rcases h_interaction with rfl | rfl | rfl <;>
       right <;>
-      rw [ChannelInteraction.toRaw_requirements] <;>
-      intro h1 h0 <;>
-      simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool h1 h0
+      exact h_bool
 
 /-- The Program-fetch opcode selected by the six input discriminants. -/
 def exposedOpcode (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
@@ -166,7 +164,7 @@ private theorem main_exposedChannelsLawful
       Operations.interactionsWith_nil, List.nil_append]
     simp only [Operations.interactionsWith_subcircuit, FormalAssertion.toSubcircuit_interactions,
       Gadgets.Equality.main, circuit_norm, List.filter_nil, List.nil_append]
-    simp only [Channels.byteChannel_eq_stateChannel_false, if_false, List.append_nil]
+    simp only [Channels.byteChannel_eq_stateChannel_false, ite_false, List.append_nil]
   · simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
       witnessVectorIR, witnessField, Witnessable.witness, witnessIR,
       subcircuitWithAssertion, assertion, assertZero, Channel.pullIf,
@@ -184,7 +182,7 @@ private theorem main_exposedChannelsLawful
       Operations.interactionsWith_nil, Soundness.iTypeImmutableMemoryInteractions,
       List.cons_append, List.nil_append]
     simp only [circuit_norm]
-    simp only [Channels.byteChannel_eq_memoryChannel_false, if_false,
+    simp only [Channels.byteChannel_eq_memoryChannel_false, ite_false,
       exposedMemoryInteractions, List.map_cons, List.map_nil]
     rfl
   · simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
@@ -204,7 +202,7 @@ private theorem main_exposedChannelsLawful
       Soundness.iTypeImmutableProgramMessage, exposedOpcode]
     simp only [Operations.interactionsWith_subcircuit, FormalAssertion.toSubcircuit_interactions,
       Gadgets.Equality.main, circuit_norm, List.filter_nil, List.nil_append]
-    simp only [Channels.byteChannel_eq_programChannel_false, if_false, List.nil_append]
+    simp only [Channels.byteChannel_eq_programChannel_false, ite_false, List.nil_append]
 
 /-- The exact pinned-SP1 Branch `GeneralFormalCircuit`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
@@ -236,13 +234,10 @@ theorem interactionsWith_memory_eq
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq,
-    Air.Flat.Component.rowOperations]
-  change ((BranchChip.main
-    (varFromOffset BranchChip.Inputs 0)).operations
-      (size BranchChip.Inputs)).lookups = []
+    ((circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [BranchChip.main, LtOperationSigned.circuit,
     LtOperationSigned.main, U16MSBOperation.circuit,
     U16MSBOperation.main, LtOperationUnsigned.circuit,
@@ -255,5 +250,10 @@ theorem lookups_empty :
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main,
     Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.BranchChip

@@ -28,7 +28,7 @@ outgoing-snapshot equality, WRITE/VERIFY installation and resource limits remain
 namespace SP1Clean.Soundness.Shard
 
 open Circuit Air.Flat Channels Machine Model.Core Semantics FormalModel.Shard
-open LeanRV64D.Defs (Register)
+open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
@@ -36,8 +36,18 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 snapshot and verifier endpoint. -/
 abbrev installed (image : ProgramImage) (source : ExecutionSnapshot) (outgoing : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
-    (channels : List (RawChannel (ZMod p))) : Ensemble (ZMod p) SP1PublicIO :=
-  HostFinalMemory.Installed image source outgoing final bankFinal channels
+    : Ensemble (ZMod p) SP1PublicIO :=
+  HostFinalMemory.Installed image source outgoing final bankFinal
+
+/-- The complete installed registry includes the commitment declaration protocol. -/
+private theorem declarations_registered (image : ProgramImage) (source : ExecutionSnapshot)
+    (outgoing : MemorySnapshot) (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) :
+    CommitmentDeclaration.channel.toRaw ∈ (installed image source outgoing final bankFinal).channels := by
+  change _ ∈ (_ ++ [_]) ++ [_]
+  apply List.mem_append_left _ (List.mem_append_left _ ?_)
+  change _ ∈ _ ++ [_]
+  apply List.mem_append_left
+  simp [HostLocalCore.baseEnsemble, HostLocalCore.registry, HostFinalMemory.sourceChannels]
 
 /-- What the public header and verifier endpoints fix about the final state of an accepted trace.
 The retirement bookkeeping is the exact function of the trace that official Sail computes. -/
@@ -71,7 +81,7 @@ structure Endpoint (source : ExecutionSnapshot) (outgoing : MemorySnapshot)
     code.toNat = header.exit_code.val
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
 /-- What one accepted header proves: the checked source is valid and is the header's incoming
 endpoint, the commitment statement is well formed, and the SP1 Sail machine has a trace from the
@@ -90,7 +100,7 @@ def SailTrace (commitments : CommitmentStatement) (image : ProgramImage) (valid 
 /-- Constraints and balance outside the commitment declarations already give the trace; each
 actual commitment call requests its declaration in the witness ledger. -/
 theorem trace_of_witness (valid : image.Valid)
-    (witness : EnsembleWitness (installed image source outgoing final bankFinal channels))
+    (witness : EnsembleWitness (installed image source outgoing final bankFinal))
     (constraints : witness.Constraints) (balanced : HostFinalMemory.DeclarationsOpen witness) :
     ExecutionSourceValid image source ∧ witness.publicInput.SourceFor source ∧
       ∃ (events : List ExecutionEvent) (target : ExecutionState),
@@ -121,22 +131,25 @@ about a witness: it lets the provider be forgotten although canonical prover dat
 name. -/
 theorem trace_of_committed_statement (valid : image.Valid) {commitments : CommitmentStatement}
     {fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
-      (installed image source outgoing final bankFinal channels).tables.map (·.circuit.name)}
-    (lookupFree : ∀ component ∈ (installed image source outgoing final bankFinal channels).tables,
+      (installed image source outgoing final bankFinal).tables.map (·.circuit.name)}
+    (lookupFree : ∀ component ∈ (installed image source outgoing final bankFinal).tables,
       component.operations.lookups = [])
-    {header : SP1PublicIO (ZMod p)}
+    {header : SP1PublicIO (ZMod p)} {heights : List ℕ}
     (accepted : (CommitmentEnsemble.install commitments
-      (installed image source outgoing final bankFinal channels) fresh).Statement header) :
+      (installed image source outgoing final bankFinal) fresh
+      (declarations_registered image source outgoing final bankFinal)).Statement .logUp header heights) :
     SailTrace commitments image valid source outgoing final bankFinal header := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-  obtain ⟨witness, rfl, constraints, balanced⟩ := accepted
+  obtain ⟨fit, witness, rfl, rfl, constraints, rawBalance⟩ := accepted
+  have balanced := EnsembleWitness.balancedChannels_of_balanced
+    (witness.interactionsFit_of_heights fit) rawBalance
   obtain ⟨sourceValid, sourceFor, events, target, trace, permitted, endpoint, declared⟩ :=
     trace_of_witness valid (CommitmentEnsemble.project witness)
       (CommitmentEnsemble.project_constraints witness lookupFree constraints)
       (fun channel member different =>
         CommitmentEnsemble.project_balancedChannel witness balanced channel member different)
   have silent := HostFinalMemory.verifier_declarations_silent (image := image) (source := source)
-    (outgoing := outgoing) (final := final) (bankFinal := bankFinal) (channels := channels)
+    (outgoing := outgoing) (final := final) (bankFinal := bankFinal)
   have agrees := (declared.transfer fun _ member =>
     CommitmentEnsemble.project_declaration_mem witness silent member).agrees commitments
       (CommitmentEnsemble.declared_member witness
@@ -153,13 +166,14 @@ registers and RAM, whose declarations agree with the well-formed statement. Ther
 beyond the checked program image. -/
 theorem sail_trace {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
     {final : HostHintQueue.State (ZMod SP1Prime)} {bankFinal : HostState}
-    {channels : List (RawChannel (ZMod SP1Prime))} (valid : image.Valid)
+    (valid : image.Valid)
     {commitments : CommitmentStatement}
     {fresh : (CommitmentDeclaration.source (p := SP1Prime) commitments).circuit.name ∉
-      (installed image source outgoing final bankFinal channels).tables.map (·.circuit.name)}
-    {header : SP1PublicIO (ZMod SP1Prime)}
+      (installed image source outgoing final bankFinal).tables.map (·.circuit.name)}
+    {header : SP1PublicIO (ZMod SP1Prime)} {heights : List ℕ}
     (accepted : (CommitmentEnsemble.install commitments
-      (installed image source outgoing final bankFinal channels) fresh).Statement header) :
+      (installed image source outgoing final bankFinal) fresh
+      (declarations_registered image source outgoing final bankFinal)).Statement .logUp header heights) :
     SailTrace commitments image valid source outgoing final bankFinal header :=
   trace_of_committed_statement valid (fun component member => HostFinalMemory.installed_lookups component member)
     accepted

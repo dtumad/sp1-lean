@@ -70,22 +70,22 @@ theorem component_membership_source (image : ProgramImage) (source : ExecutionSn
       · rcases List.mem_or_eq_of_mem_set stores with stores | rfl
         · rcases List.mem_or_eq_of_mem_set stores with old | rfl
           · exact original component old
-          · have absent := original _ (List.getElem_mem (n := 25) (by
-              change 25 < (LocalCore.tables (p := p) image source).length
-              rw [LocalCore.tables_length]; decide))
-            exact absent
-        · have absent := original _ (List.getElem_mem (n := 26) (by
-            change 26 < (LocalCore.tables (p := p) image source).length
-            rw [LocalCore.tables_length]; decide))
-          exact absent
-      · have absent := original _ (List.getElem_mem (n := 27) (by
-          change 27 < (LocalCore.tables (p := p) image source).length
-          rw [LocalCore.tables_length]; decide))
-        exact absent
-    · have absent := original _ (List.getElem_mem (n := 28) (by
-        change 28 < (LocalCore.tables (p := p) image source).length
-        rw [LocalCore.tables_length]; decide))
-      exact absent
+          · change (image.writePermissionTable (p := p)).channel.toRaw ∉
+              [WritePermissionProvider.channel.toRaw, stateChannel.toRaw, memoryChannel.toRaw]
+            simp [ProgramImage.writePermissionTable, StaticTable.ofRows, StaticTable.channel,
+              stateChannel, memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
+        · change (image.writePermissionTable (p := p)).channel.toRaw ∉
+              [WritePermissionProvider.channel.toRaw, stateChannel.toRaw, memoryChannel.toRaw]
+          simp [ProgramImage.writePermissionTable, StaticTable.ofRows, StaticTable.channel,
+            stateChannel, memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
+      · change (image.writePermissionTable (p := p)).channel.toRaw ∉
+              [WritePermissionProvider.channel.toRaw, stateChannel.toRaw, memoryChannel.toRaw]
+        simp [ProgramImage.writePermissionTable, StaticTable.ofRows, StaticTable.channel,
+          stateChannel, memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
+    · change (image.writePermissionTable (p := p)).channel.toRaw ∉
+              [WritePermissionProvider.channel.toRaw, stateChannel.toRaw, memoryChannel.toRaw]
+      simp [ProgramImage.writePermissionTable, StaticTable.ofRows, StaticTable.channel,
+        stateChannel, memoryChannel, WritePermissionProvider.channel, Channel.toRaw]
   · rcases List.mem_cons.mp fixed with fixed | fixed
     · right
       rw [fixed]
@@ -126,11 +126,11 @@ theorem permission_pull_permitted {image : ProgramImage} {source : ExecutionSnap
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (address : fields 3 (ZMod p)) (interaction : Interaction (ZMod p))
     (member : interaction ∈ witness.interactionsWith WritePermissionProvider.channel.toRaw)
-    (active : interaction.mult = -1) (payload : interaction.msg = (toElements address).toArray) :
+    (active : interaction.Pull) (payload : interaction.msg = (toElements address).toArray) :
     WritePermissionProvider.Permitted image address :=
   WritePermission.pull_permitted_of_sources image witness constraints
     (balanced _ (List.mem_cons_self ..))
-    (by intro input data emitted member
+    (by intro data emitted member
         rw [verifier_permission_silent] at member
         exact (List.not_mem_nil member).elim)
     (component_permission_source image source)
@@ -154,7 +154,7 @@ theorem row_pull_permitted {image : ProgramImage} {source : ExecutionSnapshot}
     refine Or.inr ⟨table, tableMem, List.mem_flatMap.mpr ⟨physical, physicalMem, ?_⟩⟩
     have shared : table.data = witness.data := witness.same_data table tableMem
     simpa only [Table.environment, shared, Operations.interactionValuesWith] using List.mem_map_of_mem emitted
-  · simp only [Channel.eval_pulledIf, Channel.pulledIfValue, CircuitType.eval_expr, active]
+  · simp only [Channel.eval_pulledIf, Channel.pulledIfValue, CircuitType.eval_expr, active, Interaction.Pull, and_self]
   · simp only [Channel.eval_pulledIf, Channel.pulledIfValue]
 
 end SP1Clean.Soundness.ProtectedLocalCore

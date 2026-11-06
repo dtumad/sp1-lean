@@ -27,7 +27,7 @@ codes are below 256, so canonicality requires membership in that list and zero h
 restriction preserves the current `IsCanonicalCode`/`SP1Halted` meaning without adding assertions
 absent from the Rust row. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -178,7 +178,7 @@ theorem full_run_eq_haltOnly_of_canonicalHalt (program : GuestProgram) (event : 
   have hid : event.syscallId = haltSyscallId := by
     rw [CoreSyscallEvent.syscallId, hnat]; rfl
   simp only [ExecutableSyscallHandler.full, ExecutableSyscallHandler.haltOnly, htable, hid,
-    ne_eq, not_true_eq_false, if_false, if_true, if_pos hraw]
+    ne_eq, not_true_eq_false, ite_false, ite_true, ite_eq_left hraw]
 
 /-- **The goodness obligation a mid-shard syscall row owes.** The halt row is excused from bounding
 its pushed pc because that pc is the literal `(1, 0, 0)`. A syscall row's push is a real `pc + 4`, so
@@ -300,7 +300,7 @@ theorem arm_halt (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.Sele
   have hfield : SyscallInstrsChip.syscallId r = ((SyscallInstrsChip.haltCode : ℕ) : ZMod p) :=
     (syscallId_field_iff r sel real (by decide : Machine.haltSyscallId < 256)).1 hid
   have hzero : r.is_halt_zero.result = 1 := by
-    rw [(sel.2.1 real).1, if_pos hfield]
+    rw [(sel.2.1 real).1, ite_eq_left hfield]
   have hhalt : r.is_halt = 1 := by rw [sel.2.2.2.1, hzero, real, one_mul]
   have hpc : r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0 :=
     spec.2.2.2.2.2.2.1.1 hhalt
@@ -317,7 +317,7 @@ theorem arm_pcAdvance_of_pcBound (spec : SyscallInstrsChip.Spec r) (sel : Syscal
   have hfield : SyscallInstrsChip.syscallId r ≠ ((SyscallInstrsChip.haltCode : ℕ) : ZMod p) :=
     fun h => hid ((syscallId_field_iff r sel real (by decide : Machine.haltSyscallId < 256)).2 h)
   have hzero : r.is_halt_zero.result = 0 := by
-    rw [(sel.2.1 real).1, if_neg hfield]
+    rw [(sel.2.1 real).1, ite_eq_right hfield]
   have hhalt : r.is_halt = 0 := by rw [sel.2.2.2.1, hzero, zero_mul]
   have hpc : r.next_pc[0] = r.state.pc[0] + 4 ∧ r.next_pc[1] = r.state.pc[1] ∧
       r.next_pc[2] = r.state.pc[2] := spec.2.2.2.2.2.2.1.2 real hhalt
@@ -345,7 +345,7 @@ theorem arm_enterUnconstrained (spec : SyscallInstrsChip.Spec r)
     (syscallId_field_iff r sel real
       (by decide : Machine.enterUnconstrainedSyscallId < 256)).1 hid
   have henter : r.is_enter_unconstrained.result = 1 := by
-    rw [(sel.2.1 real).2.1, if_pos hfield]
+    rw [(sel.2.1 real).2.1, ite_eq_left hfield]
   have hw : ∀ i : Fin 4, r.op_a_value[i] = 0 :=
     (spec.2.2.2.2.2.1 (pulled real).2.2.2.2.1).2.2.1 real henter
   have h0 : r.op_a_value[0] = 0 := hw 0
@@ -378,9 +378,9 @@ theorem arm_default (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.S
     fun h => hid' ((syscallId_field_iff r sel real
       (by decide : Machine.hintLenSyscallId < 256)).2 h)
   have henter : r.is_enter_unconstrained.result = 0 := by
-    rw [(sel.2.1 real).2.1, if_neg hfe]
+    rw [(sel.2.1 real).2.1, ite_eq_right hfe]
   have hhint : r.is_hint_len.result = 0 := by
-    rw [(sel.2.1 real).2.2.1, if_neg hfh]
+    rw [(sel.2.1 real).2.2.1, ite_eq_right hfh]
   have hsum : r.is_enter_unconstrained.result + r.is_hint_len.result = 0 := by
     rw [henter, hhint, add_zero]
   have hw : ∀ i : Fin 4, r.op_a_value[i] = r.op_a_memory.prev_value[i] :=
@@ -430,7 +430,7 @@ theorem arm_commit (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.Se
     rw [hid] at hev
     exact absurd hev (by decide)
   have hsum : r.is_commit.result + r.is_commit_deferred.result = 1 := by
-    rw [(sel.2.1 real).2.2.2.1, if_pos hfield, (sel.2.1 real).2.2.2.2, if_neg hne, add_zero]
+    rw [(sel.2.1 real).2.2.2.1, ite_eq_left hfield, (sel.2.1 real).2.2.2.2, ite_eq_right hne, add_zero]
   have cspec : SyscallInstrsChip.CommitArm.Spec (SyscallInstrsChip.toCommitArm r) :=
     spec.2.2.2.2.2.2.2.2.2.2.1
   -- One index bit is set, or the bitmap could not sum to one.
@@ -484,7 +484,7 @@ theorem arm_commitDeferred (spec : SyscallInstrsChip.Spec r)
       = ((SyscallInstrsChip.commitDeferredCode : ℕ) : ZMod p) :=
     (syscallId_field_iff r sel real (by decide : Machine.commitDeferredSyscallId < 256)).1 hid
   have hcd : r.is_commit_deferred.result = 1 := by
-    rw [(sel.2.1 real).2.2.2.2, if_pos hfield]
+    rw [(sel.2.1 real).2.2.2.2, ite_eq_left hfield]
   have hev : SyscallInstrsChip.ExitCodeValid r.op_c_memory.prev_value :=
     (spec.2.2.2.2.2.2.2.2.2.1.2 hcd).2
   exact hev
@@ -510,16 +510,16 @@ theorem rowLaw_of_spec_and_pulledFacts (spec : SyscallInstrsChip.Spec r)
   · -- `ResultLaw`: the three write arms, dispatched on the event's id.
     unfold CoreSyscallEvent.ResultLaw
     by_cases h3 : (syscallEventOfRow r).syscallId = Machine.enterUnconstrainedSyscallId
-    · rw [if_pos h3]; exact arm_enterUnconstrained r spec sel pulled real h3
-    · rw [if_neg h3]
+    · rw [ite_eq_left h3]; exact arm_enterUnconstrained r spec sel pulled real h3
+    · rw [ite_eq_right h3]
       by_cases h240 : (syscallEventOfRow r).syscallId = Machine.hintLenSyscallId
-      · rw [if_pos h240]; trivial
-      · rw [if_neg h240]; exact arm_default r spec sel pulled real h3 h240
+      · rw [ite_eq_left h240]; trivial
+      · rw [ite_eq_right h240]; exact arm_default r spec sel pulled real h3 h240
   · -- `PcLaw`: park at `haltPc`, or advance one instruction using the Program bus's low-limb bound.
     unfold CoreSyscallEvent.PcLaw
     by_cases h0 : (syscallEventOfRow r).syscallId = Machine.haltSyscallId
-    · rw [if_pos h0]; exact arm_halt r spec sel real h0
-    · rw [if_neg h0]; exact arm_pcAdvance_of_pcBound r spec sel real h0 (pulled real).2.1
+    · rw [ite_eq_left h0]; exact arm_halt r spec sel real h0
+    · rw [ite_eq_right h0]; exact arm_pcAdvance_of_pcBound r spec sel real h0 (pulled real).2.1
   · -- `HandlerAddressesFit`: a dispatched row drops its fourth operand limb, leaving 48 bits.
     intro htable
     have hfield : SyscallInstrsChip.tableByte r = 1 := by

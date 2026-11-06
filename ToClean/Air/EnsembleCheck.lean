@@ -31,36 +31,37 @@ structure EnsembleCheck (ens : Ensemble F PublicIO) where
   lookups_unique : (lookups.map (fun lookup => lookup.table.name)).Nodup
   lookups_complete : ∀ component ∈ ens.tables, ∀ lookup ∈ component.operations.lookups,
     ∃ fixed ∈ lookups, fixed.table = lookup.table
-  channels_unique : (ens.channels.map RawChannel.name).Nodup
-  channels_complete : ∀ component ∈ ens.tables,
-    ∀ interaction ∈ component.operations.interactions, interaction.channel ∈ ens.channels
-  verifier_channels_complete : ∀ interaction ∈ ens.verifierOperations.interactions,
-    interaction.channel ∈ ens.channels
 
-variable [DecidableEq F]
 
-/-- Check the complete finite support and the raw occurrence capacity of an interaction list. -/
-def checkInteractionBalance (characteristic : ℕ) (interactions : List (Interaction F)) : Bool :=
-  decide (interactions.length < characteristic ∨ characteristic = 0) &&
-    interactions.all (fun interaction => balanceOf interactions interaction.msg == 0)
+/-- Check signed field balance on every message in the finite physical ledger. -/
+def checkLogUpBalance (interactions : List (Interaction F)) : Bool :=
+  interactions.all (fun interaction => balanceOf interactions interaction.msg == 0)
 
 /-- Messages outside the enumerated support have zero balance as well. -/
-theorem checkInteractionBalance_iff (characteristic : ℕ) [CharP F characteristic]
-    (interactions : List (Interaction F)) :
-    checkInteractionBalance characteristic interactions = true ↔ BalancedInteractions interactions := by
-  simp only [checkInteractionBalance, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true,
-    beq_iff_eq, BalancedInteractions, ringChar.eq F characteristic]
-  apply and_congr_right
-  intro _
+theorem checkLogUpBalance_iff (interactions : List (Interaction F)) :
+    checkLogUpBalance interactions = true ↔ LogUpBalanced interactions := by
+  simp only [checkLogUpBalance, List.all_eq_true, beq_iff_eq, LogUpBalanced]
   constructor
   · intro checked message
     by_cases present : ∃ interaction ∈ interactions, interaction.msg = message
     · obtain ⟨interaction, member, rfl⟩ := present
       exact checked interaction member
-    · rw [balanceOf_eq_of_const_mult (mult := 0)
-        (fun interaction member equal => (present ⟨interaction, member, equal⟩).elim), zero_mul]
+    · have empty : interactions.filter (fun i => decide (i.msg = message)) = [] := by
+        simp only [List.filter_eq_nil_iff, decide_eq_true_eq]
+        intro i hi same
+        exact present ⟨i, hi, same⟩
+      simp [balanceOf, empty]
   · intro checked interaction _
     exact checked interaction.msg
+
+/-- Check field balance and its complete physical occurrence bound, including disabled rows. -/
+def checkInteractionBalance (characteristic : ℕ) (interactions : List (Interaction F)) : Bool :=
+  decide (interactions.length < characteristic) && checkLogUpBalance interactions
+
+theorem checkInteractionBalance_iff (characteristic : ℕ) (interactions : List (Interaction F)) :
+    checkInteractionBalance characteristic interactions = true ↔
+      interactions.length < characteristic ∧ LogUpBalanced interactions := by
+  simp only [checkInteractionBalance, Bool.and_eq_true, decide_eq_true_eq, checkLogUpBalance_iff]
 
 namespace EnsembleCheck
 
@@ -79,7 +80,7 @@ theorem containsFixed_iff (description : EnsembleCheck ens) {component : Compone
   rcases lookup with ⟨table, entry⟩
   cases tableEq
   change description.containsFixed fixed.table.name (entry.map env).toArray = true ↔
-    fixed.table.Contains (env.data fixed.table.name fixed.table.arity) (entry.map env)
+    fixed.table.Contains (env.data.tables fixed.table.name fixed.table.arity) (entry.map env)
   rw [fixed.realizes]
   simp only [containsFixed, List.any_eq_true, Bool.and_eq_true, beq_iff_eq]
   constructor
@@ -120,63 +121,46 @@ theorem checkTable_iff (description : EnsembleCheck ens) {table : Table F}
   simp only [checkTable, List.all_eq_true, Table.Constraints]
   exact forall₂_congr fun row _ => description.checkRow_iff member (table.environment row)
 
-omit [DecidableEq F] in
-/-- Every evaluated occurrence, including the separate verifier's, uses a registered channel. -/
-theorem interaction_registered (description : EnsembleCheck ens) (witness : EnsembleWitness ens)
-    {interaction : Interaction F} (member : interaction ∈ witness.interactions) :
-    interaction.channel ∈ ens.channels := by
-  simp only [EnsembleWitness.interactions, List.mem_append, Operations.interactionValues,
-    List.mem_map, List.mem_flatMap, Table.interactions] at member
-  rcases member with ⟨abstract, used, rfl⟩ | ⟨table, tableMem, row, _, abstract, used, rfl⟩
-  · exact description.verifier_channels_complete abstract used
-  · exact description.channels_complete table.component
-      (EnsembleWitness.component_mem_tables_of_mem tableMem) abstract used
-
-omit [DecidableEq F] in
-/-- Filtering the canonical ledger by name preserves exactly the registered raw channel. -/
-theorem interactionsNamed_eq (description : EnsembleCheck ens) (witness : EnsembleWitness ens)
+/-- Upstream unique channel registration identifies the complete ledger by name. -/
+theorem interactionsNamed_eq (_description : EnsembleCheck ens) (witness : EnsembleWitness ens)
     {channel : RawChannel F} (registered : channel ∈ ens.channels) :
     witness.interactions.filter (fun interaction => interaction.channel.name == channel.name) =
-      witness.interactionsWith channel := by
-  classical
-  rw [witness.interactionsWith_eq_filter]
-  apply List.filter_congr
-  intro interaction member
-  apply Bool.eq_iff_iff.mpr
-  simp only [beq_iff_eq, decide_eq_true_eq]
-  exact ⟨List.inj_on_of_nodup_map description.channels_unique
-    (description.interaction_registered witness member) registered, congrArg RawChannel.name⟩
+      witness.interactionsWith channel :=
+  (witness.interactionsWith_eq_filter_name registered).symm
+
+variable [ComputableRingChar F]
 
 /-- Check raw constraints and balances without removing repeated or disabled interactions. -/
-def checkWitness (description : EnsembleCheck ens) (characteristic : ℕ)
+def checkWitness (description : EnsembleCheck ens)
     (witness : EnsembleWitness ens) : Bool :=
   let ledger := witness.interactions
-  witness.tables.all description.checkTable &&
+  ens.interactionsFit .logUp witness.heights &&
+    (witness.tables.all description.checkTable &&
     ens.channels.all (fun channel =>
-      checkInteractionBalance characteristic
-        (ledger.filter fun interaction => interaction.channel.name == channel.name))
+      checkLogUpBalance
+        (ledger.filter fun interaction => interaction.channel.name == channel.name)))
 
-/-- Computed acceptance is equivalent to the two raw Clean witness predicates. -/
-theorem checkWitness_iff (description : EnsembleCheck ens) (characteristic : ℕ)
-    [CharP F characteristic] (witness : EnsembleWitness ens) :
-    description.checkWitness characteristic witness = true ↔
-      witness.Constraints ∧ witness.BalancedChannels := by
-  rw [EnsembleWitness.Constraints]
-  simp only [checkWitness, Bool.and_eq_true, List.all_eq_true,
-    EnsembleWitness.BalancedChannels]
+/-- Computed acceptance checks the height capacity as well as constraints and LogUp balance. -/
+theorem checkWitness_iff (description : EnsembleCheck ens) (witness : EnsembleWitness ens) :
+    description.checkWitness witness = true ↔
+      ens.interactionsFit .logUp witness.heights ∧ witness.Constraints ∧ witness.Balanced .logUp := by
+  simp only [checkWitness, Bool.and_eq_true, List.all_eq_true, EnsembleWitness.Constraints,
+    EnsembleWitness.Balanced, Balance.logUp]
+  apply and_congr_right
+  intro _
   apply and_congr
   · exact forall₂_congr fun table member => description.checkTable_iff
       (EnsembleWitness.component_mem_tables_of_mem member)
   · apply forall₂_congr
     intro channel registered
-    rw [checkInteractionBalance_iff, description.interactionsNamed_eq witness registered]
+    rw [checkLogUpBalance_iff, description.interactionsNamed_eq witness registered]
 
-/-- A checked physical witness establishes the ensemble's public statement. -/
-theorem statement_of_checkWitness (description : EnsembleCheck ens) (characteristic : ℕ)
-    [CharP F characteristic] (witness : EnsembleWitness ens)
-    (checked : description.checkWitness characteristic witness = true) :
-    ens.Statement witness.publicInput :=
-  ⟨witness, rfl, (description.checkWitness_iff characteristic witness).mp checked⟩
+/-- A checked physical witness establishes the actual height-indexed LogUp statement. -/
+theorem statement_of_checkWitness (description : EnsembleCheck ens) (witness : EnsembleWitness ens)
+    (checked : description.checkWitness witness = true) :
+    ens.Statement .logUp witness.publicInput witness.heights := by
+  obtain ⟨fit, constraints, balanced⟩ := (description.checkWitness_iff witness).mp checked
+  exact ⟨fit, witness, rfl, rfl, constraints, balanced⟩
 
 end EnsembleCheck
 

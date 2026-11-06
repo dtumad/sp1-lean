@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import SP1Clean.Native.Chips.HostCallChip.Defs
 
 /-! # Soundness and completeness of the instruction-to-host boundary
@@ -90,5 +91,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       simp only [Operations.shallowInteractions, List.mem_singleton] at member
       subst interaction
       exact Or.inl (by simp only [circuit_norm])
+
+/-- Host instructions use the same unit-demand State routing as ordinary instructions. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name
+    (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.instruction.state)
+    (fun input => input.instruction.is_real)
 
 end SP1Clean.HostCallChip

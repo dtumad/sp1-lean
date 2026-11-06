@@ -10,7 +10,7 @@ This platform condition applies to empty/stopped boundaries as well as active se
 
 namespace SP1CleanTest.Core.NativePlatform
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Functions
 
 private def image : ProgramImage := ⟨[(65536, 0x0020006f)], 65536, []⟩
 

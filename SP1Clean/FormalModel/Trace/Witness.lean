@@ -7,7 +7,7 @@ real instruction and data bytes. The reusable register initializer lives in
 `Model/Machine/ConfiguredState.lean`; the checked finite-image loader builds on the same state.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Soundness.Target
 
 open Sail LeanRV64D LeanRV64D.Functions SP1Clean.SailMem

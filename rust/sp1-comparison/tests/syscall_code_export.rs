@@ -11,7 +11,7 @@ mod generated {
     ));
 }
 
-use clean_backend::witness_generation::{generate, Program};
+use clean_backend::witness_generation::{Program, WitnessData};
 use clean_backend::GeneratedAirSpec;
 use generated::Ensemble as Profile;
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
@@ -32,10 +32,11 @@ fn codes() -> [u64; 8] {
 }
 
 fn row(input: [u64; 5]) -> Vec<F> {
-    let witness = generate::<F, Profile>(&[], &input.map(F::from_u64)).unwrap();
-    assert_eq!(witness.tables.len(), 1);
-    assert_eq!(witness.tables[0].len(), 1);
-    witness.tables[0][0].clone()
+    let input = input.map(F::from_u64);
+    let data = WitnessData::from_entries(vec![]);
+    let hint = WitnessData::from_entries(vec![("input", vec![input.to_vec()])]);
+    // This isolated guard has no channel demand; exercise its generated row program directly.
+    <Profile as Program<F>>::complete_row(0, &input, &data, &hint).unwrap()
 }
 
 fn valid(row: &[F]) -> bool {

@@ -7,7 +7,7 @@ extern crate alloc;
 mod backend;
 
 use backend::{assert_backend_rejection, config, fixed_trace, physical_reference};
-use clean_backend::{prove_ensemble, verify_ensemble, GeneratedAirSpec};
+use clean_backend::{EnsembleKey, GeneratedAirSpec};
 use p3_field::PrimeCharacteristicRing;
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
@@ -129,7 +129,7 @@ macro_rules! compare_cases {
                 "{}",
                 case["name"]
             );
-            let generated = $module::generate::<F>(&public, &[]);
+            let generated = $module::generate::<F>(&public, &[], 1);
             assert_eq!(
                 generated.is_ok(),
                 case.get("witness").is_some(),
@@ -149,12 +149,11 @@ macro_rules! compare_cases {
                     // a row but must fail eligibility constraints in the actual backend.
                     let traces = witness.into_traces().unwrap();
                     let heights: Vec<usize> = traces.iter().map(Matrix::height).collect();
-                    let statement = $module::Statement::<F>::new(&heights).unwrap();
-                    let config = config();
+                    let statement = $module::Statement::<F>::new(&heights, 1).unwrap();
+                    let mut key = EnsembleKey::new(config(), 1).unwrap();
                     let check = || {
-                        let (proof, _) =
-                            prove_ensemble(&config, &statement, traces, &public).unwrap();
-                        verify_ensemble(&config, &statement, &proof, &public).is_ok()
+                        let proof = key.prove(&statement, traces, &public).unwrap();
+                        key.verify(&statement, &proof, &public).is_ok()
                     };
                     if expected {
                         assert!(check());
@@ -180,8 +179,16 @@ fn unused_inventories_keep_every_physical_zero_count() {
     compare_cases!(nodes_unused, false, false);
     compare_cases!(words_unused, true, false);
     for (tables, width, height) in [
-        (nodes_unused::generate::<F>(&[], &[]).unwrap().tables, 12, 4),
-        (words_unused::generate::<F>(&[], &[]).unwrap().tables, 13, 8),
+        (
+            nodes_unused::generate::<F>(&[], &[], 1).unwrap().tables,
+            12,
+            4,
+        ),
+        (
+            words_unused::generate::<F>(&[], &[], 1).unwrap().tables,
+            13,
+            8,
+        ),
     ] {
         assert_eq!(tables.len(), 1);
         assert_eq!(tables[0].len(), height);
@@ -196,7 +203,7 @@ macro_rules! backend_mutations {
         let allowed = records($words);
         let request = allowed.last().unwrap();
         let public = [request.clone(), request.clone()].concat();
-        let witness = $module::generate::<F>(&public, &[]).unwrap();
+        let witness = $module::generate::<F>(&public, &[], 1).unwrap();
         let width = request.len();
         let height = allowed.len().next_power_of_two();
         assert_eq!(witness.tables[0].len(), height);
@@ -212,27 +219,31 @@ macro_rules! backend_mutations {
         }
         let traces = witness.into_traces().unwrap();
         // All payload and eligibility cells are verifier-fixed, leaving only counts in the trace.
-        assert_eq!($module::Ensemble::FIXED_WIDTHS, &[width + 1]);
+        assert_eq!(
+            $module::Ensemble::FIXED_COLUMNS,
+            &[(0..width + 1).collect::<Vec<_>>().as_slice()]
+        );
         assert_eq!((traces[0].width(), traces[0].height()), (1, height));
-        let statement = $module::Statement::<F>::new(&[height]).unwrap();
-        assert!($module::Statement::<F>::new(&[height / 2]).is_err());
-        assert!($module::Statement::<F>::new(&[height * 2]).is_err());
-        let config = config();
-        let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-        verify_ensemble(&config, &statement, &proof, &public).unwrap();
+        let statement = $module::Statement::<F>::new(&[height], 1).unwrap();
+        assert!($module::Statement::<F>::new(&[height / 2], 1).is_err());
+        assert!($module::Statement::<F>::new(&[height * 2], 1).is_err());
+        let mut key = EnsembleKey::new(config(), 1).unwrap();
+        let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+        key.verify(&statement, &proof, &public).unwrap();
         for column in 0..width {
             let mut forged = public.clone();
             forged[column] += F::ONE;
-            assert!($module::generate::<F>(&forged, &[]).is_err());
-            assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+            assert!($module::generate::<F>(&forged, &[], 1).is_err());
+            assert!(key.verify(&statement, &proof, &forged).is_err());
         }
         // Every count matters, including unused real rows and every ineligible padding row.
         for row in 0..height {
             let mut forged = traces.clone();
             forged[0].values[row] += F::ONE;
             assert_backend_rejection(|| {
-                let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-                verify_ensemble(&config, &statement, &proof, &public).is_err()
+                let mut key = EnsembleKey::new(config(), 1).unwrap();
+                let proof = key.prove(&statement, forged, &public).unwrap();
+                key.verify(&statement, &proof, &public).is_err()
             });
         }
     }};

@@ -334,7 +334,6 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 omit [Fact (2 ^ 17 < p)] in
 private theorem equalityAssertionConstraint_mem
@@ -525,7 +524,7 @@ private theorem postWitness_stateInteractions_eq (input : Var Inputs (ZMod p))
     Channels.stateChannel_eq_memoryChannel_false, not_false_eq_true,
     Operations.interactionsWith_assert, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel,
-    Channels.byteChannel_eq_stateChannel_false, if_false, List.append_nil]
+    Channels.byteChannel_eq_stateChannel_false, ite_false, List.append_nil]
 
 /-- `CPUState` contributes the whole chip's exact State-channel interaction list; the folded
 post-witness body has no State interaction. -/
@@ -948,7 +947,7 @@ private theorem postWitness_memoryInteractions_eq (input : Var Inputs (ZMod p)) 
     Channels.memoryChannel_eq_byteChannel_false, not_false_eq_true,
     Operations.interactionsWith_assert, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel,
-    Channels.byteChannel_eq_memoryChannel_false, if_false, List.append_nil,
+    Channels.byteChannel_eq_memoryChannel_false, ite_false, List.append_nil,
     Soundness.aluTypeMemoryInteractions, Soundness.registerWriteMemoryInteractions,
     List.cons_append, List.nil_append]
   simp only [exposedMemoryInteractions, Inputs.is_real, witnessPrefix, Circuit.output,
@@ -1010,7 +1009,7 @@ private theorem postWitness_programInteractions_eq (input : Var Inputs (ZMod p))
     Channels.programChannel_eq_memoryChannel_false, not_false_eq_true,
     Operations.interactionsWith_assert, Operations.interactionsWith_interact,
     Operations.interactionsWith_nil, ChannelInteraction.toRaw_channel,
-    Channels.byteChannel_eq_programChannel_false, if_false, List.append_nil,
+    Channels.byteChannel_eq_programChannel_false, ite_false, List.append_nil,
     Soundness.aluTypeProgramMessage, List.nil_append]
   simp only [postWitnessReaderInput, exposedProgramInteractions, exposedOpcode,
     witnessPrefix, Circuit.output, List.map_cons, List.map_nil]
@@ -1461,10 +1460,7 @@ private theorem postWitness_requirementsChannelsLawful (input : Var Inputs (ZMod
       List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
     rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       right <;>
-      rw [ChannelInteraction.toRaw_requirements] <;>
-      intro h1 h0 <;>
-      simp only [circuit_norm] at h1 h0 <;>
-      exact off_gate_vacuous h_bool h1 h0
+      exact h_bool
 
 /-- The folded witness prefix is structurally invisible to Clean's channel-requirement law; the
 law is exactly the post-witness byte/memory argument above. -/
@@ -1634,11 +1630,9 @@ discharge its `RegisterWrite` requirement by applying it, mirroring green `Shift
 lemma resultA_isU64
     (i₀ : ℕ) (env : Environment (ZMod p))
     {input_isSrl input_isSra input_isSrlw input_isSraw : ZMod p}
-    {input_var_adapter_op_b_memory_prev_value : Word (Expression (ZMod p))}
     {input_adapter_op_b_memory_prev_value : Word (ZMod p)}
-    (h_obmap : Vector.map (Expression.eval env) input_var_adapter_op_b_memory_prev_value = input_adapter_op_b_memory_prev_value)
     (h_rs1U : input_adapter_op_b_memory_prev_value.isU64)
-    (h_msb1 : U16MSBOperation.circuit.Assumptions { a := Expression.eval env input_var_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSra } → U16MSBOperation.circuit.Spec { a := Expression.eval env input_var_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSra })
+    (h_msb1 : U16MSBOperation.circuit.Assumptions { a := input_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSra } → U16MSBOperation.circuit.Spec { a := input_adapter_op_b_memory_prev_value[3], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSra })
     (h_msb3 : U16MSBOperation.circuit.Assumptions { a := env.get (i₀ + 1), cols := { msb := env.get (i₀ + 4 + 1) }, is_real := input_isSrlw + input_isSraw } → U16MSBOperation.circuit.Spec { a := env.get (i₀ + 1), cols := { msb := env.get (i₀ + 4 + 1) }, is_real := input_isSrlw + input_isSraw })
     (h_srl_b : input_isSrl * (input_isSrl + -1) = 0)
     (h_sra_b : input_isSra * (input_isSra + -1) = 0)
@@ -1689,23 +1683,22 @@ lemma resultA_isU64
     (h_w3 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 1) * (env.get (i₀ + 1) + -(env.get (i₀ + 4) * 65535))) = 0)
     (h_w4 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 2) + -(env.get (i₀ + 4 + 1) * 65535)) = 0)
     (h_w5 : (input_isSrlw + input_isSraw) * (env.get (i₀ + 3) + -(env.get (i₀ + 4 + 1) * 65535)) = 0)
-    (h_byte1 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte2 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
-    (h_byte3 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 1), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte4 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
-    (h_byte5 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte6 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
-    (h_byte7 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
-    (h_byte8 : -(input_isSrl + input_isSra + input_isSrlw + input_isSraw) = -1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 3), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte1 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte2 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte3 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 1), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte4 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte5 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 2), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte6 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 2), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
+    (h_byte7 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 3), b := env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8, c := 0 } env.data)
+    (h_byte8 : (input_isSrl + input_isSra + input_isSrlw + input_isSraw) = 1 → byteChannel.Guarantees { opcode := 6, a := env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 3), b := 16 + -(env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 + env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8), c := 0 } env.data)
     :
     input_isSrl + input_isSra + input_isSrlw + input_isSraw = 1 →
-      Word.isU64 (Vector.map (Expression.eval env) (Vector.mapRange 4 fun i => var { index := i₀ + i }) : Word (ZMod p)) := by
+      Word.isU64 (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p)) := by
   -- Reduce the committed result column `cols.a` to its four `env.get`s.
-  have hcolsa : (Vector.map (Expression.eval env)
-        (Vector.mapRange 4 fun i => var { index := i₀ + i }) : Word (ZMod p))
+  have hcolsa : (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p))
       = #v[env.get i₀, env.get (i₀ + 1), env.get (i₀ + 2), env.get (i₀ + 3)] := by
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     interval_cases i <;> rfl
   -- **The result range-check.** On a variant-active row the four output limbs are each `< 2^16`. Proved
   -- once here; `spec`/`regwriteA` lift it to `isU64 cols.a` and `msb3A` reads off the `a[1]` bound.
@@ -1722,15 +1715,15 @@ lemma resultA_isU64
     simp only [← sub_eq_add_neg] at h_srl_b h_sra_b h_srlw_b h_sraw_b h_sum_b h_b0 h_b1 h_b2 h_b3 h_b4 h_s0b h_s1b h_s2b
     have hp17 : 2 ^ 17 < p := Fact.out
     -- The variant flag-sum is 1, so the nine byte-pull guarantees fire (gated by `-(flag-sum) = -1`).
-    have hsumneg : -(input_isSrl +
+    have hsumneg : (input_isSrl +
           input_isSra +
           input_isSrlw +
-        input_isSraw) = -1 := by rw [hsum1]
+        input_isSraw) = 1 := by rw [hsum1]
     have hbyte_fact : ∀ {v w : ZMod p},
-        (-(input_isSrl +
+        ((input_isSrl +
             input_isSra +
             input_isSrlw +
-            input_isSraw) = -1 →
+            input_isSraw) = 1 →
           byteChannel.Guarantees (⟨6, v, w, 0⟩ : ByteRow (ZMod p)) env.data) → v.val < 2 ^ w.val := by
       intro v w hb
       exact byteRowSpec_range_val (hb hsumneg)
@@ -1783,10 +1776,8 @@ lemma resultA_isU64
         env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 4 + 4 + 3) = 1 := by
       have hh := h_onehot; rw [hsum1] at hh; linear_combination hh
     -- `b_msb ∈ {0,1}` unconditionally (the `U16MSBOperation` gadget's ungated booleanness).
-    have hb3e : Expression.eval env input_var_adapter_op_b_memory_prev_value[3]
-        = input_adapter_op_b_memory_prev_value[3] := by rw [← h_obmap]; simp only [Vector.getElem_map]
     have hbmsb_bool : env.get (i₀ + 4) = 0 ∨ env.get (i₀ + 4) = 1 :=
-      (h_msb1 ⟨fun _ => by rw [hb3e]; exact h_rs1U 3, bool_of_mul_pred h_sra_b⟩).1
+      (h_msb1 ⟨fun _ => h_rs1U 3, bool_of_mul_pred h_sra_b⟩).1
     -- The four `limb_result` atomic `u16` bounds (`lr0`/`lr1`/`lr2` via `limb_result_lt`; the bare high
     -- limbs `hl1`/`hl3` via the `ll = 0` specialisation).
     have B_hl1 : (env.get (i₀ + 4 + 1 + 1 + 6 + 1 + 3 + 4 + 1)).val < 2 ^ 16 := by

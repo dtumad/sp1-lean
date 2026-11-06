@@ -7,7 +7,7 @@ proved for Sail's byte writes and composed through its actual bounded physical-a
 -/
 
 namespace SP1Clean.SailMem
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.Advance
 
 /-- Register identity and byte-level preservation on a specified selected region. -/
@@ -199,7 +199,7 @@ theorem checked_mem_write_frame (readOnly : ℕ → Bool) (source : SailState)
       dsimp only
       refine (run_ME_bind_ok _ _ state state false (run_ME_liftM _ state state _
         (run_mmio_writable_false state stateCfg _ _))).trans ?_
-      simp only [Bool.false_eq_true, if_false, bind_assoc, pure_bind]
+      simp only [Bool.false_eq_true, ite_false, bind_assoc, pure_bind]
       exact (run_ME_bind_ok _ _ state next true (run_ME_liftM _ state next _ written)).trans rfl
     · dsimp only [control]
       split

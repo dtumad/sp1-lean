@@ -41,10 +41,12 @@ noncomputable def channelDemand (channel : RawChannel (ZMod p)) : ℕ :=
       trace.providerHeight id * (Soundness.providerTableFor (p := p) id).channelWidth channel).sum
 
 /-- Constructing row cells leaves the event-derived physical heights unchanged. -/
-theorem physicalHeights_eq : trace.physicalHeights = trace.witness.tableHeights := by
-  have preserved : (withDerivedData trace.tables).map Table.length = trace.tables.map Table.length := by
-    simp only [withDerivedData, List.map_map, Function.comp_def, Table.length]
-  rw [EnsembleWitness.tableHeights_eq, witness_tables, preserved]
+theorem physicalHeights_eq : trace.physicalHeights = trace.witness.heights := by
+  have preserved : (withDerivedData trace.tables
+      (by simpa only [← trace.tables_map_component, List.map_map, Function.comp_def] using (sp1Ensemble (p := p)).unique_names)
+      (toElements trace.publicValues).toArray).map Table.length = trace.tables.map Table.length := by
+    simp [withDerivedData, List.map_attach_eq_pmap, List.map_pmap, List.pmap_eq_map, Table.length]
+  rw [EnsembleWitness.heights, witness_tables, preserved]
   simp only [tables, instructionTables, providerTables, List.map_append, List.map_map, Function.comp_def, physicalHeights,
     instructionTableFor_length, providerTableFor_length]
 
@@ -52,9 +54,11 @@ theorem physicalHeights_eq : trace.physicalHeights = trace.witness.tableHeights 
 theorem channelDemand_eq (channel : RawChannel (ZMod p)) :
     trace.channelDemand channel = trace.witness.channelOccurrences channel := by
   have preserved :
-      (withDerivedData trace.tables).map (fun table => table.length * table.component.channelWidth channel) =
+      (withDerivedData trace.tables
+      (by simpa only [← trace.tables_map_component, List.map_map, Function.comp_def] using (sp1Ensemble (p := p)).unique_names)
+      (toElements trace.publicValues).toArray).map (fun table => table.length * table.component.channelWidth channel) =
         trace.tables.map (fun table => table.length * table.component.channelWidth channel) := by
-    simp only [withDerivedData, List.map_map, Function.comp_def, Table.length]
+    simp [withDerivedData, List.map_attach_eq_pmap, List.map_pmap, List.pmap_eq_map, Table.length]
   rw [EnsembleWitness.channelOccurrences_eq, witness_tables, preserved]
   simp only [tables, instructionTables, providerTables, List.map_append,
     List.map_map, Function.comp_def, List.sum_append, instructionTableFor_length, providerTableFor_length,

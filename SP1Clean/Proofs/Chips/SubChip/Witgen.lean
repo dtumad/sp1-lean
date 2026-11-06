@@ -22,8 +22,8 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 `FlatOperation.forAll_witnessCongr_of_subcircuit` dispatches the five zero-witness subcircuits by
 their cell count, without unfolding them, and `SubOperation.populateIR_congr` discharges the one real
-obligation from the input agreement that `FormalCircuitBase.ComputableWitnessesWithData` supplies. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+obligation from the input agreement that `FormalCircuitBase.ComputableWitnesses` supplies. -/
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,
@@ -38,10 +38,10 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
     refine SubOperation.populateIR_congr env env' _ _ (fun i hi => ?_) (fun i hi => ?_)
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
       simp only [eval_opBVal] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
       simp only [eval_opCVal] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · simp [circuit_norm]
   · simp [circuit_norm]
   · simp [circuit_norm]

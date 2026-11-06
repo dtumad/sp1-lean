@@ -14,7 +14,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Branch's row has computable witnesses. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _h_agree h_input => ?_,
@@ -34,32 +34,8 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
   · -- Comparison certificate from ordinary inputs.
     refine LtOperationSigned.populateFE_congr_flat env env' _ _ _ _
       (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
-    · have hv : (ProvableStruct.eval env.toEnvironment input).adapter.op_a_memory.prev_value
-          = (ProvableStruct.eval env'.toEnvironment input).adapter.op_a_memory.prev_value :=
-        congrArg (fun r : Inputs (ZMod p) => r.adapter.op_a_memory.prev_value) h_input
-      rw [eval_rs1In env.toEnvironment input, eval_rs1In env'.toEnvironment input] at hv
-      interval_cases i
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[0]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[1]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[2]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
-    · have hv : (ProvableStruct.eval env.toEnvironment input).adapter.op_b_memory.prev_value
-          = (ProvableStruct.eval env'.toEnvironment input).adapter.op_b_memory.prev_value :=
-        congrArg (fun r : Inputs (ZMod p) => r.adapter.op_b_memory.prev_value) h_input
-      rw [eval_rs2In env.toEnvironment input, eval_rs2In env'.toEnvironment input] at hv
-      interval_cases i
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[0]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[1]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[2]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
+    · interval_cases i <;> simp only [circuit_norm, Inputs.eval_congr_adapter h_input]
+    · interval_cases i <;> simp only [circuit_norm, Inputs.eval_congr_adapter h_input]
     · simp only [circuit_norm]
       rw [Inputs.eval_congr_isBlt h_input, Inputs.eval_congr_isBge h_input]
     · simpa only [eval_isReal] using congrArg Inputs.is_real h_input
@@ -75,30 +51,8 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       h_agree.get_eq (i := n + 1 + 3) (by omega)]
   · -- The three `next_pc` cells: pc/imm inputs, the `is_branching` cell below, `is_real`.
     refine nextPcIR_congr env env' _ _ _ _ (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
-    · have hv : (ProvableStruct.eval env.toEnvironment input).state.pc
-          = (ProvableStruct.eval env'.toEnvironment input).state.pc :=
-        congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
-      rw [eval_statePcIn env.toEnvironment input, eval_statePcIn env'.toEnvironment input] at hv
-      interval_cases i
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Vector (ZMod p) 3 => v[0]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Vector (ZMod p) 3 => v[1]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Vector (ZMod p) 3 => v[2]) hv)).trans (Vector.getElem_map _ (by omega))
-    · have hv : (ProvableStruct.eval env.toEnvironment input).adapter.op_c_imm
-          = (ProvableStruct.eval env'.toEnvironment input).adapter.op_c_imm :=
-        congrArg (fun r : Inputs (ZMod p) => r.adapter.op_c_imm) h_input
-      rw [eval_opCImmIn env.toEnvironment input, eval_opCImmIn env'.toEnvironment input] at hv
-      interval_cases i
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[0]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[1]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[2]) hv)).trans (Vector.getElem_map _ (by omega))
-      · exact ((Vector.getElem_map _ (by omega)).symm.trans
-          (congrArg (fun v : Word (ZMod p) => v[3]) hv)).trans (Vector.getElem_map _ (by omega))
+    · interval_cases i <;> simp only [circuit_norm, Inputs.eval_congr_state h_input]
+    · interval_cases i <;> simp only [circuit_norm, Inputs.eval_congr_adapter h_input]
     · simp only [circuit_norm]
       exact h_agree.get_eq (by omega)
     · simpa only [eval_isReal] using congrArg Inputs.is_real h_input

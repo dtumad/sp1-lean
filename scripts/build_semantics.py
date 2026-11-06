@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """build_semantics.py — join the build's cost to its claims.
 
-Reads the import graph of the five source trees (`SP1Clean/`, `ToClean/`, `ToMathlib/`,
-`ToPolyFun/`, `SP1CleanTest/`) plus the generated `LeanRV64D/` model, classifies every module by
+Reads the import graph of the four source trees (`SP1Clean/`, `ToClean/`, `ToMathlib/`,
+`SP1CleanTest/`) plus the generated `LeanRV64D/` model, classifies every module by
 stratum (`scripts/layering.txt`, longest prefix — the same rule as `scripts/check_layering.sh`) and
 by semantic layer (L1 ISA semantics, L2 native gadgets/chips, L3 native machine,
 L5 tests, G generated model), joins per-module seconds from a Lake build log (`Built <module> (<t>)`
@@ -38,7 +38,7 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TREES = ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun", "SP1CleanTest", "LeanRV64D"]
+TREES = ["SP1Clean", "ToClean", "ToMathlib", "SP1CleanTest", "LeanRV64D"]
 IMPORT_RE = re.compile(r"^(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?([A-Za-z0-9_.«»]+)")
 BUILT_RE = re.compile(r"Built (\S+) \((\d+(?:\.\d+)?)(ms|s)\)")
 
@@ -78,7 +78,6 @@ LAYERS = [
     ("SP1Clean.lean", "L2"),
     ("ToClean/", "L2"), ("ToClean.lean", "L2"),
     ("ToMathlib/", "L2"), ("ToMathlib.lean", "L2"),
-    ("ToPolyFun/", "L2"), ("ToPolyFun.lean", "L2"),
 ]
 
 # ---- headline declarations (module, label, status) ----------------------------------------------
@@ -128,7 +127,7 @@ def classify_stratum(path, strata):
         return -1
     if path.startswith("SP1CleanTest"):
         return 12
-    if path in ("SP1Clean.lean", "SP1Clean/Core.lean", "ToClean.lean", "ToMathlib.lean", "ToPolyFun.lean"):
+    if path in ("SP1Clean.lean", "SP1Clean/Core.lean", "ToClean.lean", "ToMathlib.lean"):
         return 99  # root indices: not a layer, imported by nothing
     return None
 

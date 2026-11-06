@@ -86,9 +86,9 @@ theorem absU_toNat (x : Witgen.U64Expr (ZMod p)) {bx : BitVec 64}
   have hmsb : bx.msb = decide (2 ^ 63 ≤ bx.toNat) := BitVec.msb_eq_decide bx
   simp only [absU, circuit_norm, hx, bvAbs]
   rcases Nat.lt_or_ge bx.toNat (2 ^ 63) with hcase | hcase
-  · rw [if_pos (by omega), if_neg (by rw [hmsb]; simp; omega)]
+  · rw [ite_eq_left (by omega), ite_eq_right (by rw [hmsb]; simp; omega)]
     exact hx
-  · rw [if_neg (by omega), if_pos (by rw [hmsb]; simp; omega)]
+  · rw [ite_eq_right (by omega), ite_eq_left (by rw [hmsb]; simp; omega)]
     exact negU_toNat env x hx
 
 /-- `sdivU` is `BitVec.sdiv` at width 64 (case-aligned with `BitVec.toNat_sdiv`). -/
@@ -108,21 +108,21 @@ theorem sdivU_toNat (x y : Witgen.U64Expr (ZMod p)) {bx bY : BitVec 64}
     rcases Nat.lt_or_ge bY.toNat (2 ^ 63) with hcy | hcy
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_pos (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_left (by omega)]
     simp only [circuit_norm, hx, hy, BitVec.udiv_eq, BitVec.toNat_udiv]
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_neg (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_right (by omega)]
     refine negU_toNat env _ ?_
     simp only [circuit_norm, hx, hny, BitVec.udiv_eq, BitVec.toNat_udiv]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_pos (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_left (by omega)]
     refine negU_toNat env _ ?_
     simp only [circuit_norm, hnx, hy, BitVec.udiv_eq, BitVec.toNat_udiv]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_neg (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_right (by omega)]
     simp only [circuit_norm, hnx, hny, BitVec.udiv_eq, BitVec.toNat_udiv]
 
 /-- `sremU` is `BitVec.srem` at width 64 (case-aligned with `BitVec.toNat_srem`). -/
@@ -142,20 +142,20 @@ theorem sremU_toNat (x y : Witgen.U64Expr (ZMod p)) {bx bY : BitVec 64}
     rcases Nat.lt_or_ge bY.toNat (2 ^ 63) with hcy | hcy
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_pos (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_left (by omega)]
     simp only [circuit_norm, hx, hy]
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_neg (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_right (by omega)]
     simp only [circuit_norm, hx, hny]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_pos (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_left (by omega)]
     refine negU_toNat env _ ?_
     simp only [circuit_norm, hnx, hy, BitVec.toNat_umod]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_neg (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_right (by omega)]
     refine negU_toNat env _ ?_
     simp only [circuit_norm, hnx, hny, BitVec.toNat_umod]
 
@@ -184,21 +184,21 @@ theorem sdiv32U_toNat (x y : Witgen.U64Expr (ZMod p)) {bx bY : BitVec 32}
     rcases Nat.lt_or_ge bY.toNat (2 ^ 31) with hcy | hcy
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_pos (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_left (by omega)]
     simp only [circuit_norm, hx, hy, BitVec.udiv_eq, BitVec.toNat_udiv]
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_neg (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_right (by omega)]
     refine neg32U_toNat env _ ?_
     simp only [circuit_norm, hx, hny, BitVec.udiv_eq, BitVec.toNat_udiv]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_pos (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_left (by omega)]
     refine neg32U_toNat env _ ?_
     simp only [circuit_norm, hnx, hy, BitVec.udiv_eq, BitVec.toNat_udiv]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_neg (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_right (by omega)]
     simp only [circuit_norm, hnx, hny, BitVec.udiv_eq, BitVec.toNat_udiv]
 
 /-- `srem32U` is `BitVec.srem` at width 32 (embedded). -/
@@ -218,20 +218,20 @@ theorem srem32U_toNat (x y : Witgen.U64Expr (ZMod p)) {bx bY : BitVec 32}
     rcases Nat.lt_or_ge bY.toNat (2 ^ 31) with hcy | hcy
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_pos (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_left (by omega)]
     simp only [circuit_norm, hx, hy]
   · rw [show bx.msb = false by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_pos (by omega), if_neg (by omega)]
+    rw [ite_eq_left (by omega), ite_eq_right (by omega)]
     simp only [circuit_norm, hx, hny]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = false by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_pos (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_left (by omega)]
     refine neg32U_toNat env _ ?_
     simp only [circuit_norm, hnx, hy, BitVec.toNat_umod]
   · rw [show bx.msb = true by rw [hmx]; simp; omega,
       show bY.msb = true by rw [hmy]; simp; omega]
-    rw [if_neg (by omega), if_neg (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_right (by omega)]
     refine neg32U_toNat env _ ?_
     simp only [circuit_norm, hnx, hny, BitVec.toNat_umod]
 
@@ -250,10 +250,10 @@ theorem sext32U_toNat (x : Witgen.U64Expr (ZMod p)) {bx : BitVec 32}
   rw [BitVec.toNat_signExtend, BitVec.toNat_setWidth]
   simp only [sext32U, circuit_norm, hx]
   rcases Nat.lt_or_ge bx.toNat (2 ^ 31) with hcase | hcase
-  · rw [if_pos (by omega), show bx.msb = false by rw [hmx]; simp; omega]
-    simp only [if_neg Bool.false_ne_true]
+  · rw [ite_eq_left (by omega), show bx.msb = false by rw [hmx]; simp; omega]
+    simp only [ite_eq_right Bool.false_ne_true]
     omega
-  · rw [if_neg (by omega), show bx.msb = true by rw [hmx]; simp; omega, if_pos rfl]
+  · rw [ite_eq_right (by omega), show bx.msb = true by rw [hmx]; simp; omega, ite_eq_left rfl]
     simp only [circuit_norm, hx]
 
 end IRCalculusEval
@@ -294,11 +294,10 @@ variable (env : ProverEnvironment (ZMod p))
 
 /-- Evaluating a derived flag is the corresponding `selectorFlags` cell. -/
 theorem flagF_eval (k : ℕ) (hk : k < 8) :
-    Witgen.FExpr.eval { env := env } (flagF selectors k) = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k]'hk := by
+    Witgen.FExpr.eval { env := env } (flagF selectors k) = (selectorFlags (Eval.eval env.toEnvironment selectors))[k]'hk := by
   interval_cases k <;>
-    (simp only [flagF, selectorF, selectorFlags, circuit_norm, Vector.getElem_map, Vector.getElem_mk,
-      List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ]
-     try ring)
+    (simp only [flagF, selectorF, selectorFlags, circuit_norm, Vector.getElem_mk,
+      List.getElem_toArray, List.getElem_cons_zero, List.getElem_cons_succ])
 
 end WordAndFlagsEval
 
@@ -364,7 +363,7 @@ theorem quotBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
     ((quotBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
-      = (quotBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
+      = (quotBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat := by
   have hb := wordU_toNat env B vB hWB hUB
   have hc := wordU_toNat env C vC hWC hUC
   have hlo32b := low32U_toNat env (wordU B) hb
@@ -401,7 +400,7 @@ theorem remBitsU_toNat (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p)
     (hWC : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment C[i] = vC[i])
     (hUB : vB.isU64) (hUC : vC.isU64) :
     ((remBitsU selectors (wordU B) (wordU C)).eval { env := env }).toNat
-      = (remBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).toNat := by
+      = (remBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).toNat := by
   have hb := wordU_toNat env B vB hWB hUB
   have hc := wordU_toNat env C vC hWC hUC
   have hlo32b := low32U_toNat env (wordU B) hb

@@ -78,7 +78,7 @@ def circuit (provider : GeneralFormalCircuit F Input Output) (channel : Channel 
   channelsWithRequirements := provider.channelsWithRequirements ++ [channel.toRaw]
   soundness := by
     circuit_proof_start [main]
-    exact ⟨h_holds h_assumptions, Or.inr h_assumptions, fun _ _ => trivial _ _⟩
+    exact ⟨h_holds h_assumptions, Or.inr h_assumptions, fun _ => trivial _ _⟩
   completeness := by
     circuit_proof_start [main]
     exact ⟨h_assumptions, (h_env h_assumptions).2⟩
@@ -87,18 +87,20 @@ variable (provider : GeneralFormalCircuit F Input Output) (channel : Channel F M
   (trivial : ∀ message data, channel.Guarantees message data) (projection : Projection F Input Message)
 
 /-- Publishing a receipt does not widen the original row. -/
-theorem width : ({ circuit := circuit provider channel trivial projection, Assumptions := provider.Assumptions } : Component F).width =
-    ({ circuit := provider, Assumptions := provider.Assumptions } : Component F).width := rfl
+theorem width : (circuit provider channel trivial projection).size =
+    provider.size := rfl
 
 /-- The complete original assertion list is retained literally. -/
-theorem constraints : ({ circuit := circuit provider channel trivial projection, Assumptions := provider.Assumptions } : Component F).operations.constraints =
-    ({ circuit := provider, Assumptions := provider.Assumptions } : Component F).operations.constraints := by
-  simp only [Component.constraints_eq, Component.rowOperations, circuit, main, circuit_norm]
+theorem constraints : ((circuit provider channel trivial projection).instantiate.operations 0).constraints =
+    (provider.instantiate.operations 0).constraints := by
+  simp only [circuit, main, circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat, FlatOperation.constraints, List.append_nil]
 
 /-- Every original lookup is retained literally. -/
-theorem lookups : ({ circuit := circuit provider channel trivial projection, Assumptions := provider.Assumptions } : Component F).operations.lookups =
-    ({ circuit := provider, Assumptions := provider.Assumptions } : Component F).operations.lookups := by
-  simp only [Component.lookups_eq, Component.rowOperations, circuit, main, circuit_norm]
+theorem lookups : ((circuit provider channel trivial projection).instantiate.operations 0).lookups =
+    (provider.instantiate.operations 0).lookups := by
+  simp only [circuit, main, circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat, FlatOperation.lookups, List.append_nil]
 
 /-- The only added interaction is the gated observation of the original cells. -/
 theorem receipt_interactions (input : Var Input F) (offset : ℕ) :
@@ -110,19 +112,27 @@ theorem receipt_interactions (input : Var Input F) (offset : ℕ) :
 
 /-- All occurrences on every other channel are unchanged, including disabled occurrences. -/
 theorem interactions (selected : RawChannel F) (different : selected ≠ channel.toRaw) :
-    ({ circuit := circuit provider channel trivial projection, Assumptions := provider.Assumptions } : Component F).operations.interactionsWith selected =
-      ({ circuit := provider, Assumptions := provider.Assumptions } : Component F).operations.interactionsWith selected := by
-  simp only [Component.interactionsWith_eq, Component.rowOperations, circuit, main, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_interactions, Ne.symm different, ↓reduceIte, List.append_nil]
-  rfl
+    ((circuit provider channel trivial projection).instantiate.operations 0).interactionsWith selected =
+      (provider.instantiate.operations 0).interactionsWith selected := by
+  simp only [circuit, main, circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat,
+    FlatOperation.interactions, List.filter_append, List.filter_cons, List.filter_nil,
+    ChannelInteraction.toRaw, Ne.symm different, ↓reduceIte, List.append_nil]
 
 /-- A fresh channel receives exactly the observation evaluated in the original physical row. -/
 theorem row_receipt (silent : channel.toRaw ∉ provider.channels) (env : Environment F) :
-    ({ circuit := circuit provider channel trivial projection, Assumptions := provider.Assumptions } : Component F).operations.interactionValuesWith
+    ((circuit provider channel trivial projection).instantiate.operations 0).interactionValuesWith
       channel.toRaw env =
         [channel.pushedIfValue (Eval.eval env (projection.gate (varFromOffset Input 0) (size Input)))
           (Eval.eval env (projection.message (varFromOffset Input 0) (size Input)))] := by
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
+  have instantiated : ((circuit provider channel trivial projection).instantiate.operations 0).interactions =
+      (((circuit provider channel trivial projection).main (varFromOffset Input 0)).operations
+        (size Input)).interactions := by
+    simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+      GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat]
+  simp only [Operations.interactionValuesWith, Operations.interactionsWith, instantiated]
+  change ((((circuit provider channel trivial projection).main (varFromOffset Input 0)).operations
+    (size Input)).interactionsWith channel.toRaw).map (AbstractInteraction.eval env) = _
   rw [receipt_interactions, InteractionRecovery.interactionsWith_main_eq_nil provider.base _ _ _ silent]
   simp only [List.nil_append, List.map_cons, List.map_nil, Channel.eval_pushedIf]
 

@@ -2,6 +2,7 @@ import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.StateBumpChip.Defs
 import Clean.Utils.Tactics
+import Clean.Circuit.WitnessIRSugar
 
 /-! # StateBump: soundness, completeness, and the bundled circuit (W3, report Finding 2)
 
@@ -41,14 +42,12 @@ theorem soundness :
      ((input_pc0 - input_next_pc0) * (65536 : ZMod p)⁻¹ + input_pc1 - input_next_pc1)
        * (65536 : ZMod p)⁻¹,
      bool_of_mul_pred c0, bool_of_mul_pred c1, ?_, ?_, ?_⟩, fun hr1 => ?_⟩,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun h1 h0 => off_gate_vacuous h_bool h1 h0,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun h1 h0 => off_gate_vacuous h_bool h1 h0,
-    fun h1 h0 => off_gate_vacuous h_bool h1 h0, fun h1 h0 => off_gate_vacuous h_bool h1 h0⟩
+    h_bool⟩
   · rw [mul_assoc, inv_mul_cancel₀ val_65536_ne_zero, mul_one]; ring
   · rw [mul_assoc, inv_mul_cancel₀ val_65536_ne_zero, mul_one]; ring
   · linear_combination hc2
   · rw [hr1, one_mul] at h_clkhi h_clklo
-    have hneg : -input_is_real = -1 := by rw [hr1]
+    have hneg : input_is_real = 1 := by rw [hr1]
     refine ⟨(byteRowSpec_range _ h13p).mp (by rw [Nat.cast_ofNat]; exact b13 hneg),
       ((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).1,
       ((byteRowSpec_u8range_pair _ _).mp (bpair hneg)).2,
@@ -77,8 +76,8 @@ theorem completeness :
     rw [hb1e, show b1 + input_pc2 - input_next_pc2 = 0 by linear_combination e2, zero_mul]
   rcases h_bool with h0 | h1
   · -- padding row: the gated asserts vanish, the gated pulls fire only off-padding
-    have hne : ∀ {P : Prop}, -input_is_real = -1 → P :=
-      fun h => absurd (neg_inj.mp h) (by rw [h0]; exact zero_ne_one)
+    have hne : ∀ {P : Prop}, input_is_real = 1 → P :=
+      fun h => absurd (h) (by rw [h0]; exact zero_ne_one)
     refine ⟨by rw [h0, zero_mul], hne, hne, hne, hne, ?_, by rw [h0, zero_mul],
       by rw [h0, zero_mul], ?_, ?_, ?_, hb2e, hne, hne, hne⟩
     · rcases h_isclk with h | h <;> simp [h]
@@ -143,11 +142,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       -- Two shapes only: the State pair's requirement is `True`, and the byte pulls are
       -- `is_real`-gated so their requirement is off-gate vacuous.
       rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> right <;>
-        first
-          | (simp only [ChannelInteraction.toRaw_requirements, ChannelInteraction.Requirements,
-                stateChannel]; intros; trivial)
-          | (rw [ChannelInteraction.toRaw_requirements]; intro h1 h0;
-             simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_bool h1 h0)
+        simp only [circuit_norm, stateChannel, byteChannel]
+      all_goals trivial
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
@@ -160,8 +156,42 @@ set_option linter.unusedSectionVars false in
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := StateBumpChip.circuit (p := p), Assumptions := (StateBumpChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations, StateBumpChip.circuit_main_eq]
-  simp [StateBumpChip.main, circuit_norm]
+    ((StateBumpChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat, FlatOperation.lookups, StateBumpChip.circuit_main_eq, StateBumpChip.main]
+
+
+/-- Re-limb an outstanding noncanonical State push with one row per occurrence. All
+input cells are computed in Clean's existing witness IR; no private execution engine is needed. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := stateChannel
+    trigger := .push
+    guard message := .not (.and (message.clk_low.val <? 16777216)
+      (.and (message.pc0.val <? 65536) (message.pc1.val <? 65536)))
+    input message := do
+      let isClk ← Witgen.letU (.ite (message.clk_low.val <? 16777216) 0 1)
+      let high ← Witgen.letU (message.clk_high.val + isClk)
+      let low ← Witgen.letU (message.clk_low.val % 16777216)
+      let carry0 ← Witgen.letU (message.pc0.val / 65536)
+      let pc1 ← Witgen.letU (message.pc1.val + carry0)
+      pure {
+        next_clk_32_48 := (high / 256).toField
+        next_clk_24_32 := (high % 256).toField
+        next_clk_16_24 := (low / 65536).toField
+        next_clk_0_16 := (low % 65536).toField
+        clk_high := message.clk_high
+        clk_low := message.clk_low
+        next_pc0 := (message.pc0.val % 65536).toField
+        next_pc1 := (pc1 % 65536).toField
+        next_pc2 := (message.pc2.val + pc1 / 65536).toField
+        pc0 := message.pc0
+        pc1 := message.pc1
+        pc2 := message.pc2
+        is_clk := isClk.toField
+        is_real := 1
+      }
+  }
 
 end SP1Clean.StateBumpChip

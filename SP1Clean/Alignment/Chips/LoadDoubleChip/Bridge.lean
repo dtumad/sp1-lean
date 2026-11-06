@@ -25,7 +25,7 @@ memory bytes as direct hypotheses (in the full system these come from the reader
 `extend_value` (zero-extend, width 8 → 64 with no extension) leaves it and the
 `wX_bits` writes on both sides match. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.LoadSail
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -220,7 +220,7 @@ theorem correct_load_double_native
         = Word.toBitVec64 loaded := by
     apply BitVec.toNat_inj.mp
     rw [Word.toBitVec64_toNat hloaded, ← hconcat_toNat]
-    simp only [extend_value, if_true, zero_extend, Sail.BitVec.zeroExtend]
+    simp only [extend_value, ite_true, zero_extend, Sail.BitVec.zeroExtend]
     rw [BitVec.toNat_setWidth, Nat.mod_eq_of_lt]
     have := (BitVec.ofNat 8 (loaded[3].val >>> 8) ++ BitVec.ofNat 8 loaded[3].val ++
           BitVec.ofNat 8 (loaded[2].val >>> 8) ++ BitVec.ofNat 8 loaded[2].val ++
@@ -234,7 +234,7 @@ theorem correct_load_double_native
   -- `wX_bits rd (Word.toBitVec64 loaded)` via `hextend`.
   simp [spec_ld, sp1_ld, run_readReg_of_isInitialized _ _ hs,
     EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.assert, hread, hextend]
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hextend]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **End-to-end composition.** From the `LoadDouble` chip's prover assumptions (the operand `isU64`s
@@ -314,7 +314,7 @@ lemma loadDouble_hval (pv : Word (ZMod p)) (hpv : Word.isU64 pv) :
     rw [byteConcat8_toNat_eq_Word_toNat pv[0] pv[1] pv[2] pv[3] h0 h1 h2 h3,
       Word.toNat_def, Word.toNat_def]
     simp
-  simp only [extend_value, Bool.false_eq_true, if_false, sign_extend, Sail.BitVec.signExtend,
+  simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend, Sail.BitVec.signExtend,
     BitVec.signExtend_eq]
   apply BitVec.toNat_inj.mp
   rw [Word.toBitVec64_toNat hpv, hconcat_toNat]

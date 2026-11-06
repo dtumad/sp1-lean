@@ -75,7 +75,7 @@ def component (id : InstructionChipId) : Component (ZMod p) :=
   let chip := supportedChipFor (p := p) id
   letI := chip.kind.provableInputs
   letI := chip.kind.provableCols
-  { circuit := InstructionReceipt.circuit chip.circuit (projection id), Assumptions := (InstructionReceipt.circuit chip.circuit (projection id)).Assumptions }
+  { circuit := InstructionReceipt.circuit chip.circuit (projection id), generation := chip.generation, Assumptions := (InstructionReceipt.circuit chip.circuit (projection id)).Assumptions }
 
 /-- Keep the descriptor's input representation available without unfolding the chip. -/
 local instance (id : InstructionChipId) : ProvableType (supportedChipFor (p := p) id).kind.Inputs :=
@@ -246,11 +246,12 @@ theorem original_silent (id : InstructionChipId) :
 omit [Fact (2 ^ 24 < p)] in
 /-- Symbolic agreement identifies the observation in the original physical row. -/
 theorem row_meaning {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
+    {generation : WitnessGeneration.Generation (ZMod p) Input}
     (provider : GeneralFormalCircuit (ZMod p) Input Output)
     (observation : Receipt.Projection (ZMod p) Input StateMsg)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (agrees : AgreesWith provider observation view) (env : Environment (ZMod p)) :
-    let original : Component (ZMod p) := { circuit := provider, Assumptions := (provider).Assumptions }
+    let original : Component (ZMod p) := { circuit := provider, generation, Assumptions := (provider).Assumptions }
     Eval.eval env (observation.gate (varFromOffset Input 0) (size Input)) =
       (view (original.rowInput env) (original.rowOutput env)).is_real ∧
     Eval.eval env (observation.message (varFromOffset Input 0) (size Input)) =
@@ -268,7 +269,7 @@ theorem row_receipt (id : InstructionChipId) (data : ProverData (ZMod p)) (physi
           ((supportedChipFor (p := p) id).decodeRow data physical).is_real
           (statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))] := by
   let chip := supportedChipFor (p := p) id
-  have meaning := row_meaning chip.circuit (projection id) chip.kind.view
+  have meaning := row_meaning (generation := chip.generation) chip.circuit (projection id) chip.kind.view
     (projection_agrees id) (Environment.fromArray physical data)
   rw [show (component id).operations.interactionValuesWith InstructionReceipt.channel.toRaw
       (Environment.fromArray physical data) = _ from
@@ -279,30 +280,35 @@ theorem row_receipt (id : InstructionChipId) (data : ProverData (ZMod p)) (physi
 /-- Receipt wrapping retains the complete original assertion system. -/
 theorem constraints (id : InstructionChipId) : (component (p := p) id).operations.constraints =
     (supportedChipFor (p := p) id).table.operations.constraints :=
-  Receipt.constraints _ _ _ _
+  Receipt.constraints _ _ (fun _ _ => trivial) _
 
 /-- Receipt wrapping retains every fixed lookup. -/
 theorem lookups (id : InstructionChipId) : (component (p := p) id).operations.lookups =
     (supportedChipFor (p := p) id).table.operations.lookups :=
-  Receipt.lookups _ _ _ _
+  Receipt.lookups _ _ (fun _ _ => trivial) _
 
 /-- Original row constructors still fit the exact same physical width. -/
 theorem width (id : InstructionChipId) : (component (p := p) id).width =
     (supportedChipFor (p := p) id).table.width :=
-  Receipt.width _ _ _ _
+  Receipt.width _ _ (fun _ _ => trivial) _
 
 /-- All original ledgers are retained literally. -/
 theorem interactions (id : InstructionChipId) (selected : RawChannel (ZMod p))
     (different : selected ≠ InstructionReceipt.channel.toRaw) :
     (component id).operations.interactionsWith selected =
       (supportedChipFor (p := p) id).table.operations.interactionsWith selected :=
-  Receipt.interactions _ _ _ _ selected different
+  Receipt.interactions _ _ (fun _ _ => trivial) _ selected different
 
 /-- Publish receipts on a registered component's existing rows, preserving their layout. -/
 def construct (id : InstructionChipId) (original : Table (ZMod p))
     (registered : original.component = (supportedChipFor id).table) : Table (ZMod p) :=
   original.withComponent (component id) (by rw [registered]; exact width id)
-    (by rw [registered]; rfl)
+    (by
+      rw [registered]
+      funext rows
+      dsimp only [component, SupportedChip.table, Component.FixedRowsMatch]
+      cases (supportedChipFor (p := p) id).generation <;> rfl)
+    (by rw [registered]; rfl) (by rw [registered]; rfl)
 
 /-- The constructor preserves raw row validity in both directions at the same ensemble data. -/
 theorem construct_constraints (id : InstructionChipId) (original : Table (ZMod p))

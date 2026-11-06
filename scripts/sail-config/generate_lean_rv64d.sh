@@ -2,26 +2,36 @@
 # Build the pinned Sail compiler and regenerate the SP1-configured Lean model.
 # --deps installs the compiler into an isolated, cacheable opam root under SAIL_GEN_DIR.
 # --generate produces fresh module-mode output; --sp1 also checks its recorded fingerprint.
-# --stock generates legacy headers for comparison with the original upstream base snapshot.
+# --stock verifies current stock output; --generate-stock prints a candidate fingerprint.
+# SAIL_GEN_PROFILE=historical selects the independent historical stock reproduction control.
 # --make-config checks the stock config plus the SP1 overlay. Never edit generated Lean.
 # Run scripts/prepare_sail.py to validate and install output into .lake/generated/sail.
 # Requires opam, cmake, z3, a C compiler, GMP, pkg-config, zlib and m4.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-MODE="${1:?usage: generate_lean_rv64d.sh --deps | --stock | --sp1 | --generate | --make-config}"
+MODE="${1:?usage: generate_lean_rv64d.sh --deps | --stock | --generate-stock | --sp1 | --generate | --legacy-sp1 | --stock-module | --make-config}"
 case "$MODE" in
-  --deps|--stock|--sp1|--generate|--make-config) ;;
+  --deps|--stock|--generate-stock|--sp1|--generate|--legacy-sp1|--stock-module|--make-config) ;;
   *) echo "unknown mode: $MODE" >&2; exit 2 ;;
 esac
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
-read -r SAIL_URL SAIL_SHA SAIL_RISCV_SHA OCAML_VERSION BASE_SNAPSHOT < <(
-  python3 - "$REPO_ROOT/scripts/provenance.json" <<'PYPROVENANCE'
+PROFILE="${SAIL_GEN_PROFILE:-current}"
+case "$PROFILE" in current|historical) ;; *) echo "unknown generator profile: $PROFILE" >&2; exit 2 ;; esac
+if [ "$PROFILE" = historical ]; then
+  case "$MODE" in --deps|--stock) ;; *) echo "historical profile supports only --deps and --stock" >&2; exit 2 ;; esac
+fi
+read -r SAIL_URL SAIL_SHA SAIL_RISCV_SHA OCAML_VERSION BASE_SNAPSHOT STOCK_CONFIG_SHA < <(
+  python3 - "$REPO_ROOT/scripts/provenance.json" "$PROFILE" <<'PYPROVENANCE'
 import json, sys
 sail = json.load(open(sys.argv[1]))["sail"]
-print(*(sail[key] for key in ("compilerRepository", "compilerRevision", "modelRevision", "ocamlVersion", "baseSnapshot")))
+if sys.argv[2] == "historical":
+    sail = sail["historicalStock"]
+print(*(sail[key] for key in ("compilerRepository", "compilerRevision", "modelRevision", "ocamlVersion", "baseSnapshot")),
+      (sail if sys.argv[2] == "historical" else sail["currentStock"])["configSha256"])
 PYPROVENANCE
 )
 WORK="${SAIL_GEN_DIR:-$REPO_ROOT/.lake/sail-gen}"
+[ "$PROFILE" != historical ] || WORK="$WORK/historical"
 mkdir -p "$WORK"
 WORK="$(cd "$WORK" && pwd)"
 export OPAMROOT="$WORK/opam"
@@ -39,8 +49,15 @@ git -C sail-riscv cat-file -e "$SAIL_RISCV_SHA^{commit}" 2>/dev/null || git -C s
 git -C sail checkout --quiet "$SAIL_SHA"
 git -C sail-riscv checkout --quiet "$SAIL_RISCV_SHA"
 
+compiler_matches() {
+  [ -f "$WORK/compiler-revision" ] &&
+    [ "$(cat "$WORK/compiler-revision")" = "$SAIL_SHA:$OCAML_VERSION" ] &&
+    [ -x "$OPAMROOT/$SWITCH/bin/sail" ] &&
+    "$OPAMROOT/$SWITCH/bin/sail" --version | grep -Fq "$SAIL_SHA"
+}
+
 if [ "$MODE" = --deps ]; then
-  if [ -f "$WORK/compiler-revision" ] && [ "$(cat "$WORK/compiler-revision")" = "$SAIL_SHA:$OCAML_VERSION" ] && [ -x "$OPAMROOT/$SWITCH/bin/sail" ]; then
+  if compiler_matches; then
     echo "Using cached compiler $SAIL_SHA"
     exit 0
   fi
@@ -57,12 +74,12 @@ fi
 
 eval "$(opam env --switch=$SWITCH --set-switch)"
 command -v sail >/dev/null || { echo "run --deps first"; exit 1; }
-[ -f "$WORK/compiler-revision" ] && [ "$(cat "$WORK/compiler-revision")" = "$SAIL_SHA:$OCAML_VERSION" ] || { echo "run --deps for the pinned compiler first" >&2; exit 1; }
+compiler_matches || { echo "run --deps for the pinned compiler first" >&2; exit 1; }
 echo "sail: $(sail --version)"
 
 # Configure (writes the stock build/config/rv64d_v256_e64.json from config/config.json.in).
 modules="--all-modules;--lean-module-system"
-[ "$MODE" != --stock ] || modules="--all-modules"
+case "$MODE" in --stock|--generate-stock|--legacy-sp1) modules="--all-modules" ;; esac
 cmake -S sail-riscv -B sail-riscv/build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   "-DSAIL_BIN=$OPAMROOT/$SWITCH/bin/sail" "-DSAIL_MODULES=$modules" >/dev/null
 CFG=sail-riscv/build/config/rv64d_v256_e64.json
@@ -94,13 +111,17 @@ PYEOF
   exit 0
 fi
 
-if [ "$MODE" = --sp1 ] || [ "$MODE" = --generate ]; then
+if [ "$MODE" = --sp1 ] || [ "$MODE" = --generate ] || [ "$MODE" = --legacy-sp1 ]; then
   [ -f "$HERE/sp1_rv64d_cfg.json" ] || { echo "missing sp1_rv64d_cfg.json — run --make-config"; exit 1; }
   cp "$HERE/sp1_rv64d_cfg.json" "$CFG"
 fi
 
 # Build the Lean model; the hash guard catches a cmake re-configure clobbering the SP1 config.
 H0=$(shasum -a 256 "$CFG" | cut -d' ' -f1)
+case "$MODE" in
+  --stock|--generate-stock|--stock-module)
+    [ "$H0" = "$STOCK_CONFIG_SHA" ] || { echo "FAIL: stock config differs from provenance" >&2; exit 1; } ;;
+esac
 # Remove only this generator-owned output, so every verification is a fresh generation.
 OUT=sail-riscv/build/model/Lean_RV64D
 python3 - "$OUT" <<'PYCLEAN'
@@ -134,7 +155,11 @@ diff_against() { # rev label
 
 case "$MODE" in
   --stock)
-    diff_against "$BASE_SNAPSHOT" "opencompl base" || verdict=1 ;;
+    if [ "$PROFILE" = historical ]; then
+      diff_against "$BASE_SNAPSHOT" "historical opencompl base" || verdict=1
+    else
+      python3 "$REPO_ROOT/scripts/check_sail_regeneration.py" stock "$OUT"
+    fi ;;
   --sp1)
     python3 - "$REPO_ROOT" "$OUT" <<'PYCHECK'
 import json, sys
@@ -146,7 +171,7 @@ validate_sail(output, json.loads((root / "scripts/provenance.json").read_text())
 print("PASS: fresh Sail output matches provenance")
 PYCHECK
     ;;
-  --generate)
+  --generate|--generate-stock|--legacy-sp1|--stock-module)
     python3 - "$REPO_ROOT" "$OUT" <<'PYHASH'
 import sys
 from pathlib import Path

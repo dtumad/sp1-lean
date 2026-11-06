@@ -12,7 +12,7 @@ then reconstructs the one `EventExecutionTrace` checked by the semantic relation
 This is deliberately below every AIR representation.  Native Clean tables and extracted Rust rows
 are two compilers for this data, not fields of its validity predicate. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Machine
 

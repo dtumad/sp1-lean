@@ -1,6 +1,7 @@
 import SP1Clean.Model.Core.ProgramTable
 import SP1Clean.Model.Channels
 import ToClean.Air.FixedPrefix
+import ToClean.Air.MessageIndex
 import ToClean.Air.FixedRows
 import ToClean.Air.ChannelClosure
 import Mathlib.Data.Nat.Log
@@ -20,7 +21,7 @@ authenticated through its fixed prefix and the complete Program channel balance.
 
 namespace SP1Clean.FixedProgramProvider.Preprocessed
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels
+open Circuit Air.Flat Air.Flat.WitnessGeneration SP1Clean.Model.Core SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime]
 
@@ -35,7 +36,7 @@ def rows (image : ProgramImage) : List (ProgramMsg (ZMod p)) :=
 /-- Every admitted image retains its entire decoded inventory. -/
 theorem rows_of_valid (image : ProgramImage) (valid : image.Valid) :
     rows (p := p) image = image.programRows := by
-  simp only [rows, if_pos (image.programRows_length_le valid)]
+  simp only [rows, ite_eq_left (image.programRows_length_le valid)]
 
 private theorem rows_length_le (image : ProgramImage) :
     (rows (p := p) image).length ≤ 2 ^ 48 := by
@@ -113,18 +114,27 @@ theorem message_mem (image : ProgramImage) (index : ℕ) (nonempty : rows (p := 
       simp only [found, Option.getD_some]
       exact List.mem_of_getElem? found
 
-/-- Public columns use Clean's row program and lowering without a separate extraction path. -/
-def fixedColumns (image : ProgramImage) : FixedColumns (ZMod p) :=
-  let rom := (rows (p := p) image).toArray
-  let padding := rom[0]?.getD (fromElements (Vector.replicate (size ProgramMsg) 0))
-  FixedColumns.ofRows (Vector.ofFn fun index : Fin (height (p := p) image) =>
-    toElements (rom[index.val]?.getD padding)) (height_lt_uint64 image)
+/-- Fixed instructions use Clean's typed index-addressed witness IR. -/
+def fixedRow (image : ProgramImage) (index : Witgen.U64Expr (ZMod p)) :
+    Witgen.M (ZMod p) (ProgramMsg (Witgen.FExpr (ZMod p))) :=
+  Witgen.literalRow (Vector.ofFn fun row : Fin (height (p := p) image) => message image row.val) index
 
-/-- Lean and exported fixed-column evaluation recover the same typed instruction. -/
-theorem fixedColumns_row (image : ProgramImage) (index : Fin (height (p := p) image)) :
-    (fixedColumns (p := p) image).row (UInt64.ofNat index.val) =
-      (toElements (message image index.val)).toArray := by
-  simp [fixedColumns, FixedColumns.ofRows_row, message, List.head?_eq_getElem?]
+/-- Lean and exported fixed-cell evaluation recover the same typed instruction. -/
+theorem fixedRow_evalRow (image : ProgramImage) (index : Fin (height (p := p) image)) :
+    (fixedRow (p := p) image .idx).evalRow (UInt64.ofNat index.val) = message image index.val := by
+  simpa [fixedRow] using Witgen.literalRow_evalRow
+    (Vector.ofFn fun row : Fin (height (p := p) image) => message image row.val)
+    (height_lt_uint64 image) index
+
+/-- Fetches update one counter in the matching fixed ROM row; unused and repeated rows remain. -/
+def generation (image : ProgramImage) : PreallocatedMode (ZMod p) Input where
+  channel := programChannel
+  trigger := .pull
+  height := UInt64.ofNatLT (height (p := p) image) (height_lt_uint64 image)
+  input index := fixedWithMultiplicity (fixedRow image index)
+  rowOf _ := .messageIndex
+    (List.ofFn fun index : Fin (height (p := p) image) => toElements (message image index.val)) 0
+    (UInt64.ofNatLT (height (p := p) image) (height_lt_uint64 image))
 
 /-- Emit the fixed instruction at its chosen count. Only an empty inventory needs an arithmetic
 constraint: its inert row cannot satisfy a Program demand. -/
@@ -152,7 +162,7 @@ private def implementation (image : ProgramImage) : GeneralFormalCircuit (ZMod p
     soundness := by
       circuit_proof_start [programChannel]
       subst input
-      exact ⟨fun _ => h_assumptions.2, fun _ _ => h_assumptions.1⟩
+      exact ⟨fun _ => h_assumptions.2, fun _ => h_assumptions.1⟩
     completeness := by circuit_proof_start [programChannel]
   }
 
@@ -164,17 +174,15 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Input unit :=
 condition on the enclosing ensemble or on the prover's count. -/
 def component [Fact (2 ^ 17 < p)] (image : ProgramImage) : Component (ZMod p) where
   circuit := circuit image
-  fixedColumns := some (fixedColumns image)
+  generation := .preallocated (generation image)
   Assumptions _ _ := True
   circuit_assumptions_of_assumptions := by
     intro index input data fixed _ _
-    have bound : index.toNat < height (p := p) image := (fixed _ rfl).1
-    have fixedCells := fixed.input_prefix (by rfl)
-    have rowEq := fixedColumns_row image ⟨index.toNat, bound⟩
+    have bound : index.toNat < height (p := p) image := fixed.1
+    have decoded := fixed.2.input_prefix (by rfl)
+    have rowEq := fixedRow_evalRow image ⟨index.toNat, bound⟩
     simp only [UInt64.ofNat_toNat] at rowEq
-    rw [rowEq] at fixedCells
-    have decoded := congrArg (fromElements (M := ProgramMsg)) (Vector.toArray_inj.mp fixedCells)
-    simp only [ProvableType.fromElements_toElements] at decoded
+    rw [rowEq] at decoded
     dsimp only [circuit, implementation]
     split
     · trivial
@@ -183,7 +191,6 @@ def component [Fact (2 ^ 17 < p)] (image : ProgramImage) : Component (ZMod p) wh
     rw [decoded]
     have member := message_mem image index.toNat nonempty
     exact ⟨image.programRows_rowSpec _ member, member⟩
-  fixed_width_le_input := by change 16 ≤ 17; decide
 
 /-- Empty and nonempty images keep one stable component identity. -/
 @[simp, circuit_norm] theorem circuit_name (image : ProgramImage) :
@@ -224,6 +231,7 @@ theorem main_interactions (image : ProgramImage)
       [(programChannel.pushedIf input.2 input.1).toRaw] := by
   by_cases empty : rows (p := p) image = []
   all_goals simp [circuit, implementation, empty, circuit_norm]
+  all_goals rfl
 
 /-- Filtering for Program retains the provider's sole occurrence. -/
 theorem main_program_interactions (image : ProgramImage)
@@ -232,6 +240,7 @@ theorem main_program_interactions (image : ProgramImage)
       [(programChannel.pushedIf input.2 input.1).toRaw] := by
   by_cases empty : rows (p := p) image = []
   all_goals simp [circuit, implementation, empty, circuit_norm]
+  all_goals rfl
 
 /-- Only counted messages claim instruction membership; inert empty padding has no authority. -/
 @[simp] theorem circuit_spec (image : ProgramImage) (input : Input (ZMod p))
@@ -245,7 +254,7 @@ theorem main_program_interactions (image : ProgramImage)
 condition on prover-owned rows. Canonical data consistency comes from the ensemble witness. -/
 theorem table_spec_and_requirements [Fact (2 ^ 17 < p)] (image : ProgramImage)
     (table : Table (ZMod p)) (same : table.component = component image)
-    (consistent : table.DataConsistency) (constraints : table.Constraints) :
+    (constraints : table.Constraints) :
     table.Spec ∧ table.Requirements := by
   have assumptions : table.Assumptions := by
     intro row _
@@ -257,7 +266,7 @@ theorem table_spec_and_requirements [Fact (2 ^ 17 < p)] (image : ProgramImage)
     exact circuit_guarantees image
   have sound (row : Array (ZMod p)) (member : row ∈ table.table) :=
     table.component.weakSoundness_of_no_guarantees noGuarantees
-      (table.circuitAssumptions_of_dataConsistency consistent assumptions row member)
+      (table.circuitAssumptions_of_assumptions assumptions row member)
       (constraints row member)
   exact ⟨fun row member => (sound row member).1, fun row member => (sound row member).2⟩
 

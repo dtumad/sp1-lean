@@ -8,8 +8,8 @@ import SP1Clean.Native.Operations.AddressOperation
 /-! # Canonical RAM finalization
 
 The final record is pulled verbatim after checking its 48-bit address and eight-byte alignment.
-The address gadget excludes SP1's reserved low region. The negative Memory emission assumes no
-channel guarantee: values, timestamps, and last-access meaning follow from global grounding.
+The address gadget excludes SP1's reserved low region. Its bundled address check is independent
+of Memory authentication; values, timestamps, and last-access meaning follow from global grounding.
 -/
 
 namespace SP1Clean.FinalRamProvider
@@ -53,43 +53,20 @@ theorem canonical (record : MemoryMsg (ZMod p)) (bound : Word.isU64 (MemoryBound
     (checked : AddressOperation.Spec (addressInput record) output) : MemoryBoundary.CanonicalSpec record :=
   (ram_canonical record bound output checked).1
 
-def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
+/-- Validate the canonical RAM address and preserve the complete Memory message. -/
+@[circuit_norm]
+def addressMain (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
   assertion WordRangeCheck.circuit (MemoryBoundary.address input)
   let _ ← AddressOperation.circuit (addressInput input)
-  memoryChannel.emit (-1) input
   return input
 
-theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).interactionsWith memoryChannel.toRaw =
-      [(memoryChannel.emitted (-1) input).toRaw] := by
-  have rangeEmpty (n : ℕ) := InteractionRecovery.filter_interactions_formalAssertion_eq_nil
-    WordRangeCheck.circuit memoryChannel.toRaw (MemoryBoundary.address input)
-    (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil)
-    (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil) (n := n)
-  have addressEmpty (n : ℕ) := InteractionRecovery.interactionsWith_main_eq_nil
-    AddressOperation.circuit.base memoryChannel.toRaw (addressInput input) n (by
-      simp [ AddressOperation.circuit, circuit_norm, memoryChannel, byteChannel])
-  simp only [main, circuit_norm, rangeEmpty, List.nil_append]
-  simp only [Operations.interactionsWith] at addressEmpty ⊢
-  simp only [GeneralFormalCircuit.toSubcircuit_interactions, addressEmpty, List.nil_append]
-
-instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
-  localLength _ := 68
-  output input _ := input
-  channelsWithGuarantees := [byteChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    simp only [main, circuit_norm, WordRangeCheck.circuit, AddressOperation.circuit]
-
-def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
-  name := "sp1.native.memory.final.ram"
-  main
-  elaborated := elaborated
+/-- Canonical RAM addressing is established before Memory values and clocks are grounded. -/
+def addressCircuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.ram.address"
+  main := addressMain
   Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input _ _ := Word.isU64 (MemoryBoundary.address input) ∧
     AddressOperation.Assumptions (addressInput input)
-  channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
     circuit_proof_start [WordRangeCheck.circuit, AddressOperation.circuit, addressInput,
       MemoryBoundary.address]
@@ -100,6 +77,56 @@ def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
     circuit_proof_start [WordRangeCheck.circuit, AddressOperation.circuit, addressInput,
       MemoryBoundary.address]
     exact ⟨⟨trivial, h_assumptions.1⟩, h_assumptions.2⟩
+
+instance addressSupported : Guarded.Supported (addressCircuit (p := p)) :=
+  Guarded.Supported.of_emitted_requirements _
+    (by intro input offset; simp [addressCircuit, WordRangeCheck.circuit,
+      AddressOperation.circuit, circuit_norm])
+    (by
+      intro selected member
+      change selected ∈ [byteChannel.toRaw] at member
+      obtain rfl := List.mem_singleton.mp member
+      infer_instance)
+    (by simp [addressCircuit])
+
+def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
+  let record ← addressCircuit input
+  memoryChannel.pull record
+  return record
+
+theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).interactionsWith memoryChannel.toRaw =
+      [(memoryChannel.pulled input).toRaw] := by
+  have empty := InteractionRecovery.interactionsWith_main_eq_nil addressCircuit.base memoryChannel.toRaw
+    input offset (by simp [addressCircuit, circuit_norm, memoryChannel, byteChannel])
+  change Operations.interactionsWith memoryChannel.toRaw [Operation.subcircuit (addressCircuit.toSubcircuit offset input),
+    Operation.interact (memoryChannel.pulled input).toRaw] = _
+  simp only [Operations.interactionsWith] at empty
+  simp only [circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, empty, List.nil_append]
+
+instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
+  localLength _ := 68
+  output input _ := input
+  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  channelsLawful := by
+    preserve_tactic_target
+    intro input offset
+    simp only [main, addressCircuit, circuit_norm]
+
+def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.ram"
+  main
+  elaborated := elaborated
+  Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
+  ProverAssumptions input data _ := (Word.isU64 (MemoryBoundary.address input) ∧
+    AddressOperation.Assumptions (addressInput input)) ∧ memoryChannel.Guarantees input data
+  channelsWithRequirements := [memoryChannel.toRaw]
+  soundness := by
+    circuit_proof_start [addressCircuit]
+    exact h_holds.1
+  completeness := by
+    circuit_proof_start [addressCircuit]
+    exact h_assumptions
 
 /-- Bounded aligned guest RAM; value and timestamp currency are global obligations. -/
 def Domain (record : MemoryMsg (ZMod p)) : Prop :=
@@ -112,9 +139,11 @@ instance (record : MemoryMsg (ZMod p)) : Decidable (Domain record) := by
   unfold Domain Word.isU64
   infer_instance
 
+omit [Fact (2 ^ 17 < p)] in
 /-- The internal address-gadget readiness condition is exactly the public semantic domain. -/
-theorem proverAssumptions_iff (record : MemoryMsg (ZMod p)) (data : ProverData (ZMod p))
-    (hint : ProverHint (ZMod p)) : circuit.ProverAssumptions record data hint ↔ Domain record := by
+theorem addressAssumptions_iff (record : MemoryMsg (ZMod p)) :
+    (Word.isU64 (MemoryBoundary.address record) ∧
+      AddressOperation.Assumptions (addressInput record)) ↔ Domain record := by
   have zeroNat : Word.toNat (#v[0, 0, 0, 0] : Word (ZMod p)) = 0 := by simp [Word.toNat]
   constructor
   · intro valid
@@ -141,7 +170,7 @@ theorem proverAssumptions_iff (record : MemoryMsg (ZMod p)) (data : ProverData (
 /-- RAM finalization adds no static lookup table. -/
 @[circuit_norm] theorem main_lookups (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups = [] := by
-  simp [main, WordRangeCheck.circuit, AddressOperation.circuit, circuit_norm]
+  simp [main, addressCircuit, WordRangeCheck.circuit, AddressOperation.circuit, circuit_norm]
 
 /-- Every physical interaction supports Boolean row activity without a legacy lookup. -/
 instance guardSupported : Guarded.Supported (circuit (p := p)) :=
@@ -149,19 +178,14 @@ instance guardSupported : Guarded.Supported (circuit (p := p)) :=
     (fun input offset => main_lookups input offset)
     (by
       intro selected member
-      change selected ∈ [byteChannel.toRaw, memoryChannel.toRaw] at member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      change selected ∈ [byteChannel.toRaw, memoryChannel.toRaw, memoryChannel.toRaw] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false, or_self] at member
       rcases member with rfl | rfl <;> infer_instance)
     (by
-      intro input offset selected member _ interaction occurs
+      intro input offset selected member outside
       have same : selected = memoryChannel.toRaw := by
         simpa only [circuit, List.mem_singleton] using member
       subst selected
-      change interaction ∈ ((main input).operations offset).interactionsWith
-        memoryChannel.toRaw at occurs
-      rw [main_memory_interactions] at occurs
-      have same := List.mem_singleton.mp occurs
-      subst interaction
-      rfl)
+      exact False.elim (outside (by change memoryChannel.toRaw ∈ [byteChannel.toRaw, memoryChannel.toRaw]; simp)))
 
 end SP1Clean.FinalRamProvider

@@ -65,7 +65,7 @@ theorem ram_location_of_key (record : MemoryMsg (ZMod p)) (address : ℕ)
   let cell : RamCell := BitVec.ofNat 61 (address / 8)
   have aligned : cell.toNat * 8 = address := aligned_cell address upper alignment
   have decoded : MemoryMsg.locOf record = MemLoc.ram cell := by
-    simp only [MemoryMsg.locOf, if_neg notRegister, key, cell]
+    simp only [MemoryMsg.locOf, ite_eq_right notRegister, key, cell]
   have base : cell.baseAddr = BitVec.ofNat 64 address :=
     congrArg (BitVec.ofNat 64) aligned
   refine ⟨?_, ?_, ?_⟩

@@ -89,10 +89,10 @@ private lemma overflow_one_of_s64 {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.i
   have hwne : ¬(f[4] + f[5] + f[6] + f[7] = 1) := by rw [hw]; exact zero_ne_one
   have hovb : (ovbWitness 1 B f).is_diff_zero.result = 1 := by
     unfold ovbWitness
-    rw [if_pos rfl, if_neg hwne, isEqualWord_populate_result, if_pos ⟨hb0, hb1, hb2, hb3⟩]
+    rw [ite_eq_left rfl, ite_eq_right hwne, isEqualWord_populate_result, ite_eq_left ⟨hb0, hb1, hb2, hb3⟩]
   have hovc : (ovcWitness 1 C f).is_diff_zero.result = 1 := by
     unfold ovcWitness
-    rw [if_pos rfl, if_neg hwne, isEqualWord_populate_result, if_pos ⟨hc0, hc1, hc2, hc3⟩]
+    rw [ite_eq_left rfl, ite_eq_right hwne, isEqualWord_populate_result, ite_eq_left ⟨hc0, hc1, hc2, hc3⟩]
   unfold populateIsOverflow
   rw [hovb, hovc, hsig]; ring
 
@@ -106,10 +106,10 @@ private lemma overflow_one_of_sW {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.is
   obtain ⟨hc0, hc1⟩ := sW_allOnes_limbs hC hCm
   have hovb : (ovbWitness 1 B f).is_diff_zero.result = 1 := by
     unfold ovbWitness
-    rw [if_pos rfl, if_pos hW, isEqualWord_populate_result, if_pos ⟨hb0, hb1, rfl, rfl⟩]
+    rw [ite_eq_left rfl, ite_eq_left hW, isEqualWord_populate_result, ite_eq_left ⟨hb0, hb1, rfl, rfl⟩]
   have hovc : (ovcWitness 1 C f).is_diff_zero.result = 1 := by
     unfold ovcWitness
-    rw [if_pos rfl, if_pos hW, isEqualWord_populate_result, if_pos ⟨hc0, hc1, rfl, rfl⟩]
+    rw [ite_eq_left rfl, ite_eq_left hW, isEqualWord_populate_result, ite_eq_left ⟨hc0, hc1, rfl, rfl⟩]
   unfold populateIsOverflow
   rw [hovb, hovc, hsig]; ring
 
@@ -119,9 +119,9 @@ in a *signature* without forcing a `GetElem`-size whnf of the heavy `populate*` 
 recovers the element form cheaply inside a proof body. -/
 private lemma eval_getElem {n : ℕ} {env : Environment (ZMod p)}
     {v : Vector (Expression (ZMod p)) n} {w : Vector (ZMod p) n}
-    (h : Vector.map (Expression.eval env) v = w) (i : ℕ) (hi : i < n) :
+    (h : Eval.eval env v = w) (i : ℕ) (hi : i < n) :
     Expression.eval env (v[i]'hi) = w[i]'hi := by
-  rw [← h, Vector.getElem_map]
+  rw [ProvableType.getElem_eval_fields, h]
 
 set_option linter.unusedVariables false in
 /-- Every own-assert (`ownAsserts colsV`) evaluates to `0` at the honest populate witnesses, given the
@@ -164,24 +164,24 @@ theorem ownAsserts_complete (env : Environment (ZMod p)) (colsV : Var Columns (Z
     -- (a per-element `(populate… B C F)[i]'hi` in the signature forces a `GetElem`-size whnf of e.g.
     -- `populateAbsRem`'s `remBits`/sdiv core → kernel deep recursion). The per-element forms the
     -- bullets use are recovered cheaply in the proof body via `eval_getElem`.
-    (eBvec : Vector.map (Expression.eval env) colsV.b = bComp B F)
-    (eCvec : Vector.map (Expression.eval env) colsV.c = cComp C F)
-    (eQvec : Vector.map (Expression.eval env) colsV.quotient = populateQuotient B C F)
-    (eQCvec : Vector.map (Expression.eval env) colsV.quotient_comp = populateQuotComp B C F)
-    (eRvec : Vector.map (Expression.eval env) colsV.remainder = populateRemainder B C F)
-    (eRCvec : Vector.map (Expression.eval env) colsV.remainder_comp = populateRemComp B C F)
-    (eAvec : Vector.map (Expression.eval env) colsV.a = populateA B C F)
-    (eABSCvec : Vector.map (Expression.eval env) colsV.abs_c = populateAbsC C F)
-    (eABSRvec : Vector.map (Expression.eval env) colsV.abs_remainder = populateAbsRem B C F)
-    (eMAXvec : Vector.map (Expression.eval env) colsV.max_abs_c_or_1 = populateMaxAbsCOr1 C F)
-    (eCTQvec : Vector.map (Expression.eval env) colsV.c_times_quotient = populateCtq B C F)
-    (eCARRYvec : Vector.map (Expression.eval env) colsV.carry = populateCarry B C F)
+    (eBvec : Eval.eval env colsV.b = bComp B F)
+    (eCvec : Eval.eval env colsV.c = cComp C F)
+    (eQvec : Eval.eval env colsV.quotient = populateQuotient B C F)
+    (eQCvec : Eval.eval env colsV.quotient_comp = populateQuotComp B C F)
+    (eRvec : Eval.eval env colsV.remainder = populateRemainder B C F)
+    (eRCvec : Eval.eval env colsV.remainder_comp = populateRemComp B C F)
+    (eAvec : Eval.eval env colsV.a = populateA B C F)
+    (eABSCvec : Eval.eval env colsV.abs_c = populateAbsC C F)
+    (eABSRvec : Eval.eval env colsV.abs_remainder = populateAbsRem B C F)
+    (eMAXvec : Eval.eval env colsV.max_abs_c_or_1 = populateMaxAbsCOr1 C F)
+    (eCTQvec : Eval.eval env colsV.c_times_quotient = populateCtq B C F)
+    (eCARRYvec : Eval.eval env colsV.carry = populateCarry B C F)
     (eCNEGVvec :
-      Vector.map (Expression.eval env) colsV.c_neg_operation.value = wCnegWitness ir C F)
+      Eval.eval env colsV.c_neg_operation.value = wCnegWitness ir C F)
     (eRNEGVvec :
-      Vector.map (Expression.eval env) colsV.rem_neg_operation.value = wRnegWitness ir B C F)
-    (eBPVvec : Vector.map (Expression.eval env) colsV.adapter.op_b_memory.prev_value = B)
-    (eCPVvec : Vector.map (Expression.eval env) colsV.adapter.op_c_memory.prev_value = C)
+      Eval.eval env colsV.rem_neg_operation.value = wRnegWitness ir B C F)
+    (eBPVvec : Eval.eval env colsV.adapter.op_b_memory.prev_value = B)
+    (eCPVvec : Eval.eval env colsV.adapter.op_c_memory.prev_value = C)
     -- struct-result eval pins (scalar; no `GetElem`-size whnf, so safe in the signature)
     (eOVBR : Expression.eval env colsV.is_overflow_b.is_diff_zero.result
       = (ovbWitness ir B F).is_diff_zero.result)

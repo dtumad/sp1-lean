@@ -98,7 +98,7 @@ def coverage_errors(record: dict, inventories: dict, revision: str,
     if record["verifier"] not in groups:
         errors.append("missing public verifier coverage")
     if native is not None:
-        actual = [{key: table[key] for key in ("name", "width", "inputWidth", "fixedWidth")} |
+        actual = [{key: table[key] for key in ("name", "width", "inputWidth", "fixedColumns")} |
                   {"lookups": table["lookups"]} for table in native["tables"]]
         expected = [{key: value for key, value in table.items() if key != "group"}
                     for table in record["native"]]

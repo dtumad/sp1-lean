@@ -137,29 +137,27 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
         Columns F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-/-! ### Operand words, in `circuit_norm`'s own orientation
+/-! ### Operand evaluation for witness input agreement
 
-Projection outside `eval`, inert right-hand side — the form `ComputableWitnesses` hands over; see
-`AddChip/Defs.lean` for the rationale. JALR mixes both styles: the jump target adds a register read
+These lemmas project whole-row input agreement into whole-vector operand agreement; see
+`AddChip/Defs.lean`. JALR mixes both styles: the jump target adds a register read
 to an immediate (I-type, like Addi), while the link value adds the program counter to a literal
 (like JAL). -/
 
 @[circuit_norm] theorem eval_rs1Prev {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_memory.prev_value
-      = Vector.map (Expression.eval env) input.adapter.op_b_memory.prev_value := by
+      = Eval.eval env input.adapter.op_b_memory.prev_value := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
-  exact ProvableType.eval_fields env _
 
 @[circuit_norm] theorem eval_opCImm {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_c_imm
-      = Vector.map (Expression.eval env) input.adapter.op_c_imm := by
+      = Eval.eval env input.adapter.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols]
-  exact ProvableType.eval_fields env _
 
 @[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
@@ -172,9 +170,8 @@ to an immediate (I-type, like Addi), while the link value adds the program count
 @[circuit_norm] theorem eval_statePc {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).state.pc
-      = Vector.map (Expression.eval env) input.state.pc := by
+      = Eval.eval env input.state.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.CPUState.eval_cols]
-  exact ProvableType.eval_fields env _
 
 end SP1Clean.JalrChip

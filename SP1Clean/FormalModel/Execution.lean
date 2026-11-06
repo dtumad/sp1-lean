@@ -21,7 +21,7 @@ Like its `Relations`/`Verifier` siblings, part of this module is reserved relati
 the ArkLib composition — declared ahead of the consumer that will instantiate it, so some
 declarations are expected to be unreferenced in-tree today. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Execution
 

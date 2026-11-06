@@ -51,10 +51,10 @@ def message? (entry : BitVec 64 × BitVec 32) : Option (ProgramMsg (ZMod p)) :=
   (row? entry).map message
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem projected_pc {pc : Vector (ZMod p) 3} {i : LeanRV64D.Defs.instruction}
+private theorem projected_pc {pc : Vector (ZMod p) 3} {i : LeanRV64D.instruction}
     {row : ProgramRow (ZMod p)} (projected : instrToProgramRow pc i = some row) :
     rowPcVec row = pc := by
-  cases i <;> simp only [instrToProgramRow] at projected
+  cases i <;> rename_i chunk <;> cases chunk <;> simp only [instrToProgramRow] at projected
   all_goals first | contradiction | cases Option.some.inj projected
   all_goals
     apply Vector.ext
@@ -126,19 +126,19 @@ theorem message_rowSpec {entry : BitVec 64 × BitVec 32} {msg : ProgramMsg (ZMod
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The guarded projection is total on the routed, canonical instruction image. -/
-private theorem projection_isSome (pc : Vector (ZMod p) 3) (i : LeanRV64D.Defs.instruction)
+private theorem projection_isSome (pc : Vector (ZMod p) 3) (i : LeanRV64D.instruction)
     (canonical : instructionImageOK i = true) (routed : (instructionRouteKey i).isSome = true) :
     (instrToProgramRow' pc i).isSome = true := by
-  cases i <;> simp_all [instructionImageOK, instructionRouteKey, instrToProgramRow', instrToProgramRow]
+  cases i <;> rename_i chunk <;> cases chunk <;> simp_all [instructionImageOK, instructionRouteKey, instrToProgramRow', instrToProgramRow]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Program-row construction accepts exactly the parser's domain; there is no extra readiness check. -/
 theorem row_isSome_iff (entry : BitVec 64 × BitVec 32) :
     (row? (p := p) entry).isSome = true ↔ (InstructionDecode.decode entry.2).isSome = true := by
   by_cases ecall : entry.2 = ECALL_ENC
-  · simp only [row?, ecall, if_pos, Option.isSome_some]
+  · simp only [row?, ecall, ite_eq_left, Option.isSome_some]
     exact iff_of_true trivial rfl
-  · simp only [row?, ecall, if_false]
+  · simp only [row?, ecall, ite_false]
     cases parsed : InstructionDecode.decode entry.2 with
     | none => simp
     | some i =>

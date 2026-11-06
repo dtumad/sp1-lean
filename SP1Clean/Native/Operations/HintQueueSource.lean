@@ -37,12 +37,12 @@ def source (hints : List Bytes) : Component (ZMod p) :=
 
 /-- Every active physical source emission binds to the immutable source store. -/
 theorem source_authenticates (hints : List Bytes) (table : Table (ZMod p))
-    (same : table.component = source hints) (consistent : table.DataConsistency)
+    (same : table.component = source hints)
     (constraints : table.Constraints) :
     table.Authenticates nodeChannel (fun record => record.Valid ∧ record.Binds (ofList hints).1) := by
   exact ((sourceTable hints).payload_authenticates nodeChannel
     (fun record member _ => (sourceTable_sound hints record member).1)
-    (source_height_lt_uint64 hints) table same consistent constraints).mono
+    (source_height_lt_uint64 hints) table same constraints).mono
       (sourceTable_sound hints)
 
 end SP1Clean.HostHintQueue

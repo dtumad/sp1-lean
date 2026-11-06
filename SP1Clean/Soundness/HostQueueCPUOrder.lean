@@ -36,7 +36,7 @@ private theorem length_edge (empty : Bool) (env : Environment (ZMod p)) :
       (valueFromOffset HostHintLengthChip.Inputs 0 env).next) := rfl
 
 private theorem length_component (empty : Bool) :
-    (view (p := p) (some empty)).component = { circuit := HostHintLengthChip.circuit empty, Assumptions := (HostHintLengthChip.circuit empty).Assumptions } := rfl
+    (view (p := p) (some empty)).component = { circuit := HostHintLengthChip.circuit empty, generation := (HostCallReceivers.hintLength (p := p) empty).component.generation, Assumptions := (HostHintLengthChip.circuit empty).Assumptions } := rfl
 
 /-- Queue transitions stamp the successor with the call's incoming CPU clock. -/
 theorem call_time (row : Row (p := p)) :
@@ -67,9 +67,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 private theorem call_mem
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
     call row ∈ HostLocalHandoff.calls witness := by
   have inside : HostCallChip.channel.pulledValue (call row) ∈
@@ -92,7 +96,7 @@ private theorem call_mem
 /-- Every queue event is an actual active syscall, with the same complete call, not just a clock.
 The physical environment is retained for subsequent register and Memory grounding. -/
 theorem call_cpu
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
@@ -119,7 +123,7 @@ theorem call_cpu
 /-- Matching a queue event's clock in the CPU inventory recovers its exact physical instruction
 and full call. Clock uniqueness is derived from this ensemble's State/Byte projection. -/
 theorem call_cpu_at
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
@@ -146,7 +150,7 @@ theorem times_pairwise {path : List (Row (p := p))} {initial final : State (ZMod
 /-- Queue events occur in the same order in every exhaustive CPU walk. The subsequence includes
 each physical queue occurrence exactly once; ordinary and queue-silent host events may intervene. -/
 theorem clocks_sublist
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
@@ -239,7 +243,7 @@ theorem currentQueues_of_order (data : ProverData (ZMod p))
   exact current_at_cpu data history queueSorted row member (split ▸ cpuSorted) (split ▸ included) clock
 
 private theorem ordered_history
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
@@ -268,12 +272,15 @@ private theorem ordered_history
   simp_rw [ExecutionRow.edge_setData _ (HostLocalCore.localWitness witness).data witness.data] at cpuSorted
   exact ⟨included, currentQueues_of_order witness.data history queueSorted cpuSorted included⟩
 
+
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 /-- The installed source-only queue registry determines both exhaustive paths and their order
 agreement from raw constraints and full balance. It retains arbitrary local CPU endpoints.
 Successful whole-host replay, Memory grounding, and outgoing snapshot binding remain separate. -/
 theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ cpu : List (ExecutionRow p), ∃ path : List (Row (p := p)),
       cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ∧
@@ -291,12 +298,16 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
   have callBalance := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   obtain ⟨cpu, cpuExhaustive, cpuWalk⟩ := HostLocalCore.executionRows_ordered_of_orderingChannels retained checks ordering
   obtain ⟨path, exhaustive, walk, history⟩ := HostHintQueueHistory.source_history witness constraints balanced
+  have sameData : retained.data = witness.data := HostHintQueueBoundary.projected_data witness
+  have samePublic : retained.publicInput = witness.publicInput := HostHintQueueBoundary.projected_publicInput witness
   refine ⟨cpu, path, cpuExhaustive, ?_, exhaustive, walk, history, ?_⟩
-  · simpa only [retained, HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] using cpuWalk
+  · rw [sameData, samePublic] at cpuWalk
+    exact cpuWalk
   have included := ordered_history retained interface checks callBalance ordering
     (queue_specs retained interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks
       (HostHintQueueBoundary.record_channels witness balanced))
-    history (by simpa only [retained, HostHintQueueBoundary.projected_data] using exhaustive) walk cpuExhaustive cpuWalk
-  simpa only [retained, HostHintQueueBoundary.projected_data] using included
+    history exhaustive walk cpuExhaustive cpuWalk
+  rw [sameData] at included
+  exact included
 
 end SP1Clean.Soundness.HostQueueCPUOrder

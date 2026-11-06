@@ -94,30 +94,30 @@ include hWB hWC hUB hUC
 /-- Evaluating the `quotient` site is `populateQuotient`. -/
 theorem quotFE_eval (i : ℕ) (hi : i < 4) :
     ((quotFE selectors B C)[i]).eval { env := env }
-      = (populateQuotient vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] :=
+      = (populateQuotient vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] :=
   wordFOfU64_eval env _ (quotBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC) i hi
 
 /-- Evaluating the `remainder` site is `populateRemainder`. -/
 theorem remFE_eval (i : ℕ) (hi : i < 4) :
     ((remFE selectors B C)[i]).eval { env := env }
-      = (populateRemainder vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] :=
+      = (populateRemainder vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] :=
   wordFOfU64_eval env _ (remBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC) i hi
 
 /-- Evaluating the `quotient_comp` site is `populateQuotComp`. -/
 theorem quotCompFE_eval (i : ℕ) (hi : i < 4) :
     ((quotCompFE selectors B C)[i]).eval { env := env }
-      = (populateQuotComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] :=
+      = (populateQuotComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] :=
   wordFOfU64_eval env _ (quotCompBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC) i hi
 
 /-- Evaluating the `remainder_comp` site is `populateRemComp`. -/
 theorem remCompFE_eval (i : ℕ) (hi : i < 4) :
     ((remCompFE selectors B C)[i]).eval { env := env }
-      = (populateRemComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] :=
+      = (populateRemComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] :=
   wordFOfU64_eval env _ (remCompBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC) i hi
 
 /-- Evaluating the result-word site is `populateA`. -/
 theorem aFE_eval (i : ℕ) (hi : i < 4) :
-    ((aFE selectors B C)[i]).eval { env := env } = (populateA vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+    ((aFE selectors B C)[i]).eval { env := env } = (populateA vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hf0 := flagF_eval selectors env 0 (by omega)
   have hf1 := flagF_eval selectors env 1 (by omega)
   have hf2 := flagF_eval selectors env 2 (by omega)
@@ -186,8 +186,8 @@ omit [Fact (2 ^ 24 < p)] in
 /-- Evaluating the W-class selector is the flag sum. -/
 theorem wSumF_eval :
     ((wSumF selectors)).eval { env := env }
-      = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] := by
+      = (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[6] + (selectorFlags (Eval.eval env.toEnvironment selectors))[7] := by
   simp only [wSumF, circuit_norm, flagF_eval selectors env 4 (by omega), flagF_eval selectors env 5 (by omega),
     flagF_eval selectors env 6 (by omega), flagF_eval selectors env 7 (by omega)]
 
@@ -195,8 +195,8 @@ omit [Fact (2 ^ 24 < p)] in
 /-- Evaluating the signed-class selector is the flag sum. -/
 theorem signedSumF_eval :
     ((signedSumF selectors)).eval { env := env }
-      = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5] := by
+      = (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5] := by
   simp only [signedSumF, circuit_norm, flagF_eval selectors env 0 (by omega), flagF_eval selectors env 2 (by omega),
     flagF_eval selectors env 4 (by omega), flagF_eval selectors env 5 (by omega)]
 
@@ -204,8 +204,8 @@ omit [Fact (2 ^ 24 < p)] in
 /-- Evaluating the 64-bit-class selector is the flag sum. -/
 theorem longSumF_eval :
     ((longSumF selectors)).eval { env := env }
-      = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[1]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[3] := by
+      = (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[1]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] + (selectorFlags (Eval.eval env.toEnvironment selectors))[3] := by
   simp only [longSumF, circuit_norm, flagF_eval selectors env 0 (by omega), flagF_eval selectors env 1 (by omega),
     flagF_eval selectors env 2 (by omega), flagF_eval selectors env 3 (by omega)]
 
@@ -219,7 +219,7 @@ omit [Fact (2 ^ 24 < p)] in
 include hWB hUB in
 /-- Evaluating the `b_msb` site is `bMsbCell`. -/
 theorem bMsbFE_eval :
-    (bMsbFE selectors B).eval { env := env } = bMsbCell vB (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (bMsbFE selectors B).eval { env := env } = bMsbCell vB (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   obtain ⟨u0, u1, u2, u3⟩ := Word.lt_cases_of_isU64 hUB
   have h1 := hWB 1 (by omega)
   have h3 := hWB 3 (by omega)
@@ -237,7 +237,7 @@ omit [Fact (2 ^ 24 < p)] in
 include hWC hUC in
 /-- Evaluating the `c_msb` site is `cMsbCell`. -/
 theorem cMsbFE_eval :
-    (cMsbFE selectors C).eval { env := env } = cMsbCell vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (cMsbFE selectors C).eval { env := env } = cMsbCell vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   obtain ⟨u0, u1, u2, u3⟩ := Word.lt_cases_of_isU64 hUC
   have h1 := hWC 1 (by omega)
   have h3 := hWC 3 (by omega)
@@ -254,9 +254,9 @@ theorem cMsbFE_eval :
 include hWB hWC hUB hUC in
 /-- Evaluating the `rem_msb` site is `remMsbCell`. -/
 theorem remMsbFE_eval :
-    (remMsbFE selectors B C).eval { env := env } = remMsbCell vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (remMsbFE selectors B C).eval { env := env } = remMsbCell vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   obtain ⟨w0, w1, w2, w3⟩ :=
-    Word.lt_cases_of_isU64 (wordOfBits_isU64 (p := p) (remBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))
+    Word.lt_cases_of_isU64 (wordOfBits_isU64 (p := p) (remBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))))
   have hr1 := remFE_eval selectors env B C vB vC hWB hWC hUB hUC 1 (by omega)
   have hr3 := remFE_eval selectors env B C vB vC hWB hWC hUB hUC 3 (by omega)
   have hm1 := U16MSBOperation.populate_msbF_eval { env := env } (remFE selectors B C)[1]
@@ -273,9 +273,9 @@ theorem remMsbFE_eval :
 include hWB hWC hUB hUC in
 /-- Evaluating the `quot_msb` site is `quotMsbCell`. -/
 theorem quotMsbFE_eval :
-    (quotMsbFE selectors B C).eval { env := env } = quotMsbCell vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (quotMsbFE selectors B C).eval { env := env } = quotMsbCell vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   obtain ⟨w0, w1, w2, w3⟩ :=
-    Word.lt_cases_of_isU64 (wordOfBits_isU64 (p := p) (quotBits vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))
+    Word.lt_cases_of_isU64 (wordOfBits_isU64 (p := p) (quotBits vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))))
   have hq1 := quotFE_eval selectors env B C vB vC hWB hWC hUB hUC 1 (by omega)
   have hm1 := U16MSBOperation.populate_msbF_eval { env := env } (quotFE selectors B C)[1]
     (by rw [hq1]; exact w1)
@@ -289,7 +289,7 @@ omit [Fact (2 ^ 24 < p)] in
 include hWB hUB in
 /-- Evaluating `b_neg` is `populateBNeg`. -/
 theorem bNegFE_eval :
-    (bNegFE selectors B).eval { env := env } = populateBNeg vB (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (bNegFE selectors B).eval { env := env } = populateBNeg vB (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   simp only [bNegFE, populateBNeg, circuit_norm, signedSumF_eval selectors env,
     bMsbFE_eval selectors env B vB hWB hUB]
 
@@ -297,14 +297,14 @@ omit [Fact (2 ^ 24 < p)] in
 include hWC hUC in
 /-- Evaluating `c_neg` is `populateCNeg`. -/
 theorem cNegFE_eval :
-    (cNegFE selectors C).eval { env := env } = populateCNeg vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (cNegFE selectors C).eval { env := env } = populateCNeg vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   simp only [cNegFE, populateCNeg, circuit_norm, signedSumF_eval selectors env,
     cMsbFE_eval selectors env C vC hWC hUC]
 
 include hWB hWC hUB hUC in
 /-- Evaluating `rem_neg` is `populateRemNeg`. -/
 theorem remNegFE_eval :
-    (remNegFE selectors B C).eval { env := env } = populateRemNeg vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (remNegFE selectors B C).eval { env := env } = populateRemNeg vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   simp only [remNegFE, populateRemNeg, circuit_norm, signedSumF_eval selectors env,
     remMsbFE_eval selectors env B C vB vC hWB hWC hUB hUC]
 
@@ -352,7 +352,7 @@ variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
 include hWC hUC in
 /-- Evaluating the `abs_c` site is `populateAbsC`. -/
 theorem absCFE_eval (i : ℕ) (hi : i < 4) :
-    ((absCFE selectors C)[i]).eval { env := env } = (populateAbsC vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+    ((absCFE selectors C)[i]).eval { env := env } = (populateAbsC vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hcomp := compU_toNat selectors env (wordU C) (hx := wordU_toNat env C vC hWC hUC) hUC
   have habs := absU_toNat env (compU selectors (wordU C)) hcomp
   simp only [absCFE, populateAbsC, circuit_norm, Vector.getElem_ofFn, signedSumF_eval selectors env]
@@ -368,7 +368,7 @@ include hWB hWC hUB hUC in
 /-- Evaluating the `abs_remainder` site is `populateAbsRem`. -/
 theorem absRemFE_eval (i : ℕ) (hi : i < 4) :
     ((absRemFE selectors B C)[i]).eval { env := env }
-      = (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have habs := absU_toNat env (remBitsU selectors (wordU B) (wordU C))
     (remBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC)
   simp only [absRemFE, populateAbsRem, circuit_norm, Vector.getElem_ofFn, signedSumF_eval selectors env]
@@ -383,7 +383,7 @@ theorem absRemFE_eval (i : ℕ) (hi : i < 4) :
 include hWC hUC in
 /-- Evaluating the `abs_c` u64 value is `Word.toNat (populateAbsC …)`. -/
 theorem absCU_toNat :
-    ((absCU selectors C).eval { env := env }).toNat = Word.toNat (populateAbsC vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) := by
+    ((absCU selectors C).eval { env := env }).toNat = Word.toNat (populateAbsC vC (selectorFlags (Eval.eval env.toEnvironment selectors))) := by
   have hcomp := compU_toNat selectors env (wordU C) (hx := wordU_toNat env C vC hWC hUC) hUC
   have habs := absU_toNat env (compU selectors (wordU C)) hcomp
   have htn : ∀ x : BitVec 64, (Word.toBitVec64 (wordOfBits (p := p) x)).toNat = x.toNat :=
@@ -397,7 +397,7 @@ include hWC hUC in
 /-- Evaluating the `max_abs_c_or_1` site is `populateMaxAbsCOr1`. -/
 theorem maxAbsFE_eval (i : ℕ) (hi : i < 4) :
     ((maxAbsFE selectors C)[i]).eval { env := env }
-      = (populateMaxAbsCOr1 vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (populateMaxAbsCOr1 vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hz := absCU_toNat selectors env C vC hWC hUC
   interval_cases i <;>
     (simp only [maxAbsFE, populateMaxAbsCOr1, circuit_norm, Vector.getElem_mk,
@@ -484,7 +484,7 @@ include hWB in
 theorem ovbResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
     (ovbResFE selectors ir B).eval { env := env }
-      = (ovbWitness vir vB (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).is_diff_zero.result := by
+      = (ovbWitness vir vB (selectorFlags (Eval.eval env.toEnvironment selectors))).is_diff_zero.result := by
   have htrunc := IsEqualWordOperation.populateFE_eval env
     (#v[.expr B[0], .expr B[1], 0, 0]) (#v[0, .const 32768, 0, 0])
     (va := #v[vB[0], vB[1], 0, 0]) (vb := #v[0, 32768, 0, 0])
@@ -528,14 +528,14 @@ theorem ovbResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [e1, hl1, hl2]
   simp only [ovbWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
-    by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2,
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
+    by_cases h2 : (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[6] + (selectorFlags (Eval.eval env.toEnvironment selectors))[7] = 1
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2,
         IsEqualWordOperation.result_eq_toElements]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2,
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2,
         IsEqualWordOperation.result_eq_toElements]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1]
     rfl
 
 omit [Fact (2 ^ 24 < p)] in
@@ -544,7 +544,7 @@ include hWC in
 theorem ovcResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
     (ovcResFE selectors ir C).eval { env := env }
-      = (ovcWitness vir vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).is_diff_zero.result := by
+      = (ovcWitness vir vC (selectorFlags (Eval.eval env.toEnvironment selectors))).is_diff_zero.result := by
   have htrunc := IsEqualWordOperation.populateFE_eval env
     (#v[.expr C[0], .expr C[1], 0, 0]) (#v[.const 65535, .const 65535, 0, 0])
     (va := #v[vC[0], vC[1], 0, 0]) (vb := #v[65535, 65535, 0, 0])
@@ -590,14 +590,14 @@ theorem ovcResFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [e1, hl1, hl2]
   simp only [ovcWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
-    by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2,
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
+    by_cases h2 : (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[6] + (selectorFlags (Eval.eval env.toEnvironment selectors))[7] = 1
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2,
         IsEqualWordOperation.result_eq_toElements]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2,
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2,
         IsEqualWordOperation.result_eq_toElements]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1]
     rfl
 
 omit [Fact (2 ^ 24 < p)] in
@@ -606,7 +606,7 @@ include hWB hWC in
 theorem isOverflowFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
     (isOverflowFE selectors ir B C).eval { env := env }
-      = populateIsOverflow vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+      = populateIsOverflow vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   simp only [isOverflowFE, populateIsOverflow, circuit_norm,
     ovbResFE_eval selectors env B vB hWB ir vir hir, ovcResFE_eval selectors env C vC hWC ir vir hir,
     signedSumF_eval selectors env]
@@ -616,7 +616,7 @@ include hWB hWC hUB hUC in
 theorem scalFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 7) :
     ((scalFE selectors ir B C)[i]).eval { env := env }
-      = (populateScal vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (populateScal vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hov := isOverflowFE_eval selectors env B C vB vC hWB hWC ir vir hir
   have hbn := bNegFE_eval selectors env B vB hWB hUB
   have hcn := cNegFE_eval selectors env C vC hWC hUC
@@ -666,14 +666,14 @@ variable (B C : Word (Expression (ZMod p))) (vB vC : Word (ZMod p))
 include hWB hWC hUB hUC in
 /-- Evaluating a product limb is the corresponding `populateCtq` cell. -/
 theorem ctqProgram_eval (k : ℕ) (hk : k < 8) :
-    ((ctqProgram selectors B C).eval (value := fields 8) env)[k] = (populateCtq vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[k] := by
+    ((ctqProgram selectors B C).eval (value := fields 8) env)[k] = (populateCtq vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[k] := by
   have hq : ((Witgen.U64Expr.eval { env := env }
       (quotCompBitsU selectors (wordU B) (wordU C))).toNat)
-      = (Word.toBitVec64 (populateQuotComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat := by
+      = (Word.toBitVec64 (populateQuotComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat := by
     rw [quotCompBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC, populateQuotComp,
       wordOfBits_toBitVec64]
   have hc : ((Witgen.U64Expr.eval { env := env } (compU selectors (wordU C))).toNat)
-      = (Word.toBitVec64 (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat :=
+      = (Word.toBitVec64 (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat :=
     compU_toNat selectors env (wordU C) (wordU_toNat env C vC hWC hUC) hUC
   rw [ctqProgram_eval_limb]
   exact ctqLimbF_eval selectors env _ _ vB vC hq hc k hk
@@ -704,10 +704,10 @@ include hWC hUC in
 /-- Evaluating an `is_c_0` cell is the corresponding flattened `isC0Witness` cell. -/
 theorem isC0FE_eval (i : ℕ) (hi : i < 11) :
     ((isC0FE selectors C)[i]).eval { env := env }
-      = ((toElements (isC0Witness vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).cast
+      = ((toElements (isC0Witness vC (selectorFlags (Eval.eval env.toEnvironment selectors)))).cast
           (show size Circuits.Types.IsZeroWordOperation = 11 from rfl))[i] := by
   have h := IsZeroWordOperation.populateFE_eval env (compF selectors C)
-    (va := cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) (compF_eval selectors env C vC hWC hUC)
+    (va := cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors))) (compF_eval selectors env C vC hWC hUC)
   rw [isC0FE, Vector.getElem_cast, Vector.getElem_cast,
     Witgen.getElem_eval_toElements, h]
   rfl
@@ -717,11 +717,11 @@ include hWC hUC in
 /-- Evaluating the gate cell is `ltGate`. -/
 theorem ltGateFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
-    (ltGateFE selectors ir C).eval { env := env } = ltGate vir vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    (ltGateFE selectors ir C).eval { env := env } = ltGate vir vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   have h := IsZeroWordOperation.populateFE_eval env (compF selectors C)
-    (va := cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) (compF_eval selectors env C vC hWC hUC)
+    (va := cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors))) (compF_eval selectors env C vC hWC hUC)
   have hres : ((IsZeroWordOperation.populateFE (compF selectors C)).result).eval { env := env }
-      = (isC0Witness vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).result := by
+      = (isC0Witness vC (selectorFlags (Eval.eval env.toEnvironment selectors))).result := by
     simp only [circuit_norm]
     rw [h]
     rfl
@@ -815,10 +815,10 @@ include hWC hUC in
 theorem wCnegFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 4) :
     ((wCnegFE selectors ir C)[i]).eval { env := env }
-      = (wCnegWitness vir vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (wCnegWitness vir vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hcn := cNegFE_eval selectors env C vC hWC hUC
   have hadd := AddOperation.populateFW_eval env (compF selectors C) (absCFE selectors C)
-    (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) (populateAbsC vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
+    (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors))) (populateAbsC vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
     (compF_eval selectors env C vC hWC hUC) (absCFE_eval selectors env C vC hWC hUC)
     (cComp_isU64 hUC _) (populateAbsC_isU64 hUC _) i hi
   simp only [wCnegFE, wCnegWitness, circuit_norm, Vector.getElem_ofFn, hcn, hir]
@@ -833,10 +833,10 @@ include hWB hWC hUB hUC in
 theorem wRnegProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 4) :
     ((wRnegProgram selectors ir B C).eval (value := fields 4) env)[i]
-      = (wRnegWitness vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (wRnegWitness vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hrn := remNegFE_eval selectors env B C vB vC hWB hWC hUB hUC
   have hadd := AddOperation.populateFW_eval env (remFE selectors B C) (absRemFE selectors B C)
-    (populateRemainder vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
+    (populateRemainder vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))) (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
     (remFE_eval selectors env B C vB vC hWB hWC hUB hUC) (absRemFE_eval selectors env B C vB vC hWB hWC hUB hUC)
     (populateRemainder_isU64 vB vC _) (populateAbsRem_isU64 vB vC _) i hi
   rw [wRnegProgram_eval_limb]
@@ -850,7 +850,7 @@ include hWB hWC hUB hUC in
 theorem miscFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 3) :
     ((miscFE selectors ir B C)[i]).eval { env := env }
-      = (populateMisc vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (populateMisc vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hcn := cNegFE_eval selectors env C vC hWC hUC
   have hrn := remNegFE_eval selectors env B C vB vC hWB hWC hUB hUC
   have hlg := ltGateFE_eval selectors env C vC hWC hUC ir vir hir
@@ -1004,24 +1004,24 @@ private theorem ltScan :
     (∀ k : Fin 2, (LtOperationUnsigned.comparisonLimbsF (absRemFE selectors B C) (maxAbsFE selectors C) k).eval
         { env := env }
       = (LtOperationUnsigned.comparisonLimbsWitness
-          (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
-          (populateMaxAbsCOr1 vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))[(k : ℕ)]) ∧
+          (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
+          (populateMaxAbsCOr1 vC (selectorFlags (Eval.eval env.toEnvironment selectors))))[(k : ℕ)]) ∧
     (∀ k : Fin 4, (LtOperationUnsigned.flagsF (absRemFE selectors B C) (maxAbsFE selectors C) k).eval { env := env }
       = (LtOperationUnsigned.flagsWitness
-          (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
-          (populateMaxAbsCOr1 vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))[(k : ℕ)]) ∧
+          (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
+          (populateMaxAbsCOr1 vC (selectorFlags (Eval.eval env.toEnvironment selectors))))[(k : ℕ)]) ∧
     (LtOperationUnsigned.notEqInvF (absRemFE selectors B C) (maxAbsFE selectors C)).eval { env := env }
       = (LtOperationUnsigned.notEqInvWitness
-          (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
-          (populateMaxAbsCOr1 vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))[0] ∧
+          (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
+          (populateMaxAbsCOr1 vC (selectorFlags (Eval.eval env.toEnvironment selectors))))[0] ∧
     (LtOperationUnsigned.compareBitF (absRemFE selectors B C) (maxAbsFE selectors C)).eval { env := env }
       = U16CompareOperation.populate_bit
           (LtOperationUnsigned.comparisonLimbsWitness
-            (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
-            (populateMaxAbsCOr1 vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))[0]
+            (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
+            (populateMaxAbsCOr1 vC (selectorFlags (Eval.eval env.toEnvironment selectors))))[0]
           (LtOperationUnsigned.comparisonLimbsWitness
-            (populateAbsRem vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
-            (populateMaxAbsCOr1 vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))))[1] :=
+            (populateAbsRem vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
+            (populateMaxAbsCOr1 vC (selectorFlags (Eval.eval env.toEnvironment selectors))))[1] :=
   LtOperationUnsigned.scanF_eval { env := env } _ _ _ _
     (absRemFE_eval selectors env B C vB vC hWB hWC hUB hUC)
     (maxAbsFE_eval selectors env C vC hWC hUC)
@@ -1031,7 +1031,7 @@ include hWB hWC hUB hUC in
 theorem clProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 2) :
     ((clProgram selectors ir B C).eval (value := fields 2) env)[i]
-      = (ltClWitness vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (ltClWitness vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hlg := ltGateFE_eval selectors env C vC hWC hUC ir vir hir
   have hscan := (ltScan selectors env B C vB vC hWB hWC hUB hUC).1 ⟨i, hi⟩
   rw [clProgram_eval_limb]
@@ -1045,7 +1045,7 @@ include hWB hWC hUB hUC in
 theorem ltfProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 4) :
     ((ltfProgram selectors ir B C).eval (value := fields 4) env)[i]
-      = (ltFlagsWitness vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (ltFlagsWitness vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hlg := ltGateFE_eval selectors env C vC hWC hUC ir vir hir
   have hscan := (ltScan selectors env B C vB vC hWB hWC hUB hUC).2.1 ⟨i, hi⟩
   rw [ltfProgram_eval_limb]
@@ -1059,7 +1059,7 @@ include hWB hWC hUB hUC in
 theorem neiProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 1) :
     ((neiProgram selectors ir B C).eval (value := fields 1) env)[i]
-      = (ltNotEqInvWitness vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (ltNotEqInvWitness vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hlg := ltGateFE_eval selectors env C vC hWC hUC ir vir hir
   have hscan := (ltScan selectors env B C vB vC hWB hWC hUB hUC).2.2.1
   interval_cases i
@@ -1074,7 +1074,7 @@ include hWB hWC hUB hUC in
 theorem bitProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) (i : ℕ) (hi : i < 1) :
     ((bitProgram selectors ir B C).eval (value := fields 1) env)[i]
-      = (ltBitWitness vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[i] := by
+      = (ltBitWitness vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[i] := by
   have hlg := ltGateFE_eval selectors env C vC hWC hUC ir vir hir
   have hscan := (ltScan selectors env B C vB vC hWB hWC hUB hUC).2.2.2
   interval_cases i
@@ -1169,12 +1169,12 @@ private theorem mulOperandEvals :
         Witgen.FExpr.eval { env := env } (quotCompFE selectors B C)[1],
         Witgen.FExpr.eval { env := env } (quotCompFE selectors B C)[2],
         Witgen.FExpr.eval { env := env } (quotCompFE selectors B C)[3]]
-      = populateQuotComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) ∧
+      = populateQuotComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))) ∧
     (#v[Witgen.FExpr.eval { env := env } (compF selectors C)[0],
         Witgen.FExpr.eval { env := env } (compF selectors C)[1],
         Witgen.FExpr.eval { env := env } (compF selectors C)[2],
         Witgen.FExpr.eval { env := env } (compF selectors C)[3]]
-      = cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) := by
+      = cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors))) := by
   constructor <;>
     (apply Vector.ext
      intro k hk
@@ -1194,40 +1194,40 @@ include hWB hWC hUB hUC in
 theorem mulLowerProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
     (mulProgram selectors ir B C false).eval env
-      = populateMulLower vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+      = populateMulLower vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   obtain ⟨hqw, hcw⟩ := mulOperandEvals selectors env B C vB vC hWB hWC hUB hUC
   have hinner := MulOperation.populateFEWW_eval env (quotCompFE selectors B C) (compF selectors C) 0 0 0
-    (populateQuotComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) 0 0 0
+    (populateQuotComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))) (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors))) 0 0 0
     hqw hcw rfl rfl rfl (populateQuotComp_isU64 vB vC _) (cComp_isU64 hUC _)
     (Or.inl rfl) (Or.inl rfl) (by simp)
   rw [mulProgram_eval]
   simp only [Bool.false_eq_true, ↓reduceIte, Witgen.eval_gateFE, populateMulLower]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1, hinner]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1, MulOperation.fromElements_zero]
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1, hinner]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1, MulOperation.fromElements_zero]
 
 include hWB hWC hUB hUC in
 /-- Evaluating the upper product payload is `populateMulUpper` (under the flag binarities the
 contract provides — the signed selector `f[0] + f[2]` must be binary). -/
 theorem mulUpperProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir)
-    (hf02 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] = 0
-      ∨ (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] = 1) :
+    (hf02 : (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] = 0
+      ∨ (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] = 1) :
     (mulProgram selectors ir B C true).eval env
-      = populateMulUpper vir vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+      = populateMulUpper vir vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   obtain ⟨hqw, hcw⟩ := mulOperandEvals selectors env B C vB vC hWB hWC hUB hUC
   have hh : Witgen.FExpr.eval { env := env }
       ((flagF selectors 0 : Witgen.FExpr (ZMod p)) + flagF selectors 2)
-      = (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] := by
+      = (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] := by
     simp only [circuit_norm, flagF_eval selectors env 0 (by omega), flagF_eval selectors env 2 (by omega)]
-  have hsumv : ((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2]).val + (0 : ZMod p).val ≤ 1 := by
+  have hsumv : ((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2]).val + (0 : ZMod p).val ≤ 1 := by
     rcases hf02 with h | h
     · simp [h]
     · simp [h, ZMod.val_one]
   have hinner := MulOperation.populateFEWW_eval env (quotCompFE selectors B C) (compF selectors C)
     ((flagF selectors 0 : Witgen.FExpr (ZMod p)) + flagF selectors 2) 0 0
-    (populateQuotComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))) (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
-    ((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2]) 0 0
+    (populateQuotComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))) (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
+    ((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2]) 0 0
     hqw hcw hh rfl rfl (populateQuotComp_isU64 vB vC _) (cComp_isU64 hUC _)
     hf02 (Or.inl rfl) hsumv
   have hband : ((Witgen.BExpr.and ((Witgen.FExpr.expr ir) =? (1 : ZMod p))
@@ -1237,24 +1237,24 @@ theorem mulUpperProgram_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [mulProgram_eval]
   simp only [↓reduceIte, Witgen.eval_gateFE, populateMulUpper]
   by_cases h1 : vir = 1
-  · by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[1]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[3] = 1
-    · rw [if_pos (by
+  · by_cases h2 : (selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[1]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] + (selectorFlags (Eval.eval env.toEnvironment selectors))[3] = 1
+    · rw [ite_eq_left (by
           rw [hband, feq_true env _ _ _ hir h1, feq_true env _ _ _ (longSumF_eval selectors env) h2]
           rfl),
-        if_pos ⟨h1, h2⟩, hinner]
-    · rw [if_neg (by
+        ite_eq_left ⟨h1, h2⟩, hinner]
+    · rw [ite_eq_right (by
           rw [hband]
           intro hb
           simp only [Bool.and_eq_true] at hb
           exact feq_false env _ _ _ (longSumF_eval selectors env) h2 hb.2),
-        if_neg (by intro h; exact h2 h.2), MulOperation.fromElements_zero]
-  · rw [if_neg (by
+        ite_eq_right (by intro h; exact h2 h.2), MulOperation.fromElements_zero]
+  · rw [ite_eq_right (by
         rw [hband]
         intro hb
         simp only [Bool.and_eq_true] at hb
         exact feq_false env _ _ _ hir h1 hb.1),
-      if_neg (by intro h; exact h1 h.1), MulOperation.fromElements_zero]
+      ite_eq_right (by intro h; exact h1 h.1), MulOperation.fromElements_zero]
 
 end MulSites
 
@@ -1293,7 +1293,7 @@ include hWB in
 /-- Evaluating the `is_overflow_b` payload is `ovbWitness`. -/
 theorem ovbFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
-    Witgen.eval { env := env } (ovbFE selectors ir B) = ovbWitness vir vB (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    Witgen.eval { env := env } (ovbFE selectors ir B) = ovbWitness vir vB (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   have htrunc := IsEqualWordOperation.populateFE_eval env
     (#v[.expr B[0], .expr B[1], 0, 0]) (#v[0, .const 32768, 0, 0])
     (va := #v[vB[0], vB[1], 0, 0]) (vb := #v[0, 32768, 0, 0])
@@ -1310,12 +1310,12 @@ theorem ovbFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [ovbFE, Witgen.eval_gateFE, Witgen.eval_iteFE]
   simp only [ovbWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
-    by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2, htrunc]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2, hfull]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1,
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
+    by_cases h2 : (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[6] + (selectorFlags (Eval.eval env.toEnvironment selectors))[7] = 1
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2, htrunc]
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2, hfull]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1,
       IsEqualWordOperation.fromElements_zero]
 
 omit [Fact (2 ^ 24 < p)] in
@@ -1323,7 +1323,7 @@ include hWC in
 /-- Evaluating the `is_overflow_c` payload is `ovcWitness`. -/
 theorem ovcFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
     (hir : Expression.eval env.toEnvironment ir = vir) :
-    Witgen.eval { env := env } (ovcFE selectors ir C) = ovcWitness vir vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) := by
+    Witgen.eval { env := env } (ovcFE selectors ir C) = ovcWitness vir vC (selectorFlags (Eval.eval env.toEnvironment selectors)) := by
   have htrunc := IsEqualWordOperation.populateFE_eval env
     (#v[.expr C[0], .expr C[1], 0, 0]) (#v[.const 65535, .const 65535, 0, 0])
     (va := #v[vC[0], vC[1], 0, 0]) (vb := #v[65535, 65535, 0, 0])
@@ -1341,12 +1341,12 @@ theorem ovcFE_eval (ir : Expression (ZMod p)) (vir : ZMod p)
   rw [ovcFE, Witgen.eval_gateFE, Witgen.eval_iteFE]
   simp only [ovcWitness]
   by_cases h1 : vir = 1
-  · rw [if_pos (feq_true env _ _ _ hir h1), if_pos h1]
-    by_cases h2 : (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
-        + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[6] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[7] = 1
-    · rw [if_pos (feq_true env _ _ _ (wSumF_eval selectors env) h2), if_pos h2, htrunc]
-    · rw [if_neg (feq_false env _ _ _ (wSumF_eval selectors env) h2), if_neg h2, hfull]
-  · rw [if_neg (feq_false env _ _ _ hir h1), if_neg h1,
+  · rw [ite_eq_left (feq_true env _ _ _ hir h1), ite_eq_left h1]
+    by_cases h2 : (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]
+        + (selectorFlags (Eval.eval env.toEnvironment selectors))[6] + (selectorFlags (Eval.eval env.toEnvironment selectors))[7] = 1
+    · rw [ite_eq_left (feq_true env _ _ _ (wSumF_eval selectors env) h2), ite_eq_left h2, htrunc]
+    · rw [ite_eq_right (feq_false env _ _ _ (wSumF_eval selectors env) h2), ite_eq_right h2, hfull]
+  · rw [ite_eq_right (feq_false env _ _ _ hir h1), ite_eq_right h1,
       IsEqualWordOperation.fromElements_zero]
 
 end OvSites
@@ -1433,11 +1433,11 @@ include hWB hWC hUB hUC in
 provides (a dishonest non-binary flag could push the sign fill past the u64 `val`
 truncation), with the ≤ `2^18` bound for the chain's wrap-freeness. -/
 private theorem remAddendU_toNat
-    (hf : ∀ (k : ℕ) (_ : k < 8), (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k] = 0 ∨ (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k] = 1)
+    (hf : ∀ (k : ℕ) (_ : k < 8), (selectorFlags (Eval.eval env.toEnvironment selectors))[k] = 0 ∨ (selectorFlags (Eval.eval env.toEnvironment selectors))[k] = 1)
     (k : ℕ) (hk : k < 8) :
     ((remAddendU (remCompFE selectors B C) (remNegFE selectors B C) k).eval { env := env }).toNat
-      = remAddendNat vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) k
-      ∧ remAddendNat vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) k < 2 ^ 18 := by
+      = remAddendNat vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) k
+      ∧ remAddendNat vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) k < 2 ^ 18 := by
   have hrn := remNegFE_eval selectors env B C vB vC hWB hWC hUB hUC
   have hval_add : ∀ a b : ZMod p, (a + b).val ≤ a.val + b.val := fun a b =>
     (ZMod.val_add a b) ▸ Nat.mod_le _ _
@@ -1447,37 +1447,37 @@ private theorem remAddendU_toNat
     rintro x (rfl | rfl)
     · simp
     · rw [ZMod.val_one]
-  have hrnval : (populateRemNeg vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).val ≤ 4 := by
-    have hmsb := hbin1 _ (remMsbCell_bool vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
+  have hrnval : (populateRemNeg vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).val ≤ 4 := by
+    have hmsb := hbin1 _ (remMsbCell_bool vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
     have h0 := hbin1 _ (hf 0 (by omega)); have h2 := hbin1 _ (hf 2 (by omega))
     have h4 := hbin1 _ (hf 4 (by omega)); have h5 := hbin1 _ (hf 5 (by omega))
     rw [populateRemNeg]
-    calc ((((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4]
-            + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5])) * remMsbCell vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).val
-        ≤ ((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4]
-            + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]).val * (remMsbCell vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))).val :=
+    calc ((((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] + (selectorFlags (Eval.eval env.toEnvironment selectors))[4]
+            + (selectorFlags (Eval.eval env.toEnvironment selectors))[5])) * remMsbCell vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).val
+        ≤ ((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2] + (selectorFlags (Eval.eval env.toEnvironment selectors))[4]
+            + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]).val * (remMsbCell vB vC (selectorFlags (Eval.eval env.toEnvironment selectors))).val :=
           hval_mul _ _
       _ ≤ 4 := by
-          have hs1 := hval_add ((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2]
-            + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4]) (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]
-          have hs2 := hval_add ((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2])
-            (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4]
-          have hs3 := hval_add (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2]
-          have := Nat.mul_le_mul (show ((selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[0] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[2]
-            + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[4] + (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[5]).val ≤ 4 from by omega) hmsb
+          have hs1 := hval_add ((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2]
+            + (selectorFlags (Eval.eval env.toEnvironment selectors))[4]) (selectorFlags (Eval.eval env.toEnvironment selectors))[5]
+          have hs2 := hval_add ((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2])
+            (selectorFlags (Eval.eval env.toEnvironment selectors))[4]
+          have hs3 := hval_add (selectorFlags (Eval.eval env.toEnvironment selectors))[0] (selectorFlags (Eval.eval env.toEnvironment selectors))[2]
+          have := Nat.mul_le_mul (show ((selectorFlags (Eval.eval env.toEnvironment selectors))[0] + (selectorFlags (Eval.eval env.toEnvironment selectors))[2]
+            + (selectorFlags (Eval.eval env.toEnvironment selectors))[4] + (selectorFlags (Eval.eval env.toEnvironment selectors))[5]).val ≤ 4 from by omega) hmsb
           omega
   rcases Nat.lt_or_ge k 4 with hk4 | hk4
   · obtain ⟨w0, w1, w2, w3⟩ :=
-      Word.lt_cases_of_isU64 (populateRemComp_isU64 vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))
+      Word.lt_cases_of_isU64 (populateRemComp_isU64 vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))
     have hrc0 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 0 (by omega)
     have hrc1 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 1 (by omega)
     have hrc2 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 2 (by omega)
     have hrc3 := remCompFE_eval selectors env B C vB vC hWB hWC hUB hUC 3 (by omega)
-    rw [remAddendU, dif_pos hk4, remAddendNat, dif_pos hk4]
+    rw [remAddendU, dite_eq_left hk4, remAddendNat, dite_eq_left hk4]
     refine ⟨?_, by interval_cases k <;> omega⟩
     interval_cases k <;>
       simp only [circuit_norm, hrc0, hrc1, hrc2, hrc3]
-  · rw [remAddendU, dif_neg (by omega), remAddendNat, dif_neg (by omega)]
+  · rw [remAddendU, dite_eq_right (by omega), remAddendNat, dite_eq_right (by omega)]
     refine ⟨?_, by
       have := Nat.mul_le_mul hrnval (le_refl 65535)
       omega⟩
@@ -1487,20 +1487,20 @@ include hWB hWC hUB hUC in
 /-- Evaluating the carry recursion is `carryNat`, with the ≤ `5` bound riding in the motive so
 the u64 wrap never trips (each step is `(< 2^16) + (< 2^18) + (≤ 5)` over `2^16`). -/
 private theorem carryChainU_toNat
-    (hf : ∀ (k : ℕ) (_ : k < 8), (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k] = 0 ∨ (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k] = 1) :
+    (hf : ∀ (k : ℕ) (_ : k < 8), (selectorFlags (Eval.eval env.toEnvironment selectors))[k] = 0 ∨ (selectorFlags (Eval.eval env.toEnvironment selectors))[k] = 1) :
     ∀ n, n < 8 → (((carryChainU selectors (quotCompBitsU selectors (wordU B) (wordU C)) (compU selectors (wordU C))
         (remCompFE selectors B C) (remNegFE selectors B C) n).eval { env := env }).toNat
-        = carryNat vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) n
-      ∧ carryNat vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) n ≤ 5) := by
+        = carryNat vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) n
+      ∧ carryNat vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) n ≤ 5) := by
   have hq : ((Witgen.U64Expr.eval { env := env }
       (quotCompBitsU selectors (wordU B) (wordU C))).toNat)
-      = (Word.toBitVec64 (populateQuotComp vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat := by
+      = (Word.toBitVec64 (populateQuotComp vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat := by
     rw [quotCompBitsU_toNat selectors env B C vB vC hWB hWC hUB hUC, populateQuotComp,
       wordOfBits_toBitVec64]
   have hc : ((Witgen.U64Expr.eval { env := env } (compU selectors (wordU C))).toNat)
-      = (Word.toBitVec64 (cComp vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))).toNat :=
+      = (Word.toBitVec64 (cComp vC (selectorFlags (Eval.eval env.toEnvironment selectors)))).toNat :=
     compU_toNat selectors env (wordU C) (wordU_toNat env C vC hWC hUC) hUC
-  have hctqlt : ∀ k, ctqLimbNat vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))) k < 2 ^ 16 := fun k =>
+  have hctqlt : ∀ k, ctqLimbNat vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)) k < 2 ^ 16 := fun k =>
     Nat.mod_lt _ (by norm_num)
   intro n
   induction n with
@@ -1529,10 +1529,10 @@ private theorem carryChainU_toNat
 include hWB hWC hUB hUC in
 /-- Evaluating a carry cell is the corresponding `populateCarry` cell. -/
 theorem carryProgram_eval
-    (hf : ∀ (k : ℕ) (_ : k < 8), (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k] = 0 ∨ (selectorFlags (selectors.map (Expression.eval env.toEnvironment)))[k] = 1)
+    (hf : ∀ (k : ℕ) (_ : k < 8), (selectorFlags (Eval.eval env.toEnvironment selectors))[k] = 0 ∨ (selectorFlags (Eval.eval env.toEnvironment selectors))[k] = 1)
     (k : ℕ) (hk : k < 8) :
     ((carryProgram selectors B C).eval (value := fields 8) env)[k]
-      = (populateCarry vB vC (selectorFlags (selectors.map (Expression.eval env.toEnvironment))))[k] := by
+      = (populateCarry vB vC (selectorFlags (Eval.eval env.toEnvironment selectors)))[k] := by
   have h := (carryChainU_toNat selectors env B C vB vC hWB hWC hUB hUC hf k hk).1
   rw [carryProgram_eval_limb]
   simp only [populateCarry, Vector.getElem_ofFn, h]

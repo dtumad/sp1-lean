@@ -80,16 +80,18 @@ theorem pullsAt_flatMap (rows : List (RowFacts p)) (loc : MemLoc) :
 theorem verifier_state_interactions_of_values {assembly : Ensemble (ZMod p) SP1PublicIO}
     (witness : EnsembleWitness assembly)
     (same : assembly.verifierOperations.interactionValuesWith stateChannel.toRaw
-        (Environment.fromInput witness.publicInput witness.data) =
+        witness.data.publicEnvironment =
       sp1StateVerifierProgram.circuitOperations.interactionValuesWith stateChannel.toRaw
-        (Environment.fromInput witness.publicInput witness.data)) :
+        witness.data.publicEnvironment) :
     typedInteractionValuesWith assembly.verifierOperations stateChannel
-        (Environment.fromInput witness.publicInput witness.data) =
+        witness.data.publicEnvironment =
       [TypedInteraction.pulledIfValue stateChannel 1 (finalBoundaryStateMessage witness.publicInput),
        TypedInteraction.pushedIfValue stateChannel 1 (initialBoundaryStateMessage witness.publicInput)] := by
   apply (List.map_injective_iff.mpr TypedInteraction.raw_injective)
-  rw [typedInteractionValuesWith_raw, same, ← typedInteractionValuesWith_raw,
-    stateVerifier_stateInteractions]
+  rw [typedInteractionValuesWith_raw, same, ← typedInteractionValuesWith_raw]
+  change (typedInteractionValuesWith sp1StateVerifierProgram.circuitOperations stateChannel
+    (Environment.fromInput witness.publicInput witness.data)).map TypedInteraction.raw = _
+  rw [stateVerifier_stateInteractions]
   rfl
 
 end SP1Clean.Soundness.NativeCore

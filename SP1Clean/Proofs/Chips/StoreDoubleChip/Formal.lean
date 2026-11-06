@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.StoreDoubleChip.Defs
@@ -108,10 +109,6 @@ theorem completeness :
   -- G1: the *push*-side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
   -- eval→value bridge for the nested `pc` vector the CPUState `Spec` references.
-  have hmap_pc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc
-      = input_state_pc := h_input.2.1.2.2.2
-  have epc : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_state_pc[i]
-      = input_state_pc[i] := fun i hi => by rw [← hmap_pc]; simp only [Vector.getElem_map]
   have h_addr_as : AddressOperation.Assumptions
       (⟨input_adapter_op_b_memory_prev_value, input_adapter_op_c_imm, 0, 0, 0,
         input_is_real⟩ : AddressOperation.Inputs (ZMod p)) :=
@@ -121,7 +118,7 @@ theorem completeness :
     ⟨⟨hbin, fun hr => (h_it.2.2.2.2.2 hr).1,
         h_clk⟩, h_mem⟩,
     ⟨⟨hbin, hbin, h_clk⟩, h_it⟩, ?_⟩
-  · simp only [epc 0 (by omega), epc 1 (by omega), epc 2 (by omega)]; exact h_cpu
+  · exact h_cpu
   · rcases hbin with h | h <;> rw [h] <;> simp
 
 /-- StoreDouble's exact Memory-channel interaction list — the store-family shape: the composed
@@ -264,10 +261,10 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    StoreDoubleChip.circuit_main_eq]
+    ((StoreDoubleChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [StoreDoubleChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, AddressOperation.circuit, AddressOperation.main,
     AddrAddOperation.circuit, AddrAddOperation.main,
@@ -276,5 +273,10 @@ theorem lookups_empty :
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.StoreDoubleChip

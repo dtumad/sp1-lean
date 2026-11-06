@@ -2,11 +2,12 @@ module
 
 public import ToClean.Air.EnsembleBuild
 public import ToClean.Circuit.VerifierAssertions
+public import ToClean.Circuit.VerifierInteractions
 
 /-! # Fresh verifier channels
 
 Clean has no channel allocator for verifier extensions. This addition derives a name from both
-registered channels and every actual verifier/table interaction, then proves the original ledger
+the complete registered channel inventory, then proves the original ledger
 is empty on that channel. It belongs beside Clean's ensemble verifier composition API; remove it
 when upstream provides automatic channel separation.
 -/
@@ -17,10 +18,9 @@ namespace Air.Flat.VerifierChannel
 open Circuit
 variable {F : Type} [FiniteField F] {PublicIO : TypeMap} [ProvableType PublicIO]
 
-/-- Registered channel names and every literal verifier/component interaction name. -/
+/-- The ensemble registry covers every verifier and component interaction. -/
 def channelNames (ens : Ensemble F PublicIO) : List String :=
-  ens.channels.map (·.name) ++ ens.verifierOperations.interactions.map (·.channel.name) ++
-    ens.tables.flatMap (fun component => component.operations.interactions.map (·.channel.name))
+  ens.channels.map (·.name)
 
 private theorem length_le_nameBound {names : List String} {name : String} (member : name ∈ names) :
     name.length ≤ names.foldr (fun name bound => max name.length bound) 0 := by
@@ -49,6 +49,16 @@ private theorem channel_ne (stem : String) (ens : Ensemble F PublicIO) (other : 
     String.length_append, String.length_ofList, List.length_replicate] at lengths
   omega
 
+/-- The allocated name is absent even before comparing dependent channel predicates. -/
+theorem name_not_mem (stem : String) (ens : Ensemble F PublicIO) :
+    (channel stem ens).name ∉ ens.channels.map (·.name) := by
+  intro member
+  have bound := length_le_nameBound (names := channelNames ens)
+    member
+  simp only [channel, Verifier.zeroChannel, Channel.toRaw, channelName,
+    String.length_append, String.length_ofList, List.length_replicate] at bound
+  omega
+
 /-- Static evidence that the check channel has no pre-existing producer or consumer. -/
 structure Fresh (stem : String) (ens : Ensemble F PublicIO) : Prop where
   /-- The channel is newly registered by installation. -/
@@ -72,17 +82,21 @@ theorem fresh (stem : String) (ens : Ensemble F PublicIO) : Fresh stem ens := by
   refine ⟨?_, ?_, ?_⟩
   · intro member
     exact channel_ne stem ens (channel stem ens)
-      (by simp only [channelNames, List.mem_append]; exact Or.inl (Or.inl (List.mem_map.mpr ⟨_, member, rfl⟩))) rfl
+      (List.mem_map.mpr ⟨_, member, rfl⟩) rfl
   · apply absent
     intro interaction member
-    simp only [channelNames, List.mem_append]
-    exact Or.inl (Or.inr (List.mem_map.mpr ⟨_, member, rfl⟩))
+    apply List.mem_map.mpr
+    refine ⟨interaction.channel, ens.verifier_channels ?_, rfl⟩
+    rw [Verifier.Program.mem_channels_iff, Operations.channels]
+    exact List.mem_map.mpr ⟨interaction, member, rfl⟩
   · intro component member
     apply absent
     intro interaction occurrence
-    simp only [channelNames, List.mem_append]
-    exact Or.inr (List.mem_flatMap.mpr ⟨component, member,
-      List.mem_map.mpr ⟨interaction, occurrence, rfl⟩⟩)
+    apply List.mem_map.mpr
+    refine ⟨interaction.channel, ens.tables_channels component member ?_, rfl⟩
+    rw [Component.interactions_eq] at occurrence
+    exact component.circuit.channels_subset component.rowInputVar component.rowOffset
+      (List.mem_map.mpr ⟨interaction, occurrence, rfl⟩)
 
 /-- Static separation makes the original witness's entire check-channel ledger empty. -/
 theorem Fresh.empty_ledger (stem : String) {ens : Ensemble F PublicIO} (fresh : Fresh stem ens)

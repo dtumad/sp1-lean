@@ -16,7 +16,7 @@ and host-interpreter data, never dense Sail memory or ordinary execution.
 
 namespace SP1CleanTest.Core.ExecutionRom
 open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target SP1Clean.Machine
-open Sail LeanRV64D.Defs LeanRV64D.Functions
+open Sail LeanRV64D LeanRV64D.Functions
 
 private def image (word : BitVec 32) : ProgramImage :=
   ⟨[(65536, 0x73), (65540, word)], 65536, [(70008, 99)]⟩

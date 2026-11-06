@@ -3,6 +3,8 @@ import SP1Clean.FormalModel.Trace.Witness
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Model.SailDecode
 import SP1CleanTest.TraceGenTests.Conformance
+import SP1CleanTest.Core.StaticMembership
+import ToClean.Air.TableEvaluation
 
 /-! # Joint non-vacuity of the supported-core relation
 
@@ -21,7 +23,7 @@ JAL event, and `TraceNonVacuity` checks construction through the trace generator
 execution completeness remains the capstone obligation.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Audit.JointNonVacuity
 
@@ -31,6 +33,8 @@ open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Execution
 open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel exitChannel)
 open Sail LeanRV64D LeanRV64D.Functions
 
+local instance jointBalanceDecidableEq : DecidableEq (ZMod SP1Prime) := FiniteField.instDecidableEq
+
 /-! ## The committed program: `JAL x0, 0` at `0x10000`
 
 One canonical ROM row `[pc0, pc1, pc2, w_lo, w_hi] = [0, 1, 0, 0x006F, 0]`: the self-jump
@@ -39,12 +43,14 @@ the matching singleton keys. -/
 
 /-- Legacy fixture encoding: one ROM row (`JAL x0, 0` at `0x10000`), entry point
 `0x10000`, genesis clock `(0, 1)`, no data image. -/
-def anchorData : ProverData (ZMod SP1Prime) := fun key n =>
-  match key, n with
-  | "sp1.rom", 5 => #[#v[0, 1, 0, 111, 0]]
-  | "sp1.pc_start", 3 => #[#v[0, 1, 0]]
-  | "sp1.init_clk", 2 => #[#v[0, 1]]
-  | _, _ => #[]
+def anchorData : ProverData (ZMod SP1Prime) where
+  publicInput := #[]
+  tables := fun key n =>
+    match key, n with
+    | "sp1.rom", 5 => #[#v[0, 1, 0, 111, 0]]
+    | "sp1.pc_start", 3 => #[#v[0, 1, 0]]
+    | "sp1.init_clk", 2 => #[#v[0, 1]]
+    | _, _ => #[]
 
 /-- The semantic guest program decoded from the fixture input. -/
 def anchorProgram : GuestProgram := Commit.progOf anchorData
@@ -135,21 +141,24 @@ multiplicity), then the `rangeCheck n` subcircuits' local bit-decomposition cell
 order. -/
 
 /-- A zero-row table, with the component's fixed-column obligation checked explicitly. -/
-def emptyTableOf (c : Component (ZMod SP1Prime)) (fixed : c.fixedColumns = none) :
+def emptyTableOf (c : Component (ZMod SP1Prime)) (fixed : SP1CleanTest.StaticMembership.acceptsSeed c = true) :
     Table (ZMod SP1Prime) where
   component := c
   table := []
-  data := anchorData
+  data := ProverData.empty _
+  data_consistent := rfl
   length_le := by decide
   uniform_width := by simp
-  fixed_rows_match := by simp only [Component.FixedRowsMatch, fixed]
+  fixed_rows_match := by
+    cases mode : c.generation <;> simp [SP1CleanTest.StaticMembership.acceptsSeed, mode,
+      Component.FixedRowsMatch] at fixed ⊢
 
 /-- The declared supported-core components have no fixed columns. -/
 theorem sp1Components_noFixed (c : Component (ZMod SP1Prime))
-    (member : c ∈ (sp1Ensemble (p := SP1Prime)).tables) : c.fixedColumns = none := by
+    (member : c ∈ (sp1Ensemble (p := SP1Prime)).tables) : SP1CleanTest.StaticMembership.acceptsSeed c = true := by
   have all : (sp1Ensemble (p := SP1Prime)).tables.all
-      (fun component => component.fixedColumns.isNone) = true := by rfl
-  exact Option.isNone_iff_eq_none.mp (List.all_eq_true.mp all c member)
+      (fun component => SP1CleanTest.StaticMembership.acceptsSeed component) = true := by rfl
+  exact List.all_eq_true.mp all c member
 
 /-- One empty physical table for every declared component, in its original position. -/
 noncomputable def emptyTables : List (Table (ZMod SP1Prime)) :=
@@ -168,10 +177,13 @@ theorem emptyTables_length : emptyTables.length = 55 := by
 /-- The `U8Range` provider table (stable position 25): one row checking the byte pair `(0, 0)` and
 pushing `⟨3, 0, 0, 0⟩` with multiplicity 2. Row layout: `[b, c, multiplicity]`, then the two
 `rangeCheck 8` bit blocks (all zero). -/
+def u8RangeTableRows : List (Array (ZMod SP1Prime)) := [#[0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
 def u8RangeTable : Table (ZMod SP1Prime) where
-  component := { circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions }
-  table := [#[0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-  data := anchorData
+  component := { circuit := ByteChip.U8Range.circuit, Assumptions := (ByteChip.U8Range.circuit).Assumptions, generation := ByteChip.U8Range.generation }
+  table := u8RangeTableRows
+  data := { tables := fun _ arity => (u8RangeTableRows.map (rowPrefix arity)).toArray, publicInput := #[] }
+  data_consistent := rfl
   length_le := by decide
   fixed_rows_match := by trivial
   uniform_width := by intro row hrow; fin_cases hrow; rfl
@@ -183,11 +195,14 @@ exactly the first bit). -/
 def rangeWidth16 : RangeChip.Width := ⟨16, by norm_num⟩
 
 /-- Two physical Range rows with counts four and six for the public boundary requests. -/
-def range16Table : Table (ZMod SP1Prime) where
-  component := { circuit := RangeChip.circuitFor rangeWidth16, Assumptions := (RangeChip.circuitFor rangeWidth16).Assumptions }
-  table := [#[1, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+def range16TableRows : List (Array (ZMod SP1Prime)) := [#[1, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             #[0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-  data := anchorData
+
+def range16Table : Table (ZMod SP1Prime) where
+  component := { circuit := RangeChip.circuitFor rangeWidth16, Assumptions := (RangeChip.circuitFor rangeWidth16).Assumptions, generation := RangeChip.generation rangeWidth16 }
+  table := range16TableRows
+  data := { tables := fun _ arity => (range16TableRows.map (rowPrefix arity)).toArray, publicInput := #[] }
+  data_consistent := rfl
   length_le := by decide
   fixed_rows_match := by trivial
   uniform_width := by intro row hrow; fin_cases hrow <;> rfl
@@ -202,10 +217,13 @@ the composed `CPUState`/`RegisterAccessCols` Byte pulls, the State pair, the ECA
 the six register Memory records are all emitted at multiplicity zero; only the anti-gated
 `1 - is_real = 1` Exit push of `⟨0⟩` is live, and that is what balances the boundary verifier's
 ungated `⟨exit_code⟩` pull. -/
+def haltPaddingTableRows : List (Array (ZMod SP1Prime)) := [haltPaddingRow]
+
 def haltPaddingTable : Table (ZMod SP1Prime) where
-  component := { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }
-  table := [haltPaddingRow]
-  data := anchorData
+  component := { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }
+  table := haltPaddingTableRows
+  data := { tables := fun _ arity => (haltPaddingTableRows.map (rowPrefix arity)).toArray, publicInput := #[] }
+  data_consistent := rfl
   length_le := by decide
   fixed_rows_match := by trivial
   uniform_width := by intro row hrow; fin_cases hrow; rfl
@@ -319,12 +337,17 @@ theorem jointTables_components : jointTables.map (·.component) = (sp1Ensemble (
       List.getElem_set_ne (Ne.symm h47), List.getElem_set_ne (Ne.symm h25)]
     simp [emptyTables, emptyTableOf]
 
+private theorem jointTables_unique : (jointTables.map (fun table => table.component.circuit.name)).Nodup := by
+  change ((jointTables.map (·.component)).map (·.circuit.name)).Nodup
+  rw [jointTables_components]
+  exact (sp1Ensemble (p := SP1Prime)).unique_names
+
 /-- Boundary-only ensemble with data derived from its complete physical inventory. -/
 noncomputable def jointWitness : SupportedCoreNativeWitness SP1Prime :=
   EnsembleWitness.ofTables _ jointTables pv jointTables_components
 
-@[simp] theorem jointWitness_tables : jointWitness.tables = withDerivedData jointTables := rfl
-@[simp] theorem jointWitness_data : jointWitness.data = deriveProverData jointTables :=
+@[simp] theorem jointWitness_tables : jointWitness.tables = withDerivedData jointTables jointTables_unique (toElements pv).toArray := rfl
+@[simp] theorem jointWitness_data : jointWitness.data = deriveProverData jointTables (toElements pv).toArray :=
   EnsembleWitness.ofTables_data ..
 @[simp] theorem jointWitness_publicInput : jointWitness.publicInput = pv := rfl
 
@@ -363,10 +386,10 @@ theorem constraintsHold_of_check {env : Environment (ZMod SP1Prime)}
 
 theorem jointWitness_constraints : jointWitness.Constraints := by
   intro t ht
-  obtain ⟨original, originalMem, rfl⟩ := List.mem_map.mp ht
+  obtain ⟨⟨original, originalMem⟩, _, rfl⟩ := List.mem_map.mp ht
   intro row hrow
   change original.component.operations.ConstraintsHold
-    (Environment.fromArray row (deriveProverData jointTables))
+    (Environment.fromArray row (deriveProverData jointTables (toElements pv).toArray))
   change row ∈ original.table at hrow
   rcases mem_jointTables originalMem with h | rfl | rfl | rfl
   · rw [emptyTables_table_eq_nil original h] at hrow
@@ -397,35 +420,19 @@ Halt padding row's anti-gated `+1` push of `⟨0⟩`; Program and Memory stay em
 row's remaining eighteen interactions are all gated off, so on the other four buses it only appends
 multiplicity-zero entries. -/
 
-/-- A pull/push pair of one message balances: the multiplicities cancel pointwise. -/
-theorem balancedInteractions_pair {F : Type} [FiniteField F] [DecidableEq F]
-    {i₁ i₂ : Interaction F} (hmsg : i₁.msg = i₂.msg) (hmult : i₁.mult + i₂.mult = 0)
-    (hchar : (2 : ℕ) < ringChar F ∨ ringChar F = 0) :
-    BalancedInteractions [i₁, i₂] := by
-  constructor
-  · rcases hchar with h | h
-    · exact Or.inl (by simpa using h)
-    · exact Or.inr h
-  · intro msg
-    rw [balanceOf_cons, balanceOf_cons]
-    have hnil : balanceOf ([] : List (Interaction F)) msg = 0 := rfl
-    rw [hnil, add_zero]
-    by_cases h : i₁.msg = msg
-    · rw [if_pos h, if_pos (hmsg.symm.trans h)]
-      exact hmult
-    · rw [if_neg h, if_neg (fun hc => h (hmsg.trans hc))]
-      exact add_zero 0
-
-/-- The empty interaction list balances (over a positive-characteristic field). -/
-theorem balancedInteractions_nil {F : Type} [FiniteField F]
-    (hchar : (0 : ℕ) < ringChar F ∨ ringChar F = 0) :
-    BalancedInteractions ([] : List (Interaction F)) := by
-  constructor
-  · rcases hchar with h | h
-    · exact Or.inl (by simpa using h)
-    · exact Or.inr h
-  · intro msg
-    rfl
+/-- A same-message pair has zero LogUp sum when its signed multiplicities cancel. -/
+theorem logUpBalanced_pair {F : Type} [FiniteField F]
+    {i₁ i₂ : Interaction F} (hmsg : i₁.msg = i₂.msg)
+    (hmult : i₁.signedMult + i₂.signedMult = 0) : LogUpBalanced [i₁, i₂] := by
+  intro msg
+  rw [balanceOf_cons, balanceOf_cons]
+  have hnil : balanceOf ([] : List (Interaction F)) msg = 0 := rfl
+  rw [hnil, add_zero]
+  by_cases h : i₁.msg = msg
+  · rw [ite_eq_left h, ite_eq_left (hmsg.symm.trans h)]
+    exact hmult
+  · rw [ite_eq_right h, ite_eq_right (fun hc => h (hmsg.trans hc))]
+    exact add_zero 0
 
 /-- Multiplicity-zero interactions move no message's balance. -/
 theorem balanceOf_eq_zero_of_mult_zero {l : List (Interaction (ZMod SP1Prime))}
@@ -433,7 +440,8 @@ theorem balanceOf_eq_zero_of_mult_zero {l : List (Interaction (ZMod SP1Prime))}
   rw [balanceOf]
   refine List.sum_eq_zero fun m hm => ?_
   obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hm
-  exact h i (List.mem_of_mem_filter hi)
+  simp [Interaction.signedMult, h i (List.mem_of_mem_filter hi)]
+  split <;> rfl
 
 theorem sp1Prime_char_pos_facts :
     (2 : ℕ) < ringChar (ZMod SP1Prime) ∧ (0 : ℕ) < ringChar (ZMod SP1Prime) := by
@@ -445,15 +453,26 @@ interaction has every `if` in its `balanceOf` sum false.  This is what makes a c
 balance decidable — `BalancedInteractions`' `∀ msg : Array F` must NOT be handed to
 `decide`/`native_decide` directly (cf. the Fintype landmine at `rowValuesBelow_of_all`); the
 bounded member form evaluates over just the list. -/
-theorem balancedInteractions_of_member_balance {l : List (Interaction (ZMod SP1Prime))}
-    (hlen : l.length < ringChar (ZMod SP1Prime))
+theorem logUpBalanced_of_member_balance {l : List (Interaction (ZMod SP1Prime))}
     (h : ∀ msg ∈ l.map (·.msg), balanceOf l msg = 0) :
-    BalancedInteractions l := by
-  refine ⟨Or.inl hlen, fun msg => ?_⟩
+    LogUpBalanced l := by
+  intro msg
   by_cases hmem : msg ∈ l.map (·.msg)
   · exact h msg hmem
-  · rw [balanceOf_eq_of_const_mult (mult := 0)
-      (fun i hi heq => (hmem (List.mem_map.mpr ⟨i, hi, heq⟩)).elim), zero_mul]
+  · unfold balanceOf
+    have empty : l.filter (fun i => decide (i.msg = msg)) = [] := by
+      apply List.filter_eq_nil_iff.mpr
+      intro i hi
+      simpa only [decide_eq_true_eq] using (fun equal => hmem (List.mem_map.mpr ⟨i, hi, equal⟩))
+    rw [empty]
+    rfl
+
+/-- The field-sum check supplies abstract balance within Clean's occurrence bound. -/
+theorem balancedInteractions_of_member_balance {l : List (Interaction (ZMod SP1Prime))}
+    (hlen : l.length < ringChar (ZMod SP1Prime))
+    (h : ∀ msg ∈ l.map (·.msg), balanceOf l msg = 0) : BalancedInteractions l := by
+  have sums := logUpBalanced_of_member_balance h
+  exact ⟨sums.exists_push_of_pull hlen, sums.activeCount_push_eq_activeCount_pull_of_isBool hlen⟩
 
 /-- A table over a single-channel circuit filters nothing: its channel view is its whole
 interaction list. -/
@@ -510,7 +529,7 @@ theorem jointWitness_interactionsWith_split (ch : RawChannel (ZMod SP1Prime)) :
       jointWitness.verifierInteractionsWith ch ++
         (u8RangeTable.interactionsWith ch ++
           (range16Table.interactionsWith ch ++ haltPaddingTable.interactionsWith ch)) := by
-  change _ ++ (withDerivedData jointTables).flatMap (fun t => t.interactionsWith ch) = _
+  change _ ++ (withDerivedData jointTables jointTables_unique (toElements pv).toArray).flatMap (fun t => t.interactionsWith ch) = _
   rw [withDerivedData_interactionsWith]
   have split := flatMap_set_set_set_of_nil (l := emptyTables)
     (f := fun (t : Table (ZMod SP1Prime)) => t.interactionsWith ch)
@@ -564,12 +583,17 @@ theorem balancedInteractions_append_halt {l : List (Interaction (ZMod SP1Prime))
     BalancedInteractions (l ++ haltPaddingTable.interactionsWith ch) := by
   have hchar : (119 : ℕ) < ringChar (ZMod SP1Prime) := by
     rw [ZMod.ringChar_zmod_n]; norm_num [SP1Prime]
-  refine ⟨Or.inl ?_, fun msg => ?_⟩
-  · have h19 := haltPaddingTable_interactionsWith_length ch
+  have lengthBound : (l ++ haltPaddingTable.interactionsWith ch).length < ringChar (ZMod SP1Prime) := by
+    have h19 := haltPaddingTable_interactionsWith_length ch
     rw [List.length_append]
     omega
-  · rw [balanceOf_append, hbal msg,
+  have sums : LogUpBalanced (l ++ haltPaddingTable.interactionsWith ch) := by
+    intro msg
+    rw [show balanceOf (l ++ haltPaddingTable.interactionsWith ch) msg =
+        balanceOf l msg + balanceOf (haltPaddingTable.interactionsWith ch) msg by
+          simp only [balanceOf, List.filter_append, List.map_append, List.sum_append], hbal msg,
       balanceOf_eq_zero_of_mult_zero (haltPaddingTable_mult_zero hname), add_zero]
+  exact ⟨sums.exists_push_of_pull lengthBound, sums.activeCount_push_eq_activeCount_pull_of_isBool lengthBound⟩
 
 /-! ### The verifier row's per-channel views -/
 
@@ -584,7 +608,10 @@ theorem jointWitness_verifierState :
   have h := congrArg (List.map TypedInteraction.raw)
     (stateVerifier_stateInteractions pv jointWitness.data)
   rw [typedInteractionValuesWith_raw] at h
-  simpa only [EnsembleWitness.verifierInteractionsWith, jointWitness_publicInput,
+  have publicEnvironment : jointWitness.data.publicEnvironment =
+      Environment.fromInput pv jointWitness.data := rfl
+  rw [EnsembleWitness.verifierInteractionsWith, publicEnvironment]
+  simpa only [
     List.map_cons, List.map_nil, Ensemble.verifierOperations,
     sp1Ensemble_verifier, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw] using h
 
@@ -615,7 +642,10 @@ theorem jointWitness_verifierExit :
   have h := congrArg (List.map TypedInteraction.raw)
     (stateVerifier_exitInteractions pv jointWitness.data)
   rw [typedInteractionValuesWith_raw] at h
-  simpa only [EnsembleWitness.verifierInteractionsWith, jointWitness_publicInput,
+  have publicEnvironment : jointWitness.data.publicEnvironment =
+      Environment.fromInput pv jointWitness.data := rfl
+  rw [EnsembleWitness.verifierInteractionsWith, publicEnvironment]
+  simpa only [
     List.map_cons, List.map_nil, Ensemble.verifierOperations,
     sp1Ensemble_verifier, TypedInteraction.pulledIfValue_raw, TypedInteraction.pushedIfValue_raw] using h
 
@@ -705,10 +735,8 @@ theorem jointWitness_byteInteractions :
   simp only [byteInteractions, List.append_assoc]
 
 /-- The verifier's twelve pulls and the two provider tables' pushes cancel message-for-message. -/
-theorem byteInteractions_balanced : BalancedInteractions byteInteractions := by
-  refine balancedInteractions_of_member_balance ?_ (by native_decide)
-  rw [show byteInteractions.length = 15 from by native_decide, ZMod.ringChar_zmod_n]
-  norm_num [SP1Prime]
+theorem byteInteractions_balanced : LogUpBalanced byteInteractions :=
+  logUpBalanced_of_member_balance (by native_decide)
 
 /-! ### The Exit bus
 
@@ -731,6 +759,7 @@ def haltExitInteractions : List (Interaction (ZMod SP1Prime)) :=
 
 theorem haltPaddingTable_exit :
     haltPaddingTable.interactionsWith exitChannel.toRaw = haltExitInteractions := by
+  rw [Table.interactionsWith_at haltPaddingTable anchorData]
   show [haltPaddingRow].flatMap _ = _
   rw [List.flatMap_singleton, Operations.interactionValuesWith_eq_map,
     Component.interactionsWith_eq]
@@ -760,7 +789,10 @@ theorem jointWitness_syscallTable_nil :
       jointWitness.tables[syscallTablePosition]? = some t → t.table = [] := by
   intro t ht
   rw [jointWitness_tables, withDerivedData, List.getElem?_map] at ht
-  obtain ⟨original, originalAt, rfl⟩ := Option.map_eq_some_iff.mp ht
+  obtain ⟨⟨original, originalMem⟩, originalAt, rfl⟩ := Option.map_eq_some_iff.mp ht
+  have originalAt : jointTables[syscallTablePosition]? = some original := by
+    simpa only [← List.getElem?_map, List.attach_map_subtype_val, Option.map_some] using
+      congrArg (Option.map Subtype.val) originalAt
   rw [jointTables, List.getElem?_set_ne (by decide),
     List.getElem?_set_ne (by decide), List.getElem?_set_ne (by decide)] at originalAt
   exact emptyTables_table_eq_nil original (List.mem_of_getElem? originalAt)
@@ -778,7 +810,7 @@ theorem jointWitness_syscallTableInactive : SyscallTableInactive jointWitness wh
   haltTablePresent := by
     show (haltTable jointWitness).table ≠ []
     show haltPaddingTable.table ≠ []
-    simp [haltPaddingTable]
+    simp [haltPaddingTable, haltPaddingTableRows]
 
 theorem jointWitness_balanced : jointWitness.BalancedChannels := by
   intro channel hchannel
@@ -789,29 +821,26 @@ theorem jointWitness_balanced : jointWitness.BalancedChannels := by
     show BalancedInteractions (jointWitness.interactionsWith Channels.syscallChannel.toRaw)
     rw [witness_syscallChannel_silent (p := SP1Prime) jointWitness
       jointWitness_syscallTable_nil]
-    exact balancedInteractions_nil
-      (Or.inl (Nat.lt_of_lt_of_le Nat.zero_lt_two sp1Prime_char_pos_facts.1.le))
+    exact BalancedInteractions.nil
   case inr.inr.inr.inr.inr.inr =>
     show BalancedInteractions
       (jointWitness.interactionsWith Channels.publicValuesChannel.toRaw)
     rw [witness_publicValuesChannel_silent (p := SP1Prime) jointWitness
       jointWitness_syscallTable_nil]
-    exact balancedInteractions_nil
-      (Or.inl (Nat.lt_of_lt_of_le Nat.zero_lt_two sp1Prime_char_pos_facts.1.le))
+    exact BalancedInteractions.nil
   · show BalancedInteractions (jointWitness.interactionsWith stateChannel.toRaw)
     rw [jointWitness_interactionsWith_split, jointWitness_verifierState,
       u8RangeTable_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),
       range16Table_interactionsWith_nil (of_eq_false Channels.stateChannel_eq_byteChannel_false),
       List.nil_append, List.nil_append]
     exact balancedInteractions_append_halt (by norm_num)
-      (balancedInteractions_pair (by native_decide) (neg_add_cancel 1)
-        (Or.inl sp1Prime_char_pos_facts.1)).2
+      (logUpBalanced_pair (by native_decide) (neg_add_cancel 1))
       (by simp only [Channel.toRaw_name, Channels.stateChannel]; decide)
   · show BalancedInteractions (jointWitness.interactionsWith byteChannel.toRaw)
     rw [jointWitness_byteInteractions]
     exact balancedInteractions_append_halt
       (by rw [show byteInteractions.length = 15 from by native_decide]; norm_num)
-      byteInteractions_balanced.2
+      byteInteractions_balanced
       (by simp only [Channel.toRaw_name, Channels.byteChannel]; decide)
   · show BalancedInteractions (jointWitness.interactionsWith programChannel.toRaw)
     rw [jointWitness_interactionsWith_split, jointWitness_verifierProgram_nil,
@@ -853,26 +882,26 @@ noncomputable def anchorState : SailState :=
 theorem anchorMem_65536 : anchorMem.get? 65536 = some (0x6F : BitVec 8) := by
   show anchorMem[(65536 : ℕ)]? = some (0x6F : BitVec 8)
   unfold anchorMem
-  rw [Std.ExtHashMap.getElem?_insert, if_neg (by decide), Std.ExtHashMap.getElem?_insert,
-    if_neg (by decide), Std.ExtHashMap.getElem?_insert, if_neg (by decide),
-    Std.ExtHashMap.getElem?_insert, if_pos (by decide)]
+  rw [Std.ExtHashMap.getElem?_insert, ite_eq_right (by decide), Std.ExtHashMap.getElem?_insert,
+    ite_eq_right (by decide), Std.ExtHashMap.getElem?_insert, ite_eq_right (by decide),
+    Std.ExtHashMap.getElem?_insert, ite_eq_left (by decide)]
 
 theorem anchorMem_65537 : anchorMem.get? 65537 = some (0x00 : BitVec 8) := by
   show anchorMem[(65537 : ℕ)]? = some (0x00 : BitVec 8)
   unfold anchorMem
-  rw [Std.ExtHashMap.getElem?_insert, if_neg (by decide), Std.ExtHashMap.getElem?_insert,
-    if_neg (by decide), Std.ExtHashMap.getElem?_insert, if_pos (by decide)]
+  rw [Std.ExtHashMap.getElem?_insert, ite_eq_right (by decide), Std.ExtHashMap.getElem?_insert,
+    ite_eq_right (by decide), Std.ExtHashMap.getElem?_insert, ite_eq_left (by decide)]
 
 theorem anchorMem_65538 : anchorMem.get? 65538 = some (0x00 : BitVec 8) := by
   show anchorMem[(65538 : ℕ)]? = some (0x00 : BitVec 8)
   unfold anchorMem
-  rw [Std.ExtHashMap.getElem?_insert, if_neg (by decide), Std.ExtHashMap.getElem?_insert,
-    if_pos (by decide)]
+  rw [Std.ExtHashMap.getElem?_insert, ite_eq_right (by decide), Std.ExtHashMap.getElem?_insert,
+    ite_eq_left (by decide)]
 
 theorem anchorMem_65539 : anchorMem.get? 65539 = some (0x00 : BitVec 8) := by
   show anchorMem[(65539 : ℕ)]? = some (0x00 : BitVec 8)
   unfold anchorMem
-  rw [Std.ExtHashMap.getElem?_insert, if_pos (by decide)]
+  rw [Std.ExtHashMap.getElem?_insert, ite_eq_left (by decide)]
 
 theorem anchorState_pc : anchorState.regs.get? Register.PC = some (65536#64) :=
   cfgState_pc (65536#64)

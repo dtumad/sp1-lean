@@ -14,7 +14,7 @@ No circuit row, compiler readiness or separately supplied intermediate invariant
 -/
 
 namespace SP1Clean.Model.Core
-open Machine Soundness.Target LeanRV64D.Defs LeanRV64D.Functions
+open Machine Soundness.Target LeanRV64D LeanRV64D.Functions
 
 /-- Every byte of a fetched image word belongs to the image's protected region. -/
 theorem ProgramImage.readOnly_of_fetch (image : ProgramImage) (valid : image.Valid)
@@ -47,7 +47,7 @@ theorem HostExecution.configured (execution : HostExecution) (state : SailState)
     have returnOther : ¬ ((Register.x5 == reg) = true) := by
       rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
     change ((state.regs.insert Register.x5 execution.result).insert Register.PC (execution.nextPc pc)).get? reg = _
-    rw [Std.ExtDHashMap.get?_insert, dif_neg pcOther, Std.ExtDHashMap.get?_insert, dif_neg returnOther]
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right pcOther, Std.ExtDHashMap.get?_insert, dite_eq_right returnOther]
 
 /-- A successful host call binds its observations and frames configuration and protected bytes.
 The full emitted write is checked, including HINT_READ's mandatory padding. -/

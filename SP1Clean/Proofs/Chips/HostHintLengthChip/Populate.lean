@@ -51,7 +51,7 @@ theorem populate_spec_of_run (store : HintQueue.Store) (head previousClock clock
       | nil => exact False.elim (empty rfl)
       | cons read descending _ => exact ⟨_, read, descending⟩
     have result : executed.result = BitVec.ofNat 64 node.bytes.length := by
-      simpa only [HintQueue.hintLength?, if_neg empty, read, Option.map_some, Option.some.injEq] using length.symm
+      simpa only [HintQueue.hintLength?, ite_eq_right empty, read, Option.map_some, Option.some.injEq] using length.symm
     simp only [HeadSpec, decide_eq_false empty, Bool.false_eq_true, ↓reduceIte,
       populate, read, Option.getD_some, HostControl.message]
     exact ⟨rfl, congrArg bitVecToWord result, HintQueue.NodeRecord.encode_valid _ _ headBound descending⟩

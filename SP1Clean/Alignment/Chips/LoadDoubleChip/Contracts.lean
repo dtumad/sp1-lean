@@ -13,7 +13,6 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 -- Runs at the plain default: the former 1000000 ceiling was ~25x over; measured floor <= 40000.
 /-- Project LoadDouble's literal `op_a_0 === 0` assertion from the folded native `main`. -/

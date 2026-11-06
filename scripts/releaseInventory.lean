@@ -12,7 +12,8 @@ private def releaseInventory : IO Unit := do
   let tables := ensemble.tables.mapIdx fun index component => Json.mkObj [
     ("slot", toJson index), ("name", toJson component.circuit.name),
     ("width", toJson component.width), ("inputWidth", toJson component.rowOffset),
-    ("fixedWidth", toJson component.fixedWidth),
+    ("fixedColumns", toJson (component.generation.cells.1.toList.zipIdx.filterMap
+      (fun (cell, index) => if cell.isFixed then some index else none))),
     ("lookups", toJson (component.rowOperations.lookups.map (·.table.name)))]
   IO.println <| (Json.mkObj [
     ("tables", toJson tables),

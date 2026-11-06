@@ -44,14 +44,14 @@ theorem toSailMemory_eq_iff (left right : ByteMemory) (limit : ℕ) :
   constructor
   · intro equal address bound
     have observed := congrArg (fun memory : Std.ExtHashMap ℕ (BitVec 8) => memory.get? address) equal
-    simpa only [toSailMemory_get?, if_pos bound, Option.some.injEq] using observed
+    simpa only [toSailMemory_get?, ite_eq_left bound, Option.some.injEq] using observed
   · intro equal
     apply Std.ExtHashMap.ext_getElem?
     intro address
     change (left.toSailMemory limit).get? address = (right.toSailMemory limit).get? address
     by_cases bound : address < limit
-    · simp only [toSailMemory_get?, if_pos bound, equal address bound]
-    · simp only [toSailMemory_get?, if_neg bound]
+    · simp only [toSailMemory_get?, ite_eq_left bound, equal address bound]
+    · simp only [toSailMemory_get?, ite_eq_right bound]
 
 /-- In-range sparse updates agree with Sail's actual memory-map insertion. -/
 theorem toSailMemory_write (memory : ByteMemory) (limit address : ℕ) (value : BitVec 8)

@@ -21,12 +21,10 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); 
 def sourceWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     EnsembleWitness ((SnapshotMemoryEnsemble.inventory (p := p) source.sail.memorySnapshot).ensemble
-      (afterSourceTables image source) [] (baseEnsemble image source).unique_names) :=
-  { tables := witness.tables
-    publicInput := ()
-    same_length := witness.same_length
-    same_circuits := witness.same_circuits
-    same_data := witness.same_data }
+      (PublicIO := SP1PublicIO) (afterSourceTables image source)
+      (baseEnsemble image source).channels.tail (baseEnsemble image source).unique_names
+      (baseEnsemble image source).unique_channel_names (baseEnsemble image source).tables_channels) :=
+  witness.withEnsemble _ rfl
 
 /-- Source records use Byte guarantees and fixed-register membership, independently of Memory balance. -/
 theorem sourceTables_spec_of_channels {image : ProgramImage} {source : ExecutionSnapshot}
@@ -114,7 +112,7 @@ theorem sourceWitness_interactions {image : ProgramImage} {source : ExecutionSna
   rw [verifier_source_interactions]
   apply congrArg (fun front => front ++ witness.toTables.interactionsWith
     (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw)
-  change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
+  change (OrderedBoundaryVerifier.verifierProgram (PublicIO := SP1PublicIO) _ _ _).circuitOperations.interactionValuesWith _ _ = _
   simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
     Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
@@ -172,13 +170,14 @@ program, platform, initialization, ROM, and range checks pass without caller-sup
 theorem public_contract_of_byte {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
-    (byte : (ensemble image source).VerifierChannelGuarantees witness.publicInput witness.data byteChannel.toRaw) :
+    (byte : (ensemble image source).VerifierChannelGuarantees witness.data byteChannel.toRaw) :
     witness.publicInput.LimbBounds ∧ ExecutionSourceValid image source ∧
       witness.publicInput.SourceFor source ∧ witness.publicInput.PreservesStoppedClock source := by
   have boundaryByte := (Verifier.Program.andThen_channelGuarantees boundaryVerifier
     ((LocalSourceBoundary.checker image source).program (baseEnsemble image source))
     byteChannel.toRaw (Environment.fromInput witness.publicInput witness.data)).mp byte
-  exact ⟨boundaryVerifier_limbBounds _ _ boundaryByte.1, (source_balanced_iff witness).mp sourceChecks⟩
+  exact ⟨by simpa only [EnsembleWitness.data_getPublicInput] using
+      boundaryVerifier_limbBounds witness.data boundaryByte.1, (source_balanced_iff witness).mp sourceChecks⟩
 
 /-- The complete witness supplies the verifier's Byte guarantees. -/
 theorem public_contract {image : ProgramImage} {source : ExecutionSnapshot}

@@ -1,3 +1,4 @@
+import Clean.Air.WitnessGeneration.Generation
 import ToClean.Gadgets.LookupProjection
 import SP1Clean.Model.Channels
 import SP1Clean.Model.ByteTable
@@ -88,7 +89,7 @@ def circuit (n : ℕ) (hn : 2 ^ n < p) : GeneralFormalCircuit (ZMod p) Inputs un
   soundness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     have hnp : n < p := lt_trans Nat.lt_two_pow_self hn
-    exact ⟨h_holds, fun _ _ => (byteRowSpec_range input_a hnp).mpr h_holds⟩
+    exact ⟨h_holds, fun _ => (byteRowSpec_range input_a hnp).mpr h_holds⟩
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions
@@ -111,5 +112,15 @@ omit [Fact (2 ^ 17 < p)] in
     (input : Var Inputs (ZMod p)) (offset : ℕ) :
     ((main n bound input).operations offset).lookups = [] := by
   simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+
+/-- Route the Range opcode by its declared width and count repeated full messages. -/
+def generation (width : ℕ) : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := byteChannel
+    trigger := .pull
+    guard message := .and (.feq (.expr message.opcode) (.const 6))
+      (.feq (.expr message.b) (.const (width : ZMod p)))
+    input message := pure ⟨message.a, .multiplicity⟩
+  }
 
 end SP1Clean.RangeChip

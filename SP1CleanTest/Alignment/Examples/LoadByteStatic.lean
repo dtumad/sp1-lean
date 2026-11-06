@@ -16,7 +16,7 @@ open SP1Clean.Soundness.LoadByteStatic
 /-- Shared native field. -/
 abbrev F := ZMod SP1Prime
 /-- The row generators need no external data; checks derive data from physical tables. -/
-def data : ProverData F := fun _ _ => #[]
+def data : ProverData F := .empty F
 /-- LoadByte's witness builder needs no external hint. -/
 def hint : ProverHint F := ProverHint.empty F
 
@@ -59,7 +59,7 @@ def tableCheck (evaluationData : ProverData F) (table : Table F) : Bool :=
 
 /-- Check each physical row at the data derived from the entire assembly. -/
 def tablesCheck (tables : List (Table F)) : Bool :=
-  tables.all (tableCheck (deriveProverData tables))
+  tables.all (tableCheck (deriveProverData tables #[]))
 
 /-- Read all physical Byte interactions, including disabled occurrences. -/
 def byteLedger (tables : List (Table F)) : List (Interaction F) :=
@@ -72,21 +72,27 @@ def byteBalanced (tables : List (Table F)) : Bool :=
   decide (ledger.length < SP1Prime) &&
     ledger.all (fun interaction => balanceOf ledger interaction.msg == 0)
 
+/-- Build a fixture row with the production component and consistent committed inputs. -/
+private def buildProvider (component : Component F) (input : component.Input F)
+    (fixed : component.FixedRowsMatch [component.buildRow input data hint]) : Table F :=
+  Table.buildAt component [input] data (component.inputData [input] data) hint
+    (by exact (show 1 ≤ UInt64.size from by decide)) fixed (Component.inputData_consistent ..)
+
 /-- A residual provider is generated from the actual replacement consumer's request. -/
 def providerFor (interaction : Interaction F) : Option (Option (Table F)) :=
   if interaction.mult == 0 then some none else
   match interaction.msg.toList with
   | [opcode, a, b, c] =>
     if opcode == 3 then
-      some (some (Table.build ByteChip.U8Range.component [⟨b, c, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
+      some (some (buildProvider ByteChip.U8Range.component ⟨b, c, interaction.mult⟩ (by trivial)))
     else if opcode == 4 then
-      some (some (Table.build ByteChip.Ltu.component [⟨b, c, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
+      some (some (buildProvider ByteChip.Ltu.component ⟨b, c, interaction.mult⟩ (by trivial)))
     else if opcode == 5 then
-      some (some (Table.build ByteChip.MSB.component [⟨b, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
+      some (some (buildProvider ByteChip.MSB.component ⟨b, interaction.mult⟩ (by trivial)))
     else if opcode == 6 then
       if bound : b.val < 17 then
-        some (some (Table.build (RangeChip.componentFor ⟨b.val, bound⟩)
-          [⟨a, -(interaction.mult)⟩] data hint (by exact (show 1 ≤ UInt64.size from by decide))))
+        some (some (buildProvider (RangeChip.componentFor ⟨b.val, bound⟩)
+          ⟨a, interaction.mult⟩ (by trivial)))
       else none
     else none
   | _ => none
@@ -140,8 +146,8 @@ def repeatedKeyRetained : Bool :=
   match residual? [rowInput] (by exact (show 1 ≤ UInt64.size from by decide)) with
   | none => false
   | some residual =>
-    let pulls := (byteLedger [consumer]).countP fun i => i.msg == selected.msg && i.mult == -1
-    let pushes := (byteLedger residual).countP fun i => i.msg == selected.msg && i.mult == 1
+    let pulls := (byteLedger [consumer]).countP fun i => i.msg == selected.msg && i.direction == .pull && i.mult == 1
+    let pushes := (byteLedger residual).countP fun i => i.msg == selected.msg && i.direction == .push && i.mult == 1
     decide (0 < pulls) && pulls == pushes && byteBalanced (consumer :: residual)
 
 /-- Removing a selected occurrence does not erase reader demand with an identical byte key. -/

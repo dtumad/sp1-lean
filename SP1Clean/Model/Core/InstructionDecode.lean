@@ -13,7 +13,7 @@ their distinct Sail constructors need separate semantic bridges before they can 
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace InstructionDecode
 
@@ -167,7 +167,6 @@ theorem decode_supported {word : BitVec 32} {i : instruction} (decoded : decode 
     | split at decoded
   all_goals
     first
-    | contradiction
     | cases Option.some.inj decoded
       first
       | exact Or.inl ⟨by assumption, rfl⟩

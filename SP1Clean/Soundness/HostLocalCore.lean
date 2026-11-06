@@ -32,22 +32,73 @@ theorem tables_names (image : ProgramImage) (source : ExecutionSnapshot)
         (HostCallLedger.producer (p := p)).circuit.name ++ auxiliary.map (·.circuit.name) := by
   simp only [tables, List.map_append, List.map_set]
 
+/-- Complete physical protocol registry, before allocating the source assertion channel. -/
+def registry (image : ProgramImage) (source : ExecutionSnapshot)
+    (channels : List (RawChannel (ZMod p))) : List (RawChannel (ZMod p)) :=
+  HostCallChip.channel.toRaw :: WritePermissionProvider.channel.toRaw ::
+    image.writePermissionTable.channel.toRaw ::
+    (LocalCore.baseEnsemble image source).channels ++ channels
+
+private theorem producer_channels :
+    (HostCallLedger.producer (p := p)).circuit.channels =
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+        exitChannel.toRaw, syscallChannel.toRaw, publicValuesChannel.toRaw,
+        byteChannel.toRaw, memoryChannel.toRaw] ++
+        [memoryChannel.toRaw, HostCallChip.channel.toRaw] := by
+  change (HostCallChip.elaborated (p := p)).channelsWithGuarantees ++
+    [memoryChannel.toRaw, HostCallChip.channel.toRaw] = _
+  rw [HostCallChip.channelsWithGuarantees_eq]
+
+private theorem producer_channels_subset (channel : RawChannel (ZMod p))
+    (used : channel ∈ (HostCallLedger.producer (p := p)).circuit.channels) :
+    channel ∈ (sp1Ensemble (p := p)).channels ∨ channel = HostCallChip.channel.toRaw := by
+  rw [producer_channels] at used
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at used
+  simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
+  tauto
+
 /-- Install the complete physical inventory before choosing the source-check channel. -/
 def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
-    (names : ((tables image source auxiliary).map (·.circuit.name)).Nodup) : Ensemble (ZMod p) SP1PublicIO where
+    (names : ((tables image source auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : ((registry image source channels).map (·.name)).Nodup)
+    (registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels) :
+    Ensemble (ZMod p) SP1PublicIO where
   tables := tables image source auxiliary
   unique_names := names
-  channels := HostCallChip.channel.toRaw :: WritePermissionProvider.channel.toRaw ::
-    image.writePermissionTable.channel.toRaw ::
-    (LocalCore.baseEnsemble image source).channels ++ channels
+  channels := registry image source channels
+  unique_channel_names := channelNames
   verifier := LocalCore.boundaryVerifier
+  tables_channels := by
+    intro component member channel used
+    rcases List.mem_append.mp member with physical | extra
+    · rcases List.mem_or_eq_of_mem_set physical with old | rfl
+      · have support := ProtectedLocalCore.component_channels_subset image source component old used
+        exact List.mem_cons_of_mem _ (List.mem_append_left _ support)
+      · rcases producer_channels_subset channel used with core | host
+        · apply List.mem_cons_of_mem _
+          apply List.mem_cons_of_mem _
+          apply List.mem_cons_of_mem _
+          apply List.mem_append_left
+          exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+            (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ core)))
+        · exact List.mem_cons.mpr (Or.inl host)
+    · exact registered component extra used
+  verifier_channels := by
+    intro channel used
+    have known := (LocalCore.baseEnsemble image source).verifier_channels used
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+      (List.mem_append_left _ known)))
 
 /-- Source assertions are authenticated on a channel fresh for the complete host assembly. -/
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
-    (names : ((tables image source auxiliary).map (·.circuit.name)).Nodup) : Ensemble (ZMod p) SP1PublicIO :=
-  (LocalSourceBoundary.checker image source).install (baseEnsemble image source auxiliary channels names)
+    (names : ((tables image source auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : ((registry image source channels).map (·.name)).Nodup)
+    (registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels) :
+    Ensemble (ZMod p) SP1PublicIO :=
+  (LocalSourceBoundary.checker image source).install
+    (baseEnsemble image source auxiliary channels names channelNames registered)
 
 theorem tables_length (image : ProgramImage) (source : ExecutionSnapshot) (auxiliary : List (Component (ZMod p))) :
     (tables image source auxiliary).length = 63 + auxiliary.length := by
@@ -93,7 +144,7 @@ theorem component_projection (image : ProgramImage) (source : ExecutionSnapshot)
     simp only [↓reduceIte]
     exact ⟨HostCallProjection.constraints_original, HostCallProjection.byte_guarantees,
       HostCallProjection.state_interactions⟩
-  · rw [if_neg wrapper]
+  · rw [ite_eq_right wrapper]
     have old := ProtectedLocalCore.component_projection (p := p) image source index
     exact unchanged_projection _ _ old.1 old.2.1
       (old.2.2 _ (by simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw]))
@@ -153,7 +204,6 @@ private theorem protected_byte_requirements (image : ProgramImage) (source : Exe
         simpa only [Operations.ConstraintsHold, projection.1, projection.2.1] using constraints)
     apply Operations.channelRequirements_of_interactionsWith_subset _ _ _ ?_ env original
     rw [projection.2.2 byteChannel.toRaw (by simp [byteChannel, WritePermissionProvider.channel, Channel.toRaw])]
-    exact List.Subset.refl _
   · apply Operations.requirements_of_not_mem _ _ _
       (((ProtectedLocalCore.tables image source)[index]).inChannelsOrRequirements_of_constraints env constraints)
     rcases (show index = 61 ∨ index = 62 by omega) with rfl | rfl
@@ -205,7 +255,7 @@ private theorem component_other_interactions (image : ProgramImage) (source : Ex
     subst index
     simp only [↓reduceIte]
     exact HostCallProjection.other_interactions channel notByte notMemory notCall
-  · rw [if_neg wrapper]
+  · rw [ite_eq_right wrapper]
     exact ((ProtectedLocalCore.component_projection (p := p) image source index).2.2 channel notPermission).symm
 
 
@@ -213,14 +263,14 @@ private theorem component_width_eq (image : ProgramImage) (source : ExecutionSna
     (auxiliary : List (Component (ZMod p))) (index : Fin 61) (unchanged : 58 ≠ index.val) :
     ((LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)).width =
       ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).width := by
-  rw [core_component, if_neg unchanged]
+  rw [core_component, ite_eq_right unchanged]
   exact (ProtectedLocalCore.component_layout image source index).1
 
 private theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot)
     (auxiliary : List (Component (ZMod p))) (index : Fin 61) :
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt)
     let extended := (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)
-    original.width ≤ extended.width ∧ original.fixedColumns = extended.fixedColumns := by
+    original.width ≤ extended.width ∧ original.FixedRowsMatch = extended.FixedRowsMatch := by
   dsimp only
   rw [core_component]
   by_cases wrapper : 58 = index.val
@@ -228,62 +278,63 @@ private theorem component_layout (image : ProgramImage) (source : ExecutionSnaps
     subst index
     simp only [↓reduceIte]
     exact ⟨by exact of_decide_eq_true rfl, rfl⟩
-  · rw [if_neg wrapper]
+  · rw [ite_eq_right wrapper]
     have old := ProtectedLocalCore.component_layout (p := p) image source index
     exact ⟨old.1.le, old.2⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
   {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
+  {channelNames : ((registry (p := p) image source channels).map (·.name)).Nodup}
+  {registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
 
 /-- A physical witness for the installed host inventory and its public source-check verifier. -/
-abbrev Witness := EnsembleWitness (ensemble image source auxiliary channels names)
+abbrev Witness := EnsembleWitness (ensemble image source auxiliary channels names channelNames registered)
 
 variable (witness : Witness (image := image) (source := source)
-  (auxiliary := auxiliary) (channels := channels) (names := names))
+  (auxiliary := auxiliary) (channels := channels) (names := names) (channelNames := channelNames) (registered := registered))
 
 /-- The automatically separated source-check channel for this complete physical inventory. -/
 abbrev sourceChannel := (LocalSourceBoundary.checker (p := p) image source).channel
-  (baseEnsemble image source auxiliary channels names)
+  (baseEnsemble image source auxiliary channels names channelNames registered)
 
 /-- Balance authenticates the same complete source contract as the local execution assembly. -/
 theorem source_balanced_iff :
-    witness.BalancedChannel (sourceChannel (names := names) (channels := channels)) ↔
+    witness.BalancedChannel (sourceChannel (names := names) (channelNames := channelNames) (registered := registered) (channels := channels)) ↔
       LocalSourceBoundary.Spec image source witness.publicInput := by
   apply Iff.trans ?_ ((LocalSourceBoundary.checker image source).program_balanced_iff
-    (baseEnsemble image source auxiliary channels names) witness.publicInput witness.data |>.trans ?_)
+    (baseEnsemble image source auxiliary channels names channelNames registered) witness.publicInput witness.data |>.trans ?_)
   · exact (congrArg BalancedInteractions
       ((LocalSourceBoundary.checker image source).installed_check_interactions
-        (ens := baseEnsemble image source auxiliary channels names) witness)).to_iff
+        (ens := baseEnsemble image source auxiliary channels names channelNames registered) witness)).to_iff
   · rw [LocalSourceBoundary.checks_iff]
-    exact and_iff_right (LocalSourceBoundary.count_bound image source)
 
 private theorem projectionLength :
     (LocalCore.ensemble (p := p) image source).tables.length ≤
-      (ensemble image source auxiliary channels names).tables.length := by
+      (ensemble image source auxiliary channels names channelNames registered).tables.length := by
   change (LocalCore.tables (p := p) image source).length ≤ (tables image source auxiliary).length
   rw [LocalCore.tables_length, tables_length]
   omega
 
 private theorem projectionWidths (index : Fin (LocalCore.ensemble (p := p) image source).tables.length) :
     (LocalCore.ensemble (p := p) image source).tables[index.val].width ≤
-      ((ensemble image source auxiliary channels names).tables[index.val]'(by
-        have := projectionLength (names := names) (channels := channels); omega)).width :=
+      ((ensemble image source auxiliary channels names channelNames registered).tables[index.val]'(by
+        have := projectionLength (names := names) (channelNames := channelNames) (registered := registered) (channels := channels); omega)).width :=
   (component_layout image source auxiliary ⟨index.val, by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).1
 
 private theorem projectionFixed (index : Fin (LocalCore.ensemble (p := p) image source).tables.length) :
-    (LocalCore.ensemble (p := p) image source).tables[index.val].fixedColumns =
-      ((ensemble image source auxiliary channels names).tables[index.val]'(by
-        have := projectionLength (names := names) (channels := channels); omega)).fixedColumns :=
+    (LocalCore.ensemble (p := p) image source).tables[index.val].FixedRowsMatch =
+      ((ensemble image source auxiliary channels names channelNames registered).tables[index.val]'(by
+        have := projectionLength (names := names) (channelNames := channelNames) (registered := registered) (channels := channels); omega)).FixedRowsMatch :=
   (component_layout image source auxiliary ⟨index.val, by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2
 
 private theorem projectionWidth_eq (index : Fin (LocalCore.ensemble (p := p) image source).tables.length)
     (unchanged : 58 ≠ index.val) :
     (LocalCore.ensemble (p := p) image source).tables[index.val].width =
-      ((ensemble image source auxiliary channels names).tables[index.val]'(by
-        have := projectionLength (names := names) (channels := channels); omega)).width :=
+      ((ensemble image source auxiliary channels names channelNames registered).tables[index.val]'(by
+        have := projectionLength (names := names) (channelNames := channelNames) (registered := registered) (channels := channels); omega)).width :=
   component_width_eq image source auxiliary ⟨index.val, by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩ unchanged
 
@@ -295,36 +346,18 @@ def localWitness : EnsembleWitness (LocalCore.ensemble (p := p) image source) :=
 
 /-- Non-wrapper components retain every complete physical row under their original interpretation. -/
 theorem localWitness_table (index : Fin 61) (unchanged : 58 ≠ index.val) :
-    (localWitness witness).tables[index.val]'(by
+    ((localWitness witness).tables[index.val]'(by
       rw [← (localWitness witness).same_length]
       change index.val < (LocalCore.tables (p := p) image source).length
-      rw [LocalCore.tables_length]; exact index.isLt) =
-      { (witness.tables[index.val]'(by
+      rw [LocalCore.tables_length]; exact index.isLt)).table =
+      (witness.tables[index.val]'(by
         rw [← witness.same_length]; change index.val < (tables image source auxiliary).length
-        rw [tables_length]; omega)).withComponent
-        ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt))
-        (by rw [← witness.same_circuits]; exact component_width_eq image source auxiliary index unchanged)
-        (by rw [← witness.same_circuits]; exact (component_layout image source auxiliary index).2) with
-        data := (localWitness witness).data } := by
-  rw [localWitness, witness.projectPrefix_getElem (index := ⟨index.val, by
-    change index.val < (LocalCore.tables (p := p) image source).length
-    rw [LocalCore.tables_length]; exact index.isLt⟩)]
-  rw [Table.ext_iff]
-  refine ⟨rfl, ?_, rfl⟩
-  let original := witness.tables[index.val]'(by
-    rw [← witness.same_length]
-    change index.val < (tables image source auxiliary).length
-    rw [tables_length]; omega)
-  let component := (LocalCore.tables (p := p) image source)[index.val]'(by
-    rw [LocalCore.tables_length]; exact index.isLt)
-  have sameWidth : component.width = original.component.width := by
-    rw [← witness.same_circuits]
-    exact component_width_eq image source auxiliary index unchanged
-  have sameFixed : component.fixedColumns = original.component.fixedColumns := by
-    rw [← witness.same_circuits]
-    exact (component_layout image source auxiliary index).2
-  have rows := original.projectPrefix_rows_of_width_eq component sameWidth.le sameFixed sameWidth
-  exact rows
+        rw [tables_length]; omega)).table :=
+  witness.projectPrefix_getElem_rows_of_width_eq projectionLength projectionWidths projectionFixed
+    ⟨index.val, by
+      change index.val < (LocalCore.tables (p := p) image source).length
+      rw [LocalCore.tables_length]; exact index.isLt⟩
+    (component_width_eq image source auxiliary index unchanged)
 
 theorem localWitness_constraints (constraints : witness.Constraints) : (localWitness witness).Constraints := by
   apply witness.projectPrefix_constraints_of (target := LocalCore.ensemble image source)
@@ -337,15 +370,15 @@ theorem localWitness_constraints (constraints : witness.Constraints) : (localWit
   by_cases wrapper : 58 = index.val
   · have same : index = ⟨58, by change 58 < (LocalCore.tables (p := p) image source).length; rw [LocalCore.tables_length]; decide⟩ := Fin.ext wrapper.symm
     subst index
-    rw [core_component image source auxiliary ⟨58, by decide⟩, if_pos rfl] at checked
+    rw [core_component image source auxiliary ⟨58, by decide⟩, ite_eq_left rfl] at checked
     exact HostCallProjection.constraints_prefix row witness.data (localWitness witness).data checked
-  · rw [projectionWidth_eq (names := names) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
+  · rw [projectionWidth_eq (names := names) (channelNames := channelNames) (registered := registered) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
     exact LocalCore.component_constraints_setData image source _ (List.getElem_mem _)
       ((component_projection image source auxiliary ⟨index.val, bound⟩).1 _ checked)
 
 private theorem base_channel_registered (channel : RawChannel (ZMod p))
     (member : channel ∈ (LocalCore.baseEnsemble image source).channels) :
-    channel ∈ (baseEnsemble image source auxiliary channels names).channels :=
+    channel ∈ (baseEnsemble image source auxiliary channels names channelNames registered).channels :=
   List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ member)))
 
 /-- Registered base channels retain their actual public-verifier ledger after physical projection. -/
@@ -353,32 +386,32 @@ theorem localWitness_verifier_interactions (channel : RawChannel (ZMod p))
     (member : channel ∈ (LocalCore.baseEnsemble image source).channels) :
     (localWitness witness).verifierInteractionsWith channel = witness.verifierInteractionsWith channel := by
   change (LocalCore.ensemble (p := p) image source).verifierOperations.interactionValuesWith channel
-    (Environment.fromInput witness.publicInput (localWitness witness).data) =
-      (ensemble image source auxiliary channels names).verifierOperations.interactionValuesWith channel
-        (Environment.fromInput witness.publicInput witness.data)
+    (localWitness witness).data.publicEnvironment =
+      (ensemble image source auxiliary channels names channelNames registered).verifierOperations.interactionValuesWith channel
+        witness.data.publicEnvironment
   change ((LocalSourceBoundary.checker image source).install (LocalCore.baseEnsemble image source)).verifierOperations.interactionValuesWith channel
-    (Environment.fromInput witness.publicInput (localWitness witness).data) =
-      ((LocalSourceBoundary.checker image source).install (baseEnsemble image source auxiliary channels names)).verifierOperations.interactionValuesWith channel
-        (Environment.fromInput witness.publicInput witness.data)
+    (localWitness witness).data.publicEnvironment =
+      ((LocalSourceBoundary.checker image source).install (baseEnsemble image source auxiliary channels names channelNames registered)).verifierOperations.interactionValuesWith channel
+        witness.data.publicEnvironment
   rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ member,
     PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ (base_channel_registered channel member)]
   exact Operations.interactionValuesWith_congr rfl
 
 /-- Channels unaffected by the wrappers retain their complete registered ledger. -/
 theorem localWitness_other (channel : RawChannel (ZMod p))
-    (registered : channel ∈ (LocalCore.baseEnsemble image source).channels)
+    (channelRegistered : channel ∈ (LocalCore.baseEnsemble image source).channels)
     (notByte : channel ≠ byteChannel.toRaw) (notMemory : channel ≠ memoryChannel.toRaw)
     (notCall : channel ≠ HostCallChip.channel.toRaw) (notPermission : channel ≠ WritePermissionProvider.channel.toRaw)
     (silent : ∀ component ∈ auxiliary, channel ∉ component.circuit.channels) :
     (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
   have notMembership := ProtectedLocalCore.old_channel_ne_membership channel
-    (List.mem_append_left _ registered)
+    (List.mem_append_left _ channelRegistered)
   have physical := witness.projectPrefix_tables_interactions (target := LocalCore.ensemble image source)
     projectionLength projectionWidths projectionFixed channel ?_
   · change (localWitness witness).tables.flatMap (·.interactionsWith channel) =
       (witness.tables.take (LocalCore.ensemble (p := p) image source).tables.length).flatMap (·.interactionsWith channel) at physical
     simp only [EnsembleWitness.interactionsWith, EnsembleWitness.toTables, Tables.interactionsWith]
-    rw [localWitness_verifier_interactions witness channel registered, physical]
+    rw [localWitness_verifier_interactions witness channel channelRegistered, physical]
     congr 1
     conv_rhs => rw [← List.take_append_drop (LocalCore.ensemble (p := p) image source).tables.length witness.tables]
     rw [List.flatMap_append]
@@ -412,13 +445,13 @@ theorem localWitness_other (channel : RawChannel (ZMod p))
       subst index
       change HostCallProjection.original.operations.interactionValuesWith channel _ =
         ((tables image source auxiliary)[58]'(by rw [tables_length]; omega)).operations.interactionValuesWith channel _
-      rw [core_component image source auxiliary ⟨58, by decide⟩, if_pos rfl]
+      rw [core_component image source auxiliary ⟨58, by decide⟩, ite_eq_left rfl]
       exact HostCallProjection.other_values_prefix row witness.data (localWitness witness).data channel notByte notMemory notCall
-    · rw [projectionWidth_eq (names := names) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
+    · rw [projectionWidth_eq (names := names) (channelNames := channelNames) (registered := registered) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
       have projected := component_other_interactions image source auxiliary ⟨index.val, bound⟩ channel notByte notMemory notCall notPermission
       change (LocalCore.ensemble (p := p) image source).tables[index.val].operations.interactionsWith channel =
-        ((ensemble image source auxiliary channels names).tables[index.val]'(by
-          have := projectionLength (names := names) (channels := channels); omega)).operations.interactionsWith channel at projected
+        ((ensemble image source auxiliary channels names channelNames registered).tables[index.val]'(by
+          have := projectionLength (names := names) (channelNames := channelNames) (registered := registered) (channels := channels); omega)).operations.interactionsWith channel at projected
       exact (congrArg (List.map (AbstractInteraction.eval
         (Environment.fromArray row (localWitness witness).data))) projected).trans
           (List.map_congr_left fun interaction _ => AbstractInteraction.eval_congr rfl)
@@ -493,18 +526,18 @@ theorem localWitness_byte_of_guarantees
   by_cases wrapper : 58 = index.val
   · have same : index = ⟨58, by change 58 < (LocalCore.tables (p := p) image source).length; rw [LocalCore.tables_length]; decide⟩ := Fin.ext wrapper.symm
     subst index
-    rw [core_component image source auxiliary ⟨58, by decide⟩, if_pos rfl] at guaranteed
+    rw [core_component image source auxiliary ⟨58, by decide⟩, ite_eq_left rfl] at guaranteed
     exact HostCallProjection.byte_guarantees_prefix row witness.data (localWitness witness).data guaranteed
-  · rw [projectionWidth_eq (names := names) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
+  · rw [projectionWidth_eq (names := names) (channelNames := channelNames) (registered := registered) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
     exact byte_guarantees_setData _ row witness.data (localWitness witness).data
       ((component_projection image source auxiliary ⟨index.val, bound⟩).2.1 _ guaranteed)
 
 /-- Public Byte guarantees also transport through the actual verifier ledger. -/
 theorem localWitness_verifier_byte
-    (byte : (ensemble image source auxiliary channels names).VerifierChannelGuarantees
-      witness.publicInput witness.data byteChannel.toRaw) :
+    (byte : (ensemble image source auxiliary channels names channelNames registered).VerifierChannelGuarantees
+      witness.data byteChannel.toRaw) :
     (LocalCore.ensemble (p := p) image source).VerifierChannelGuarantees
-      (localWitness witness).publicInput (localWitness witness).data byteChannel.toRaw := by
+      (localWitness witness).data byteChannel.toRaw := by
   rw [EnsembleWitness.verifierChannelGuarantees_iff_forall] at byte ⊢
   intro interaction member
   have kept := byte interaction (by
@@ -518,20 +551,20 @@ theorem localWitness_verifier_byte
 
 /-- Public boundary emissions supply their own requirements, independently of witness acceptance. -/
 theorem verifier_requirements (env : Environment (ZMod p)) :
-    (ensemble image source auxiliary channels names).verifierOperations.FullRequirements env := by
+    (ensemble image source auxiliary channels names channelNames registered).verifierOperations.FullRequirements env := by
   change (LocalCore.boundaryVerifier.andThen ((LocalSourceBoundary.checker image source).program
-    (baseEnsemble image source auxiliary channels names))).circuitOperations.FullRequirements env
+    (baseEnsemble image source auxiliary channels names channelNames registered))).circuitOperations.FullRequirements env
   rw [Verifier.Program.andThen_requirements]
   exact ⟨LocalCore.boundaryVerifier_requirements env, Verifier.checkZeros_requirements _ _ _⟩
 
 /-- Byte closure includes the public verifier and every physical table separately. -/
 theorem byte_guarantees (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannel byteChannel.toRaw) :
-    (ensemble image source auxiliary channels names).VerifierChannelGuarantees
-      witness.publicInput witness.data byteChannel.toRaw ∧
+    (ensemble image source auxiliary channels names channelNames registered).VerifierChannelGuarantees
+      witness.data byteChannel.toRaw ∧
       ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw := by
   apply witness.channelGuarantees_of_component_requirements byteChannel.toRaw constraints balanced
-  · intro input data interaction emitted _
+  · intro data interaction emitted _
     exact verifier_requirements _ interaction emitted
   · exact component_byte_requirements image source auxiliary interface
 
@@ -544,10 +577,10 @@ theorem localWitness_byte (interface : AuxiliaryInterface auxiliary) (constraint
 
 /-- Chronology uses actual verifier/physical Byte guarantees, source-check balance and State balance. -/
 theorem orderingChannels_of_guarantees (interface : AuxiliaryInterface auxiliary)
-    (verifierByte : (ensemble image source auxiliary channels names).VerifierChannelGuarantees
-      witness.publicInput witness.data byteChannel.toRaw)
+    (verifierByte : (ensemble image source auxiliary channels names channelNames registered).VerifierChannelGuarantees
+      witness.data byteChannel.toRaw)
     (byte : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
-    (sourceChecks : witness.BalancedChannel (sourceChannel (names := names) (channels := channels)))
+    (sourceChecks : witness.BalancedChannel (sourceChannel (names := names) (channelNames := channelNames) (registered := registered) (channels := channels)))
     (state : witness.BalancedChannel stateChannel.toRaw) : LocalCore.OrderingChannels (localWitness witness) := by
   refine ⟨localWitness_verifier_byte witness verifierByte, localWitness_byte_of_guarantees witness byte, ?_, ?_⟩
   · exact (LocalCore.source_balanced_iff (localWitness witness)).mpr ((source_balanced_iff witness).mp sourceChecks)
@@ -559,10 +592,10 @@ theorem orderingChannels_of_guarantees (interface : AuxiliaryInterface auxiliary
 theorem orderingChannels (interface : AuxiliaryInterface auxiliary) (constraints : witness.Constraints)
     (balanced : witness.BalancedChannels) : LocalCore.OrderingChannels (localWitness witness) := by
   have byte := byte_guarantees witness interface constraints (balanced _ (by
-    simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]))
+    simp [ensemble, PublicVerifier.install, baseEnsemble, registry, LocalCore.baseEnsemble, sp1Ensemble_channels]))
   exact orderingChannels_of_guarantees witness interface byte.1 byte.2
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
-    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, LocalCore.baseEnsemble, sp1Ensemble_channels]))
+    (balanced _ (by simp [ensemble, PublicVerifier.install, baseEnsemble, registry, LocalCore.baseEnsemble, sp1Ensemble_channels]))
 
 /-- Reuse the exhaustive CPU walk at the same public endpoints and actual host canonical data. -/
 theorem executionRows_ordered_of_orderingChannels
@@ -595,7 +628,7 @@ def hostCallTable : Table (ZMod p) :=
 
 theorem hostCallTable_component : (hostCallTable witness).component = HostCallLedger.producer := by
   rw [hostCallTable, ← witness.same_circuits]
-  exact (core_component image source auxiliary ⟨58, by decide⟩).trans (if_pos rfl)
+  exact (core_component image source auxiliary ⟨58, by decide⟩).trans (ite_eq_left rfl)
 
 theorem hostCallTable_mem : hostCallTable witness ∈ witness.tables := List.getElem_mem _
 

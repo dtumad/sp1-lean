@@ -72,7 +72,7 @@ theorem compilePrepend_replay (clock : ℕ) (store : Store) (head : ℕ) (added 
     simp only [compilePrepend, replayCursors, List.foldlM_append] at ih ⊢
     rw [ih small]
     simp only [Bind.bind, Option.bind_some, List.foldlM_cons, List.foldlM_nil, pure,
-      populate, if_true, Inputs.next, HostHintQueue.State.encode, NodeRecord.encode,
+      populate, ite_true, Inputs.next, HostHintQueue.State.encode, NodeRecord.encode,
       Address.toNat_ofNat _ (show (HintQueue.prepend store head rest).1.size < 2 ^ 48 by omega),
       HintQueue.prepend, Array.size_push]
 

@@ -102,7 +102,7 @@ lemma microValueG_reg_pre {traj : Trajectory} {s0 : SailState} {tl : Timeline}
   have h0 : tl.start 0 ≤ tl.start n := tl.start_le_of_le (Nat.zero_le n)
   have hgap := tl.gap n
   unfold microValueG
-  rw [if_neg (by omega), tl.stepOf_eq hlo (by omega)]
+  rw [ite_eq_right (by omega), tl.stepOf_eq hlo (by omega)]
   have hpre : ¬ regEffectOffset ≤ τ - tl.start n := by
     simp only [regEffectOffset]; omega
   simp [hpre]
@@ -120,11 +120,11 @@ lemma microValueG_reg_post {traj : Trajectory} {s0 : SailState} {tl : Timeline}
   have hgap' := tl.gap (n + 1)
   unfold microValueG
   by_cases hwin : τ < tl.start (n + 1)
-  · rw [if_neg (by omega), tl.stepOf_eq (by omega) hwin]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (by omega) hwin]
     have hpost : regEffectOffset ≤ τ - tl.start n := by
       simp only [regEffectOffset]; omega
     simp [hpost]
-  · rw [if_neg (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
     have hpre : ¬ regEffectOffset ≤ τ - tl.start (n + 1) := by
       simp only [regEffectOffset]; omega
     simp [hpre]
@@ -139,7 +139,7 @@ lemma microValueG_ram_pre {traj : Trajectory} {s0 : SailState} {tl : Timeline}
   have h0 : tl.start 0 ≤ tl.start n := tl.start_le_of_le (Nat.zero_le n)
   have hgap := tl.gap n
   unfold microValueG
-  rw [if_neg (by omega), tl.stepOf_eq hlo (by omega)]
+  rw [ite_eq_right (by omega), tl.stepOf_eq hlo (by omega)]
   have hpre : ¬ ramEffectOffset ≤ τ - tl.start n := by
     simp only [ramEffectOffset]; omega
   simp [hpre]
@@ -157,11 +157,11 @@ lemma microValueG_ram_post {traj : Trajectory} {s0 : SailState} {tl : Timeline}
   have hgap' := tl.gap (n + 1)
   unfold microValueG
   by_cases hwin : τ < tl.start (n + 1)
-  · rw [if_neg (by omega), tl.stepOf_eq (by omega) hwin]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (by omega) hwin]
     have hpost : ramEffectOffset ≤ τ - tl.start n := by
       simp only [ramEffectOffset]; omega
     simp [hpost]
-  · rw [if_neg (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
     have hpre : ¬ ramEffectOffset ≤ τ - tl.start (n + 1) := by
       simp only [ramEffectOffset]; omega
     simp [hpre]

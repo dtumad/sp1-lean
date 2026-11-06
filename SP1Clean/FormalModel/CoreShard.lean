@@ -14,7 +14,7 @@ clock/PC endpoints, code loading, configuration, and a finite canonical Memory b
 Specializations add their profile facts through `CoreShardContract` without replacing those
 common clauses. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Execution
 

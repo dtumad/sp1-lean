@@ -51,16 +51,16 @@ def CircuitFetchDiscriminant {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
-  ∀ data physical,
-    ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+  ∀ generation data physical,
+    ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data) →
-      ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees Channels.byteChannel.toRaw
+      ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees Channels.byteChannel.toRaw
         (Environment.fromArray physical data) →
-        (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput (Environment.fromArray physical data))
-            (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput (Environment.fromArray physical data))
+            (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
               (Environment.fromArray physical data))).is_real = 1 →
-          (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput (Environment.fromArray physical data))
-              (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+          (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput (Environment.fromArray physical data))
+              (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
                 (Environment.fromArray physical data))).opcode ≠ (50 : ZMod p)
 
 /-- The descriptor-level obligation collected by the registry rollout. -/
@@ -79,85 +79,86 @@ def FetchDiscriminantShape (chip : SupportedChip p) : Prop :=
 theorem fetchDiscriminantShape_of_circuit (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (shape : @CircuitFetchDiscriminant p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
-    FetchDiscriminantShape ⟨id, kind, circuit, spec_eq⟩ :=
-  shape
+    FetchDiscriminantShape ⟨id, kind, circuit, generation, spec_eq⟩ :=
+  shape generation
 
 /-! ## The twelve chips that pin a literal opcode -/
 
 private theorem addChip_fetchDiscriminant :
     CircuitFetchDiscriminant (AddChip.circuit (p := p)) AddChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 0) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem addiChip_fetchDiscriminant :
     CircuitFetchDiscriminant (AddiChip.circuit (p := p)) AddiChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 1) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem addwChip_fetchDiscriminant :
     CircuitFetchDiscriminant (AddwChip.circuit (p := p)) AddwChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 19) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem subChip_fetchDiscriminant :
     CircuitFetchDiscriminant (SubChip.circuit (p := p)) SubChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 2) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem subwChip_fetchDiscriminant :
     CircuitFetchDiscriminant (SubwChip.circuit (p := p)) SubwChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 20) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem jalChip_fetchDiscriminant :
     CircuitFetchDiscriminant (JalChip.circuit (p := p)) JalChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 46) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem jalrChip_fetchDiscriminant :
     CircuitFetchDiscriminant (JalrChip.circuit (p := p)) JalrChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 47) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem loadDoubleChip_fetchDiscriminant :
     CircuitFetchDiscriminant (LoadDoubleChip.circuit (p := p)) LoadDoubleChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 35) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem storeByteChip_fetchDiscriminant :
     CircuitFetchDiscriminant (StoreByteChip.circuit (p := p)) StoreByteChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 36) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem storeHalfChip_fetchDiscriminant :
     CircuitFetchDiscriminant (StoreHalfChip.circuit (p := p)) StoreHalfChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 37) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem storeWordChip_fetchDiscriminant :
     CircuitFetchDiscriminant (StoreWordChip.circuit (p := p)) StoreWordChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 38) (by omega) (by omega)
     push_cast at h
     exact h
 private theorem storeDoubleChip_fetchDiscriminant :
     CircuitFetchDiscriminant (StoreDoubleChip.circuit (p := p)) StoreDoubleChip.rowView :=
-  fun _ _ _ _ _ => by
+  fun _ _ _ _ _ _ => by
     have h := natLit_ne_fifty (p := p) (k := 39) (by omega) (by omega)
     push_cast at h
     exact h
@@ -166,43 +167,43 @@ private theorem storeDoubleChip_fetchDiscriminant :
 
 private theorem bitwiseChip_fetchDiscriminant :
     CircuitFetchDiscriminant (BitwiseChip.circuit (p := p)) BitwiseChip.rowView :=
-  fun _ _ constraints _ real => BitwiseChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => BitwiseChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem ltChip_fetchDiscriminant :
     CircuitFetchDiscriminant (LtChip.circuit (p := p)) LtChip.rowView :=
-  fun _ _ constraints _ real => LtChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => LtChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem shiftLeftChip_fetchDiscriminant :
     CircuitFetchDiscriminant (ShiftLeftChip.circuit (p := p)) ShiftLeftChip.rowView :=
-  fun _ _ constraints _ real => ShiftLeftChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => ShiftLeftChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem shiftRightChip_fetchDiscriminant :
     CircuitFetchDiscriminant (ShiftRightChip.circuit (p := p)) ShiftRightChip.rowView :=
-  fun _ _ constraints _ real => ShiftRightChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => ShiftRightChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem uTypeChip_fetchDiscriminant :
     CircuitFetchDiscriminant (UTypeChip.circuit (p := p)) UTypeChip.rowView :=
-  fun _ _ constraints _ real => UTypeChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => UTypeChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem loadByteChip_fetchDiscriminant :
     CircuitFetchDiscriminant (LoadByteChip.circuit (p := p)) LoadByteChip.rowView :=
-  fun _ _ constraints _ real => LoadByteChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => LoadByteChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem loadHalfChip_fetchDiscriminant :
     CircuitFetchDiscriminant (LoadHalfChip.circuit (p := p)) LoadHalfChip.rowView :=
-  fun _ _ constraints _ real => LoadHalfChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => LoadHalfChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem loadWordChip_fetchDiscriminant :
     CircuitFetchDiscriminant (LoadWordChip.circuit (p := p)) LoadWordChip.rowView :=
-  fun _ _ constraints _ real => LoadWordChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => LoadWordChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem loadX0Chip_fetchDiscriminant :
     CircuitFetchDiscriminant (LoadX0Chip.circuit (p := p)) LoadX0Chip.rowView :=
-  fun _ _ constraints _ real => LoadX0Chip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => LoadX0Chip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem mulChip_fetchDiscriminant :
     CircuitFetchDiscriminant (MulChip.circuit (p := p)) MulChip.rowView :=
-  fun _ _ constraints _ real => MulChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => MulChip.physicalViewOpcode_ne_ecall _ constraints real
 private theorem divRemChip_fetchDiscriminant :
     CircuitFetchDiscriminant (DivRemChip.circuit (p := p)) DivRemChip.rowView :=
-  fun _ _ constraints _ real => DivRemChip.physicalViewOpcode_ne_ecall _ constraints real
+  fun _ _ _ constraints _ real => DivRemChip.physicalViewOpcode_ne_ecall _ constraints real
 
 /-- Branch's row-level lemma is stated over the folded `main` assertion system (its documented
 proof-decomposition exception keeps `circuit` out of the `Contracts` file). -/
 private theorem branchChip_fetchDiscriminant :
     CircuitFetchDiscriminant (BranchChip.circuit (p := p)) BranchChip.rowView :=
-  fun _ _ constraints _ real =>
+  fun _ _ _ constraints _ real =>
     BranchChip.physicalViewOpcode_ne_ecall _ ((Component.constraintsHold_iff _).mp constraints)
       real
 
@@ -210,7 +211,7 @@ private theorem branchChip_fetchDiscriminant :
 that consumes the Byte-channel guarantee premise. -/
 private theorem aluX0Chip_fetchDiscriminant :
     CircuitFetchDiscriminant (AluX0Chip.circuit (p := p)) AluX0Chip.rowView :=
-  fun _ _ constraints guarantees real =>
+  fun _ _ _ constraints guarantees real =>
     AluX0Chip.physicalViewOpcode_ne_ecall _ constraints guarantees real
 
 /-- Discharge one registry case from its circuit-level discriminant theorem. -/

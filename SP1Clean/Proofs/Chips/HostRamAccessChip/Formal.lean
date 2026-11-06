@@ -117,7 +117,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
     Inputs.reader, Inputs.pushed, Inputs.message, Inputs.clockLow, MemoryBoundary.address,
     FinalRamProvider.addressInput]
   obtain ⟨domain, word, low, high, clockHigh, previousHigh, read⟩ := h_assumptions
-  have address := (FinalRamProvider.proverAssumptions_iff _ env.data env.hint).mpr domain
+  have address := (FinalRamProvider.addressAssumptions_iff _).mpr domain
   exact ⟨address.1, address.2, word, low, high, clockHigh, previousHigh,
     ⟨Or.inr rfl, fun _ => word, Readers.ClkDiscipline.of_cpuState_spec (fun _ => ⟨low, high⟩)⟩, read⟩
 

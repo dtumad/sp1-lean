@@ -69,8 +69,8 @@ theorem intCast_multiplicitySum_map_congr {Entry : Type}
       simp only [List.map_cons, LookupAccessList.multiplicitySum_cons]
       rw [hkey entry]
       by_cases h : keyOf (intended entry) = key
-      · simp only [h, if_true, Int.cast_add, hmult entry, ih]
-      · simpa only [h, if_false, zero_add] using ih
+      · simp only [h, ite_true, Int.cast_add, hmult entry, ih]
+      · simpa only [h, ite_false, zero_add] using ih
 
 /-- One provider occurrence's access with the multiplicity the built Clean row actually carries. -/
 def actualProviderAccess (access : LookupAccess) (multiplicity : ℕ) : LookupAccess :=
@@ -128,10 +128,10 @@ theorem balancedInteractions_of_fieldClosurePermutation {Message : Type*}
     (pull : Message → Interaction (ZMod p))
     (provider : Message → ℕ → Interaction (ZMod p))
     (pull_msg : ∀ message, (pull message).msg = encode message)
-    (pull_mult : ∀ message, (pull message).mult = -1)
+    (pull_mult : ∀ message, (pull message).signedMult = -1)
     (provider_msg : ∀ message demand, (provider message demand).msg = encode message)
     (provider_mult : ∀ message demand,
-      (provider message demand).mult = (demand : ZMod p))
+      (provider message demand).signedMult = (demand : ZMod p))
     (messages : List Message)
     (hperm : interactions.Perm
       (SP1Clean.FieldClosure.unitPulls pull messages ++
@@ -142,7 +142,7 @@ theorem balancedInteractions_of_fieldClosurePermutation {Message : Type*}
       (SP1Clean.FieldClosure.unitPulls pull messages ++
         SP1Clean.FieldClosure.aggregateProviders provider messages).length < p := by
     rwa [← hperm.length_eq]
-  exact balancedInteractions_of_perm
+  exact BalancedInteractions.of_perm
     (SP1Clean.FieldClosure.balancedInteractions_unitPulls_append_aggregateProviders
       encode pull provider pull_msg pull_mult provider_msg provider_mult messages hlen')
     hperm.symm
@@ -152,12 +152,14 @@ theorem balancedInteractions_of_fieldClosurePermutation {Message : Type*}
 theorem u8Range_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ByteChip.U8Range.component (p := p)).circuit.name (size (ByteChip.U8Range.component (p := p)).Input) =
+      ((ByteChip.U8Range.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.U8Range.component (p := p))
-        (ByteChip.U8Range.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ByteChip.U8Range.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e => actualProviderAccess (p := p) (u8RangeAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.U8Range.component (p := p)) entries
-    ByteChip.U8Range.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ByteChip.U8Range.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [u8Range_buildRow_cleanAccesses]
   have hb := (hwf e he).1
   have hc := (hwf e he).2
@@ -170,12 +172,14 @@ theorem u8Range_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 theorem msb_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ByteChip.MSB.component (p := p)).circuit.name (size (ByteChip.MSB.component (p := p)).Input) =
+      ((ByteChip.MSB.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.MSB.component (p := p))
-        (ByteChip.MSB.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ByteChip.MSB.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e => actualProviderAccess (p := p) (msbAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.MSB.component (p := p)) entries
-    ByteChip.MSB.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ByteChip.MSB.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [msb_buildRow_cleanAccesses _ _ _ (val_natCast_lt (hwf e he).1 (by norm_num))]
   simp only [actualProviderAccess, withFieldMultiplicity, msbAccess, ByteChip.MSB.ofEntry,
     val_ofNat_small (p := p) (n := 5) (by norm_num), val_ite_bit, val_zero_zmod,
@@ -184,12 +188,14 @@ theorem msb_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 theorem and_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ByteChip.AndByte.component (p := p)).circuit.name (size (ByteChip.AndByte.component (p := p)).Input) =
+      ((ByteChip.AndByte.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.AndByte.component (p := p))
-        (ByteChip.AndByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ByteChip.AndByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e => actualProviderAccess (p := p) (andAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.AndByte.component (p := p)) entries
-    ByteChip.AndByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ByteChip.AndByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [and_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, andAccess, ByteChip.AndByte.ofEntry,
@@ -200,12 +206,14 @@ theorem and_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 theorem or_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ByteChip.OrByte.component (p := p)).circuit.name (size (ByteChip.OrByte.component (p := p)).Input) =
+      ((ByteChip.OrByte.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.OrByte.component (p := p))
-        (ByteChip.OrByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ByteChip.OrByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e => actualProviderAccess (p := p) (orAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.OrByte.component (p := p)) entries
-    ByteChip.OrByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ByteChip.OrByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [or_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, orAccess, ByteChip.OrByte.ofEntry,
@@ -216,12 +224,14 @@ theorem or_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 theorem xor_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ByteChip.XorByte.component (p := p)).circuit.name (size (ByteChip.XorByte.component (p := p)).Input) =
+      ((ByteChip.XorByte.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.XorByte.component (p := p))
-        (ByteChip.XorByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ByteChip.XorByte.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e => actualProviderAccess (p := p) (xorAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.XorByte.component (p := p)) entries
-    ByteChip.XorByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ByteChip.XorByte.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [xor_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, xorAccess, ByteChip.XorByte.ofEntry,
@@ -232,12 +242,14 @@ theorem xor_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
 theorem ltu_traceTable_actualAccesses (entries : List TraceGen.ByteEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ByteChip.Ltu.component (p := p)).circuit.name (size (ByteChip.Ltu.component (p := p)).Input) =
+      ((ByteChip.Ltu.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed) :
     tableCleanAccesses (Table.build (ByteChip.Ltu.component (p := p))
-        (ByteChip.Ltu.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ByteChip.Ltu.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e => actualProviderAccess (p := p) (ltuAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ByteChip.Ltu.component (p := p)) entries
-    ByteChip.Ltu.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ByteChip.Ltu.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [ltu_buildRow_cleanAccesses _ _ _
     ⟨val_natCast_lt (hwf e he).1 (by norm_num), val_natCast_lt (hwf e he).2 (by norm_num)⟩]
   simp only [actualProviderAccess, withFieldMultiplicity, ltuAccess, ByteChip.Ltu.ofEntry,
@@ -249,13 +261,15 @@ theorem range_traceTable_actualAccesses (width : RangeChip.Width)
     (entries : List TraceGen.RangeEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (RangeChip.componentFor (p := p) width).circuit.name (size (RangeChip.componentFor (p := p) width).Input) =
+      ((RangeChip.traceInputs entries).map toElements).toArray)
     (hwf : ∀ e ∈ entries, e.WellFormed width.val) :
     tableCleanAccesses (Table.build (RangeChip.componentFor (p := p) width)
-        (RangeChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (RangeChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e =>
         actualProviderAccess (p := p) (rangeAccess width e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (RangeChip.componentFor (p := p) width) entries
-    RangeChip.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    RangeChip.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [range_buildRow_cleanAccesses]
   have ha : e.a < 2 ^ 24 := by
     have hlt : e.a < 2 ^ width.val := hwf e he
@@ -268,13 +282,15 @@ theorem range_traceTable_actualAccesses (width : RangeChip.Width)
 theorem program_traceTable_actualAccesses (entries : List TraceGen.RomEntry)
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : entries.length ≤ UInt64.size)
+    (consistent : data.tables (ProgramProviderChip.component (p := p)).circuit.name (size (ProgramProviderChip.component (p := p)).Input) =
+      ((ProgramProviderChip.traceInputs entries).map toElements).toArray)
     (hfit : ∀ e ∈ entries, RomKeyFits e) :
     tableCleanAccesses (Table.build (ProgramProviderChip.component (p := p))
-        (ProgramProviderChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded)) =
+        (ProgramProviderChip.traceInputs entries) data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent) =
       entries.map fun e =>
         actualProviderAccess (p := p) (programEntryAccess e) e.multiplicity := by
   refine tableCleanAccesses_build_map_singleton (ProgramProviderChip.component (p := p)) entries
-    ProgramProviderChip.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) (fun e he => ?_)
+    ProgramProviderChip.ofEntry _ data hint (by exact (List.length_map _).le.trans bounded) (by trivial) consistent (fun e he => ?_)
   rw [program_buildRow_cleanAccesses]
   obtain ⟨hop, hopa, hopa0, himmb, himmc⟩ := hfit e he
   simp only [actualProviderAccess, withFieldMultiplicity, programRowAccess, programEntryAccess,
@@ -330,42 +346,42 @@ theorem preprocessedProviderActualLedger_eq (hwf : trace.WellFormed)
   have u8Range : tableCleanAccesses (trace.providerTableFor (.byte .u8Range)) =
       (trace.providerOccurrences (.byte .u8Range)).map (fun e =>
         actualProviderAccess (p := p) (u8RangeAccess e) e.multiplicity) :=
-    u8Range_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .u8Range))
+    u8Range_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .u8Range)) (trace.providerDataFor_consistent (.byte .u8Range))
       (hwf.provider (.byte .u8Range))
   have msb : tableCleanAccesses (trace.providerTableFor (.byte .msb)) =
       (trace.providerOccurrences (.byte .msb)).map (fun e =>
         actualProviderAccess (p := p) (msbAccess e) e.multiplicity) :=
-    msb_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .msb))
+    msb_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .msb)) (trace.providerDataFor_consistent (.byte .msb))
       (hwf.provider (.byte .msb))
   have andByte : tableCleanAccesses (trace.providerTableFor (.byte .andByte)) =
       (trace.providerOccurrences (.byte .andByte)).map (fun e =>
         actualProviderAccess (p := p) (andAccess e) e.multiplicity) :=
-    and_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .andByte))
+    and_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .andByte)) (trace.providerDataFor_consistent (.byte .andByte))
       (hwf.provider (.byte .andByte))
   have orByte : tableCleanAccesses (trace.providerTableFor (.byte .orByte)) =
       (trace.providerOccurrences (.byte .orByte)).map (fun e =>
         actualProviderAccess (p := p) (orAccess e) e.multiplicity) :=
-    or_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .orByte))
+    or_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .orByte)) (trace.providerDataFor_consistent (.byte .orByte))
       (hwf.provider (.byte .orByte))
   have xorByte : tableCleanAccesses (trace.providerTableFor (.byte .xorByte)) =
       (trace.providerOccurrences (.byte .xorByte)).map (fun e =>
         actualProviderAccess (p := p) (xorAccess e) e.multiplicity) :=
-    xor_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .xorByte))
+    xor_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .xorByte)) (trace.providerDataFor_consistent (.byte .xorByte))
       (hwf.provider (.byte .xorByte))
   have ltu : tableCleanAccesses (trace.providerTableFor (.byte .ltu)) =
       (trace.providerOccurrences (.byte .ltu)).map (fun e =>
         actualProviderAccess (p := p) (ltuAccess e) e.multiplicity) :=
-    ltu_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .ltu))
+    ltu_traceTable_actualAccesses _ _ _ (trace.providerCapacity (.byte .ltu)) (trace.providerDataFor_consistent (.byte .ltu))
       (hwf.provider (.byte .ltu))
   have range (width : RangeChip.Width) : tableCleanAccesses (trace.providerTableFor (.range width)) =
       (trace.providerOccurrences (.range width)).map (fun e =>
         actualProviderAccess (p := p) (rangeAccess width e) e.multiplicity) :=
-    range_traceTable_actualAccesses _ _ _ _ (trace.providerCapacity (.range width))
+    range_traceTable_actualAccesses _ _ _ _ (trace.providerCapacity (.range width)) (trace.providerDataFor_consistent (.range width))
       (hwf.provider (.range width))
   have program : tableCleanAccesses (trace.providerTableFor .program) =
       (trace.providerOccurrences .program).map (fun e =>
         actualProviderAccess (p := p) (programEntryAccess e) e.multiplicity) :=
-    program_traceTable_actualAccesses _ _ _ (trace.providerCapacity .program) hromKeys
+    program_traceTable_actualAccesses _ _ _ (trace.providerCapacity .program) (trace.providerDataFor_consistent .program) hromKeys
   rw [preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,
     List.append_nil, rangeTables, List.flatMap_map, actualProviderLedger,
@@ -676,13 +692,13 @@ theorem skeleton_providerLedger_balanced
     multiplicitySum (trace.skeletonLedger ++ trace.providerLedger) key = 0 := by
   rw [LookupAccessList.multiplicitySum_append, hsupply key]
   by_cases hkey : key ∈ trace.closingKeyList
-  · rw [if_pos hkey]
+  · rw [ite_eq_left hkey]
     have hbalanced := trace.closingAccesses_balances hnonpos hsel
     rw [LookupAccessList.multiplicitySum_append, closingAccesses,
       LookupAccessList.multiplicitySum_closingAccesses _
         (LookupAccessList.closingKeys_nodup _ _) hkey] at hbalanced
     exact hbalanced
-  · rw [if_neg hkey, add_zero]
+  · rw [ite_eq_right hkey, add_zero]
     have hnot : key ∉ LookupAccessList.closingKeys trace.skeletonLedger preprocessedKey := hkey
     have hbalanced := trace.closingAccesses_balances hnonpos hsel
     rw [LookupAccessList.multiplicitySum_append, closingAccesses,
@@ -701,12 +717,9 @@ theorem fullLedger_intCast_zero
   rw [trace.fullLedger_mod_skeleton_provider hwf hromKeys key,
     trace.skeleton_providerLedger_balanced hsupply hnonpos hsel, Int.cast_zero]
 
-/-- **Canonical Byte/Program balance in Clean's native field semantics.**
-
-This is the replacement for `balancedOn_of_closure` on the aggregate-provider buses.  Its only
-capacity premise is Clean's own interaction-list bound.  In particular there is no `CountsFit`,
-`ProviderMultiplicitiesFit`, or `2 * multiplicity ≤ p` premise. -/
-theorem canonicalClosure_balancedInteractions
+/-- Canonical providers cancel each Byte/Program key in the actual LogUp field equation.
+No centered-count bound is imposed on aggregated provider multiplicities. -/
+theorem canonicalClosure_logUpBalanced
     (hwf : (trace.canonicalClosure capacity).WellFormed)
     (hserv : trace.DemandServable)
     (hnonpos : ∀ key ∈ trace.closingKeyList,
@@ -714,11 +727,10 @@ theorem canonicalClosure_balancedInteractions
     (channel : RawChannel (ZMod p))
     (hchannel : channel ∈ (sp1Ensemble (p := p)).channels)
     (hkind : kindOf channel.name = InteractionKind.Byte ∨
-      kindOf channel.name = InteractionKind.Program)
-    (hlen : ((trace.canonicalClosure capacity).witness.interactionsWith channel).length < p) :
-    BalancedInteractions ((trace.canonicalClosure capacity).witness.interactionsWith channel) := by
+      kindOf channel.name = InteractionKind.Program) :
+    LogUpBalanced ((trace.canonicalClosure capacity).witness.interactionsWith channel) := by
   let closed := (trace.canonicalClosure capacity)
-  change BalancedInteractions (closed.witness.interactionsWith channel)
+  change LogUpBalanced (closed.witness.interactionsWith channel)
   have hservClosed : closed.DemandServable := DemandServable.canonicalClosure trace capacity hserv
   have hreal : closed.ClosureRealized := by
     change (trace.canonicalClosure capacity).ClosureRealized
@@ -733,27 +745,45 @@ theorem canonicalClosure_balancedInteractions
     exact hnonpos key hkey
   have hromKeys : ∀ entry ∈ closed.providerOccurrences .program, RomKeyFits entry :=
     trace.canonicalClosure_romKeyFits capacity hserv
-  constructor
-  · left
-    simpa only [ZMod.ringChar_zmod_n] using hlen
-  · intro message
-    by_cases hexists : ∃ interaction ∈ closed.witness.interactionsWith channel,
-        interaction.msg = message
-    · obtain ⟨interaction, hinteraction, rfl⟩ := hexists
-      rw [← LookupAccessList.intCast_multiplicitySum_map_toAccess_eq_balanceOf
-        (closed.witness.interactionsWith channel) channel
-        (fun i hi => Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith hi)
-        interaction hinteraction]
-      rw [closed.fullLedger_multiplicitySum_channel channel hchannel (by
-        have hch := Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith hinteraction
-        simp only [Interaction.toAccess, hch])]
-      refine closed.fullLedger_intCast_zero hwf hromKeys hsupply hnonposClosed ?_
+  intro message
+  by_cases hexists : ∃ interaction ∈ closed.witness.interactionsWith channel,
+      interaction.msg = message
+  · obtain ⟨interaction, hinteraction, rfl⟩ := hexists
+    rw [← LookupAccessList.intCast_multiplicitySum_map_toAccess_eq_balanceOf
+      (closed.witness.interactionsWith channel) channel
+      (fun i hi => Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith hi)
+      interaction hinteraction]
+    rw [closed.fullLedger_multiplicitySum_channel channel hchannel (by
       have hch := Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith hinteraction
-      simp only [preprocessedKey, Interaction.toAccess, hch]
-      rcases hkind with hkind | hkind <;> rw [hkind]
-    · rw [balanceOf_eq_of_const_mult (mult := 0)
-        (fun interaction emitted same => False.elim (hexists ⟨interaction, emitted, same⟩)),
-        zero_mul]
+      simp only [Interaction.toAccess, hch])]
+    refine closed.fullLedger_intCast_zero hwf hromKeys hsupply hnonposClosed ?_
+    have hch := Air.Flat.EnsembleWitness.channel_eq_of_mem_interactionsWith hinteraction
+    simp only [preprocessedKey, Interaction.toAccess, hch]
+    rcases hkind with hkind | hkind <;> rw [hkind]
+  · unfold balanceOf
+    apply List.sum_eq_zero
+    intro value present
+    obtain ⟨interaction, member, rfl⟩ := List.mem_map.mp present
+    have member := List.mem_filter.mp member
+    simp only [decide_eq_true_eq] at member
+    exact (hexists ⟨interaction, member.1, member.2⟩).elim
+
+/-- Field balance and the physical occurrence bound give Clean's abstract balance. -/
+theorem canonicalClosure_balancedInteractions
+    (hwf : (trace.canonicalClosure capacity).WellFormed)
+    (hserv : trace.DemandServable)
+    (hnonpos : ∀ key ∈ trace.closingKeyList,
+      multiplicitySum trace.skeletonLedger key ≤ 0)
+    (channel : RawChannel (ZMod p))
+    (hchannel : channel ∈ (sp1Ensemble (p := p)).channels)
+    (hkind : kindOf channel.name = InteractionKind.Byte ∨
+      kindOf channel.name = InteractionKind.Program)
+    (hlen : ((trace.canonicalClosure capacity).witness.interactionsWith channel).length < p) :
+    BalancedInteractions ((trace.canonicalClosure capacity).witness.interactionsWith channel) := by
+  apply (Balance.logUp (F := ZMod p)).balancedInteractions_of_balanced _
+    (by simpa only [Balance.logUp, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n,
+      decide_eq_true_eq] using hlen)
+  exact trace.canonicalClosure_logUpBalanced capacity hwf hserv hnonpos channel hchannel hkind
 
 /-- Byte-channel specialization of `canonicalClosure_balancedInteractions`. -/
 theorem canonicalClosure_byte_balancedInteractions

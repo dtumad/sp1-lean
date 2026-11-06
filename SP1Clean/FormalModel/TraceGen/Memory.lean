@@ -209,9 +209,9 @@ theorem memoryAccess_spec {value prevTs clk pc : ℕ} {addr0 addr1 addr2 is_real
     have hle : prevTs % 2 ^ 24 ≤ clk % 2 ^ 24 := by
       rw [hcurrSR, hprevSR, hclkSR] at hsame; omega
     have hd : memDiffOf prevTs (clk + 1) = clk % 2 ^ 24 - prevTs % 2 ^ 24 := by
-      rw [memDiffOf, if_pos hsame]; omega
+      rw [memDiffOf, ite_eq_left hsame]; omega
     have hc : ((memCompareLow prevTs (clk + 1) : ℕ) : ZMod p) = 1 := by
-      rw [memCompareLow, if_pos hsame, Nat.cast_one]
+      rw [memCompareLow, ite_eq_left hsame, Nat.cast_one]
     have hheq : ((prevTs >>> 24 : ℕ) : ZMod p) = ((clk >>> 24 : ℕ) : ZMod p) := by
       rw [← hcurrSR, hsame]
     have hcast : ((clk % 2 ^ 24 : ℕ) : ZMod p) = ((prevTs % 2 ^ 24 : ℕ) : ZMod p)
@@ -232,9 +232,9 @@ theorem memoryAccess_spec {value prevTs clk pc : ℕ} {addr0 addr1 addr2 is_real
       rw [hcurrSR] at hsame; rw [hprevSR, hclkSR] at hsame ⊢; omega
     have hclkhigh : clk >>> 24 < 2 ^ 24 := by rw [hclkSR]; omega
     have hd : memDiffOf prevTs (clk + 1) = clk >>> 24 - prevTs >>> 24 - 1 := by
-      rw [memDiffOf, if_neg hsame, hcurrSR]
+      rw [memDiffOf, ite_eq_right hsame, hcurrSR]
     have hc : ((memCompareLow prevTs (clk + 1) : ℕ) : ZMod p) = 0 := by
-      rw [memCompareLow, if_neg hsame, Nat.cast_zero]
+      rw [memCompareLow, ite_eq_right hsame, Nat.cast_zero]
     have hcast : ((clk >>> 24 : ℕ) : ZMod p) = ((prevTs >>> 24 : ℕ) : ZMod p) + 1
         + (((memDiffOf prevTs (clk + 1) % 2 ^ 16 : ℕ) : ZMod p)
           + ((memDiffOf prevTs (clk + 1) / 2 ^ 16 : ℕ) : ZMod p) * 65536) := by

@@ -38,8 +38,10 @@ def tablesCleanAccesses (tables : List (Table (ZMod p))) : LookupAccessList :=
 
 /-- Literal interaction values read row cells alone; semantic channel predicates are separate. -/
 @[simp] theorem tableCleanAccesses_setData (table : Table (ZMod p))
-    (data : ProverData (ZMod p)) :
-    tableCleanAccesses { table with data } = tableCleanAccesses table := by
+    (data : ProverData (ZMod p))
+    (consistent : data.tables table.component.circuit.name (size table.component.Input) =
+      table.rowPrefixes (size table.component.Input)) :
+    tableCleanAccesses { table with data, data_consistent := consistent } = tableCleanAccesses table := by
   apply congrArg (List.map Interaction.toAccess)
   unfold Table.interactions
   apply List.flatMap_congr
@@ -47,12 +49,22 @@ def tablesCleanAccesses (tables : List (Table (ZMod p))) : LookupAccessList :=
   exact Operations.interactionValues_congr (env := Environment.fromArray row data)
     (env' := Environment.fromArray row table.data) rfl
 
-/-- Changing stored data preserves every occurrence in the physical table ledgers. -/
-@[simp] theorem tablesCleanAccesses_setData (tables : List (Table (ZMod p)))
-    (data : ProverData (ZMod p)) :
-    tablesCleanAccesses (tables.map fun table => { table with data }) =
+/-- Canonicalizing stored data preserves every literal physical ledger occurrence. -/
+@[simp] theorem tablesCleanAccesses_withDerivedData (tables : List (Table (ZMod p)))
+    (unique : (tables.map fun table => table.component.circuit.name).Nodup)
+    (publicInput : Array (ZMod p)) :
+    tablesCleanAccesses (Air.Flat.withDerivedData tables unique publicInput) =
       tablesCleanAccesses tables := by
-  simp only [tablesCleanAccesses, List.flatMap_map, tableCleanAccesses_setData]
+  simp only [tablesCleanAccesses, Air.Flat.withDerivedData, List.flatMap, List.map_map]
+  apply congrArg List.flatten
+  calc
+    _ = tables.attach.map (fun table => tableCleanAccesses table.val) := by
+      apply List.map_congr_left
+      intro table _
+      exact tableCleanAccesses_setData table.val _
+        (Air.Flat.deriveTables_eq_of_mem tables unique table.property _)
+    _ = tables.map tableCleanAccesses := by simp
+
 
 @[simp] theorem tablesCleanAccesses_append (left right : List (Table (ZMod p))) :
     tablesCleanAccesses (left ++ right) =
@@ -148,7 +160,9 @@ theorem tableCleanAccesses_build (component : Component (ZMod p))
     (inputs : List (component.Input (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (bounded : inputs.length ≤ UInt64.size)
     (fixed : component.FixedRowsMatch (inputs.map (component.buildRow · data hint)))
-    : tableCleanAccesses (Table.build component inputs data hint bounded fixed) =
+    (consistent : data.tables component.circuit.name (size component.Input) =
+      (inputs.map toElements).toArray)
+    : tableCleanAccesses (Table.build component inputs data hint bounded fixed consistent) =
       inputs.flatMap fun input =>
         component.operations.interactions.map
           (AbstractInteraction.toAccess
@@ -165,15 +179,17 @@ theorem tableCleanAccesses_build_map_singleton
     (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p))
     (bounded : (rows.map decode).length ≤ UInt64.size)
     (fixed : component.FixedRowsMatch ((rows.map decode).map (component.buildRow · data hint)))
+    (consistent : data.tables component.circuit.name (size component.Input) =
+      ((rows.map decode).map toElements).toArray)
     (rowAccess : ∀ row ∈ rows,
       component.operations.interactions.map
           (AbstractInteraction.toAccess
             (Environment.fromArray (component.buildRow (decode row) data hint) data)) =
         [access row]) :
-    tableCleanAccesses (Table.build component (rows.map decode) data hint bounded fixed) =
+    tableCleanAccesses (Table.build component (rows.map decode) data hint bounded fixed consistent) =
       rows.map access := by
   rw [tableCleanAccesses_build]
-  clear fixed bounded
+  clear fixed bounded consistent
   induction rows with
   | nil => rfl
   | cons row rest ih =>

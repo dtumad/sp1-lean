@@ -24,26 +24,12 @@ omit [Fact (2 ^ 17 < p)] in
 theorem soundness :
     FormalAssertion.Soundness (ZMod p) main Assumptions ShiftRightChip.CoreSpec := by
   circuit_proof_start [ShiftRightChip.CoreSpec]
-  obtain ⟨-, ⟨-, -, -, -, ⟨hbpv, -, -⟩, -, -, -⟩, ha, -, -, hcb, -, -, -, -,
-    hlo, hhi, hlr, hsu, -, -, -, -, -⟩ := h_input
-  have ev {n : ℕ} {xs : Vector (Expression (ZMod p)) n} {ys : Vector (ZMod p) n}
-      (h : Vector.map (Expression.eval env) xs = ys) (i : ℕ) (hi : i < n) :
-      Expression.eval env xs[i] = ys[i] := by
-    rw [← h, Vector.getElem_map]
-  simp only [ev hbpv, ev ha, ev hcb, ev hlo, ev hhi, ev hlr, ev hsu] at h_holds
   exact h_holds
 
 omit [Fact (2 ^ 17 < p)] in
 theorem completeness :
     FormalAssertion.Completeness (ZMod p) main Assumptions ShiftRightChip.CoreSpec := by
   circuit_proof_start [ShiftRightChip.CoreSpec]
-  obtain ⟨-, ⟨-, -, -, -, ⟨hbpv, -, -⟩, -, -, -⟩, ha, -, -, hcb, -, -, -, -,
-    hlo, hhi, hlr, hsu, -, -, -, -, -⟩ := h_input
-  have ev {n : ℕ} {xs : Vector (Expression (ZMod p)) n} {ys : Vector (ZMod p) n}
-      (h : Vector.map (Expression.eval env.toEnvironment) xs = ys) (i : ℕ) (hi : i < n) :
-      Expression.eval env.toEnvironment xs[i] = ys[i] := by
-    rw [← h, Vector.getElem_map]
-  simp only [ev hbpv, ev ha, ev hcb, ev hlo, ev hhi, ev hlr, ev hsu]
   exact h_spec
 
 /-- The 53-assert ShiftRight chip-local tail as a zero-witness Clean `FormalAssertion`. -/

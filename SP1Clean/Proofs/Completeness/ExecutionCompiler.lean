@@ -18,7 +18,7 @@ validity predicate: it refers only to the unique result of this function and nev
 witness, a Clean row, or an existential trace generator.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.TraceGen
 

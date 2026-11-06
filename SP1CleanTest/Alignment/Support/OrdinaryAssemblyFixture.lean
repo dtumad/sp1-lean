@@ -16,7 +16,7 @@ only at the observed cell for the existing access-plan projection, never as the 
 namespace SP1CleanTest.Alignment.OrdinaryAssembly
 
 open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
-open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D.Defs
+open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D
 open SP1CleanTest.Alignment.InstalledAssembly
 
 /-- One located decoded instruction and its finite outgoing observation. -/

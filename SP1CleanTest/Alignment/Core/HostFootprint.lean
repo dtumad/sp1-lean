@@ -11,7 +11,7 @@ claim that the pending host AIR tables authenticate an execution.
 namespace SP1CleanTest.Core.HostFootprint
 
 open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
-open LeanRV64D LeanRV64D.Defs
+open LeanRV64D LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 

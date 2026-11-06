@@ -72,7 +72,7 @@ theorem GroundingCarrier.initialStateTruth {image : ProgramImage} (valid : image
   have boot := image.initialSailState_loaded valid
   have pc := initial_pc valid witness.publicInput (public_boot witness constraints balanced).2
   refine ⟨0, image.initialSailState, initial, carrier.timeline_start.symm, ?_, boot.romLoaded, boot.configured⟩
-  change image.initialSailState.regs.get? LeanRV64D.Defs.Register.PC =
+  change image.initialSailState.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (initialBoundaryStateMessage witness.publicInput))
   rw [pc]
   exact boot.pc

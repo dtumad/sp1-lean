@@ -82,7 +82,7 @@ theorem GroundingCarrier.trajectory_halt {image : ProgramImage} (valid : image.V
     (atIndex : StateMsg.timeNat (haltRowFacts row).statePull = carrier.timeline.start n)
     (zero : (haltEventOfRow row).rawCode = 0) :
     carrier.trajectory valid handler (n + 1) = (carrier.trajectory valid handler n).map
-      (fun state => { state with regs := state.regs.insert LeanRV64D.Defs.Register.PC Machine.haltPc }) := by
+      (fun state => { state with regs := state.regs.insert LeanRV64D.Register.PC Machine.haltPc }) := by
   unfold trajectory
   rw [eventTrajectory_succ, carrier.event_at member atIndex]
   simp only [ExecutionRow.event, Machine.executeEvent?,

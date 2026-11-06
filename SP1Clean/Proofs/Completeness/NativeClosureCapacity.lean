@@ -57,151 +57,151 @@ attribute [local circuit_norm]
 
 private theorem add_interactionBound :
     ({ circuit := AddChip.circuit (p := p),
-        Assumptions := (AddChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (AddChip.circuit (p := p)).Assumptions, generation := AddChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem addi_interactionBound :
     ({ circuit := AddiChip.circuit (p := p),
-        Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem addw_interactionBound :
     ({ circuit := AddwChip.circuit (p := p),
-        Assumptions := (AddwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (AddwChip.circuit (p := p)).Assumptions, generation := AddwChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem sub_interactionBound :
     ({ circuit := SubChip.circuit (p := p),
-        Assumptions := (SubChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (SubChip.circuit (p := p)).Assumptions, generation := SubChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem subw_interactionBound :
     ({ circuit := SubwChip.circuit (p := p),
-        Assumptions := (SubwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (SubwChip.circuit (p := p)).Assumptions, generation := SubwChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem bitwise_interactionBound :
     ({ circuit := BitwiseChip.circuit (p := p),
-        Assumptions := (BitwiseChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (BitwiseChip.circuit (p := p)).Assumptions, generation := BitwiseChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem lt_interactionBound :
     ({ circuit := LtChip.circuit (p := p),
-        Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (LtChip.circuit (p := p)).Assumptions, generation := LtChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem shiftLeft_interactionBound :
     ({ circuit := ShiftLeftChip.circuit (p := p),
-        Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions, generation := ShiftLeftChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem shiftRight_interactionBound :
     ({ circuit := ShiftRightChip.circuit (p := p),
-        Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions, generation := ShiftRightChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem jal_interactionBound :
     ({ circuit := JalChip.circuit (p := p),
-        Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem jalr_interactionBound :
     ({ circuit := JalrChip.circuit (p := p),
-        Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem branch_interactionBound :
     ({ circuit := BranchChip.circuit (p := p),
-        Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem uType_interactionBound :
     ({ circuit := UTypeChip.circuit (p := p),
-        Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem loadByte_interactionBound :
     ({ circuit := LoadByteChip.circuit (p := p),
-        Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem loadHalf_interactionBound :
     ({ circuit := LoadHalfChip.circuit (p := p),
-        Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem loadWord_interactionBound :
     ({ circuit := LoadWordChip.circuit (p := p),
-        Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem loadDouble_interactionBound :
     ({ circuit := LoadDoubleChip.circuit (p := p),
-        Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem loadX0_interactionBound :
     ({ circuit := LoadX0Chip.circuit (p := p),
-        Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem storeByte_interactionBound :
     ({ circuit := StoreByteChip.circuit (p := p),
-        Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem storeHalf_interactionBound :
     ({ circuit := StoreHalfChip.circuit (p := p),
-        Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem storeWord_interactionBound :
     ({ circuit := StoreWordChip.circuit (p := p),
-        Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem storeDouble_interactionBound :
     ({ circuit := StoreDoubleChip.circuit (p := p),
-        Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem mul_interactionBound :
     ({ circuit := MulChip.circuit (p := p),
-        Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem divRem_interactionBound :
     ({ circuit := DivRemChip.circuit (p := p),
-        Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (DivRemChip.circuit (p := p)).Assumptions, generation := DivRemChip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
 private theorem aluX0_interactionBound :
     ({ circuit := AluX0Chip.circuit (p := p),
-        Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
+        Assumptions := (AluX0Chip.circuit (p := p)).Assumptions, generation := AluX0Chip.generation } : Component (ZMod p)).operations.interactions.length ≤ 2 ^ 16 := by
   simp only [Component.interactions_eq, circuit_norm]
   norm_num
 
@@ -276,7 +276,7 @@ private theorem tableFamilyLength {ι : Type} (ids : List ι) (table : ι → Ta
     (tablesCleanAccesses (ids.map table)).length ≤ ids.length * bound := by
   simp only [tablesCleanAccesses, List.flatMap_map, List.length_flatMap]
   simpa only [List.length_map, nsmul_eq_mul, Nat.cast_id] using
-    List.sum_le_card_nsmul (ids.map fun id => (tableCleanAccesses (table id)).length) bound
+    List.sum_le_length_nsmul (ids.map fun id => (tableCleanAccesses (table id)).length) bound
       (by simpa only [List.mem_map, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂] using bounded)
 
 private theorem skeletonLengthBound (trace : SupportedCoreTraceWitness p) (rows : ℕ)

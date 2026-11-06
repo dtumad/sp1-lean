@@ -42,7 +42,7 @@ theorem msb_of_raw {a : ZMod p} {cols : Circuits.Types.U16MSBOperation (ZMod p)}
   · rw [h0] at hr ⊢
     simp only [zero_mul, sub_zero] at hr
     rw [h2] at hr
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
   · rw [h1] at hr ⊢
     simp only [one_mul] at hr
     have hge : a.val ≥ 32768 := by
@@ -52,7 +52,7 @@ theorem msb_of_raw {a : ZMod p} {cols : Circuits.Types.U16MSBOperation (ZMod p)}
       have hval := ZMod.val_add_of_lt hbound
       rw [hsum, h2, val_65536_zmod_p] at hval
       omega
-    rw [if_pos hge]
+    rw [ite_eq_left hge]
 
 /-- SP1's `eval_msb` witness: the high bit of `a` (`a.val / 2^15`). -/
 def populate_msb (a : ZMod p) : ZMod p := ((a.val / 32768 : ℕ) : ZMod p)
@@ -64,8 +64,8 @@ private lemma populate_msb_eq {a : ZMod p} (ha : a.val < 2 ^ 16) :
     populate_msb a = if a.val ≥ 32768 then 1 else 0 := by
   simp only [populate_msb]
   by_cases hge : a.val ≥ 32768
-  · rw [if_pos hge, show a.val / 32768 = 1 by omega, Nat.cast_one]
-  · rw [if_neg hge, show a.val / 32768 = 0 by omega, Nat.cast_zero]
+  · rw [ite_eq_left hge, show a.val / 32768 = 1 by omega, Nat.cast_one]
+  · rw [ite_eq_right hge, show a.val / 32768 = 0 by omega, Nat.cast_zero]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- `populate_msb` is always boolean (for a genuine 16-bit `a`) — the composing operation uses this to
@@ -145,9 +145,9 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
   simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨hr, _hbool, hgc⟩ := h_holds
-  refine ⟨⟨bool_of_mul_pred hgc, ?_⟩, fun h1 h0 => off_gate_vacuous hbin h1 h0⟩
+  refine ⟨⟨bool_of_mul_pred hgc, ?_⟩, hbin⟩
   intro hr1eq
-  have hneg : - input_is_real = -1 := by rw [hr1eq]
+  have hneg : input_is_real = 1 := hr1eq
   have R := hr hneg
   rw [← c16] at R
   refine msb_of_raw (ha hr1eq) ?_
@@ -163,7 +163,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   simp only [circuit_norm, byteChannel]
   refine ⟨?_, ?_, ?_⟩
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hav := ha hr1
     have hin_cast : ((input_a.val : ℕ) : ZMod p) = input_a := ZMod.natCast_zmod_val input_a
     have h2 : (2 * input_a : ZMod p).val = 2 * input_a.val := by
@@ -173,11 +173,11 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
     apply (byteRowSpec_range _ sixteen_lt).mpr
     rw [hmsb]
     by_cases hge : input_a.val ≥ 32768
-    · rw [if_pos hge, one_mul]
+    · rw [ite_eq_left hge, one_mul]
       have hsub : (2 * input_a - 65536 : ZMod p) = (((2 * input_a.val - 65536 : ℕ) : ZMod p)) := by
         rw [Nat.cast_sub (by omega)]; push_cast; rw [hin_cast]
       rw [hsub, ZMod.val_natCast_of_lt (by omega)]; omega
-    · rw [if_neg hge, zero_mul, sub_zero, h2]; omega
+    · rw [ite_eq_right hge, zero_mul, sub_zero, h2]; omega
   · rcases hbin with h | h <;> rw [h] <;> simp
   · rcases hmsbbool with h | h <;> rw [h] <;> simp
 

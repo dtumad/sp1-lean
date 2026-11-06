@@ -30,7 +30,7 @@ def Spec (input : Inputs (ZMod p)) (cols : Columns (ZMod p)) (_ : ProverData (ZM
 -- half the 231121 baseline was spent there. Landed: drop the 53 spent `_2` copies once
 -- `resultA_isU64` has consumed them; drop the never-cited `with h…_def` equations off 23 `set`s;
 -- clear each fact source as it is consumed -- including the sixteen `o`-column constraints, which
--- SRAW never reads -- and hoist the `h_input` destructuring so its ~35 input binders go with it.
+-- SRAW never reads -- and hoist the `h_input` cleanup so its ~35 input binders go with it.
 -- Net 231121 -> 128963. See `Sra.lean` for the full ablation table and the levers measured and
 -- rejected there (Clean fix pattern 7; hoisting the `set`s into one early block).
 set_option linter.unusedVariables false in
@@ -44,7 +44,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     h_srl_b, h_sra_b, h_srlw_b, h_sraw_b, h_core,
     h_byte0, h_byte1, h_byte2, h_byte3, h_byte4, h_byte5, h_byte6, h_byte7, h_byte8⟩ := h_holds
   have h_core' := h_core trivial
-  simp only [ShiftRightCore.circuit, ShiftRightChip.CoreSpec, Vector.getElem_map,
+  simp only [ShiftRightCore.circuit, ShiftRightChip.CoreSpec,
     Vector.getElem_mapRange, circuit_norm] at h_core'
   obtain ⟨h_wimm, h_b0, h_b1, h_b2, h_b3, h_b4, h_b5,
     h_s0w, h_s0b, h_s1w, h_s1b, h_s2w, h_s2b, h_s3w, h_s3b, h_onehot,
@@ -59,9 +59,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   clear h_core
   -- W11 Option B: the op_a write `RegisterWrite` push's `isU64 a` requirement, via the shared result
   -- range-check `resultA_isU64` applied to this row's destructured constraints.
-  have h_obmap : Vector.map (Expression.eval env) input_var_adapter_op_b_memory_prev_value =
-      input_adapter_op_b_memory_prev_value := by
-    exact h_input.2.1.2.2.2.2.1.1
   -- `resultA_isU64` deliberately keeps its `x * (x + -1) = 0` parameter forms (shared by all four
   -- Soundness files); `h_holds`'s destructured hyps are now `x - y` form (4.30 circuit_norm), and the
   -- rest of this proof relies on that `-` form downstream, so convert local COPIES (never mutate the
@@ -90,7 +87,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   simp only [sub_eq_add_neg] at h_o6_2 h_o7_2 h_o8_2 h_o9_2 h_o10_2 h_o11_2 h_o12_2 h_o13_2 h_o14_2
   simp only [sub_eq_add_neg] at h_o15_2 h_w0_2 h_w1_2 h_w2_2 h_w3_2 h_w4_2 h_w5_2
   simp only [sub_eq_add_neg] at h_byte2_2 h_byte4_2 h_byte6_2 h_byte8_2
-  have hregW := resultA_isU64 i₀ env h_obmap h_assumptions.1 h_msb1 h_msb3 h_srl_b2 h_sra_b2
+  have hregW := resultA_isU64 i₀ env h_assumptions.1 h_msb1 h_msb3 h_srl_b2 h_sra_b2
     h_srlw_b2 h_sraw_b2 h_sum_b2 h_b0_2 h_b1_2 h_b2_2 h_b3_2 h_b4_2 (by simpa using h_s0w)
     h_s0b2 h_s1w2 h_s1b2 h_s2w2
     h_s2b2 h_s3w2 h_onehot2 h_v01_2 h_v012_2 h_v0123_2 h_split2_2 h_lr0_2 h_lr1_2 h_lr2_2 h_lr3_2
@@ -112,27 +109,31 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   refine ⟨?spec, ?aluA,
     Or.inr ⟨bool_of_mul_pred h_sum_b, hregW,
       h_clk.at_four⟩,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0,
-    fun h1 h0 => off_gate_vacuous (bool_of_mul_pred h_sum_b) h1 h0⟩
+    (bool_of_mul_pred h_sum_b)⟩
   case spec =>
       intro hreal hsraw
       -- Same discipline inside the conjunct: everything the `refine` above already consumed, the
       -- sixteen `o`-column constraints (SRA/SRL-only; SRAW reads the `w` columns), and the input
-      -- binders reachable only through `h_input` -- hence its destructuring is hoisted up to here.
-      clear h_cpu h_msb1 h_alu h_regwrite hregW h_clk h_obmap
+      -- binders reachable only through `h_input` -- hence its cleanup is hoisted up to here.
+      clear h_cpu h_msb1 h_alu h_regwrite hregW h_clk
       clear h_wimm h_s0b h_s1b h_s2b h_s3b h_msbz h_srwz h_opa0
       clear h_o0 h_o1 h_o2 h_o3 h_o4 h_o5 h_o6 h_o7
       clear h_o8 h_o9 h_o10 h_o11 h_o12 h_o13 h_o14 h_o15
       clear h_split3 h_lr2 h_lr3
       clear hreal
-      obtain ⟨-, ⟨-, -, -, -, ⟨h_obmap, -, -⟩, -, ⟨h_ocmap, -, -⟩, -⟩, -⟩ := h_input
+      change U16MSBOperation.circuit.Assumptions { a := input_adapter_op_b_memory_prev_value[1], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSraw } →
+        U16MSBOperation.circuit.Spec { a := input_adapter_op_b_memory_prev_value[1], cols := { msb := env.get (i₀ + 4) }, is_real := input_isSraw } at h_msb2
+      -- Rebuild the bound proofs after normalization so these hypotheses no longer
+      -- retain the input equality through hidden `GetElem` proof arguments.
+      change input_isSrl + input_isSra + input_isSrlw + input_isSraw = 1 →
+        byteChannel.Guarantees
+          { opcode := 6,
+            a := (input_adapter_op_c_memory_prev_value[0] -
+              (env.get (i₀ + 4 + 1 + 1) * 1 + env.get (i₀ + 4 + 1 + 1 + 1) * 2 +
+               env.get (i₀ + 4 + 1 + 1 + 2) * 4 + env.get (i₀ + 4 + 1 + 1 + 3) * 8 +
+               env.get (i₀ + 4 + 1 + 1 + 4) * 16 + env.get (i₀ + 4 + 1 + 1 + 5) * 32)) * 64⁻¹,
+            b := 10, c := 0 } env.data at h_byte0
+      clear h_input
       clear input_adapter_op_a
       clear input_adapter_op_a_0
       clear input_adapter_op_b
@@ -173,11 +174,10 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
               · exact Or.inl (by linear_combination h)
               · exact Or.inr (by linear_combination h))
       clear h_srl_b h_sra_b h_srlw_b h_sum_b
-      have hcolsa : (Vector.map (Expression.eval env)
-            (Vector.mapRange 4 fun i => var { index := i₀ + i }) : Word (ZMod p))
+      have hcolsa : (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p))
           = #v[env.get i₀, env.get (i₀ + 1), env.get (i₀ + 2), env.get (i₀ + 3)] := by
         apply Vector.ext; intro i hi
-        simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+        simp only [Vector.getElem_mapRange, circuit_norm]
         interval_cases i <;> rfl
       obtain ⟨h_rs1U, h_rs2U⟩ := h_assumptions
       set cb0 := env.get (i₀ + 4 + 1 + 1)
@@ -199,15 +199,15 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
           + input_isSrlw
           + input_isSraw = 1 := by
         rw [h_srl0, h_sra0, h_srlw0, hsraw]; ring
-      have hsumneg : -(input_isSrl
+      have hsumneg : (input_isSrl
           + input_isSra
           + input_isSrlw
-          + input_isSraw) = -1 := by rw [hsum1]
+          + input_isSraw) = 1 := by rw [hsum1]
       have hbyte_fact : ∀ {v w : ZMod p},
-          (-(input_isSrl
+          ((input_isSrl
               + input_isSra
               + input_isSrlw
-              + input_isSraw) = -1 →
+              + input_isSraw) = 1 →
             byteChannel.Guarantees (⟨6, v, w, 0⟩
               : ByteRow (ZMod p)) env.data) → v.val < 2 ^ w.val := by
         intro v w hb
@@ -236,10 +236,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       -- these `set`s used to name were never cited anywhere, and every entry they added to the context
       -- was re-walked by each later `set`/`clear_value`, so they are gone.
       clear_value cb0 cb1 cb2 cb3 cb4 cb5 ll0 ll1 ll2 ll3 hl0 hl1 hl2 hl3 v0123 v012 v01
-      have hb1e : Expression.eval env input_var_adapter_op_b_memory_prev_value[1]
-          = input_adapter_op_b_memory_prev_value[1] := by rw [← h_obmap]; simp only [Vector.getElem_map]
-      have hc0e : Expression.eval env input_var_adapter_op_c_memory_prev_value[0]
-          = input_adapter_op_c_memory_prev_value[0] := by rw [← h_ocmap]; simp only [Vector.getElem_map]
       have eq_v01 : v01 = (1 + -cb0 + 1) * 2 * ((1 + -cb1) * 3 + 1) := by
         linear_combination h_v01
       have eq_v012 : v012 = v01 * ((1 + -cb2) * 15 + 1) := by
@@ -272,7 +268,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
           = (cb0 + cb1 * 2 + cb2 * 4 + cb3 * 8 + cb4 * 16 : ZMod p).val := by
         refine ShiftRightMath.is_mod_32 b_cb0 b_cb1 b_cb2 b_cb3 b_cb4 b_cb5 (by simpa using h_rs2U 0) ?_
         have he := hbyte_fact h_byte0
-        rw [hc0e] at he
         have h10v : ((10 : ZMod p)).val = 10 := by
           rw [show (10 : ZMod p) = ((10 : ℕ) : ZMod p) by push_cast; rfl]
           exact ZMod.val_natCast_of_lt (by omega)
@@ -301,9 +296,9 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       -- `b_msb = op_b[1] sign` (gated `is_sraw`), via `U16MSBOperation` gadget `h_msb2`.
       have h_msb_eq2 : env.get (i₀ + 4)
           = if input_adapter_op_b_memory_prev_value[1].val ≥ 32768 then 1 else 0 := by
-        have hsp := (h_msb2 ⟨fun _ => by rw [hb1e]; exact h_rs1U 1, bool_of_mul_pred h_sraw_b⟩).2 hsraw
-        rwa [hb1e] at hsp
-      clear h_msb2 h_sraw_b hb1e h_obmap
+        have hsp := (h_msb2 ⟨fun _ => h_rs1U 1, bool_of_mul_pred h_sraw_b⟩).2 hsraw
+        exact hsp
+      clear h_msb2 h_sraw_b
       have h_lowmsb : (BitVec.extractLsb' 0 32 (Word.toBitVec64 input_adapter_op_b_memory_prev_value)).msb
           = decide (input_adapter_op_b_memory_prev_value[1].val ≥ 32768) := low32_msb_eq_b1 h_rs1U
       have a2eq : env.get (i₀ + 2) = srwmsb * 65535 := by
@@ -313,7 +308,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       rw [hcolsa]
       by_cases hb1 : input_adapter_op_b_memory_prev_value[1].val ≥ 32768
       · -- b_msb = 1 (negative low-32): sign-extended arithmetic word shift.
-        have hbmsb1 : env.get (i₀ + 4) = 1 := by rw [h_msb_eq2, if_pos hb1]
+        have hbmsb1 : env.get (i₀ + 4) = 1 := by rw [h_msb_eq2, ite_eq_left hb1]
         have hlowtrue : (BitVec.extractLsb' 0 32
             (Word.toBitVec64 input_adapter_op_b_memory_prev_value)).msb = true := by
           rw [h_lowmsb]; simp [hb1]
@@ -417,7 +412,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
             exact ShiftRightMath.sraw_dispatch_1_msb1 b_cb0 b_cb1 b_cb2 b_cb3 hcb4 eq_v01 eq_v012 eq_v0123
               lt_ll0 lt_lh0 lt_ll1 lt_lh1 h_b0_dec h_b1_dec
       · -- b_msb = 0 (non-negative low-32): identical to SRLW (logical word shift, then sign-extend).
-        have hbmsb0 : env.get (i₀ + 4) = 0 := by rw [h_msb_eq2, if_neg hb1]
+        have hbmsb0 : env.get (i₀ + 4) = 0 := by rw [h_msb_eq2, ite_eq_right hb1]
         have hlowfalse : (BitVec.extractLsb' 0 32
             (Word.toBitVec64 input_adapter_op_b_memory_prev_value)).msb = false := by
           rw [h_lowmsb]; simp [hb1]

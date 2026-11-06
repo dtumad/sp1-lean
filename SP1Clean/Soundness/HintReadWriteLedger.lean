@@ -86,13 +86,12 @@ theorem permission_ledger (tables : List (Table (ZMod p)))
   exact row_permission_values row
 
 /-- Authenticating the actual byte pulls permits the complete semantic write, including padding. -/
-theorem permitted_of_inventory (tables : List (Table (ZMod p)))
-    (aligned : List.Forall₂ (fun last table => (view last).component = table.component) variants tables)
-    (valid : Steps tables) (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
-    (inventory : ((TransitionView.readIndexedActiveRows variants view tables).map HintReadWrites.produced).Perm
+theorem permitted_of_inventory (rows : List (Row (p := p)))
+    (valid : Steps rows) (policy : HostMemoryPolicy) (address : ℕ) (bytes : Bytes)
+    (inventory : ((activeRows rows).map HintReadWrites.produced).Perm
       (wordWrites address bytes))
     (permissions : ∀ request, WritePermissionProvider.channel.pulledValue request ∈
-      tables.flatMap (·.interactionsWith WritePermissionProvider.channel.toRaw) →
+      interactions rows WritePermissionProvider.channel.toRaw →
       policy.permits (Address.toNat request) 1 = true) :
     policy.permits address (hintWriteBytes bytes).length = true := by
   apply permits_of_word_bytes
@@ -100,11 +99,15 @@ theorem permitted_of_inventory (tables : List (Table (ZMod p)))
   have entry : (address + index * 8, wordValue bytes index) ∈ wordWrites address bytes :=
     List.mem_map.mpr ⟨index, List.mem_range.mpr bound, rfl⟩
   obtain ⟨row, member, equal⟩ := List.mem_map.mp (inventory.mem_iff.mpr entry)
-  obtain ⟨physical, enabled⟩ := mem_active_rows.mp member
+  obtain ⟨physical, enabled⟩ := List.mem_filter.mp member
+  simp only [decide_eq_true_eq] at enabled
   have requested := permissions (Address.offset (rowInput row).address (slot.val : ZMod p)) (by
-    rw [permission_ledger tables aligned]
+    unfold interactions
     apply List.mem_flatMap.mpr
-    refine ⟨row, physical, List.mem_ofFn.mpr ⟨slot, ?_⟩⟩
+    refine ⟨row, physical, ?_⟩
+    rw [row_permission_values]
+    apply List.mem_ofFn.mpr
+    refine ⟨slot, ?_⟩
     simp only [enabled, Channel.pulledIfValue, Channel.pulledValue])
   have addressEqual := congrArg Prod.fst equal
   change Address.toNat (rowInput row).address = address + index * 8 at addressEqual
@@ -113,11 +116,12 @@ theorem permitted_of_inventory (tables : List (Table (ZMod p)))
     slot.val (by have := slot.isLt; omega), addressEqual] at requested
   exact requested
 
+omit [Fact (2 ^ 25 < p)] in
 /-- Each physically emitted new Memory value agrees with the byte-level host update. -/
-theorem memory_readback (tables : List (Table (ZMod p))) (address : ℕ) (bytes : Bytes)
-    (inventory : ((TransitionView.readIndexedActiveRows variants view tables).map HintReadWrites.produced).Perm
+theorem memory_readback (rows : List (Row (p := p))) (address : ℕ) (bytes : Bytes)
+    (inventory : ((activeRows rows).map HintReadWrites.produced).Perm
       (wordWrites address bytes)) (memory : ByteMemory)
-    (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedActiveRows variants view tables) :
+    (row : Row (p := p)) (member : row ∈ activeRows rows) :
     (memory.writeBytes address (hintWriteBytes bytes)).readWord (Address.toNat (rowInput row).address) =
       Word.toBitVec64 (rowInput row).ram.pushed.value := by
   exact wordWrites_readback memory address bytes (HintReadWrites.produced row)

@@ -23,7 +23,7 @@ route, which nothing needs and nothing proves. -/
 namespace SP1Clean.Semantics
 
 open Sail LeanRV64D LeanRV64D.Functions
-open LeanRV64D.Defs
+open LeanRV64D
 open SP1Clean.Machine
 open SP1Clean.Soundness.Target
 open SP1Clean.Channels (StateMsg MemoryMsg)
@@ -106,8 +106,8 @@ theorem microValueE_allOrdinary (handler : ExecutableSyscallHandler) (program : 
     microValueE handler program events s0 tl loc τ = microValueT s0 tl loc τ := by
   rw [microValueE, microValueT]
   by_cases hpre : τ < tl.start 0
-  · rw [if_pos hpre, if_pos hpre]
-  · rw [if_neg hpre, if_neg hpre]
+  · rw [ite_eq_left hpre, ite_eq_left hpre]
+  · rw [ite_eq_right hpre, ite_eq_right hpre]
     exact congrArg (Option.bind · _)
       (eventTrajectory_allOrdinary handler program events s0 ordinary _ (covered hpre))
 

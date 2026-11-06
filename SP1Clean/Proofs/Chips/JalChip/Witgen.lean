@@ -16,7 +16,7 @@ open Circuit
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- JAL's row has computable witnesses: both witnessed words are functions of the input row alone. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_input => ?_,
@@ -35,13 +35,13 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       intro j hj
       have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
       simp only [eval_statePc] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     refine AddOperation.populateIR_congr env env' _ _ (fun i hi => ?_) (fun i hi => ?_)
     · interval_cases i <;>
         simp [Expression.eval, hpc 0 (by omega), hpc 1 (by omega), hpc 2 (by omega)]
     · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_b_imm) h_input
       simp only [eval_opBImm] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
   · -- the link value: `pc ++ 0` plus the literal 4 (constant limbs), gated by activity and `op_a_0`
     have hpc : ∀ (j : ℕ) (hj : j < 3),
         Expression.eval env.toEnvironment input.state.pc[j]
@@ -49,7 +49,7 @@ theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithDat
       intro j hj
       have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
       simp only [eval_statePc] at hv
-      simpa [Vector.getElem_map] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+      simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
     have hoa0 : Expression.eval env.toEnvironment input.adapter.op_a_0
         = Expression.eval env'.toEnvironment input.adapter.op_a_0 := by
       have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_a_0) h_input

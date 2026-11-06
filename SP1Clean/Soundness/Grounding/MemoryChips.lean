@@ -19,7 +19,7 @@ Concrete chip sections below authenticate these abstractions against each chip's
 faithfulness anchor enters this boundary.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -102,31 +102,7 @@ structure ImmutableRamMemoryInteractionShape (chip : SupportedChip p) where
       decoded.interactionsWith data memoryChannel =
         immutableRamMemoryInteractions (decoded.toChipRow data).view (access decoded data)
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem ramPull_one_signed (message : MemoryMsg (ZMod p)) :
-    signedVal (TypedInteraction.pulledIfValue
-      (memoryChannel (p := p)) 1 message).mult = -1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  calc
-    _ = signedVal (-(1 : ZMod p)) := rfl
-    _ = -((1 : ZMod p).val : ℤ) := signedVal_neg_is_real hp (Or.inr rfl)
-    _ = -1 := by
-      rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-      norm_num
-
-omit [Fact (2 ^ 25 < p)] in
-private theorem ramPush_one_signed (message : MemoryMsg (ZMod p)) :
-    signedVal (TypedInteraction.pushedIfValue
-      (memoryChannel (p := p)) 1 message).mult = 1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  calc
-    _ = signedVal (1 : ZMod p) := rfl
-    _ = ((1 : ZMod p).val : ℤ) := signedVal_is_real hp (Or.inr rfl)
-    _ = 1 := by
-      rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-      norm_num
-
-omit [Fact (2 ^ 25 < p)] in
+omit [Fact (2 ^ 25 < p)] [Fact (2 ^ 17 < p)] in
 private theorem consumedMessages_loadSix
     (ramPrior ramPush priorA priorB readB writeA : MemoryMsg (ZMod p)) :
     consumedMessages
@@ -137,11 +113,11 @@ private theorem consumedMessages_loadSix
        TypedInteraction.pushedIfValue memoryChannel 1 readB,
        TypedInteraction.pushedIfValue memoryChannel 1 writeA] =
       [ramPrior, priorA, priorB] := by
-  simp only [consumedMessages, List.filter_cons, List.filter_nil,
-    ramPull_one_signed, ramPush_one_signed]
-  norm_num
+  simp [consumedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+    TypedInteraction.mult, TypedInteraction.message, Channel.pulledIfValue, Channel.pushedIfValue,
+    ProvableType.fromElements_toElements]
 
-omit [Fact (2 ^ 25 < p)] in
+omit [Fact (2 ^ 25 < p)] [Fact (2 ^ 17 < p)] in
 private theorem producedMessages_loadSix
     (ramPrior ramPush priorA priorB readB writeA : MemoryMsg (ZMod p)) :
     producedMessages
@@ -152,11 +128,11 @@ private theorem producedMessages_loadSix
        TypedInteraction.pushedIfValue memoryChannel 1 readB,
        TypedInteraction.pushedIfValue memoryChannel 1 writeA] =
       [ramPush, readB, writeA] := by
-  simp only [producedMessages, List.filter_cons, List.filter_nil,
-    ramPull_one_signed, ramPush_one_signed]
-  norm_num
+  simp [producedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+    TypedInteraction.mult, TypedInteraction.message, Channel.pulledIfValue, Channel.pushedIfValue,
+    ProvableType.fromElements_toElements]
 
-omit [Fact (2 ^ 25 < p)] in
+omit [Fact (2 ^ 25 < p)] [Fact (2 ^ 17 < p)] in
 private theorem consumedMessages_immutableRamSix
     (ramPrior ramPush priorA readA priorB readB : MemoryMsg (ZMod p)) :
     consumedMessages
@@ -167,11 +143,11 @@ private theorem consumedMessages_immutableRamSix
        TypedInteraction.pulledIfValue memoryChannel 1 priorB,
        TypedInteraction.pushedIfValue memoryChannel 1 readB] =
       [ramPrior, priorA, priorB] := by
-  simp only [consumedMessages, List.filter_cons, List.filter_nil,
-    ramPull_one_signed, ramPush_one_signed]
-  norm_num
+  simp [consumedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+    TypedInteraction.mult, TypedInteraction.message, Channel.pulledIfValue, Channel.pushedIfValue,
+    ProvableType.fromElements_toElements]
 
-omit [Fact (2 ^ 25 < p)] in
+omit [Fact (2 ^ 25 < p)] [Fact (2 ^ 17 < p)] in
 private theorem producedMessages_immutableRamSix
     (ramPrior ramPush priorA readA priorB readB : MemoryMsg (ZMod p)) :
     producedMessages
@@ -182,9 +158,9 @@ private theorem producedMessages_immutableRamSix
        TypedInteraction.pulledIfValue memoryChannel 1 priorB,
        TypedInteraction.pushedIfValue memoryChannel 1 readB] =
       [ramPush, readA, readB] := by
-  simp only [producedMessages, List.filter_cons, List.filter_nil,
-    ramPull_one_signed, ramPush_one_signed]
-  norm_num
+  simp [producedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+    TypedInteraction.mult, TypedInteraction.message, Channel.pulledIfValue, Channel.pushedIfValue,
+    ProvableType.fromElements_toElements]
 
 /-- An active normal load consumes the RAM prior plus destination/source-B register priors. -/
 theorem consumedMemoryMessages_eq_of_loadShape {chip : SupportedChip p}
@@ -277,10 +253,10 @@ private theorem pulledWord_isU64_of_guarantees
     (guarantees : operations.ChannelGuarantees memoryChannel.toRaw env) :
     Word.isU64 message.value := by
   let interaction := TypedInteraction.pulledIfValue (memoryChannel (p := p)) 1 message
-  have negative : interaction.mult = -1 := by
+  have active : interaction.mult = 1 := by
     simp only [interaction, TypedInteraction.pulledIfValue_mult]
   have guarantee := TypedInteraction.guarantee_of_channelGuarantees
-    operations memoryChannel env interaction pull guarantees (by rfl) negative
+    operations memoryChannel env interaction pull guarantees ⟨rfl, active⟩
   simpa only [Channels.memoryChannel, interaction,
     TypedInteraction.pulledIfValue_message, MemoryMsg.isU64] using guarantee.1
 
@@ -427,45 +403,46 @@ reader to `ActiveMemoryTimestampFacts`. The reader's Memory guarantee is deliber
 theorem ramAccessTimestampFacts_of_contract {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (ramAccess :
       Input (ZMod p) → Output (ZMod p) → Option (Trace.RamAccessView (ZMod p)))
     (contract : CircuitRamAccessTimestampContract circuit view ramAccess)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data))
-    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
     (access : Trace.RamAccessView (ZMod p))
     (accessEq : ramAccess
-      (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-      (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+      (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data)) = some access)
     (real : (view
-      (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-      (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+      (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
     ActiveMemoryTimestampFacts access.compareLow access.prevHigh access.prevLow
       access.diffLow access.diffHigh
       (view
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data))
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
           (Environment.fromArray physical data))).state.clk_high
       ((view
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
           (Environment.fromArray physical data))
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
           (Environment.fromArray physical data))).state.clk_0_16 +
         (view
-          (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+          (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
             (Environment.fromArray physical data))
-          (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+          (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
             (Environment.fromArray physical data))).state.clk_16_24 * 65536) := by
   obtain ⟨readerOffset, readerInput, readerMem, binding⟩ := contract
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   have rowConstraints : component.rowOperations.ConstraintsHold env :=
     (Component.constraintsHold_iff env).mp constraints
@@ -505,7 +482,6 @@ private theorem memoryEqualityConstraint_mem
     x - y ∈
       ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- The three retained `AddressOperation` selector gates prove that the evaluated byte-offset
@@ -622,24 +598,25 @@ omit [Fact (2 ^ 25 < p)] in
 theorem ramAccessIsRam_of_addressContract {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (ramAccess :
       Input (ZMod p) → Output (ZMod p) → Option (Trace.RamAccessView (ZMod p)))
     (selector : Input (ZMod p) → ZMod p)
     (contract : CircuitRamAddressContract circuit ramAccess selector)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data))
-    (real : selector (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+    (real : selector (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
       (Environment.fromArray physical data)) = 1)
     (access : Trace.RamAccessView (ZMod p))
     (accessEq : ramAccess
-      (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-      (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+      (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data)) = some access) :
     RamAccessIsRam access := by
   obtain ⟨addressOffset, addressInput, addressMem, binding, selectorBinding⟩ := contract
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   have rowConstraints : component.rowOperations.ConstraintsHold env :=
     (Component.constraintsHold_iff env).mp constraints
@@ -809,7 +786,7 @@ theorem locOf_ramPriorMessage (access : Trace.RamAccessView (ZMod p))
     MemoryMsg.locOf (ramPriorMessage access) = MemLoc.ram (ramCellOfAccess access) := by
   unfold RamAccessIsRam at isRam
   simp only [MemoryMsg.locOf, ramPriorMessage]
-  exact if_neg isRam
+  exact ite_eq_right isRam
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 /-- Turn membership of the authenticated generic RAM pull into a live Sail-state cell read. -/
@@ -899,7 +876,7 @@ theorem locOf_ramPushMessage (view : Trace.RowView (ZMod p))
     MemoryMsg.locOf (ramPushMessage view access) = MemLoc.ram (ramCellOfAccess access) := by
   unfold RamAccessIsRam at isRam
   simp only [MemoryMsg.locOf, ramPushMessage]
-  exact if_neg isRam
+  exact ite_eq_right isRam
 
 /-- The generic RAM push occupies SP1's `+1` cell-write slot. -/
 theorem timeNat_ramPushMessage {view : Trace.RowView (ZMod p)}
@@ -1550,33 +1527,34 @@ surface consumed by normal load rows. -/
 theorem loadMemoryTimestampBounds_of_contracts {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (access : Input (ZMod p) → Output (ZMod p) → Trace.RamAccessView (ZMod p))
     (ramContract : CircuitRamAccessTimestampContract circuit view
       (fun input output => some (access input output)))
     (itypeContract : CircuitITypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data))
-    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
     LoadMemoryTimestampBounds
-      (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
           (Environment.fromArray physical data)))
-      (access (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (access (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
           (Environment.fromArray physical data))) := by
   constructor
-  · exact ramAccessTimestampFacts_of_contract circuit view
+  · exact ramAccessTimestampFacts_of_contract circuit generation view
       (fun input output => some (access input output)) ramContract data physical
       constraints guarantees _ rfl real
-  · exact itypeTimestampBounds_of_contract circuit view itypeContract data physical
+  · exact itypeTimestampBounds_of_contract circuit generation view itypeContract data physical
       guarantees real
 
 /-- Immutable I-type twin of `loadMemoryTimestampBounds_of_contracts`, used by `LoadX0` and all
@@ -1584,33 +1562,34 @@ four stores. -/
 theorem immutableRamTimestampBounds_of_contracts {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (access : Input (ZMod p) → Output (ZMod p) → Trace.RamAccessView (ZMod p))
     (ramContract : CircuitRamAccessTimestampContract circuit view
       (fun input output => some (access input output)))
     (itypeContract : CircuitImmutableITypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold
       (Environment.fromArray physical data))
-    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
     ImmutableRamTimestampBounds
-      (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
           (Environment.fromArray physical data)))
-      (access (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
+      (access (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
         (Environment.fromArray physical data))
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
           (Environment.fromArray physical data))) := by
   constructor
-  · exact ramAccessTimestampFacts_of_contract circuit view
+  · exact ramAccessTimestampFacts_of_contract circuit generation view
       (fun input output => some (access input output)) ramContract data physical
       constraints guarantees _ rfl real
-  · exact immutableItypeTimestampBounds_of_contract circuit view itypeContract data physical
+  · exact immutableItypeTimestampBounds_of_contract circuit generation view itypeContract data physical
       guarantees real
 
 /-- Construct the aligned timed carrier of any exact normal-load row. -/
@@ -1884,12 +1863,13 @@ local macro "chipViewClockBoundsEnv " r:ident : tactic => do
   let s := r.getId.toString
   let ns := Lean.Name.mkSimple (s.capitalize ++ "Chip")
   let (circ, rv) := (Lean.mkIdent (ns ++ `circuit), Lean.mkIdent (ns ++ `rowView))
+  let generation := Lean.mkIdent (ns ++ `generation)
   let contract := Lean.mkIdent (ns ++ `cpuStateTimeContract)
   let (data, physical) := (Lean.mkIdent `data, Lean.mkIdent `physical)
   let (guarantees, real) := (Lean.mkIdent `guarantees, Lean.mkIdent `real)
   `(tactic|
     (rw [$(Lean.mkIdent `circuitRowViewOf_eq):ident] at $real:ident ⊢
-     exact viewClockBounds_of_cpuStateContract $circ $rv $contract $data $physical
+     exact viewClockBounds_of_cpuStateContract $circ $generation $rv $contract $data $physical
        $guarantees $real))
 
 /-- Read a chip's `RamAccessIsRam` off its retained address contract; `sel` is the chip's
@@ -1897,6 +1877,7 @@ local macro "chipViewClockBoundsEnv " r:ident : tactic => do
 local macro "chipIsRamEnv " r:ident sel:term : tactic => do
   let s := r.getId.toString
   let ns := Lean.Name.mkSimple (s.capitalize ++ "Chip")
+  let generation := Lean.mkIdent (ns ++ `generation)
   let (circ, rv) := (Lean.mkIdent (ns ++ `circuit), Lean.mkIdent (ns ++ `rowView))
   let rav := Lean.mkIdent (ns ++ `ramAccessView)
   let contract := Lean.mkIdent (ns ++ `ramAddressContract)
@@ -1905,7 +1886,7 @@ local macro "chipIsRamEnv " r:ident sel:term : tactic => do
   `(tactic|
     (rw [$(Lean.mkIdent `circuitRowViewOf_eq):ident] at $real:ident
      rw [$(Lean.mkIdent `circuitRamAccessOf_eq):ident]
-     exact ramAccessIsRam_of_addressContract $circ
+     exact ramAccessIsRam_of_addressContract $circ $generation
        (fun input cols => some ($rav input cols))
        $sel $contract $data $physical $constraints
        (by simpa only [$rv:ident] using $real) _ rfl))
@@ -1954,6 +1935,7 @@ local macro "chipMemoryValues " r:ident layout:ident : tactic => do
 local macro "chipTypedMemoryInteractions " r:ident layout:ident : tactic => do
   let s := r.getId.toString
   let ns := Lean.Name.mkSimple (s.capitalize ++ "Chip")
+  let generation := Lean.mkIdent (ns ++ `generation)
   let (circ, inputs) := (Lean.mkIdent (ns ++ `circuit), Lean.mkIdent (ns ++ `Inputs))
   let desc := Lean.mkIdent (.mkSimple (s ++ "ChipDescriptor"))
   let tbl := Lean.mkIdent (.mkSimple (s ++ "ChipDescriptor_table"))
@@ -1966,11 +1948,11 @@ local macro "chipTypedMemoryInteractions " r:ident layout:ident : tactic => do
        $decoded $data $hchip
      intro env
      have inputEq : Eval.eval env (varFromOffset $inputs 0) =
-         ({ circuit := $circ (p := p), Assumptions := ($circ (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+         ({ circuit := $circ (p := p), Assumptions := ($circ (p := p)).Assumptions, generation := $generation } : Component (ZMod p)).rowInput env :=
        eval_varFromOffset_valueFromOffset $inputs 0 env
      have outputEq : Eval.eval env
          (($circ (p := p)).output (varFromOffset $inputs 0) (size $inputs)) =
-         ({ circuit := $circ (p := p), Assumptions := ($circ (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
+         ({ circuit := $circ (p := p), Assumptions := ($circ (p := p)).Assumptions, generation := $generation } : Component (ZMod p)).rowOutput env := by
        simp only [Component.rowOutput, circuit_norm]
      simp only [$tbl:ident, $vw:ident, $ra:ident, Option.getD_some]
      rw [← inputEq, ← outputEq]
@@ -1980,14 +1962,14 @@ section LoadByte
 
 /-- The LoadByte descriptor in the supported Core registry. -/
 def loadByteChipDescriptor : SupportedChip p :=
-  ⟨.loadByte, LoadByteChip.kind, LoadByteChip.circuit, rfl⟩
+  ⟨.loadByte, LoadByteChip.kind, LoadByteChip.circuit, LoadByteChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Small descriptor projections kept symbolic so decoded-row proofs never normalize the full
 dependent component merely to identify its circuit, row view, or RAM access. -/
 theorem loadByteChipDescriptor_table :
     (loadByteChipDescriptor (p := p)).table =
-      ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadByteChipDescriptor_rdGuard :
@@ -2037,23 +2019,26 @@ completed output merely to discover a field of the input. -/
 @[irreducible] noncomputable def circuitRowInputOf {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (env : Environment (ZMod p)) : Input (ZMod p) :=
-  ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env
+  ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env
 
 /-- Opaque typed output paired with `circuitRowInputOf`. -/
 @[irreducible] noncomputable def circuitRowOutputOf {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (env : Environment (ZMod p)) : Output (ZMod p) :=
-  ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput env
+  ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput env
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 theorem circuitRowInputOf_eq_component {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (env : Environment (ZMod p)) :
-    circuitRowInputOf circuit env =
-      ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env := by
+    circuitRowInputOf circuit generation env =
+      ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env := by
   unfold circuitRowInputOf
   rfl
 
@@ -2061,9 +2046,10 @@ omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 theorem circuitRowOutputOf_eq_component {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (env : Environment (ZMod p)) :
-    circuitRowOutputOf circuit env =
-      ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput env := by
+    circuitRowOutputOf circuit generation env =
+      ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput env := by
   unfold circuitRowOutputOf
   rfl
 
@@ -2071,8 +2057,9 @@ omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 theorem circuitRowInputOf_eq_eval {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (env : Environment (ZMod p)) :
-    circuitRowInputOf circuit env =
+    circuitRowInputOf circuit generation env =
       Eval.eval env (varFromOffset (F := ZMod p) Input 0) := by
   rw [circuitRowInputOf_eq_component]
   exact (eval_varFromOffset_valueFromOffset Input 0 env).symm
@@ -2084,18 +2071,19 @@ theorem chipSpec_of_literalDescriptor
     (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (specEq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (h : ((⟨id, kind, circuit, specEq⟩ : SupportedChip p).decodeRow
+    (h : ((⟨id, kind, circuit, generation, specEq⟩ : SupportedChip p).decodeRow
       data physical).chipSpec data) :
     kind.chipSpec
       (@circuitRowInputOf p inferInstance kind.Inputs kind.Cols
-        kind.provableInputs kind.provableCols circuit
+        kind.provableInputs kind.provableCols circuit generation
         (Environment.fromArray physical data))
       (@circuitRowOutputOf p inferInstance kind.Inputs kind.Cols
-        kind.provableInputs kind.provableCols circuit
+        kind.provableInputs kind.provableCols circuit generation
         (Environment.fromArray physical data))
       data := by
   let : ProvableType kind.Inputs := kind.provableInputs
@@ -2108,6 +2096,7 @@ theorem advanceReady_of_literalDescriptor
     (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (specEq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
@@ -2115,17 +2104,17 @@ theorem advanceReady_of_literalDescriptor
     (program : GuestProgram) (state : SailState)
     (h : kind.advanceReady
       (@circuitRowInputOf p inferInstance kind.Inputs kind.Cols
-        kind.provableInputs kind.provableCols circuit
+        kind.provableInputs kind.provableCols circuit generation
         (Environment.fromArray physical data))
       (@circuitRowOutputOf p inferInstance kind.Inputs kind.Cols
-        kind.provableInputs kind.provableCols circuit
+        kind.provableInputs kind.provableCols circuit generation
         (Environment.fromArray physical data))
       program state) :
-    ((⟨id, kind, circuit, specEq⟩ : SupportedChip p).decodeRow
+    ((⟨id, kind, circuit, generation, specEq⟩ : SupportedChip p).decodeRow
       data physical).kind.advanceReady
-      ((⟨id, kind, circuit, specEq⟩ : SupportedChip p).decodeRow
+      ((⟨id, kind, circuit, generation, specEq⟩ : SupportedChip p).decodeRow
         data physical).inputs
-      ((⟨id, kind, circuit, specEq⟩ : SupportedChip p).decodeRow
+      ((⟨id, kind, circuit, generation, specEq⟩ : SupportedChip p).decodeRow
         data physical).cols
       program state := by
   let : ProvableType kind.Inputs := kind.provableInputs
@@ -2138,7 +2127,7 @@ theorem loadByteChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (loadByteChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadByteChip.Assumptions
-        (circuitRowInputOf LoadByteChip.circuit env) env.data := by
+        (circuitRowInputOf LoadByteChip.circuit LoadByteChip.generation env) env.data := by
   chipAssumptionsIff loadByte
 
 /-- Opaque evaluation spelling shared by concrete memory chips. Keeping a completed chip's output
@@ -2147,29 +2136,32 @@ folded is essential at the dependent decoder boundary: unification must not norm
 @[irreducible] noncomputable def circuitRowViewOf {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env)
-    (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput env)
+  view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env)
+    (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput env)
 
 /-- Opaque evaluated RAM projection paired with `circuitRowViewOf`. -/
 @[irreducible] noncomputable def circuitRamAccessOf {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (access : Input (ZMod p) → Output (ZMod p) → Trace.RamAccessView (ZMod p))
     (env : Environment (ZMod p)) : Trace.RamAccessView (ZMod p) :=
-  access (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env)
-    (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput env)
+  access (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env)
+    (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput env)
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 theorem circuitRowViewOf_eq {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (env : Environment (ZMod p)) :
-    circuitRowViewOf circuit view env =
-      view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env)
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput env) := by
+    circuitRowViewOf circuit generation view env =
+      view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env)
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput env) := by
   unfold circuitRowViewOf
   rfl
 
@@ -2177,11 +2169,12 @@ omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 theorem circuitRamAccessOf_eq {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (access : Input (ZMod p) → Output (ZMod p) → Trace.RamAccessView (ZMod p))
     (env : Environment (ZMod p)) :
-    circuitRamAccessOf circuit access env =
-      access (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput env)
-        (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput env) := by
+    circuitRamAccessOf circuit generation access env =
+      access (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput env)
+        (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput env) := by
   unfold circuitRamAccessOf
   rfl
 
@@ -2191,10 +2184,11 @@ completed circuit. -/
 theorem circuitRowViewOf_eq_typed {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (env : Environment (ZMod p)) :
-    circuitRowViewOf circuit view env =
-      view (circuitRowInputOf circuit env) (circuitRowOutputOf circuit env) := by
+    circuitRowViewOf circuit generation view env =
+      view (circuitRowInputOf circuit generation env) (circuitRowOutputOf circuit generation env) := by
   rw [circuitRowViewOf_eq, circuitRowInputOf_eq_component, circuitRowOutputOf_eq_component]
 
 omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
@@ -2202,10 +2196,11 @@ omit [Fact (2 ^ 17 < p)] [Fact (2 ^ 25 < p)] in
 theorem circuitRamAccessOf_eq_typed {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (access : Input (ZMod p) → Output (ZMod p) → Trace.RamAccessView (ZMod p))
     (env : Environment (ZMod p)) :
-    circuitRamAccessOf circuit access env =
-      access (circuitRowInputOf circuit env) (circuitRowOutputOf circuit env) := by
+    circuitRamAccessOf circuit generation access env =
+      access (circuitRowInputOf circuit generation env) (circuitRowOutputOf circuit generation env) := by
   rw [circuitRamAccessOf_eq, circuitRowInputOf_eq_component, circuitRowOutputOf_eq_component]
 
 /-! ### LoadByte's retained circuit contracts -/
@@ -2299,15 +2294,15 @@ folded prevents descriptor rewriting from normalizing the completed chip output.
 @[irreducible] noncomputable def loadByteViewOf (env : Environment (ZMod p)) :
     Trace.RowView (ZMod p) :=
   LoadByteChip.rowView
-    (circuitRowInputOf LoadByteChip.circuit env)
-    (circuitRowOutputOf LoadByteChip.circuit env)
+    (circuitRowInputOf LoadByteChip.circuit LoadByteChip.generation env)
+    (circuitRowOutputOf LoadByteChip.circuit LoadByteChip.generation env)
 
 /-- Opaque RAM-view spelling paired with `loadByteViewOf`. -/
 @[irreducible] noncomputable def loadByteRamAccessOf (env : Environment (ZMod p)) :
     Trace.RamAccessView (ZMod p) :=
   LoadByteChip.ramAccessView
-    (circuitRowInputOf LoadByteChip.circuit env)
-    (circuitRowOutputOf LoadByteChip.circuit env)
+    (circuitRowInputOf LoadByteChip.circuit LoadByteChip.generation env)
+    (circuitRowOutputOf LoadByteChip.circuit LoadByteChip.generation env)
 
 omit [Fact (2 ^ 25 < p)] in
 /-- Assemble LoadByte's concrete circuit assumptions from the three grounded 64-bit words while
@@ -2318,7 +2313,7 @@ theorem loadByteAssumptions_env
     (immediate : Word.isU64 (loadByteViewOf env).adapter.op_c)
     (ram : Word.isU64 (loadByteRamAccessOf env).priorValue) :
     LoadByteChip.Assumptions
-      (circuitRowInputOf LoadByteChip.circuit env) data := by
+      (circuitRowInputOf LoadByteChip.circuit LoadByteChip.generation env) data := by
   unfold LoadByteChip.Assumptions
   constructor
   · simpa only [LoadByteChip.Inputs.op_b_val, loadByteViewOf,
@@ -2478,13 +2473,13 @@ theorem loadByteSpec_of_decoded
     (h :
       ((loadByteChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     LoadByteChip.Spec
-      (circuitRowInputOf LoadByteChip.circuit
+      (circuitRowInputOf LoadByteChip.circuit LoadByteChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadByteChip.circuit
+      (circuitRowOutputOf LoadByteChip.circuit LoadByteChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold loadByteChipDescriptor at h
-  exact chipSpec_of_literalDescriptor LoadByteChip.kind LoadByteChip.circuit
+  exact chipSpec_of_literalDescriptor LoadByteChip.kind LoadByteChip.circuit LoadByteChip.generation
     rfl .loadByte data physical h
 
 /-- Specialize the folded `advanceReady` transport to LoadByte. -/
@@ -2492,9 +2487,9 @@ theorem loadByteAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : LoadByteChip.AdvanceReady
-      (circuitRowInputOf LoadByteChip.circuit
+      (circuitRowInputOf LoadByteChip.circuit LoadByteChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadByteChip.circuit
+      (circuitRowOutputOf LoadByteChip.circuit LoadByteChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((loadByteChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -2502,7 +2497,7 @@ theorem loadByteAdvanceReady_of_decoded
       ((loadByteChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold loadByteChipDescriptor
-  apply advanceReady_of_literalDescriptor LoadByteChip.kind LoadByteChip.circuit
+  apply advanceReady_of_literalDescriptor LoadByteChip.kind LoadByteChip.circuit LoadByteChip.generation
     rfl .loadByte data physical program state
   exact h
 
@@ -2510,8 +2505,8 @@ omit [Fact (2 ^ 25 < p)] in
 theorem loadByteViewOf_eq (env : Environment (ZMod p)) :
     loadByteViewOf env =
       LoadByteChip.rowView
-        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
+        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).rowInput env)
+        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).rowOutput env) := by
   unfold loadByteViewOf
   rw [circuitRowInputOf_eq_component, circuitRowOutputOf_eq_component]
 
@@ -2540,8 +2535,8 @@ omit [Fact (2 ^ 25 < p)] in
 theorem loadByteRamAccessOf_eq (env : Environment (ZMod p)) :
     loadByteRamAccessOf env =
       LoadByteChip.ramAccessView
-        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) := by
+        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).rowInput env)
+        (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).rowOutput env) := by
   unfold loadByteRamAccessOf
   rw [circuitRowInputOf_eq_component, circuitRowOutputOf_eq_component]
 
@@ -2567,21 +2562,21 @@ theorem loadByteViewOf_decoded
 
 theorem loadByteViewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
     (real : (loadByteViewOf (Environment.fromArray physical data)).is_real = 1) :
     ViewClockBounds (loadByteViewOf (Environment.fromArray physical data)) := by
   rw [loadByteViewOf_eq] at real ⊢
-  exact viewClockBounds_of_cpuStateContract LoadByteChip.circuit LoadByteChip.rowView
+  exact viewClockBounds_of_cpuStateContract LoadByteChip.circuit LoadByteChip.generation LoadByteChip.rowView
     LoadByteChip.cpuStateTimeContract data physical guarantees real
 
 theorem loadByteTimestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
     (real : (loadByteViewOf (Environment.fromArray physical data)).is_real = 1) :
@@ -2590,14 +2585,14 @@ theorem loadByteTimestampBounds_env
       (loadByteRamAccessOf (Environment.fromArray physical data)) := by
   rw [loadByteViewOf_eq] at real ⊢
   rw [loadByteRamAccessOf_eq]
-  exact loadMemoryTimestampBounds_of_contracts LoadByteChip.circuit
+  exact loadMemoryTimestampBounds_of_contracts LoadByteChip.circuit LoadByteChip.generation
     LoadByteChip.rowView LoadByteChip.ramAccessView LoadByteChip.ramTimestampContract
     LoadByteChip.itypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadByteIsRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
     (real : (loadByteViewOf
@@ -2605,7 +2600,7 @@ theorem loadByteIsRam_env
     RamAccessIsRam (loadByteRamAccessOf (Environment.fromArray physical data)) := by
   rw [loadByteViewOf_eq] at real
   rw [loadByteRamAccessOf_eq]
-  exact ramAccessIsRam_of_addressContract LoadByteChip.circuit
+  exact ramAccessIsRam_of_addressContract LoadByteChip.circuit LoadByteChip.generation
     (fun input cols => some (LoadByteChip.ramAccessView input cols))
     LoadByteChip.isReal LoadByteChip.ramAddressContract data physical constraints
     (by simpa only [LoadByteChip.rowView] using real) _ rfl
@@ -2688,7 +2683,7 @@ theorem typedMemoryInteractions_of_values (chip : SupportedChip p)
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadByte's public exposed Memory list evaluates to the normal-load six-message layout. -/
 theorem loadByteChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (loadMemoryInteractions
         (LoadByteChip.rowView
@@ -2729,12 +2724,12 @@ section LoadHalf
 
 /-- The LoadHalf descriptor in the supported Core registry. -/
 def loadHalfChipDescriptor : SupportedChip p :=
-  ⟨.loadHalf, LoadHalfChip.kind, LoadHalfChip.circuit, rfl⟩
+  ⟨.loadHalf, LoadHalfChip.kind, LoadHalfChip.circuit, LoadHalfChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadHalfChipDescriptor_table :
     (loadHalfChipDescriptor (p := p)).table =
-      ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadHalfChipDescriptor_rdGuard :
@@ -2757,7 +2752,7 @@ theorem loadHalfChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (loadHalfChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadHalfChip.Assumptions
-        (circuitRowInputOf LoadHalfChip.circuit env) env.data := by
+        (circuitRowInputOf LoadHalfChip.circuit LoadHalfChip.generation env) env.data := by
   chipAssumptionsIff loadHalf
 
 omit [Fact (2 ^ 25 < p)] in
@@ -2765,13 +2760,13 @@ omit [Fact (2 ^ 25 < p)] in
 theorem loadHalfAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView env).adapter.op_b_memory.prev_value))
+      ((circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView env).adapter.op_c)
+      (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView env).adapter.op_c)
     (ram : Word.isU64
-      (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.ramAccessView env).priorValue) :
+      (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.ramAccessView env).priorValue) :
     LoadHalfChip.Assumptions
-      (circuitRowInputOf LoadHalfChip.circuit env) data := by
+      (circuitRowInputOf LoadHalfChip.circuit LoadHalfChip.generation env) data := by
   chipLoadAssumptionsEnv loadHalf
 
 /-- Specialize the folded semantic-row transport to LoadHalf. -/
@@ -2779,13 +2774,13 @@ theorem loadHalfSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((loadHalfChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     LoadHalfChip.Spec
-      (circuitRowInputOf LoadHalfChip.circuit
+      (circuitRowInputOf LoadHalfChip.circuit LoadHalfChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadHalfChip.circuit
+      (circuitRowOutputOf LoadHalfChip.circuit LoadHalfChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold loadHalfChipDescriptor at h
-  exact chipSpec_of_literalDescriptor LoadHalfChip.kind LoadHalfChip.circuit
+  exact chipSpec_of_literalDescriptor LoadHalfChip.kind LoadHalfChip.circuit LoadHalfChip.generation
     rfl .loadHalf data physical h
 
 /-- Specialize the folded readiness transport to LoadHalf. -/
@@ -2793,9 +2788,9 @@ theorem loadHalfAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : LoadHalfChip.AdvanceReady
-      (circuitRowInputOf LoadHalfChip.circuit
+      (circuitRowInputOf LoadHalfChip.circuit LoadHalfChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadHalfChip.circuit
+      (circuitRowOutputOf LoadHalfChip.circuit LoadHalfChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((loadHalfChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -2803,14 +2798,14 @@ theorem loadHalfAdvanceReady_of_decoded
       ((loadHalfChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold loadHalfChipDescriptor
-  apply advanceReady_of_literalDescriptor LoadHalfChip.kind LoadHalfChip.circuit
+  apply advanceReady_of_literalDescriptor LoadHalfChip.kind LoadHalfChip.circuit LoadHalfChip.generation
     rfl .loadHalf data physical program state
   exact h
 
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadHalf's folded view exposes its physical non-x0 route flag without evaluating the output. -/
 theorem loadHalfView_opA0 (env : Environment (ZMod p)) :
-    (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView env).adapter.op_a_0 =
+    (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView env).adapter.op_a_0 =
       Expression.eval env
         (varFromOffset (F := ZMod p) LoadHalfChip.Inputs 0).adapter.op_a_0 := by
   rw [circuitRowViewOf_eq_typed]
@@ -3025,59 +3020,59 @@ theorem loadHalfChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨loadHalfChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView
+      circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded loadHalf
 
 theorem loadHalfChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨loadHalfChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.ramAccessView
+      circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded loadHalf
 
 theorem loadHalfChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView
+    (real : (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView
+    ViewClockBounds (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv loadHalf
 
 theorem loadHalfChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView
+    (real : (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     LoadMemoryTimestampBounds
-      (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView
+      (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.ramAccessView
+      (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact loadMemoryTimestampBounds_of_contracts LoadHalfChip.circuit
+  exact loadMemoryTimestampBounds_of_contracts LoadHalfChip.circuit LoadHalfChip.generation
     LoadHalfChip.rowView LoadHalfChip.ramAccessView LoadHalfChip.ramTimestampContract
     LoadHalfChip.itypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadHalfChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.rowView
+    (real : (circuitRowViewOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.ramAccessView
+      (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv loadHalf LoadHalfChip.isReal
 
@@ -3114,7 +3109,7 @@ theorem loadHalfChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadHalf's public exposed Memory list evaluates to the normal-load six-message layout. -/
 theorem loadHalfChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (loadMemoryInteractions
         (LoadHalfChip.rowView
@@ -3155,12 +3150,12 @@ section LoadWord
 
 /-- The LoadWord descriptor in the supported Core registry. -/
 def loadWordChipDescriptor : SupportedChip p :=
-  ⟨.loadWord, LoadWordChip.kind, LoadWordChip.circuit, rfl⟩
+  ⟨.loadWord, LoadWordChip.kind, LoadWordChip.circuit, LoadWordChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadWordChipDescriptor_table :
     (loadWordChipDescriptor (p := p)).table =
-      ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadWordChipDescriptor_rdGuard :
@@ -3183,7 +3178,7 @@ theorem loadWordChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (loadWordChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadWordChip.Assumptions
-        (circuitRowInputOf LoadWordChip.circuit env) env.data := by
+        (circuitRowInputOf LoadWordChip.circuit LoadWordChip.generation env) env.data := by
   chipAssumptionsIff loadWord
 
 omit [Fact (2 ^ 25 < p)] in
@@ -3191,13 +3186,13 @@ omit [Fact (2 ^ 25 < p)] in
 theorem loadWordAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView env).adapter.op_b_memory.prev_value))
+      ((circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView env).adapter.op_c)
+      (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView env).adapter.op_c)
     (ram : Word.isU64
-      (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.ramAccessView env).priorValue) :
+      (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.ramAccessView env).priorValue) :
     LoadWordChip.Assumptions
-      (circuitRowInputOf LoadWordChip.circuit env) data := by
+      (circuitRowInputOf LoadWordChip.circuit LoadWordChip.generation env) data := by
   chipLoadAssumptionsEnv loadWord
 
 /-- Specialize the folded semantic-row transport to LoadWord. -/
@@ -3205,13 +3200,13 @@ theorem loadWordSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((loadWordChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     LoadWordChip.Spec
-      (circuitRowInputOf LoadWordChip.circuit
+      (circuitRowInputOf LoadWordChip.circuit LoadWordChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadWordChip.circuit
+      (circuitRowOutputOf LoadWordChip.circuit LoadWordChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold loadWordChipDescriptor at h
-  exact chipSpec_of_literalDescriptor LoadWordChip.kind LoadWordChip.circuit
+  exact chipSpec_of_literalDescriptor LoadWordChip.kind LoadWordChip.circuit LoadWordChip.generation
     rfl .loadWord data physical h
 
 /-- Specialize the folded readiness transport to LoadWord. -/
@@ -3219,9 +3214,9 @@ theorem loadWordAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : LoadWordChip.AdvanceReady
-      (circuitRowInputOf LoadWordChip.circuit
+      (circuitRowInputOf LoadWordChip.circuit LoadWordChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadWordChip.circuit
+      (circuitRowOutputOf LoadWordChip.circuit LoadWordChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((loadWordChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -3229,14 +3224,14 @@ theorem loadWordAdvanceReady_of_decoded
       ((loadWordChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold loadWordChipDescriptor
-  apply advanceReady_of_literalDescriptor LoadWordChip.kind LoadWordChip.circuit
+  apply advanceReady_of_literalDescriptor LoadWordChip.kind LoadWordChip.circuit LoadWordChip.generation
     rfl .loadWord data physical program state
   exact h
 
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadWord's folded view exposes its physical non-x0 route flag without evaluating the output. -/
 theorem loadWordView_opA0 (env : Environment (ZMod p)) :
-    (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView env).adapter.op_a_0 =
+    (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView env).adapter.op_a_0 =
       Expression.eval env
         (varFromOffset (F := ZMod p) LoadWordChip.Inputs 0).adapter.op_a_0 := by
   rw [circuitRowViewOf_eq_typed]
@@ -3448,59 +3443,59 @@ theorem loadWordChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨loadWordChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView
+      circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded loadWord
 
 theorem loadWordChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨loadWordChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf LoadWordChip.circuit LoadWordChip.ramAccessView
+      circuitRamAccessOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded loadWord
 
 theorem loadWordChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView
+    (real : (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView
+    ViewClockBounds (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv loadWord
 
 theorem loadWordChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView
+    (real : (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     LoadMemoryTimestampBounds
-      (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView
+      (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.ramAccessView
+      (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact loadMemoryTimestampBounds_of_contracts LoadWordChip.circuit
+  exact loadMemoryTimestampBounds_of_contracts LoadWordChip.circuit LoadWordChip.generation
     LoadWordChip.rowView LoadWordChip.ramAccessView LoadWordChip.ramTimestampContract
     LoadWordChip.itypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadWordChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadWordChip.circuit LoadWordChip.rowView
+    (real : (circuitRowViewOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.ramAccessView
+      (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv loadWord LoadWordChip.isReal
 
@@ -3537,7 +3532,7 @@ theorem loadWordChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadWord's public exposed Memory list evaluates to the normal-load six-message layout. -/
 theorem loadWordChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (loadMemoryInteractions
         (LoadWordChip.rowView
@@ -3578,12 +3573,12 @@ section LoadDouble
 
 /-- The LoadDouble descriptor in the supported Core registry. -/
 def loadDoubleChipDescriptor : SupportedChip p :=
-  ⟨.loadDouble, LoadDoubleChip.kind, LoadDoubleChip.circuit, rfl⟩
+  ⟨.loadDouble, LoadDoubleChip.kind, LoadDoubleChip.circuit, LoadDoubleChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadDoubleChipDescriptor_table :
     (loadDoubleChipDescriptor (p := p)).table =
-      ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadDoubleChipDescriptor_rdGuard :
@@ -3606,7 +3601,7 @@ theorem loadDoubleChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (loadDoubleChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadDoubleChip.Assumptions
-        (circuitRowInputOf LoadDoubleChip.circuit env) env.data := by
+        (circuitRowInputOf LoadDoubleChip.circuit LoadDoubleChip.generation env) env.data := by
   chipAssumptionsIff loadDouble
 
 omit [Fact (2 ^ 25 < p)] in
@@ -3614,13 +3609,13 @@ omit [Fact (2 ^ 25 < p)] in
 theorem loadDoubleAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView env).adapter.op_b_memory.prev_value))
+      ((circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView env).adapter.op_c)
+      (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView env).adapter.op_c)
     (ram : Word.isU64
-      (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.ramAccessView env).priorValue) :
+      (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.ramAccessView env).priorValue) :
     LoadDoubleChip.Assumptions
-      (circuitRowInputOf LoadDoubleChip.circuit env) data := by
+      (circuitRowInputOf LoadDoubleChip.circuit LoadDoubleChip.generation env) data := by
   chipLoadAssumptionsEnv loadDouble
 
 /-- Specialize the folded semantic-row transport to LoadDouble. -/
@@ -3628,13 +3623,13 @@ theorem loadDoubleSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((loadDoubleChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     LoadDoubleChip.Spec
-      (circuitRowInputOf LoadDoubleChip.circuit
+      (circuitRowInputOf LoadDoubleChip.circuit LoadDoubleChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadDoubleChip.circuit
+      (circuitRowOutputOf LoadDoubleChip.circuit LoadDoubleChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold loadDoubleChipDescriptor at h
-  exact chipSpec_of_literalDescriptor LoadDoubleChip.kind LoadDoubleChip.circuit
+  exact chipSpec_of_literalDescriptor LoadDoubleChip.kind LoadDoubleChip.circuit LoadDoubleChip.generation
     rfl .loadDouble data physical h
 
 /-- Specialize the folded readiness transport to LoadDouble. -/
@@ -3642,9 +3637,9 @@ theorem loadDoubleAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : LoadDoubleChip.AdvanceReady
-      (circuitRowInputOf LoadDoubleChip.circuit
+      (circuitRowInputOf LoadDoubleChip.circuit LoadDoubleChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadDoubleChip.circuit
+      (circuitRowOutputOf LoadDoubleChip.circuit LoadDoubleChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((loadDoubleChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -3652,14 +3647,14 @@ theorem loadDoubleAdvanceReady_of_decoded
       ((loadDoubleChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold loadDoubleChipDescriptor
-  apply advanceReady_of_literalDescriptor LoadDoubleChip.kind LoadDoubleChip.circuit
+  apply advanceReady_of_literalDescriptor LoadDoubleChip.kind LoadDoubleChip.circuit LoadDoubleChip.generation
     rfl .loadDouble data physical program state
   exact h
 
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadDouble's folded view exposes its physical non-x0 route flag without evaluating the output. -/
 theorem loadDoubleView_opA0 (env : Environment (ZMod p)) :
-    (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView env).adapter.op_a_0 =
+    (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView env).adapter.op_a_0 =
       Expression.eval env
         (varFromOffset (F := ZMod p) LoadDoubleChip.Inputs 0).adapter.op_a_0 := by
   rw [circuitRowViewOf_eq_typed]
@@ -3741,46 +3736,46 @@ theorem loadDoubleChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨loadDoubleChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView
+      circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded loadDouble
 
 theorem loadDoubleChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨loadDoubleChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.ramAccessView
+      circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded loadDouble
 
 theorem loadDoubleChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView
+    (real : (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView
+    ViewClockBounds (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv loadDouble
 
 theorem loadDoubleChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView
+    (real : (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     LoadMemoryTimestampBounds
-      (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView
+      (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.ramAccessView
+      (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact loadMemoryTimestampBounds_of_contracts LoadDoubleChip.circuit
+  exact loadMemoryTimestampBounds_of_contracts LoadDoubleChip.circuit LoadDoubleChip.generation
     LoadDoubleChip.rowView LoadDoubleChip.ramAccessView
     LoadDoubleChip.ramTimestampContract LoadDoubleChip.itypeTimestampContract
     data physical constraints guarantees real
@@ -3788,13 +3783,13 @@ theorem loadDoubleChip_timestampBounds_env
 omit [Fact (2 ^ 25 < p)] in
 theorem loadDoubleChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.rowView
+    (real : (circuitRowViewOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.ramAccessView
+      (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv loadDouble (fun input => input.is_real)
 
@@ -3831,7 +3826,7 @@ theorem loadDoubleChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadDouble's public exposed Memory list evaluates to the normal-load six-message layout. -/
 theorem loadDoubleChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (loadMemoryInteractions
         (LoadDoubleChip.rowView
@@ -3873,12 +3868,12 @@ section LoadX0
 
 /-- The LoadX0 descriptor in the supported Core registry. -/
 def loadX0ChipDescriptor : SupportedChip p :=
-  ⟨.loadX0, LoadX0Chip.kind, LoadX0Chip.circuit, rfl⟩
+  ⟨.loadX0, LoadX0Chip.kind, LoadX0Chip.circuit, LoadX0Chip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadX0ChipDescriptor_table :
     (loadX0ChipDescriptor (p := p)).table =
-      ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadX0ChipDescriptor_rdGuard :
@@ -3901,7 +3896,7 @@ theorem loadX0ChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (loadX0ChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       LoadX0Chip.Assumptions
-        (circuitRowInputOf LoadX0Chip.circuit env) env.data := by
+        (circuitRowInputOf LoadX0Chip.circuit LoadX0Chip.generation env) env.data := by
   chipAssumptionsIff loadX0
 
 omit [Fact (2 ^ 25 < p)] in
@@ -3909,13 +3904,13 @@ omit [Fact (2 ^ 25 < p)] in
 theorem loadX0Assumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView env).adapter.op_b_memory.prev_value))
+      ((circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView env).adapter.op_c)
+      (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView env).adapter.op_c)
     (ram : Word.isU64
-      (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.ramAccessView env).priorValue) :
+      (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.ramAccessView env).priorValue) :
     LoadX0Chip.Assumptions
-      (circuitRowInputOf LoadX0Chip.circuit env) data := by
+      (circuitRowInputOf LoadX0Chip.circuit LoadX0Chip.generation env) data := by
   chipLoadAssumptionsEnv loadX0
 
 /-- Specialize the folded semantic-row transport to LoadX0. -/
@@ -3923,13 +3918,13 @@ theorem loadX0Spec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((loadX0ChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     LoadX0Chip.Spec
-      (circuitRowInputOf LoadX0Chip.circuit
+      (circuitRowInputOf LoadX0Chip.circuit LoadX0Chip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadX0Chip.circuit
+      (circuitRowOutputOf LoadX0Chip.circuit LoadX0Chip.generation
         (Environment.fromArray physical data))
       data := by
   unfold loadX0ChipDescriptor at h
-  exact chipSpec_of_literalDescriptor LoadX0Chip.kind LoadX0Chip.circuit
+  exact chipSpec_of_literalDescriptor LoadX0Chip.kind LoadX0Chip.circuit LoadX0Chip.generation
     rfl .loadX0 data physical h
 
 /-- Specialize the folded readiness transport to LoadX0. -/
@@ -3937,9 +3932,9 @@ theorem loadX0AdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : LoadX0Chip.advanceReady
-      (circuitRowInputOf LoadX0Chip.circuit
+      (circuitRowInputOf LoadX0Chip.circuit LoadX0Chip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf LoadX0Chip.circuit
+      (circuitRowOutputOf LoadX0Chip.circuit LoadX0Chip.generation
         (Environment.fromArray physical data))
       program state) :
     ((loadX0ChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -3947,7 +3942,7 @@ theorem loadX0AdvanceReady_of_decoded
       ((loadX0ChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold loadX0ChipDescriptor
-  apply advanceReady_of_literalDescriptor LoadX0Chip.kind LoadX0Chip.circuit
+  apply advanceReady_of_literalDescriptor LoadX0Chip.kind LoadX0Chip.circuit LoadX0Chip.generation
     rfl .loadX0
     data physical program state
   exact h
@@ -3955,7 +3950,7 @@ theorem loadX0AdvanceReady_of_decoded
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadX0's folded view exposes its physical `x0` route flag without evaluating the output. -/
 theorem loadX0View_opA0 (env : Environment (ZMod p)) :
-    (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView env).adapter.op_a_0 =
+    (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView env).adapter.op_a_0 =
       Expression.eval env
         (varFromOffset (F := ZMod p) LoadX0Chip.Inputs 0).adapter.op_a_0 := by
   rw [circuitRowViewOf_eq_typed]
@@ -3968,7 +3963,7 @@ theorem loadX0View_opA0 (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadX0's folded view exposes the seven-selector activity sum. -/
 theorem loadX0View_isReal (env : Environment (ZMod p)) :
-    (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView env).is_real =
+    (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView env).is_real =
       Expression.eval env
           (varFromOffset (F := ZMod p) LoadX0Chip.Inputs 0).is_lb +
         Expression.eval env
@@ -4508,59 +4503,59 @@ theorem loadX0Chip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨loadX0ChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView
+      circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded loadX0
 
 theorem loadX0Chip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨loadX0ChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.ramAccessView
+      circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded loadX0
 
 theorem loadX0Chip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView
+    (real : (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView
+    ViewClockBounds (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv loadX0
 
 theorem loadX0Chip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView
+    (real : (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     ImmutableRamTimestampBounds
-      (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView
+      (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.ramAccessView
+      (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact immutableRamTimestampBounds_of_contracts LoadX0Chip.circuit
+  exact immutableRamTimestampBounds_of_contracts LoadX0Chip.circuit LoadX0Chip.generation
     LoadX0Chip.rowView LoadX0Chip.ramAccessView LoadX0Chip.ramTimestampContract
     LoadX0Chip.immutableItypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem loadX0Chip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.rowView
+    (real : (circuitRowViewOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.ramAccessView
+      (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv loadX0 LoadX0Chip.isReal
 
@@ -4597,7 +4592,7 @@ theorem loadX0Chip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- LoadX0's public exposed Memory list evaluates to the immutable RAM/I-type six-message layout. -/
 theorem loadX0Chip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableRamMemoryInteractions
         (LoadX0Chip.rowView
@@ -4638,12 +4633,12 @@ section StoreByte
 
 /-- The StoreByte descriptor in the supported Core registry. -/
 def storeByteChipDescriptor : SupportedChip p :=
-  ⟨.storeByte, StoreByteChip.kind, StoreByteChip.circuit, rfl⟩
+  ⟨.storeByte, StoreByteChip.kind, StoreByteChip.circuit, StoreByteChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeByteChipDescriptor_table :
     (storeByteChipDescriptor (p := p)).table =
-      ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeByteChipDescriptor_view (input : StoreByteChip.Inputs (ZMod p))
@@ -4666,21 +4661,21 @@ theorem storeByteChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (storeByteChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreByteChip.Assumptions
-        (circuitRowInputOf StoreByteChip.circuit env) env.data := by
+        (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation env) env.data := by
   chipAssumptionsIff storeByte
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeByteAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf StoreByteChip.circuit
+      ((circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation
         StoreByteChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView env).adapter.op_c)
+      (circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView env).adapter.op_c)
     (storeValue : Word.isU64
-      (circuitRowInputOf StoreByteChip.circuit env).store_value) :
+      (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation env).store_value) :
     StoreByteChip.Assumptions
-      (circuitRowInputOf StoreByteChip.circuit env) data := by
+      (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation env) data := by
   rw [circuitRowViewOf_eq_typed] at base immediate
   unfold StoreByteChip.Assumptions
   refine ⟨?_, ?_, fun _ => storeValue⟩
@@ -4693,22 +4688,22 @@ theorem storeByteSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((storeByteChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     StoreByteChip.Spec
-      (circuitRowInputOf StoreByteChip.circuit
+      (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreByteChip.circuit
+      (circuitRowOutputOf StoreByteChip.circuit StoreByteChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold storeByteChipDescriptor at h
-  exact chipSpec_of_literalDescriptor StoreByteChip.kind StoreByteChip.circuit
+  exact chipSpec_of_literalDescriptor StoreByteChip.kind StoreByteChip.circuit StoreByteChip.generation
     rfl .storeByte data physical h
 
 theorem storeByteAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : StoreByteChip.AdvanceReady
-      (circuitRowInputOf StoreByteChip.circuit
+      (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreByteChip.circuit
+      (circuitRowOutputOf StoreByteChip.circuit StoreByteChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((storeByteChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -4716,7 +4711,7 @@ theorem storeByteAdvanceReady_of_decoded
       ((storeByteChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold storeByteChipDescriptor
-  apply advanceReady_of_literalDescriptor StoreByteChip.kind StoreByteChip.circuit
+  apply advanceReady_of_literalDescriptor StoreByteChip.kind StoreByteChip.circuit StoreByteChip.generation
     rfl .storeByte data physical program state
   exact h
 
@@ -5121,13 +5116,12 @@ theorem StoreByteChip.byteBounds_of_mainGuarantees
     (Operations.mem_interactions_of_mem_shallowInteractions memoryMem) (by rfl)
   have registerGuarantee := (ChannelInteraction.toRaw_guarantees env registerPull).mp registerRaw
   have memoryGuarantee := (ChannelInteraction.toRaw_guarantees env memoryPull).mp memoryRaw
-  have negReal : -(Expression.eval env input.is_real) = -1 := by rw [real]
   have registerMult :
-      (fun x => Expression.eval env x) registerPull.toRaw.mult = -1 := by
-    simpa only [registerPull, circuit_norm] using negReal
+      (fun x => Expression.eval env x) registerPull.toRaw.mult = 1 := by
+    simpa only [registerPull, circuit_norm] using real
   have memoryMult :
-      (fun x => Expression.eval env x) memoryPull.toRaw.mult = -1 := by
-    simpa only [memoryPull, circuit_norm] using negReal
+      (fun x => Expression.eval env x) memoryPull.toRaw.mult = 1 := by
+    simpa only [memoryPull, circuit_norm] using real
   have registerSpec : ByteRowSpec (Eval.eval env registerPull.msg) := by
     have guarantee := registerGuarantee (by rfl) (by simpa only [circuit_norm] using registerMult)
     change ByteRowSpec (Eval.eval env registerPull.msg) at guarantee
@@ -5532,24 +5526,24 @@ prior Memory word. -/
 theorem StoreByteChip.storeValue_isU64_of_constraints
     (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+      ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
         Component (ZMod p)).operations.ConstraintsHold env)
     (guarantees :
-      ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+      ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
         Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env)
     (real :
-      (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
         Component (ZMod p)).rowInput env).is_real = 1)
     (prior : Word.isU64
-      (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
         Component (ZMod p)).rowInput env).memory_access.prev_value) :
     Word.isU64
-      (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
         Component (ZMod p)).rowInput env).store_value := by
   let input : Var StoreByteChip.Inputs (ZMod p) := varFromOffset StoreByteChip.Inputs 0
   let offset := size StoreByteChip.Inputs
   let addressInput : Var AddressOperation.Inputs (ZMod p) := storeByteAddressInput input
-  let component : Component (ZMod p) := { circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := StoreByteChip.circuit, Assumptions := (StoreByteChip.circuit).Assumptions, generation := StoreByteChip.generation }
   have rowConstraints : component.rowOperations.ConstraintsHold env :=
     (Component.constraintsHold_iff env).mp constraints
   have mainConstraints :
@@ -5696,59 +5690,59 @@ theorem storeByteChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨storeByteChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView
+      circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded storeByte
 
 theorem storeByteChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨storeByteChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf StoreByteChip.circuit StoreByteChip.ramAccessView
+      circuitRamAccessOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded storeByte
 
 theorem storeByteChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView
+    (real : (circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView
+    ViewClockBounds (circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv storeByte
 
 theorem storeByteChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView
+    (real : (circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     ImmutableRamTimestampBounds
-      (circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView
+      (circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf StoreByteChip.circuit StoreByteChip.ramAccessView
+      (circuitRamAccessOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact immutableRamTimestampBounds_of_contracts StoreByteChip.circuit
+  exact immutableRamTimestampBounds_of_contracts StoreByteChip.circuit StoreByteChip.generation
     StoreByteChip.rowView StoreByteChip.ramAccessView StoreByteChip.ramTimestampContract
     StoreByteChip.immutableItypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeByteChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreByteChip.circuit StoreByteChip.rowView
+    (real : (circuitRowViewOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf StoreByteChip.circuit StoreByteChip.ramAccessView
+      (circuitRamAccessOf StoreByteChip.circuit StoreByteChip.generation StoreByteChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv storeByte (fun input => input.is_real)
 
@@ -5785,7 +5779,7 @@ theorem storeByteChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- StoreByte's public exposed Memory list evaluates to the immutable RAM/I-type layout. -/
 theorem storeByteChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableRamMemoryInteractions
         (StoreByteChip.rowView
@@ -5826,12 +5820,12 @@ section StoreHalf
 
 /-- The StoreHalf descriptor in the supported Core registry. -/
 def storeHalfChipDescriptor : SupportedChip p :=
-  ⟨.storeHalf, StoreHalfChip.kind, StoreHalfChip.circuit, rfl⟩
+  ⟨.storeHalf, StoreHalfChip.kind, StoreHalfChip.circuit, StoreHalfChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeHalfChipDescriptor_table :
     (storeHalfChipDescriptor (p := p)).table =
-      ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeHalfChipDescriptor_view (input : StoreHalfChip.Inputs (ZMod p))
@@ -5854,21 +5848,21 @@ theorem storeHalfChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (storeHalfChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreHalfChip.Assumptions
-        (circuitRowInputOf StoreHalfChip.circuit env) env.data := by
+        (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation env) env.data := by
   chipAssumptionsIff storeHalf
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeHalfAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf StoreHalfChip.circuit
+      ((circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation
         StoreHalfChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView env).adapter.op_c)
+      (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView env).adapter.op_c)
     (storeValue : Word.isU64
-      (circuitRowInputOf StoreHalfChip.circuit env).store_value) :
+      (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation env).store_value) :
     StoreHalfChip.Assumptions
-      (circuitRowInputOf StoreHalfChip.circuit env) data := by
+      (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation env) data := by
   rw [circuitRowViewOf_eq_typed] at base immediate
   unfold StoreHalfChip.Assumptions
   refine ⟨?_, ?_, fun _ => storeValue⟩
@@ -5881,22 +5875,22 @@ theorem storeHalfSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((storeHalfChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     StoreHalfChip.Spec
-      (circuitRowInputOf StoreHalfChip.circuit
+      (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreHalfChip.circuit
+      (circuitRowOutputOf StoreHalfChip.circuit StoreHalfChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold storeHalfChipDescriptor at h
-  exact chipSpec_of_literalDescriptor StoreHalfChip.kind StoreHalfChip.circuit
+  exact chipSpec_of_literalDescriptor StoreHalfChip.kind StoreHalfChip.circuit StoreHalfChip.generation
     rfl .storeHalf data physical h
 
 theorem storeHalfAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : StoreHalfChip.AdvanceReady
-      (circuitRowInputOf StoreHalfChip.circuit
+      (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreHalfChip.circuit
+      (circuitRowOutputOf StoreHalfChip.circuit StoreHalfChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((storeHalfChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -5904,7 +5898,7 @@ theorem storeHalfAdvanceReady_of_decoded
       ((storeHalfChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold storeHalfChipDescriptor
-  apply advanceReady_of_literalDescriptor StoreHalfChip.kind StoreHalfChip.circuit
+  apply advanceReady_of_literalDescriptor StoreHalfChip.kind StoreHalfChip.circuit StoreHalfChip.generation
     rfl .storeHalf data physical program state
   exact h
 
@@ -6216,21 +6210,21 @@ omit [Fact (2 ^ 25 < p)] in
 theorem StoreHalfChip.storeValue_isU64_of_constraints
     (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+      ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
         Component (ZMod p)).operations.ConstraintsHold env)
     (prior : Word.isU64
-      (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
         Component (ZMod p)).rowInput env).memory_access.prev_value)
     (source : Word.isU64
-      (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
         Component (ZMod p)).rowInput env).adapter.op_a_memory.prev_value) :
     Word.isU64
-      (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
         Component (ZMod p)).rowInput env).store_value := by
   let input : Var StoreHalfChip.Inputs (ZMod p) := varFromOffset StoreHalfChip.Inputs 0
   let offset := size StoreHalfChip.Inputs
   let addressInput : Var AddressOperation.Inputs (ZMod p) := storeHalfAddressInput input
-  let component : Component (ZMod p) := { circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := StoreHalfChip.circuit, Assumptions := (StoreHalfChip.circuit).Assumptions, generation := StoreHalfChip.generation }
   have rowConstraints : component.rowOperations.ConstraintsHold env :=
     (Component.constraintsHold_iff env).mp constraints
   have mainConstraints :
@@ -6395,59 +6389,59 @@ theorem storeHalfChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨storeHalfChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView
+      circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded storeHalf
 
 theorem storeHalfChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨storeHalfChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.ramAccessView
+      circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded storeHalf
 
 theorem storeHalfChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView
+    (real : (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView
+    ViewClockBounds (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv storeHalf
 
 theorem storeHalfChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView
+    (real : (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     ImmutableRamTimestampBounds
-      (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView
+      (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.ramAccessView
+      (circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact immutableRamTimestampBounds_of_contracts StoreHalfChip.circuit
+  exact immutableRamTimestampBounds_of_contracts StoreHalfChip.circuit StoreHalfChip.generation
     StoreHalfChip.rowView StoreHalfChip.ramAccessView StoreHalfChip.ramTimestampContract
     StoreHalfChip.immutableItypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeHalfChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.rowView
+    (real : (circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.ramAccessView
+      (circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.generation StoreHalfChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv storeHalf (fun input => input.is_real)
 
@@ -6484,7 +6478,7 @@ theorem storeHalfChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- StoreHalf's public exposed Memory list evaluates to the immutable RAM/I-type layout. -/
 theorem storeHalfChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableRamMemoryInteractions
         (StoreHalfChip.rowView
@@ -6524,12 +6518,12 @@ section StoreWord
 
 /-- The StoreWord descriptor in the supported Core registry. -/
 def storeWordChipDescriptor : SupportedChip p :=
-  ⟨.storeWord, StoreWordChip.kind, StoreWordChip.circuit, rfl⟩
+  ⟨.storeWord, StoreWordChip.kind, StoreWordChip.circuit, StoreWordChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeWordChipDescriptor_table :
     (storeWordChipDescriptor (p := p)).table =
-      ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeWordChipDescriptor_view (input : StoreWordChip.Inputs (ZMod p))
@@ -6552,21 +6546,21 @@ theorem storeWordChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (storeWordChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreWordChip.Assumptions
-        (circuitRowInputOf StoreWordChip.circuit env) env.data := by
+        (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation env) env.data := by
   chipAssumptionsIff storeWord
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeWordAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf StoreWordChip.circuit
+      ((circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation
         StoreWordChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView env).adapter.op_c)
+      (circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView env).adapter.op_c)
     (storeValue : Word.isU64
-      (circuitRowInputOf StoreWordChip.circuit env).store_value) :
+      (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation env).store_value) :
     StoreWordChip.Assumptions
-      (circuitRowInputOf StoreWordChip.circuit env) data := by
+      (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation env) data := by
   rw [circuitRowViewOf_eq_typed] at base immediate
   unfold StoreWordChip.Assumptions
   refine ⟨?_, ?_, fun _ => storeValue⟩
@@ -6579,22 +6573,22 @@ theorem storeWordSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((storeWordChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     StoreWordChip.Spec
-      (circuitRowInputOf StoreWordChip.circuit
+      (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreWordChip.circuit
+      (circuitRowOutputOf StoreWordChip.circuit StoreWordChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold storeWordChipDescriptor at h
-  exact chipSpec_of_literalDescriptor StoreWordChip.kind StoreWordChip.circuit
+  exact chipSpec_of_literalDescriptor StoreWordChip.kind StoreWordChip.circuit StoreWordChip.generation
     rfl .storeWord data physical h
 
 theorem storeWordAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : StoreWordChip.AdvanceReady
-      (circuitRowInputOf StoreWordChip.circuit
+      (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreWordChip.circuit
+      (circuitRowOutputOf StoreWordChip.circuit StoreWordChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((storeWordChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -6602,7 +6596,7 @@ theorem storeWordAdvanceReady_of_decoded
       ((storeWordChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold storeWordChipDescriptor
-  apply advanceReady_of_literalDescriptor StoreWordChip.kind StoreWordChip.circuit
+  apply advanceReady_of_literalDescriptor StoreWordChip.kind StoreWordChip.circuit StoreWordChip.generation
     rfl .storeWord data physical program state
   exact h
 
@@ -6846,21 +6840,21 @@ pull words; it therefore closes the otherwise circular `MemoryAccess` push preco
 theorem StoreWordChip.storeValue_isU64_of_constraints
     (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+      ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
         Component (ZMod p)).operations.ConstraintsHold env)
     (prior : Word.isU64
-      (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
         Component (ZMod p)).rowInput env).memory_access.prev_value)
     (source : Word.isU64
-      (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
         Component (ZMod p)).rowInput env).adapter.op_a_memory.prev_value) :
     Word.isU64
-      (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+      (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
         Component (ZMod p)).rowInput env).store_value := by
   let input : Var StoreWordChip.Inputs (ZMod p) := varFromOffset StoreWordChip.Inputs 0
   let offset := size StoreWordChip.Inputs
   let addressInput : Var AddressOperation.Inputs (ZMod p) := storeWordAddressInput input
-  let component : Component (ZMod p) := { circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := StoreWordChip.circuit, Assumptions := (StoreWordChip.circuit).Assumptions, generation := StoreWordChip.generation }
   have rowConstraints : component.rowOperations.ConstraintsHold env :=
     (Component.constraintsHold_iff env).mp constraints
   have mainConstraints :
@@ -7027,59 +7021,59 @@ theorem storeWordChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨storeWordChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView
+      circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded storeWord
 
 theorem storeWordChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨storeWordChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf StoreWordChip.circuit StoreWordChip.ramAccessView
+      circuitRamAccessOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded storeWord
 
 theorem storeWordChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView
+    (real : (circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView
+    ViewClockBounds (circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv storeWord
 
 theorem storeWordChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView
+    (real : (circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     ImmutableRamTimestampBounds
-      (circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView
+      (circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf StoreWordChip.circuit StoreWordChip.ramAccessView
+      (circuitRamAccessOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact immutableRamTimestampBounds_of_contracts StoreWordChip.circuit
+  exact immutableRamTimestampBounds_of_contracts StoreWordChip.circuit StoreWordChip.generation
     StoreWordChip.rowView StoreWordChip.ramAccessView StoreWordChip.ramTimestampContract
     StoreWordChip.immutableItypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeWordChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreWordChip.circuit StoreWordChip.rowView
+    (real : (circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf StoreWordChip.circuit StoreWordChip.ramAccessView
+      (circuitRamAccessOf StoreWordChip.circuit StoreWordChip.generation StoreWordChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv storeWord (fun input => input.is_real)
 
@@ -7116,7 +7110,7 @@ theorem storeWordChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- StoreWord's public exposed Memory list evaluates to the immutable RAM/I-type layout. -/
 theorem storeWordChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableRamMemoryInteractions
         (StoreWordChip.rowView
@@ -7156,12 +7150,12 @@ section StoreDouble
 
 /-- The StoreDouble descriptor in the supported Core registry. -/
 def storeDoubleChipDescriptor : SupportedChip p :=
-  ⟨.storeDouble, StoreDoubleChip.kind, StoreDoubleChip.circuit, rfl⟩
+  ⟨.storeDouble, StoreDoubleChip.kind, StoreDoubleChip.circuit, StoreDoubleChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeDoubleChipDescriptor_table :
     (storeDoubleChipDescriptor (p := p)).table =
-      ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeDoubleChipDescriptor_view (input : StoreDoubleChip.Inputs (ZMod p))
@@ -7184,19 +7178,19 @@ theorem storeDoubleChipDescriptor_assumptions_iff
     (env : Environment (ZMod p)) :
     (storeDoubleChipDescriptor (p := p)).table.CircuitAssumptions env ↔
       StoreDoubleChip.Assumptions
-        (circuitRowInputOf StoreDoubleChip.circuit env) env.data := by
+        (circuitRowInputOf StoreDoubleChip.circuit StoreDoubleChip.generation env) env.data := by
   chipAssumptionsIff storeDouble
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeDoubleAssumptions_env
     (env : Environment (ZMod p)) (data : ProverData (ZMod p))
     (base : Word.isU64
-      ((circuitRowViewOf StoreDoubleChip.circuit
+      ((circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation
         StoreDoubleChip.rowView env).adapter.op_b_memory.prev_value))
     (immediate : Word.isU64
-      (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView env).adapter.op_c) :
+      (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView env).adapter.op_c) :
     StoreDoubleChip.Assumptions
-      (circuitRowInputOf StoreDoubleChip.circuit env) data := by
+      (circuitRowInputOf StoreDoubleChip.circuit StoreDoubleChip.generation env) data := by
   rw [circuitRowViewOf_eq_typed] at base immediate
   unfold StoreDoubleChip.Assumptions
   constructor
@@ -7209,22 +7203,22 @@ theorem storeDoubleSpec_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (h : ((storeDoubleChipDescriptor (p := p)).decodeRow data physical).chipSpec data) :
     StoreDoubleChip.Spec
-      (circuitRowInputOf StoreDoubleChip.circuit
+      (circuitRowInputOf StoreDoubleChip.circuit StoreDoubleChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreDoubleChip.circuit
+      (circuitRowOutputOf StoreDoubleChip.circuit StoreDoubleChip.generation
         (Environment.fromArray physical data))
       data := by
   unfold storeDoubleChipDescriptor at h
-  exact chipSpec_of_literalDescriptor StoreDoubleChip.kind StoreDoubleChip.circuit
+  exact chipSpec_of_literalDescriptor StoreDoubleChip.kind StoreDoubleChip.circuit StoreDoubleChip.generation
     rfl .storeDouble data physical h
 
 theorem storeDoubleAdvanceReady_of_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
     (program : GuestProgram) (state : SailState)
     (h : StoreDoubleChip.AdvanceReady
-      (circuitRowInputOf StoreDoubleChip.circuit
+      (circuitRowInputOf StoreDoubleChip.circuit StoreDoubleChip.generation
         (Environment.fromArray physical data))
-      (circuitRowOutputOf StoreDoubleChip.circuit
+      (circuitRowOutputOf StoreDoubleChip.circuit StoreDoubleChip.generation
         (Environment.fromArray physical data))
       program state) :
     ((storeDoubleChipDescriptor (p := p)).decodeRow data physical).kind.advanceReady
@@ -7232,7 +7226,7 @@ theorem storeDoubleAdvanceReady_of_decoded
       ((storeDoubleChipDescriptor (p := p)).decodeRow data physical).cols
       program state := by
   unfold storeDoubleChipDescriptor
-  apply advanceReady_of_literalDescriptor StoreDoubleChip.kind StoreDoubleChip.circuit
+  apply advanceReady_of_literalDescriptor StoreDoubleChip.kind StoreDoubleChip.circuit StoreDoubleChip.generation
     rfl .storeDouble data physical program state
   exact h
 
@@ -7343,59 +7337,59 @@ theorem storeDoubleChip_viewOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     (DecodedInstructionRow.toChipRow
       ⟨storeDoubleChipDescriptor (p := p), physical⟩ data).view =
-      circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView
+      circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView
         (Environment.fromArray physical data) := by
   chipViewOfDecoded storeDouble
 
 theorem storeDoubleChip_ramAccessOf_decoded
     (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     decodedRamAccess ⟨storeDoubleChipDescriptor (p := p), physical⟩ data =
-      circuitRamAccessOf StoreDoubleChip.circuit StoreDoubleChip.ramAccessView
+      circuitRamAccessOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.ramAccessView
         (Environment.fromArray physical data) := by
   chipRamAccessOfDecoded storeDouble
 
 theorem storeDoubleChip_viewClockBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView
+    (real : (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
-    ViewClockBounds (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView
+    ViewClockBounds (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView
       (Environment.fromArray physical data)) := by
   chipViewClockBoundsEnv storeDouble
 
 theorem storeDoubleChip_timestampBounds_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (guarantees : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } :
+    (guarantees : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } :
       Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView
+    (real : (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     ImmutableRamTimestampBounds
-      (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView
+      (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView
         (Environment.fromArray physical data))
-      (circuitRamAccessOf StoreDoubleChip.circuit StoreDoubleChip.ramAccessView
+      (circuitRamAccessOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.ramAccessView
         (Environment.fromArray physical data)) := by
   rw [circuitRowViewOf_eq] at real ⊢
   rw [circuitRamAccessOf_eq]
-  exact immutableRamTimestampBounds_of_contracts StoreDoubleChip.circuit
+  exact immutableRamTimestampBounds_of_contracts StoreDoubleChip.circuit StoreDoubleChip.generation
     StoreDoubleChip.rowView StoreDoubleChip.ramAccessView StoreDoubleChip.ramTimestampContract
     StoreDoubleChip.immutableItypeTimestampContract data physical constraints guarantees real
 
 omit [Fact (2 ^ 25 < p)] in
 theorem storeDoubleChip_isRam_env
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (constraints : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } :
+    (constraints : ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } :
       Component (ZMod p)).operations.ConstraintsHold
         (Environment.fromArray physical data))
-    (real : (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.rowView
+    (real : (circuitRowViewOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.rowView
       (Environment.fromArray physical data)).is_real = 1) :
     RamAccessIsRam
-      (circuitRamAccessOf StoreDoubleChip.circuit StoreDoubleChip.ramAccessView
+      (circuitRamAccessOf StoreDoubleChip.circuit StoreDoubleChip.generation StoreDoubleChip.ramAccessView
         (Environment.fromArray physical data)) := by
   chipIsRamEnv storeDouble (fun input => input.is_real)
 
@@ -7432,7 +7426,7 @@ theorem storeDoubleChip_isRam
 omit [Fact (2 ^ 25 < p)] in
 /-- StoreDouble's public exposed Memory list evaluates to the immutable RAM/I-type layout. -/
 theorem storeDoubleChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := StoreDoubleChip.circuit (p := p), Assumptions := (StoreDoubleChip.circuit (p := p)).Assumptions, generation := StoreDoubleChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (immutableRamMemoryInteractions
         (StoreDoubleChip.rowView

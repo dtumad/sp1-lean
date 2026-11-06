@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.AluX0Chip.Defs
@@ -29,7 +30,7 @@ lemma byteRowSpec_ltu_29_iff {op : ZMod p} :
         rw [opcodeEq]
         norm_cast)
     cases byteOpcode <;> simp only [ByteOpcode.idx] at indexEq
-    all_goals first | omega | skip
+    all_goals try omega
     simp only [ByteOpcode.constrain_LTU, ZMod.val_one, h29] at constrained
     exact constrained.2.2.mp trivial
   · intro h
@@ -68,7 +69,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- rules out the `¬is_real = 0` ∧ `¬-is_real = -1` antecedents), and the immutable reader.
   exact ⟨⟨h_reader ⟨h_bin, h_bin, h_clk⟩,
       h_bin, h_oa1, h_oa2, h_op_lt⟩,
-    fun h1 h0 => off_gate_vacuous h_bin h1 h0,
+    h_bin,
     Or.inr ⟨h_bin, h_bin, h_clk⟩⟩
 
 /-- Honest prover-side row well-formedness: `is_real` binary, the two `op_a_0` forcing gates, the
@@ -102,7 +103,7 @@ theorem completeness :
   · -- the LTU `opcode < 29` byte pull (fires on real rows).
     intro hneg
     simp only [byteChannel]
-    exact byteRowSpec_ltu_29 (h_op_lt (neg_inj.mp hneg))
+    exact byteRowSpec_ltu_29 (h_op_lt hneg)
   · -- `is_real` binary gate.
     rcases h_bin with h | h <;> rw [h] <;> simp
 
@@ -324,14 +325,19 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    AluX0Chip.circuit_main_eq]
+    ((AluX0Chip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [AluX0Chip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.ALUTypeReaderImmutable.circuit, Readers.ALUTypeReaderImmutable.main,
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
     Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.AluX0Chip

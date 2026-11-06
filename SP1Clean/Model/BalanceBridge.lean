@@ -22,7 +22,7 @@ the message (`ZMod.val` + `Array.toList` injectivity), so each `LookupKey`'s ℤ
 `balanceOf` (`intCast_multiplicitySum_map_toAccess`), and the whole adapter — Clean
 `BalancedInteractions` ⇒ native `isConsistentBalanced` over any access list that permutes to the
 `Interaction.toAccess`-image with `{-1, 0, 1}` multiplicities — is
-`isConsistentBalanced_of_balancedInteractions` (the roadmap-W1a core). The remaining input — the
+`isConsistentBalanced_of_logUpBalanced` (the roadmap-W1a core). The remaining input — the
 witness ↔ access-list correspondence itself — is the decode seam
 (`Soundness/WitnessDecode.lean`). -/
 
@@ -114,12 +114,12 @@ theorem intCast_multiplicitySum_map_toAccess_eq_balanceOf
     ((multiplicitySum (interactions.map Interaction.toAccess)
         (keyOf (Interaction.toAccess i₀)) : ℤ) : ZMod p)
         = ((((interactions.filter (fun i => i.msg = i₀.msg)).map
-            (fun i => signedVal i.mult)).sum : ℤ) : ZMod p) := by
+            (fun i => signedVal i.signedMult)).sum : ℤ) : ZMod p) := by
           rw [multiplicitySum, filterKey, h_filter, List.map_map]
           rfl
-    _ = ((interactions.filter (fun i => i.msg = i₀.msg)).map (fun i => i.mult)).sum := by
+    _ = ((interactions.filter (fun i => i.msg = i₀.msg)).map (fun i => i.signedMult)).sum := by
           rw [intCast_list_sum, List.map_map]
-          exact congrArg List.sum (List.map_congr_left fun i _ => intCast_signedVal i.mult)
+          exact congrArg List.sum (List.map_congr_left fun i _ => intCast_signedVal i.signedMult)
     _ = balanceOf interactions i₀.msg := rfl
 
 /-- **Per-key cast-sum zero.** For a single-channel interaction list whose Clean per-message balance
@@ -151,26 +151,43 @@ bus), is natively balanced. The count guard is Clean's own `length < ringChar (Z
 `ringChar = 0` disjunct is impossible at a prime); the per-key `mod p` sums are
 `intCast_multiplicitySum_map_toAccess`; the upgrade to exact `0` is
 `isConsistentBalanced_of_intCast_zero`. -/
-theorem isConsistentBalanced_of_balancedInteractions
+theorem isConsistentBalanced_of_logUpBalanced
     (accesses : LookupAccessList)
     (interactions : List (Interaction (ZMod p))) (channel : RawChannel (ZMod p))
     (h_channel : ∀ i ∈ interactions, i.channel = channel)
     (h_perm : accesses.Perm (interactions.map Interaction.toAccess))
-    (h_bal : BalancedInteractions interactions)
+    (h_count : interactions.length < p)
+    (h_bal : LogUpBalanced interactions)
     (h_bin : ∀ a ∈ accesses, multOf a = -1 ∨ multOf a = 0 ∨ multOf a = 1) :
     isConsistentBalanced accesses := by
   refine isConsistentBalanced_of_intCast_zero (p := p) accesses ?_ h_bin ?_
-  · rcases h_bal.1 with hlt | hchar
-    · rw [h_perm.length_eq, List.length_map]; rwa [ZMod.ringChar_zmod_n] at hlt
-    · rw [ZMod.ringChar_zmod_n] at hchar; exact absurd hchar (Fact.out (p := p.Prime)).ne_zero
+  · simpa only [h_perm.length_eq, List.length_map] using h_count
   · intro k
     rw [multiplicitySum_perm _ _ h_perm k]
-    exact intCast_multiplicitySum_map_toAccess interactions channel h_channel h_bal.2 k
+    exact intCast_multiplicitySum_map_toAccess interactions channel h_channel h_bal k
 
-/-- **Native ℤ balance ⇒ Clean field balance, through `toAccess`.**  Unlike the forward direction,
-this implication needs no binary-multiplicity hypothesis: an integer sum which is literally zero
-casts to zero in the field.  The explicit count premise is exactly Clean's non-overflow side
-condition and is deliberately not inferred from balance. -/
+/-- Exact integer balance casts to the actual LogUp field equation, without a count premise. -/
+theorem logUpBalanced_of_isConsistentBalanced
+    (accesses : LookupAccessList)
+    (interactions : List (Interaction (ZMod p))) (channel : RawChannel (ZMod p))
+    (h_channel : ∀ i ∈ interactions, i.channel = channel)
+    (h_perm : accesses.Perm (interactions.map Interaction.toAccess))
+    (h_bal : isConsistentBalanced accesses) :
+    LogUpBalanced interactions := by
+  intro msg
+  by_cases h_ex : ∃ i ∈ interactions, i.msg = msg
+  · obtain ⟨i₀, hi₀, hmsg⟩ := h_ex
+    rw [← hmsg, ← intCast_multiplicitySum_map_toAccess_eq_balanceOf interactions channel
+      h_channel i₀ hi₀]
+    rw [← multiplicitySum_perm accesses _ h_perm _]
+    simpa only [Int.cast_zero] using congrArg (fun z : ℤ => (z : ZMod p))
+      (h_bal (keyOf (Interaction.toAccess i₀)))
+  · have h_filter : interactions.filter (fun i => i.msg = msg) = [] := by
+      exact List.filter_eq_nil_iff.mpr fun i hi himsg => h_ex ⟨i, hi, by simpa using himsg⟩
+    simp only [balanceOf, h_filter, List.map_nil, List.sum_nil]
+
+
+/-- Integer balance and the complete physical occurrence bound imply Clean's abstract balance. -/
 theorem balancedInteractions_of_isConsistentBalanced
     (accesses : LookupAccessList)
     (interactions : List (Interaction (ZMod p))) (channel : RawChannel (ZMod p))
@@ -179,20 +196,9 @@ theorem balancedInteractions_of_isConsistentBalanced
     (h_count : interactions.length < p)
     (h_bal : isConsistentBalanced accesses) :
     BalancedInteractions interactions := by
-  constructor
-  · left
-    simpa only [ZMod.ringChar_zmod_n] using h_count
-  · intro msg
-    by_cases h_ex : ∃ i ∈ interactions, i.msg = msg
-    · obtain ⟨i₀, hi₀, hmsg⟩ := h_ex
-      rw [← hmsg, ← intCast_multiplicitySum_map_toAccess_eq_balanceOf interactions channel
-        h_channel i₀ hi₀]
-      rw [← multiplicitySum_perm accesses _ h_perm _]
-      simpa only [Int.cast_zero] using congrArg (fun z : ℤ => (z : ZMod p))
-        (h_bal (keyOf (Interaction.toAccess i₀)))
-    · have h_filter : interactions.filter (fun i => i.msg = msg) = [] := by
-        exact List.filter_eq_nil_iff.mpr fun i hi himsg => h_ex ⟨i, hi, by simpa using himsg⟩
-      simp only [balanceOf, h_filter, List.map_nil, List.sum_nil]
+  apply (Balance.logUp (F := ZMod p)).balancedInteractions_of_balanced interactions
+    (by simpa only [Balance.logUp, ComputableRingChar.char_eq, ZMod.ringChar_zmod_n, decide_eq_true_eq] using h_count)
+  exact logUpBalanced_of_isConsistentBalanced accesses interactions channel h_channel h_perm h_bal
 
 end CleanTranslation
 

@@ -12,7 +12,7 @@ LSB-clearing. Key non-obvious moves: `update_elp_state` is a no-op (`update_elp_
 `jump_to (BitVec.update target 0 0#1)` retires via `jump_to_of_mod4_eq_zero` (LSB-clearing guarantees
 4-byte alignment). `JalrChip.kind.view` threads `next_pc = add_operation.value[0] - lsb` (LSB-cleared). -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.JalrSail
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -74,7 +74,7 @@ theorem correct_jalr_native
     rw [← h_lsbclear]; apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
   have hjump : EStateM.run (jump_to (BitVec.update (rs1_val + sign_extend (m := 64) imm) 0 0#1)) sp
       = .ok RETIRE_SUCCESS { sp with regs := sp.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
-    rw [jump_to_of_mod4_eq_zero _ sp hsp_init htgt4, ← h_lsbclear]
+    rw [jump_to_of_mod4_eq_zero _ sp htgt4, ← h_lsbclear]
   simp [spec_jalr, sp1_jalr, execute_JALR, hsp.symm,
     Sail.run_readReg_bind_of_isInitialized _ _ hs, hpc_get, hupd, hsp_rs1,
     Sail.run_readReg_bind_of_isInitialized _ _ hsp_init, hjump,

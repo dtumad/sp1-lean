@@ -11,7 +11,7 @@ given the chip's semantic fact `a_val = op_b + op_c` and the register/PC reads.
 `add_chip_reaches_sail` composes `AddChip.Spec` into the bridge; `AddChip.kind` registers Add
 rows in the heterogeneous trace and soundness capstone. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.AddSail
 
 open Sail LeanRV64D LeanRV64D.Functions

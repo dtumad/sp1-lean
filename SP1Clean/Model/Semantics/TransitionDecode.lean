@@ -14,7 +14,7 @@ semantic relation proves that this computation returns the instruction already j
 official transition evidence.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 open SP1Clean.Soundness.Target
 
 namespace SP1Clean.Semantics

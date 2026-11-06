@@ -38,7 +38,7 @@ Those adapters can disappear when its consumers use the component-local interfac
 native boot and local assemblies.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -88,7 +88,8 @@ its row through `circuitRowViewOf`: name the row environment, extract the decode
 restate the pulled base word and the immediate against the circuit's own row view.  `env`,
 `immediate`, `base` and `immediate'` are all consumed by the caller afterwards, so they are
 introduced non-hygienically. -/
-local macro "chip_base_immediate " viewDecoded:ident ", " circ:ident ", " rowView:ident : tactic =>
+local macro "chip_base_immediate " viewDecoded:ident ", " circ:ident ", " rowView:ident : tactic => do
+  let generation := Lean.mkIdent (circ.getId.getPrefix ++ `generation)
   `(tactic|
     (let $(Lean.mkIdent `env) :=
        Environment.fromArray $(Lean.mkIdent `physical) $(Lean.mkIdent `proverData)
@@ -96,12 +97,12 @@ local macro "chip_base_immediate " viewDecoded:ident ", " circ:ident ", " rowVie
        simp only [programAccess, ProgramAccess.toRow, $viewDecoded:ident,
          circuitRowViewOf_eq_typed, $rowView:ident, Circuits.Types.ITypeReader.toAdapterView])
      have $(Lean.mkIdent `base) : Word.isU64
-         ((circuitRowViewOf $circ $rowView
+         ((circuitRowViewOf $circ $generation $rowView
            $(Lean.mkIdent `env)).adapter.op_b_memory.prev_value) := by
        simpa only [$viewDecoded:ident, $(Lean.mkIdent `env):ident] using
          $(Lean.mkIdent `pulled).2.2
      have $(Lean.mkIdent `immediate') : Word.isU64
-         (circuitRowViewOf $circ $rowView $(Lean.mkIdent `env)).adapter.op_c := by
+         (circuitRowViewOf $circ $generation $rowView $(Lean.mkIdent `env)).adapter.op_c := by
        simpa only [programAccess, ProgramAccess.toRow, $viewDecoded:ident,
          $(Lean.mkIdent `env):ident] using $(Lean.mkIdent `immediate)))
 
@@ -490,8 +491,7 @@ theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (balanced : witness.BalancedChannels)
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness Channels.memoryChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1)
+      IsBool interaction.mult)
     (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
       Channels.memoryChannel) = [])
     (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
@@ -1838,7 +1838,7 @@ private theorem loadByteChip_loadMemoryGroundingData_of_eq
     have assumptions :=
       loadByteAssumptions_env env proverData base immediate' ram
     change LoadByteChip.Assumptions
-      (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadByteChip.circuit (p := p), Assumptions := (LoadByteChip.circuit (p := p)).Assumptions, generation := LoadByteChip.generation } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -1862,8 +1862,8 @@ private theorem loadByteChip_loadMemoryGroundingData_of_eq
     have isRam := loadByteChip_isRam decoded proverData hchip rowConstraints real
     chip_subst loadByteChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) LoadByteChip.circuit env
-    let cols := circuitRowOutputOf (p := p) LoadByteChip.circuit env
+    let input := circuitRowInputOf (p := p) LoadByteChip.circuit LoadByteChip.generation env
+    let cols := circuitRowOutputOf (p := p) LoadByteChip.circuit LoadByteChip.generation env
     have decodedSpec :
         ((loadByteChipDescriptor (p := p)).decodeRow proverData physical).chipSpec
           proverData := chipSpec
@@ -1997,13 +1997,13 @@ private theorem loadHalfChip_loadMemoryGroundingData_of_eq
     chip_base_immediate loadHalfChip_viewOf_decoded, LoadHalfChip.circuit,
       LoadHalfChip.rowView
     have ram : Word.isU64
-        (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.ramAccessView env).priorValue := by
+        (circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.ramAccessView env).priorValue := by
       simpa only [loadHalfChip_loadMemoryInteractionShape,
         loadHalfChip_ramAccessOf_decoded, env] using pulled.1
     have assumptions :=
       loadHalfAssumptions_env env proverData base immediate' ram
     change LoadHalfChip.Assumptions
-      (({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadHalfChip.circuit (p := p), Assumptions := (LoadHalfChip.circuit (p := p)).Assumptions, generation := LoadHalfChip.generation } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2027,10 +2027,10 @@ private theorem loadHalfChip_loadMemoryGroundingData_of_eq
     have isRam := loadHalfChip_isRam decoded proverData hchip rowConstraints real
     chip_subst loadHalfChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) LoadHalfChip.circuit env
-    let cols := circuitRowOutputOf (p := p) LoadHalfChip.circuit env
+    let input := circuitRowInputOf (p := p) LoadHalfChip.circuit LoadHalfChip.generation env
+    let cols := circuitRowOutputOf (p := p) LoadHalfChip.circuit LoadHalfChip.generation env
     let access :=
-      circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.ramAccessView env
+      circuitRamAccessOf LoadHalfChip.circuit LoadHalfChip.generation LoadHalfChip.ramAccessView env
     have decodedSpec :
         ((loadHalfChipDescriptor (p := p)).decodeRow proverData physical).chipSpec
           proverData := chipSpec
@@ -2197,13 +2197,13 @@ private theorem loadWordChip_loadMemoryGroundingData_of_eq
     chip_base_immediate loadWordChip_viewOf_decoded, LoadWordChip.circuit,
       LoadWordChip.rowView
     have ram : Word.isU64
-        (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.ramAccessView env).priorValue := by
+        (circuitRamAccessOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.ramAccessView env).priorValue := by
       simpa only [loadWordChip_loadMemoryInteractionShape,
         loadWordChip_ramAccessOf_decoded, env] using pulled.1
     have assumptions :=
       loadWordAssumptions_env env proverData base immediate' ram
     change LoadWordChip.Assumptions
-      (({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadWordChip.circuit (p := p), Assumptions := (LoadWordChip.circuit (p := p)).Assumptions, generation := LoadWordChip.generation } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2227,10 +2227,10 @@ private theorem loadWordChip_loadMemoryGroundingData_of_eq
     have isRam := loadWordChip_isRam decoded proverData hchip rowConstraints real
     chip_subst loadWordChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) LoadWordChip.circuit env
-    let cols := circuitRowOutputOf (p := p) LoadWordChip.circuit env
+    let input := circuitRowInputOf (p := p) LoadWordChip.circuit LoadWordChip.generation env
+    let cols := circuitRowOutputOf (p := p) LoadWordChip.circuit LoadWordChip.generation env
     let access :=
-      circuitRamAccessOf LoadWordChip.circuit LoadWordChip.ramAccessView env
+      circuitRamAccessOf LoadWordChip.circuit LoadWordChip.generation LoadWordChip.ramAccessView env
     have decodedSpec :
         ((loadWordChipDescriptor (p := p)).decodeRow proverData physical).chipSpec
           proverData := chipSpec
@@ -2410,14 +2410,14 @@ private theorem loadDoubleChip_loadMemoryGroundingData_of_eq
     chip_base_immediate loadDoubleChip_viewOf_decoded, LoadDoubleChip.circuit,
       LoadDoubleChip.rowView
     have ram : Word.isU64
-        (circuitRamAccessOf LoadDoubleChip.circuit
+        (circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.generation
           LoadDoubleChip.ramAccessView env).priorValue := by
       simpa only [loadDoubleChip_loadMemoryInteractionShape,
         loadDoubleChip_ramAccessOf_decoded, env] using pulled.1
     have assumptions :=
       loadDoubleAssumptions_env env proverData base immediate' ram
     change LoadDoubleChip.Assumptions
-      (({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadDoubleChip.circuit (p := p), Assumptions := (LoadDoubleChip.circuit (p := p)).Assumptions, generation := LoadDoubleChip.generation } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2442,10 +2442,10 @@ private theorem loadDoubleChip_loadMemoryGroundingData_of_eq
     have isRam := loadDoubleChip_isRam decoded proverData hchip rowConstraints real
     chip_subst loadDoubleChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) LoadDoubleChip.circuit env
-    let cols := circuitRowOutputOf (p := p) LoadDoubleChip.circuit env
+    let input := circuitRowInputOf (p := p) LoadDoubleChip.circuit LoadDoubleChip.generation env
+    let cols := circuitRowOutputOf (p := p) LoadDoubleChip.circuit LoadDoubleChip.generation env
     let access :=
-      circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.ramAccessView env
+      circuitRamAccessOf LoadDoubleChip.circuit LoadDoubleChip.generation LoadDoubleChip.ramAccessView env
     have decodedSpec :
         ((loadDoubleChipDescriptor (p := p)).decodeRow proverData physical).chipSpec
           proverData := chipSpec
@@ -2660,13 +2660,13 @@ private theorem loadX0Chip_immutableLoadMemoryGroundingData_of_eq
     chip_base_immediate loadX0Chip_viewOf_decoded, LoadX0Chip.circuit,
       LoadX0Chip.rowView
     have ram : Word.isU64
-        (circuitRamAccessOf LoadX0Chip.circuit
+        (circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.generation
           LoadX0Chip.ramAccessView env).priorValue := by
       simpa only [loadX0Chip_immutableRamMemoryInteractionShape,
         loadX0Chip_ramAccessOf_decoded, env] using pulled.1
     have assumptions := loadX0Assumptions_env env proverData base immediate' ram
     change LoadX0Chip.Assumptions
-      (({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
+      (({ circuit := LoadX0Chip.circuit (p := p), Assumptions := (LoadX0Chip.circuit (p := p)).Assumptions, generation := LoadX0Chip.generation } : Component (ZMod p)).rowInput env)
       proverData
     rw [← circuitRowInputOf_eq_component]
     exact assumptions
@@ -2702,9 +2702,9 @@ private theorem loadX0Chip_immutableLoadMemoryGroundingData_of_eq
     have isRam := loadX0Chip_isRam decoded proverData hchip rowConstraints real
     chip_subst loadX0ChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) LoadX0Chip.circuit env
-    let cols := circuitRowOutputOf (p := p) LoadX0Chip.circuit env
-    let access := circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.ramAccessView env
+    let input := circuitRowInputOf (p := p) LoadX0Chip.circuit LoadX0Chip.generation env
+    let cols := circuitRowOutputOf (p := p) LoadX0Chip.circuit LoadX0Chip.generation env
+    let access := circuitRamAccessOf LoadX0Chip.circuit LoadX0Chip.generation LoadX0Chip.ramAccessView env
     have decodedSpec :
         ((loadX0ChipDescriptor (p := p)).decodeRow proverData physical).chipSpec
           proverData := chipSpec
@@ -2822,8 +2822,8 @@ private theorem storeByteChip_storeMemoryGroundingData_of_eq
   · intro decoded data hchip real spec
     chip_subst storeByteChipDescriptor (p := p)
     let env := Environment.fromArray physical data
-    let input := circuitRowInputOf (p := p) StoreByteChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreByteChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreByteChip.circuit StoreByteChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreByteChip.circuit StoreByteChip.generation env
     have decodedSpec :
         ((storeByteChipDescriptor (p := p)).decodeRow data physical).chipSpec data :=
       spec
@@ -2846,16 +2846,16 @@ private theorem storeByteChip_storeMemoryGroundingData_of_eq
     chip_base_immediate storeByteChip_viewOf_decoded, StoreByteChip.circuit,
       StoreByteChip.rowView
     have prior : Word.isU64
-        (circuitRowInputOf StoreByteChip.circuit env).memory_access.prev_value := by
+        (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation env).memory_access.prev_value := by
       have priorAccess : Word.isU64
-          (circuitRamAccessOf StoreByteChip.circuit
+          (circuitRamAccessOf StoreByteChip.circuit StoreByteChip.generation
             StoreByteChip.ramAccessView env).priorValue := by
         simpa only [storeByteChip_immutableRamMemoryInteractionShape,
           storeByteChip_ramAccessOf_decoded, env] using pulled.1
       rw [circuitRamAccessOf_eq_typed] at priorAccess
       simpa only [StoreByteChip.ramAccessView] using priorAccess
     have realInput :
-        (circuitRowInputOf StoreByteChip.circuit env).is_real = 1 := by
+        (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation env).is_real = 1 := by
       change
         ((DecodedInstructionRow.mk storeByteChipDescriptor physical).toChipRow
           proverData).view.is_real = 1 at real
@@ -2863,22 +2863,22 @@ private theorem storeByteChip_storeMemoryGroundingData_of_eq
       simpa only [StoreByteChip.rowView] using real
     rw [storeByteChipDescriptor_table] at rowConstraints byteG
     have priorPhysical : Word.isU64
-        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
           Component (ZMod p)).rowInput env).memory_access.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact prior
     have realPhysical :
-        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
           Component (ZMod p)).rowInput env).is_real = 1 := by
       rw [← circuitRowInputOf_eq_component]
       exact realInput
     have storeValuePhysical : Word.isU64
-        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreByteChip.circuit (p := p), Assumptions := (StoreByteChip.circuit (p := p)).Assumptions, generation := StoreByteChip.generation } :
           Component (ZMod p)).rowInput env).store_value :=
       StoreByteChip.storeValue_isU64_of_constraints
         env rowConstraints byteG realPhysical priorPhysical
     have storeValue : Word.isU64
-        (circuitRowInputOf StoreByteChip.circuit env).store_value := by
+        (circuitRowInputOf StoreByteChip.circuit StoreByteChip.generation env).store_value := by
       rw [circuitRowInputOf_eq_component]
       exact storeValuePhysical
     have assumptions :=
@@ -2890,8 +2890,8 @@ private theorem storeByteChip_storeMemoryGroundingData_of_eq
     have programSpec := staticInputs.programRowSpec real
     chip_subst storeByteChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) StoreByteChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreByteChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreByteChip.circuit StoreByteChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreByteChip.circuit StoreByteChip.generation env
     have concreteAssumptions : StoreByteChip.Assumptions input proverData :=
       (storeByteChipDescriptor_assumptions_iff env).mp openInputs.assumptions
     obtain ⟨baseBound, immediateBound, _storeBound⟩ := concreteAssumptions
@@ -2953,8 +2953,8 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
   · intro decoded data hchip real spec
     chip_subst storeHalfChipDescriptor (p := p)
     let env := Environment.fromArray physical data
-    let input := circuitRowInputOf (p := p) StoreHalfChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreHalfChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreHalfChip.circuit StoreHalfChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreHalfChip.circuit StoreHalfChip.generation env
     have decodedSpec :
         ((storeHalfChipDescriptor (p := p)).decodeRow data physical).chipSpec data :=
       spec
@@ -2976,18 +2976,18 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
     chip_base_immediate storeHalfChip_viewOf_decoded, StoreHalfChip.circuit,
       StoreHalfChip.rowView
     have prior : Word.isU64
-        (circuitRowInputOf StoreHalfChip.circuit env).memory_access.prev_value := by
+        (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation env).memory_access.prev_value := by
       have priorAccess : Word.isU64
-          (circuitRamAccessOf StoreHalfChip.circuit
+          (circuitRamAccessOf StoreHalfChip.circuit StoreHalfChip.generation
             StoreHalfChip.ramAccessView env).priorValue := by
         simpa only [storeHalfChip_immutableRamMemoryInteractionShape,
           storeHalfChip_ramAccessOf_decoded, env] using pulled.1
       rw [circuitRamAccessOf_eq_typed] at priorAccess
       simpa only [StoreHalfChip.ramAccessView] using priorAccess
     have source : Word.isU64
-        (circuitRowInputOf StoreHalfChip.circuit env).adapter.op_a_memory.prev_value := by
+        (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation env).adapter.op_a_memory.prev_value := by
       have sourceView : Word.isU64
-          ((circuitRowViewOf StoreHalfChip.circuit
+          ((circuitRowViewOf StoreHalfChip.circuit StoreHalfChip.generation
             StoreHalfChip.rowView env).adapter.op_a_memory.prev_value) := by
         simpa only [storeHalfChip_viewOf_decoded, env] using pulled.2.1
       rw [circuitRowViewOf_eq_typed] at sourceView
@@ -2995,22 +2995,22 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
         Circuits.Types.ITypeReader.toAdapterView] using sourceView
     rw [storeHalfChipDescriptor_table] at rowConstraints
     have priorPhysical : Word.isU64
-        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
           Component (ZMod p)).rowInput env).memory_access.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact prior
     have sourcePhysical : Word.isU64
-        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
           Component (ZMod p)).rowInput env).adapter.op_a_memory.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact source
     have storeValuePhysical : Word.isU64
-        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreHalfChip.circuit (p := p), Assumptions := (StoreHalfChip.circuit (p := p)).Assumptions, generation := StoreHalfChip.generation } :
           Component (ZMod p)).rowInput env).store_value :=
       StoreHalfChip.storeValue_isU64_of_constraints
         env rowConstraints priorPhysical sourcePhysical
     have storeValue : Word.isU64
-        (circuitRowInputOf StoreHalfChip.circuit env).store_value := by
+        (circuitRowInputOf StoreHalfChip.circuit StoreHalfChip.generation env).store_value := by
       rw [circuitRowInputOf_eq_component]
       exact storeValuePhysical
     have assumptions :=
@@ -3022,8 +3022,8 @@ private theorem storeHalfChip_storeMemoryGroundingData_of_eq
     have programSpec := staticInputs.programRowSpec real
     chip_subst storeHalfChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) StoreHalfChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreHalfChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreHalfChip.circuit StoreHalfChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreHalfChip.circuit StoreHalfChip.generation env
     have concreteAssumptions : StoreHalfChip.Assumptions input proverData :=
       (storeHalfChipDescriptor_assumptions_iff env).mp openInputs.assumptions
     obtain ⟨baseBound, immediateBound, _storeBound⟩ := concreteAssumptions
@@ -3085,8 +3085,8 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
   · intro decoded data hchip real spec
     chip_subst storeWordChipDescriptor (p := p)
     let env := Environment.fromArray physical data
-    let input := circuitRowInputOf (p := p) StoreWordChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreWordChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreWordChip.circuit StoreWordChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreWordChip.circuit StoreWordChip.generation env
     have decodedSpec :
         ((storeWordChipDescriptor (p := p)).decodeRow data physical).chipSpec data :=
       spec
@@ -3108,18 +3108,18 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
     chip_base_immediate storeWordChip_viewOf_decoded, StoreWordChip.circuit,
       StoreWordChip.rowView
     have prior : Word.isU64
-        (circuitRowInputOf StoreWordChip.circuit env).memory_access.prev_value := by
+        (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation env).memory_access.prev_value := by
       have priorAccess : Word.isU64
-          (circuitRamAccessOf StoreWordChip.circuit
+          (circuitRamAccessOf StoreWordChip.circuit StoreWordChip.generation
             StoreWordChip.ramAccessView env).priorValue := by
         simpa only [storeWordChip_immutableRamMemoryInteractionShape,
           storeWordChip_ramAccessOf_decoded, env] using pulled.1
       rw [circuitRamAccessOf_eq_typed] at priorAccess
       simpa only [StoreWordChip.ramAccessView] using priorAccess
     have source : Word.isU64
-        (circuitRowInputOf StoreWordChip.circuit env).adapter.op_a_memory.prev_value := by
+        (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation env).adapter.op_a_memory.prev_value := by
       have sourceView : Word.isU64
-          ((circuitRowViewOf StoreWordChip.circuit
+          ((circuitRowViewOf StoreWordChip.circuit StoreWordChip.generation
             StoreWordChip.rowView env).adapter.op_a_memory.prev_value) := by
         simpa only [storeWordChip_viewOf_decoded, env] using pulled.2.1
       rw [circuitRowViewOf_eq_typed] at sourceView
@@ -3127,22 +3127,22 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
         Circuits.Types.ITypeReader.toAdapterView] using sourceView
     rw [storeWordChipDescriptor_table] at rowConstraints
     have priorPhysical : Word.isU64
-        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
           Component (ZMod p)).rowInput env).memory_access.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact prior
     have sourcePhysical : Word.isU64
-        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
           Component (ZMod p)).rowInput env).adapter.op_a_memory.prev_value := by
       rw [← circuitRowInputOf_eq_component]
       exact source
     have storeValuePhysical : Word.isU64
-        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions } :
+        (({ circuit := StoreWordChip.circuit (p := p), Assumptions := (StoreWordChip.circuit (p := p)).Assumptions, generation := StoreWordChip.generation } :
           Component (ZMod p)).rowInput env).store_value :=
       StoreWordChip.storeValue_isU64_of_constraints
         env rowConstraints priorPhysical sourcePhysical
     have storeValue : Word.isU64
-        (circuitRowInputOf StoreWordChip.circuit env).store_value := by
+        (circuitRowInputOf StoreWordChip.circuit StoreWordChip.generation env).store_value := by
       rw [circuitRowInputOf_eq_component]
       exact storeValuePhysical
     have assumptions :=
@@ -3154,8 +3154,8 @@ private theorem storeWordChip_storeMemoryGroundingData_of_eq
     have programSpec := staticInputs.programRowSpec real
     chip_subst storeWordChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) StoreWordChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreWordChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreWordChip.circuit StoreWordChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreWordChip.circuit StoreWordChip.generation env
     have concreteAssumptions : StoreWordChip.Assumptions input proverData :=
       (storeWordChipDescriptor_assumptions_iff env).mp openInputs.assumptions
     obtain ⟨baseBound, immediateBound, _storeBound⟩ := concreteAssumptions
@@ -3217,8 +3217,8 @@ private theorem storeDoubleChip_storeMemoryGroundingData_of_eq
   · intro decoded data hchip real spec
     chip_subst storeDoubleChipDescriptor (p := p)
     let env := Environment.fromArray physical data
-    let input := circuitRowInputOf (p := p) StoreDoubleChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreDoubleChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreDoubleChip.circuit StoreDoubleChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreDoubleChip.circuit StoreDoubleChip.generation env
     have decodedSpec :
         ((storeDoubleChipDescriptor (p := p)).decodeRow data physical).chipSpec data :=
       spec
@@ -3246,8 +3246,8 @@ private theorem storeDoubleChip_storeMemoryGroundingData_of_eq
     have programSpec := staticInputs.programRowSpec real
     chip_subst storeDoubleChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
-    let input := circuitRowInputOf (p := p) StoreDoubleChip.circuit env
-    let cols := circuitRowOutputOf (p := p) StoreDoubleChip.circuit env
+    let input := circuitRowInputOf (p := p) StoreDoubleChip.circuit StoreDoubleChip.generation env
+    let cols := circuitRowOutputOf (p := p) StoreDoubleChip.circuit StoreDoubleChip.generation env
     have concreteAssumptions : StoreDoubleChip.Assumptions input proverData :=
       (storeDoubleChipDescriptor_assumptions_iff env).mp openInputs.assumptions
     obtain ⟨baseBound, immediateBound⟩ := concreteAssumptions
@@ -3306,9 +3306,9 @@ theorem addiChip_itypeGroundingData :
     chip_subst addiChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-      (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_c_imm
+      (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowInput env).adapter.op_c_imm
     have inputEq : Eval.eval env (varFromOffset AddiChip.Inputs 0) =
-        ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+        ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowInput env :=
       eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
     rw [← inputEq]
     change Word.isU64
@@ -3381,7 +3381,7 @@ theorem addwChip_aluTypeGroundingData :
     chip_subst addwChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-      (({ circuit := AddwChip.circuit (p := p), Assumptions := (AddwChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
+      (({ circuit := AddwChip.circuit (p := p), Assumptions := (AddwChip.circuit (p := p)).Assumptions, generation := AddwChip.generation } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
     rw [AddwChip.inputOutputAdapter env]
     simpa only [DecodedInstructionRow.toChipRow, addwViewOf_decodeRow, addwViewOf,
       AddwChip.rowView, Circuits.Types.ALUTypeReader.toAdapterView, env] using opCU64
@@ -3497,9 +3497,9 @@ theorem ltChip_aluTypeGroundingData :
     chip_subst ltChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-        (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions, generation := LtChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value ∧
-      Word.isU64 (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      Word.isU64 (({ circuit := LtChip.circuit (p := p), Assumptions := (LtChip.circuit (p := p)).Assumptions, generation := LtChip.generation } : Component (ZMod p)).rowInput
         env).adapter.op_c_memory.prev_value
     rw [LtChip.inputOutputAdapter env]
     simpa only [LtChip.Inputs.op_b_val, LtChip.Inputs.op_c_val,
@@ -3560,10 +3560,10 @@ theorem shiftLeftChip_aluTypeGroundingData :
     chip_subst shiftLeftChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-        (({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions, generation := ShiftLeftChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value ∧
       Word.isU64
-        (({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftLeftChip.circuit (p := p), Assumptions := (ShiftLeftChip.circuit (p := p)).Assumptions, generation := ShiftLeftChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_c_memory.prev_value
     rw [ShiftLeftChip.inputOutputAdapter env]
     simpa only [ShiftLeftChip.Inputs.op_b_val, ShiftLeftChip.Inputs.op_c_val,
@@ -3628,10 +3628,10 @@ theorem shiftRightChip_aluTypeGroundingData :
     chip_subst shiftRightChipDescriptor (p := p)
     let env := Environment.fromArray physical proverData
     change Word.isU64
-        (({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions, generation := ShiftRightChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value ∧
       Word.isU64
-        (({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := ShiftRightChip.circuit (p := p), Assumptions := (ShiftRightChip.circuit (p := p)).Assumptions, generation := ShiftRightChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_c_memory.prev_value
     rw [ShiftRightChip.inputOutputAdapter env]
     simpa only [DecodedInstructionRow.toChipRow, shiftRightViewOf_decodeRow, shiftRightViewOf,
@@ -3894,12 +3894,12 @@ theorem mulChip_rtypeGroundingData :
       (MulChip.circuit (p := p)) env rowConstraints
     have inputFlag := MulChip.eval_opA0_eq_zero_of_shallowConstraints input offset env shallow
     have outputEq : Eval.eval env ((MulChip.circuit (p := p)).output input offset) =
-        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
+        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).rowOutput env := by
       simp only [input, offset, Component.rowOutput, circuit_norm]
     have flagZero : (MulChip.rowView
-        (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-        (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
-      change (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
+        (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).rowInput env)
+        (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).rowOutput env)).adapter.op_a_0 = 0 := by
+      change (({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).rowOutput env).adapter.op_a_0 = 0
       rw [← outputEq, ← MulChip.eval_output_adapter input offset env]
       rw [MulChip.eval_inputs, Readers.RTypeReader.eval_opA0]
       exact inputFlag
@@ -3916,10 +3916,10 @@ theorem mulChip_rtypeGroundingData :
     have shallow := shallowConstraints_of_componentConstraints
       (MulChip.circuit (p := p)) env rowConstraints
     have inputEq : Eval.eval env input =
-        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).rowInput env :=
       eval_varFromOffset_valueFromOffset MulChip.Inputs 0 env
     have outputEq : Eval.eval env ((MulChip.circuit (p := p)).output input offset) =
-        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
+        ({ circuit := MulChip.circuit (p := p), Assumptions := (MulChip.circuit (p := p)).Assumptions, generation := MulChip.generation } : Component (ZMod p)).rowOutput env := by
       simp only [input, offset, Component.rowOutput, circuit_norm]
     have adapter := MulChip.eval_output_adapter input offset env
     rw [inputEq, outputEq] at adapter
@@ -3967,9 +3967,9 @@ theorem divRemChip_rtypeGroundingData :
     let env := Environment.fromArray physical proverData
     have adapter := DivRemChip.inputOutputAdapter env
     change Word.isU64
-        (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_b_memory.prev_value ∧
+        (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions, generation := DivRemChip.generation } : Component (ZMod p)).rowInput env).adapter.op_b_memory.prev_value ∧
       Word.isU64
-        (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
+        (({ circuit := DivRemChip.circuit (p := p), Assumptions := (DivRemChip.circuit (p := p)).Assumptions, generation := DivRemChip.generation } : Component (ZMod p)).rowInput env).adapter.op_c_memory.prev_value
     rw [adapter]
     simpa only [env, DecodedInstructionRow.toChipRow, divRemViewOf_decodeRow, divRemViewOf,
       DivRemChip.rowView, Circuits.Types.RTypeReader.toAdapterView] using operands
@@ -4022,32 +4022,32 @@ theorem jalChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverData
   chip_subst jalChipDescriptor (p := p)
   let env := Environment.fromArray physical data
   change JalChip.Spec
-    (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-    (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) data at spec
+    (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowInput env)
+    (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput env) data at spec
   have realInput :
-      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real = 1 := by
+      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowInput env).is_real = 1 := by
     change ((jalChipDescriptor (p := p)).decodeRow data physical).view.is_real = 1 at real
     rw [jalViewOf_decodeRow] at real
     simpa only [jalViewOf, JalChip.rowView] using real
   let readerInput : Readers.JTypeReader.Inputs (ZMod p) :=
-    { cols := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter
-      is_real := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
-      is_trusted := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
-      clk_high := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+    { cols := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput env).adapter
+      is_real := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowInput env).is_real
+      is_trusted := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowInput env).is_real
+      clk_high := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
         env).state.clk_high
-      clk_low := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      clk_low := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
           env).state.clk_0_16 +
-        (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
           env).state.clk_16_24 * 65536
-      pc := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state.pc
+      pc := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput env).state.pc
       opcode := 46
-      wv0 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv0 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[0]
-      wv1 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv1 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[1]
-      wv2 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv2 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[2]
-      wv3 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv3 := (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[3] }
   have reader : Readers.JTypeReader.Spec readerInput := by
     simpa only [readerInput] using spec.1
@@ -4088,7 +4088,7 @@ theorem jalChip_assumptionsLocal :
   chip_subst jalChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset JalChip.Inputs 0) =
-      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset JalChip.Inputs 0 env
   change Word.isU64 (jalViewOf env).adapter.op_b at immediate
   rw [jalViewOf_adapter, inputEq] at immediate
@@ -4097,7 +4097,7 @@ theorem jalChip_assumptionsLocal :
       (jalViewOf env).state.pc[2], 0] : Word (ZMod p)) at pcWord
   rw [jalViewOf_state, inputEq] at pcWord
   have concrete : JalChip.Assumptions
-      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions, generation := JalChip.generation } : Component (ZMod p)).rowInput env) proverData :=
       ⟨immediate, pcWord⟩
   exact (jalChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4193,35 +4193,35 @@ theorem uTypeChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverDa
   chip_subst uTypeChipDescriptor (p := p)
   let env := Environment.fromArray physical data
   change UTypeChip.Spec
-    (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-    (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) data at spec
+    (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env)
+    (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput env) data at spec
   have realInput :
-      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real = 1 := by
+      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).is_real = 1 := by
     change ((uTypeChipDescriptor (p := p)).decodeRow data physical).view.is_real = 1 at real
     rw [uTypeViewOf_decodeRow] at real
     simpa only [uTypeViewOf, UTypeChip.rowView] using real
   let readerInput : Readers.JTypeReader.Inputs (ZMod p) :=
-    { cols := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter
-      is_real := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
-      is_trusted := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
-      clk_high := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+    { cols := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput env).adapter
+      is_real := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).is_real
+      is_trusted := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).is_real
+      clk_high := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
         env).state.clk_high
-      clk_low := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      clk_low := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
           env).state.clk_0_16 +
-        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
           env).state.clk_16_24 * 65536
-      pc := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state.pc
+      pc := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput env).state.pc
       opcode :=
-        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_auipc * 48 +
-          (1 - (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).is_auipc * 48 +
+          (1 - (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput
             env).is_auipc) * 49
-      wv0 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv0 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
         env).add_operation.value[0]
-      wv1 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv1 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
         env).add_operation.value[1]
-      wv2 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv2 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
         env).add_operation.value[2]
-      wv3 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv3 := (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput
         env).add_operation.value[3] }
   have reader : Readers.JTypeReader.Spec readerInput := by
     simpa only [readerInput] using spec.1
@@ -4264,7 +4264,7 @@ theorem uTypeChip_assumptionsLocal :
   chip_subst uTypeChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset UTypeChip.Inputs 0) =
-      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset UTypeChip.Inputs 0 env
   change Word.isU64 (uTypeViewOf env).adapter.op_b at immediate
   rw [uTypeViewOf_adapter, inputEq] at immediate
@@ -4278,10 +4278,10 @@ theorem uTypeChip_assumptionsLocal :
     simpa only [DecodedInstructionRow.toChipRow, uTypeViewOf_decodeRow, env] using decode
   have decodeRelation :
       Word.toBitVec64
-          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput
             env).adapter.op_b_imm =
         RV64.lui (UTypeChip.immOf
-          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter) := by
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).adapter) := by
     rcases selector with selectorZero | selectorOne
     · have opcodeEq :
           (programAccess (uTypeViewOf env)).toRow.opcode =
@@ -4292,7 +4292,7 @@ theorem uTypeChip_assumptionsLocal :
       obtain ⟨word, imm, rd, fetch, decodedAll, opA, opB⟩ :=
         decodesUType uop.LUI decode' opcodeEq immC
       have opBInput :
-          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput
               env).adapter.op_b_imm =
             bitVecToWord ((imm.signExtend 64) <<< 12) := by
         change (uTypeViewOf env).adapter.op_b =
@@ -4300,7 +4300,7 @@ theorem uTypeChip_assumptionsLocal :
         rw [uTypeViewOf_adapter, inputEq] at opB
         exact opB
       have immEq := SP1Clean.UTypeChip.immOf_bind imm
-        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter opBInput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).adapter opBInput
       rw [opBInput, immEq, toBitVec64_bitVecToWord]
       exact uTypeSignExtend_shiftLeft imm
     · have opcodeEq :
@@ -4312,7 +4312,7 @@ theorem uTypeChip_assumptionsLocal :
       obtain ⟨word, imm, rd, fetch, decodedAll, opA, opB⟩ :=
         decodesUType uop.AUIPC decode' opcodeEq immC
       have opBInput :
-          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+          (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput
               env).adapter.op_b_imm =
             bitVecToWord ((imm.signExtend 64) <<< 12) := by
         change (uTypeViewOf env).adapter.op_b =
@@ -4320,11 +4320,11 @@ theorem uTypeChip_assumptionsLocal :
         rw [uTypeViewOf_adapter, inputEq] at opB
         exact opB
       have immEq := SP1Clean.UTypeChip.immOf_bind imm
-        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).adapter opBInput
+        (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env).adapter opBInput
       rw [opBInput, immEq, toBitVec64_bitVecToWord]
       exact uTypeSignExtend_shiftLeft imm
   have concrete : UTypeChip.Assumptions
-      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env) proverData :=
       ⟨immediate, pcWord, decodeRelation⟩
   exact (uTypeChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4423,32 +4423,32 @@ theorem jalrChip_specFacts (decoded : DecodedInstructionRow p) (data : ProverDat
   chip_subst jalrChipDescriptor (p := p)
   let env := Environment.fromArray physical data
   change JalrChip.Spec
-    (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-    (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env) data at spec
+    (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env)
+    (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput env) data at spec
   have realInput :
-      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real = 1 := by
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env).is_real = 1 := by
     change ((jalrChipDescriptor (p := p)).decodeRow data physical).view.is_real = 1 at real
     rw [jalrViewOf_decodeRow] at real
     simpa only [jalrViewOf, JalrChip.rowView] using real
   let readerInput : Readers.ITypeReader.Inputs (ZMod p) :=
-    { cols := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).adapter
-      is_real := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
-      is_trusted := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).is_real
-      clk_high := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+    { cols := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput env).adapter
+      is_real := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env).is_real
+      is_trusted := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env).is_real
+      clk_high := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
         env).state.clk_high
-      clk_low := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      clk_low := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
           env).state.clk_0_16 +
-        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
           env).state.clk_16_24 * 65536
-      pc := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env).state.pc
+      pc := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput env).state.pc
       opcode := 47
-      wv0 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv0 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[0]
-      wv1 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv1 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[1]
-      wv2 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv2 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[2]
-      wv3 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput
+      wv3 := (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowOutput
         env).op_a_operation.value[3] }
   have reader : Readers.ITypeReader.Spec readerInput := by
     simpa only [readerInput] using spec.1
@@ -4506,38 +4506,38 @@ theorem jalrChip_assumptionsLocal :
   chip_subst jalrChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset JalrChip.Inputs 0) =
-      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset JalrChip.Inputs 0 env
   have sourceRaw : Word.isU64
-      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput
         env).adapter.op_b_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
       jalrViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceU64
   have sourceInput : Word.isU64
-      (#v[(({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (#v[(({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[0],
-        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[1],
-        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[2],
-        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[3]] : Word (ZMod p)) := by
     rw [wordFour_eta]
     exact sourceRaw
   have immediateInput : Word.isU64
-      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput
         env).adapter.op_c_imm := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
       jalrViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using immediate
   have pcInput : Word.isU64
-      (#v[(({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[0],
-        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[1],
-        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[2],
+      (#v[(({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env).state.pc[0],
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env).state.pc[1],
+        (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env).state.pc[2],
         0] : Word (ZMod p)) := by
     simpa only [DecodedInstructionRow.toChipRow, jalrViewOf_decodeRow,
       jalrViewOf_state, inputEq, env] using pcWord
   have concrete : JalrChip.Assumptions
-      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := JalrChip.circuit (p := p), Assumptions := (JalrChip.circuit (p := p)).Assumptions, generation := JalrChip.generation } : Component (ZMod p)).rowInput env) proverData :=
     jalrAssumptions_of_components immediateInput sourceInput pcInput
   exact (jalrChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -4669,55 +4669,55 @@ theorem branchChip_assumptionsLocal :
   chip_subst branchChipDescriptor (p := p)
   let env := Environment.fromArray physical proverData
   have inputEq : Eval.eval env (varFromOffset BranchChip.Inputs 0) =
-      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) :=
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput env) :=
     eval_varFromOffset_valueFromOffset BranchChip.Inputs 0 env
   obtain ⟨sourceA, sourceB⟩ := operands
   have sourceARaw : Word.isU64
-      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
         env).adapter.op_a_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceA
   have sourceAInput : Word.isU64
-      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[0],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[1],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[2],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_a_memory.prev_value[3]] : Word (ZMod p)) := by
     rw [wordFour_eta]
     exact sourceARaw
   have sourceBRaw : Word.isU64
-      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
         env).adapter.op_b_memory.prev_value := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using sourceB
   have sourceBInput : Word.isU64
-      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[0],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[1],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[2],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
           env).adapter.op_b_memory.prev_value[3]] : Word (ZMod p)) := by
     rw [wordFour_eta]
     exact sourceBRaw
   have immediateInput : Word.isU64
-      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput
         env).adapter.op_c_imm := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_adapter, inputEq, Circuits.Types.ITypeReader.toAdapterView, env] using immediate
   have pcInput : Word.isU64
-      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[0],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[1],
-        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env).state.pc[2],
+      (#v[(({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput env).state.pc[0],
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput env).state.pc[1],
+        (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput env).state.pc[2],
         0] : Word (ZMod p)) := by
     simpa only [DecodedInstructionRow.toChipRow, branchViewOf_decodeRow,
       branchViewOf_state, inputEq, env] using pcWord
   have concrete : BranchChip.Assumptions
-      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) proverData :=
+      (({ circuit := BranchChip.circuit (p := p), Assumptions := (BranchChip.circuit (p := p)).Assumptions, generation := BranchChip.generation } : Component (ZMod p)).rowInput env) proverData :=
     branchAssumptions_of_components immediateInput sourceAInput sourceBInput pcInput
   exact (branchChipDescriptor_assumptions_iff proverData physical).mpr concrete
 
@@ -5064,8 +5064,7 @@ private theorem val_lt_of_byteU8PairPull_guarantee
   have typed := (ChannelInteraction.toRaw_guarantees env
     ((byteChannel (p := p)).pulledIf gate
       (⟨3, 0, b, c⟩ : ByteRow (Expression (ZMod p))))).mp guarantee
-  have negReal : -(Expression.eval env gate) = -1 := by rw [real]
-  have spec := typed (by rfl) (by simpa only [circuit_norm] using negReal)
+  have spec := typed (by rfl) (by simpa only [circuit_norm] using real)
   change ByteRowSpec (Eval.eval env ((byteChannel (p := p)).pulledIf gate
     (⟨3, 0, b, c⟩ : ByteRow (Expression (ZMod p)))).msg) at spec
   have msgEq : Eval.eval env ((byteChannel (p := p)).pulledIf gate
@@ -5212,7 +5211,7 @@ closed form `memoryBumpRow_closedForm` of `Soundness/BumpDecode.lean` — a rewr
 unification, so the decoded row's `valueFromOffset` body is never normalised. -/
 theorem memoryBump_evidence_of_component
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation })
     (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
     (real : (memoryBumpRow data row).is_real = 1) :
@@ -5335,7 +5334,7 @@ private lemma bump_val65536 : ((65536 : ZMod p)).val = 65536 := by
 recombined low clock (`ClkBound`) and the recombined high clock are genuine 24-bit values. -/
 theorem memoryBump_pushedMessage_clkFacts_of_component
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation })
     (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
     (real : (memoryBumpRow data row).is_real = 1) :
@@ -5434,7 +5433,7 @@ produced side of the widened memory balance — the row's pulled and pushed reco
 `compare_low`-selected difference evidence (`bump_clkNat_lt`). -/
 theorem memoryBump_isRefresh_of_component
     (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions })
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation })
     (constraints : table.Constraints) (byte : table.ChannelGuarantees byteChannel.toRaw)
     {row : Array (ZMod p)} (tableMem : row ∈ table.table)
     (real : (memoryBumpRow data row).is_real = 1) :

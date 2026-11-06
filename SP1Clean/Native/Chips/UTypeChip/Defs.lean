@@ -108,28 +108,26 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
          is_auipc := Eval.eval env cols.is_auipc } : Columns F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-/-! ### Operand words, in `circuit_norm`'s own orientation
+/-! ### Operand evaluation for witness input agreement
 
-Projection outside `eval`, inert right-hand side — the form `ComputableWitnesses` hands over; see
-`AddChip/Defs.lean` for the rationale. U-type's addend is `is_auipc · pc` (zero for LUI, the program
+These lemmas project whole-row input agreement into whole-vector operand agreement; see
+`AddChip/Defs.lean`. U-type's addend is `is_auipc · pc` (zero for LUI, the program
 counter for AUIPC), so the pieces to project are the program counter and the J-type immediate; the
 `is_auipc` selector is a scalar and so is already in normal form. -/
 
 @[circuit_norm] theorem eval_statePc {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).state.pc
-      = Vector.map (Expression.eval env) input.state.pc := by
+      = Eval.eval env input.state.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.CPUState.eval_cols]
-  exact ProvableType.eval_fields env _
 
 @[circuit_norm] theorem eval_opBImm {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_imm
-      = Vector.map (Expression.eval env) input.adapter.op_b_imm := by
+      = Eval.eval env input.adapter.op_b_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.JTypeReader.eval_cols]
-  exact ProvableType.eval_fields env _
 
 @[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :

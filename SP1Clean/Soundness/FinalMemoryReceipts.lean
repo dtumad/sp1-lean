@@ -15,72 +15,89 @@ namespace SP1Clean.Soundness.FinalMemoryReceipts
 
 open Circuit Air.Flat Channels OrderedFinalProvider
 
+variable {PublicIO : TypeMap} [ProvableType PublicIO]
+
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Add the register receipts at the existing typed register slot. -/
-def withRegisters (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
-    (names : (((FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup) :=
-  FinalReceiptEnsemble.install (FinalMemoryEnsemble.ensemble auxiliary channels names) false registerCircuit
+def withRegisters {PublicIO : TypeMap} [ProvableType PublicIO] (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
+    (names : (((FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : (((OrderedBoundary.channel channelName).toRaw :: channels).map (·.name)).Nodup := by assumption)
+    (registered : ∀ table ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary,
+      table.circuit.channels ⊆ (OrderedBoundary.channel channelName).toRaw :: channels := by assumption)
+    (registerReceipt : (FinalMemoryValue.channel false).toRaw ∈ channels := by assumption) :=
+  FinalReceiptEnsemble.install (FinalMemoryEnsemble.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered) false registerCircuit
     ⟨⟨0, by simp [FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
       OrderedBoundaryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.views,
-      FinalMemoryEnsemble.inventory]⟩, rfl⟩
+      FinalMemoryEnsemble.inventory]⟩, rfl⟩ (List.mem_cons_of_mem _ registerReceipt)
 
 /-- Both receipt channels are registered; the original three tables keep their positions. -/
-def ensemble (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
-    (names : (((FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup) :=
-  FinalReceiptEnsemble.install (withRegisters auxiliary channels names) true ramCircuit
+def ensemble {PublicIO : TypeMap} [ProvableType PublicIO] (auxiliary : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
+    (names : (((FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : (((OrderedBoundary.channel channelName).toRaw :: channels).map (·.name)).Nodup := by assumption)
+    (registered : ∀ table ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary,
+      table.circuit.channels ⊆ (OrderedBoundary.channel channelName).toRaw :: channels := by assumption)
+    (registerReceipt : (FinalMemoryValue.channel false).toRaw ∈ channels := by assumption)
+    (ramReceipt : (FinalMemoryValue.channel true).toRaw ∈ channels := by assumption) :=
+  FinalReceiptEnsemble.install (withRegisters (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt) true ramCircuit
     ⟨⟨1, by simp [withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
       FinalMemoryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.ensemble,
       OrderedBoundaryEnsemble.ensemble, OrderedMemoryEnsemble.Inventory.views,
-      FinalMemoryEnsemble.inventory]⟩, rfl⟩
+      FinalMemoryEnsemble.inventory]⟩, rfl⟩ (List.mem_cons_of_mem _ ramReceipt)
 
 variable {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
 variable {names : (((FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
+variable {channelNames : (((OrderedBoundary.channel channelName).toRaw :: channels).map (·.name)).Nodup}
+variable {registered : ∀ table ∈ (FinalMemoryEnsemble.inventory (p := p)).views.map (·.component) ++ auxiliary,
+      table.circuit.channels ⊆ (OrderedBoundary.channel channelName).toRaw :: channels}
+variable {registerReceipt : (FinalMemoryValue.channel false).toRaw ∈ channels}
+variable {ramReceipt : (FinalMemoryValue.channel true).toRaw ∈ channels}
 
 /-- Forget only the RAM receipt, retaining the register receipt. -/
-def registerWitness (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    EnsembleWitness (withRegisters auxiliary channels names) :=
+def registerWitness (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
+    EnsembleWitness (withRegisters (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt) :=
   FinalReceiptEnsemble.project witness
 
-@[simp] theorem registerWitness_data (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+@[simp] theorem registerWitness_data (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     (registerWitness witness).data = witness.data := FinalReceiptEnsemble.project_data witness
 
 /-- The unchanged ordered inventory, as a physical proof view of the installed finalizers. -/
-def original (witness : EnsembleWitness (ensemble auxiliary channels names)) :
-    EnsembleWitness (FinalMemoryEnsemble.ensemble auxiliary channels names) :=
+def original (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
+    EnsembleWitness (FinalMemoryEnsemble.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered) :=
   FinalReceiptEnsemble.project (registerWitness witness)
 
 /-- Reuse the existing witness arrays when constructing the two receipt-bearing tables. -/
-def lift (witness : EnsembleWitness (FinalMemoryEnsemble.ensemble auxiliary channels names)) :
-    EnsembleWitness (ensemble auxiliary channels names) :=
+def lift (witness : EnsembleWitness (FinalMemoryEnsemble.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered)) :
+    EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt) :=
   FinalReceiptEnsemble.lift (FinalReceiptEnsemble.lift witness)
 
 /-- Forgetting both receipts keeps every physical row array of the boundary inventory. -/
-theorem original_rows (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem original_rows (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     (original witness).tables.map (·.table) = witness.tables.map (·.table) :=
   (FinalReceiptEnsemble.project_rows (registerWitness witness)).trans
     (FinalReceiptEnsemble.project_rows witness)
 
 /-- The original inventory retains the actual shared environment. -/
-theorem original_data (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem original_data (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     (original witness).data = witness.data :=
   (FinalReceiptEnsemble.project_data (registerWitness witness)).trans
     (FinalReceiptEnsemble.project_data witness)
 
 /-- Receipt publication adds no row-construction obligation to the existing finalizers. -/
-theorem lift_constraints (witness : EnsembleWitness (FinalMemoryEnsemble.ensemble auxiliary channels names))
-    (constraints : witness.Constraints) : (lift witness).Constraints :=
+theorem lift_constraints (witness : EnsembleWitness (FinalMemoryEnsemble.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
+    (constraints : witness.Constraints) :
+    (lift (registerReceipt := registerReceipt) (ramReceipt := ramReceipt) witness).Constraints :=
   FinalReceiptEnsemble.lift_constraints _
     (FinalReceiptEnsemble.lift_constraints witness constraints)
 
 /-- Both wrappers preserve the complete original assertion and lookup systems. -/
-theorem original_constraints (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem original_constraints (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     (original witness).Constraints ↔ witness.Constraints :=
   (FinalReceiptEnsemble.project_constraints (registerWitness witness)).trans
     (FinalReceiptEnsemble.project_constraints witness)
 
 /-- Original channels retain their complete physical ledgers, with multiplicities unchanged. -/
-theorem original_interactions (witness : EnsembleWitness (ensemble auxiliary channels names))
+theorem original_interactions (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt))
     (channel : RawChannel (ZMod p))
     (registers : channel ≠ (FinalMemoryValue.channel false).toRaw)
     (ram : channel ≠ (FinalMemoryValue.channel true).toRaw) :
@@ -89,15 +106,15 @@ theorem original_interactions (witness : EnsembleWitness (ensemble auxiliary cha
     (FinalReceiptEnsemble.project_interactions witness channel ram)
 
 /-- The physical register table, without copying or rebuilding any row. -/
-def registerTable (witness : EnsembleWitness (ensemble auxiliary channels names)) : Table (ZMod p) :=
+def registerTable (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) : Table (ZMod p) :=
   FinalReceiptEnsemble.table (registerWitness witness)
 
 /-- The physical RAM table, without copying or rebuilding any row. -/
-def ramTable (witness : EnsembleWitness (ensemble auxiliary channels names)) : Table (ZMod p) :=
+def ramTable (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) : Table (ZMod p) :=
   FinalReceiptEnsemble.table witness
 
 /-- The receipt adapter retains the original weighted physical inventory, including padding. -/
-theorem physicalRecords_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem physicalRecords_eq (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     FinalMemoryEnsemble.physicalRecords (original witness) =
       FinalReceiptEnsemble.physicalRecords (registerWitness witness) ++ FinalReceiptEnsemble.physicalRecords witness := by
   rw [FinalMemoryEnsemble.physicalRecords_eq]
@@ -107,14 +124,21 @@ theorem physicalRecords_eq (witness : EnsembleWitness (ensemble auxiliary channe
     FinalReceiptEnsemble.table, TableSlot.table, FinalReceiptEnsemble.slot, List.getElem_set_self,
     List.getElem_set_ne (by decide : 0 ≠ 1), List.getElem_set_ne (by decide : 1 ≠ 0), Table.withComponent_rows]
   congr 1
-  apply List.map_congr_left
-  intro row _
-  apply Prod.ext
-  · rfl
-  · exact Component.rowOutput_congr _ rfl
+  · apply List.map_congr_left
+    intro row _
+    apply Prod.ext
+    · rfl
+    · exact (FinalMemoryEnsemble.registerView_output (p := p)
+        (Environment.fromArray row witness.data)).symm.trans
+          (Component.rowOutput_congr _ rfl)
+  · apply List.map_congr_left
+    intro row _
+    apply Prod.ext
+    · rfl
+    · exact (FinalMemoryEnsemble.ramView_output (p := p) _).symm
 
 /-- The original finalizer constraints make every physical receipt activity Boolean. -/
-theorem physicalRecords_binary (witness : EnsembleWitness (ensemble auxiliary channels names))
+theorem physicalRecords_binary (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt))
     (constraints : witness.Constraints) :
     ∀ row ∈ FinalReceiptEnsemble.physicalRecords (registerWitness witness) ++
       FinalReceiptEnsemble.physicalRecords witness, row.1 = 0 ∨ row.1 = 1 := by
@@ -124,25 +148,23 @@ theorem physicalRecords_binary (witness : EnsembleWitness (ensemble auxiliary ch
   exact (original_constraints witness).mpr constraints table (List.mem_of_mem_take member)
 
 /-- Receipt decoding is exactly the existing ordered final inventory, in its physical order. -/
-theorem records_eq (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem records_eq (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     FinalMemoryEnsemble.records (original witness) =
       FinalReceiptEnsemble.records (registerWitness witness) ++ FinalReceiptEnsemble.records witness := by
-  rw [FinalMemoryEnsemble.records_eq]
-  simp only [FinalReceiptEnsemble.records, FinalReceiptEnsemble.activity_eq,
-    FinalMemoryEnsemble.activity, original_data witness]
-  simp only [original, registerWitness, FinalReceiptEnsemble.project, EnsembleWitness.ofCanonicalTables,
-    FinalReceiptEnsemble.table, TableSlot.table, FinalReceiptEnsemble.slot, List.getElem_set_self,
-    List.getElem_set_ne (by decide : 0 ≠ 1), List.getElem_set_ne (by decide : 1 ≠ 0), Table.withComponent_rows]
-  congr 1
-  apply List.map_congr_left
-  intro row _
-  exact Component.rowOutput_congr _ rfl
+  refine (FinalMemoryEnsemble.inventory.records_eq_active_physical (original witness)).trans ?_
+  change ((FinalMemoryEnsemble.physicalRecords (original witness)).filter
+    (fun row => decide (row.1 = 1))).map Prod.snd = _
+  rw [physicalRecords_eq]
+  simp only [List.filter_append, List.map_append]
+  exact congrArg₂ List.append
+    (FinalReceiptEnsemble.records_eq_active_physical (registerWitness witness)).symm
+    (FinalReceiptEnsemble.records_eq_active_physical witness).symm
 
 /-- The receipt records are precisely the actual Memory pulls of the original three final tables. -/
-theorem memory_receipts (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem memory_receipts (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     ((original witness).tables.take 3).flatMap (·.interactionsWith memoryChannel.toRaw) =
       (FinalReceiptEnsemble.physicalRecords (registerWitness witness) ++ FinalReceiptEnsemble.physicalRecords witness).map
-        (fun row => memoryChannel.emittedValue (-row.1) row.2) := by
+        (fun row => memoryChannel.pulledIfValue row.1 row.2) := by
   rw [← physicalRecords_eq]
   exact FinalMemoryEnsemble.memory_interactions_eq (original witness)
 
@@ -161,14 +183,14 @@ private theorem ram_silent :
   contradiction
 
 /-- Exact register-receipt accounting includes every finalizer's value and private timestamp. -/
-theorem register_receipts (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem register_receipts (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     (registerTable witness).interactionsWith (FinalMemoryValue.channel false).toRaw =
       (FinalReceiptEnsemble.physicalRecords (registerWitness witness)).map
         (fun row => (FinalMemoryValue.channel false).pushedIfValue row.1 row.2) :=
   FinalReceiptEnsemble.table_receipts (registerWitness witness) register_silent
 
 /-- Exact RAM-receipt accounting includes every finalizer's value and private timestamp. -/
-theorem ram_receipts (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem ram_receipts (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     (ramTable witness).interactionsWith (FinalMemoryValue.channel true).toRaw =
       (FinalReceiptEnsemble.physicalRecords witness).map
         (fun row => (FinalMemoryValue.channel true).pushedIfValue row.1 row.2) :=
@@ -176,7 +198,7 @@ theorem ram_receipts (witness : EnsembleWitness (ensemble auxiliary channels nam
 
 /-- The installed RAM receipts retain the actual finalizer's RAM domain. Only Byte guarantees
 are needed locally; Memory values and timestamps still come from the global grounding proof. -/
-theorem ram_records_spec (witness : EnsembleWitness (ensemble auxiliary channels names))
+theorem ram_records_spec (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt))
     (constraints : witness.Constraints)
     (bytes : (ramTable witness).ChannelGuarantees byteChannel.toRaw) :
     ∀ record ∈ FinalReceiptEnsemble.records witness, MemoryBoundary.RamFinalSpec record := by
@@ -191,6 +213,7 @@ theorem ram_records_spec (witness : EnsembleWitness (ensemble auxiliary channels
   change (FinalReceiptEnsemble.table witness).component.operations.ConstraintsHold _ at checks
   change (FinalReceiptEnsemble.table witness).component.operations.ChannelGuarantees _ _ at guarantees
   rw [FinalReceiptEnsemble.table_component witness] at checks guarantees
+  change ((FinalMemoryReceipt.circuit true ramCircuit).instantiate.operations 0).ConstraintsHold _ at checks
   rw [Operations.ConstraintsHold, FinalMemoryReceipt.constraints,
     FinalMemoryReceipt.lookups] at checks
   have providerBytes := FinalReceiptEnsemble.row_channelGuarantees
@@ -201,7 +224,7 @@ theorem ram_records_spec (witness : EnsembleWitness (ensemble auxiliary channels
   exact (valid.2 (OrderedMemoryEnsemble.active_input (Payload := MemoryMsg) active)).1
 
 /-- The only added occurrences are one receipt for each register row and one for each RAM row. -/
-theorem receipt_cost (witness : EnsembleWitness (ensemble auxiliary channels names)) :
+theorem receipt_cost (witness : EnsembleWitness (ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered registerReceipt ramReceipt)) :
     ((registerTable witness).interactionsWith (FinalMemoryValue.channel false).toRaw).length +
       ((ramTable witness).interactionsWith (FinalMemoryValue.channel true).toRaw).length =
       (registerTable witness).length + (ramTable witness).length := by

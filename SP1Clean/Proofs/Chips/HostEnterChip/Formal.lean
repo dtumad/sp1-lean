@@ -13,11 +13,6 @@ open Circuit
 
 variable {p : ℕ} [Fact p.Prime]
 
-private theorem eval_zero (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const (0 : Word (ZMod p))) = 0 := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
-
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.enter"
   main
@@ -27,10 +22,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   channelsWithRequirements := [HostCallChip.channel.toRaw]
   soundness := by
     circuit_proof_start [Gadgets.Equality.circuit, HostCallChip.channel, codeWord]
-    simpa only [eval_zero, codeWord, circuit_norm] using h_holds
+    simpa only [Vector.map_id', codeWord, circuit_norm] using h_holds
   completeness := by
     circuit_proof_start [Gadgets.Equality.circuit, HostCallChip.channel, codeWord]
-    simpa only [eval_zero, Spec, codeWord, circuit_norm] using h_assumptions
+    simpa only [Vector.map_id', Spec, codeWord, circuit_norm] using h_assumptions
   requirementsChannelsLawful := by
     preserve_tactic_target
     intro input offset

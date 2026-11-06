@@ -108,7 +108,7 @@ noncomputable def haltTable
 /-- The stable MemoryBump position carries the MemoryBump circuit. -/
 theorem memoryBumpTable_component
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (memoryBumpTable witness).component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions } := by
+    (memoryBumpTable witness).component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation } := by
   unfold memoryBumpTable
   have aligned := witness.same_circuits memoryBumpIndex (by
     simp [memoryBumpIndex, instructionTableCount, nonBumpProviderTableCount,
@@ -118,7 +118,7 @@ theorem memoryBumpTable_component
 /-- The stable StateBump position carries the StateBump circuit. -/
 theorem stateBumpTable_component
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (stateBumpTable witness).component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions } := by
+    (stateBumpTable witness).component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions, generation := StateBumpChip.generation } := by
   unfold stateBumpTable
   have aligned := witness.same_circuits stateBumpIndex (by
     simp [stateBumpIndex, instructionTableCount, stateSilentProviderTableCount,
@@ -128,7 +128,7 @@ theorem stateBumpTable_component
 /-- The stable Halt position carries the Halt circuit. -/
 theorem haltTable_component
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (haltTable witness).component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } := by
+    (haltTable witness).component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } := by
   unfold haltTable
   have aligned := witness.same_circuits haltIndex (by
     simp [haltIndex, instructionTableCount, stateSilentProviderTableCount,
@@ -138,7 +138,7 @@ theorem haltTable_component
 /-- The stable `SyscallInstrs` position carries the syscall circuit. -/
 theorem syscallInstrsTable_component
     (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (syscallInstrsTable witness).component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } := by
+    (syscallInstrsTable witness).component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } := by
   unfold syscallInstrsTable
   have aligned := witness.same_circuits syscallInstrsIndex (by
     simp [syscallInstrsIndex, instructionTableCount, stateSilentProviderTableCount,
@@ -419,7 +419,7 @@ theorem memoryBumpMain_shallowConstraints
 /-- The StateBump table's typed State view: per physical row, the decoded semantic pull/push pair
 (the provider-segment analogue of `DecodedInstructionRow.stateInteractions_eq`). -/
 theorem stateBumpTable_typedState_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions, generation := StateBumpChip.generation }) :
     typedTableInteractionsWith table stateChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pulledIfValue stateChannel
@@ -476,7 +476,7 @@ theorem stateBumpTable_typedState (witness : EnsembleWitness (sp1Ensemble (p := 
 /-- The MemoryBump table's typed Memory view: per physical row, the decoded old-record pull and
 refreshed push. -/
 theorem memoryBumpTable_typedMemory_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation }) :
     typedTableInteractionsWith table memoryChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pulledIfValue memoryChannel
@@ -590,7 +590,7 @@ theorem publicValuesChannel_interaction_guarantees [Fact p.Prime] (env : Environ
 trivial `Assumptions`, the row's constraints, and the byte/state guarantees — byte grounded by the
 finished-channel engine (the bump tables sit on its consumer side), State's guarantee `True`. -/
 theorem stateBumpTable_spec_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions })
+    (component : table.component = { circuit := StateBumpChip.circuit, Assumptions := (StateBumpChip.circuit).Assumptions, generation := StateBumpChip.generation })
     (sameData : table.data = data)
     (tableConstraints : table.Constraints) (byteGuarantees : table.ChannelGuarantees byteChannel.toRaw) :
     ∀ row ∈ table.table,
@@ -673,7 +673,7 @@ private theorem memoryBumpRow_spec_of_facts
   -- Cross from `Component.Spec` to the chip `Spec` in two head-congruent steps (`rowInput` is
   -- definitionally `memoryBumpRow`'s `valueFromOffset` body), so the unifier never descends into
   -- the nested-carrier `Spec` conjuncts.
-  show MemoryBumpChip.Spec (Component.rowInput { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions }
+  show MemoryBumpChip.Spec (Component.rowInput { circuit := MemoryBumpChip.circuit, Assumptions := (MemoryBumpChip.circuit).Assumptions, generation := MemoryBumpChip.generation }
     (Environment.fromArray row witness.data))
   exact spec
 
@@ -832,7 +832,7 @@ theorem HaltChip.eval_inputs (env : Environment (ZMod p))
 /-- The Halt table's typed State view: per physical row, the decoded pre-syscall pull and halted
 push. -/
 theorem haltTable_typedState_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }) :
     typedTableInteractionsWith table stateChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pulledIfValue stateChannel
@@ -877,7 +877,7 @@ theorem haltTable_typedState (witness : EnsembleWitness (sp1Ensemble (p := p))) 
 `(clk + 264, next_pc)` push. This is the table's entry into the State trail — the reason registering
 it is not merely "two more buses go silent". -/
 theorem syscallInstrsTable_typedState_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }) :
     typedTableInteractionsWith table stateChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pulledIfValue stateChannel
@@ -926,7 +926,7 @@ theorem syscallInstrsTable_typedState (witness : EnsembleWitness (sp1Ensemble (p
 
 /-- One physical HALT row's Program view is its single gated ECALL pull, in any assembly. -/
 theorem haltRow_typedProgram_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }) (row : Array (ZMod p)) :
+    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }) (row : Array (ZMod p)) :
     typedInteractionValuesWith table.component.operations programChannel (Environment.fromArray row data) =
       [TypedInteraction.pulledIfValue programChannel (haltRow data row).is_real
         (HaltChip.programMessage (haltRow data row))] := by
@@ -958,7 +958,7 @@ theorem haltTable_typedProgram (witness : EnsembleWitness (sp1Ensemble (p := p))
 `syscallInstrsTable_typedProgram` so the row's `ProgramMsg.RowSpec` can be read off at one
 environment. -/
 theorem syscallInstrsRow_typedProgram_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (row : Array (ZMod p)) :
     typedInteractionValuesWith table.component.operations programChannel
         (Environment.fromArray row data) =
@@ -1012,7 +1012,7 @@ theorem syscallInstrsTable_typedProgram (witness : EnsembleWitness (sp1Ensemble 
 /-- The Halt table's typed Memory view: per physical row, the three decoded register
 read-prior/read-back pairs (`x5` at `+4`, `x10` at `+3`, `x11` at `+2`). -/
 theorem haltTable_typedMemory_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }) :
     typedTableInteractionsWith table memoryChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pulledIfValue memoryChannel
@@ -1127,7 +1127,7 @@ walk needs it *per row*: the currency antecedent supplies `isU64 ∧ ClkBound` f
 pulls, and `channelGuarantees_of_consumedMessages` turns exactly that into the memory
 `ChannelGuarantees` the row's own `weakSoundness` consumes. -/
 theorem syscallInstrsRow_typedMemory_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (row : Array (ZMod p)) :
     typedInteractionValuesWith table.component.operations memoryChannel
         (Environment.fromArray row data) =
@@ -1263,7 +1263,7 @@ theorem syscallInstrsTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (
 There is no anti-gated companion — a many-row table cannot balance the verifier that way, which is
 exactly why the exit accounting is redesigned when the halt table retires. -/
 theorem syscallInstrsTable_typedExit_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }) :
     typedTableInteractionsWith table exitChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pushedIfValue exitChannel
@@ -1301,7 +1301,7 @@ theorem syscallInstrsTable_typedExit (witness : EnsembleWitness (sp1Ensemble (p 
 /-- The Halt table's typed Exit view: per physical row, the gated reduced-word push and the
 anti-gated zero push — the hand-off pair the verifier's ungated `⟨exit_code⟩` pull balances. -/
 theorem haltTable_typedExit_of_component (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions }) :
+    (component : table.component = { circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation }) :
     typedTableInteractionsWith table exitChannel =
       table.table.flatMap fun row =>
         [TypedInteraction.pushedIfValue exitChannel
@@ -1392,7 +1392,7 @@ private theorem haltRow_spec_of_facts
   have hassump : (haltTable witness).component.CircuitAssumptions
       (Environment.fromArray row witness.data) := by
     rw [haltTable_component]
-    rw [show ∀ env, ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).CircuitAssumptions env = True from
+    rw [show ∀ env, ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).CircuitAssumptions env = True from
       fun _ => HaltChip.circuit_Assumptions_apply _ _]
     trivial
   have spec := ((haltTable witness).component.weakSoundness
@@ -1400,7 +1400,7 @@ private theorem haltRow_spec_of_facts
     hassump (by simpa only [Table.environment, haltTable_data] using tableConstraints row rowMem)
     (haltTable_fullGuarantees witness byteGuarantees programGuarantees memoryGuarantees rowMem)).1
   rw [haltTable_component,
-    show ∀ env, ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions } : Component (ZMod p)).Spec env =
+    show ∀ env, ({ circuit := HaltChip.circuit, Assumptions := (HaltChip.circuit).Assumptions, generation := HaltChip.generation } : Component (ZMod p)).Spec env =
         HaltChip.Spec (valueFromOffset HaltChip.Inputs 0 env) from
       fun _ => HaltChip.circuit_Spec_apply _ _ _] at spec
   exact spec
@@ -1445,7 +1445,7 @@ theorem mem_realHaltRows (witness : EnsembleWitness (sp1Ensemble (p := p)))
 table's five: the two extra buses are the ones only this chip speaks on, and both carry `True`, so
 D2's carve-outs stay *derived from balance* rather than promised here. -/
 private theorem syscallInstrsTable_fullGuarantees
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (byteGuarantees : table.ChannelGuarantees byteChannel.toRaw)
     (programGuarantees : table.ChannelGuarantees programChannel.toRaw)
@@ -1491,7 +1491,7 @@ private theorem syscallInstrsTable_fullGuarantees
 **at this row's environment** rather than table-wide, because that is the form the walk can supply:
 its currency antecedent hands one row's pulls their `isU64 ∧ ClkBound` at a time. -/
 theorem syscallInstrsRow_spec_of_component
-    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions })
+    (table : Table (ZMod p)) (data : ProverData (ZMod p)) (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation })
     (sameData : table.data = data)
     (tableConstraints : table.Constraints)
     (byteGuarantees : table.ChannelGuarantees byteChannel.toRaw)
@@ -1505,7 +1505,7 @@ theorem syscallInstrsRow_spec_of_component
   have hassump : table.component.CircuitAssumptions
       (Environment.fromArray row data) := by
     rw [component]
-    rw [show ∀ env, ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).CircuitAssumptions env = True from
+    rw [show ∀ env, ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).CircuitAssumptions env = True from
       fun _ => SyscallInstrsChip.circuit_Assumptions_apply _ _]
     trivial
   have spec := (table.component.weakSoundness
@@ -1514,7 +1514,7 @@ theorem syscallInstrsRow_spec_of_component
     (syscallInstrsTable_fullGuarantees table data component sameData byteGuarantees programGuarantees
       memoryGuarantees rowMem)).1
   rw [component,
-    show ∀ env, ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions } : Component (ZMod p)).Spec env =
+    show ∀ env, ({ circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation } : Component (ZMod p)).Spec env =
         SyscallInstrsChip.Spec (valueFromOffset SyscallInstrsChip.Inputs 0 env) from
       fun _ => SyscallInstrsChip.circuit_Spec_apply _ _ _] at spec
   exact spec

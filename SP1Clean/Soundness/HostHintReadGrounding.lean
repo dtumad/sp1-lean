@@ -21,10 +21,13 @@ local instance groundingLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem source_ordering
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) :=
   HostHintQueueBoundary.projected_orderingChannels witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
@@ -32,14 +35,14 @@ private theorem source_ordering
 private theorem source_public
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))) :
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).publicInput = witness.publicInput := by
   rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput]
 
 private theorem source_program
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (balanced : HostHintQueueBoundary.Balanced witness) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel programChannel.toRaw := by
   change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
@@ -50,7 +53,7 @@ private theorem source_program
 private theorem source_event_readsInWindow (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
@@ -71,7 +74,7 @@ private theorem source_event_readsInWindow (valid : image.Valid)
 private theorem canonical_times
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -106,7 +109,7 @@ private theorem original_prior_bounds {aligned original : RowFacts p} (facts : A
 abbrev GroundingCarrier
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))) :=
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)) :=
   NativeCore.ExecutionCarrier
     (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
       (wordTables (HostHintQueueBoundary.projected witness))))
@@ -125,7 +128,7 @@ private theorem eventFacts_canonEdge (data : ProverData (ZMod p)) (words : List 
 theorem GroundingCarrier.cpuWalk
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness) :
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness) :
     Walk.IsWalk (ExecutionRow.canonEdge witness.data) (initialBoundaryStateMessage witness.publicInput)
       (finalBoundaryStateMessage witness.publicInput) carrier.ordered := by
   have walk := carrier.eventWalk
@@ -137,7 +140,7 @@ Ordering, read alignment, refresh elimination, and canonical State transport are
 theorem source_grounding_carrier (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     Nonempty (GroundingCarrier witness) := by
   obtain ⟨ordered, rows, touches, frontier, exhaustive, walk, alignment, chronology,
@@ -194,7 +197,7 @@ alignment, canonicalization, and the rewritten prior records are internal to the
 theorem GroundingCarrier.ground_of_steps (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (trajectory : Trajectory) (initial : trajectory 0 = some source.sail.realize)
     (steps : ∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),

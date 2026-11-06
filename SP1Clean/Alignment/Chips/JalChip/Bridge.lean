@@ -10,7 +10,7 @@ import SP1Clean.Proofs.Sail.Advance
 jump/link semantic facts and 4-byte alignment. `JalChip.kind.view` threads a **data-dependent**
 `next_pc = add_operation.value` — `RowView.next_pc` is computed data, not `pc + 4`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.JalSail
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -63,7 +63,7 @@ theorem correct_jal_native
     apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
   have hjump : EStateM.run (jump_to (pc + sign_extend (m := 64) imm)) sp
       = .ok RETIRE_SUCCESS { sp with regs := sp.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
-    rw [← h_jump]; exact jump_to_of_mod4_eq_zero _ sp hsp_init htgt4
+    rw [← h_jump]; exact jump_to_of_mod4_eq_zero _ sp htgt4
   simp [spec_jal, sp1_jal, execute_JAL, hsp.symm,
     Sail.run_readReg_bind_of_isInitialized _ _ hs, hpc_get,
     Sail.run_readReg_bind_of_isInitialized _ _ hsp_init,
@@ -102,7 +102,7 @@ theorem correct_jal_native_x0
     apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
   have hjump : EStateM.run (jump_to (pc + sign_extend (m := 64) imm)) sp
       = .ok RETIRE_SUCCESS { sp with regs := sp.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
-    rw [← h_jump]; exact jump_to_of_mod4_eq_zero _ sp hsp_init htgt4
+    rw [← h_jump]; exact jump_to_of_mod4_eq_zero _ sp htgt4
   simp [spec_jal, sp1_jal, execute_JAL, hsp.symm,
     Sail.run_readReg_bind_of_isInitialized _ _ hs, hpc_get,
     Sail.run_readReg_bind_of_isInitialized _ _ hsp_init,

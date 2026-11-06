@@ -97,7 +97,7 @@ def circuit (op : Op) (hp : 2 ^ 8 < p) :
     obtain ⟨⟨hx, hxbits⟩, ⟨hy, hybits⟩, hr⟩ := h_holds
     refine ⟨⟨hx, hy⟩, ?_⟩
     simp only [hr, fieldFromBits_eval, Vector.map_zipWith, Op.bit_eval,
-      ← Vector.zipWith_map, hxbits, hybits]
+      ← Vector.zipWith_map, Vector.map_mapRange, circuit_norm, hxbits, hybits]
     rw [fieldFromBits_bitwise op hp _ _ hx hy,
       ZMod.val_natCast_of_lt (lt_trans (op.apply_lt hx hy) hp)]
   completeness := by
@@ -107,7 +107,7 @@ def circuit (op : Op) (hp : 2 ^ 8 < p) :
     dsimp only at hx hy
     obtain ⟨hxbits, hybits, hr⟩ := h_env
     refine ⟨hx, hy, ?_⟩
-    simp only [hr, fieldFromBits_eval, Vector.map_zipWith, Op.bit_eval, ← Vector.zipWith_map,
+    simp only [hr, fieldFromBits_eval, Vector.map_zipWith, Op.bit_eval, ← Vector.zipWith_map, Vector.map_mapRange, circuit_norm,
       (hxbits hx).2, (hybits hy).2]
     rw [fieldFromBits_bitwise op hp _ _ hx hy]
     cases op <;> simp [Op.apply, circuit_norm]

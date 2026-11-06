@@ -17,7 +17,7 @@ no provider construction, channel balance, or complete shard relation is claimed
 namespace SP1Clean.Audit.BranchCompilerRoundTrip
 
 open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
-open SP1Clean.TraceGen LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean.TraceGen LeanRV64D LeanRV64D.Functions
 
 /-- A single full-width BEQ word at the native guest-memory lower bound. -/
 def image : ProgramImage := ⟨[(65536, 0x7e208ee3)], 65536, []⟩
@@ -120,7 +120,8 @@ theorem event_target : event.imm = 4092 ∧ event.branchTaken = true ∧ event.b
   native_decide
 
 /-- Local row generation needs no external provider table data. -/
-def data : ProverData (ZMod SP1Prime) := fun _ _ => #[]
+def data : ProverData (ZMod SP1Prime) :=
+  BranchChip.component.inputData (BranchChip.traceInputs [event] 0) (.empty _)
 
 /-- The actual circuit witness generated from the identical compiled event. -/
 def row : Array (ZMod SP1Prime) :=
@@ -141,11 +142,13 @@ theorem row_target : sndPcOf (SP1Clean.Soundness.stateAccess rowView) = 69628#64
 
 /-- One circuit-built Branch table, with the compiled event and no padding. -/
 def table : Table (ZMod SP1Prime) :=
-  Table.build BranchChip.component (BranchChip.traceInputs [event] 0) data (ProverHint.empty _) (by decide)
+  Table.build BranchChip.component (BranchChip.traceInputs [event] 0) data (ProverHint.empty _) (by decide) (by trivial)
+    (BranchChip.component.inputData_consistent _ _)
 
 /-- Completeness checks the real local table. It does not assert ensemble channel balance. -/
 theorem table_constraints : table.Constraints :=
   BranchChip.traceTable_constraints [event] 0 data (by simpa using event_valid) (by decide)
+    (BranchChip.component.inputData_consistent _ _)
 
 /-- The accepted table contains exactly the generated non-padding row. -/
 theorem table_one_real_row : table.table = [row] ∧
@@ -155,7 +158,24 @@ theorem table_one_real_row : table.table = [row] ∧
 data and rejects unchecked legacy lookups; no channel-balance claim is made. -/
 def flatCheck : Bool :=
   WitnessGeneration.constraintsHold <| EnsembleWitness.ofTables
-    ({ tables := [BranchChip.component], unique_names := by simp, channels := [] } :
+    ({ tables := [BranchChip.component], unique_names := by simp,
+       channels := [Channels.stateChannel.toRaw, Channels.byteChannel.toRaw,
+         Channels.memoryChannel.toRaw, Channels.programChannel.toRaw],
+       unique_channel_names := by decide,
+       tables_channels := by
+         intro component member channel used
+         obtain rfl := List.mem_singleton.mp member
+         change channel ∈ BranchChip.circuit.channels at used
+         rw [GeneralFormalCircuit.channels, List.mem_append,
+           show (BranchChip.circuit (p := SP1Prime)).channelsWithGuarantees =
+             (BranchChip.elaborated (p := SP1Prime)).channelsWithGuarantees from rfl,
+           show (BranchChip.circuit (p := SP1Prime)).channelsWithRequirements =
+             [Channels.memoryChannel.toRaw] from rfl] at used
+         simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at used
+         simp only [List.mem_cons, List.not_mem_nil, or_false]
+         tauto,
+       verifier_channels := by simp [Verifier.Program.channels, Verifier.Program.channelsWithGuarantees,
+         Verifier.Program.channelsWithRequirements, Verifier.Program.operations, circuit_norm] } :
       Ensemble (ZMod SP1Prime) unit)
     [table] () rfl
 

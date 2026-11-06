@@ -13,7 +13,7 @@ stutters, making the transition total without treating an interpreter error as a
 PolyFun is used only for this semantic transition/run interface.  Circuit construction and Clean's
 interaction machinery remain independent of it. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Machine
 

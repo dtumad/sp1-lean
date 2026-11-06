@@ -12,13 +12,13 @@ use assembly::*;
 use fixture::fixture;
 
 use clean_backend::witness_generation::Program;
-use clean_backend::{prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec};
+use clean_backend::{EnsembleKey, EnsembleShapeError, GeneratedAirSpec};
 use p3_field::PrimeCharacteristicRing;
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
 
-fixture!(empty, "installed_empty");
-fixture!(generated, "installed_assembly");
+fixture!(empty, installed_empty);
+fixture!(generated, installed_assembly);
 #[test]
 fn complete_generated_witness_matches_native_rows_and_ledger() {
     check_reference::<generated::Ensemble>(&generated::reference(), 3);
@@ -34,7 +34,7 @@ fn empty_generated_witness_matches_native_boundaries_and_rejects_mutations() {
     assert_eq!(public[0], F::ONE);
     assert_eq!(&public[4..7], &[F::ZERO, F::ONE, F::ZERO]);
     assert_eq!(&public[..7], &public[7..14]);
-    let witness = empty::generate(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = empty::generate(&public, &fields(&case["privateInput"]), 1).unwrap();
     // The instruction range is the canonical 25-chip inventory, following six memory
     // boundary components and the Program provider. No instruction row is invented.
     assert!(witness.tables[7..32].iter().all(Vec::is_empty));
@@ -58,15 +58,41 @@ fn empty_assembly_proves_and_requires_every_boundary_terminal() {
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
     let private = fields(&case["privateInput"]);
-    let traces = empty::generate(&public, &private)
+    let traces = empty::generate(&public, &private, 1)
         .unwrap()
         .into_traces()
         .unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = empty::Statement::<F>::new(&heights).unwrap();
-    let config = backend::config();
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let statement = empty::Statement::<F>::new(&heights, 1).unwrap();
+    let mut key = EnsembleKey::new(backend::config(), 1).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
+    // A single key must reindex its fixed commitments when a demand AIR enters and leaves
+    // the batch. These are honest inactive ADD rows, with physical zero-count occurrences.
+    let data = clean_backend::witness_generation::WitnessData::from_entries(vec![]);
+    let padding = <empty::Ensemble as Program<F>>::complete_row(
+        7,
+        &vec![F::ZERO; empty::component_7::INPUT_WIDTH],
+        &data,
+        &data,
+    )
+    .unwrap();
+    assert!(
+        <empty::Ensemble as GeneratedAirSpec>::constraints(7, &padding)
+            .iter()
+            .all(|value| *value == F::ZERO)
+    );
+    assert!(<empty::Ensemble as Program<F>>::interactions(7, &padding)
+        .iter()
+        .all(|entry| entry.multiplicity == F::ZERO));
+    for height in [2, 4, 0] {
+        let mut varied = traces.clone();
+        varied[7] = p3_matrix::dense::RowMajorMatrix::new(padding.repeat(height), padding.len());
+        let heights = varied.iter().map(Matrix::height).collect::<Vec<_>>();
+        let statement = empty::Statement::<F>::new(&heights, 1).unwrap();
+        let proof = key.prove(&statement, varied, &public).unwrap();
+        key.verify(&statement, &proof, &public).unwrap();
+    }
     for case in reference["cases"]
         .as_array()
         .unwrap()
@@ -74,9 +100,9 @@ fn empty_assembly_proves_and_requires_every_boundary_terminal() {
         .skip(1)
         .take(4)
     {
-        assert!(
-            verify_ensemble(&config, &statement, &proof, &fields(&case["publicInput"])).is_err()
-        );
+        assert!(key
+            .verify(&statement, &proof, &fields(&case["publicInput"]))
+            .is_err());
     }
     // Removing any one terminal must fail actual proving/verification with the new shape,
     // not merely fail to verify an old proof against a different statement.
@@ -96,10 +122,11 @@ fn empty_assembly_proves_and_requires_every_boundary_terminal() {
         missing[index].values.clear();
         let mut missing_heights = heights.clone();
         missing_heights[index] = 0;
-        let statement = empty::Statement::<F>::new(&missing_heights).unwrap();
+        let statement = empty::Statement::<F>::new(&missing_heights, 1).unwrap();
         backend::assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, missing, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(backend::config(), 1).unwrap();
+            let proof = key.prove(&statement, missing, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
 }
@@ -110,35 +137,35 @@ fn complete_assembly_proves_and_binds_public_endpoints() {
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
     let private = fields(&case["privateInput"]);
-    let traces = generated::generate(&public, &private)
+    let traces = generated::generate(&public, &private, 1)
         .unwrap()
         .into_traces()
         .unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = generated::Statement::<F>::new(&heights).unwrap();
+    let statement = generated::Statement::<F>::new(&heights, 1).unwrap();
     assert_eq!(statement.component_count(), 95);
     assert_eq!(
-        statement.interaction_count() as usize,
+        statement.interaction_counts().values().sum::<u128>() as usize,
         case["witness"]["interactions"].as_array().unwrap().len()
     );
-    let config = backend::config();
-    let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let mut key = EnsembleKey::new(backend::config(), 1).unwrap();
+    let proof = key.prove(&statement, traces, &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
     let wrong_public = fields(&reference["cases"][1]["publicInput"]);
-    assert!(verify_ensemble(&config, &statement, &proof, &wrong_public).is_err());
+    assert!(key.verify(&statement, &proof, &wrong_public).is_err());
 
     let mut missing_branch = heights.clone();
     missing_branch[18] = 0;
-    let wrong_statement = generated::Statement::<F>::new(&missing_branch).unwrap();
-    assert!(verify_ensemble(&config, &wrong_statement, &proof, &public).is_err());
+    let wrong_statement = generated::Statement::<F>::new(&missing_branch, 1).unwrap();
+    assert!(key.verify(&wrong_statement, &proof, &public).is_err());
     let fixed = generated::Ensemble::FIXED_HEIGHTS
         .iter()
         .position(|height| *height > 0)
         .unwrap();
     let mut missing_fixed = heights;
     missing_fixed[fixed] = 0;
-    assert!(matches!(generated::Statement::<F>::new(&missing_fixed),
-        Err(EnsembleShapeError::FixedTraceHeight { component, actual: 0, .. }) if component == fixed));
+    assert!(matches!(generated::Statement::<F>::new(&missing_fixed, 1),
+        Err(EnsembleShapeError::TraceHeight { component, height: 0 }) if component == fixed));
 }
 
 #[test]
@@ -147,16 +174,16 @@ fn complete_assembly_rejects_a_changed_committed_branch_row() {
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
     let private = fields(&case["privateInput"]);
-    let mut traces = generated::generate(&public, &private)
+    let mut traces = generated::generate(&public, &private, 1)
         .unwrap()
         .into_traces()
         .unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
-    let statement = generated::Statement::<F>::new(&heights).unwrap();
+    let statement = generated::Statement::<F>::new(&heights, 1).unwrap();
     traces[18].values[0] += F::ONE;
-    let config = backend::config();
     backend::assert_backend_rejection(|| {
-        let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
-        verify_ensemble(&config, &statement, &proof, &public).is_err()
+        let mut key = EnsembleKey::new(backend::config(), 1).unwrap();
+        let proof = key.prove(&statement, traces, &public).unwrap();
+        key.verify(&statement, &proof, &public).is_err()
     });
 }

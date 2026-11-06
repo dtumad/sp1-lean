@@ -11,7 +11,7 @@ observations and return value from execution; it does not accept a claimed sysca
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D LeanRV64D.Defs SP1Clean.Soundness.Target
+open LeanRV64D LeanRV64D SP1Clean.Soundness.Target
 
 def HostReadContext.ofSail (source : SailState) : HostReadContext where
   register := source.get_reg?

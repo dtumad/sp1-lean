@@ -14,6 +14,8 @@ namespace SP1Clean.Soundness.OrderedMemoryEnsemble
 
 open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 
+variable {PublicIO : TypeMap} [ProvableType PublicIO]
+
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 def startKey : Word (ZMod p) := #v[0, 0, 0, 0]
@@ -57,6 +59,7 @@ def providerView {Payload : TypeMap} [ProvableType Payload] (name : String) (dis
     TransitionView (OrderedBoundary.channel (p := p) name) where
   component := {
     circuit := OrderedMemoryProvider.circuit name recordSpec provider binds canonical
+    generation := OrderedMemoryProvider.generation name provider.name
     Assumptions := (OrderedMemoryProvider.circuit name recordSpec provider binds canonical).Assumptions
   }
   activity := (varFromOffset (OrderedMemoryProvider.RowInput Payload) 0).2
@@ -109,7 +112,7 @@ private theorem eval_terminal_previous (env : Environment (ZMod p))
 
 def terminalView (name : String) (distinct : name ≠ "SP1Byte") :
     TransitionView (OrderedBoundary.channel (p := p) name) where
-  component := { circuit := OrderedBoundaryEnd.circuit name endKey, Assumptions := (OrderedBoundaryEnd.circuit name endKey).Assumptions }
+  component := { circuit := OrderedBoundaryEnd.circuit name endKey, generation := OrderedBoundaryEnd.generation name, Assumptions := (OrderedBoundaryEnd.circuit name endKey).Assumptions }
   edge env := ((valueFromOffset OrderedBoundary.TerminalInputs 0 env).previous, endKey)
   interactions := by
     intro env
@@ -152,38 +155,44 @@ variable {name : String} {recordSpec : MemoryMsg (ZMod p) → Prop}
 
 def views (inventory : Inventory name recordSpec) := inventory.tableIds.map inventory.viewFor
 
-def ensemble (inventory : Inventory name recordSpec) (auxiliary : List (Component (ZMod p)))
+def ensemble {PublicIO : TypeMap} [ProvableType PublicIO] (inventory : Inventory name recordSpec) (auxiliary : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : ((inventory.views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup) :
-    Ensemble (ZMod p) unit :=
-  OrderedBoundaryEnsemble.ensemble name startKey endKey inventory.views auxiliary channels names
+    (names : ((inventory.views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup)
+    (channelNames : (((OrderedBoundary.channel name).toRaw :: channels).map (·.name)).Nodup := by assumption)
+    (registered : ∀ table ∈ inventory.views.map (·.component) ++ auxiliary,
+      table.circuit.channels ⊆ (OrderedBoundary.channel name).toRaw :: channels := by assumption) :
+    Ensemble (ZMod p) PublicIO :=
+  OrderedBoundaryEnsemble.ensemble (PublicIO := PublicIO) name startKey endKey inventory.views auxiliary channels names channelNames registered
 
 variable (inventory : Inventory name recordSpec) {auxiliary : List (Component (ZMod p))}
 variable {channels : List (RawChannel (ZMod p))}
 variable {names : ((inventory.views.map (·.component) ++ auxiliary).map (·.circuit.name)).Nodup}
+variable {channelNames : (((OrderedBoundary.channel name).toRaw :: channels).map (·.name)).Nodup}
+variable {registered : ∀ table ∈ inventory.views.map (·.component) ++ auxiliary,
+  table.circuit.channels ⊆ (OrderedBoundary.channel name).toRaw :: channels}
 
 /-- All original row environments and registry identities, including padding. -/
-def physicalRows (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) :=
+def physicalRows (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered)) :=
   TransitionView.readIndexedRows inventory.tableIds (witness.tables.take inventory.views.length)
 
 /-- Active rows carry semantic memory records; their environments still use canonical table data. -/
-def indexedRows (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) :=
+def indexedRows (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered)) :=
   TransitionView.readIndexedActiveRows inventory.tableIds inventory.viewFor
     (witness.tables.take inventory.views.length)
 
 /-- Every physical record occurrence retains its actual activity, including zero. -/
-def physicalRecords (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) :
+def physicalRecords (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered)) :
     List (ZMod p × MemoryMsg (ZMod p)) :=
   (inventory.physicalRows witness).filterMap fun row =>
     (inventory.recordFor row.1 row.2).map fun record => (row.2 (inventory.viewFor row.1).activity, record)
 
-def records (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) : List (MemoryMsg (ZMod p)) :=
+def records (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered)) : List (MemoryMsg (ZMod p)) :=
   (inventory.indexedRows witness).filterMap fun row => inventory.recordFor row.1 row.2
 
 omit [Fact (2 ^ 17 < p)] in
 /-- The decoded record inventory is the actual Memory ledger whenever each registered component
 has the stated single-record effect. This transport assumes no constraints or semantic facts. -/
-theorem memory_interactions_eq (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem memory_interactions_eq (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (effect : ZMod p → MemoryMsg (ZMod p) → Interaction (ZMod p))
     (realizes : ∀ id env, (inventory.viewFor id).component.operations.interactionValuesWith memoryChannel.toRaw env =
       ((inventory.recordFor id env).toList).map (effect (env (inventory.viewFor id).activity))) :
@@ -200,7 +209,7 @@ theorem memory_interactions_eq (witness : EnsembleWitness (inventory.ensemble au
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Selecting active records changes neither the physical ledger nor the table data. -/
-theorem records_eq_active_physical (witness : EnsembleWitness (inventory.ensemble auxiliary channels names)) :
+theorem records_eq_active_physical (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered)) :
     inventory.records witness =
       ((inventory.physicalRecords witness).filter fun row => decide (row.1 = 1)).map Prod.snd := by
   simp only [records, indexedRows, TransitionView.readIndexedActiveRows, physicalRecords, physicalRows]
@@ -215,7 +224,7 @@ theorem records_eq_active_physical (witness : EnsembleWitness (inventory.ensembl
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Boolean activity of every physical record follows from its actual table specification. -/
-theorem physicalRecords_binary (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem physicalRecords_binary (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
     ∀ row ∈ inventory.physicalRecords witness, row.1 = 0 ∨ row.1 = 1 := by
   intro row rowMem
@@ -228,7 +237,7 @@ theorem physicalRecords_binary (witness : EnsembleWitness (inventory.ensemble au
 omit [Fact (2 ^ 17 < p)] in
 /-- Raw constraints suffice for physical record multiplicities, before channel authentication. -/
 theorem physicalRecords_binary_of_constraints
-    (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+    (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Constraints) :
     ∀ row ∈ inventory.physicalRecords witness, row.1 = 0 ∨ row.1 = 1 := by
   intro row rowMem
@@ -242,7 +251,7 @@ theorem physicalRecords_binary_of_constraints
       (fun id => (inventory.viewFor id).component) _ aligned valid physical physicalMem)
 
 omit [Fact (2 ^ 17 < p)] in
-theorem indexedRows_spec_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem indexedRows_spec_of_tables (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
     ∀ row ∈ inventory.indexedRows witness, (inventory.viewFor row.1).component.Spec row.2 := by
   apply TransitionView.readIndexedActiveRows_spec inventory.tableIds inventory.viewFor _
@@ -250,7 +259,7 @@ theorem indexedRows_spec_of_tables (witness : EnsembleWitness (inventory.ensembl
   · exact valid
 
 omit [Fact (2 ^ 17 < p)] in
-theorem records_valid_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem records_valid_of_tables (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec) :
     ∀ record ∈ inventory.records witness, recordSpec record := by
   intro record member
@@ -261,7 +270,7 @@ theorem records_valid_of_tables (witness : EnsembleWitness (inventory.ensemble a
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Actual Clean balance forces distinct canonical locations throughout the inventory. -/
-theorem records_locations_nodup_of_tables (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem records_locations_nodup_of_tables (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
     (valid : ∀ table ∈ witness.tables.take inventory.views.length, table.Spec)
@@ -285,20 +294,20 @@ theorem records_locations_nodup_of_tables (witness : EnsembleWitness (inventory.
   simpa only [records, List.map_filterMap, Function.comp_def] using decoded
 
 omit [Fact (2 ^ 17 < p)] in
-theorem indexedRows_spec (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem indexedRows_spec (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (valid : witness.Spec) :
     ∀ row ∈ inventory.indexedRows witness, (inventory.viewFor row.1).component.Spec row.2 :=
   inventory.indexedRows_spec_of_tables witness (fun table member =>
     valid.2 table (List.mem_of_mem_take member))
 
 omit [Fact (2 ^ 17 < p)] in
-theorem records_valid (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem records_valid (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (valid : witness.Spec) : ∀ record ∈ inventory.records witness, recordSpec record :=
   inventory.records_valid_of_tables witness (fun table member =>
     valid.2 table (List.mem_of_mem_take member))
 
 omit [Fact (2 ^ 17 < p)] in
-theorem records_locations_nodup (witness : EnsembleWitness (inventory.ensemble auxiliary channels names))
+theorem records_locations_nodup (witness : EnsembleWitness (inventory.ensemble (PublicIO := PublicIO) auxiliary channels names channelNames registered))
     (privateChannel : ∀ component ∈ auxiliary,
       (OrderedBoundary.channel name).toRaw ∉ component.circuit.channels)
     (valid : witness.Spec) (balanced : witness.BalancedChannels) :

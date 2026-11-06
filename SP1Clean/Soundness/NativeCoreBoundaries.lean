@@ -67,13 +67,11 @@ private theorem initialView_spec (image : ProgramImage)
 /-- A proof view of the actual combined table list, with just the initialization verifier.
 No row or prover data is synthesized or replaced. -/
 def initialWitness {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image)) :
-    EnsembleWitness (InitialMemoryEnsemble.ensemble (p := p) image (afterInitialTables (p := p) image ++ [ramMembership image]) []
-      (baseEnsemble image).unique_names) :=
-  { tables := witness.tables
-    publicInput := ()
-    same_length := witness.same_length
-    same_circuits := witness.same_circuits
-    same_data := witness.same_data }
+    EnsembleWitness (InitialMemoryEnsemble.ensemble (PublicIO := SP1PublicIO) (p := p) image
+      (afterInitialTables (p := p) image ++ [ramMembership image])
+      ((baseEnsemble image).channels.tail) (baseEnsemble image).unique_names
+      (baseEnsemble image).unique_channel_names (baseEnsemble image).tables_channels) :=
+  witness.withEnsemble _ rfl
 
 /-- The Byte closure of the combined ensemble discharges every initial provider's local
 assumptions. Other instruction/finalizer specifications are not required at this stage. -/
@@ -126,25 +124,11 @@ theorem afterInitialTables_silent (image : ProgramImage) :
   rcases member with ((member | rfl) | member) | member
   · simp only [OrderedMemoryEnsemble.Inventory.views, FinalMemoryEnsemble.inventory,
       List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl
-    · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
-        [byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-          byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-          memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-      simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
-        memoryChannel, byteChannel, Channel.toRaw]
-    · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
-        [byteChannel.toRaw, byteChannel.toRaw,
-          (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-          byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw, byteChannel.toRaw,
-          memoryChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-      simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
-        memoryChannel, byteChannel, Channel.toRaw]
-    · change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
-        [byteChannel.toRaw, (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw,
-          (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw]
-      simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, OrderedFinalProvider.channelName,
-        byteChannel, Channel.toRaw]
+    rcases member with rfl | rfl | rfl <;>
+      intro used <;>
+      have support := FinalMemoryEnsemble.view_channels_subset _ used <;>
+      simp [OrderedBoundary.channel, OrderedInitialProvider.channelName,
+        OrderedFinalProvider.channelName, memoryChannel, byteChannel, Channel.toRaw] at support
   · change (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName).toRaw ∉
       (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
     rw [FixedProgramProvider.Preprocessed.circuit_channels]
@@ -191,7 +175,7 @@ theorem initialWitness_interactions {image : ProgramImage}
     verifier_initial_interactions]
   apply congrArg (fun front => front ++ witness.toTables.interactionsWith
     (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw)
-  change (OrderedBoundaryVerifier.verifierProgram _ _ _).circuitOperations.interactionValuesWith _ _ = _
+  change (OrderedBoundaryVerifier.verifierProgram (PublicIO := SP1PublicIO) _ _ _).circuitOperations.interactionValuesWith _ _ = _
   simp only [OrderedBoundaryVerifier.verifierProgram, Verifier.Program.circuitOperations,
     Verifier.Program.operations, Verifier.ofInteractions_values]
   exact OrderedBoundaryVerifier.interactionValues _ _ _ _ _ _
@@ -216,26 +200,6 @@ theorem initial_records_locations_nodup {image : ProgramImage}
         OrderedInitialProvider.channelName, Channel.toRaw]
 
 
-omit [Fact (2 ^ 24 < p)] in
-theorem component_spec_of_byte (component : Component (ZMod p))
-    (channels : component.circuit.channelsWithGuarantees ⊆
-      [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
-        (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
-        (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
-    (env : Environment (ZMod p)) (assumptions : component.CircuitAssumptions env)
-    (constraints : component.operations.ConstraintsHold env)
-    (byte : component.operations.ChannelGuarantees byteChannel.toRaw env) : component.Spec env := by
-  apply (Component.weakSoundness assumptions constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (component.inChannelsOrGuarantees env)]
-  intro channel member
-  have member := channels member
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl
-  · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
-  · exact byte
-  · exact Operations.channelGuarantees_of_trivial _ (by simp [exitChannel, Channel.toRaw]) _ _
-  all_goals exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
-
 /-- The public start state is fixed to the image's entry and boot clock by the actual verifier,
 and both public endpoints have canonical limbs. -/
 theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble (p := p) image))
@@ -244,7 +208,7 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
   have boot := (boot_balanced_iff witness).mp
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
   have byte := (finishedChannel_guarantees image witness constraints balanced).1.1
-  have sourceByte : ({ circuit := verifier image, Assumptions := (verifier image).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+  have sourceByte : ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).ChannelGuarantees
       byteChannel.toRaw (Environment.fromInput witness.publicInput witness.data) := by
     intro interaction member selected
     apply byte interaction ?_ selected
@@ -255,25 +219,42 @@ theorem public_boot {image : ProgramImage} (witness : EnsembleWitness (ensemble 
     left
     change interaction ∈ ((verifierInteractions image).main (varFromOffset SP1PublicIO 0)).circuitOperations.interactions
     rw [verifierInteractions_interactions]
-    simpa only [Component.interactions_eq, Component.rowOperations, verifier, verifierMain,
+    simpa only [verifierMain,
       GeneralFormalCircuit.toSubcircuit_interactions, sp1StateVerifier,
       sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
       circuit_norm] using member
-  have checked : ({ circuit := verifier image, Assumptions := (verifier image).Assumptions } : Component (ZMod p)).operations.ConstraintsHold
+  have checked : ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).ConstraintsHold
       (Environment.fromInput witness.publicInput witness.data) := by
-    rw [Operations.ConstraintsHold, Component.constraints_eq, Component.lookups_eq]
-    change (∀ expression ∈ ((verifierMain image (varFromOffset SP1PublicIO 0)).operations (size SP1PublicIO)).constraints,
+    rw [Operations.ConstraintsHold]
+    change (∀ expression ∈ ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).constraints,
       Expression.eval (Environment.fromInput witness.publicInput witness.data) expression = 0) ∧ _
     constructor
     · have checks := (verifierChecks_iff image (Environment.fromInput witness.publicInput witness.data)).mpr
         (by simpa only [ProvableType.eval_fromInput_varFromOffset_zero] using boot)
       simpa only [verifierMain_constraints] using checks
-    · simp [Component.rowOperations, verifier, verifierMain, sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
+    · simp [verifierMain, sp1StateVerifier, sp1StateVerifierMain, OrderedBoundaryVerifier.circuit, OrderedBoundaryVerifier.main,
         circuit_norm]
-  have spec := component_spec_of_byte ({ circuit := verifier image, Assumptions := (verifier image).Assumptions } : Component (ZMod p))
-    (List.Subset.refl _) _ (by trivial) checked sourceByte
-  simpa only [Component.Spec, verifier, Component.rowInput, circuit_norm,
-    ProvableType.valueFromOffset_zero_fromInput_eq] using spec
+  have guarantees : ((verifierMain image (varFromOffset SP1PublicIO 0)).operations 0).FullGuarantees
+      (Environment.fromInput witness.publicInput witness.data) := by
+    change ((verifier image).main (varFromOffset SP1PublicIO 0)).operations 0
+      |>.FullGuarantees (Environment.fromInput witness.publicInput witness.data)
+    rw [Operations.guarantees_iff _ _ _
+      ((verifier (p := p) image).in_channels_or_guarantees_full
+        (varFromOffset SP1PublicIO 0) 0 (Environment.fromInput witness.publicInput witness.data))]
+    intro channel member
+    change channel ∈ [stateChannel.toRaw, byteChannel.toRaw, exitChannel.toRaw,
+      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
+      (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw] at member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [stateChannel, Channel.toRaw]) _ _
+    · exact sourceByte
+    · exact Operations.channelGuarantees_of_trivial _ (by simp [exitChannel, Channel.toRaw]) _ _
+    all_goals exact Operations.channelGuarantees_of_trivial _ (by simp [OrderedBoundary.channel, Channel.toRaw]) _ _
+  have spec := ((verifier image).original_full_soundness 0
+    (Environment.fromInput witness.publicInput witness.data) (varFromOffset SP1PublicIO 0)
+    trivial checked guarantees).1
+  simpa only [verifier, ProvableType.eval_fromInput_varFromOffset_zero] using spec
 
 private theorem programIndex_bound {image : ProgramImage}
     (witness : EnsembleWitness (ensemble (p := p) image)) : 6 < witness.tables.length := by
@@ -306,8 +287,7 @@ theorem program_row_committed {image : ProgramImage} (valid : image.Valid)
     witness.same_data (programTable witness) tableMem
   simpa only [Table.environment, shared] using
     FixedProgramProvider.Preprocessed.table_committed valid (programTable witness)
-      (programTable_component witness) (witness.dataConsistency_of_mem _ tableMem)
-      (constraints _ tableMem) row member
+      (programTable_component witness) (constraints _ tableMem) row member
       (by simpa only [Table.environment, shared] using active)
 
 /-- The authenticated initial inventory is exactly the physical Memory push list.

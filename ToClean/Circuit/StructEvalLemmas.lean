@@ -25,7 +25,7 @@ bridge by hand, once per field:
 
 `provable_struct_eval_lemmas S` generates exactly those lemmas for every field of `S` (proof:
 `cases s; simp only [circuit_norm]`, so the right-hand side lands in whatever normal form the
-field's type has — `Expression.eval` for a scalar, `Vector.map (Expression.eval env)` for a
+field's type has — `Expression.eval` for a scalar, `Eval.eval env` for a
 `Vector F n`, `ProvableStruct.eval` for a nested struct). Scalar and nested-struct lemmas are
 `circuit_norm` members; a `Vector F n` field's lemma is declared but left untagged, because
 Clean's indexing simproc does lift `Expression.eval env s.c[i]` to `(ProvableStruct.eval env s).c[i]`
@@ -59,7 +59,8 @@ open Lean Elab Command Meta
 namespace ProvableStruct
 
 /-- `provable_struct_eval_lemmas S` declares `S.eval_<field> : (ProvableStruct.eval env s).<field> =
-Eval.eval env s.<field>` (tagged `circuit_norm`) for every field of the structure `S`. -/
+Eval.eval env s.<field>` for every field of `S`. Scalar and nested-struct fields are tagged
+`circuit_norm`; vector fields retain the upstream lifted normal form. -/
 elab "provable_struct_eval_lemmas " id:ident : command => do
   let structName ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo id
   let env ← getEnv
@@ -76,7 +77,7 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
     let fieldIdent := mkIdent field
     -- A `Vector F n` field keeps Clean's lifted normal form (`(ProvableStruct.eval env s).c[i]`,
     -- which Clean's indexing simproc does produce), so its lemma is not a `circuit_norm` member:
-    -- tagging it would loop against that simproc through `eval_fields`/`getElem_map`.
+    -- tagging it would undo the vector-projection lift and prevent a stable normal form.
     let some projFn := getProjFnForField? env structName field
       | throwErrorAt id "no projection function for field `{field}` of `{structName}`"
     -- 0 = scalar (`F`); 1 = `Vector F n` (`Word F`, `fields n F` included); 3 = a vector of
@@ -128,11 +129,10 @@ elab "provable_struct_eval_lemmas " id:ident : command => do
         theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}
             {s : Var $structIdent F}
             (h : ProvableStruct.eval env s = ProvableStruct.eval env' s) :
-            Vector.map (Expression.eval env) s.$fieldIdent:ident
-              = Vector.map (Expression.eval env') s.$fieldIdent:ident := by
+            Eval.eval env s.$fieldIdent:ident
+              = Eval.eval env' s.$fieldIdent:ident := by
           have := congrArg (fun r => r.$fieldIdent:ident) h
-          rw [$lemmaIdent:ident, $lemmaIdent:ident, ProvableType.eval_fields,
-            ProvableType.eval_fields] at this
+          rw [$lemmaIdent:ident, $lemmaIdent:ident] at this
           exact this)
       | 2 => `(
         theorem $congrIdent:ident {F : Type} [FiniteField F] {env env' : Environment F}

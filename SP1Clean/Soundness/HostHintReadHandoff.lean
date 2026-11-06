@@ -112,7 +112,10 @@ theorem handler_clocks_nodup_of_registered_channels
     {receivers : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
     {channels : List (RawChannel (ZMod p))}
     {names : ((HostLocalCore.tables image source (receivers.map (·.component) ++ resources)).map (·.circuit.name)).Nodup}
-    (witness : EnsembleWitness (HostLocalHandoff.ensemble image source receivers resources channels names))
+    {channelNames : ((HostLocalCore.registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ receivers.map (·.component) ++ resources,
+      component.circuit.channels ⊆ HostLocalCore.registry image source channels}
+    (witness : EnsembleWitness (HostLocalHandoff.ensemble image source receivers resources channels names channelNames tableChannels))
     (silent : ∀ component ∈ resources, HostCallChip.channel.toRaw ∉ component.circuit.channels)
     (constraints : witness.Constraints)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))

@@ -10,7 +10,7 @@ including bookkeeping; the native memory-policy window is explicit.
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs SP1Clean.Soundness.Target SP1Clean.Machine
+open LeanRV64D SP1Clean.Soundness.Target SP1Clean.Machine
 
 /-- Sparse observations agree with every partial observation made by the Sail adapter. -/
 def SailSnapshot.readContext (snapshot : SailSnapshot) : HostReadContext where
@@ -42,7 +42,7 @@ theorem HostMemoryWrite.realize (write : HostMemoryWrite) (memory : ByteMemory) 
   · have index : address - write.address < write.bytes.length := by omega
     have equal : address = write.address + (address - write.address) := by omega
     rw [equal, write.read_written _ _ index, ByteMemory.toSailMemory_get?,
-      if_pos (by omega), ByteMemory.read_writeBytes_inside _ _ _ _ index]
+      ite_eq_left (by omega), ByteMemory.read_writeBytes_inside _ _ _ _ index]
   · have outside : address < write.address ∨ write.address + write.bytes.length ≤ address := by omega
     rw [write.read_outside _ address outside, ByteMemory.toSailMemory_get?,
       ByteMemory.read_writeBytes_of_outside _ _ _ _ outside, ByteMemory.toSailMemory_get?]

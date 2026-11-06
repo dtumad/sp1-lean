@@ -22,12 +22,13 @@ theorem main_other_interactions (target : RawChannel (ZMod p)) (notByte : target
   apply InteractionRecovery.interactionsWith_main_eq_nil circuit.base target input offset
   simp [circuit, circuit_norm, notByte]
 
-theorem component_spec_of_byte (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
-    (byte : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env) :
-    ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).inChannelsOrGuarantees env)]
+/-- The bundled circuit's contract follows from its row constraints and Byte guarantees. -/
+theorem row_spec_of_byte (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p))
+    (constraints : ((circuit.main input).operations offset).ConstraintsHold env)
+    (byte : ((circuit.main input).operations offset).ChannelGuarantees byteChannel.toRaw env) :
+    circuit.Spec (eval env input) (eval env ((circuit.main input).output offset)) env.data := by
+  apply (circuit.original_full_soundness offset env input (by trivial) constraints ?_).1
+  rw [Operations.guarantees_iff _ _ _ (circuit.in_channels_or_guarantees_full input offset env)]
   intro selected member
   have same : selected = byteChannel.toRaw := by simpa [circuit, circuit_norm] using member
   simpa only [same] using byte

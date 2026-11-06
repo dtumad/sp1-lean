@@ -22,7 +22,7 @@ class ProfileRunnerTests(unittest.TestCase):
         for name in ("profile_compile.sh", "profile_aggregate.py", "lean_flags.py"):
             shutil.copy2(ROOT / "scripts" / name, self.root / "scripts" / name)
         shutil.copy2(ROOT / "lakefile.toml", self.root / "lakefile.toml")
-        for tree in ("SP1Clean", "ToPolyFun"):
+        for tree in ("SP1Clean", "ToMathlib"):
             (self.root / tree).mkdir()
             (self.root / tree / "Example.lean").write_text("-- process fixture\n")
         self.bin = self.root / "bin"
@@ -31,7 +31,7 @@ class ProfileRunnerTests(unittest.TestCase):
 import json, os, sys
 with open(os.environ["CALLS"], "a") as output:
     output.write(json.dumps(sys.argv[1:]) + "\\n")
-if sys.argv[1] == "build":
+if "build" in sys.argv[1:]:
     sys.exit(int(os.environ.get("FAIL_BUILD", "0")))
 if sys.argv[1] == "env":
     if os.environ.get("FAIL_ENV"):
@@ -44,7 +44,7 @@ if "--version" in sys.argv:
     print("Lean process fixture")
     sys.exit(0)
 case = os.environ.get("PROFILE_CASE", "ok")
-if sys.argv[-1].startswith("ToPolyFun/"):
+if sys.argv[-1].startswith("ToMathlib/"):
     case = "ok"
 if case == "exit":
     sys.exit(7)
@@ -91,12 +91,12 @@ raise SystemExit("profiling must not signal unrelated processes")
         result = self.run_profile()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual(calls, [["build", "--wfail", "--iofail", "SP1Clean", "SP1CleanTest",
-                                  "ToClean", "ToMathlib", "ToPolyFun"], ["env"]])
+        self.assertEqual(calls, [["--no-cache", "build", "--wfail", "--iofail", "SP1Clean", "SP1CleanTest",
+                                  "ToClean", "ToMathlib"], ["env"]])
         self.assertFalse(self.kill_marker.exists())
         records = self.measurements()
         self.assertEqual({r["metric"] for r in records},
-                         {"compile//SP1Clean.Example", "compile//ToPolyFun.Example"})
+                         {"compile//SP1Clean.Example", "compile//ToMathlib.Example"})
         self.assertTrue(all(r["exit"] == 0 for r in records))
         self.assertTrue((self.out / "profile.json").is_file())
 
@@ -126,7 +126,7 @@ raise SystemExit("profiling must not signal unrelated processes")
                 records = {r["metric"]: r for r in self.measurements()}
                 self.assertNotEqual(records["compile//SP1Clean.Example"]["exit"], 0)
                 # Finish the sweep and retain diagnostics for every module after a failure.
-                self.assertEqual(records["compile//ToPolyFun.Example"]["exit"], 0)
+                self.assertEqual(records["compile//ToMathlib.Example"]["exit"], 0)
                 self.assertTrue((self.out / "profile.json").is_file())
 
 

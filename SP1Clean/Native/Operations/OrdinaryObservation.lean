@@ -43,11 +43,11 @@ omit [Fact (2 ^ 25 < p)] in
 /-- The limb encoding denotes the official zero-or-one counter increment. -/
 theorem increment_bits (enabled : Bool) :
     Word.toBitVec64 (increment (R := ZMod p) enabled) = if enabled then 1 else 0 := by
-  cases enabled <;> norm_num [increment, Word.toBitVec64, Word.toNat, ZMod.val_one] <;> rfl
+  cases enabled <;> norm_num [increment, Word.toBitVec64, Word.toNat, ZMod.val_one]
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem eval_increment (enabled : Bool) (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (increment enabled) = increment enabled := by
+    Eval.eval env (increment (R := Expression (ZMod p)) enabled) = increment enabled := by
   cases enabled <;> simp only [increment, circuit_norm]
 
 /-- Local arithmetic and ordering follow from the composed circuit contracts. -/

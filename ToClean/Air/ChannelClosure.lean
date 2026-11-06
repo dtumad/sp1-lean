@@ -56,9 +56,9 @@ order, all evaluated at the canonical data derived from the witness's physical r
 theorem EnsembleWitness.channelGuarantees_of_requirements (witness : EnsembleWitness ens)
     (channel : RawChannel F) [channel.Consistent]
     (balanced : witness.BalancedChannel channel)
-    (verifier : ens.VerifierChannelRequirements witness.publicInput witness.data channel)
+    (verifier : ens.VerifierChannelRequirements witness.data channel)
     (requirements : ∀ table ∈ witness.tables, table.ChannelRequirements channel) :
-    ens.VerifierChannelGuarantees witness.publicInput witness.data channel ∧
+    ens.VerifierChannelGuarantees witness.data channel ∧
       ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
   have allRequirements : ∀ interaction ∈ witness.interactionsWith channel,
       interaction.channel = channel ∧ interaction.Requirements witness.data := by
@@ -88,12 +88,12 @@ No witness-specific provider validity or positional consumer/provider partition 
 theorem EnsembleWitness.channelGuarantees_of_component_requirements (witness : EnsembleWitness ens)
     (channel : RawChannel F) [channel.Consistent]
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel channel)
-    (verifier : ∀ input data, ens.VerifierChannelRequirements input data channel)
+    (verifier : ∀ data, ens.VerifierChannelRequirements data channel)
     (requirements : ∀ component ∈ ens.tables, ∀ env,
       component.operations.ConstraintsHold env → component.operations.ChannelRequirements channel env) :
-    ens.VerifierChannelGuarantees witness.publicInput witness.data channel ∧
+    ens.VerifierChannelGuarantees witness.data channel ∧
       ∀ table ∈ witness.tables, table.ChannelGuarantees channel := by
-  apply witness.channelGuarantees_of_requirements channel balanced (verifier _ _)
+  apply witness.channelGuarantees_of_requirements channel balanced (verifier _)
   intro table member row rowMember
   apply requirements table.component (EnsembleWitness.component_mem_tables_of_mem member)
   exact constraints table member row rowMember

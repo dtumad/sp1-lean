@@ -132,7 +132,7 @@ theorem ExecutionSnapshot.memorySupport_eq (snapshot : ExecutionSnapshot) :
   simp only [ExecutionState.memorySupport, Finset.mem_filter, Finset.mem_range, ByteMemory.mem_supportBelow]
   by_cases bound : address < NativeLayout.sailMemory.upper
   · have read : snapshot.realize.sail.mem.get? address = some (snapshot.sail.memory.read address) :=
-      (snapshot.sail.memory.toSailMemory_get? _ _).trans (if_pos bound)
+      (snapshot.sail.memory.toSailMemory_get? _ _).trans (ite_eq_left bound)
     simp only [bound, true_and]
     change (snapshot.realize.sail.mem.get? address).any (· != 0) = true ↔ _
     rw [read]

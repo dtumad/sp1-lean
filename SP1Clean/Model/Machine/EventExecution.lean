@@ -14,7 +14,7 @@ public witness type is instead the proof-free `EventExecutionTrace`; its validit
 the same steps.  This separation lets an AIR postprocessor decode trace data without inspecting a
 proof of AIR validity.  A certified PolyFun `Prefix` remains the convenient internal theorem view. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Machine
 

@@ -42,14 +42,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main
   circuit_proof_start [U16toU8OperationSafe.circuit, U16toU8OperationSafe.Assumptions,
     HostRamReadChip.channel, bytes]
   obtain ⟨decoded, read⟩ := h_holds
-  obtain ⟨⟨_, _, _, _, _, values⟩, low⟩ := h_input
-  have evalValue (index : ℕ) (bound : index < 4) :
-      env input_var_read_value[index] = input_read_value[index] := by
-    rw [← values, Vector.getElem_map]
-  have evalLow (index : ℕ) (bound : index < 4) :
-      env input_var_low[index] = input_low[index] := by
-    rw [← low, Vector.getElem_map]
-  simp only [evalValue, evalLow]
   simpa only [Spec, bytes, circuit_norm] using bytes_spec ⟨_, _⟩ read (decoded rfl)
 
 theorem completeness : GeneralFormalCircuit.Completeness (ZMod p) main
@@ -86,8 +78,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs (fields 8) where
       subst interaction
       apply Or.inr
       rw [ChannelInteraction.toRaw_requirements]
-      intro impossible
-      exact (impossible (by simp only [circuit_norm])).elim
+      exact Or.inr rfl
 
 @[circuit_norm, explicit_circuit_norm]
 theorem circuit_localLength (input : Var Inputs (ZMod p)) : circuit.localLength input = 0 := rfl

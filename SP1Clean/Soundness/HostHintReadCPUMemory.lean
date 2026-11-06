@@ -89,9 +89,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 private theorem handler_queue_member
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
     (none, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices (queueTables witness) := by
@@ -106,11 +110,11 @@ private theorem handler_queue_member
 /-- Every active word belongs to an actual active syscall with the handler's complete call.
 The clock is derived from the two installed ledgers, independently of Memory-value guarantees. -/
 theorem word_cpu
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
-    (steps : HintReadCoverage.Steps (wordTables witness))
+    (steps : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (row : HintReadCoverage.Row (p := p))
     (member : row ∈ TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) :
     ∃ handler ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data),
@@ -131,7 +135,7 @@ theorem word_cpu
 /-- An actual handler's active words are exactly its authenticated node's padded write
 inventory. This does not require the current call or its preceding CPU replay to succeed. -/
 theorem handler_writes
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (store : HintQueue.Store) (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (records : RecordChannels witness)
@@ -141,9 +145,7 @@ theorem handler_writes
     (env : Environment (ZMod p))
     (member : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data)) :
     ∃ node, HintQueue.node? store (Address.toNat (HostHintReadCoverage.input env).node.pointer) = some node ∧
-      ((TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness)
-          (wordTables_aligned witness))).map
+      ((HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness))).map
           HintReadWrites.produced).Perm
         (HintQueue.wordWrites (Address.toNat (HostHintReadCoverage.input env).span.start) node.bytes) := by
   have valid : HostHintReadCoverage.handler.Spec env := by
@@ -155,30 +157,26 @@ theorem handler_writes
   have bound := HostQueueHistory.records_of_witness witness store authenticated records
     (none, env) (handler_queue_member witness env member)
   have steps := word_steps witness interface store authenticated constraints records
-  have fixed := HintReadCoverage.selection_fixed (wordTables witness)
-    (HostHintReadPartition.keepWord (HostHintReadPartition.callClock env)) (wordTables_aligned witness)
   apply HostHintReadWrites.writes_of_records env _ valid
-    (TransitionView.selectTables_aligned _ _ (fun last => (HintReadCoverage.view last).component)
-      (HostHintReadPartition.keepWord _) fixed (wordTables_aligned witness))
-    (steps.select (HostHintReadPartition.keepWord _) fixed)
+    (steps.select (fun row => HostHintReadPartition.keepWord
+      (HostHintReadPartition.callClock env) row.1 row.2))
     (balanced_for_of_channels witness interface constraints ordering calls cursor env member) store bound.1 bound.2
   intro row present
-  rw [TransitionView.readIndexedActiveRows_selectTables] at present
+  change row ∈ HintReadCoverage.activeRows
+    (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness)) at present
+  rw [HostHintReadPartition.active_rows_for] at present
   exact consumer_word_binding witness store authenticated records.word row (List.mem_filter.mp present).1
 
 private theorem wordsAt_tables (data : ProverData (ZMod p)) (tables : List (Table (ZMod p)))
-    (aligned : List.Forall₂ (fun last table => (HintReadCoverage.view last).component = table.component)
-      HintReadCoverage.variants tables)
     (event : ExecutionRow p) :
     wordsAt data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view tables) event =
-      TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
-        (HostHintReadPartition.tablesFor (cpuClock data event) tables aligned) := by
+      HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (cpuClock data event) tables) := by
   rw [HostHintReadPartition.active_rows_for]
   rfl
 
 /-- Full HostCall agreement identifies the actual CPU group's physical handler words. -/
 theorem handler_wordsAt
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
@@ -187,19 +185,17 @@ theorem handler_wordsAt
     (handler : env ∈ (handlerTable witness).table.map (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
     wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view (wordTables witness)) event =
-      TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
-        (HostHintReadPartition.tablesFor (HostHintReadPartition.callClock env) (wordTables witness)
-          (wordTables_aligned witness)) := by
+      HintReadCoverage.activeRows (HostHintReadPartition.rowsFor (HostHintReadPartition.callClock env) (wordTables witness)) := by
   obtain ⟨physical, _, sameCall, sameEvent⟩ := HostQueueCPUOrder.call_cpu_at witness interface
     constraints calls ordering (none, env) (handler_queue_member witness env handler) event member clock
   have same := congrArg (fun message : HostCallChip.Message (ZMod p) =>
     (message.clk_high, message.clk_low)) sameCall
-  rw [wordsAt_tables _ _ (wordTables_aligned witness), sameEvent, wrapper_call_clock, same, queue_read_call, handler_clock]
+  rw [wordsAt_tables _ _, sameEvent, wrapper_call_clock, same, queue_read_call, handler_clock]
 
 /-- A CPU event's hint writes have distinct destinations. Immutable word authentication
 excludes repeated addresses even though the final consumer retains its address in the cursor. -/
 theorem wordsAt_addresses_nodup
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (store : HintQueue.Store) (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (records : RecordChannels witness)
@@ -222,7 +218,7 @@ theorem wordsAt_addresses_nodup
   rw [same] at writes
   have distinct := (writes.map Prod.fst).nodup_iff.mpr
     (HintQueue.wordWrites_addresses_nodup (Address.toNat (HostHintReadCoverage.input handler).span.start) node.bytes)
-  rw [wordsAt_tables _ _ (wordTables_aligned witness)]
+  rw [wordsAt_tables _ _]
   simpa only [List.map_map, Function.comp_def] using distinct
 
 omit [Fact (2 ^ 25 < p)] in
@@ -242,7 +238,7 @@ theorem address_loc (row : HintReadCoverage.Row (p := p))
 /-- Distinct authenticated destinations are distinct canonical Memory locations in the
 actual timed carrier, independently of predecessor value truth. -/
 theorem wordsAt_locations_nodup
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (store : HintQueue.Store) (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (records : RecordChannels witness)
@@ -266,13 +262,17 @@ theorem wordsAt_locations_nodup
 
 variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
 
+
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 /-- The installed source-backed assembly supplies the word-step contracts used for grouping. -/
 theorem source_word_steps
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
-    HintReadCoverage.Steps (wordTables (HostHintQueueBoundary.projected witness)) := by
+    HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants
+      (wordTables (HostHintQueueBoundary.projected witness))) := by
   have steps := word_steps (HostHintQueueBoundary.projected witness)
     (HostFinalMemory.sourceInterface source.host.io.hints outgoing)
     (HintQueue.ofList source.host.io.hints).1 (HostHintQueueBoundary.source_authentication witness constraints)
@@ -290,7 +290,7 @@ private theorem read_call_code [Fact (2 ^ 17 < p)]
   rw [same, spec.1, HostHintReadChip.codeWord, Target.toBitVec64_bitVecToWord]
 
 private theorem wordsAt_nil_of_not_read
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (store : HintQueue.Store) (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (records : RecordChannels witness)
@@ -331,7 +331,7 @@ out assigning another call's words to a non-read event, without using Memory-val
 theorem source_wordsAt_nil_of_not_read
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -352,12 +352,12 @@ theorem source_wordsAt_nil_of_not_read
 /-- Every active word occurs exactly once among the groups of any exhaustive CPU order.
 This is an occurrence-preserving permutation, so grouping cannot erase duplicate accesses. -/
 theorem words_partition
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (cursor : witness.BalancedChannel HintReadWordChip.stateChannel.toRaw)
     (ordering : LocalCore.OrderingChannels (HostLocalCore.localWitness witness))
-    (steps : HintReadCoverage.Steps (wordTables witness))
+    (steps : HintReadCoverage.Steps (TransitionView.readIndexedRows HintReadCoverage.variants (wordTables witness)))
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness witness))) :
     (cpu.flatMap (wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
@@ -382,7 +382,7 @@ theorem words_partition
 theorem source_words_partition
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) :
@@ -403,7 +403,7 @@ raw Memory ledger and its count bound. -/
 theorem source_memory_partition
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (cpu : List (ExecutionRow p))
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))) :
@@ -442,7 +442,7 @@ theorem source_memory_partition
 theorem source_locations_nodup
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p) :
     ((wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
@@ -479,7 +479,7 @@ All its writes share the event's access time, and authenticated coverage makes l
 theorem source_touches_chain
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p) (loc : MemLoc) :
     List.IsChain (fun a b : TimedGrounding.Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
@@ -493,7 +493,7 @@ predecessor order of every active hint word. -/
 theorem source_touches_at (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p) :
     ∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view

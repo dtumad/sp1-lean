@@ -37,17 +37,11 @@ def main (bound : ℕ) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := 
 instance elaborated (bound : ℕ) : ElaboratedCircuit (ZMod p) Inputs unit (main bound) := by
   elaborate_circuit
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem eval_limit (bound : ℕ) (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const (limit (p := p) bound)) = limit bound := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
-
 theorem soundness (bound : ℕ) (fits : bound < 2 ^ 64) :
     GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) (main bound)
       (fun _ _ => True) (fun input _ _ => Spec bound input) := by
   circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec]
-  rw [eval_limit] at h_holds
+  simp only [Vector.map_id'] at h_holds
   obtain ⟨valueBound, compare, one⟩ := h_holds
   have limitBound : Word.isU64 (limit (p := p) bound) := isU64_bitVecToWord _
   have result := (LtOperationUnsigned.result_semantic
@@ -64,7 +58,7 @@ theorem completeness (bound : ℕ) (fits : bound < 2 ^ 64) :
       (fun input _ _ => ProverAssumptions bound input) (fun _ _ _ => True) := by
   circuit_proof_start [WordRangeCheck.circuit, WordRangeCheck.Assumptions, WordRangeCheck.Spec,
     ProverAssumptions, Spec]
-  rw [eval_limit]
+  simp only [Vector.map_id']
   obtain ⟨⟨valueBound, boundValue⟩, comparisonEq⟩ := h_assumptions
   have limitBound : Word.isU64 (limit (p := p) bound) := isU64_bitVecToWord _
   have compare := LtOperationUnsigned.spec_populate (b := input_value) (cc := limit (p := p) bound) valueBound limitBound
@@ -72,7 +66,7 @@ theorem completeness (bound : ℕ) (fits : bound < 2 ^ 64) :
   rw [← comparisonEq] at compare result
   refine ⟨valueBound, ⟨⟨fun _ => ⟨valueBound, limitBound⟩, Or.inr rfl⟩, compare⟩, ?_⟩
   dsimp only at result
-  rw [result, limit_value bound fits, if_pos boundValue, sub_self]
+  rw [result, limit_value bound fits, ite_eq_left boundValue, sub_self]
 
 @[local circuit_norm] private theorem word_requirements :
     (WordRangeCheck.circuit (p := p)).channelsWithRequirements = [] := rfl

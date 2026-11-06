@@ -289,27 +289,24 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
   obtain ⟨h_rac_a, h_rac_b, h_rac_c, hbin, h_trust, h_prog, z0, z1, z2, z3, h_mem_a, h_mem_b, h_mem_c⟩ :=
     h_holds
   have htbin := bool_of_mul_pred h_trust
-  have e : ∀ i (hi : i < 3), Expression.eval env input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   -- Spec: pair `(decode if trusted) ∧ (isU64 trio if real)`. Requirements: 3 rac (Or.inr), program
   -- off-gate (vacuous via binary is_trusted), 3 pull off-gates (vacuous via binary is_real), 3 push reqs.
   refine ⟨⟨⟨z0, z1, z2, z3⟩, bool_of_mul_pred hbin,
       h_rac_a h_assumptions.1, h_rac_b h_assumptions.1, h_rac_c h_assumptions.1,
       ⟨fun ht => ?_, fun ht2 => ?_⟩⟩,
     Or.inr h_assumptions.1, Or.inr h_assumptions.1, Or.inr h_assumptions.1,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_⟩
+    htbin,
+    h_assumptions.1,
+    h_assumptions.1,
+    fun h0 => ?_,
+    h_assumptions.1,
+    fun h0 => ?_⟩
   · -- Decode bounds are exactly the structural Program-channel guarantee.
     obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [show input_is_trusted = 1 from ht])
-    rw [e 0 (by norm_num)] at hp0; rw [e 1 (by norm_num)] at hp1; rw [e 2 (by norm_num)] at hp2
     exact ⟨ha, hp0, hp1, hp2⟩
   · -- Goal 2: is_real = 1 → isU64 trio + the three pulled records' 24-bit clock bounds — the three
     -- memory pull guarantees (`isU64 ∧ ClkBound`), verbatim.
-    have hneg : - input_is_real = -1 := by rw [show input_is_real = 1 from ht2]
+    have hneg : input_is_real = 1 := by rw [show input_is_real = 1 from ht2]
     exact ⟨(h_mem_a hneg).1, (h_mem_b hneg).1, (h_mem_c hneg).1,
       (h_mem_a hneg).2, (h_mem_b hneg).2, (h_mem_c hneg).2⟩
   · -- Goal 3: push_b requirement — the same prev_value Word as the paired pull (h_mem_b), pushed at
@@ -333,22 +330,19 @@ theorem completeness :
   -- `hbin`/`htrust` carry `{record}.field` projections (the `ProverAssumptionsD`/Contracts `Spec`
   -- reassembly); `dsimp` iota-reduces them to the destructured atoms so the `rw`-gates below match.
   dsimp only at hbin htrust
-  have e : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
   refine ⟨⟨hreal, hrac_a⟩, ⟨hreal, hrac_b⟩, ⟨hreal, hrac_c⟩, ?_, ?_, ?_, z0, z1, z2, z3, ?_, ?_, ?_⟩
   · rcases hbin with h | h <;> rw [h] <;> simp     -- `op_a_0` gate
   · rcases htrust with h | h <;> rw [h] <;> simp   -- `is_trusted` gate
   · -- Completeness proves the structural Program row from the reader's semantic Spec.
     intro ht
-    rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
     exact ⟨ha, hp0, hp1, hp2, hbin⟩
   -- mem_pull_a/b/c: each pull's `MemoryMsg.isU64 ∧ MemoryMsg.ClkBound` is read straight off the
   -- `Spec`'s gated six-fact tuple (the message carries the whole `Word`, so no per-limb eval bridging,
   -- and its `clk_low` *is* the block's `prev_low`).
-  · exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).1, (hisu (neg_inj.mp hneg)).2.2.2.1⟩
-  · exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).2.1, (hisu (neg_inj.mp hneg)).2.2.2.2.1⟩
-  · exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).2.2.1, (hisu (neg_inj.mp hneg)).2.2.2.2.2⟩
+  · exact fun hneg => ⟨(hisu hneg).1, (hisu hneg).2.2.2.1⟩
+  · exact fun hneg => ⟨(hisu hneg).2.1, (hisu hneg).2.2.2.2.1⟩
+  · exact fun hneg => ⟨(hisu hneg).2.2.1, (hisu hneg).2.2.2.2.2⟩
 
 /-- The native RTypeReader reader as a Clean `GeneralFormalCircuit`: takes the chip-owned `cols` adapter block,
 composes a `RegisterAccessCols` sub-assertion per operand for the timestamp byte checks, imposes the
@@ -384,8 +378,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
 
 set_option linter.unusedSectionVars false in

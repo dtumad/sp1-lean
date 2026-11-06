@@ -21,12 +21,14 @@ class RawChannel.ZeroNeutral (channel : RawChannel F) : Prop where
   /-- Zero multiplicity contributes no assumed channel meaning. -/
   guarantees : ∀ message data, channel.Guarantees 0 message data
   /-- Zero multiplicity contributes no required channel meaning. -/
-  requirements : ∀ message data, channel.Requirements 0 message data
+  requirements : ∀ direction message data, channel.Requirements direction 0 message data
 
 instance {Message : TypeMap} [ProvableType Message] (channel : Channel F Message) :
     channel.toRaw.ZeroNeutral where
   guarantees := by intros; simp [Channel.toRaw]
-  requirements := by intros; simp [Channel.toRaw]
+  requirements := by
+    intro direction message data
+    cases direction <;> simp [Channel.toRaw]
 
 namespace AbstractInteraction
 
@@ -63,7 +65,7 @@ theorem guard_requirements_zero (enabled : Expression F) (interaction : Abstract
     (guard enabled interaction).Requirements env := by
   simpa [guard, Requirements, Expression.eval, inactive] using
     RawChannel.ZeroNeutral.requirements (channel := interaction.channel)
-      (interaction.msg.map env) env.data
+      interaction.direction (interaction.msg.map env) env.data
 
 end AbstractInteraction
 
@@ -261,7 +263,7 @@ theorem guard_channelsLawful {offset : ℕ} (original : Subcircuit F offset)
     (neutral : ∀ interaction ∈ FlatOperation.interactions original.ops.toFlat,
       interaction.channel.ZeroNeutral)
     (declared : ∀ interaction ∈ FlatOperation.interactions original.ops.toFlat,
-      interaction.assumeGuarantees = true → interaction.channel ∈ original.channelsWithGuarantees) :
+      interaction.direction = .pull → interaction.channel ∈ original.channelsWithGuarantees) :
     (original.guard enabled noLookups neutral).ChannelsLawful := by
   have flat : (original.guard enabled noLookups neutral).ops.toFlat =
       FlatOperation.assert (enabled * (enabled - 1)) ::
@@ -275,7 +277,7 @@ theorem guard_channelsLawful {offset : ℕ} (original : Subcircuit F offset)
     rw [FlatOperation.inChannelsOrGuarantees_iff_forall_mem, flat]
     simp only [FlatOperation.interactions, FlatOperation.interactions_guard, List.forall_mem_map]
     intro interaction member
-    by_cases carries : interaction.assumeGuarantees = true
+    by_cases carries : interaction.direction = .pull
     · exact Or.inl (declared interaction member carries)
     · exact Or.inr (by intro assumed; exact False.elim (carries assumed))
   · intro env constraints
@@ -317,7 +319,7 @@ class Supported (provider : GeneralFormalCircuit F Input Output) : Prop where
   /-- The child declares every occurrence that can assume a channel guarantee. -/
   declared : ∀ input offset interaction,
     interaction ∈ FlatOperation.interactions (provider.toSubcircuit offset input).ops.toFlat →
-      interaction.assumeGuarantees = true → interaction.channel ∈ provider.channelsWithGuarantees
+      interaction.direction = .pull → interaction.channel ∈ provider.channelsWithGuarantees
 
 /-- Recover compatibility for actual occurrences from the child's declared channel interface. -/
 theorem Supported.neutral {provider : GeneralFormalCircuit F Input Output}
@@ -338,7 +340,7 @@ theorem Supported.of_emitted_requirements (provider : GeneralFormalCircuit F Inp
     (emitted : ∀ input offset channel, channel ∈ provider.channelsWithRequirements →
       channel ∉ provider.channelsWithGuarantees →
       ∀ interaction ∈ ((provider.main input).operations offset).interactionsWith channel,
-        interaction.assumeGuarantees = false) : Supported provider where
+        interaction.direction = .push) : Supported provider where
   noLookups := by
     intro input offset
     rw [GeneralFormalCircuit.toSubcircuit_toFlat, Operations.lookups_toFlat]
@@ -435,6 +437,16 @@ theorem activity_of_constraints
   rw [main_toFlat] at flat
   apply IsBool.iff_mul_sub_one.mpr
   simpa [eval_sub, Expression.eval] using flat.1
+
+/-- Guarding preserves the assertion list, scaling each child assertion by activity. -/
+@[circuit_norm] theorem main_constraints
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)
+    (input : Var (ProvablePair Input field) F) (offset : ℕ) :
+    ((main provider supported input).operations offset).constraints =
+      input.2 * (input.2 - 1) ::
+        (((provider.main input.1).operations offset).constraints.map (input.2 * ·)) := by
+  rw [← Operations.constraints_toFlat, main_toFlat]
+  simp only [FlatOperation.constraints, FlatOperation.constraints_guard, Operations.constraints_toFlat]
 
 /-- An active guarded row retains the child's raw assertions and lookup constraints. -/
 theorem constraints_of_active

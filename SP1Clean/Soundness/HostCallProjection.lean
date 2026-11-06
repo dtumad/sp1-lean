@@ -19,7 +19,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }
+def original : Component (ZMod p) := { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }
 
 /-- WRITE's additional register read, using the constraint-determined full-word selector. -/
 def extraRead (env : Environment (ZMod p)) : Readers.RegisterRead.Inputs (ZMod p) :=
@@ -199,16 +199,16 @@ private theorem main_memory_values (input : Var HostCallChip.Inputs (ZMod p)) (o
   congr 1
   simp only [List.map_cons, List.map_nil, Channel.eval_pulledIf, Channel.eval_pushedIf]
   -- Both sides evaluate the same field expressions once `read`/`prior`/`pushed` are unfolded and
-  -- the selector is rewritten by its constraint-derived value; `circuit_norm` pushes every
-  -- projection of `eval env input` down to the cell level (the input stays opaque).
+  -- the selector is rewritten by its constraint-derived value. Operand words stay folded
+  -- as whole-vector evaluations across the instruction and length-reader boundaries.
   have hsel := HostCallChip.selector_of_constraints input offset env constraints
   have hv : (ProvableStruct.eval env input.instruction).op_a_memory.prev_value =
-      Vector.map (Expression.eval env) input.instruction.op_a_memory.prev_value := by
+      Eval.eval env input.instruction.op_a_memory.prev_value := by
     rw [SyscallInstrsChip.Inputs.eval_op_a_memory, ProvableStruct.eval_eq_eval,
-      Circuits.Types.RegisterAccessCols.eval_prev_value, ProvableType.eval_fields]
+      Circuits.Types.RegisterAccessCols.eval_prev_value]
   have hv' : (ProvableStruct.eval env input.length).prev_value =
-      Vector.map (Expression.eval env) input.length.prev_value := by
-    rw [Circuits.Types.RegisterAccessCols.eval_prev_value, ProvableType.eval_fields]
+      Eval.eval env input.length.prev_value := by
+    rw [Circuits.Types.RegisterAccessCols.eval_prev_value]
   simp only [HostCallChip.Inputs.read, Readers.RegisterRead.Inputs.prior,
     Readers.RegisterRead.Inputs.pushed, circuit_norm, hsel, hv, hv']
 

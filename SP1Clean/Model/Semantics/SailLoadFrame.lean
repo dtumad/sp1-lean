@@ -8,7 +8,7 @@ the successful instruction result.
 -/
 
 namespace SP1Clean.Advance
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem SP1Clean.SailFrame SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 private theorem translate_read_frame (source : SailState) (cfg : SailConfigured source)
@@ -90,7 +90,7 @@ theorem load_execute_frame (source : SailState) (cfg : SailConfigured source)
     (ran : (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width))).run source =
       .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
-  simp only [execute, execute_LOAD, PreSail.assert] at ran
+  simp only [execute, execute_LOAD, PreSail.sail_assert] at ran
   split at ran
   · simp only [pure_bind] at ran
     obtain ⟨middle, value, readRun, rest⟩ := run_bind_success _ _ source target result ran

@@ -25,10 +25,13 @@ local instance executionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p :=
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem source_ordering
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) :=
   HostHintQueueBoundary.projected_orderingChannels witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
@@ -36,7 +39,7 @@ private theorem source_ordering
 private theorem halt_facts (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
@@ -59,7 +62,7 @@ private theorem halt_facts (valid : image.Valid)
 private theorem trajectory_halt (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
@@ -70,7 +73,7 @@ private theorem trajectory_halt (valid : image.Valid)
       LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     (n : ℕ) (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = carrier.timeline.start n) :
     carrier.trajectory valid (n + 1) = (carrier.trajectory valid n).map
-      (fun state => { state with regs := state.regs.insert LeanRV64D.Defs.Register.PC Machine.haltPc }) := by
+      (fun state => { state with regs := state.regs.insert LeanRV64D.Register.PC Machine.haltPc }) := by
   obtain ⟨m, state, present, atTime, pc, rom, _⟩ := pull
   have same : m = n := start_injective carrier.timeline (atTime.symm.trans time)
   subst m
@@ -78,7 +81,7 @@ private theorem trajectory_halt (valid : image.Valid)
   obtain ⟨whole, paired, sail⟩ := Option.map_eq_some_iff.mp present
   have before : carrier.trajectory valid n = some whole.sail := by
     simp only [GroundingCarrier.trajectory, paired, Option.map_some]
-  have atPc : whole.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  have atPc : whole.sail.regs.get? LeanRV64D.Register.PC =
       some (StateMsg.pcBits (HaltChip.statePulledMessage row)) := by rwa [sail]
   have facts := halt_facts valid witness constraints balanced member
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member paired atPc facts.2
@@ -104,7 +107,7 @@ private theorem trajectory_halt (valid : image.Valid)
 theorem GroundingCarrier.halt_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
@@ -129,7 +132,7 @@ paired replay, including empty local segments. Complete outgoing snapshot bindin
 theorem GroundingCarrier.ground (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
       LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline (event.facts witness.data).statePull ∧

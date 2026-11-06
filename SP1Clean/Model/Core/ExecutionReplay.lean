@@ -43,7 +43,7 @@ theorem replayHost?_eq_some_iff (policy : HostPolicy) (program : GuestProgram)
 
 /-- The Boolean ECALL test observes the actual PC in the committed program. -/
 def ExecutionState.atEcall (program : GuestProgram) (source : ExecutionState) : Bool :=
-  ((source.sail.regs.get? LeanRV64D.Defs.Register.PC).bind program.fetchWord) == some ECALL_ENC
+  ((source.sail.regs.get? LeanRV64D.Register.PC).bind program.fetchWord) == some ECALL_ENC
 
 theorem ExecutionState.atEcall_iff (program : GuestProgram) (source : ExecutionState) :
     source.atEcall program = true ↔ AboutToExecuteEcall program source.sail := by
@@ -95,7 +95,7 @@ theorem replayStep?_terminal_pc {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {event : ExecutionEvent}
     (success : replayStep? policy program source event = some target)
     (stopped : target.host.exitCode ≠ none) :
-    target.sail.regs.get? LeanRV64D.Defs.Register.PC = some haltPc := by
+    target.sail.regs.get? LeanRV64D.Register.PC = some haltPc := by
   cases event with
   | ordinary =>
     simp only [replayStep?] at success
@@ -202,10 +202,10 @@ theorem replayEvents?_preserves {policy : HostPolicy} {program : GuestProgram}
 theorem replayEvents?_terminal_pc {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {events : List ExecutionEvent}
     (initial : source.host.exitCode ≠ none →
-      source.sail.regs.get? LeanRV64D.Defs.Register.PC = some haltPc)
+      source.sail.regs.get? LeanRV64D.Register.PC = some haltPc)
     (success : replayEvents? policy program source events = some target)
     (stopped : target.host.exitCode ≠ none) :
-    target.sail.regs.get? LeanRV64D.Defs.Register.PC = some haltPc := by
+    target.sail.regs.get? LeanRV64D.Register.PC = some haltPc := by
   induction events generalizing source with
   | nil => cases success; exact initial stopped
   | cons event rest ih =>
@@ -219,7 +219,7 @@ theorem replayEvents?_running_of_fetch {policy : HostPolicy} {program : GuestPro
     (initial : source.host.exitCode = none)
     (success : replayEvents? policy program source events = some target)
     {pc : BitVec 64} {word : BitVec 32}
-    (atPc : target.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc)
+    (atPc : target.sail.regs.get? LeanRV64D.Register.PC = some pc)
     (fetched : program.fetchWord pc = some word) : target.host.exitCode = none := by
   by_contra stopped
   have parked := replayEvents?_terminal_pc (fun stopped => (stopped initial).elim) success stopped

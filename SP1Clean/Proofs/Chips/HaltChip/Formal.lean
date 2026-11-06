@@ -1,7 +1,9 @@
 import ToClean.Circuit.SubcircuitProjection
 import Clean.Air.FlatComponent
+import ToClean.Air.HintIndex
 import SP1Clean.Native.Chips.HaltChip.Defs
 import Clean.Utils.Tactics
+import Clean.Circuit.WitnessIRSugar
 
 /-! # Halt table: soundness, completeness, and the bundled circuit
 
@@ -39,40 +41,21 @@ theorem soundness :
     h_m5, h_m10, h_m11⟩ := h_holds
   have h_bin := bool_of_mul_pred h_gate
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec (h_cpu h_bin)
-  -- The `Vector`-component eval crossings `h_input` leaves whole: the pc limbs, the x5 word, and
-  -- the x10 word's high limbs.
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env input_var_state_pc[i] = input_state_pc[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.1.2.2.2
-    simpa using this
-  have e5 : ∀ i (hi : i < 4),
-      Expression.eval env input_var_x5_memory_prev_value[i]
-        = input_x5_memory_prev_value[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.1.1
-    simpa using this
-  have e10 : ∀ i (hi : i < 4),
-      Expression.eval env input_var_x10_memory_prev_value[i]
-        = input_x10_memory_prev_value[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.2.1.1
-    simpa using this
   refine ⟨⟨h_bin, h_cpu h_bin, h_rac5 h_bin, h_rac10 h_bin, h_rac11 h_bin,
       fun hr => ?_, fun hr => ?_⟩, ?_⟩
   · -- pc limb bounds: the Program pull's `RowSpec` guarantee.
-    have hneg : -input_is_real = -1 := by rw [hr]
-    exact ⟨epc 0 (by norm_num) ▸ (h_prog hneg).2.1,
-      epc 1 (by norm_num) ▸ (h_prog hneg).2.2.1,
-      epc 2 (by norm_num) ▸ (h_prog hneg).2.2.2⟩
+    have hneg : input_is_real = 1 := by rw [hr]
+    exact ⟨(h_prog hneg).2.1,
+      (h_prog hneg).2.2.1,
+      (h_prog hneg).2.2.2⟩
   · -- the gated tail: `x5 = 0` / the x10 high-limb zeros from the gated asserts, `isU64`/clock
     -- bounds from the pulls.
-    have hneg : -input_is_real = -1 := by rw [hr]
+    have hneg : input_is_real = 1 := by rw [hr]
     rw [hr, one_mul] at z0 z1 z2 z3 z4 z5 z6
-    exact ⟨⟨e5 0 (by norm_num) ▸ z0, e5 1 (by norm_num) ▸ z1,
-      e5 2 (by norm_num) ▸ z2, e5 3 (by norm_num) ▸ z3⟩,
-      ⟨e10 1 (by norm_num) ▸ z4, e10 2 (by norm_num) ▸ z5,
-        e10 3 (by norm_num) ▸ z6⟩,
+    exact ⟨⟨z0, z1,
+      z2, z3⟩,
+      ⟨z4, z5,
+        z6⟩,
       (h_m5 hneg).1, (h_m10 hneg).1, (h_m11 hneg).1,
       (h_m5 hneg).2, (h_m10 hneg).2, (h_m11 hneg).2⟩
   · -- the requirement tail: sub-circuit assumptions, off-gate pulls, push requirements (the two
@@ -81,10 +64,7 @@ theorem soundness :
       first
         | exact h_bin
         | exact Or.inl rfl
-        | exact Or.inr h_bin
-        | exact fun h1 h0 => off_gate_vacuous h_bin h1 h0
-        | exact fun _ _ => trivial
-        | (intro _ h0
+        | (intro h0
            have hr : input_is_real = 1 := h_bin.resolve_left h0
            first
              | exact ⟨(h_m5 (by rw [hr])).1, h_clk.at_four hr⟩
@@ -96,23 +76,6 @@ theorem completeness :
       (fun input _ _ => Spec input) (fun _ _ _ => True) := by
   circuit_proof_start
   obtain ⟨h_bin, h_cpu, h_rac5, h_rac10, h_rac11, h_pc, h_tail⟩ := h_assumptions
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env.toEnvironment input_var_state_pc[i] = input_state_pc[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.1.2.2.2
-    simpa using this
-  have e5 : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_x5_memory_prev_value[i]
-        = input_x5_memory_prev_value[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.1.1
-    simpa using this
-  have e10 : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_x10_memory_prev_value[i]
-        = input_x10_memory_prev_value[i] := by
-    intro i hi
-    have := congrArg (fun v => v[i]'hi) h_input.2.2.1.1
-    simpa using this
   -- Slots, in op order: the gate, the `CPUState`/register-access sub pairs, the gated Program
   -- pull, the four `x5 = 0` asserts, the three x10 upper-limb asserts, and the three Memory
   -- read-prior pulls (a push owes nothing in completeness — its requirement is a soundness-side
@@ -122,38 +85,38 @@ theorem completeness :
     fun hneg => ?_, fun hneg => ?_, fun hneg => ?_⟩
   · rcases h_bin with h | h <;> rw [h] <;> simp
   · -- Program pull: `RowSpec` of the ECALL fetch, from the pc bounds + the index literal.
-    have hr : input_is_real = 1 := neg_inj.mp hneg
+    have hr : input_is_real = 1 := hneg
     exact ⟨val5_lt (Fact.out (p := 2 ^ 17 < p)),
-      (epc 0 (by norm_num)).symm ▸ (h_pc hr).1,
-      (epc 1 (by norm_num)).symm ▸ (h_pc hr).2.1,
-      (epc 2 (by norm_num)).symm ▸ (h_pc hr).2.2, Or.inl rfl⟩
+      (h_pc hr).1,
+      (h_pc hr).2.1,
+      (h_pc hr).2.2, Or.inl rfl⟩
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e5 0 (by norm_num)]; exact ((h_tail h).1).1
+    · rw [one_mul]; exact ((h_tail h).1).1
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e5 1 (by norm_num)]; exact ((h_tail h).1).2.1
+    · rw [one_mul]; exact ((h_tail h).1).2.1
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e5 2 (by norm_num)]; exact ((h_tail h).1).2.2.1
+    · rw [one_mul]; exact ((h_tail h).1).2.2.1
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e5 3 (by norm_num)]; exact ((h_tail h).1).2.2.2
+    · rw [one_mul]; exact ((h_tail h).1).2.2.2
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e10 1 (by norm_num)]; exact ((h_tail h).2.1).1
+    · rw [one_mul]; exact ((h_tail h).2.1).1
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e10 2 (by norm_num)]; exact ((h_tail h).2.1).2.1
+    · rw [one_mul]; exact ((h_tail h).2.1).2.1
   · rcases h_bin with h | h <;> rw [h]
     · rw [zero_mul]
-    · rw [one_mul, e10 3 (by norm_num)]; exact ((h_tail h).2.1).2.2
+    · rw [one_mul]; exact ((h_tail h).2.1).2.2
   · -- x5 read-prior pull: `isU64` + the pulled clock's 24-bit bound.
-    have hr : input_is_real = 1 := neg_inj.mp hneg
+    have hr : input_is_real = 1 := hneg
     exact ⟨(h_tail hr).2.2.1, (h_tail hr).2.2.2.2.2.1⟩
-  · have hr : input_is_real = 1 := neg_inj.mp hneg
+  · have hr : input_is_real = 1 := hneg
     exact ⟨(h_tail hr).2.2.2.1, (h_tail hr).2.2.2.2.2.2.1⟩
-  · have hr : input_is_real = 1 := neg_inj.mp hneg
+  · have hr : input_is_real = 1 := hneg
     exact ⟨(h_tail hr).2.2.2.2.1, (h_tail hr).2.2.2.2.2.2.2⟩
 
 /-- Halt's exact Memory-channel interaction list: the three register read-prior/read-back pairs
@@ -260,14 +223,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       -- requirements are `True` (`exitChannel.Guarantees := True`).
       rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
       · right
-        rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-        simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_bool h1 h0
+        exact h_bool
       all_goals first
         | exact Or.inl List.mem_cons_self
         | (right
-           simp only [ChannelInteraction.toRaw_requirements, ChannelInteraction.Requirements,
-             exitChannel]
-           intros; trivial)
+           simp [circuit_norm, exitChannel])
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :
@@ -345,10 +305,30 @@ theorem interactionsWith_exit_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
 
 /-- Halt rows use channels for their cross-table checks, with no Clean lookup operations. -/
 theorem lookups_empty :
-    ({ circuit := circuit (p := p), Assumptions := (circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations]
-  simp [circuit, main, Readers.CPUState.circuit, Readers.CPUState.main,
+    ((circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat, FlatOperation.lookups, circuit, main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main, circuit_norm]
+
+/-- Exit demand creates the one halt row, including ordinary shards' zero-code padding.
+The optional private input is indexed by exit code; an absent input must not synthesize a
+zero-code padding response before a real host HALT runs. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  .demand {
+    channel := Channels.exitChannel
+    trigger := .pull
+    guard message :=
+      let input := Witgen.HintIndex.input (Input := Inputs) (circuit (p := p)).name message.value.val
+      .and (.lt 0 (Witgen.HintIndex.row (circuit (p := p)).name message.value.val))
+        (input.is_real * (input.x10_memory.prev_value[0] +
+          (input.x10_memory.prev_value[1] +
+            (input.x10_memory.prev_value[2] + input.x10_memory.prev_value[3] * 65536) * 65536) * 65536)
+          =? message.value)
+    input message :=
+      pure (fromElements ((toElements (Witgen.HintIndex.input (Input := Inputs)
+        (circuit (p := p)).name message.value.val)).map Air.Flat.WitnessGeneration.Cell.witness))
+  }
 
 end SP1Clean.HaltChip

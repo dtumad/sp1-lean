@@ -1,3 +1,4 @@
+import Clean.Air.Balance
 import SP1Clean.Native.Operations.FinalRegisterValue
 import SP1Clean.Native.Operations.FinalRamValue
 import SP1Clean.Native.Operations.FinalMemoryReceipt
@@ -61,13 +62,13 @@ private def evaluate {Input Output : TypeMap} [ProvableType Input] [ProvableType
       byteValid (interaction.msg.map env).toList
   let membership := StaticMembership.check (FinalRegisterValue.membership snapshot)
     (interactions.map fun interaction =>
-      (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+      (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
     (FinalRegisterValue.membership_height_lt_uint64 snapshot)
   (localConstraints snapshot env operations && bytes && membership,
     (interactions.filter fun interaction =>
       interaction.channel.name == "SP1FinalRegisterValue" || interaction.channel.name == "SP1FinalRamValue" ||
         interaction.channel.name == "SP1FinalMemoryChange").map
-      fun interaction => (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+      fun interaction => (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
 
 private def balanced (rows : List (Bool × List (String × List Fp × Fp))) : Bool :=
   let interactions := rows.flatMap Prod.snd

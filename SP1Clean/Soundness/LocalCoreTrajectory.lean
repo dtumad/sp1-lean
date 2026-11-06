@@ -124,7 +124,7 @@ theorem GroundingCarrier.pairedTrajectory_running_of_fetch {image : ProgramImage
     {event : ExecutionRow p} (member : event ∈ executionRows witness)
     {n : ℕ} {state : ExecutionState} (present : carrier.pairedTrajectory valid policy n = some state)
     {pc : BitVec 64} {word : BitVec 32}
-    (atPc : state.sail.regs.get? LeanRV64D.Defs.Register.PC = some pc)
+    (atPc : state.sail.regs.get? LeanRV64D.Register.PC = some pc)
     (fetched : (image.toGuestProgram valid).fetchWord pc = some word) : state.host.exitCode = none := by
   exact replayEvents?_running_of_fetch (source_running_of_event witness constraints balanced member) present atPc fetched
 
@@ -138,7 +138,7 @@ theorem GroundingCarrier.replay_of_finalTruth {image : ProgramImage} {source : E
       (finalBoundaryStateMessage witness.publicInput)) :
     ∃ target, replayEvents? policy (image.toGuestProgram valid) source.realize carrier.events = some target ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
-      target.sail.regs.get? LeanRV64D.Defs.Register.PC =
+      target.sail.regs.get? LeanRV64D.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) := by
   obtain ⟨n, state, present, time, pc, _, _⟩ := final
   have atEnd : n = carrier.rows.length := start_injective carrier.timeline (time.symm.trans carrier.finalClock.symm)

@@ -22,7 +22,7 @@ projection then identifies one of the official Core ALU instruction families, in
 and word-immediate form supported by SP1 v6.4.0. Source-register facts are needed only so the Sail reads
 succeed; their values are discarded. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.AluX0Sail
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -296,11 +296,11 @@ open Air.Flat Circuit
 
 /-- The completed AluX0 columns at one physical component row. -/
 noncomputable def physicalCols (env : Environment (ZMod p)) : Columns (ZMod p) :=
-  ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env
+  ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions, generation := AluX0Chip.generation } : Component (ZMod p)).rowOutput env
 
 /-- The completed AluX0 row view at one physical component row. -/
 noncomputable def physicalView (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  rowView (({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) (physicalCols env)
+  rowView (({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions, generation := AluX0Chip.generation } : Component (ZMod p)).rowInput env) (physicalCols env)
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluation of AluX0's input selector, exposed without decomposing the reader blocks. -/
@@ -349,11 +349,8 @@ private theorem opcodeBound_of_byteGuarantees (input : Var Inputs (ZMod p)) (off
     Operations.forall_interactionsWith_iff.mpr guarantees _
       (ltuPull_mem_interactionsWith input offset)
   have typed := (ChannelInteraction.toRaw_guarantees env ltu).mp ltuGuarantee
-  have negReal : -(Expression.eval env input.is_real) = -1 := by rw [real]
-  have ltuMult : (fun x => Expression.eval env x) ltu.toRaw.mult = -1 := by
-    simpa only [ltu, circuit_norm] using negReal
   have spec : ByteRowSpec (Eval.eval env ltu.msg) := by
-    have guarantee := typed rfl (by simpa only [circuit_norm] using ltuMult)
+    have guarantee := typed rfl (by simpa only [ltu, circuit_norm] using real)
     change ByteRowSpec (Eval.eval env ltu.msg) at guarantee
     exact guarantee
   have msgEq : Eval.eval env ltu.msg =
@@ -369,16 +366,16 @@ re-base's per-chip strengthening fact). The Byte-channel guarantee premise is di
 `sp1_finishedChannel_guarantees` at the whole-ensemble level. -/
 theorem physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (_constraints :
-      ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions, generation := AluX0Chip.generation } : Component (ZMod p)).operations.ConstraintsHold env)
     (guarantees :
-      ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+      ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions, generation := AluX0Chip.generation } : Component (ZMod p)).operations.ChannelGuarantees
         (Channels.byteChannel (p := p)).toRaw env)
     (real : (physicalView env).is_real = 1) :
     (physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var Inputs (ZMod p) := varFromOffset Inputs 0
   let offset := size Inputs
   have inputEq : Eval.eval env input =
-      ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+      ({ circuit := AluX0Chip.circuit (p := p), Assumptions := (AluX0Chip.circuit (p := p)).Assumptions, generation := AluX0Chip.generation } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset Inputs 0 env
   have rowGuarantees : Operations.ChannelGuarantees (Channels.byteChannel (p := p)).toRaw env
       ((AluX0Chip.main input).operations offset) := by
