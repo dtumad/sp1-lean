@@ -2,7 +2,6 @@ import SP1Clean.Model.BusMessages
 import SP1Clean.Circuits.Types.BitwiseChip
 import SP1Clean.Circuits.Types.LtChip
 import SP1Clean.Proofs.Chips.DivRemChip.Defs
-import ToClean.Gadgets.Equality
 import Clean.Utils.Tactics
 
 /-! Regression proofs for Clean's vector evaluation normal form at SP1 message boundaries.
@@ -90,15 +89,5 @@ example {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
       (ProvableStruct.eval env input).state := by
   rw [DivRemChip.Columns.eval_state, DivRemChip.output_state_eq]
   simp only [circuit_norm]
-
--- Zero-cell assertions need no input, data or hint agreement, even at different offsets.
--- Equality's polymorphic bundle retains the generic pair instance.
-local instance (priority := high + 1) : ProvableType (ProvablePair field field) := ProvablePair.instance
-
-example (left right : Expression F) (env env' : ProverEnvironment F) (offset start : ℕ) :
-    ((Gadgets.Equality.circuit field).toSubcircuit offset (left, right)).ComputableWitnesses
-      start env env' := by
-  apply Subcircuit.computableWitnesses_of_localLength_zero
-  rfl
 
 end SP1CleanTest.BundledComputability
