@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.AddChip.Defs
@@ -49,10 +50,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   -- read off `h_addspec.1`; the rest are discharged by the binary gate.
   and_intros <;>
     first
-      | exact h_bin
-      | exact Or.inl rfl
       | exact Or.inr ⟨h_bin, h_bin, h_clk⟩
-      | exact ⟨fun hr => ⟨(h_trio hr).2.1, (h_trio hr).2.2.1⟩, h_bin⟩
       | exact Or.inr ⟨h_bin, fun hr => (h_addspec hr).1,
           h_clk.at_four⟩
 
@@ -63,18 +61,18 @@ theorem completeness :
     h_assumptions
   -- G1: the *push* side clock bounds, from the prover-supplied CPUState clock byte bounds.
   have h_clk := Readers.ClkDiscipline.of_cpuState_spec h_cpu
-  obtain ⟨-, -, -, -, -, -, ⟨hob, -, -⟩, -, hoc, -, -⟩ := h_input
+  have hob := h_input.2.2.2.2.2.2.1.1
+  have hoc := h_input.2.2.2.2.2.2.2.2.1
   have hz : ∀ w : ZMod p, input_adapter_op_a_0 * w = 0 := fun w => by rw [hop_a_0, zero_mul]
   have hbeq := (vec4_eval env.toEnvironment input_var_adapter_op_b_memory_prev_value).trans hob
   have hceq := (vec4_eval env.toEnvironment input_var_adapter_op_c_memory_prev_value).trans hoc
   -- The witnessed `value` is `populate op_b op_c`: `h_env` pins each limb to the (folded)
   -- `populateIR` evaluation, and `populateIR_eval` crosses that boundary to `populate`.
-  have hval : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var {index := i₀ + i}) : Word (ZMod p))
+  have hval : (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p))
       = AddOperation.populate input_adapter_op_b_memory_prev_value input_adapter_op_c_memory_prev_value := by
     rw [← AddOperation.populateIR_eval env _ _ _ _ hbeq hceq ha hb]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     -- `h_env` now bundles the GFC `CPUState` obligation (`.1`, since it too is a GFC subcircuit now),
     -- the chip's `value` witness-gen equations (`.2.1`), and the `RTypeReader` obligation (`.2.2`);
     -- `exact` crosses the (definitional) struct-projection gap between the destructured names and
@@ -238,14 +236,19 @@ theorem interactionsWith_memory_eq (input : Var Inputs (ZMod p)) (offset : ℕ) 
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := AddChip.circuit (p := p), Assumptions := (AddChip.circuit (p := p)).Assumptions } : Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    AddChip.circuit_main_eq]
-  simp [AddChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
+    ((AddChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat, FlatOperation.lookups, AddChip.main, Readers.CPUState.circuit, Readers.CPUState.main,
     Readers.RTypeReader.circuit, Readers.RTypeReader.main,
     Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
     AddOperation.circuit, AddOperation.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.AddChip

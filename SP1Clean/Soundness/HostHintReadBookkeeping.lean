@@ -13,7 +13,7 @@ the endpoint execution theorem. Binding these observations to a supplied target 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
 open Circuit Air.Flat Channels Model.Core NativeCore HostHintReadLocal
-open LeanRV64D.Defs (Register)
+open LeanRV64D (Register)
 
 private def retirementObservation (state : SailState) : Bool × Option Bool × Option (BitVec 64) :=
   (retirementEnabled state, state.regs.get? Register.minstret_increment, state.regs.get? Register.minstret)
@@ -48,6 +48,8 @@ local instance bookkeepingLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p 
 local instance bookkeepingLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 private theorem step_bookkeeping (valid : image.Valid)
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)

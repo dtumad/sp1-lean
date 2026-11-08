@@ -1,3 +1,4 @@
+import Clean.Air.Balance
 import SP1Clean.Soundness.Decode
 import SP1CleanTest.Core.NonVacuityReal
 
@@ -20,7 +21,7 @@ namespace SP1Clean.Audit.OneAddNativePremises
 
 open Air.Flat Circuit
 open SP1Clean.NonVacuityRealTests SP1Clean.TraceGenTests
-open LeanRV64D.Defs
+open LeanRV64D
 
 /-- `ADD x1, x2, x3` at the first legal committed code address. The source values are `100` and
 `23`; the destination receives `123`. -/
@@ -38,7 +39,7 @@ def operations : Operations (ZMod SP1Prime) :=
 
 /-- A stable, decidable projection of Clean's heterogeneous evaluated interaction. -/
 def interactionView (interaction : Interaction (ZMod SP1Prime)) : String × Nat × List Nat :=
-  (interaction.channel.name, interaction.mult.val, interaction.msg.toList.map ZMod.val)
+  (interaction.channel.name, interaction.signedMult.val, interaction.msg.toList.map ZMod.val)
 
 def interactionViews : List (String × Nat × List Nat) :=
   (operations.interactionValues environment).map interactionView
@@ -48,7 +49,7 @@ true Clean subcircuits. -/
 theorem constraints_hold : operations.ConstraintsHold environment :=
   constraintsHold_of_check (by native_decide)
 
-/-- The exact four-bus footprint of the row. Multiplicity `SP1Prime - 1` is field `-1` (a pull),
+/-- The exact four-bus footprint of the row. Signed multiplicity `SP1Prime - 1` is field `-1` (a pull),
 and multiplicity `1` is a push. Besides guarding interaction layout, this records the finite
 provider rows that a future joint non-vacuity witness must balance. -/
 theorem interactions_exact :

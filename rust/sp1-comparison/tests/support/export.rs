@@ -1,8 +1,7 @@
 //! Concrete field evaluation and one-row Clean runtime support for export comparisons.
 
-use clean_backend::witness_generation::{
-    HintTable, Interaction, Mode, Padding, Program, WitnessData,
-};
+use clean_backend::witness_generation::{Direction, Program, WitnessData};
+use p3_field::PrimeField64;
 use p3_koala_bear::KoalaBear as NativeField;
 use slop_air::{AirBuilder, AirBuilderWithPublicValues};
 use slop_algebra::{AbstractField, PrimeField64 as Sp1PrimeField64};
@@ -13,7 +12,7 @@ use sp1_hypercube::{
     InteractionKind,
 };
 use sp1_primitives::SP1Field;
-use std::marker::PhantomData;
+use std::collections::BTreeMap;
 
 pub type Ledger = Vec<(String, u64, Vec<u64>)>;
 
@@ -103,46 +102,44 @@ impl MessageBuilder<AirInteraction<SP1Field>> for Sp1Evaluation {
     }
 }
 
-/// Use Clean's runtime to construct one row, without satisfying its external buses.
-/// Only this test adapter suppresses scheduling interactions. The generated interactions
-/// are checked separately against SP1, including repeated and zero-multiplicity entries.
-/// The unadapted generated program must still reject an active row with no providers.
-pub struct RowWitness<P>(PhantomData<P>);
-impl<P: Program<NativeField>> Program<NativeField> for RowWitness<P> {
-    const FIELD_ORDER: u64 = P::FIELD_ORDER;
-    const HINT_TABLES: &'static [HintTable] = P::HINT_TABLES;
-    const FUEL: usize = <P as Program<NativeField>>::FUEL;
-    const COMPONENTS: usize = <P as Program<NativeField>>::COMPONENTS;
-    const PUBLIC_INPUTS: usize = <P as Program<NativeField>>::PUBLIC_INPUTS;
-    const PROVER_INPUTS: usize = <P as Program<NativeField>>::PROVER_INPUTS;
-    const FIXED_WIDTHS: &'static [usize] = <P as Program<NativeField>>::FIXED_WIDTHS;
-    const ROW_WIDTHS: &'static [usize] = <P as Program<NativeField>>::ROW_WIDTHS;
-    const COMPONENT_NAMES: &'static [&'static str] = <P as Program<NativeField>>::COMPONENT_NAMES;
-    fn modes() -> Vec<Mode<NativeField>> {
-        P::modes()
+/// Complete an isolated component row through the generated upstream witness function.
+/// This checks the row program; full ensemble tests separately exercise channel scheduling.
+pub fn complete_row<P: Program<NativeField>>(
+    input: &[NativeField],
+) -> Result<Vec<NativeField>, String> {
+    assert_eq!(P::COMPONENTS, 1);
+    if input.len() != P::PROVER_INPUTS {
+        return Err(format!(
+            "row input has width {}, expected {}",
+            input.len(),
+            P::PROVER_INPUTS
+        ));
     }
-    fn padding() -> Vec<Padding<NativeField>> {
-        P::padding()
+    let data = WitnessData::from_entries(vec![]);
+    let hint = WitnessData::from_entries(vec![("input", vec![input.to_vec()])]);
+    P::complete_row(0, input, &data, &hint)
+}
+
+/// Determine whether a component row leaves an unmatched external demand. Count over integers,
+/// retaining direction separately from the natural field count. Physical comparisons above and
+/// in the callers still compare every occurrence, including repeated keys and zero counts.
+pub fn has_open_bus<P: Program<NativeField>>(input: &[NativeField]) -> bool {
+    let row = complete_row::<P>(input).unwrap();
+    let mut counts = BTreeMap::new();
+    for entry in P::interactions(0, &row) {
+        let key = (
+            entry.channel,
+            entry
+                .message
+                .iter()
+                .map(PrimeField64::as_canonical_u64)
+                .collect::<Vec<_>>(),
+        );
+        let count = i128::from(entry.multiplicity.as_canonical_u64());
+        *counts.entry(key).or_insert(0) += match entry.direction {
+            Direction::Push => count,
+            Direction::Pull => -count,
+        };
     }
-    fn initial_row(
-        component: usize,
-        row: u64,
-        hint: &WitnessData<NativeField>,
-    ) -> Vec<NativeField> {
-        P::initial_row(component, row, hint)
-    }
-    fn complete_row(
-        component: usize,
-        input: &[NativeField],
-        data: &WitnessData<NativeField>,
-        hint: &WitnessData<NativeField>,
-    ) -> Result<Vec<NativeField>, String> {
-        P::complete_row(component, input, data, hint)
-    }
-    fn interactions(_: usize, _: &[NativeField]) -> Vec<Interaction<NativeField>> {
-        vec![]
-    }
-    fn verifier_interactions(_: &[NativeField]) -> Vec<Interaction<NativeField>> {
-        vec![]
-    }
+    counts.values().any(|count| *count != 0)
 }

@@ -14,6 +14,7 @@ on:
       - "scripts/provenance.json"
       - "scripts/prepare_sail.py"
       - "scripts/check_pins.py"
+      - "scripts/check_sail_regeneration.py"
       - "lakefile.toml"
       - ".github/actions/prepare-sail/**"
       - "lake-manifest.json"
@@ -41,6 +42,8 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
               print('SAIL_SHA=' + sail['compilerRevision'], file=out)
               print('OCAML_VERSION=' + sail['ocamlVersion'], file=out)
+              print('HISTORICAL_OCAML=' + sail['historicalStock']['ocamlVersion'], file=out)
+              print('HISTORICAL_SHA=' + sail['historicalStock']['compilerRevision'], file=out)
               print('MODEL_SHA=' + sail['generatedTreeSha256'], file=out)
           PY
 
@@ -58,6 +61,21 @@ jobs:
             .lake/sail-gen/compiler-revision
           key: sail-compiler-${{ runner.os }}-${{ steps.pins.outputs.SAIL_SHA }}-${{ steps.pins.outputs.OCAML_VERSION }}
 
+      - name: Restore the historical compiler control
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/sail-gen/historical/opam
+            .lake/sail-gen/historical/compiler-revision
+          key: sail-historical-${{ runner.os }}-${{ steps.pins.outputs.HISTORICAL_SHA }}-${{ steps.pins.outputs.HISTORICAL_OCAML }}
+
+      - name: Reproduce the independent historical stock snapshot
+        env:
+          SAIL_GEN_PROFILE: historical
+        run: |
+          scripts/sail-config/generate_lean_rv64d.sh --deps
+          scripts/sail-config/generate_lean_rv64d.sh --stock
+
       - name: Build or verify the pinned Sail compiler
         run: scripts/sail-config/generate_lean_rv64d.sh --deps
 
@@ -66,16 +84,37 @@ jobs:
           scripts/sail-config/generate_lean_rv64d.sh --make-config
           git diff --exit-code -- scripts/sail-config/sp1_rv64d_cfg.json
 
+      - name: Generate the current compiler controls
+        run: |
+          mkdir -p .lake/sail-controls
+          scripts/sail-config/generate_lean_rv64d.sh --stock
+          cp -R .lake/sail-gen/sail-riscv/build/model/Lean_RV64D .lake/sail-controls/stock
+          scripts/sail-config/generate_lean_rv64d.sh --legacy-sp1
+          cp -R .lake/sail-gen/sail-riscv/build/model/Lean_RV64D .lake/sail-controls/sp1
+          scripts/sail-config/generate_lean_rv64d.sh --stock-module
+          cp -R .lake/sail-gen/sail-riscv/build/model/Lean_RV64D .lake/sail-controls/stock-module
+
       - name: Independently regenerate and check the SP1-configured fingerprint
         run: |
           scripts/sail-config/generate_lean_rv64d.sh --sp1
           python3 scripts/prepare_sail.py --from .lake/sail-gen/sail-riscv/build/model/Lean_RV64D
+
+      - name: Check configuration and module deltas independently
+        run: |
+          python3 scripts/check_sail_regeneration.py matrix \
+            .lake/sail-controls/stock .lake/sail-controls/sp1 \
+            .lake/sail-controls/stock-module .lake/generated/sail
+          diff -ru .lake/sail-gen/historical/sail-riscv/build/model/Lean_RV64D \
+            .lake/sail-controls/stock > .lake/sail-controls/compiler-delta.diff || test "$?" = 1
+
+      - name: Archive regeneration controls
+        uses: actions/upload-artifact@v4
+        with:
+          name: sail-regeneration-controls
+          path: .lake/sail-controls
 
       - name: Save the verified portable sources
         uses: actions/cache/save@v4
         with:
           path: .lake/generated/sail
           key: sail-source-${{ steps.pins.outputs.MODEL_SHA }}
-
-      - name: Regenerate with the stock config and compare with the opencompl base
-        run: scripts/sail-config/generate_lean_rv64d.sh --stock

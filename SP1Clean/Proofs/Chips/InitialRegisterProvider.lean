@@ -36,7 +36,7 @@ theorem initialSpec (image : ProgramImage) (index : ZMod p) (bound : index.val <
   refine ⟨?_, by simp [MemoryBoundary.address, message, Word.toNat]⟩
   let register := BitVec.ofNat 5 index.val
   have decoded : MemoryMsg.locOf (message index) = MemLoc.reg register := by
-    simp only [MemoryMsg.locOf, message, bound, and_self, if_true, register]
+    simp only [MemoryMsg.locOf, message, bound, and_self, ite_true, register]
   have zero : Word.toBitVec64 (#v[0, 0, 0, 0] : Word (ZMod p)) = 0 := by
     simp [Word.toBitVec64, Word.toNat]
   refine ⟨?_, by simp [MemoryMsg.ClkBound, message],
@@ -80,7 +80,7 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) field MemoryM
   soundness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, message]
     have valid := initialSpec image input h_holds
-    exact ⟨valid, fun _ _ => ⟨valid.1.1, valid.1.2.1⟩⟩
+    exact ⟨valid, fun _ => ⟨valid.1.1, valid.1.2.1⟩⟩
   completeness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, message]
     exact h_assumptions

@@ -31,24 +31,22 @@ the form `ComputableWitnesses`'s input-agreement hypothesis hands over. -/
 theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
-      = Vector.map (Expression.eval env) input.op_b_val := by
+      = Eval.eval env input.op_b_val := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Inputs.op_b_val, eval_inputs, Readers.evalITypeColumns,
     Readers.evalRegisterAccessColumns]
-  exact ProvableType.eval_fields env _
 
 /-- The sign-extended offset immediate, evaluated. -/
 theorem eval_opCImm {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_imm
-      = Vector.map (Expression.eval env) input.op_c_imm := by
+      = Eval.eval env input.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [Inputs.op_c_imm, eval_inputs, Readers.evalITypeColumns]
-  exact ProvableType.eval_fields env _
 
 /-- StoreWord's row has computable witnesses: the four address cells come from the composed
 `AddressOperation`, whose input row is a function of this row's own input cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,

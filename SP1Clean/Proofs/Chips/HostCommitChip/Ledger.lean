@@ -24,7 +24,7 @@ theorem guarded_host_values (deferred : Bool) (slot : Fin 8) (input : Var RowInp
   change ((Guarded.main (activeCircuit deferred slot) (guardSupported deferred slot) input).operations offset).interactionValuesWith _ env = _
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, host_values, List.map_cons, List.map_nil,
-    Channel.pulledValue, Channel.pulledIfValue, mul_neg, mul_one]
+    Channel.pulledValue, Channel.pulledIfValue, mul_one]
 
 /-- An active row requests its slot's declaration; padding requests it at zero multiplicity. -/
 theorem guarded_declaration_values (deferred : Bool) (slot : Fin 8) (input : Var RowInput (ZMod p))
@@ -36,7 +36,7 @@ theorem guarded_declaration_values (deferred : Bool) (slot : Fin 8) (input : Var
   change ((Guarded.main (activeCircuit deferred slot) (guardSupported deferred slot) input).operations offset).interactionValuesWith _ env = _
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, declaration_values, List.map_cons, List.map_nil,
-    Channel.pulledValue, Channel.pulledIfValue, mul_neg, mul_one]
+    Channel.pulledValue, Channel.pulledIfValue, mul_one]
 
 /-- Both bank-state occurrences survive padding at zero multiplicity. -/
 theorem guarded_state_values (deferred : Bool) (slot : Fin 8) (input : Var RowInput (ZMod p))
@@ -48,6 +48,6 @@ theorem guarded_state_values (deferred : Bool) (slot : Fin 8) (input : Var RowIn
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, state_values, List.map_cons, List.map_nil,
     Channel.pulledValue, Channel.pushedValue, Channel.pulledIfValue, Channel.pushedIfValue,
-    mul_neg, mul_one]
+    mul_one]
 
 end SP1Clean.HostCommitChip

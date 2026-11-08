@@ -130,7 +130,7 @@ def liftResult {α : Type} (result : Except String α) : IO α :=
 def jsonNat (value : Nat) : Json := toJson (toString value)
 
 def assertionsHold (flat : List (FlatOperation F)) (cells : List F) : Bool :=
-  let env := Environment.fromArray cells.toArray (fun _ _ => #[])
+  let env := Environment.fromArray cells.toArray (.empty _)
   flat.all fun op => match op with
     | .assert expression => env expression == 0
     | .witness .. => true

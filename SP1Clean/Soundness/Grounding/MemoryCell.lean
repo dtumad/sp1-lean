@@ -364,39 +364,39 @@ theorem patchedCellBytes_zero_four
     (wordBytes (Word.toBitVec64 new))[index]
   interval_cases i
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 0 ≤ 0 ∧ 0 < 0 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 0 ≤ 0 ∧ 0 < 0 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 0 8 = (Word.toBitVec64 new).extractLsb' 0 8
     rw [wordByte_zero stored storedBound, wordByte_zero new newBound, new0]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 0 ≤ 1 ∧ 1 < 0 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 0 ≤ 1 ∧ 1 < 0 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 8 8 = (Word.toBitVec64 new).extractLsb' 8 8
     rw [wordByte_one stored storedBound, wordByte_one new newBound, new0]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 0 ≤ 2 ∧ 2 < 0 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 0 ≤ 2 ∧ 2 < 0 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 16 8 = (Word.toBitVec64 new).extractLsb' 16 8
     rw [wordByte_two stored storedBound, wordByte_two new newBound, new1]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 0 ≤ 3 ∧ 3 < 0 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 0 ≤ 3 ∧ 3 < 0 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 24 8 = (Word.toBitVec64 new).extractLsb' 24 8
     rw [wordByte_three stored storedBound, wordByte_three new newBound, new1]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(0 ≤ 4 ∧ 4 < 0 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(0 ≤ 4 ∧ 4 < 0 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 32 8 = (Word.toBitVec64 new).extractLsb' 32 8
     rw [wordByte_four old oldBound, wordByte_four new newBound, new2]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(0 ≤ 5 ∧ 5 < 0 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(0 ≤ 5 ∧ 5 < 0 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 40 8 = (Word.toBitVec64 new).extractLsb' 40 8
     rw [wordByte_five old oldBound, wordByte_five new newBound, new2]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(0 ≤ 6 ∧ 6 < 0 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(0 ≤ 6 ∧ 6 < 0 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 48 8 = (Word.toBitVec64 new).extractLsb' 48 8
     rw [wordByte_six old oldBound, wordByte_six new newBound, new3]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(0 ≤ 7 ∧ 7 < 0 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(0 ≤ 7 ∧ 7 < 0 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 56 8 = (Word.toBitVec64 new).extractLsb' 56 8
     rw [wordByte_seven old oldBound, wordByte_seven new newBound, new3]
 
@@ -423,38 +423,38 @@ theorem patchedCellBytes_four_four
     (wordBytes (Word.toBitVec64 new))[index]
   interval_cases i
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(4 ≤ 0 ∧ 0 < 4 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(4 ≤ 0 ∧ 0 < 4 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 0 8 = (Word.toBitVec64 new).extractLsb' 0 8
     rw [wordByte_zero old oldBound, wordByte_zero new newBound, new0]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(4 ≤ 1 ∧ 1 < 4 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(4 ≤ 1 ∧ 1 < 4 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 8 8 = (Word.toBitVec64 new).extractLsb' 8 8
     rw [wordByte_one old oldBound, wordByte_one new newBound, new0]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(4 ≤ 2 ∧ 2 < 4 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(4 ≤ 2 ∧ 2 < 4 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 16 8 = (Word.toBitVec64 new).extractLsb' 16 8
     rw [wordByte_two old oldBound, wordByte_two new newBound, new1]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_neg (by change ¬(4 ≤ 3 ∧ 3 < 4 + 4); omega)]
+    rw [patchedCellBytes_getElem, ite_eq_right (by change ¬(4 ≤ 3 ∧ 3 < 4 + 4); omega)]
     change (Word.toBitVec64 old).extractLsb' 24 8 = (Word.toBitVec64 new).extractLsb' 24 8
     rw [wordByte_three old oldBound, wordByte_three new newBound, new1]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 4 ≤ 4 ∧ 4 < 4 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 4 ≤ 4 ∧ 4 < 4 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 0 8 = (Word.toBitVec64 new).extractLsb' 32 8
     rw [wordByte_zero stored storedBound, wordByte_four new newBound, new2]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 4 ≤ 5 ∧ 5 < 4 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 4 ≤ 5 ∧ 5 < 4 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 8 8 = (Word.toBitVec64 new).extractLsb' 40 8
     rw [wordByte_one stored storedBound, wordByte_five new newBound, new2]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 4 ≤ 6 ∧ 6 < 4 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 4 ≤ 6 ∧ 6 < 4 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 16 8 = (Word.toBitVec64 new).extractLsb' 48 8
     rw [wordByte_two stored storedBound, wordByte_six new newBound, new3]
   · dsimp only [index]
-    rw [patchedCellBytes_getElem, if_pos (by change 4 ≤ 7 ∧ 7 < 4 + 4; omega)]
+    rw [patchedCellBytes_getElem, ite_eq_left (by change 4 ≤ 7 ∧ 7 < 4 + 4; omega)]
     norm_num
     change (Word.toBitVec64 stored).extractLsb' 24 8 = (Word.toBitVec64 new).extractLsb' 56 8
     rw [wordByte_three stored storedBound, wordByte_seven new newBound, new3]
@@ -550,7 +550,7 @@ theorem lowByteUpdateFacts
   intro i
   have newSelected :
       new[limb] = registerLow + memoryHigh * 256 := by
-    rw [newEq limb, if_pos rfl]
+    rw [newEq limb, ite_eq_left rfl]
   have newLow :=
     lowByte_eq registerLowBound memoryHighBound newSelected
   have newHigh :=
@@ -628,7 +628,7 @@ theorem highByteUpdateFacts
   intro i
   have newSelected :
       new[limb] = memoryLow + registerLow * 256 := by
-    rw [newEq limb, if_pos rfl]
+    rw [newEq limb, ite_eq_left rfl]
   have newLow :=
     lowByte_eq memoryLowBound registerLowBound newSelected
   have newHigh :=
@@ -695,11 +695,11 @@ theorem patchedCellBytes_one
   rw [newBytes index, patchedCellBytes_getElem]
   by_cases selectedEq : index = selected
   · subst selected
-    rw [if_pos rfl, if_pos (by omega)]
+    rw [ite_eq_left rfl, ite_eq_left (by omega)]
     norm_num
     rfl
-  · rw [if_neg selectedEq]
-    apply if_neg
+  · rw [ite_eq_right selectedEq]
+    apply ite_eq_right
     intro covered
     apply selectedEq
     apply Fin.ext
@@ -734,14 +734,14 @@ theorem ramCellUpdate_of_patchedCell
     (patchedCellBytes old mw offset width)[index]
   rw [updatedCellBytes_getElem, patchedCellBytes_getElem]
   by_cases covered : offset ≤ index.val ∧ index.val < offset + width
-  · rw [if_pos covered, if_pos]
+  · rw [ite_eq_left covered, ite_eq_left]
     · unfold Trace.MemWrite.byteAt
       congr 2
       omega
     · unfold Trace.MemWrite.covers
       rw [address, widthEq]
       omega
-  · rw [if_neg covered, if_neg]
+  · rw [ite_eq_right covered, ite_eq_right]
     unfold Trace.MemWrite.covers
     rw [address, widthEq]
     omega

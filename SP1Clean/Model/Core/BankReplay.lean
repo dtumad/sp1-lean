@@ -69,7 +69,7 @@ theorem HostState.executeBank_bank {host : HostState} {policy : HostPolicy}
     {context : HostReadContext} (deferred : Bool) {arg1 arg2 : BitVec 64} {effect : HostEffect}
     (success : host.executeKind policy context (bankKind deferred) arg1 arg2 = some effect) :
     bankUpdate (host.bank deferred) (arg1, arg2) = effect.state.bank deferred := by
-  simpa only [bankCall?, if_pos rfl, ↓reduceIte, Option.toList_some, List.foldl_cons, List.foldl_nil] using
+  simpa only [bankCall?, ite_eq_left rfl, ↓reduceIte, Option.toList_some, List.foldl_cons, List.foldl_nil] using
     HostState.executeKind_bank success deferred
 
 theorem replayStep?_bank {policy : HostPolicy} {program : GuestProgram}

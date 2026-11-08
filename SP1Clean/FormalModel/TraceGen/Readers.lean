@@ -291,7 +291,7 @@ omit [Fact (2 ^ 24 < p)] in
 /-- A built R-type block's `op_a_0` flag is `0` exactly when the destination is not `x0`. -/
 lemma rTypeReaderCols_op_a_0_eq_zero {e : RTypeEvent} (h : e.opA ≠ 0) :
     (rTypeReaderCols (p := p) e).op_a_0 = 0 := by
-  rw [rTypeReaderCols_op_a_0, if_neg h]
+  rw [rTypeReaderCols_op_a_0, ite_eq_right h]
 
 /-! ## The sibling adapter blocks
 
@@ -313,7 +313,7 @@ omit [Fact (2 ^ 24 < p)] in
 /-- A built I-type block's `op_a_0` flag is `0` exactly when the destination is not `x0`. -/
 lemma iTypeReaderCols_op_a_0_eq_zero {e : ITypeEvent} (h : e.opA ≠ 0) :
     (iTypeReaderCols (p := p) e).op_a_0 = 0 := by
-  rw [iTypeReaderCols_op_a_0, if_neg h]
+  rw [iTypeReaderCols_op_a_0, ite_eq_right h]
 
 omit [Fact p.Prime] in
 /-- The committed destination-register index of a built ALU-type block is `< 32`. -/
@@ -327,14 +327,14 @@ omit [Fact (2 ^ 24 < p)] in
 /-- A built ALU-type block's `op_a_0` flag is `0` exactly when the destination is not `x0`. -/
 lemma aluTypeReaderCols_op_a_0_eq_zero {e : ALUTypeEvent} (h : e.opA ≠ 0) :
     (aluTypeReaderCols (p := p) e).op_a_0 = 0 := by
-  rw [aluTypeReaderCols_op_a_0, if_neg h]
+  rw [aluTypeReaderCols_op_a_0, ite_eq_right h]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- A built ALU-type block's `op_a_0` flag is `1` exactly when the destination **is** `x0` — the
 routing condition of the `AluX0` chip. -/
 lemma aluTypeReaderCols_op_a_0_eq_one {e : ALUTypeEvent} (h : e.opA = 0) :
     (aluTypeReaderCols (p := p) e).op_a_0 = 1 := by
-  rw [aluTypeReaderCols_op_a_0, if_pos h]
+  rw [aluTypeReaderCols_op_a_0, ite_eq_left h]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The immediate selector committed by the ALU-type builder is binary. Unlike the older
@@ -367,7 +367,7 @@ lemma aluTypeReaderCols_imm_copy {e : ALUTypeEvent}
     · rw [aluTypeReaderCols_imm_c, h, Nat.cast_zero, zero_mul]
     · rw [aluTypeReaderCols_imm_c, h, Nat.cast_one, one_mul,
         aluTypeReaderCols_op_c_memory, aluTypeReaderCols_op_c,
-        aluTypeOpCCols, if_pos h, sub_self]
+        aluTypeOpCCols, ite_eq_left h, sub_self]
   exact ⟨hgate 0 (by omega), hgate 1 (by omega), hgate 2 (by omega), hgate 3 (by omega)⟩
 
 /-- The value a built ALU-type `op_c` block commits is a u64 in **both** row forms — the `rs2`
@@ -459,7 +459,7 @@ theorem aluTypeReaderImmutable_spec {e : ALUTypeEvent} (hclk : e.clk % 8 = 1) (h
     intro i hi
     rcases himmC with h | h
     · rw [aluTypeReaderCols_imm_c, h, Nat.cast_zero, zero_mul]
-    · rw [aluTypeReaderCols_op_c_memory, aluTypeReaderCols_op_c, aluTypeOpCCols, if_pos h,
+    · rw [aluTypeReaderCols_op_c_memory, aluTypeReaderCols_op_c, aluTypeOpCCols, ite_eq_left h,
         sub_self, mul_zero]
   refine ⟨⟨hgate 0 (by omega), hgate 1 (by omega), hgate 2 (by omega), hgate 3 (by omega)⟩,
     hbin, by rw [sub_self, zero_mul], ?_,
@@ -495,13 +495,13 @@ omit [Fact (2 ^ 24 < p)] in
 /-- A built J-type block's `op_a_0` flag is `0` exactly when the destination is not `x0`. -/
 lemma jTypeReaderCols_op_a_0_eq_zero {e : JTypeEvent} (h : e.opA ≠ 0) :
     (jTypeReaderCols (p := p) e).op_a_0 = 0 := by
-  rw [jTypeReaderCols_op_a_0, if_neg h]
+  rw [jTypeReaderCols_op_a_0, ite_eq_right h]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- A built J-type block sets its destination-zero flag when `rd = x0`. -/
 lemma jTypeReaderCols_op_a_0_eq_one {e : JTypeEvent} (h : e.opA = 0) :
     (jTypeReaderCols (p := p) e).op_a_0 = 1 := by
-  rw [jTypeReaderCols_op_a_0, if_pos h]
+  rw [jTypeReaderCols_op_a_0, ite_eq_left h]
 
 omit [Fact (2 ^ 24 < p)] in
 /-- The destination-zero flag of any built J-type row is binary. -/
@@ -554,7 +554,7 @@ omit [Fact (2 ^ 24 < p)] in
 routing condition of the `AluX0`/`LoadX0`/`StoreX0` chips. -/
 lemma iTypeReaderCols_op_a_0_eq_one {e : ITypeEvent} (h : e.opA = 0) :
     (iTypeReaderCols (p := p) e).op_a_0 = 1 := by
-  rw [iTypeReaderCols_op_a_0, if_pos h]
+  rw [iTypeReaderCols_op_a_0, ite_eq_left h]
 
 /-- **The immutable I-type adapter's contract on a built row.** The sibling of `iTypeReader_spec`
 for the reader the `x0` and store chips compose: `op_a` is a source **read**, so the four `op_a_0`

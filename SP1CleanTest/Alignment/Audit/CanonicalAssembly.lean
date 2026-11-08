@@ -15,7 +15,7 @@ open SP1Clean SP1Clean.Model.Core SP1CleanTest.Alignment.InstalledAssembly Air.F
 /-- No witness of this physical inventory contains the legacy initial-PC data entry. -/
 theorem uncommittedInitialPcAbsent {context : Context}
     (witness : EnsembleWitness (assembly context)) :
-    witness.data "sp1.pc_start" 3 = #[] := by
+    witness.data.tables "sp1.pc_start" 3 = #[] := by
   have absent : "sp1.pc_start" ∉
       ((assembly context).tables.map fun component => component.circuit.name) := by
     rw [tables_eq, List.map_append]
@@ -37,12 +37,12 @@ theorem uncommittedInitialPcAbsent {context : Context}
     apply absent
     rw [← witness.tables_map_component, List.map_map]
     exact List.mem_map.mpr ⟨table, member, same⟩
-  exact deriveProverData_append_of_not_mem [] witness.tables "sp1.pc_start" noTable 3
+  exact deriveTables_append_of_not_mem [] witness.tables "sp1.pc_start" noTable 3
 
 /-- A nonempty generation-time entry cannot become committed data without a physical table. -/
 theorem seedCannotChooseCommittedData {context : Context}
     (witness : EnsembleWitness (assembly context))
-    (generationData : ProverData Fp) (nonempty : generationData "sp1.pc_start" 3 ≠ #[]) :
+    (generationData : ProverData Fp) (nonempty : generationData.tables "sp1.pc_start" 3 ≠ #[]) :
     witness.data ≠ generationData := by
   intro same
   apply nonempty

@@ -11,7 +11,7 @@ Unused endpoints, including stopped identities, have no active-window or fetch o
 -/
 
 namespace SP1Clean.Model.Core
-open Machine Soundness.Target LeanRV64D.Defs Semantics
+open Machine Soundness.Target LeanRV64D Semantics
 
 /-- A decoded native memory instruction uses a width-aligned span wholly inside guest memory. -/
 def instructionMemoryEncoded (register : BitVec 5 → Option (BitVec 64)) : instruction → Prop

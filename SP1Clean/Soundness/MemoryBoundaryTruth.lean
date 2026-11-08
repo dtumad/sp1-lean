@@ -25,7 +25,7 @@ genesis-backed portion.  The cell's `finalClock` is the refresh-eliminated last-
 committed record's own timestamp is not shard-bounded natively — the MemoryBump table does not tie
 its refreshed clock to the public final clock). -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -46,7 +46,7 @@ theorem microValue_at_final (initial : SailState) (c0 n : ℕ) (loc : MemLoc) :
     microValue initial c0 loc (c0 + 8 * n) =
       (chainState initial n).bind (locContent · loc) := by
   unfold microValue
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   cases loc with
   | reg index => simp [regEffectOffset]
   | ram cell => simp [ramEffectOffset]

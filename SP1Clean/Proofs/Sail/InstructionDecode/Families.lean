@@ -9,7 +9,7 @@ and machine-theorem callers do not need to dispatch on them.
 
 namespace SP1Clean.SailDecode.Symbolic
 
-open LeanRV64D.Defs LeanRV64D.Functions Sail SP1Clean.Soundness.Target
+open LeanRV64D LeanRV64D.Functions Sail SP1Clean.Soundness.Target
 open SP1Clean.Model.Core.InstructionDecode
 
 theorem decode_ADD (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)

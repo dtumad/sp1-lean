@@ -33,10 +33,10 @@ private theorem eval_next (env : Environment (ZMod p)) (input : Var Inputs (ZMod
   rcases input with ⟨call, previous, comparison, bytes⟩
   rcases call with ⟨high, low, code, arg1, arg2, result, length⟩
   rcases previous with ⟨previousHigh, previousLow, values⟩
-  simp only [Inputs.next, circuit_norm, eval_vector, Vector.map_set, ProvableType.eval_fields]
+  simp only [Inputs.next, circuit_norm]
 
 def view (deferred : Bool) (slot : Fin 8) : TransitionView (stateChannel (p := p) deferred) where
-  component := { circuit := HostCommitChip.circuit deferred slot, Assumptions := (HostCommitChip.circuit deferred slot).Assumptions }
+  component := { circuit := HostCommitChip.circuit deferred slot, Assumptions := (HostCommitChip.circuit deferred slot).Assumptions, generation := HostCommitChip.generation deferred slot }
   activity := (varFromOffset RowInput 0).2
   edge env :=
     let input := (valueFromOffset RowInput 0 env).1

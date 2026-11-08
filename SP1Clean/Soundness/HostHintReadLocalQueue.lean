@@ -24,23 +24,27 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((receiver :: HostCallReceivers.available).map (·.component) ++
       (wordResources ++ resources))).map (·.circuit.name)).Nodup}
+    {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ ((receiver :: HostCallReceivers.available).map (·.component) ++
+      (wordResources ++ resources)),
+      component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 /-- HINT_READ followed by the two HINT_LEN variants, in the actual receiver registry. -/
-def queueTables (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :=
+def queueTables (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :=
   handlerTable witness :: (HostLocalHandoff.receiverTables witness).drop 19
 
-def extraTables (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :=
+def extraTables (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :=
   (HostLocalHandoff.resourceTables witness).drop 2
 
 theorem queueTables_components
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     (queueTables witness).map (·.component) = HostQueueOrder.indices.map (fun index => (HostQueueOrder.view index).component) := by
   simp only [queueTables, List.map_cons, handlerTable_component, List.map_drop,
     HostLocalHandoff.receiverTables_components]
   rfl
 
 theorem queueTables_aligned
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     List.Forall₂ (fun index table => (HostQueueOrder.view index).component = table.component)
       HostQueueOrder.indices (queueTables witness) := by
   have same : List.Forall₂ (· = ·)
@@ -50,14 +54,14 @@ theorem queueTables_aligned
   simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using same
 
 theorem queueTables_mem
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (table : Table (ZMod p)) (member : table ∈ queueTables witness) : table ∈ witness.tables := by
   rcases List.mem_cons.mp member with rfl | member
   · exact handlerTable_mem witness
   · exact List.mem_of_mem_drop (List.mem_of_mem_take (List.mem_of_mem_drop member))
 
 theorem extraTables_components
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     (extraTables witness).map (·.component) = resources := by
   simp only [extraTables, List.map_drop]
   rw [HostLocalHandoff.resourceTables_components witness]
@@ -106,7 +110,7 @@ private theorem tables_queue_silent (physical : List (Table (ZMod p)))
   contradiction
 
 private theorem control_queue_silent
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     (((HostLocalHandoff.receiverTables witness).drop 1).take 18).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
   apply tables_queue_silent _ (((HostCallReceivers.available (p := p)).map (·.component)).take 18)
   · simp only [List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
@@ -114,21 +118,19 @@ private theorem control_queue_silent
   · rfl
 
 private theorem word_queue_silent
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     (wordTables witness).flatMap (·.interactionsWith stateChannel.toRaw) = [] := by
   exact tables_queue_silent _ wordResources (wordTables_components witness) rfl
 
 /-- This accounts for every installed table. No endpoint or future allocation contribution is dropped. -/
 theorem queue_interactions
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names)) :
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
     witness.interactionsWith stateChannel.toRaw =
       (queueTables witness).flatMap (·.interactionsWith stateChannel.toRaw) ++
         (extraTables witness).flatMap (·.interactionsWith stateChannel.toRaw) := by
   rw [HostLocalCore.interactions_split_new witness _ (by
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _
-      (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_flatMap.mpr
-        ⟨HostHintReadCoverage.handler, by simp [receiver], by
-          simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]⟩))))))) queue_fresh
+    apply tableChannels HostHintReadCoverage.handler (by simp [receiver])
+    simp [HostHintReadCoverage.handler, HostHintReadChip.circuit, circuit_norm]) queue_fresh
     (by simp [stateChannel, WritePermissionProvider.channel, Channel.toRaw])
     (by simp [stateChannel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw])]
   have wrapper : (HostLocalCore.hostCallTable witness).interactionsWith stateChannel.toRaw = [] := by
@@ -158,7 +160,7 @@ theorem queue_interactions
 
 /-- The installed AIR supplies all three queue-handler contracts without Memory assumptions. -/
 theorem queue_specs
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources) (store : HintQueue.Store)
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : RecordChannels witness) :
@@ -169,7 +171,7 @@ theorem queue_specs
   · exact handler_spec witness interface store authenticated constraints balanced
   have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   simp only [List.map_drop, HostLocalHandoff.receiverTables_components] at mapped
-  change table.component ∈ [{ circuit := HostHintLengthChip.circuit false, Assumptions := (HostHintLengthChip.circuit false).Assumptions }, { circuit := HostHintLengthChip.circuit true, Assumptions := (HostHintLengthChip.circuit true).Assumptions }] at mapped
+  change table.component ∈ [(HostCallReceivers.hintLength false).component, (HostCallReceivers.hintLength true).component] at mapped
   simp only [List.mem_cons, List.not_mem_nil, or_false] at mapped
   have nodes := node_guarantees witness store authenticated balanced.node table present
   have checked := constraints table present
@@ -184,7 +186,7 @@ theorem queue_specs
 /-- Once actual extra resources supply exactly the two queue endpoints, the installed AIR
 orders every queue-handler occurrence. Endpoint authentication and construction remain explicit. -/
 theorem queue_ordered_of_endpoints
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources) (store : HintQueue.Store)
     (authenticated : RecordAuthentication witness store)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
@@ -201,12 +203,12 @@ theorem queue_ordered_of_endpoints
   rw [queue_interactions, endpoints] at ledger
   exact HostQueueOrder.ordered _ (queueTables_aligned witness)
     (queue_specs witness interface store authenticated constraints (RecordChannels.of_balanced witness balanced)) initial final
-    (balancedInteractions_of_perm ledger (List.perm_append_comm ..))
+    (BalancedInteractions.of_perm ledger (List.perm_append_comm ..))
 
 /-- If all extra resources are queue-silent, complete AIR balance forces every queue-handler
 table empty. This diagnoses the missing queue endpoints in the fixed record-source assembly. -/
 theorem queue_rows_nil_of_silent_resources
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources) (store : HintQueue.Store)
     (authenticated : RecordAuthentication witness store)
     (silent : ∀ component ∈ resources, stateChannel.toRaw ∉ component.circuit.channels)
@@ -233,8 +235,12 @@ An appended block keeps this provided it has no record or queue edge. -/
 theorem source_queue_rows_nil {extra : List (Component (ZMod p))}
     {names : ((HostLocalCore.tables image source ((receiver :: HostCallReceivers.available).map (·.component) ++
       (wordResources ++ (sourceResources source.host.io.hints ++ extra)))).map (·.circuit.name)).Nodup}
+    {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ ((receiver :: HostCallReceivers.available).map (·.component) ++
+      (wordResources ++ (sourceResources source.host.io.hints ++ extra))),
+      component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ extra) channels names))
+      (sourceResources source.host.io.hints ++ extra) channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available (sourceResources source.host.io.hints ++ extra))
     (records : ∀ component ∈ extra,
       nodeChannel.toRaw ∉ component.circuit.channels ∧ wordChannel.toRaw ∉ component.circuit.channels)

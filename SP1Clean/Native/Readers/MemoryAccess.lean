@@ -188,10 +188,8 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
   -- The byte-pull off-gate `Requirements` + the memory pull off-gate are vacuous; the memory **push** owes
   -- `Word.isU64` of `new_value` and the `ClkBound` of its `clk_low + 1` push clock — exactly the two gated
   -- `Assumptions` conjuncts (real row via ¬is_real = 0).
-  refine ⟨fun hr1 => ?_, fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ⟨h_assumptions.2.1 (h_assumptions.1.resolve_left h0),
+  refine ⟨fun hr1 => ?_, h_assumptions.1, h_assumptions.1, h_assumptions.1,
+    fun h0 => ⟨h_assumptions.2.1 (h_assumptions.1.resolve_left h0),
       h_assumptions.2.2.at_one (h_assumptions.1.resolve_left h0)⟩⟩
   -- Spec consequent (real row); the `isU64 prev_value` conjunct is the memory pull `h_mem` verbatim.
   -- `hr1`/the goal carry the reassembled `{record}.field` projections (the `SpecD` wrapper); `dsimp only`
@@ -217,8 +215,8 @@ theorem completeness :
   rcases hbin with h0 | h1
   · -- padding row (`is_real = 0`): the leading gate + every gated assert is `0 · _`, the byte/memory pulls
     -- fire only off-padding.
-    have hne : ∀ {P : Prop}, - input_is_real = -1 → P :=
-      fun h => absurd (neg_inj.mp h) (by rw [h0]; exact zero_ne_one)
+    have hne : ∀ {P : Prop}, input_is_real = 1 → P :=
+      fun h => absurd h (by rw [h0]; exact zero_ne_one)
     refine ⟨?_, ?_, ?_, ?_, hne, hne, hne⟩ <;> simp only [h0, zero_mul]
   · -- real row (`is_real = 1`): the asserts come from the `Spec` facts, the byte pulls from its ranges, the
     -- memory pull from its `isU64 prev_value` + G1 `prev_low` clock-bound conjuncts.
@@ -276,8 +274,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         -- `is_real`) has to be delegated to `channelsWithRequirements`.
         rcases h_interaction with rfl | rfl | rfl | rfl <;>
           first
-            | (right; rw [ChannelInteraction.toRaw_requirements]; intro h1 h0;
-               simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_bool h1 h0)
+            | (right; simpa only [circuit_norm, byteChannel, memoryChannel] using h_bool)
             | exact Or.inl List.mem_cons_self }
 
 set_option linter.unusedSectionVars false in

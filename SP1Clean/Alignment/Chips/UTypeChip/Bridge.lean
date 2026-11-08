@@ -11,7 +11,7 @@ import Clean.Air.FlatComponent
 committed result is `RV64.lui imm` / `RV64.auipc imm pc`). The Sail `sign_extend (imm ++ 0#12)` is
 definitionally `RV64.lui imm`. The 20-bit immediate `imm` is the column-derived `UTypeChip.immOf`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.UTypeSail
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -263,7 +263,6 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 /-- The `is_auipc` boolean gate is among the physical U-type circuit's deep constraints. -/
 private theorem isAuipcGate_mem_constraints (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -295,11 +294,11 @@ theorem isAuipcBinary_of_mainConstraints (input : Var Inputs (ZMod p)) (offset :
 
 /-- The completed U-type columns at one physical component row. -/
 noncomputable def physicalCols (env : Environment (ZMod p)) : Columns (ZMod p) :=
-  ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env
+  ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowOutput env
 
 /-- The completed U-type row view at one physical component row. -/
 noncomputable def physicalView (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
-  rowView (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env) (physicalCols env)
+  rowView (({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env) (physicalCols env)
 
 /-- Small-literal disequality against the `ECALL` discriminant `50`, via `ZMod.val` injectivity. -/
 private theorem utypeOpcodeLiteral_ne_ecall {k : ℕ} (hk : k < 2 ^ 17) (hne : k ≠ 50) :
@@ -316,7 +315,7 @@ private theorem utypeOpcodeLiteral_ne_ecall {k : ℕ} (hk : k < 2 ^ 17) (hne : k
 (the committed-fragment re-base's per-chip strengthening fact). -/
 theorem physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (constraints :
-      ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
+      ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).operations.ConstraintsHold env)
     (_real : (physicalView env).is_real = 1) :
     (physicalView env).opcode ≠ (50 : ZMod p) := by
   let input : Var Inputs (ZMod p) := varFromOffset Inputs 0
@@ -325,7 +324,7 @@ theorem physicalViewOpcode_ne_ecall (env : Environment (ZMod p))
     (Component.constraintsHold_iff env).mp constraints
   have binary := isAuipcBinary_of_mainConstraints input offset env mainConstraints
   have inputEq : Eval.eval env input =
-      ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+      ({ circuit := UTypeChip.circuit (p := p), Assumptions := (UTypeChip.circuit (p := p)).Assumptions, generation := UTypeChip.generation } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset Inputs 0 env
   have viewOpcode : (physicalView env).opcode =
       (Eval.eval env input).is_auipc * 48 + (1 - (Eval.eval env input).is_auipc) * 49 := by

@@ -22,7 +22,7 @@ alignment, and control-flow-target facts needed for full per-chip validity remai
 the official Sail step and can be proved at the later execution-fold boundary.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.TraceGen
 
@@ -53,7 +53,7 @@ theorem utypeImmediateNat_eq_luiImmNat (immediate : BitVec 20) :
   by_cases sign : immediate.msb = true
   · have highGe := msb_iff.mp sign
     have high : ¬ immediate.toNat < 2 ^ 19 := by omega
-    rw [if_pos sign, if_neg high]
+    rw [ite_eq_left sign, ite_eq_right high]
     have residueLt : immediate.toNat * 4096 + (2 ^ 64 - 2 ^ 32) < 2 ^ 64 := by
       omega
     have rearrange :
@@ -66,7 +66,7 @@ theorem utypeImmediateNat_eq_luiImmNat (immediate : BitVec 20) :
   · have low : immediate.toNat < 2 ^ 19 := by
       by_contra high
       exact sign (msb_iff.mpr (by omega))
-    rw [if_neg sign, if_pos low]
+    rw [ite_eq_right sign, ite_eq_left low]
     simp only [Nat.add_zero]
     rw [Nat.mod_eq_of_lt]
     omega
@@ -472,7 +472,8 @@ private theorem instructionEventFor?_load {args : BitVec 12 × regidx × regidx 
     simp [routeId, InstructionChipId.all, InstructionRoute.claims,
       InstructionChipId.route, RdGuard.holds] at routed
     cases routed
-    simp_all [instructionEventFor?, memoryEvent?] <;> rfl
+    simp_all [instructionEventFor?, memoryEvent?]
+  all_goals rfl
 
 private theorem instructionEventFor?_store {args : BitVec 12 × regidx × regidx × word_width}
     {id : InstructionChipId} {stamped : List StampedTouch}
@@ -487,7 +488,6 @@ private theorem instructionEventFor?_store {args : BitVec 12 × regidx × regidx
   simp only [storeOpcode] at routed
   split_ifs at routed
   all_goals
-    try simp_all only [↓reduceIte]
     simp [routeId, InstructionChipId.all, InstructionRoute.claims,
       InstructionChipId.route, RdGuard.holds] at routed
     cases routed
@@ -671,7 +671,7 @@ private theorem instructionEventFor?_isSome {id : InstructionChipId} {decoded : 
     {stamped : List StampedTouch} (routed : instructionRouteId decoded = some id)
     (shape : stamped.map (fun touch => touch.touch.slot) = instructionAccessSlots decoded)
     (clk pc opcode : ℕ) : (instructionEventFor? id decoded stamped clk pc opcode).isSome := by
-  cases decoded
+  cases decoded <;> rename_i chunk <;> cases chunk
   case UTYPE => exact instructionEventFor?_utype routed shape clk pc opcode
   case JAL => exact instructionEventFor?_jal routed shape clk pc opcode
   case JALR => exact instructionEventFor?_jalr routed shape clk pc opcode
@@ -882,8 +882,8 @@ private theorem cbaRegisters?_nonzero {decoded : instruction}
     (extracted : cbaRegisters? decoded = some registers)
     (keyEq : instructionRouteKey decoded = some key) (nonzero : key.opAIsX0 = false) :
     registers.2.2.toNat ≠ 0 := by
-  cases decoded <;> simp only [cbaRegisters?] at extracted
-  all_goals first | contradiction | skip
+  cases decoded <;> rename_i chunk <;> cases chunk <;> simp only [cbaRegisters?] at extracted
+  all_goals try contradiction
   all_goals
     cases Option.some.inj extracted
     simp only [instructionRouteKey, Option.some.injEq] at keyEq

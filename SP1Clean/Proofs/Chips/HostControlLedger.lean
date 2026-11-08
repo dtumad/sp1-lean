@@ -55,12 +55,17 @@ theorem main_other_interactions (target : RawChannel (ZMod p))
   apply InteractionRecovery.interactionsWith_main_eq_nil circuit.base target input offset
   simp [circuit, circuit_norm, notByte, notHost, notExit]
 
-theorem component_spec_of_byte (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
-    (byte : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees byteChannel.toRaw env) :
-    ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).inChannelsOrGuarantees env)]
+theorem row_spec_of_byte (env : Environment (ZMod p))
+    (constraints : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).ConstraintsHold env)
+    (byte : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).ChannelGuarantees
+      byteChannel.toRaw env) :
+    Spec (valueFromOffset Inputs 0 env) := by
+  suffices guarantees : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).FullGuarantees env by
+    have result := (circuit.original_full_soundness (size Inputs) env (varFromOffset Inputs 0)
+      (by trivial) constraints guarantees).1
+    simpa only [circuit, eval_varFromOffset_valueFromOffset] using result
+  rw [Operations.guarantees_iff _ _ _ (circuit.in_channels_or_guarantees_full
+    (varFromOffset Inputs 0) (size Inputs) env)]
   intro selected member
   change selected ∈ [byteChannel.toRaw, HostCallChip.channel.toRaw] at member
   rcases List.mem_cons.mp member with rfl | member
@@ -110,11 +115,15 @@ theorem main_other_interactions (target : RawChannel (ZMod p))
   simp [circuit, circuit_norm, notHost]
 
 omit [Fact (2 ^ 17 < p)] in
-theorem component_spec_of_constraints (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env) :
-    ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).Spec env := by
-  apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).inChannelsOrGuarantees env)]
+theorem row_spec_of_constraints (env : Environment (ZMod p))
+    (constraints : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).ConstraintsHold env) :
+    Spec (valueFromOffset Inputs 0 env) := by
+  suffices guarantees : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).FullGuarantees env by
+    have result := (circuit.original_full_soundness (size Inputs) env (varFromOffset Inputs 0)
+      (by trivial) constraints guarantees).1
+    simpa only [circuit, eval_varFromOffset_valueFromOffset] using result
+  rw [Operations.guarantees_iff _ _ _ (circuit.in_channels_or_guarantees_full
+    (varFromOffset Inputs 0) (size Inputs) env)]
   intro selected member
   change selected ∈ [HostCallChip.channel.toRaw] at member
   obtain rfl := List.mem_singleton.mp member

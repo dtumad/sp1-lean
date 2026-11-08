@@ -17,9 +17,18 @@ private abbrev Fp := ZMod 7
 private instance : Fact (Nat.Prime 7) := ⟨by decide⟩
 
 private def physical : Table Fp where
-  component := { circuit := { GeneralFormalCircuit.empty Fp (fields 1) with name := "retained" } }
+  component := {
+    circuit := { GeneralFormalCircuit.empty Fp (fields 1) with name := "retained" }
+    generation := .demand {
+      channel := ({ name := "fixture", Guarantees _ _ := True } : Channel Fp unit)
+      trigger := .pull
+      guard _ := .false
+      input _ := pure #v[0]
+    } }
   table := [#[3]]
-  data := fun _ _ => #[]
+  data := { tables := fun name arity =>
+    if name = "retained" then #[rowPrefix arity #[3]] else #[], publicInput := #[] }
+  data_consistent := rfl
   length_le := by decide
   uniform_width := by
     intro row member
@@ -31,12 +40,24 @@ private def base : Ensemble Fp unit where
   tables := [physical.component]
   unique_names := by simp
   channels := [HostExitBoundary.channel.toRaw]
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change [] ⊆ _
+    simp
+  verifier_channels := by simp [Verifier.Program.channels, Verifier.Program.channelsWithGuarantees,
+    Verifier.Program.channelsWithRequirements, Verifier.Program.operations, circuit_norm]
 
 private def original : EnsembleWitness base :=
   EnsembleWitness.ofTables base [physical] () rfl
 
+private theorem registered (source target : Option (BitVec 32)) :
+    (HostExitBoundary.closed (p := 7) source target).circuit.channels ⊆ base.channels := by
+  simp [base, HostExitBoundary.closed, HostExitBoundary.circuit, circuit_norm]
+
 private def candidate (source target : Option (BitVec 32)) :
-    EnsembleWitness ((HostExitBoundary.closed source target).install base) :=
+    EnsembleWitness ((HostExitBoundary.closed source target).install base (registered source target)) :=
   EnsembleWitness.ofTables _ [physical] () rfl
 
 /-- Installing verifier checks never adds the old synthetic singleton to physical rows. -/
@@ -59,10 +80,9 @@ theorem changedStoppedStatusRejected :
     ¬ (candidate (some 1) (some 2)).BalancedChannels := by
   intro balanced
   have checked := ((HostExitBoundary.closed (p := 7) (some 1) (some 2)).balanced_iff
-    (candidate (some 1) (some 2))).mp balanced |>.2.2
+    (candidate (some 1) (some 2))).mp balanced |>.2
   norm_num [ClosedVerifier.Checks, ClosedVerifier.operations, HostExitBoundary.closed,
     HostExitBoundary.circuit, HostExitBoundary.main, circuit_norm] at checked
-  exact (by decide : (1 : BitVec 32) ≠ 2) (checked (by decide))
 
 /-- A running boundary with no exit keeps the disabled receipt in the literal ledger. -/
 theorem disabledReceiptOccurrence :
@@ -72,7 +92,7 @@ theorem disabledReceiptOccurrence :
     intro same
     apply (HostExitBoundary.closed (p := 7) none none).channel_not_mem base
     rw [same]
-    exact List.mem_append_left _ (by simp [base])
+    simp [base]
   rw [← ClosedVerifier.interactionView_interactions _ _ _ different]
   have permutation := (HostExitBoundary.closed (p := 7) none none).interactionView_interactions_perm
     (candidate none none) HostExitBoundary.channel.toRaw
@@ -80,14 +100,13 @@ theorem disabledReceiptOccurrence :
       (candidate none none)).interactionsWith HostExitBoundary.channel.toRaw = [] := by
     change original.interactionsWith HostExitBoundary.channel.toRaw = []
     rw [EnsembleWitness.interactionsWith_of_verifier_empty rfl]
-    change (withDerivedData [physical]).flatMap (·.interactionsWith HostExitBoundary.channel.toRaw) = []
+    change (withDerivedData [physical] (by simp) #[]).flatMap (·.interactionsWith HostExitBoundary.channel.toRaw) = []
     rw [withDerivedData_interactionsWith]
     change physical.interactionsWith HostExitBoundary.channel.toRaw ++ [] = []
     rw [List.append_nil]
     simp only [Table.interactionsWith, Operations.interactionValuesWith, Component.interactionsWith_eq]
     simp [physical, Component.rowOperations, GeneralFormalCircuit.empty, circuit_norm]
-  rw [permutation.length_eq, List.length_append, original_empty, List.length_nil, Nat.zero_add,
-    ClosedVerifier.singleton_interactions]
+  rw [permutation.length_eq, List.length_append, original_empty, List.length_nil, Nat.zero_add]
   change (((HostExitBoundary.main none none ()).operations 0).interactionValuesWith _ _).length = _
   rw [HostExitBoundary.values]
   simp

@@ -69,6 +69,10 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 /-- Erase silent instruction families while retaining every wrapper occurrence. -/
 theorem filterMap_inventory {Instruction Halt Wrapper Row Message Label : Type*}
@@ -108,7 +112,7 @@ private theorem inventory_projection (data : ProverData (ZMod p))
   · exact syscall_projection data
 
 private theorem cpu_inventory
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (constraints : witness.Constraints) :
     ((LocalCore.executionRows (HostLocalCore.localWitness witness)).filterMap (stampedCPU witness.data)) =
       (HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data).filterMap stamped := by
@@ -119,7 +123,7 @@ private theorem cpu_inventory
 /-- Every actual CPU event in the installed registry is safe for nonallocating queue replay.
 The absence of WRITE follows from the complete physical handoff, not a caller restriction. -/
 theorem cpu_safe
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
@@ -171,7 +175,7 @@ private theorem ordered_projection (data : ProverData (ZMod p))
 /-- The ordered CPU tape projects to exactly the ordered queue actions, including their labels.
 Ordinary instructions and queue-preserving host calls are erased only after their accounting proof. -/
 theorem cpu_projection
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)

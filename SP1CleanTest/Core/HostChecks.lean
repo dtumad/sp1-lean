@@ -1,3 +1,4 @@
+import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
 import SP1Clean.Model.SP1Field
 import SP1Clean.Math.Address
@@ -91,5 +92,5 @@ def evaluateProgram (program : Circuit Fp Unit) (inputs : List Fp)
           interaction.channel.name
   (valid, (FlatOperation.interactions operations).filterMap fun interaction =>
     if env interaction.mult == 0 then none else
-      some (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+      some (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
 end SP1CleanTest.Core.HostChecks

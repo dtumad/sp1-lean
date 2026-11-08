@@ -60,8 +60,8 @@ lemma eq_one_iff_of_one_sub_ite [Fact p.Prime] {x : ZMod p} {P : Prop} [Decidabl
 lemma bool_eq_ite_of_iff {x : ZMod p} (hx : x = 0 ∨ x = 1) {P : Prop} [Decidable P]
     (h : x = 1 ↔ P) : x = if P then 1 else 0 := by
   by_cases hP : P
-  · rw [if_pos hP]; exact h.mpr hP
-  · rw [if_neg hP]; exact hx.resolve_right fun h1 => hP (h.mp h1)
+  · rw [ite_eq_left hP]; exact h.mpr hP
+  · rw [ite_eq_right hP]; exact hx.resolve_right fun h1 => hP (h.mp h1)
 
 /-- A binary `x` with `x = 1 ↔ y = 0` (for binary `y`) is `1 - y`. -/
 lemma bool_eq_one_sub [Fact p.Prime] {x y : ZMod p} (hx : x = 0 ∨ x = 1) (hy : y = 0 ∨ y = 1)

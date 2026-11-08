@@ -18,7 +18,7 @@ concrete-decode walk technique in `Model/SailDecode.lean`.
 
 This file is built bottom-up, one verified stage lemma at a time. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.TryStepReduction
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -70,10 +70,10 @@ theorem run_should_inc_minstret (s : SailState) (hs : SailState.isInitialized s)
     (should_inc_minstret priv).run s
       = .ok (((_get_Counterin_IR (s.regs.get Register.mcountinhibit (hs _))) == 0#1)
           && ((counter_priv_filter_bit (s.regs.get Register.minstretcfg (hs _)) priv) == 0#1)) s := by
-  unfold should_inc_minstret
-  rw [Sail.run_readReg_bind_of_isInitialized s Register.mcountinhibit hs,
-    Sail.run_readReg_bind_of_isInitialized s Register.minstretcfg hs]
-  simp only [EStateM.run_pure]
+  simp only [should_inc_minstret, andM, toBool,
+    Sail.run_readReg_bind_of_isInitialized s Register.mcountinhibit hs, pure_bind]
+  split <;> simp_all only [Bool.false_and, Bool.true_and,
+    Sail.run_readReg_bind_of_isInitialized s Register.minstretcfg hs, EStateM.run_pure]
 
 /-! ## Stage 2 — the straight-line readiness predicate
 
@@ -171,7 +171,7 @@ theorem run_hart_active_eq_of_ready (s : SailState) (w : BitVec 32) (I : instruc
   rw [run_SailME_liftM_bind_of_run _ _ _ h.fetched]
   simp only [ext_fetch_hook_eq]
   rw [run_SailME_liftM_bind_of_run _ _ _ hdec]
-  simp only [get_config_print_instr_eq, Bool.false_eq_true, if_false, pure_bind]
+  simp only [get_config_print_instr_eq, Bool.false_eq_true, ite_false, pure_bind]
   -- the landing-pad guard is false (`elp ≠ LP_EXPECTED`), so the CFI trap arm is dead.
   have hlp : (is_landing_pad_expected ()).run s = .ok false s := by
     rw [run_is_landing_pad_expected s h.init]
@@ -180,7 +180,7 @@ theorem run_hart_active_eq_of_ready (s : SailState) (w : BitVec 32) (I : instruc
     exact fun heq =>
       h.no_landing_pad (by rw [Std.ExtDHashMap.get?_eq_some_get (h.init _), heq])
   rw [run_SailME_liftM_bind_of_run _ _ _ hlp]
-  simp only [Bool.false_and, Bool.false_eq_true, if_false]
+  simp only [Bool.false_and, Bool.false_eq_true, ite_false]
   -- the state-changing execute tail: peel `readReg PC`, `writeReg nextPC`, `execute I` with the general
   -- lift-bind law (threading the state), then strip `EStateM.run` and the three binders with `bind_congr`
   -- so the `ExecuteAs` redirect match's scrutinee `a` becomes free — `cases a` collapses both arms (of the
@@ -259,7 +259,7 @@ theorem RunPres.bind {α β : Type} {m : SailM α} {k : α → SailM β} {s : Sa
 
 theorem RunPres.ite {α : Type} {c : Prop} [Decidable c] {a b : SailM α} {s : SailState}
     (ha : RunPres a s) (hb : RunPres b s) : RunPres (if c then a else b) s := by
-  by_cases h : c <;> simp only [h, if_true, if_false, reduceIte] <;> [exact ha; exact hb]
+  by_cases h : c <;> simp only [h, ite_true, ite_false, reduceIte] <;> [exact ha; exact hb]
 
 /-- `currentlyEnabled Ext_Zicsr` is state-preserving (a `pure`, no register read). -/
 theorem RunPres.currentlyEnabled_Zicsr (s : SailState) :
@@ -269,9 +269,10 @@ theorem RunPres.currentlyEnabled_Zicsr (s : SailState) :
 /-- `currentlyEnabled Ext_S` is state-preserving (reads `misa`, recurses to the `pure` `Zicsr`). -/
 theorem RunPres.currentlyEnabled_S (s : SailState) (hs : s.isInitialized) :
     RunPres (currentlyEnabled extension.Ext_S) s := by
-  unfold currentlyEnabled
-  exact RunPres.bind (RunPres.readReg s Register.misa hs)
-    (fun _ => RunPres.bind (RunPres.currentlyEnabled_Zicsr s) (fun _ => RunPres.pure _ s))
+  simp only [currentlyEnabled, hartSupports, andM, toBool, pure_bind]
+  apply RunPres.bind (RunPres.readReg s Register.misa hs)
+  intro value
+  split <;> exact RunPres.pure _ s
 
 /-- `external_interrupts_pending` is state-preserving (reads `sig_meip`; conditionally `sig_seip`). -/
 theorem RunPres.eip (s : SailState) (hs : s.isInitialized) :
@@ -296,7 +297,7 @@ theorem RunPres.readMipIncl (s : SailState) (hs : s.isInitialized) :
 
 /-- A satisfied `assert true` is a state-preserving no-op (`= pure ()`). -/
 theorem run_assert_true (s : SailState) (msg : String) :
-    ((PreSail.assert true msg : SailM Unit)).run s = .ok () s := rfl
+    ((PreSail.sail_assert true msg : SailM Unit)).run s = .ok () s := rfl
 
 /-- **`getPendingSet Machine = none`** from a quiescent-interrupt state: at Machine priv the SIE branch is
 dead and, with `mstatus.MIE = 0`, the MIE branch is too — so the result is `none` regardless of the (run
@@ -317,17 +318,21 @@ theorem run_getPendingSet_machine_none (s : SailState) (hinit : s.isInitialized)
   rw [run_bind_of_run s _ ce hce]
   cases ce with
   | false =>
-    simp only [Bool.false_eq_true, if_false, pure_bind]
+    simp only [Bool.false_eq_true, ite_false, pure_bind]
     rw [run_bind_of_run s _ mb hmb]
     simp only [run_readReg_bind_of_isInitialized s Register.mie hinit,
-      run_readReg_bind_of_isInitialized s Register.mstatus hinit, pure_bind, hmie]
+      run_readReg_bind_of_isInitialized s Register.mstatus hinit, pure_bind, hmie, andM, orM, toBool, bind_assoc,
+      show (Privilege.Machine == Privilege.Machine) = true from rfl,
+      show (Privilege.Machine == Privilege.Supervisor) = false from rfl]
     rfl
   | true =>
-    simp only [if_true]
+    simp only [ite_true]
     rw [run_readReg_bind_of_isInitialized s Register.mideleg hinit, hmideleg,
       run_bind_of_run s _ mb hmb]
     simp only [run_readReg_bind_of_isInitialized s Register.mie hinit,
-      run_readReg_bind_of_isInitialized s Register.mstatus hinit, pure_bind, hmie]
+      run_readReg_bind_of_isInitialized s Register.mstatus hinit, pure_bind, hmie, andM, orM, toBool, bind_assoc,
+      show (Privilege.Machine == Privilege.Machine) = true from rfl,
+      show (Privilege.Machine == Privilege.Supervisor) = false from rfl]
     rfl
 
 /-- **`dispatchInterrupt Machine = none`** (the `no_interrupt` field) from a quiescent-interrupt state. -/
@@ -353,7 +358,7 @@ theorem get_writeMinstret_ne {reg : Register} (h : Register.minstret_increment �
     (s : SailState) (v : RegisterType Register.minstret_increment) (hmem : reg ∈ s.regs)
     (hmem' : reg ∈ s.regs.insert Register.minstret_increment v) :
     (s.regs.insert Register.minstret_increment v).get reg hmem' = s.regs.get reg hmem := by
-  rw [Std.ExtDHashMap.get_insert, dif_neg]
+  rw [Std.ExtDHashMap.get_insert, dite_eq_right]
   simpa [beq_iff_eq] using h
 
 /-- **`dispatchInterrupt Machine = none` survives the `minstret_increment` write** — the `no_interrupt`
@@ -445,7 +450,7 @@ theorem tryStep_eq_of_hart_active (s : SailState) (step_no : Nat)
     rw [Sail.run_readReg, show s''.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()) from h_active'']
   simp only [run_bind_of_run s'' _ (HartState.HART_ACTIVE ()) hhs'', hart_is_active_active,
     run_bind_of_run s'' _ () (run_assert_true s'' _)]
-  simp only [get_config_rvfi_eq, Bool.false_eq_true, if_false, ext_post_step_hook_eq, pure_bind,
-    bind_assoc]
+  simp only [get_config_rvfi_eq, Bool.false_eq_true, ite_false, ext_post_step_hook_eq, pure_bind,
+    bind_assoc, andM, orM, toBool, Bool.true_and]
 
 end SP1Clean.TryStepReduction

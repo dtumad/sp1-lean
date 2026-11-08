@@ -159,20 +159,22 @@ production guard and its witness program; Rust checks the selected codes against
 enum, rejects upper-limb aliases and unselected calls, and checks generated rows and tampered
 products. This profile is deliberately stricter than the executor’s truncating syscall dispatch.
 
-The Clean patch supports message-filtered demand handlers and checked indexing into preallocated
-providers. Production keeps SP1's specialized Byte providers: the channel payload selects the
-opcode/width handler. Filters must identify one handler; ambiguous or missing matches are errors.
-Indexed routes verify the selected row's actual message before changing its multiplicity.
-Zero contributions do not enter the scheduler's pending-demand worklist; physical rows and their
-zero-count ledger occurrences remain intact. These changes, plus the public-only-channel verifier
-fix, modify existing upstream declarations and therefore live in the dependency patch. Remove each
-patch when upstream provides the corresponding capability.
+The Clean pin uses upstream typed generation metadata and demand guards. SP1 retains its
+specialized Byte providers: opcode and width select the handler. A demand input containing a
+multiplicity cell aggregates identical messages; without that cell, each request creates a
+physical row. Execution and ordered-boundary rows use the latter representation. Private input
+hints are checked against the complete requested message; they are not trusted semantic data.
+The sparse index also distinguishes a supplied all-zero record from an absent record. In
+particular, an omitted legacy HALT input must not create a padding Exit occurrence before the
+real host HALT runs.
 
-The same dependency patch lets `minimumRows := 0` preserve empty mutable tables. The Rust
-backend keeps all indexed heights and widths, proving only nonempty tables; verifier-fixed
-tables cannot be omitted. Verifier interactions and the complete occurrence bound still apply.
-At least one table must be nonempty for the batch PCS. This removes spurious padding demands
-from unused chips, but active tables still need valid padding to power-of-two heights.
+Upstream checked `rowOf` routes select preallocated rows and verify the complete message before
+changing its count. Upstream also supplies public-input and table-height statements, and empty
+dynamic tables. These capabilities replace the former Clean fork patches. Active dynamic tables
+still require valid padding to power-of-two heights, and preallocated tables retain their fixed
+inventory. Physical zero-count occurrences remain part of the ledger even though they create no
+pending demand. Scheduler completeness and agreement with final canonical data remain separate
+proof obligations.
 
 Production retains the specialized Byte/Range providers. The archived
 [provider review](https://github.com/dtumad/sp1-lean/pull/153) compares generation, proving,
@@ -181,6 +183,17 @@ The unified alternative cost more on large distinct demand; fully preprocessed t
 substantial proving and verification costs. Source and measurements remain in the linked checkpoints. Routine validation
 covers the installed providers. Revisit this choice when upstream demand indexing or reusable
 preprocessing changes those costs.
+
+Assembly fixtures share exact component-and-generation-mode output from Clean's printer. A generated
+catalog makes those modules part of the comparison crate's `assembly-export` library; profile
+wrappers use Clean's assembly printer. Two independent generations authenticate the catalog,
+components, wrappers and native reference data before Rust compilation.
+
+Backend proofs use upstream `EnsembleKey`, scoped to a generated ensemble, proof configuration and
+minimum trace height. With the comparison configuration's constant FRI final polynomial that minimum
+is one; empty demand tables still have height zero. Keys can serve different public inputs and dynamic
+trace heights. A key is discarded after a caught prover panic, because its PCS data may have moved
+out before unwinding. Key reuse does not allow different fixed programs to share a key.
 
 The existing test adapter constructs component rows with Clean's
 runtime, then independently checks their external interactions. It is not a production scheduler

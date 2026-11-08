@@ -330,7 +330,7 @@ theorem chronologicalStateLinks_isHandoffChain {p : ℕ} [NeZero p]
       obtain ⟨pullEq, tail⟩ := chronology
       rw [chronologicalStateLinks_cons]
       by_cases canonical : routed.rawPushState = routed.nextState
-      · simp only [routedStateRecordLinks, canonical, if_pos, List.append_nil,
+      · simp only [routedStateRecordLinks, canonical, ite_eq_left, List.append_nil,
           List.map_cons, List.map_nil]
         exact ⟨congrArg (StateRecord.key (p := p)) pullEq,
           by simpa [canonical] using ih tail⟩

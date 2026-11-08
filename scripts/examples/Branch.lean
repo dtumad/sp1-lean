@@ -5,7 +5,7 @@ import Lean.Data.Json
 witness and its mutations. The imported theorem supplies official Sail execution; this driver
 does not execute the noncomputable full Sail state. -/
 
-open SP1CleanTest.Alignment.InstalledAssembly (assembly channels)
+open SP1CleanTest.Alignment.InstalledAssembly (assembly)
 open Lean Circuit Air.Flat SP1Clean
 open SP1Clean.Audit.BranchEnsemble
 
@@ -52,8 +52,9 @@ private def runBranchEnsembleExample : IO Unit := do
     ("physicalInteractions", toJson physicalLedger.length),
     ("verifierInteractions", toJson verifierLedger.length),
     ("interactions", toJson activeWitness.interactions.length),
-    ("registeredChannelOccurrences", toJson (assembly (context target)).channels.length),
-    ("uniqueChannels", toJson (channels (context target)).length),
+    ("declaredChannelOccurrences", toJson ((assembly (context target)).tables.flatMap (·.circuit.channels) ++
+      (assembly (context target)).verifier.channels).length),
+    ("uniqueChannels", toJson (assembly (context target)).channels.length),
     ("tables", toJson tableStats),
     ("cases", toJson (cases.map fun (name, expected, actual) => Json.mkObj [
       ("id", toJson name), ("expected", toJson expected), ("actual", toJson actual)]))]

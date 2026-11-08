@@ -190,7 +190,10 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHin
 /-- The DivRem chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- Real event inputs followed by SP1's DIVU padding template. -/
 def traceInputs (events : List RTypeEvent) (padding : ℕ) : List (Inputs (ZMod p)) :=
@@ -216,32 +219,38 @@ assert tail, the reader glue — evaluates to zero on every built row, and no st
 unchecked. -/
 theorem traceTable_constraints (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.IsDivRem)
-    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding)
-      data (ProverHint.empty _) bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+      data (ProverHint.empty _) bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
 Memory, Program and Byte channels carries the payload its channel promises. -/
 theorem traceTable_guarantees (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (h : ∀ e ∈ events, e.WellFormed ∧ e.IsDivRem)
-    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding)
-      data (ProverHint.empty _) bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+      data (ProverHint.empty _) bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,
 concatenated in row order. -/
 theorem traceTable_interactionsWith (events : List RTypeEvent) (padding : ℕ)
     (data : ProverData (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events padding).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding)
-        data (ProverHint.empty _) bounded).interactionsWith channel =
+        data (ProverHint.empty _) bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events padding).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data (ProverHint.empty _)) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.DivRemChip

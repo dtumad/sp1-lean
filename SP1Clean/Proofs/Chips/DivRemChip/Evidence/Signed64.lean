@@ -397,7 +397,7 @@ theorem signed64Evidence {input : Inputs (ZMod p)} {cols : Columns (ZMod p)} {ca
       have hcz1 : cols.c[1] = 0 := (ZMod.val_eq_zero _).mp (by omega)
       have hcz2 : cols.c[2] = 0 := (ZMod.val_eq_zero _).mp (by omega)
       have hcz3 : cols.c[3] = 0 := (ZMod.val_eq_zero _).mp (by omega)
-      rw [if_pos ⟨hcz0, hcz1, hcz2, hcz3⟩] at hzeroResult
+      rw [ite_eq_left ⟨hcz0, hcz1, hcz2, hcz3⟩] at hzeroResult
       have hq0 : cols.quotient[0] = 65535 := eq_of_gate_eq_one hzeroResult e230
       have hq1 : cols.quotient[1] = 65535 := eq_of_gate_eq_one hzeroResult e232
       have hq2 : cols.quotient[2] = 65535 := eq_of_gate_eq_one hzeroResult e234

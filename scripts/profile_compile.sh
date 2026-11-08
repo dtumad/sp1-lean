@@ -35,7 +35,7 @@
 #
 # Env:
 #   TREES=…        space-separated source trees to sweep
-#                  (default: "SP1Clean ToClean ToMathlib ToPolyFun").
+#                  (default: "SP1Clean ToClean ToMathlib").
 #                  Add SP1CleanTest to include the native_decide test library.
 #   SKIP_BUILD=1   skip the warm build (use when the cache is already warm).
 #   EXCLUDE_RE=…   optional grep -E pattern of module paths to skip.
@@ -61,7 +61,7 @@ PREFIX="${1:-}"
 case "$PREFIX" in
   LeanRV64D*) PREFIX=".lake/generated/sail/$PREFIX" ;;
 esac
-TREES="${TREES:-SP1Clean ToClean ToMathlib ToPolyFun}"
+TREES="${TREES:-SP1Clean ToClean ToMathlib}"
 TOP="${TOP:-50}"
 
 # Package-level lean args (lakefile.toml `moreLeanArgs` + `[leanOptions]`), applied to every
@@ -80,7 +80,7 @@ mkdir -p "$OUTDIR"
 #    only the core, so warm the full library. Run solo; never stop another process here.
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   echo ">>> Warming cache: strict full build"
-  if ! lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib ToPolyFun; then
+  if ! lake --no-cache build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib; then
     echo "!!! warm build failed — fix the build before profiling. Aborting." >&2
     exit 1
   fi

@@ -17,12 +17,12 @@ use p3_field::PrimeCharacteristicRing;
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
 
-fixture!(fabricated_halt, "installed_fabricated_halt");
-fixture!(changed_stopped, "installed_stopped_changed");
-fixture!(stopped_wide, "installed_stopped_wide");
-fixture!(stopped_zero, "installed_stopped_zero");
-fixture!(empty, "installed_empty");
-fixture!(generated, "installed_assembly");
+fixture!(fabricated_halt, installed_fabricated_halt);
+fixture!(changed_stopped, installed_stopped_changed);
+fixture!(stopped_wide, installed_stopped_wide);
+fixture!(stopped_zero, installed_stopped_zero);
+fixture!(empty, installed_empty);
+fixture!(generated, installed_assembly);
 fn stopped_receipt<P: GeneratedAirSpec>(public: &[F], word: &[F]) {
     let ledger = P::verifier_interactions(public);
     let receipts = ledger
@@ -78,6 +78,7 @@ fn invalid_optional_exit_instances_reject_generation_for_the_expected_reason() {
         let error = generate::<F, changed_stopped::Ensemble>(
             &fields(&case["publicInput"]),
             &fields(&case["privateInput"]),
+            0,
         )
         .unwrap_err();
         assert!(
@@ -87,8 +88,9 @@ fn invalid_optional_exit_instances_reject_generation_for_the_expected_reason() {
     }
     let case = &fabricated["cases"][0];
     let public = fields(&case["publicInput"]);
-    let error = generate::<F, fabricated_halt::Ensemble>(&public, &fields(&case["privateInput"]))
-        .unwrap_err();
+    let error =
+        generate::<F, fabricated_halt::Ensemble>(&public, &fields(&case["privateInput"]), 1)
+            .unwrap_err();
     assert!(
         matches!(&error, WitnessGenerationError::Runtime(message) if message.contains("SP1HostExit")),
         "{error}"
@@ -98,7 +100,7 @@ fn invalid_optional_exit_instances_reject_generation_for_the_expected_reason() {
         .iter()
         .find(|entry| entry.channel == "SP1HostExit")
         .unwrap();
-    assert_eq!(receipt.multiplicity, -F::ONE);
+    assert_eq!(receipt.signed_multiplicity(), -F::ONE);
     assert_eq!(receipt.message, vec![F::ZERO; 4]);
 }
 

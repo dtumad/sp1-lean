@@ -28,7 +28,7 @@ input expression, so an environment agreeing on the input agrees on every declar
 tails — the per-bit boolean assertions (a `forEach` of zero-witness assertions) and the closing
 equality subcircuit — declare no cells at all. -/
 theorem toBits_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
-    (toBits n hn (p := p)).base.ComputableWitnessesWithData := by
+    (toBits n hn (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [toBits, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨fun _ h_in => ?_,
@@ -39,7 +39,7 @@ theorem toBits_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
 /-- `rangeCheck` has computable witnesses: it is the assertion wrapper around `toBits`, whose own
 `ComputableWitnesses` dispatches the single composed subcircuit. -/
 theorem rangeCheck_computableWitnesses [Fact (p > 2)] (n : ℕ) (hn : 2 ^ n < p) :
-    (rangeCheck n hn (p := p)).base.ComputableWitnessesWithData := by
+    (rangeCheck n hn (p := p)).base.ComputableWitnesses := by
   intro k input env env'
   simp only [rangeCheck, circuit_norm, Operations.forAllFlat, Operations.forAll]
   exact FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
@@ -55,7 +55,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (p > 2)]
 
 /-- Every witness depends only on the two inputs. -/
 theorem computableWitnesses (op : Op) (hp : 2 ^ 8 < p) :
-    (circuit op hp).base.ComputableWitnessesWithData := by
+    (circuit op hp).base.ComputableWitnesses := by
   intro k input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat]
   refine ⟨?_, ?_, ?_, ?_⟩

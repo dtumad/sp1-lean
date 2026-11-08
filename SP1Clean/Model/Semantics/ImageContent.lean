@@ -12,7 +12,7 @@ The file sits beside `Model/Machine/Boot.lean`'s loader contract but below the m
 itself).  Like `GuestProgram.lean`, the namespace records the intended `Target` vocabulary rather
 than the directory. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness.Target.GuestProgram
 

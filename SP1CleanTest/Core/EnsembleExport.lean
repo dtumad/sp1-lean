@@ -1,4 +1,5 @@
 import SP1CleanTest.Core.ComponentExport
+import ToClean.Air.MessageIndex
 import SP1CleanTest.Core.EnsembleCheck
 
 /-! # Built-in Rust export of fixed membership and a public boundary
@@ -31,17 +32,16 @@ def provider : GeneralFormalCircuit Fp fieldPair field where
     circuit_proof_start [EnsembleCheck.values]
     simp_all
 
-/-- The original finite lookup meaning is supplied by the verifier, independently of prover data. -/
-def fixed : FixedColumns Fp where
-  height := 2
-  program := .ofFExprs #v[.listGet [.const 7, .const 9] .idx]
-  valid := by rfl
-
-/-- The multiplicity is prover-owned; the allowed value is the fixed prefix. -/
+/-- The value is verifier-fixed and the count belongs to upstream preallocation. -/
 def component : Component Fp where
   circuit := provider
-  fixedColumns := some fixed
-  fixed_width_le_input := by decide
+  generation := .preallocated {
+    channel := values
+    trigger := .pull
+    height := 2
+    input index := pure (.fixed (.listGet [.const 7, .const 9] index), .multiplicity)
+    rowOf _ := .messageIndex [#v[7], #v[9]] 0 2
+  }
 
 /-- One physical provider with the original separate public pull. -/
 def ensemble : Ensemble Fp field where
@@ -49,19 +49,17 @@ def ensemble : Ensemble Fp field where
   unique_names := by simp
   channels := [values.toRaw]
   verifier := verifier
-
-/-- Built-in preallocation updates only the count, selected by the actual emitted message. -/
-def config : WitnessGeneration.Config Fp where
-  components := [(provider.name, {
-    mode := .preallocated {
-      rows := 2
-      input := .ofFExprs #v[.const 0]
-      input_valid := by rfl
-      handlers := [{ interaction := 0, column := 1 }]
-    }
-    padding := { input := #[7, 0], minimumRows := 2 }
-  })]
-  fuel := 8
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change [values.toRaw] ⊆ _
+    simp
+  verifier_channels := by
+    intro channel member
+    simpa [EnsembleCheck.verifier, Verifier.Program.channels,
+      Verifier.Program.channelsWithGuarantees, Verifier.Program.channelsWithRequirements,
+      Verifier.Program.operations, circuit_norm] using member
 
 /-- Independent raw acceptance includes all occurrences, including the unused fixed row. -/
 def description : Air.Flat.EnsembleCheck ensemble where
@@ -69,25 +67,18 @@ def description : Air.Flat.EnsembleCheck ensemble where
   lookups_unique := by simp
   lookups_complete := by
     simp [ensemble, component, Component.lookups_eq, Component.rowOperations, provider, circuit_norm]
-  channels_unique := by simp [ensemble]
-  channels_complete := by
-    simp [ensemble, component, Component.interactions_eq, Component.rowOperations, provider, circuit_norm]
-  verifier_channels_complete := by
-    simp [ensemble, Ensemble.verifierOperations, EnsembleCheck.verifier,
-      Verifier.Program.circuitOperations, circuit_norm]
-
 /-- Use Clean's scheduler with no external prover input or custom witness evaluator. -/
 def generate (value : Fp) : Except String (EnsembleWitness ensemble) :=
-  WitnessGeneration.generate (ComponentExport.fixture ensemble) config value () |>.mapError toString
+  WitnessGeneration.generate ensemble 8 value () |>.mapError toString
 
 /-- The entire output is rendered by Clean's built-in exporter. -/
 def rust : Except String String :=
-  Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) config
+  Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) 8
 
 /-- Check generation against raw constraints and the full ledger. -/
 def accepts (value : Fp) : Bool :=
   match generate value with
-  | .ok witness => description.checkWitness SP1Clean.SP1Prime witness
+  | .ok witness => description.checkWitness witness
   | .error _ => false
 
 /-- Both original allowed values pass, while the forged member has no fixed provider. -/

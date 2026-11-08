@@ -27,9 +27,16 @@ theorem soundness :
     h_taken0, h_taken1, h_taken2, h_taken3,
     h_fall0, h_fall1, h_fall2, h_fall3,
     h_cpustate, h_itype, h_byte1, h_byte2, h_byte3⟩ := h_holds
-  obtain ⟨⟨_h_ckh, _h_ck1, _h_ck0, hpc⟩, ⟨_h_a,
-    ⟨h_amem_pv, _, _⟩, _h_a0, _h_b,
-    ⟨h_bmem_pv, _, _⟩, hcimm⟩, _, _, _, _, _, _⟩ := h_input
+  have _h_ckh := h_input.1.1
+  have _h_ck1 := h_input.1.2.1
+  have _h_ck0 := h_input.1.2.2.1
+  have hpc := h_input.1.2.2.2
+  have _h_a := h_input.2.1.1
+  have h_amem_pv := h_input.2.1.2.1.1
+  have _h_a0 := h_input.2.1.2.2.1
+  have _h_b := h_input.2.1.2.2.2.1
+  have h_bmem_pv := h_input.2.1.2.2.2.2.1.1
+  have hcimm := h_input.2.1.2.2.2.2.2
   have h_realsum : input_is_real =
       input_isBeq + input_isBne + input_isBlt + input_isBge + input_isBltu + input_isBgeu := rfl
   have h_bin : input_is_real = 0 ∨ input_is_real = 1 := by
@@ -44,58 +51,26 @@ theorem soundness :
   have h_clk :=
     Readers.ClkDiscipline.of_cpuState_spec (h_cpustate h_bin)
   let rs1 : Word (ZMod p) :=
-    #v[Expression.eval env input_var_adapter_op_a_memory_prev_value[0],
-      Expression.eval env input_var_adapter_op_a_memory_prev_value[1],
-      Expression.eval env input_var_adapter_op_a_memory_prev_value[2],
-      Expression.eval env input_var_adapter_op_a_memory_prev_value[3]]
+    #v[input_adapter_op_a_memory_prev_value[0],
+      input_adapter_op_a_memory_prev_value[1],
+      input_adapter_op_a_memory_prev_value[2],
+      input_adapter_op_a_memory_prev_value[3]]
   let rs2 : Word (ZMod p) :=
-    #v[Expression.eval env input_var_adapter_op_b_memory_prev_value[0],
-      Expression.eval env input_var_adapter_op_b_memory_prev_value[1],
-      Expression.eval env input_var_adapter_op_b_memory_prev_value[2],
-      Expression.eval env input_var_adapter_op_b_memory_prev_value[3]]
+    #v[input_adapter_op_b_memory_prev_value[0],
+      input_adapter_op_b_memory_prev_value[1],
+      input_adapter_op_b_memory_prev_value[2],
+      input_adapter_op_b_memory_prev_value[3]]
   let pc : Word (ZMod p) :=
-    #v[Expression.eval env input_var_state_pc[0],
-      Expression.eval env input_var_state_pc[1],
-      Expression.eval env input_var_state_pc[2], 0]
-  let imm : Word (ZMod p) :=
-    #v[Expression.eval env input_var_adapter_op_c_imm[0],
-      Expression.eval env input_var_adapter_op_c_imm[1],
-      Expression.eval env input_var_adapter_op_c_imm[2],
-      Expression.eval env input_var_adapter_op_c_imm[3]]
+    #v[input_state_pc[0],
+      input_state_pc[1],
+      input_state_pc[2], 0]
+  let imm : Word (ZMod p) := input_adapter_op_c_imm
   let next : Word (ZMod p) :=
     #v[env.get (i₀ + 11), env.get (i₀ + 12), env.get (i₀ + 13), 0]
-  have hrs1eq : rs1 =
-      #v[input_adapter_op_a_memory_prev_value[0],
-        input_adapter_op_a_memory_prev_value[1],
-        input_adapter_op_a_memory_prev_value[2],
-        input_adapter_op_a_memory_prev_value[3]] := by
-    dsimp only [rs1]
-    rw [← h_amem_pv]
-    simp only [Vector.getElem_map]
-  have hrs2eq : rs2 =
-      #v[input_adapter_op_b_memory_prev_value[0],
-        input_adapter_op_b_memory_prev_value[1],
-        input_adapter_op_b_memory_prev_value[2],
-        input_adapter_op_b_memory_prev_value[3]] := by
-    dsimp only [rs2]
-    rw [← h_bmem_pv]
-    simp only [Vector.getElem_map]
-  have hpceq : pc =
-      #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0] := by
-    dsimp only [pc]
-    rw [← hpc]
-    simp only [Vector.getElem_map]
-  have himmeq : imm = input_adapter_op_c_imm := by
-    dsimp only [imm]
-    rw [← hcimm]
-    apply Vector.ext
-    intro i hi
-    simp only [Vector.getElem_map]
-    interval_cases i <;> rfl
-  have hrs1U : Word.isU64 rs1 := hrs1eq ▸ h_rs1U
-  have hrs2U : Word.isU64 rs2 := hrs2eq ▸ h_rs2U
-  have hpcU : Word.isU64 pc := hpceq ▸ h_pcU
-  have himmU : Word.isU64 imm := himmeq ▸ h_imm
+  have hrs1U : Word.isU64 rs1 := h_rs1U
+  have hrs2U : Word.isU64 rs2 := h_rs2U
+  have hpcU : Word.isU64 pc := h_pcU
+  have himmU : Word.isU64 imm := h_imm
   have h4U :
       Word.isU64 (#v[(4 : ZMod p), 0, 0, 0] : Word (ZMod p)) :=
     Word.isU64_four
@@ -103,9 +78,9 @@ theorem soundness :
     (signed_selector_valid hbeq hbne hblt hbge hbltu hbgeu h_bin).1
   have nextInteract (hr1 : input_is_real = 1) :
       AddOperation.InteractSpec next := by
-    have h0 := h_byte1 (congrArg Neg.neg hr1)
-    have h1 := h_byte2 (congrArg Neg.neg hr1)
-    have h2 := h_byte3 (congrArg Neg.neg hr1)
+    have h0 := h_byte1 hr1
+    have h1 := h_byte2 hr1
+    have h2 := h_byte3 hr1
     simp only [byteChannel] at h0 h1 h2
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
@@ -176,13 +151,11 @@ theorem soundness :
     exact h_realsum.symm.trans real
   · intro hr1 hbr1
     have hsem := takenSemantics hr1 hbr1
-    rw [hpceq, himmeq] at hsem
     simpa only [next, pc, imm, SP1Clean.BranchChip.nextPcWord,
       SP1Clean.BranchChip.pcWord, Vector.getElem_map,
       Vector.getElem_mapRange, circuit_norm] using hsem
   · intro hr1 hbr0
     have hsem := fallSemantics hr1 hbr0
-    rw [hpceq] at hsem
     simpa only [next, pc, SP1Clean.BranchChip.nextPcWord,
       SP1Clean.BranchChip.pcWord, Vector.getElem_map,
       Vector.getElem_mapRange, circuit_norm] using hsem
@@ -192,8 +165,6 @@ theorem soundness :
       (h_lt ⟨hrs1U, hrs2U, h_bin, h_sig_bin⟩) hr1
     obtain ⟨h_bit, h_eqf⟩ := h_lt_spec
     simp only [circuit_norm] at h_bit h_eqf
-    dsimp only [rs1, rs2] at hrs1eq hrs2eq
-    rw [hrs1eq, hrs2eq] at h_bit h_eqf
     have hone :
         input_isBeq + input_isBne + input_isBlt +
             input_isBge + input_isBltu +
@@ -212,16 +183,14 @@ theorem soundness :
   · intro hr1
     change input_is_real = 1 at hr1
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
-    have hguar := h_byte1 (congrArg Neg.neg hr1)
+    have hguar := h_byte1 hr1
     simp only [byteChannel] at hguar
     rw [← c14] at hguar
     have halign := val_mod_four_of_mul_inv_four_lt
       ((byteRowSpec_range _ SP1Clean.BranchChip.h14p).mp hguar)
     simpa only [Vector.getElem_map, Vector.getElem_mapRange,
       circuit_norm] using halign
-  · refine ⟨⟨h_bin, h_bin, h_clk⟩, ?_, ?_, ?_⟩ <;>
-      intro h1 h0 <;>
-        exact off_gate_vacuous h_bin h1 h0
+  · and_intros <;> first | exact h_bin | exact h_clk
 
 theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions
@@ -257,16 +226,15 @@ theorem completeness :
     rfl
   simp only [branchTargetWord, fallThroughWord] at h_bt3 h_ft3 h_ranges
   have hpc :
-      Vector.map (Expression.eval env.toEnvironment) input_var_state_pc =
+      Eval.eval env.toEnvironment input_var_state_pc =
         input_state_pc := by
-    rw [← CircuitType.eval_var_fields]
     exact h_input.1.2.2.2
   have ep : ∀ i (hi : i < 3),
       Expression.eval env.toEnvironment input_var_state_pc[i] =
         input_state_pc[i] := by
     intro i hi
     rw [← hpc]
-    simp only [Vector.getElem_map]
+    simp only [ProvableType.getElem_eval_fields]
   have ep0 := ep 0 (by omega)
   have ep1 := ep 1 (by omega)
   have ep2 := ep 2 (by omega)
@@ -289,22 +257,16 @@ theorem completeness :
       Word.isU64 (#v[(4 : ZMod p), 0, 0, 0] : Word (ZMod p)) :=
     Word.isU64_four
   have hcimm :
-      Vector.map (Expression.eval env.toEnvironment)
-          input_var_adapter_op_c_imm =
+      Eval.eval env.toEnvironment input_var_adapter_op_c_imm =
         input_adapter_op_c_imm := by
-    rw [← CircuitType.eval_var_fields]
     exact h_input.2.1.2.2.2.2.2
   have hapv_map :
-      Vector.map (Expression.eval env.toEnvironment)
-          input_var_adapter_op_a_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_a_memory_prev_value =
         input_adapter_op_a_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]
     exact h_input.2.1.2.1.1
   have hbpv_map :
-      Vector.map (Expression.eval env.toEnvironment)
-          input_var_adapter_op_b_memory_prev_value =
+      Eval.eval env.toEnvironment input_var_adapter_op_b_memory_prev_value =
         input_adapter_op_b_memory_prev_value := by
-    rw [← CircuitType.eval_var_fields]
     exact h_input.2.1.2.2.2.2.1.1
   have hcimmeq :
       (#v[Expression.eval env.toEnvironment input_var_adapter_op_c_imm[0],
@@ -315,14 +277,14 @@ theorem completeness :
     rw [← hcimm]
     apply Vector.ext
     intro i hi
-    simp only [Vector.getElem_map]
+    simp only [ProvableType.getElem_eval_fields]
     interval_cases i <;> rfl
   have ec : ∀ i (hi : i < 4),
       Expression.eval env.toEnvironment input_var_adapter_op_c_imm[i] =
         input_adapter_op_c_imm[i] := by
     intro i hi
     rw [← hcimm]
-    simp only [Vector.getElem_map]
+    simp only [ProvableType.getElem_eval_fields]
   have ec0 := ec 0 (by omega)
   have ec1 := ec 1 (by omega)
   have ec2 := ec 2 (by omega)
@@ -342,7 +304,7 @@ theorem completeness :
           input_adapter_op_a_memory_prev_value[2],
           input_adapter_op_a_memory_prev_value[3]] := by
     rw [← hapv_map]
-    simp only [Vector.getElem_map]
+    simp only [ProvableType.getElem_eval_fields]
   have hrs2eq :
       (#v[Expression.eval env.toEnvironment
             input_var_adapter_op_b_memory_prev_value[0],
@@ -358,7 +320,7 @@ theorem completeness :
           input_adapter_op_b_memory_prev_value[2],
           input_adapter_op_b_memory_prev_value[3]] := by
     rw [← hbpv_map]
-    simp only [Vector.getElem_map]
+    simp only [ProvableType.getElem_eval_fields]
   have hrs1U :
       Word.isU64
         (#v[Expression.eval env.toEnvironment
@@ -411,11 +373,9 @@ theorem completeness :
           Expression.eval env.toEnvironment
             input_var_adapter_op_b_memory_prev_value[3]],
         ⟨⟨⟨env.get (i₀)⟩,
-            Vector.map (Expression.eval env.toEnvironment)
-              (Vector.mapRange 4 fun i => var { index := i₀ + 1 + i }),
+            Vector.mapRange 4 fun i => env.get (i₀ + 1 + i),
             env.get (i₀ + 5),
-            Vector.map (Expression.eval env.toEnvironment)
-              (Vector.mapRange 2 fun i => var { index := i₀ + 6 + i })⟩,
+            Vector.mapRange 2 fun i => env.get (i₀ + 6 + i)⟩,
           ⟨env.get (i₀ + 8)⟩, ⟨env.get (i₀ + 9)⟩⟩,
         input_isBlt + input_isBge, input_is_real⟩ := by
     rw [he_lt, LtOperationSigned.populateFE_eval env
@@ -425,7 +385,7 @@ theorem completeness :
          input_var_adapter_op_b_memory_prev_value[2], input_var_adapter_op_b_memory_prev_value[3]]
       _ _ _ _ rfl rfl hrs1U hrs2U]
     simp only [circuit_norm, h_input]
-    exact LtOperationSigned.spec_populate hrs1U hrs2U h_sig_bin h_bin hbg_gate
+    exact LtOperationSigned.spec_populate h_rs1U h_rs2U h_sig_bin h_bin hbg_gate
   have he_dec := he_br
   have he_cmp := he_lt
   rw [LtOperationSigned.populateFE_eval env
@@ -435,7 +395,6 @@ theorem completeness :
        input_var_adapter_op_b_memory_prev_value[2], input_var_adapter_op_b_memory_prev_value[3]]
     _ _ _ _ rfl rfl hrs1U hrs2U] at he_cmp
   simp only [circuit_norm, h_input] at he_cmp
-  rw [hrs1eq, hrs2eq] at he_cmp
   have hdecision := congrArg (fun c : Circuits.Types.LtOperationSigned (ZMod p) =>
     branchDecision input_isBeq input_isBne input_isBlt input_isBge input_isBltu input_isBgeu
       c.result.u16_compare_operation.bit
@@ -678,11 +637,10 @@ theorem completeness :
     branchDecision, rs1WordInput, rs2WordInput, Inputs.is_real,
     Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ] at h_ranges
-  simp +instances only [main, branchDecision, circuit_norm, h_input, hpc, hcimm,
-    hapv_map, hbpv_map, ep0, ep1, ep2, ec0, ec1, ec2, ec3]
+  simp +instances only [main, branchDecision, circuit_norm, h_input, ep0, ep1, ep2, ec0, ec1, ec2, ec3]
   refine
-    ⟨⟨⟨hrs1U, hrs2U, h_bin, h_sig_bin⟩,
-        by simpa only [LtOperationSigned.circuit] using h_lt_spec⟩,
+    ⟨⟨⟨h_rs1U, h_rs2U, h_bin, h_sig_bin⟩,
+        by simpa only [LtOperationSigned.circuit, circuit_norm, h_input] using h_lt_spec⟩,
         ?_, ?_, ?_, ?_, ?_, ?_,
         hsumbin, ?_, ?_,
         ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
@@ -760,7 +718,7 @@ theorem completeness :
       · rw [hsumreal, hr1, hbr1]
         simp
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
     rw [← he_br] at hranges
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
@@ -768,7 +726,7 @@ theorem completeness :
     rw [← c14]
     exact (byteRowSpec_range _ SP1Clean.BranchChip.h14p).mpr hranges.1
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
     rw [← he_br] at hranges
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat
@@ -776,7 +734,7 @@ theorem completeness :
     rw [← c16]
     exact (byteRowSpec_range _ SP1Clean.sixteen_lt).mpr hranges.2.1
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have hranges := h_ranges hr1
     rw [← he_br] at hranges
     have c16 : ((16 : ℕ) : ZMod p) = (16 : ZMod p) := Nat.cast_ofNat

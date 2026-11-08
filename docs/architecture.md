@@ -13,7 +13,7 @@ and a chip should be understandable with its local correctness proofs.
 | Circuits | `SP1Clean/Circuits/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
 | Machine | `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Registration, assembly, grounding, Sail bridges and physical compiler |
 | Export and comparison | `SP1CleanTest/Core/`, `SP1CleanTest/Alignment/Support/`, `rust/sp1-comparison/` | Built-in Clean export fixtures and independent released-SP1 comparisons |
-| Upstream additions | `ToClean/`, `ToPolyFun/`, `ToMathlib/` | Reusable missing APIs in upstream namespaces, independent of SP1 |
+| Upstream additions | `ToClean/`, `ToMathlib/` | Reusable missing APIs in upstream namespaces, independent of SP1 |
 | Tests | `SP1CleanTest/` | Executable examples, non-vacuity, adversarial witnesses and native computation |
 
 The current import rules are encoded in [layering.txt](../scripts/layering.txt);
@@ -141,6 +141,18 @@ raw constraints, complete balance, authenticated boundaries and ranked chronolog
 smuggled into a channel payload. Keep occurrence lists through transformations: equal keys do
 not identify occurrences, and disabled interactions still affect characteristic bounds.
 
+Direction and multiplicity are separate in Clean. Signed ledgers apply the direction to the field
+count. A dedicated multiplicity input is a provider choice: demand generation can emit one row per
+request, or reuse a row and accumulate its count when a counter is declared. Instruction activity
+and ordered State/Memory transitions remain Boolean; aggregating their rows would discard the
+per-step state and chronology. Fixed membership and Byte providers can share counted rows.
+[DemandMultiplicity](../SP1CleanTest/Core/DemandMultiplicity.lean) exercises both upstream modes.
+
+Clean's abstract balance relation supplies channel guarantees and Boolean occurrence matching.
+The concrete LogUp statement additionally carries signed field-sum balance and authenticated table
+heights, with the occurrence bound required to derive abstract balance. These are separate proof
+obligations. No conversion may infer field-sum balance from abstract balance alone.
+
 Source and target register/RAM authentication use separate fixed membership channels. Clean's
 fixed-column programs own register rows and normalized sparse-memory intervals, including zero
 gaps, eligibility and padding; only counts are prover-owned. Source RAM reads authenticate eight
@@ -193,8 +205,7 @@ no maintained consumer; SP1 agreement is checked independently in Rust.
 ## Upstream and generated boundaries
 
 To* means “To Upstream”: additions belong in the namespace they would have upstream and state
-the missing capability in their module documentation. ToMathlib imports Mathlib; ToPolyFun imports
-PolyFun; ToClean imports Clean and may use those two. None imports SP1Clean.
+the missing capability in their module documentation. ToMathlib imports Mathlib; ToClean imports Clean and may use ToMathlib and PolyFun. None imports SP1Clean.
 
 Prefer additions over dependency forks. A fork is reserved for a required modification of a
 canonical declaration that cannot be expressed at an extension layer. Its patch and exit remain

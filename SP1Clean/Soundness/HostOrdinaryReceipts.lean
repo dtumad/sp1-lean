@@ -36,6 +36,25 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
   {names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources}
+  [registration : HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+
+/-- Static freshness of the additional receipt protocol in the existing channel registry. -/
+class FreshReceipt (image : ProgramImage) (source : ExecutionSnapshot)
+    (channels : List (RawChannel (ZMod p))) : Prop where
+  fresh : (InstructionReceipt.channel (p := p)).toRaw.name ∉
+    (HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)
+
+/-- The canonical source-backed host registry leaves the ordinary receipt name available. -/
+instance source_freshReceipt (image : ProgramImage) (source : ExecutionSnapshot)
+    (target : MemorySnapshot) : FreshReceipt (p := p) image source (HostFinalMemory.sourceChannels target) where
+  fresh := by
+    simp only [HostLocalCore.registry, LocalCore.baseEnsemble, sp1Ensemble_channels,
+      HostFinalMemory.sourceChannels, List.map_cons, List.map_nil, List.cons_append,
+      List.nil_append, StaticTable.channel, StaticTable.ofRows, MemorySnapshot.registerTable,
+      ProgramImage.writePermissionTable, InitialMemoryLookup.membership, FinalRegisterValue.membership,
+      Channel.toRaw_name]
+    change "SP1OrdinaryStateReceipt" ∉ ["sp1.native.host_call", "SP1WritePermission", "sp1.native.write_permission", "SP1NativeMemoryInitOrder", "SP1NativeMemoryFinalOrder", "sp1.native.source_registers", "sp1.native.initial_memory", "SP1State", "SP1Byte", "SP1Program", "SP1Memory", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.hint_read_state", "sp1.native.hint_word", "sp1.native.hint_node", "sp1.native.hint_queue_state", "SP1HostExit", "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access", "SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange", "sp1.native.target_registers", "sp1.native.target_memory", "sp1.native.commitment_declaration"]
+    decide
 
 private theorem base_length :
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length =
@@ -47,8 +66,10 @@ private theorem base_length :
 private theorem protected_component (index : Fin 25) :
     (ProtectedLocalCore.tables (p := p) image source)[7 + index.val]'(by
       rw [ProtectedLocalCore.tables_length]; omega) =
-        { circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
-          rw [InstructionChipId.all_length]; exact index.isLt))
+        { generation := (supportedChipFor (p := p) (InstructionChipId.all[index.val]'(by
+          rw [InstructionChipId.all_length]; exact index.isLt))).generation
+          circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
+            rw [InstructionChipId.all_length]; exact index.isLt))
           Assumptions := (ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
             rw [InstructionChipId.all_length]; exact index.isLt))).Assumptions
           circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
@@ -60,13 +81,15 @@ theorem original_component (index : Fin 25) :
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables[7 + index.val]'(by
       rw [base_length]
       omega) =
-      { circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
-        rw [InstructionChipId.all_length]; exact index.isLt))
+      { generation := (supportedChipFor (p := p) (InstructionChipId.all[index.val]'(by
+        rw [InstructionChipId.all_length]; exact index.isLt))).generation
+        circuit := ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
+          rw [InstructionChipId.all_length]; exact index.isLt))
         Assumptions := (ProtectedOrdinaryReceipt.provider (InstructionChipId.all[index.val]'(by
           rw [InstructionChipId.all_length]; exact index.isLt))).Assumptions
         circuit_assumptions_of_assumptions := fun _ _ _ _ _ h => h } := by
   change (HostFinalMemory.ensemble image source target.sail.memorySnapshot final target.host
-    others resources channels names).tables[7 + index.val]'_ = _
+    others resources channels names registration).tables[7 + index.val]'_ = _
   simp only [HostFinalMemory.tables_eq]
   rw [List.getElem_set_ne (by omega : 4 ≠ 7 + index.val),
     List.getElem_set_ne (by omega : 3 ≠ 7 + index.val),
@@ -74,7 +97,7 @@ theorem original_component (index : Fin 25) :
   rw [List.getElem_append_left (by rw [HostFinalMemory.prefix_length]; have := index.isLt; omega)]
   simp only [HostFinalMemory.beforeChecks]
   rw [HostLocalCore.core_component image source _ ⟨7 + index.val, by omega⟩,
-    if_neg (by have := index.isLt; omega : 58 ≠ 7 + index.val)]
+    ite_eq_right (by have := index.isLt; omega : 58 ≠ 7 + index.val)]
   exact protected_component index
 
 private theorem replacement_layout
@@ -82,26 +105,53 @@ private theorem replacement_layout
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
     let extended := replace index.val original
     extended.circuit.name = original.circuit.name ∧
-      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns := by
+      extended.width = original.width ∧ extended.FixedRowsMatch = original.FixedRowsMatch := by
   dsimp only
   by_cases within : 7 ≤ index.val ∧ index.val < 32
   · rw [show replace index.val _ = ProtectedOrdinaryReceipt.component
-        (InstructionChipId.all[index.val - 7]'(by rw [InstructionChipId.all_length]; omega)) from dif_pos within]
+        (InstructionChipId.all[index.val - 7]'(by rw [InstructionChipId.all_length]; omega)) from dite_eq_left within]
     have selected := original_component (image := image) (source := source) (target := target)
       (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
       ⟨index.val - 7, by omega⟩
     simp only [show 7 + (index.val - 7) = index.val by omega] at selected
     rw [selected]
-    exact ⟨rfl, ProtectedOrdinaryReceipt.width _, rfl⟩
-  · rw [show replace index.val _ = _ from dif_neg within]
+    refine ⟨rfl, ProtectedOrdinaryReceipt.width _, ?_⟩
+    funext rows
+    dsimp only [ProtectedOrdinaryReceipt.component, Component.FixedRowsMatch]
+    cases (supportedChipFor (p := p) (InstructionChipId.all[index.val - 7]'(by
+      rw [InstructionChipId.all_length]; omega))).generation <;> rfl
+  · rw [show replace index.val _ = _ from dite_eq_right within]
     exact ⟨rfl, rfl, rfl⟩
+
+private theorem replacement_channels
+    (index : Fin (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
+    let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
+    (replace index.val original).circuit.channels ⊆
+      original.circuit.channels ++ [InstructionReceipt.channel.toRaw] := by
+  dsimp only
+  by_cases within : 7 ≤ index.val ∧ index.val < 32
+  · rw [show replace index.val _ = ProtectedOrdinaryReceipt.component
+        (InstructionChipId.all[index.val - 7]'(by rw [InstructionChipId.all_length]; omega)) from dite_eq_left within]
+    have selected := original_component (image := image) (source := source) (target := target)
+      (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
+      ⟨index.val - 7, by omega⟩
+    simp only [show 7 + (index.val - 7) = index.val by omega] at selected
+    rw [selected]
+    intro channel member
+    change channel ∈ (ProtectedOrdinaryReceipt.provider _).channelsWithGuarantees ++
+      ((ProtectedOrdinaryReceipt.provider _).channelsWithRequirements ++ [InstructionReceipt.channel.toRaw]) at member
+    simpa only [GeneralFormalCircuit.channels, List.append_assoc] using member
+  · rw [show replace index.val _ = _ from dite_eq_right within]
+    exact List.subset_append_left _ _
 
 /-- Install the producers without moving or removing any physical table. -/
 def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p))
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources) : Ensemble (ZMod p) SP1PublicIO :=
+    (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
+    [HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+    [FreshReceipt (p := p) image source channels] : Ensemble (ZMod p) SP1PublicIO :=
   let base := HostSailBoundary.ensemble image source target final others resources channels names
   { base with tables := base.tables.mapIdx replace
               channels := base.channels ++ [InstructionReceipt.channel.toRaw]
@@ -116,7 +166,49 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
                       (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
                       ⟨index, by simpa only [List.length_map] using right⟩).1
                 rw [unchanged]
-                exact base.unique_names }
+                exact base.unique_names
+              unique_channel_names := by
+                rw [List.map_append, List.nodup_append]
+                refine ⟨base.unique_channel_names, by simp, ?_⟩
+                intro a old b added same
+                subst a
+                have : b = (InstructionReceipt.channel (p := p)).toRaw.name := by simpa using added
+                subst b
+                change _ ∈ ((((HostLocalCore.registry image source
+                  (HintReadWordChip.stateChannel.toRaw :: channels) ++ [_]) ++ [_]) ++ [_]) ++ [_]).map (fun channel : RawChannel (ZMod p) => channel.name) at old
+                simp only [List.map_append, List.mem_append, List.map_cons, List.map_nil,
+                  List.mem_singleton] at old
+                have separate (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
+                    (long : 0 < stem.toList.length) (different : stem.toList[0]? ≠ some 'S') :
+                    (InstructionReceipt.channel (p := p)).toRaw.name ≠
+                      (VerifierChannel.channel stem ens).name := by
+                  intro same
+                  have heads := congrArg (fun name : String => name.toList[0]?) same
+                  dsimp only [VerifierChannel.channel, Verifier.zeroChannel,
+                    Channel.toRaw, VerifierChannel.channelName] at heads
+                  rw [String.toList_append, List.getElem?_append_left long] at heads
+                  apply different
+                  simpa [InstructionReceipt.channel] using heads.symm
+                rcases old with (((old | old) | old) | old) | old
+                · exact FreshReceipt.fresh (image := image) (source := source) (channels := channels) old
+                · exact separate "sp1.local.source" _ (by decide) (by decide) old
+                · exact separate "host-boundary" _ (by decide) (by decide) old
+                · exact separate "final-memory-change" _ (by decide) (by decide) old
+                · exact separate "sail_boundary" _ (by decide) (by decide) old
+              tables_channels := by
+                intro component member channel used
+                obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
+                rw [List.getElem_mapIdx] at used
+                have bound' : index < base.tables.length := by simpa using bound
+                have declared := replacement_channels (image := image) (source := source) (target := target)
+                  (final := final) (others := others) (resources := resources) (channels := channels)
+                  (names := names) ⟨index, bound'⟩ used
+                rcases List.mem_append.mp declared with old | added
+                · exact List.mem_append_left _ (base.tables_channels _ (List.getElem_mem _) old)
+                · exact List.mem_append_right _ added
+              verifier_channels := fun _ used => List.mem_append_left _ (base.verifier_channels used) }
+
+variable [fresh : FreshReceipt (p := p) image source channels]
 
 /-- Receipt publication adds no tables. -/
 theorem tables_length :
@@ -164,6 +256,7 @@ theorem instructionTable_receipt_count (index : Fin 25)
       (instructionTable index witness).length := by
   rw [instructionTable_receipts, List.length_map]
 
+omit fresh in
 private theorem component_projection
     (index : Fin (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
@@ -175,7 +268,7 @@ private theorem component_projection
   dsimp only
   by_cases within : 7 ≤ index.val ∧ index.val < 32
   · rw [show replace index.val _ = ProtectedOrdinaryReceipt.component
-        (InstructionChipId.all[index.val - 7]'(by rw [InstructionChipId.all_length]; omega)) from dif_pos within]
+        (InstructionChipId.all[index.val - 7]'(by rw [InstructionChipId.all_length]; omega)) from dite_eq_left within]
     have selected := original_component (image := image) (source := source) (target := target)
       (final := final) (others := others) (resources := resources) (channels := channels) (names := names)
       ⟨index.val - 7, by omega⟩
@@ -183,7 +276,7 @@ private theorem component_projection
     rw [selected]
     exact ⟨ProtectedOrdinaryReceipt.constraints _, ProtectedOrdinaryReceipt.lookups _,
       ProtectedOrdinaryReceipt.interactions _⟩
-  · rw [show replace index.val _ = _ from dif_neg within]
+  · rw [show replace index.val _ = _ from dite_eq_right within]
     exact ⟨rfl, rfl, fun _ _ => rfl⟩
 
 private theorem layout (image : ProgramImage) (source target : ExecutionSnapshot)
@@ -191,13 +284,15 @@ private theorem layout (image : ProgramImage) (source target : ExecutionSnapshot
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
     (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
+    [HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+    [FreshReceipt (p := p) image source channels]
     (index : Fin
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
     let extended := (ensemble image source target final others resources channels names).tables[index.val]'(by
       rw [tables_length]; exact index.isLt)
     extended.circuit.name = original.circuit.name ∧
-      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns := by
+      extended.width = original.width ∧ extended.FixedRowsMatch = original.FixedRowsMatch := by
   dsimp only
   unfold ensemble
   dsimp only
@@ -217,7 +312,7 @@ private theorem construction_layout (index : Fin
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]'(
       Nat.lt_of_lt_of_eq index.isLt tables_length)
     extended.circuit.name = original.circuit.name ∧
-      extended.width = original.width ∧ extended.fixedColumns = original.fixedColumns := by
+      extended.width = original.width ∧ extended.FixedRowsMatch = original.FixedRowsMatch := by
   have facts := layout image source target final others resources channels names
     ⟨index.val, Nat.lt_of_lt_of_eq index.isLt tables_length⟩
   constructor
@@ -237,29 +332,25 @@ def construct (witness : EnsembleWitness
 theorem baseWitness_data (witness : EnsembleWitness
     (ensemble image source target final others resources channels names)) :
     (baseWitness witness).data = witness.data := by
-  funext key arity
   unfold baseWitness
-  apply witness.projectPrefix_data_of_layout
+  apply witness.projectPrefix_data_eq_of_layout
   · intro index
     exact (layout image source target final others resources channels names index).2.1.symm
   · intro index
     rw [(layout image source target final others resources channels names index).1]
-  · rw [← tables_length, List.drop_length]
-    simp
+  · rw [← tables_length]
 
 /-- Installing receipts retains every original named input, including empty table entries. -/
 theorem construct_data (witness : EnsembleWitness
     (HostSailBoundary.ensemble image source target final others resources channels names)) :
     (construct witness).data = witness.data := by
-  funext key arity
   unfold construct
-  apply witness.projectPrefix_data_of_layout
+  apply witness.projectPrefix_data_eq_of_layout
   · intro index
     exact (construction_layout index).2.1
   · intro index
     rw [(construction_layout index).1]
-  · rw [tables_length, List.drop_length]
-    simp
+  · rw [tables_length]
 
 /-- The complete public header remains attached to the same physical instruction rows. -/
 theorem baseWitness_publicInput (witness : EnsembleWitness

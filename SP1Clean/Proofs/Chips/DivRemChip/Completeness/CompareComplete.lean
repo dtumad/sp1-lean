@@ -146,39 +146,29 @@ private theorem inputs_eq_of_views {F : Type} {x y : DivRemCompare.Inputs F}
 private theorem evaluatedWordView_eq (env : ProverEnvironment (ZMod p))
     (input : Var SP1Clean.DivRemChip.Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
-    (hbpv : Vector.map (Expression.eval env.toEnvironment)
+    (hbpv : Eval.eval env.toEnvironment
       input.adapter.op_b_memory.prev_value = B)
-    (hcpv : Vector.map (Expression.eval env.toEnvironment)
+    (hcpv : Eval.eval env.toEnvironment
       input.adapter.op_c_memory.prev_value = C)
-    (hCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) :
+    (hCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + i) :
         Word (ZMod p)) = cComp C f)
-    (hABSCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i }) :
+    (hABSCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i)) :
         Word (ZMod p)) = populateAbsC C f)
-    (hABSRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) :
+    (hABSRvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i)) :
         Word (ZMod p)) = populateAbsRem B C f)
-    (hRCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + i }) : Word (ZMod p)) = populateRemComp B C f)
-    (hMAXvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + i }) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
-    (hRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) :
+    (hRCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + i)) : Word (ZMod p)) = populateRemComp B C f)
+    (hMAXvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + i)) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
+    (hRvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i) :
         Word (ZMod p)) = populateRemainder B C f)
-    (hQvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) :
+    (hQvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i) :
         Word (ZMod p)) = populateQuotient B C f) :
     wordView (Eval.eval env (DivRemCompare.Inputs.ofCols (populatedRowAt input off))) =
       wordView (honestInputs ir B C f) := by
+  simp only [circuit_norm] at hbpv hcpv
   unfold wordView
   simp +instances only [DivRemCompare.Inputs.ofCols, populatedRowAt,
     honestInputs, circuit_norm, hbpv, hcpv, hCvec, hABSCvec, hABSRvec, hRCvec,
@@ -227,23 +217,15 @@ private theorem evaluatedScalarView_eq (env : ProverEnvironment (ZMod p))
 private theorem evaluatedOperationView_eq (env : ProverEnvironment (ZMod p))
     (input : Var SP1Clean.DivRemChip.Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
-    (hWCNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wCnegWitness ir C f)
-    (hWRNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wRnegWitness ir B C f)
-    (hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 2 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i }) : Vector (ZMod p) 2) =
+    (hWCNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wCnegWitness ir C f)
+    (hWRNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wRnegWitness ir B C f)
+    (hLTCLvec : ((Vector.mapRange 2 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i)) : Vector (ZMod p) 2) =
         ltClWitness ir B C f)
-    (hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i }) : Vector (ZMod p) 4) =
+    (hLTFvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i)) : Vector (ZMod p) 4) =
         ltFlagsWitness ir B C f)
     (hNEI : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4) = (ltNotEqInvWitness ir B C f)[0])
@@ -289,62 +271,43 @@ theorem evaluatedInputs_eq (env : ProverEnvironment (ZMod p))
     (input : Var SP1Clean.DivRemChip.Inputs (ZMod p)) (off : ℕ)
     (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
     (hir : Expression.eval env.toEnvironment input.is_real = ir)
-    (hbpv : Vector.map (Expression.eval env.toEnvironment)
+    (hbpv : Eval.eval env.toEnvironment
       input.adapter.op_b_memory.prev_value = B)
-    (hcpv : Vector.map (Expression.eval env.toEnvironment)
+    (hcpv : Eval.eval env.toEnvironment
       input.adapter.op_c_memory.prev_value = C)
     (hfl4 : Expression.eval env.toEnvironment input.selectors[3] = f[4]) (hfl5 : Expression.eval env.toEnvironment input.selectors[4] = f[5])
     (hfl6 : Expression.eval env.toEnvironment input.selectors[5] = f[6]) (hfl7 : Expression.eval env.toEnvironment input.selectors[6] = f[7])
     (hSC4 : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) =
       ir * (1 - (f[4] + f[5] + f[6] + f[7])))
-    (hCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) :
+    (hCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + i) :
         Word (ZMod p)) = cComp C f)
-    (hABSCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i }) :
+    (hABSCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + i)) :
         Word (ZMod p)) = populateAbsC C f)
-    (hABSRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) :
+    (hABSRvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i)) :
         Word (ZMod p)) = populateAbsRem B C f)
-    (hRCvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + i }) : Word (ZMod p)) = populateRemComp B C f)
-    (hMAXvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + i }) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
-    (hWCNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wCnegWitness ir C f)
-    (hWRNEGvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + i }) : Word (ZMod p)) = wRnegWitness ir B C f)
-    (hLTCLvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 2 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i }) : Vector (ZMod p) 2) =
+    (hRCvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + i)) : Word (ZMod p)) = populateRemComp B C f)
+    (hMAXvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + i)) : Word (ZMod p)) = populateMaxAbsCOr1 C f)
+    (hWCNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wCnegWitness ir C f)
+    (hWRNEGvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + i)) : Word (ZMod p)) = wRnegWitness ir B C f)
+    (hLTCLvec : ((Vector.mapRange 2 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + i)) : Vector (ZMod p) 2) =
         ltClWitness ir B C f)
-    (hLTFvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
-          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i }) : Vector (ZMod p) 4) =
+    (hLTFvec : ((Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
+          + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + i)) : Vector (ZMod p) 4) =
         ltFlagsWitness ir B C f)
     (hNEI : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4) = (ltNotEqInvWitness ir B C f)[0])
     (hBIT : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1) = (ltBitWitness ir B C f)[0])
-    (hRvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) :
+    (hRvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i) :
         Word (ZMod p)) = populateRemainder B C f)
-    (hQvec : (Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
-        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) :
+    (hQvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7
+        + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i) :
         Word (ZMod p)) = populateQuotient B C f)
     (hBM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4) = bMsbCell B f)
@@ -486,43 +449,43 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rcases hbin with h0 | h1
     · rw [h0, zero_mul, ovbWitness]
-      simp only [if_neg zero_ne_one]
+      simp only [ite_eq_right zero_ne_one]
       exact IsEqualWordOperation.spec_zero B #v[0, 0, 0, 32768] rfl
     · rcases he2sum with hw0 | hw1
       · rw [h1, hw0]
         norm_num
         rw [ovbWitness]
-        simp only [if_true, hw0, if_neg zero_ne_one]
+        simp only [ite_true, hw0, ite_eq_right zero_ne_one]
         exact IsEqualWordOperation.spec_populate B #v[0, 0, 0, 32768] 1
       · rw [h1, hw1]
         norm_num
         rw [ovbWitness]
-        simp only [if_true, hw1]
+        simp only [ite_true, hw1]
         exact IsEqualWordOperation.spec_populate_offGate B #v[0, 0, 0, 32768]
           #v[B[0], B[1], 0, 0] #v[0, 32768, 0, 0] rfl
   · rcases hbin with h0 | h1
     · rw [h0, zero_mul, ovcWitness]
-      simp only [if_neg zero_ne_one]
+      simp only [ite_eq_right zero_ne_one]
       exact IsEqualWordOperation.spec_zero C #v[65535, 65535, 65535, 65535] rfl
     · rcases he2sum with hw0 | hw1
       · rw [h1, hw0]
         norm_num
         rw [ovcWitness]
-        simp only [if_true, hw0, if_neg zero_ne_one]
+        simp only [ite_true, hw0, ite_eq_right zero_ne_one]
         exact IsEqualWordOperation.spec_populate C #v[65535, 65535, 65535, 65535] 1
       · rw [h1, hw1]
         norm_num
         rw [ovcWitness]
-        simp only [if_true, hw1]
+        simp only [ite_true, hw1]
         exact IsEqualWordOperation.spec_populate_offGate C #v[65535, 65535, 65535, 65535]
           #v[C[0], C[1], 0, 0] #v[65535, 65535, 0, 0] rfl
   · rcases he2sum with hw0 | hw1
     · rw [hw0]
       rcases hbin with h0 | h1
-      · rw [ovbWitness, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+      · rw [ovbWitness, ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_zero (#v[B[0], B[1], 0, 0] : Word (ZMod p))
           #v[0, 32768, 0, 0] rfl
-      · rw [ovbWitness, if_pos h1, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      · rw [ovbWitness, ite_eq_left h1, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_populate_offGate
           (#v[B[0], B[1], 0, 0] : Word (ZMod p)) #v[0, 32768, 0, 0]
           B #v[0, 0, 0, 32768] rfl
@@ -532,16 +495,16 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
           rw [hf] at hw1
           simp at hw1
         · exact h1
-      rw [hw1, ovbWitness, if_pos h1, if_pos hw1]
+      rw [hw1, ovbWitness, ite_eq_left h1, ite_eq_left hw1]
       exact IsEqualWordOperation.spec_populate (#v[B[0], B[1], 0, 0] : Word (ZMod p))
         #v[0, 32768, 0, 0] 1
   · rcases he2sum with hw0 | hw1
     · rw [hw0]
       rcases hbin with h0 | h1
-      · rw [ovcWitness, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+      · rw [ovcWitness, ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_zero (#v[C[0], C[1], 0, 0] : Word (ZMod p))
           #v[65535, 65535, 0, 0] rfl
-      · rw [ovcWitness, if_pos h1, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      · rw [ovcWitness, ite_eq_left h1, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
         exact IsEqualWordOperation.spec_populate_offGate
           (#v[C[0], C[1], 0, 0] : Word (ZMod p)) #v[65535, 65535, 0, 0]
           C #v[65535, 65535, 65535, 65535] rfl
@@ -551,7 +514,7 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
           rw [hf] at hw1
           simp at hw1
         · exact h1
-      rw [hw1, ovcWitness, if_pos h1, if_pos hw1]
+      rw [hw1, ovcWitness, ite_eq_left h1, ite_eq_left hw1]
       exact IsEqualWordOperation.spec_populate (#v[C[0], C[1], 0, 0] : Word (ZMod p))
         #v[65535, 65535, 0, 0] 1
   · exact IsZeroWordOperation.spec_populate (cComp C f) ir
@@ -560,7 +523,7 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
       exact fun hx => absurd hx zero_ne_one
     · rw [hg1, show wCnegWitness ir C f =
           AddOperation.populate (cComp C f) (populateAbsC C f) from by
-          rw [wCnegWitness, if_pos hg1]]
+          rw [wCnegWitness, ite_eq_left hg1]]
       exact AddOperation.spec_populate (cComp_isU64 hcU f) (populateAbsC_isU64 hcU f) 1
   · rcases hgrneg with hg0 | hg1
     · rw [hg0]
@@ -570,45 +533,45 @@ theorem honestSpec (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
         hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum hg1
       have hRCR : populateRemComp B C f = populateRemainder B C f := by
         unfold populateRemComp remCompBits populateRemainder
-        rw [if_neg (fun hx => absurd (h67.symm.trans hx) zero_ne_one)]
+        rw [ite_eq_right (fun hx => absurd (h67.symm.trans hx) zero_ne_one)]
       rw [hRCR, show wRnegWitness ir B C f =
           AddOperation.populate (populateRemainder B C f) (populateAbsRem B C f) from by
-          rw [wRnegWitness, if_pos hg1]]
+          rw [wRnegWitness, ite_eq_left hg1]]
       exact AddOperation.spec_populate (populateRemainder_isU64 B C f)
         (populateAbsRem_isU64 B C f) 1
   · rcases hltgbool with hg0 | hg1
-    · rw [hg0, ltFlagsWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
-        ltClWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
-        ltNotEqInvWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
-        ltBitWitness, if_neg (fun hx => absurd (hg0.symm.trans hx) zero_ne_one)]
+    · rw [hg0, ltFlagsWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
+        ltClWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
+        ltNotEqInvWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one),
+        ltBitWitness, ite_eq_right (fun hx => absurd (hg0.symm.trans hx) zero_ne_one)]
       exact LtOperationUnsigned.spec_zero (populateAbsRem B C f) (populateMaxAbsCOr1 C f) rfl
-    · rw [hg1, ltClWitness, if_pos hg1, ltFlagsWitness, if_pos hg1,
-        ltNotEqInvWitness, if_pos hg1, ltBitWitness, if_pos hg1, ltClWitness, if_pos hg1]
+    · rw [hg1, ltClWitness, ite_eq_left hg1, ltFlagsWitness, ite_eq_left hg1,
+        ltNotEqInvWitness, ite_eq_left hg1, ltBitWitness, ite_eq_left hg1, ltClWitness, ite_eq_left hg1]
       exact LtOperationUnsigned.spec_populate (populateAbsRem_isU64 B C f)
         (populateMaxAbsCOr1_isU64 hcU f)
   · exact ⟨bMsbCell_bool hbU f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
-      rw [bMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      rw [bMsbCell, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
       exact (U16MSBOperation.spec_populate hbU3 1).2 rfl⟩
   · exact ⟨cMsbCell_bool hcU f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
-      rw [cMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      rw [cMsbCell, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
       exact (U16MSBOperation.spec_populate hcU3 1).2 rfl⟩
   · exact ⟨remMsbCell_bool B C f, fun hg => by
       obtain ⟨_, hw0⟩ := hirnw_cases hg
-      rw [remMsbCell, if_neg (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
+      rw [remMsbCell, ite_eq_right (fun hx => absurd (hw0.symm.trans hx) zero_ne_one)]
       exact (U16MSBOperation.spec_populate hRb3 1).2 rfl⟩
   · exact ⟨bMsbCell_bool hbU f, fun hg => by
-      rw [bMsbCell, if_pos hg]
+      rw [bMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hbU1 1).2 rfl⟩
   · exact ⟨cMsbCell_bool hcU f, fun hg => by
-      rw [cMsbCell, if_pos hg]
+      rw [cMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hcU1 1).2 rfl⟩
   · exact ⟨remMsbCell_bool B C f, fun hg => by
-      rw [remMsbCell, if_pos hg]
+      rw [remMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hRb1 1).2 rfl⟩
   · exact ⟨quotMsbCell_bool B C f, fun hg => by
-      rw [quotMsbCell, if_pos hg]
+      rw [quotMsbCell, ite_eq_left hg]
       exact (U16MSBOperation.spec_populate hQb1 1).2 rfl⟩
 
 end SP1Clean.DivRemChip.CompareComplete

@@ -113,8 +113,8 @@ def CircuitRegisterOperandPullAt {Input Output : TypeMap}
     (immediate operandIndex : Trace.AdapterView (ZMod p) → ZMod p)
     (priorValue : Trace.AdapterView (ZMod p) → Word (ZMod p)) :
     Prop :=
-  ∀ data physical rowView program state,
-    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  ∀ generation data physical rowView program state,
+    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
     let env := Environment.fromArray physical data
     rowView = view (component.rowInput env) (component.rowOutput env) →
       ready (component.rowInput env) (component.rowOutput env) program state →
@@ -202,10 +202,10 @@ theorem circuitRegisterOperandPullAt_of_exposure {Input Output : TypeMap}
     CircuitRegisterOperandPullAt circuit view selector ready immediate operandIndex priorValue := by
   obtain ⟨gate, clkHigh, prevLow, indexExpr, valueExpr, member, gate_eval, index_eval,
     value_eval⟩ := contract
-  intro data physical rowView
+  intro generation data physical rowView
   dsimp only
   intro program state viewEq _ready real
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -230,11 +230,8 @@ theorem circuitRegisterOperandPullAt_of_exposure {Input Output : TypeMap}
       component.operations.interactionsWith memoryChannel.toRaw := by
     rw [Component.interactionsWith_eq]
     exact member inputVar offset
-  have hp : 2 < p := by
-    have := Fact.out (p := 2 ^ 24 < p)
-    omega
   have consumed := eval_pulledIf_message_mem_consumedMessages component.operations memoryChannel
-    env (gate inputVar offset) _ rawMem hp active
+    env (gate inputVar offset) _ rawMem active
   rw [eval_registerMemoryMessage] at consumed
   have addr0 : (index.toNat : ZMod p) = Expression.eval env (indexExpr inputVar offset) := by
     rw [index_eval env, ← viewEq']
@@ -285,6 +282,7 @@ structure RegisterOperandPullShape (chip : SupportedChip p) : Prop where
 theorem registerOperandPullShape_of_circuit (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
@@ -292,20 +290,20 @@ theorem registerOperandPullShape_of_circuit (kind : ChipKind p)
     (selector_eq : ∀ input output, (kind.view input output).is_real = selector input)
     (shape : @CircuitRegisterOperandPullShape p _ kind.Inputs kind.Cols
       kind.provableInputs kind.provableCols circuit kind.view selector kind.advanceReady) :
-    RegisterOperandPullShape ⟨id, kind, circuit, spec_eq⟩ := by
+    RegisterOperandPullShape ⟨id, kind, circuit, generation, spec_eq⟩ := by
   let : ProvableType kind.Inputs := kind.provableInputs
   let : ProvableType kind.Cols := kind.provableCols
   constructor
   · intro data physical program state
     dsimp only
     intro ready _constraints real
-    apply shape.opB data physical _ program state rfl ready
+    apply shape.opB generation data physical _ program state rfl ready
     rw [← selector_eq]
     exact real
   · intro data physical program state
     dsimp only
     intro ready _constraints real
-    apply shape.opC data physical _ program state rfl ready
+    apply shape.opC generation data physical _ program state rfl ready
     rw [← selector_eq]
     exact real
 
@@ -315,6 +313,7 @@ reduce a concrete `ChipKind` record. -/
 theorem registerOperandPullShape_of_circuitContract (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
@@ -322,10 +321,10 @@ theorem registerOperandPullShape_of_circuitContract (kind : ChipKind p)
     (selector_eq : ∀ input output, (kind.view input output).is_real = selector input)
     (contract : @CircuitRegisterOperandPullContract p _ kind.Inputs kind.Cols
       kind.provableInputs kind.provableCols circuit kind.view selector) :
-    RegisterOperandPullShape ⟨id, kind, circuit, spec_eq⟩ := by
+    RegisterOperandPullShape ⟨id, kind, circuit, generation, spec_eq⟩ := by
   let : ProvableType kind.Inputs := kind.provableInputs
   let : ProvableType kind.Cols := kind.provableCols
-  apply registerOperandPullShape_of_circuit kind circuit spec_eq id selector
+  apply registerOperandPullShape_of_circuit kind circuit generation spec_eq id selector
     selector_eq
   exact circuitRegisterOperandPullShape_of_exposure circuit kind.view selector
     kind.advanceReady contract
@@ -414,9 +413,8 @@ theorem memoryChannelGuarantees_of_pullCurrency (decoded : DecodedInstructionRow
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1) :
     decoded.chip.table.operations.ChannelGuarantees memoryChannel.toRaw
       (decoded.environment data) := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 24 < p); omega
   apply channelGuarantees_of_consumedMessages decoded.chip.table.operations memoryChannel
-    (decoded.environment data) hp
+    (decoded.environment data)
   intro message messageMem
   -- G1: the memory channel's `Guarantees` is the pair `isU64 ∧ ClkBound`, supplied directly by the
   -- assumed pull currency.

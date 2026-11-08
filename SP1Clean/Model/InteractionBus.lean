@@ -265,7 +265,7 @@ theorem multiplicitySum_filter_map_eq {α : Type*} (l : List α) (f : α → Loo
       · rw [List.filter_cons_of_pos hq, List.map_cons, multiplicitySum_cons, ih htail]
       · have hne : keyOf (f head) ≠ k := fun hkey =>
           hq (hkeep head List.mem_cons_self hkey)
-        rw [List.filter_cons_of_neg (by simpa using hq), ih htail, if_neg hne, zero_add]
+        rw [List.filter_cons_of_neg (by simpa using hq), ih htail, ite_eq_right hne, zero_add]
 
 /-- A concatenation of per-item ledgers sums per item. The `flatMap` counterpart of
 `multiplicitySum_append`, for a table family indexed by a list (the seventeen fixed Range widths). -/
@@ -395,7 +395,7 @@ theorem multiplicitySum_map_negMult (l : LookupAccessList) (k : LookupKey) :
   | cons hd tl ih =>
     rw [List.map_cons, multiplicitySum_cons, multiplicitySum_cons, ih, keyOf_negMult,
       multOf_negMult]
-    by_cases h : keyOf hd = k <;> simp only [h, if_true, if_false] <;> omega
+    by_cases h : keyOf hd = k <;> simp only [h, ite_true, ite_false] <;> omega
 
 /-- Balance is invariant under negating every multiplicity. -/
 theorem isConsistentBalanced_map_negMult (l : LookupAccessList) :
@@ -507,7 +507,7 @@ private lemma count_filter_kind (x : LookupAccess) (K : InteractionKind) (l : Lo
     List.count x (l.filter (fun a => a.1 = K)) = if x.1 = K then List.count x l else 0 := by
   by_cases hxK : x.1 = K
   · simp [hxK, List.count_filter]
-  · simp only [hxK, if_false]
+  · simp only [hxK, ite_false]
     exact List.count_eq_zero_of_not_mem fun hmem => hxK (by simpa using (List.mem_filter.mp hmem).2)
 
 /-- A `LookupAccessList` is a permutation of its eight per-kind filters: the four SP1 instruction
@@ -582,9 +582,9 @@ theorem multiplicitySum_nonpos (l : LookupAccessList) {k : LookupKey}
       rw [multiplicitySum_cons]
       have htail := ih fun a ha => h a (List.mem_cons_of_mem _ ha)
       by_cases hkey : keyOf head = k
-      · rw [if_pos hkey]
+      · rw [ite_eq_left hkey]
         exact add_nonpos (h head List.mem_cons_self hkey) htail
-      · rw [if_neg hkey, zero_add]
+      · rw [ite_eq_right hkey, zero_add]
         exact htail
 
 /-! ## Why a bus balances: exactly two reasons
@@ -687,10 +687,10 @@ theorem active_flatMap_gatedPair {α : Type*} (items : List α) (gate : α → �
         fun a ha => hgate a (List.mem_cons_of_mem _ ha)
       rw [List.flatMap_cons, active_append, ih htail, List.filter_cons]
       rcases hgate head List.mem_cons_self with hzero | hone
-      · rw [if_neg (by simp [hzero]), hzero]
+      · rw [ite_eq_right (by simp [hzero]), hzero]
         simp only [active, List.filter_cons, neg_zero, multOf_accessAt, ne_eq, not_true_eq_false,
-          decide_false, Bool.false_eq_true, if_false, List.filter_nil, List.nil_append]
-      · rw [if_pos (by simp [hone]), hone, List.flatMap_cons]
+          decide_false, Bool.false_eq_true, ite_false, List.filter_nil, List.nil_append]
+      · rw [ite_eq_left (by simp [hone]), hone, List.flatMap_cons]
         simp only [active, List.filter_cons, multOf_accessAt, linkAccesses]
         norm_num
 
@@ -844,14 +844,14 @@ theorem multiplicitySum_closingAccesses (skeleton : LookupAccessList) {keys : Li
       rw [closingAccesses_cons, multiplicitySum_cons]
       obtain ⟨hhead, htail⟩ := List.nodup_cons.mp hnodup
       rcases List.mem_cons.mp hkey with rfl | hmem
-      · rw [if_pos (keyOf_accessAt _ _)]
+      · rw [ite_eq_left (keyOf_accessAt _ _)]
         rw [multiplicitySum_closingAccesses_of_not_mem skeleton hhead]
         simp
       · have hne : keyOf (accessAt head (providerRecount skeleton head : ℤ)) ≠ key := by
           rw [keyOf_accessAt]
           rintro rfl
           exact hhead hmem
-        rw [if_neg hne, ih htail hmem, zero_add]
+        rw [ite_eq_right hne, ih htail hmem, zero_add]
 
 /-- **The closure balances.** Appending the closing ledger to the consumer skeleton zeroes every
 key, given that the skeleton is non-positive at each listed key and that no key with nonzero demand

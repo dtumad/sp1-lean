@@ -47,7 +47,7 @@ theorem halt_program_committed_of_balance {image : ProgramImage} {source : Execu
       haltRow_typedProgram_of_component _ witness.data (systemTable_component witness 2)]
     exact List.mem_cons_self
   exact program_pull_committed_of_balance valid witness constraints balanced message interaction emitted
-    (by change -row.is_real = -1; rw [real]) rfl
+    (by exact ⟨rfl, real⟩) rfl
 
 /-- Every active HALT fetch belongs to the checked image, by the actual Program balance. -/
 theorem halt_program_committed {image : ProgramImage} {source : ExecutionSnapshot} (valid : image.Valid)
@@ -110,7 +110,7 @@ theorem GroundingCarrier.halt_step {image : ProgramImage} {source : ExecutionSna
     {n : ℕ} {whole : ExecutionState} (paired : carrier.pairedTrajectory valid policy n = some whole)
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = carrier.timeline.start n) :
     ExecutionStep policy (image.toGuestProgram valid) whole (.syscall (haltEventOfRow row))
-      ⟨{ whole.sail with regs := whole.sail.regs.insert LeanRV64D.Defs.Register.PC Machine.haltPc },
+      ⟨{ whole.sail with regs := whole.sail.regs.insert LeanRV64D.Register.PC Machine.haltPc },
         { whole.host with exitCode := some ((Word.toBitVec64 row.x10_memory.prev_value).setWidth 32) },
         whole.clock + Machine.syscallSchedule.duration⟩ := by
   obtain ⟨m, state, present, atIndex, pc, rom, _⟩ := pull
@@ -120,7 +120,7 @@ theorem GroundingCarrier.halt_step {image : ProgramImage} {source : ExecutionSna
     simpa only [trajectory, paired, Option.map_some, Option.some.injEq] using present
   have before : carrier.trajectory valid policy n = some whole.sail := by
     simp only [trajectory, paired, Option.map_some]
-  have atPc : whole.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  have atPc : whole.sail.regs.get? LeanRV64D.Register.PC =
       some (StateMsg.pcBits (HaltChip.statePulledMessage row)) := by rwa [sail]
   have committed := halt_program_committed valid witness constraints balanced member
   have fetch : (image.toGuestProgram valid).fetchWord (StateMsg.pcBits (HaltChip.statePulledMessage row)) =
@@ -145,7 +145,7 @@ theorem GroundingCarrier.trajectory_halt {image : ProgramImage} {source : Execut
         (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     (n : ℕ) (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = carrier.timeline.start n) :
     carrier.trajectory valid policy (n + 1) = (carrier.trajectory valid policy n).map
-      (fun state => { state with regs := state.regs.insert LeanRV64D.Defs.Register.PC Machine.haltPc }) := by
+      (fun state => { state with regs := state.regs.insert LeanRV64D.Register.PC Machine.haltPc }) := by
   have stateTruth := pull
   obtain ⟨m, state, present, atIndex, _⟩ := pull
   have same : m = n := start_injective carrier.timeline (atIndex.symm.trans time)

@@ -51,13 +51,13 @@ theorem populate_assumptions (prior : MemoryMsg (ZMod p)) (clkHigh clk0 clk1 : Z
     obtain ⟨gap, gapLow, gapHigh⟩ := MemoryClock.gap_encoding _ _ lowIncreases currentLow
     simp only [populate, Inputs.reader, Inputs.clockLow,
       Readers.MemoryAccess.selCur, Readers.MemoryAccess.selPrev, sub_self, zero_mul, one_mul,
-      add_zero, sameHigh, if_true, mul_zero]
+      add_zero, sameHigh, ite_true, mul_zero]
     exact ⟨Or.inr (by trivial), by trivial, gap, gapLow, gapHigh, oldWord, previousLow⟩
   · have highDifferent : prior.clk_high.val ≠ clkHigh.val := fun equal =>
       sameHigh (ZMod.val_injective p equal)
     have highIncreases : prior.clk_high.val < clkHigh.val := by omega
     obtain ⟨gap, gapLow, gapHigh⟩ := MemoryClock.gap_encoding _ _ highIncreases high
-    simp only [populate, if_neg sameHigh, Inputs.reader, Inputs.clockLow,
+    simp only [populate, ite_eq_right sameHigh, Inputs.reader, Inputs.clockLow,
       Readers.MemoryAccess.selCur, Readers.MemoryAccess.selPrev, zero_mul, sub_zero, one_mul,
       zero_add]
     exact ⟨Or.inl (by trivial), by trivial, gap, gapLow, gapHigh, oldWord, previousLow⟩

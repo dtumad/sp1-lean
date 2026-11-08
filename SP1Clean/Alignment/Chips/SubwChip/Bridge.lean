@@ -11,7 +11,7 @@ given the chip's semantic fact `a_val = sext32→64 (op_b - op_c)` and the regis
 `execute_RTYPEW rs2 rs1 rd .SUBW` computes `sext (rX(rs1)[31:0] - rX(rs2)[31:0])`, so
 `rs1 ↦ op_b_val`, `rs2 ↦ op_c_val` — the non-commutative order is load-bearing. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.SubwSail
 
 open Sail LeanRV64D LeanRV64D.Functions

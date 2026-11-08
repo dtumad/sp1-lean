@@ -8,7 +8,7 @@ mod export_support;
 
 use clean_backend::witness_generation::{generate, Program, WitnessGenerationError};
 use clean_backend::GeneratedAirSpec;
-use export_support::{Ledger, RowWitness, Sp1Evaluation};
+use export_support::{complete_row, has_open_bus, Ledger, Sp1Evaluation};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use slop_air::Air;
@@ -71,12 +71,11 @@ fn valid<S: GeneratedAirSpec>(row: &[F]) -> bool {
 
 fn check<P: Program<F> + GeneratedAirSpec>(b: u64, c: u64, count: u64, mutate: bool) -> Ledger {
     assert_eq!(P::COMPONENTS, 1);
-    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[0]);
+    assert!(<P as Program<F>>::FIXED_COLUMNS
+        .iter()
+        .all(|columns| columns.is_empty()));
     let inputs = input::<P>(b, c, count);
-    let witness = generate::<F, RowWitness<P>>(&[], &inputs).unwrap();
-    assert_eq!(witness.tables.len(), 1);
-    assert_eq!(witness.tables[0].len(), 1);
-    let row = &witness.tables[0][0];
+    let row = &complete_row::<P>(&inputs).unwrap();
     assert_eq!(P::WIDTHS, &[row.len()]);
     assert_eq!(&row[..inputs.len()], inputs);
     assert!(valid::<P>(row));
@@ -99,7 +98,7 @@ fn check<P: Program<F> + GeneratedAirSpec>(b: u64, c: u64, count: u64, mutate: b
         .map(|entry| {
             (
                 entry.channel.to_owned(),
-                entry.multiplicity.as_canonical_u64(),
+                entry.signed_multiplicity().as_canonical_u64(),
                 entry
                     .message
                     .iter()
@@ -184,16 +183,16 @@ fn malformed<P: Program<F> + GeneratedAirSpec>(limit: u64) {
             for value in [limit, limit + 1, 65536, F::ORDER_U64 - 1] {
                 let mut inputs = input::<P>(0, 0, count);
                 inputs[operand] = F::from_u64(value);
-                let witness = generate::<F, RowWitness<P>>(&[], &inputs).unwrap();
+                let row = complete_row::<P>(&inputs).unwrap();
                 assert!(
-                    !valid::<P>(&witness.tables[0][0]),
+                    !valid::<P>(&row),
                     "out-of-range input must fail even at count zero"
                 );
             }
         }
     }
     assert!(matches!(
-        generate::<F, RowWitness<P>>(&[], &[]),
+        generate::<F, P>(&[], &[], 1),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
 }
@@ -209,17 +208,12 @@ fn out_of_range_inputs_are_rejected_independently_of_multiplicity() {
 }
 
 fn open_bus<P: Program<F> + GeneratedAirSpec>(b: u64, c: u64) {
-    let padding = P::padding();
-    assert_eq!(padding.len(), 1);
-    assert_eq!(padding[0].input, input::<P>(0, 0, 0));
-    let witness = generate::<F, P>(&[], &input::<P>(0, 0, 0)).unwrap();
-    assert!(valid::<P>(&witness.tables[0][0]));
+    let zero = input::<P>(0, 0, 0);
+    assert!(valid::<P>(&complete_row::<P>(&zero).unwrap()));
+    assert!(!has_open_bus::<P>(&zero));
     for count in [1, 2, F::ORDER_U64 - 1] {
         assert!(
-            matches!(
-                generate::<F, P>(&[], &input::<P>(b, c, count)),
-                Err(WitnessGenerationError::Runtime(_))
-            ),
+            has_open_bus::<P>(&input::<P>(b, c, count)),
             "open byte bus must not balance"
         );
     }

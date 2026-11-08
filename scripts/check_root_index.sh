@@ -4,8 +4,8 @@
 # this script is the machine check behind that rule (a 2026-08 sweep found 33 silent omissions, so
 # the rule needs a gate, not a convention).
 #
-# Covers the four hand-written trees: `SP1Clean/` and the upstream-destined `ToClean/`,
-# `ToPolyFun/`, `ToMathlib/`. `SP1Clean/` has two indices: `SP1Clean/Core.lean` (the `SP1Core`
+# Covers the three hand-written trees: `SP1Clean/` and the upstream-destined `ToClean/`,
+# `ToMathlib/`. `SP1Clean/` has two indices: `SP1Clean/Core.lean` (the `SP1Core`
 # library root, strata 0–6 of `scripts/layering.txt` — its exact contents are gated by
 # `scripts/check_layering.sh`) and the umbrella `SP1Clean.lean`, which imports `SP1Clean.Core` and
 # everything else; coverage is checked over the union of the two.
@@ -60,10 +60,9 @@ check_tree() {
 
 check_tree SP1Clean SP1Clean.lean
 check_tree ToClean ToClean.lean
-check_tree ToPolyFun ToPolyFun.lean
 check_tree ToMathlib ToMathlib.lean
 
 if [ "$fail" -eq 0 ]; then
-  echo "PASS: root indices import all $total modules across SP1Clean/ToClean/ToMathlib/ToPolyFun, no dangling imports"
+  echo "PASS: root indices import all $total modules across SP1Clean/ToClean/ToMathlib, no dangling imports"
 fi
 exit "$fail"

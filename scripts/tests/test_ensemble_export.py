@@ -73,6 +73,29 @@ class InputStagingTests(unittest.TestCase):
             pass
 
 
+class SharedInventoryTests(unittest.TestCase):
+    def test_catalog_cannot_omit_a_profile_or_reference_an_unowned_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            path = root / "shared_assemblies.json"
+            expected = ["installed_first.rs", "installed_second.rs"]
+            valid = {"components": ["shared_component_0.rs"],
+                     "assemblies": {"installed_first": [0, 0], "installed_second": [0]}}
+            exports.write_json(path, valid)
+            self.assertEqual(exports.shared_artifact_names(root, expected), valid["components"])
+            invalid = [
+                {**valid, "components": ["../external.rs"]},
+                {**valid, "assemblies": {"installed_first": [0]}},
+                {**valid, "assemblies": {"installed_first": [0], "installed_second": [1]}},
+                {**valid, "components": ["shared_component_0.rs", "shared_component_1.rs"]},
+            ]
+            for record in invalid:
+                with self.subTest(record=record):
+                    exports.write_json(path, record)
+                    with self.assertRaises(ValueError):
+                        exports.shared_artifact_names(root, expected)
+
+
 class RustCompletionTests(unittest.TestCase):
     @staticmethod
     def binary(name, count):

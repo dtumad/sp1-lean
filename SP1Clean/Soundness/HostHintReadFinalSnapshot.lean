@@ -16,7 +16,7 @@ a complete outgoing Sail/host snapshot certificate.
 namespace SP1Clean.Soundness.HostHintReadCPU
 
 open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal
-open LeanRV64D.Defs (Register)
+open LeanRV64D (Register)
 
 private theorem realizes_of_observations (snapshot : MemorySnapshot) (state : SailState)
     (observed : ∀ loc, loc.busAddress < 2 ^ 48 →
@@ -63,6 +63,8 @@ local instance snapshotLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 /-- Decode every original final-record occurrence; no record is discarded or filled in. -/
 noncomputable def finalMemoryValues
@@ -118,7 +120,7 @@ theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
   rintro ⟨registers, ram⟩
   have realizes : targetMemory.Realizes target.sail := ⟨registers, by
     intro address bound
-    rw [ram, ByteMemory.toSailMemory_get?, if_pos bound]⟩
+    rw [ram, ByteMemory.toSailMemory_get?, ite_eq_left bound]⟩
   have records := HostLocalCore.final_records_canonical_nodup (HostHintQueueBoundary.projected witness)
     (auxiliaryInterface (HostFinalMemory.sourceInterface source.host.io.hints outgoing))
     (source_boundary_silent source _ (by simp))
@@ -158,7 +160,7 @@ theorem source_execution_with_memory (valid : image.Valid)
       events.Perm ((LocalCore.executionRows
         (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
-      target.sail.regs.get? LeanRV64D.Defs.Register.PC =
+      target.sail.regs.get? LeanRV64D.Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
       (∀ loc, loc.busAddress < 2 ^ 48 → locContent target.sail loc = some
         (match LocalCore.memoryFinalFrontier

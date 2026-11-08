@@ -42,7 +42,7 @@ end SP1Clean.TraceGen
 
 namespace SP1Clean.Soundness
 
-open Sail LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Execution
 open SP1Clean.LookupAccessList
 open SP1Clean.Soundness.Target

@@ -10,7 +10,7 @@ invalid observations. Whole-AIR same-value ROM-write rejection is tested in `Ali
 
 namespace SP1CleanTest.Core.InstructionWrite
 
-open SP1Clean.Model.Core LeanRV64D.Defs
+open SP1Clean.Model.Core LeanRV64D
 
 private def image : ProgramImage := ⟨[(65536, 0x00110023)], 65536, []⟩
 

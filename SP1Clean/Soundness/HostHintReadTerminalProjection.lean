@@ -19,6 +19,9 @@ local instance terminalClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
   {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem bound
     (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) : 57 < witness.tables.length := by
@@ -33,7 +36,7 @@ private theorem projected_rows
     (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) 2).table =
       (witness.tables[57]'(bound witness)).table := by
   change ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).tables[57]'_).table = _
-  rw [HostLocalCore.localWitness_table _ ⟨57, by decide⟩ (by decide), Table.withComponent_rows]
+  rw [HostLocalCore.localWitness_table _ ⟨57, by decide⟩ (by decide)]
   change ((witness.tables.set 57 _)[57]'_).table = _
   erw [List.getElem_set_self]
   rfl

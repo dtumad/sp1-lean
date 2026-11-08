@@ -21,9 +21,11 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
   {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
 
 /-- Every physical wrapper's additional pair, including its zero-multiplicity padding. -/
-def wrapperMemory (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+def wrapperMemory (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     List (TypedInteraction (memoryChannel (p := p))) :=
   ((hostCallTable witness).table.map (Environment.fromArray · witness.data)).flatMap fun env =>
     [TypedInteraction.pulledIfValue memoryChannel (HostCallProjection.extraRead env).is_real
@@ -32,38 +34,45 @@ def wrapperMemory (witness : EnsembleWitness (ensemble image source auxiliary ch
       (HostCallProjection.extraRead env).pushed]
 
 /-- The actual appended component ledgers, without imposing a particular handler registry. -/
-noncomputable def auxiliaryMemory (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+noncomputable def auxiliaryMemory (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     List (TypedInteraction (memoryChannel (p := p))) :=
   (auxiliaryTables witness).flatMap (typedTableInteractionsWith · memoryChannel)
 
-private theorem local_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+private theorem local_length (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     (localWitness witness).tables.length = 61 := by
   rw [← (localWitness witness).same_length]
   exact LocalCore.tables_length image source
 
-private theorem extended_length (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+private theorem extended_length (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     63 ≤ witness.tables.length := by
   rw [← witness.same_length]
   change 63 ≤ (tables image source auxiliary).length
   rw [tables_length]
   omega
 
-private theorem table_memory_original (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+private theorem table_memory_original (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (index : Fin 61) (notWrapper : index.val ≠ 58) :
     typedTableInteractionsWith ((localWitness witness).tables[index.val]'(by rw [local_length]; exact index.isLt)) memoryChannel =
       typedTableInteractionsWith (witness.tables[index.val]'(by have := extended_length witness; omega)) memoryChannel := by
-  rw [localWitness_table witness index (Ne.symm notWrapper)]
   apply List.map_injective_iff.mpr TypedInteraction.raw_injective
   simp only [typedTableInteractionsWith_raw]
-  rw [Table.interactionsWith_setData _ (localWitness witness).data]
-  apply Table.withComponent_interactions
-  rw [← witness.same_circuits]
-  change _ = ((tables image source auxiliary)[index.val]'(by rw [tables_length]; omega)).operations.interactionsWith _
-  rw [core_component image source auxiliary index, if_neg (Ne.symm notWrapper)]
+  apply Table.interactionsWith_eq_of_rows _ _ _ (localWitness_table witness index (Ne.symm notWrapper))
+  have localComponent :
+      ((localWitness witness).tables[index.val]'(by rw [local_length]; exact index.isLt)).component =
+        (LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt) :=
+    ((localWitness witness).same_circuits index.val (by change index.val < (LocalCore.tables image source).length; rw [LocalCore.tables_length]; exact index.isLt)).symm
+  have hostComponent :
+      (witness.tables[index.val]'(by have := extended_length witness; omega)).component =
+        (tables image source auxiliary)[index.val]'(by rw [tables_length]; omega) :=
+    (witness.same_circuits index.val (by change index.val < (tables image source auxiliary).length; rw [tables_length]; omega)).symm
+  rw [localComponent, hostComponent]
+  rw [core_component image source auxiliary index, ite_eq_right (Ne.symm notWrapper)]
   exact ((ProtectedLocalCore.component_projection (p := p) image source index).2.2 memoryChannel.toRaw
     (by simp [memoryChannel, WritePermissionProvider.channel, Channel.toRaw])).symm
 
-private theorem before_wrapper (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+
+
+private theorem before_wrapper (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     (((localWitness witness).tables.drop 6).take 52).flatMap (typedTableInteractionsWith · memoryChannel) =
       ((witness.tables.drop 6).take 52).flatMap (typedTableInteractionsWith · memoryChannel) := by
   apply congrArg List.flatten
@@ -79,11 +88,11 @@ private theorem before_wrapper (witness : EnsembleWitness (ensemble image source
     exact table_memory_original witness ⟨6 + index, by omega⟩ (by dsimp only; omega)
 
 /-- The instruction table retains exactly the physical prefix of every wrapper row. -/
-theorem hostCallTable_prefix (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+theorem hostCallTable_prefix (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     (LocalCore.systemTable (localWitness witness) 3).table =
       (hostCallTable witness).table.map (·.extract 0 (HostCallProjection.original (p := p)).width) := rfl
 
-private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints) :
     (typedTableInteractionsWith (hostCallTable witness) memoryChannel).Perm
       (typedTableInteractionsWith (LocalCore.systemTable (localWitness witness) 3) memoryChannel ++
@@ -129,7 +138,7 @@ private theorem wrapper_memory_perm (witness : EnsembleWitness (ensemble image s
   rw [values]
   exact (List.flatMap_append_perm _ _ _).symm
 
-private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     typedTableInteractionsWith (witness.tables[61]'(by have := extended_length witness; omega)) memoryChannel = [] := by
   have component : (witness.tables[61]'(by have := extended_length witness; omega)).component =
       WritePermissionProvider.component image := by
@@ -146,7 +155,7 @@ private theorem permission_memory_nil (witness : EnsembleWitness (ensemble image
   change memoryChannel.toRaw ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
   simp [memoryChannel, WritePermissionProvider.channel, StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
 
-private theorem permission_membership_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names)) :
+private theorem permission_membership_memory_nil (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :
     typedTableInteractionsWith (witness.tables[62]'(by have := extended_length witness; omega)) memoryChannel = [] := by
   have component : (witness.tables[62]'(by have := extended_length witness; omega)).component =
       WritePermissionProvider.membershipComponent image := by
@@ -165,7 +174,7 @@ private theorem permission_membership_memory_nil (witness : EnsembleWitness (ens
 
 /-- The complete interior is the original instruction/refresh ledger plus all actual host
 accesses. The permutation preserves complete typed interactions, including disabled pairs. -/
-theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+theorem memoryInterior_perm (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints) :
     (memoryInterior witness).Perm
       (LocalCore.memoryInterior (localWitness witness) ++ wrapperMemory witness ++ auxiliaryMemory witness) := by

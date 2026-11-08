@@ -166,11 +166,9 @@ theorem soundness [Fact (2 ^ 17 < p)] :
   simp only [circuit_norm, AssumptionsD, SpecD, Spec, Assumptions, byteChannel, stateChannel]
     at h_holds h_assumptions ⊢
   obtain ⟨-, h_b1, h_b2⟩ := h_holds
-  refine ⟨fun hr1 => ?_, fun h1 h0 => off_gate_vacuous h_assumptions h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions h1 h0⟩
-  have hneg : -(input_is_real) = -1 := by rw [hr1]
-  exact ⟨(byteRowSpec_range _ h13p).mp (by rw [Nat.cast_ofNat]; exact h_b1 hneg),
-    ((byteRowSpec_u8range_pair _ _).mp (h_b2 hneg)).1⟩
+  refine ⟨fun hr1 => ?_, h_assumptions⟩
+  exact ⟨(byteRowSpec_range _ h13p).mp (by rw [Nat.cast_ofNat]; exact h_b1 hr1),
+    ((byteRowSpec_u8range_pair _ _).mp (h_b2 hr1)).1⟩
 
 theorem completeness [Fact (2 ^ 17 < p)] :
     GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main ProverAssumptionsD
@@ -183,9 +181,9 @@ theorem completeness [Fact (2 ^ 17 < p)] :
   refine ⟨?_, ?_, ?_⟩
   · rcases h_bin with h | h <;> simp only [h, sub_self, mul_zero, zero_mul]
   · intro hneg
-    simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ h13p).mpr (h_spec (neg_inj.mp hneg)).1
+    simpa only [Nat.cast_ofNat] using (byteRowSpec_range _ h13p).mpr (h_spec hneg).1
   · intro hneg
-    obtain ⟨_, hb2⟩ := h_spec (neg_inj.mp hneg)
+    obtain ⟨_, hb2⟩ := h_spec hneg
     exact (byteRowSpec_u8range_pair _ _).mpr ⟨hb2, by rw [ZMod.val_zero]; norm_num⟩
 
 /-- The native CPUState reader as a Clean `GeneralFormalCircuit`: takes the chip-owned `cols` block plus
@@ -236,11 +234,8 @@ def circuit [Fact (2 ^ 17 < p)] : GeneralFormalCircuit (ZMod p) Inputs unit wher
       -- `is_real`-gated so their requirement is off-gate vacuous. (The State *push* carries the
       -- unnegated multiplicity `is_real`, so it cannot go through `off_gate_vacuous`.)
       rcases h_interaction with rfl | rfl | rfl | rfl <;> right <;>
-        first
-          | (simp only [ChannelInteraction.toRaw_requirements, ChannelInteraction.Requirements,
-                stateChannel]; intros; trivial)
-          | (rw [ChannelInteraction.toRaw_requirements]; intro h1 h0;
-             simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_bool h1 h0)
+        simp only [circuit_norm, stateChannel, byteChannel]
+      all_goals trivial
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength [Fact (2 ^ 17 < p)] (x : Var Inputs (ZMod p)) :

@@ -30,7 +30,7 @@ private theorem eval_values (input : Var State (ZMod p)) (env : Environment (ZMo
   simp only [circuit_norm]
 
 def terminalView (deferred : Bool) : TransitionView (stateChannel (p := p) deferred) where
-  component := { circuit := HostCommitBoundary.terminal deferred, Assumptions := (HostCommitBoundary.terminal deferred).Assumptions }
+  component := { circuit := HostCommitBoundary.terminal deferred, generation := HostCommitBoundary.terminalGeneration deferred, Assumptions := (HostCommitBoundary.terminal deferred).Assumptions }
   edge env :=
     let input := valueFromOffset State 0 env
     (input, HostCommitBoundary.final input.values)

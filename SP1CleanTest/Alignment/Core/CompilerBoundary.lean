@@ -14,7 +14,7 @@ counterexamples, not a claim that the complete mixed capstone has been instantia
 
 namespace SP1CleanTest.Core.CompilerBoundary
 open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
-open SP1Clean.TraceGen LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean.TraceGen LeanRV64D LeanRV64D.Functions
 
 private def lastPc : BitVec 64 := BitVec.ofNat 64 (2 ^ 48 - 4)
 
@@ -31,7 +31,7 @@ private theorem staged_initialized (pc : BitVec 64) : (staged pc).isInitialized 
 
 private theorem staged_pc (pc : BitVec 64) : (staged pc).regs.get? Register.PC = some pc := by
   change ((configuredState pc).regs.insert Register.nextPC (pc + 4#64)).get? Register.PC = some pc
-  rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
   exact cfgState_pc pc
 
 private def jalTarget (rd : BitVec 5) : SailState :=

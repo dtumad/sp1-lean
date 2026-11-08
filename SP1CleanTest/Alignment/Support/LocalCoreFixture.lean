@@ -91,20 +91,18 @@ def evaluate (_image : ProgramImage) (_source : ExecutionSnapshot) (component : 
         table.rows.any (fun row => row.toArray == (lookup.entry.map env).toArray)
     | .witness .. | .interact .. => true
   (valid, (FlatOperation.interactions operations).map fun interaction =>
-    (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+    (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
 
 /-- Evaluate the whole verifier-fixed Program inventory, retaining unused and padding rows.
 Counts come from actual consumer messages; empty-ROM count assertions are checked as well. -/
 def programEvaluation (image : ProgramImage) (ledger : Ledger) : Bool × Ledger :=
   let component := FixedProgramProvider.Preprocessed.component (p := SP1Prime) image
-  let fixed := FixedProgramProvider.Preprocessed.fixedColumns (p := SP1Prime) image
-  let table := Table.buildPreallocated component fixed rfl
-    (SP1CleanTest.StaticMembership.literalSuffix "SP1Program" (size Channels.ProgramMsg) ledger fixed)
-    (fun _ _ => #[]) (ProverHint.empty Fp)
+  let table := SP1CleanTest.StaticMembership.buildTable component [] ledger
+    (.empty Fp) (ProverHint.empty Fp) (by simp)
   let valid := table.table.all fun row => component.operations.constraints.all fun expression =>
     expression.eval (table.environment row) == 0
   (valid, table.interactions.map fun interaction =>
-    (interaction.channel.name, interaction.msg.toList, interaction.mult))
+    (interaction.channel.name, interaction.msg.toList, interaction.signedMult))
 
 /-- One real provider row for each Byte demand. Provider input shapes are checked at their actual
 table indices; unused families are empty. The fixture needs U8Range, LTU, MSB, and fixed Range. -/

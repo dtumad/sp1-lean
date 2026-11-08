@@ -11,7 +11,7 @@ ROM, and an empty identity, including a stopped one, needs no fetch.
 -/
 
 namespace SP1Clean.FormalModel.Shard.Executes
-open Model.Core Machine Soundness.Target LeanRV64D.Defs LeanRV64D.Functions
+open Model.Core Machine Soundness.Target LeanRV64D LeanRV64D.Functions
 
 variable {characteristic : ℕ} {image : ProgramImage}
   {source target : ExecutionSnapshot} {events : List ExecutionEvent}

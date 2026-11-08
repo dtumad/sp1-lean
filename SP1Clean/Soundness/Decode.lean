@@ -26,7 +26,7 @@ the `TargetObligations` wiring) were retired with `Soundness/TargetVm.lean` (202
 capstone derives the program-decode truth globally in `supportedCore_orderedRows_programDecoded`
 (`Soundness/AIR.lean`) and consumes these hoists through the grounding contracts. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Soundness.Target
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -64,7 +64,7 @@ def addProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed Program-bus row the ADD decodes to — the `instrToProgramRow` projection at pc `0x10000`
 (`op_a = rd = x1`, `op_b[0] = rs1 = x2`, `op_c[0] = rs2 = x3`, opcode `ADD`; `pc1 = 1` for `0x10000`). -/
@@ -616,7 +616,7 @@ def addiProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `addiProgram` decodes to — the `instrToProgramRow` I-type arm at pc
 `#v[0, 1, 0]`. -/
@@ -652,7 +652,7 @@ def slliProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `slliProgram` decodes to — the SHIFTIOP arm (zero-extended shift amount). -/
 def slliRow : ProgramRow (ZMod p) :=
@@ -687,7 +687,7 @@ def addiwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `addiwProgram` decodes to — the ADDIW arm (opcode ADDW, `imm_c = 1`). -/
 def addiwRow : ProgramRow (ZMod p) :=
@@ -721,7 +721,7 @@ def addwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `addwProgram` decodes to — the RTYPEW arm. -/
 def addwRow : ProgramRow (ZMod p) :=
@@ -757,7 +757,7 @@ def slliwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `slliwProgram` decodes to — the SHIFTIWOP arm (5-bit shift amount). -/
 def slliwRow : ProgramRow (ZMod p) :=
@@ -792,7 +792,7 @@ def luiProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `luiProgram` decodes to — the UTYPE arm (`op_b = op_c` the shifted
 immediate, both immediate flags set). -/
@@ -827,7 +827,7 @@ def jalProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `jalProgram` decodes to — the JAL arm (`op_b` the sign-extended offset,
 `op_c = 0`). -/
@@ -862,7 +862,7 @@ def jalrProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `jalrProgram` decodes to — the JALR arm (I-type shape). -/
 def jalrRow : ProgramRow (ZMod p) :=
@@ -896,7 +896,7 @@ def beqProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `beqProgram` decodes to — the BTYPE arm (`op_a = rs1`, a source; `op_c` the
 sign-extended offset). -/
@@ -932,7 +932,7 @@ def lwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `lwProgram` decodes to — the LOAD arm at width 4, signed (the
 `loadWidthOK`-guarded projection accepts it). -/
@@ -968,7 +968,7 @@ def swProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `swProgram` decodes to — the STORE arm at width 4 (`op_a = rs2`, the value
 source; the `storeWidthOK`-guarded projection accepts it). -/
@@ -1004,7 +1004,7 @@ def mulProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `mulProgram` decodes to — the MUL arm at the canonical
 `(Low, Signed, Signed)` descriptor (the `mulOpCanonical`-guarded projection accepts it). -/
@@ -1041,7 +1041,7 @@ def mulwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `mulwProgram` decodes to — the MULW arm. -/
 def mulwRow : ProgramRow (ZMod p) :=
@@ -1076,7 +1076,7 @@ def divProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `divProgram` decodes to — the DIV arm at `isU = false` (opcode DIV). -/
 def divRow : ProgramRow (ZMod p) :=
@@ -1111,7 +1111,7 @@ def remProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `remProgram` decodes to — the REM arm at `isU = false` (opcode REM). -/
 def remRow : ProgramRow (ZMod p) :=
@@ -1147,7 +1147,7 @@ def divwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `divwProgram` decodes to — the DIVW arm at `isU = false` (opcode DIVW). -/
 def divwRow : ProgramRow (ZMod p) :=
@@ -1183,7 +1183,7 @@ def remwProgram : GuestProgram where
     intro aw ha; simp only [List.mem_singleton] at ha; subst ha
     refine ⟨?_, ?_⟩ <;> norm_num [BitVec.toNat_ofNat]
   rom_full_width := by
-    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; bv_decide
+    intro aw ha; simp only [List.mem_singleton] at ha; subst ha; decide
 
 /-- The committed row `remwProgram` decodes to — the REMW arm at `isU = false` (opcode REMW). -/
 def remwRow : ProgramRow (ZMod p) :=

@@ -29,10 +29,10 @@ def source (statement : CommitmentStatement) : Component (ZMod p) :=
 
 /-- Physical preprocessing authenticates every nonzero source occurrence. -/
 theorem source_authenticates (statement : CommitmentStatement) (physical : Table (ZMod p))
-    (same : physical.component = source statement) (consistent : physical.DataConsistency)
+    (same : physical.component = source statement)
     (constraints : physical.Constraints) :
     physical.Authenticates channel (fun row => row ∈ rows statement) :=
   (table statement).payload_authenticates channel (fun _ _ _ => trivial)
-    (height_bounded statement) physical same consistent constraints
+    (height_bounded statement) physical same constraints
 
 end SP1Clean.CommitmentDeclaration

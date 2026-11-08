@@ -116,8 +116,14 @@ lemma memoryInitProducedMessages_pairwise
   rw [List.pairwise_map]
   refine (List.Pairwise.sublist List.filter_sublist huniq).imp_of_mem ?_
   intro i₁ i₂ hi₁ hi₂ hrel
-  have h₁ : signedVal i₁.mult = 1 := by simpa using (List.mem_filter.mp hi₁).2
-  have h₂ : signedVal i₂.mult = 1 := by simpa using (List.mem_filter.mp hi₂).2
+  have h₁ : i₁.mult = 1 := by
+    have selected := (List.mem_filter.mp hi₁).2
+    simp only [decide_eq_true_eq] at selected
+    exact selected.2
+  have h₂ : i₂.mult = 1 := by
+    have selected := (List.mem_filter.mp hi₂).2
+    simp only [decide_eq_true_eq] at selected
+    exact selected.2
   exact hrel (by rw [h₁]; exact one_ne_zero) (by rw [h₂]; exact one_ne_zero)
 
 /-- Active finalize pulls are pairwise distinct in location (from `MemoryFinalizeProviderUnique`). -/
@@ -131,8 +137,14 @@ lemma memoryFinalizeConsumedMessages_pairwise
   rw [List.pairwise_map]
   refine (List.Pairwise.sublist List.filter_sublist huniq).imp_of_mem ?_
   intro i₁ i₂ hi₁ hi₂ hrel
-  have h₁ : signedVal i₁.mult = -1 := by simpa using (List.mem_filter.mp hi₁).2
-  have h₂ : signedVal i₂.mult = -1 := by simpa using (List.mem_filter.mp hi₂).2
+  have h₁ : i₁.mult = 1 := by
+    have selected := (List.mem_filter.mp hi₁).2
+    simp only [decide_eq_true_eq] at selected
+    exact selected.2
+  have h₂ : i₂.mult = 1 := by
+    have selected := (List.mem_filter.mp hi₂).2
+    simp only [decide_eq_true_eq] at selected
+    exact selected.2
   exact hrel (by rw [h₁]; norm_num) (by rw [h₂]; norm_num)
 
 /-- **The genesis-frontier bridge.** `optMS (memoryInitFrontier witness loc)` is exactly the
@@ -278,8 +290,7 @@ with `live = memoryInitFrontier witness`, `finM = memoryFinalizeFrontier witness
 theorem memoryFrontierBalance (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (balanced : witness.BalancedChannels)
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1)
+      IsBool interaction.mult)
     (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
       memoryChannel) = [])
     (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
@@ -347,10 +358,9 @@ theorem memoryInitMessageBound_of_mem_produced
     rw [← typedTableInteractionsWith_raw]
     exact List.mem_map_of_mem typedMem
   have multNonzero : interaction.raw.mult ≠ 0 := by
-    intro multZero
-    change signedVal interaction.raw.mult = 1 at positive
-    rw [multZero] at positive
-    simp [signedVal] at positive
+    change interaction.mult ≠ 0
+    rw [positive.2]
+    exact one_ne_zero
   let rebound : TypedInteraction memoryChannel :=
     { raw := interaction.raw
       channel_eq := (memoryInitProviderTable witness).channel_eq_of_mem_interactionsWith rawMem }

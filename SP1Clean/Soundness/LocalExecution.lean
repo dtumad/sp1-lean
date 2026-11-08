@@ -12,7 +12,7 @@ contain row-local facts—registered chip, `Spec`, committed decode, current ope
 verified `advance` theorem.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 

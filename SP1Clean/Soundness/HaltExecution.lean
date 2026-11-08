@@ -10,7 +10,7 @@ machine at `haltPc` on the exact canonical `HALT` code, and every event field is
 observation of the reached pre-halt state (the halt row's pulled operands, grounded by the timed
 memory walk). -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 

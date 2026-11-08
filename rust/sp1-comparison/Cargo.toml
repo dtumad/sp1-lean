@@ -24,17 +24,17 @@ sp1-hypercube = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96
 sp1-primitives = { git = "https://github.com/succinctlabs/sp1", rev = "d83ed91f96701209613720708f36ffce0e98ed33", optional = true }
 
 # The backend and emitter use the same published Clean revision as lake-manifest.json.
-clean_backend = { git = "https://github.com/dtumad/clean", rev = "8f8c05ac20d4a62671f2ff0b275bc7deac1be0dc", optional = true }
-p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-koala-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-fri = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
-p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "47e442f", optional = true }
+clean_backend = { git = "https://github.com/Verified-zkEVM/clean", rev = "2ca265f5c402d71911e4a2c865ea29c8e03fbef2", optional = true }
+p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-koala-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-fri = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "0571a85", optional = true }
 rand = { version = "0.10", optional = true }
 
 [features]
@@ -42,6 +42,7 @@ default = ["inventory"]
 inventory = ["dep:enum-map", "dep:slop-air", "dep:slop-algebra", "dep:sp1-core-machine",
     "dep:sp1-hypercube", "dep:sp1-primitives", "dep:sp1-core-executor"]
 mprotect = ["inventory", "sp1-core-machine/mprotect"]
+assembly-export = ["instruction-export"]
 instruction-export = ["clean-export", "inventory", "dep:slop-matrix", "dep:slop-uni-stark", "dep:sp1-core-executor"]
 clean-export = ["dep:clean_backend", "dep:p3-air", "dep:p3-field", "dep:p3-matrix",
     "dep:p3-koala-bear", "dep:p3-challenger", "dep:p3-commit", "dep:p3-dft", "dep:p3-fri",
@@ -106,32 +107,32 @@ required-features = ["clean-export"]
 
 [[test]]
 name = "assembly_boundaries_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_commitments_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_enter_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_halt_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_hint_read_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_hints_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_ordinary_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]
 
 [[test]]
 name = "assembly_stopped_export"
-required-features = ["instruction-export"]
+required-features = ["assembly-export"]

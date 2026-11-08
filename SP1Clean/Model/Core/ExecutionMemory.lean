@@ -13,7 +13,7 @@ namespace SP1Clean.Model.Core
 open Machine Soundness.Target
 
 /-- Native memory encodings cannot write outside the represented Sail memory domain. -/
-theorem instructionMemoryEncoded.outside_permission {decoded : LeanRV64D.Defs.instruction}
+theorem instructionMemoryEncoded.outside_permission {decoded : LeanRV64D.instruction}
     {register : BitVec 5 → Option (BitVec 64)} (encoded : instructionMemoryEncoded register decoded)
     (image : instructionImageOK decoded = true) (routed : (instructionRouteId decoded).isSome) :
     InstructionWrite.check (fun address => decide (NativeLayout.sailMemory.upper ≤ address))
@@ -96,7 +96,7 @@ theorem ExecutionSnapshot.memory_present (snapshot : ExecutionSnapshot) (address
     (inside : address < NativeLayout.sailMemory.upper) :
     (snapshot.realize.sail.mem.get? address).isSome := by
   change ((snapshot.sail.memory.toSailMemory _).get? address).isSome = true
-  rw [ByteMemory.toSailMemory_get?, if_pos inside]
+  rw [ByteMemory.toSailMemory_get?, ite_eq_left inside]
   rfl
 
 /-- The finite source has no memory keys beyond the represented Sail domain. -/
@@ -105,7 +105,7 @@ theorem ExecutionSnapshot.memory_absent (snapshot : ExecutionSnapshot) (address 
     snapshot.realize.sail.mem.get? address = none := by
   change (snapshot.sail.memory.toSailMemory _).get? address = none
   change 2 ^ 48 ≤ address at outside
-  rw [ByteMemory.toSailMemory_get?, if_neg (by omega)]
+  rw [ByteMemory.toSailMemory_get?, ite_eq_right (by omega)]
 
 /-- Outside-domain equality is preserved independently of final AIR memory grounding. -/
 theorem ExecutionPath.memory_outside {image : ProgramImage} (valid : image.Valid) {policy : HostPolicy}

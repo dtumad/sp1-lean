@@ -11,7 +11,7 @@ mod export_support;
 
 use backend::{assert_backend_rejection, config, fixed_trace, physical_reference};
 use clean_backend::witness_generation::Program;
-use clean_backend::{prove_ensemble, verify_ensemble, GeneratedAirSpec};
+use clean_backend::{EnsembleKey, GeneratedAirSpec};
 use export_support::Sp1Evaluation;
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
@@ -122,7 +122,7 @@ fn released_preprocessing_and_air_match_including_padding_and_zero_counts() {
                 evaluation.ledger,
                 vec![(
                     ledger[0].channel.to_owned(),
-                    ledger[0].multiplicity.as_canonical_u64(),
+                    ledger[0].signed_multiplicity().as_canonical_u64(),
                     ledger[0]
                         .message
                         .iter()
@@ -137,7 +137,7 @@ fn released_preprocessing_and_air_match_including_padding_and_zero_counts() {
 #[test]
 fn upstream_scheduler_matches_source_counts_and_lean_physical_inventory() {
     let public = requests();
-    let witness = active::generate::<F>(&public, &[]).unwrap();
+    let witness = active::generate::<F>(&public, &[], 1).unwrap();
     let reference = reference();
     assert_eq!(
         physical_reference::<active::Ensemble>(&public, &witness.tables),
@@ -191,13 +191,13 @@ fn upstream_scheduler_matches_source_counts_and_lean_physical_inventory() {
     assert_eq!(witness.tables[0][0][16], F::from_u64(2));
     assert_eq!(witness.tables[0][1][16], F::ONE);
     assert!(witness.tables[0][2..].iter().all(|row| row[16] == F::ZERO));
-    let unused = unused::generate::<F>(&[], &[]).unwrap();
+    let unused = unused::generate::<F>(&[], &[], 1).unwrap();
     assert_eq!(unused.tables[0].len(), 32);
     assert_eq!(
         physical_reference::<unused::Ensemble>(&[], &unused.tables),
         reference["unused"]["witness"]
     );
-    let empty = empty::generate::<F>(&[], &[]).unwrap();
+    let empty = empty::generate::<F>(&[], &[], 1).unwrap();
     assert_eq!(empty.tables, vec![vec![vec![F::ZERO; 17]]]);
     assert_eq!(
         physical_reference::<empty::Ensemble>(&[], &empty.tables),
@@ -208,30 +208,41 @@ fn upstream_scheduler_matches_source_counts_and_lean_physical_inventory() {
 #[test]
 fn backend_authenticates_rom_and_counts_without_forbidding_duplicate_padding() {
     let public = requests();
-    let statement = active::Statement::<F>::new(&[32]).unwrap();
-    let config = config();
-    let traces = active::generate::<F>(&public, &[])
+    let statement = active::Statement::<F>::new(&[32], 1).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let traces = active::generate::<F>(&public, &[], 1)
         .unwrap()
         .into_traces()
         .unwrap();
     assert_eq!((traces[0].height(), traces[0].width()), (32, 1));
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
+    let other_minimum = active::Statement::<F>::new(&[32], 2).unwrap();
+    assert!(matches!(
+        key.verify(&other_minimum, &proof, &public),
+        Err(clean_backend::EnsembleVerificationError::Shape(
+            clean_backend::EnsembleShapeError::KeyMinimumHeight {
+                expected: 1,
+                actual: 2
+            }
+        ))
+    ));
     for column in 0..16 {
         let mut forged = public.clone();
         forged[column] += F::ONE;
         assert!(
-            active::generate(&forged, &[]).is_err(),
+            active::generate(&forged, &[], 1).is_err(),
             "forged column {column}"
         );
-        assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+        assert!(key.verify(&statement, &proof, &forged).is_err());
     }
     for row in [0, 1, 2, 31] {
         let mut forged = traces.clone();
         forged[0].values[row] += F::ONE;
         assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(config(), 1).unwrap();
+            let proof = key.prove(&statement, forged, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
     // SP1 AIR permits moving count between physical copies of the same instruction.
@@ -239,24 +250,25 @@ fn backend_authenticates_rom_and_counts_without_forbidding_duplicate_padding() {
     let mut redistributed = traces;
     redistributed[0].values[31] = redistributed[0].values[0];
     redistributed[0].values[0] = F::ZERO;
-    let (proof, _) = prove_ensemble(&config, &statement, redistributed, &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let proof = key.prove(&statement, redistributed, &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
 }
 
 #[test]
 fn empty_padding_cannot_supply_an_instruction() {
-    let statement = empty::Statement::<F>::new(&[1]).unwrap();
-    let config = config();
-    let mut traces = empty::generate::<F>(&[], &[])
+    let statement = empty::Statement::<F>::new(&[1], 1).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let mut traces = empty::generate::<F>(&[], &[], 1)
         .unwrap()
         .into_traces()
         .unwrap();
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &[]).unwrap();
-    verify_ensemble(&config, &statement, &proof, &[]).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &[]).unwrap();
+    key.verify(&statement, &proof, &[]).unwrap();
     traces[0].values[0] = F::ONE;
     assert_backend_rejection(|| {
-        let (proof, _) = prove_ensemble(&config, &statement, traces, &[]).unwrap();
-        verify_ensemble(&config, &statement, &proof, &[]).is_err()
+        let mut key = EnsembleKey::new(config(), 1).unwrap();
+        let proof = key.prove(&statement, traces, &[]).unwrap();
+        key.verify(&statement, &proof, &[]).is_err()
     });
 }
 
@@ -291,7 +303,7 @@ fn sparse_rom_routes_full_addresses_in_source_order() {
         .into_iter()
         .flat_map(|index| expected[index].iter().copied())
         .collect();
-    let witness = sparse::generate::<F>(&public, &[]).unwrap();
+    let witness = sparse::generate::<F>(&public, &[], 1).unwrap();
     assert_eq!(
         witness.tables[0]
             .iter()
@@ -303,15 +315,16 @@ fn sparse_rom_routes_full_addresses_in_source_order() {
         physical_reference::<sparse::Ensemble>(&public, &witness.tables),
         reference()["sparse"]["witness"]
     );
-    let statement = sparse::Statement::<F>::new(&[32]).unwrap();
-    let config = config();
-    let (proof, _) =
-        prove_ensemble(&config, &statement, witness.into_traces().unwrap(), &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let statement = sparse::Statement::<F>::new(&[32], 1).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let proof = key
+        .prove(&statement, witness.into_traces().unwrap(), &public)
+        .unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
     for limb in 0..3 {
         let mut forged = public.clone();
         forged[limb] += F::ONE;
-        assert!(sparse::generate(&forged, &[]).is_err());
-        assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+        assert!(sparse::generate(&forged, &[], 1).is_err());
+        assert!(key.verify(&statement, &proof, &forged).is_err());
     }
 }

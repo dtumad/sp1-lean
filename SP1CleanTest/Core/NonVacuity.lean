@@ -83,7 +83,7 @@ def zeroed (α : TypeMap) [ProvableType α] : α (ZMod SP1Prime) :=
   ProvableType.fromElements (.replicate _ 0)
 
 /-- Empty committed prover data (every chip `Assumptions` ignores it). -/
-def emptyData : ProverData (ZMod SP1Prime) := fun _ _ => #[]
+def emptyData : ProverData (ZMod SP1Prime) := .empty _
 
 /-! ## ALU chips (audit-surface `Assumptions`, `Contracts/ChipAssumptions.lean`) -/
 

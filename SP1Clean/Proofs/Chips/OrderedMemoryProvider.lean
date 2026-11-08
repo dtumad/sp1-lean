@@ -1,3 +1,4 @@
+import ToClean.Air.HintIndex
 import ToClean.Circuit.Guarded
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.Native.Operations.OrderedBoundary
@@ -137,9 +138,7 @@ def activeCircuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
   channelsWithRequirements := provider.channelsWithRequirements ++ [(OrderedBoundary.channel name).toRaw]
   soundness := by
     circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
-    have one : Vector.map (Expression.eval env) (Vector.map Expression.const (oneWord (p := p))) =
-        oneWord := by simp only [Vector.map_map, Function.comp_def, Expression.eval]; exact Vector.map_id _
-    rw [one] at h_holds
+    simp only [Vector.map_id'] at h_holds
     have valid := binds _ _ _ (h_holds.1 h_assumptions)
     have canonicalRecord := canonical _ valid
     -- `circuit_norm` puts the record's projections in the constraint form the goal carries
@@ -152,11 +151,7 @@ def activeCircuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     exact ⟨⟨valid, h_holds.2.1, key⟩, Or.inr h_assumptions⟩
   completeness := by
     circuit_proof_start [OrderedBoundary.circuit, MemoryBoundary.address]
-    have one : Vector.map (Expression.eval env.toEnvironment)
-        (Vector.map Expression.const (oneWord (p := p))) = oneWord := by
-      simp only [Vector.map_map, Function.comp_def, Expression.eval]
-      exact Vector.map_id _
-    rw [one]
+    simp only [Vector.map_id']
     have spec := (h_env.1 h_assumptions.1).1 h_assumptions.2.1
     have valid := binds _ _ _ spec
     have canonicalRecord := canonical _ valid
@@ -217,9 +212,9 @@ instance guardSupported (name : String) (recordSpec : MemoryMsg (ZMod p) → Pro
         exact outside (List.mem_append_right _ (by simp [same]))
       change interaction ∈ ((main name provider input).operations offset).interactionsWith selected at occurs
       rw [main_provider_interactions name provider selected notByte notOrder] at occurs
-      cases carries : interaction.assumeGuarantees with
-      | false => rfl
-      | true =>
+      cases carries : interaction.direction with
+      | push => rfl
+      | pull =>
         have registered := child.declared input.payload offset interaction (by
           rw [GeneralFormalCircuit.toSubcircuit_interactions]
           exact (List.mem_filter.mp occurs).1) carries
@@ -235,6 +230,15 @@ def circuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     (canonical : ∀ record, recordSpec record → MemoryBoundary.CanonicalSpec record) :
     GeneralFormalCircuit (ZMod p) (RowInput Payload) MemoryMsg :=
   Guarded.circuit (activeCircuit name recordSpec provider binds canonical) inferInstance
+
+/-- Follow the private ordering cursor, selecting complete inputs by their previous key.
+No count cell is installed: each cursor occurrence generates its own physical row. -/
+def generation (name providerName : String) :
+    Air.Flat.WitnessGeneration.Generation (ZMod p) (RowInput Payload) :=
+  Witgen.HintIndex.unitDemand s!"{providerName}.{name}" (OrderedBoundary.channel name) .push
+    (fun key => key[0].val + key[1].val * 65536 + key[2].val * 4294967296 +
+      key[3].val * 281474976710656)
+    (fun input => input.1.link.previous) (fun input => input.2)
 
 /-- Construct the control columns from the payload and its semantic address. -/
 def populate (payload : Payload (ZMod p)) (previous address : ℕ) : RowInput Payload (ZMod p) :=

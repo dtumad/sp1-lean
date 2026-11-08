@@ -273,16 +273,16 @@ theorem memoryBump_spec {e : MemoryBumpEvent} (h : e.WellFormed) :
   · rw [ZMod.val_natCast_of_lt (by omega)]; omega
   · rw [ZMod.val_natCast_of_lt (by omega)]; omega
   · by_cases hsame : e.prevTs >>> 24 = e.currTs >>> 24
-    · exact Or.inr (by rw [memCompareLow, if_pos hsame, Nat.cast_one])
-    · exact Or.inl (by rw [memCompareLow, if_neg hsame, Nat.cast_zero])
+    · exact Or.inr (by rw [memCompareLow, ite_eq_left hsame, Nat.cast_one])
+    · exact Or.inl (by rw [memCompareLow, ite_eq_right hsame, Nat.cast_zero])
   · by_cases hsame : e.prevTs >>> 24 = e.currTs >>> 24
-    · rw [memCompareLow, if_pos hsame, Nat.cast_one, one_mul, hclkHigh, hsame, sub_self]
-    · rw [memCompareLow, if_neg hsame, Nat.cast_zero, zero_mul]
+    · rw [memCompareLow, ite_eq_left hsame, Nat.cast_one, one_mul, hclkHigh, hsame, sub_self]
+    · rw [memCompareLow, ite_eq_right hsame, Nat.cast_zero, zero_mul]
   · by_cases hsame : e.prevTs >>> 24 = e.currTs >>> 24
     · have hle : e.prevTs % 2 ^ 24 < e.currTs % 2 ^ 24 := by
         rw [hprevSR, hcurrSR] at hsame; omega
       have hd : memDiffOf e.prevTs e.currTs = e.currTs % 2 ^ 24 - e.prevTs % 2 ^ 24 - 1 := by
-        rw [memDiffOf, if_pos hsame]
+        rw [memDiffOf, ite_eq_left hsame]
       have hcast : ((e.currTs % 2 ^ 24 : ℕ) : ZMod p) = ((e.prevTs % 2 ^ 24 : ℕ) : ZMod p) + 1
           + (((memDiffOf e.prevTs e.currTs % 2 ^ 16 : ℕ) : ZMod p)
             + ((memDiffOf e.prevTs e.currTs / 2 ^ 16 : ℕ) : ZMod p) * 65536) := by
@@ -291,13 +291,13 @@ theorem memoryBump_spec {e : MemoryBumpEvent} (h : e.WellFormed) :
             + memDiffOf e.prevTs e.currTs / 2 ^ 16 * 65536) from by omega]
         push_cast
         ring
-      rw [memCompareLow, if_pos hsame, Nat.cast_one]
+      rw [memCompareLow, ite_eq_left hsame, Nat.cast_one]
       rw [hclkLow]
       linear_combination hcast
     · have hhigh : e.prevTs >>> 24 + 1 ≤ e.currTs >>> 24 := by
         rw [hprevSR, hcurrSR] at hsame ⊢; omega
       have hd : memDiffOf e.prevTs e.currTs = e.currTs >>> 24 - e.prevTs >>> 24 - 1 := by
-        rw [memDiffOf, if_neg hsame]
+        rw [memDiffOf, ite_eq_right hsame]
       have hcast : ((e.currTs >>> 24 : ℕ) : ZMod p) = ((e.prevTs >>> 24 : ℕ) : ZMod p) + 1
           + (((memDiffOf e.prevTs e.currTs % 2 ^ 16 : ℕ) : ZMod p)
             + ((memDiffOf e.prevTs e.currTs / 2 ^ 16 : ℕ) : ZMod p) * 65536) := by
@@ -306,18 +306,18 @@ theorem memoryBump_spec {e : MemoryBumpEvent} (h : e.WellFormed) :
             + memDiffOf e.prevTs e.currTs / 2 ^ 16 * 65536) from by omega]
         push_cast
         ring
-      rw [memCompareLow, if_neg hsame, Nat.cast_zero]
+      rw [memCompareLow, ite_eq_right hsame, Nat.cast_zero]
       rw [hclkHigh]
       linear_combination hcast
   · rw [ZMod.val_natCast_of_lt (by omega)]
     exact Nat.mod_lt _ (by norm_num)
   · by_cases hsame : e.prevTs >>> 24 = e.currTs >>> 24
     · have hd : memDiffOf e.prevTs e.currTs = e.currTs % 2 ^ 24 - e.prevTs % 2 ^ 24 - 1 := by
-        rw [memDiffOf, if_pos hsame]
+        rw [memDiffOf, ite_eq_left hsame]
       rw [ZMod.val_natCast_of_lt (by omega)]
       omega
     · have hd : memDiffOf e.prevTs e.currTs = e.currTs >>> 24 - e.prevTs >>> 24 - 1 := by
-        rw [memDiffOf, if_neg hsame]
+        rw [memDiffOf, ite_eq_right hsame]
       rw [ZMod.val_natCast_of_lt (by omega)]
       omega
 

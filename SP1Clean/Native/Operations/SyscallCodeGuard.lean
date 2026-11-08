@@ -70,8 +70,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main (fun _ => True) Spec
   · simpa only [mul_eq_zero, sub_eq_zero] using binary
   · intro real
     apply (canonical_iff _).mpr
-    rw [← h_input.1]
-    simp only [Vector.getElem_map]
     simp only [h7, h6, h5, h4, h3, h2, real, one_mul, mul_eq_zero, sub_eq_zero]
       at low high1 high2 high3
     exact ⟨by tauto, high1, high2, high3⟩
@@ -84,8 +82,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main (fun _ => True
   rcases binary with zero | one
   · simp [zero]
   · have canonical := (canonical_iff _).mp (valid one)
-    rw [← h_input.1] at canonical
-    simp only [Vector.getElem_map] at canonical
     simp only [one, sub_self, mul_zero, one_mul, mul_eq_zero, sub_eq_zero]
     tauto
 

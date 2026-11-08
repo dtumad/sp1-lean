@@ -5,7 +5,7 @@ use p3_challenger::DuplexChallenger;
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::{extension::BinomialExtensionField, Field, PrimeField64};
-use p3_fri::{create_benchmark_fri_params, create_test_fri_params, TwoAdicFriPcs};
+use p3_fri::{FriParameters, TwoAdicFriPcs};
 use p3_koala_bear::{KoalaBear as F, Poseidon2KoalaBear};
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
@@ -14,7 +14,7 @@ use rand::{rngs::SmallRng, SeedableRng};
 type Perm = Poseidon2KoalaBear<16>;
 type Hash = PaddingFreeSponge<Perm, 16, 8, 8>;
 type Compress = TruncatedPermutation<Perm, 2, 8, 16>;
-type Mmcs = MerkleTreeMmcs<<F as Field>::Packing, <F as Field>::Packing, Hash, Compress, 8>;
+type Mmcs = MerkleTreeMmcs<<F as Field>::Packing, <F as Field>::Packing, Hash, Compress, 2, 8>;
 type Challenge = BinomialExtensionField<F, 4>;
 type ChallengeMmcs = ExtensionMmcs<F, Challenge, Mmcs>;
 type Challenger = DuplexChallenger<F, Perm, 16, 8>;
@@ -41,11 +41,12 @@ fn configured(benchmark: bool, log_blowup: usize) -> Config {
     let mmcs = Mmcs::new(
         Hash::new(permutation.clone()),
         Compress::new(permutation.clone()),
+        0,
     );
     let mut fri = if benchmark {
-        create_benchmark_fri_params(ChallengeMmcs::new(mmcs.clone()))
+        FriParameters::new_benchmark(ChallengeMmcs::new(mmcs.clone()))
     } else {
-        create_test_fri_params(ChallengeMmcs::new(mmcs.clone()), 0)
+        FriParameters::new_testing(ChallengeMmcs::new(mmcs.clone()), 0)
     };
     fri.log_blowup = log_blowup;
     let pcs = Pcs::new(Radix2DitParallel::default(), mmcs, fri);
@@ -76,11 +77,11 @@ pub fn interaction(
     channel: &str,
     mult: u64,
     message: Vec<u64>,
-    assumes: bool,
+    is_pull: bool,
 ) -> serde_json::Value {
     serde_json::json!({
         "channel": channel, "message": message,
-        "multiplicity": mult, "assumeGuarantees": assumes,
+        "multiplicity": mult, "direction": if is_pull { "pull" } else { "push" },
     })
 }
 
@@ -97,13 +98,13 @@ pub fn physical_reference<P: Program<F>>(
         .map(|entry| {
             interaction(
                 entry.channel,
-                entry.multiplicity.as_canonical_u64(),
+                entry.signed_multiplicity().as_canonical_u64(),
                 entry
                     .message
                     .iter()
                     .map(PrimeField64::as_canonical_u64)
                     .collect(),
-                entry.assume_guarantees,
+                entry.direction == clean_backend::witness_generation::Direction::Pull,
             )
         })
         .collect::<Vec<_>>();
@@ -125,7 +126,7 @@ pub fn physical_reference<P: Program<F>>(
 
 /// Enumerate the emitter's fixed-row API for comparison with independent source rows.
 pub fn fixed_trace<P: GeneratedAirSpec>(component: usize) -> p3_matrix::dense::RowMajorMatrix<F> {
-    let width = P::FIXED_WIDTHS[component];
+    let width = P::FIXED_COLUMNS[component].len();
     assert_ne!(width, 0);
     let values = (0..P::FIXED_HEIGHTS[component] as u64)
         .flat_map(|row| P::fixed_row::<F>(component, row))

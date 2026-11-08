@@ -152,7 +152,7 @@ theorem MemoryMsg.locOf_register [Fact p.Prime] [Fact (2 ^ 17 < p)]
   rw [← addr0, addr1, addr2]
   have indexLtP : index.toNat < p := by
     have := index.isLt; have := Fact.out (p := 2 ^ 17 < p); omega
-  simp only [ZMod.val_natCast, Nat.mod_eq_of_lt indexLtP, index.isLt, true_and, if_true,
+  simp only [ZMod.val_natCast, Nat.mod_eq_of_lt indexLtP, index.isLt, true_and, ite_true,
     BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
 /-- The 8-byte little-endian RAM word at `a` (the Memory bus's value granularity). -/
@@ -386,11 +386,11 @@ lemma microValueT_ordinary (s0 : SailState) (c0 : ℕ) (loc : MemLoc) (τ : ℕ)
     microValueT s0 (Timeline.ordinary c0) loc τ = microValue s0 c0 loc τ := by
   by_cases h : τ < c0
   · unfold microValueT microValue
-    rw [if_pos (show τ < (Timeline.ordinary c0).start 0 by
-        simp only [Timeline.ordinary_start]; omega), if_pos h]
+    rw [ite_eq_left (show τ < (Timeline.ordinary c0).start 0 by
+        simp only [Timeline.ordinary_start]; omega), ite_eq_left h]
   · unfold microValueT microValue
-    rw [if_neg (show ¬ τ < (Timeline.ordinary c0).start 0 by
-        simp only [Timeline.ordinary_start]; omega), if_neg h]
+    rw [ite_eq_right (show ¬ τ < (Timeline.ordinary c0).start 0 by
+        simp only [Timeline.ordinary_start]; omega), ite_eq_right h]
     have hstep := Timeline.stepOf_ordinary c0 τ (by omega)
     simp only [hstep, Timeline.ordinary_start]
     have hδ : τ - (c0 + 8 * ((τ - c0) / 8)) = (τ - c0) % 8 := by omega

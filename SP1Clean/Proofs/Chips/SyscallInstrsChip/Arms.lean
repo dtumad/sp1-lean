@@ -44,18 +44,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   circuit_proof_start
   obtain ⟨h_rbin, h_hbin⟩ := h_assumptions
   obtain ⟨e0, e1, e2, h0, h1, h2⟩ := h_holds
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have enp : ∀ i (hi : i < 3),
-      Expression.eval env input_var_next_pc[i] = input_next_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  rw [enp 0 (by norm_num)] at e0 h0
-  rw [enp 1 (by norm_num)] at e1 h1
-  rw [enp 2 (by norm_num)] at e2 h2
-  rw [epc 0 (by norm_num)] at e0
-  rw [epc 1 (by norm_num)] at e1
-  rw [epc 2 (by norm_num)] at e2
   refine ⟨fun hh => ?_, fun hr hnh => ?_⟩
   · rw [hh, one_mul] at h0 h1 h2
     exact ⟨by linear_combination h0, h1, h2⟩
@@ -68,13 +56,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   circuit_proof_start
   obtain ⟨h_rbin, h_hbin⟩ := h_assumptions
   obtain ⟨h_halt, h_next⟩ := h_spec
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env.toEnvironment input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have enp : ∀ i (hi : i < 3),
-      Expression.eval env.toEnvironment input_var_next_pc[i] = input_next_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  simp only [epc, enp]
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact gate_zero h_rbin (fun hr => gate_zero (one_sub_bool h_hbin)
       (fun hg => by linear_combination (h_next hr (eq_zero_of_one_sub hg)).1))
@@ -112,19 +93,6 @@ omit [Fact (2 ^ 17 < p)] in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨h_rbin, h_cbin, h_dbin, h_sumbin⟩ := h_assumptions
-  have ebits : ∀ i (hi : i < 8),
-      Expression.eval env input_var_index_bits[i] = input_index_bits[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have edw : ∀ i (hi : i < 4),
-      Expression.eval env input_var_digest_word[i] = input_digest_word[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  have eob : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_b[i] = input_op_b[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.1; simpa using this
-  have eoc : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_c[i] = input_op_c[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.1; simpa using this
-  simp only [circuit_norm, ebits, edw, eob, eoc] at h_holds
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, hs1, hs0, x0, x1, x2, x3, x4, x5, x6, x7,
     hup, hp0, hp1, hp2, hp3⟩ := h_holds
   have boolOf : ∀ x : ZMod p, input_is_real * (x * (x - 1)) = 0 → input_is_real = 1 →
@@ -179,19 +147,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   circuit_proof_start
   obtain ⟨h_rbin, h_cbin, h_dbin, h_sumbin⟩ := h_assumptions
   obtain ⟨h_bits, h_idx, h_sum1, h_sum0, h_up, h_pack⟩ := h_spec
-  have ebits : ∀ i (hi : i < 8),
-      Expression.eval env.toEnvironment input_var_index_bits[i] = input_index_bits[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have edw : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_digest_word[i] = input_digest_word[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  have eob : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_b[i] = input_op_b[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.1; simpa using this
-  have eoc : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_c[i] = input_op_c[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.1; simpa using this
-  simp only [circuit_norm, ebits, edw, eob, eoc]
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_⟩
   · exact gate_zero h_rbin (fun hr => gate_zero (h_bits 0 hr) (fun hb => by rw [hb]; ring))
@@ -257,13 +212,6 @@ omit [Fact (2 ^ 17 < p)] in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨h_rbin, h_a0bin, h_ebin, h_sumbin⟩ := h_assumptions
-  have eap : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_a_prev[i] = input_op_a_prev[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have eav : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_a_value[i] = input_op_a_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  simp only [circuit_norm, eap, eav] at h_holds
   obtain ⟨hz, z0, z1, z2, z3, e0, e1, e2, e3, u0, u1, u2, u3⟩ := h_holds
   have ax : ∀ (i : Fin 4), input_op_a_0 = 1 → input_op_a_value[i] = 0 := by
     intro i h1
@@ -300,13 +248,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   circuit_proof_start
   obtain ⟨h_rbin, h_a0bin, h_ebin, h_sumbin⟩ := h_assumptions
   obtain ⟨h_real0, h_x0, h_enter, h_unch⟩ := h_spec
-  have eap : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_a_prev[i] = input_op_a_prev[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have eav : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_a_value[i] = input_op_a_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  simp only [circuit_norm, eap, eav]
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact gate_zero h_rbin h_real0
   · exact gate_zero h_a0bin (fun hz => h_x0 hz 0)
@@ -358,10 +299,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   have hbound : ((fieldLimbBound : ℕ) : ZMod p).val = fieldLimbBound := by
     have hp : (2 : ℕ) ^ 17 < p := Fact.out
     exact ZMod.val_natCast_of_lt (by simp only [fieldLimbBound]; omega)
-  have ew : ∀ i (hi : i < 4),
-      Expression.eval env input_var_word[i] = input_word[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  simp only [circuit_norm, ew] at h_holds
   obtain ⟨h2, h3, h_cmp, hc1, hc0⟩ := h_holds
   have hspec := h_cmp ⟨fun hr => ⟨h_u16 hr, by rw [hbound]; simp only [fieldLimbBound]; omega⟩,
     h_rbin⟩
@@ -375,7 +312,7 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   · rw [hr, one_mul] at h3; exact h3
   · by_cases hlt : (input_word[1]).val < fieldLimbBound
     · exact Or.inl hlt
-    have hbit0 : input_bit = 0 := by rw [hbit, if_neg hlt]
+    have hbit0 : input_bit = 0 := by rw [hbit, ite_eq_right hlt]
     refine Or.inr ⟨?_, ?_⟩
     · rw [hr, one_mul, hbit0] at hc1
       have heq : input_word[1] = ((fieldLimbBound : ℕ) : ZMod p) := by linear_combination -hc1
@@ -390,17 +327,13 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   have hbound : ((fieldLimbBound : ℕ) : ZMod p).val = fieldLimbBound := by
     have hp : (2 : ℕ) ^ 17 < p := Fact.out
     exact ZMod.val_natCast_of_lt (by simp only [fieldLimbBound]; omega)
-  have ew : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_word[i] = input_word[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  simp only [circuit_norm, ew]
   refine ⟨gate_zero h_rbin (fun hr => (h_live hr).2.1),
     gate_zero h_rbin (fun hr => (h_live hr).2.2.1), ⟨?_, ?_⟩, ?_, ?_⟩
   · exact ⟨fun hr => ⟨h_u16 hr, by rw [hbound]; simp only [fieldLimbBound]; omega⟩, h_rbin⟩
   · exact ⟨h_bitbool, fun hr => by rw [(h_live hr).1, hbound]⟩
   · exact gate_zero h_rbin (fun hr => gated_of_cases (by
       by_cases hlt : (input_word[1]).val < fieldLimbBound
-      · exact Or.inl (by rw [(h_live hr).1, if_pos hlt]; ring)
+      · exact Or.inl (by rw [(h_live hr).1, ite_eq_left hlt]; ring)
       · refine Or.inr ?_
         rcases (h_live hr).2.2.2 with h | h
         · exact absurd h hlt
@@ -411,7 +344,7 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
           rw [this]; ring))
   · exact gate_zero h_rbin (fun hr => gated_of_cases (by
       by_cases hlt : (input_word[1]).val < fieldLimbBound
-      · exact Or.inl (by rw [(h_live hr).1, if_pos hlt]; ring)
+      · exact Or.inl (by rw [(h_live hr).1, ite_eq_left hlt]; ring)
       · refine Or.inr ?_
         rcases (h_live hr).2.2.2 with h | h
         · exact absurd h hlt
@@ -446,13 +379,6 @@ namespace DispatchArm
 omit [Fact (2 ^ 17 < p)] in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
-  have eob : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_b[i] = input_op_b[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have eoc : ∀ i (hi : i < 4),
-      Expression.eval env input_var_op_c[i] = input_op_c[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  simp only [circuit_norm, eob, eoc] at h_holds
   obtain ⟨hb, hc⟩ := h_holds
   intro ht
   rw [ht, one_mul] at hb hc
@@ -461,13 +387,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 omit [Fact (2 ^ 17 < p)] in
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
-  have eob : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_b[i] = input_op_b[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1; simpa using this
-  have eoc : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_op_c[i] = input_op_c[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.1; simpa using this
-  simp only [circuit_norm, eob, eoc]
   exact ⟨gate_zero h_assumptions (fun ht => (h_spec ht).1),
     gate_zero h_assumptions (fun ht => (h_spec ht).2)⟩
 

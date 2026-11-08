@@ -35,7 +35,9 @@ on a cache miss. Generated sources are portable; compiler caches are specific to
 |---|---|
 | --deps | Prepare the pinned OCaml/Sail toolchain |
 | --make-config | Deep-merge stock generated configuration with the SP1 overlay |
-| --stock | Regenerate and require byte identity with the pinned base snapshot |
+| --stock | Verify the current stock fingerprint; with `SAIL_GEN_PROFILE=historical`, reproduce the independent base snapshot |
+| --generate-stock | Generate current stock output for explicit fingerprint review |
+| --legacy-sp1 / --stock-module | Generate the other two configuration/module controls |
 | --sp1 | Regenerate with SP1 configuration and verify the recorded fingerprint |
 | --generate | Generate a candidate and print its fingerprint for explicit review |
 
@@ -47,7 +49,9 @@ an equivalent config override without changing model identity.
 
 1. Select compatible compiler, model, base snapshot and runtime revisions. Update provenance and
    the single Lake requirement deliberately; do not run bare lake update.
-2. Verify --stock, regenerate the configuration, inspect the platform delta and run --generate.
+2. Reproduce the historical stock control with `SAIL_GEN_PROFILE=historical` (a separate toolchain cache).
+   Generate current stock with `--generate-stock`, review the compiler delta and record `currentStock`.
+   Regenerate the configuration, inspect the platform delta and run `--generate`.
 3. Review the generated diff and update generatedTreeSha256, generatedFiles and configSha256.
    scripts/check_pins.py uses a deterministic path/content tree hash; import its tree_hash helper
    when recording a newly reviewed snapshot.
@@ -55,14 +59,33 @@ an equivalent config override without changing model identity.
    where Sail internals changed; do not paper over them with new assumptions.
 5. Record commands and generator environment with the PR evidence.
 
+Sail regeneration CI checks four current-compiler outputs (stock/SP1 × legacy/module).
+`scripts/check_sail_regeneration.py` permits exactly the four documented Boolean changes
+and reverses only the generated module/import/exposure headers. All remaining bytes and
+file inventories must agree. The historical compiler must independently reproduce the
+opencompl snapshot; its compiler/model/configuration is distinct from the reviewed current
+stock fingerprint. Historical-to-current differences are archived, not erased by normalization.
+These controls test reproducibility and bounded configuration changes, not compiler correctness.
+
 Sail regeneration CI independently checks configuration and byte identity. The normal pin check
 requires prepared output; `--source-only` checks input pins without it in lightweight source/Rust
 jobs. Fingerprints authenticate the reviewed snapshot; fresh regeneration supplies independent
 evidence. Neither the preparation script nor a cache restore updates the expected fingerprint.
 
-The compiler carries only upstream Sail #1742's module-header patch on the existing compiler
-base; the runtime carries lean-sail #13. Both use published immutable revisions. Consume compatible
-upstream revisions when those changes merge. The module migration preserves generated bodies.
+The compiler carries the module-header adaptation from Sail #1742 on the active `sail2` branch.
+The runtime carries lean-sail #13. Both use published immutable revisions. Generated declarations
+now live directly in `LeanRV64D`; `LeanRV64D.Defs` remains a module filename, not a declaration
+namespace. The generator also adjusts supplementary files that opened the former namespace.
+Consume compatible upstream revisions when these adaptations merge.
+
+Lean 4.35 rejects a flat variant with more than 244 constructors carrying fields during layout
+computation, including noncomputable declarations. The generator splits large variants into
+mutually defined chunks and exposes the original constructor names as match-pattern abbreviations.
+Every alternative and its arguments remain represented, and exhaustive matches still cover all
+alternatives. This is a generator-owned representation workaround; remove it when the pinned Lean
+compiler supports the original flat variants. The generator's large-union regression covers the
+chunk boundary. Generated instruction matches and the complete model must also compile before a
+replacement is accepted.
 
 The narrow RvfiDii legacy-do Lake library is a temporary elaboration workaround (#6), not a
 generated-source modification. Coordinate its replacement with module-system support (#33);

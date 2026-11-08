@@ -6,7 +6,7 @@ extern crate alloc;
 mod backend;
 
 use backend::{assert_backend_rejection, config, fixed_trace, physical_reference};
-use clean_backend::{prove_ensemble, verify_ensemble, GeneratedAirSpec};
+use clean_backend::{EnsembleKey, GeneratedAirSpec};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
@@ -118,9 +118,9 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
                 case["name"]
             );
             let generated = if empty_rom {
-                empty::generate::<F>(&public, &[])
+                empty::generate::<F>(&public, &[], 1)
             } else {
-                rom::generate::<F>(&public, &[])
+                rom::generate::<F>(&public, &[], 1)
             };
             assert_eq!(
                 generated.is_ok(),
@@ -147,15 +147,14 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
                     assert_eq!(actual, case["witness"], "{}", case["name"]);
                     // Witness generation does not replace AIR acceptance: malformed limbs can
                     // generate rows, and their local range assertions must still reject them.
-                    let config = config();
                     let traces = witness.into_traces().unwrap();
                     let heights: Vec<usize> = traces.iter().map(Matrix::height).collect();
                     if empty_rom {
-                        let statement = empty::Statement::<F>::new(&heights).unwrap();
+                        let statement = empty::Statement::<F>::new(&heights, 1).unwrap();
                         let check = || {
-                            let (proof, _) =
-                                prove_ensemble(&config, &statement, traces, &public).unwrap();
-                            verify_ensemble(&config, &statement, &proof, &public).is_ok()
+                            let mut key = EnsembleKey::new(config(), 1).unwrap();
+                            let proof = key.prove(&statement, traces, &public).unwrap();
+                            key.verify(&statement, &proof, &public).is_ok()
                         };
                         if expected {
                             assert!(check());
@@ -163,11 +162,11 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
                             assert_backend_rejection(|| !check());
                         }
                     } else {
-                        let statement = rom::Statement::<F>::new(&heights).unwrap();
+                        let statement = rom::Statement::<F>::new(&heights, 1).unwrap();
                         let check = || {
-                            let (proof, _) =
-                                prove_ensemble(&config, &statement, traces, &public).unwrap();
-                            verify_ensemble(&config, &statement, &proof, &public).is_ok()
+                            let mut key = EnsembleKey::new(config(), 1).unwrap();
+                            let proof = key.prove(&statement, traces, &public).unwrap();
+                            key.verify(&statement, &proof, &public).is_ok()
                         };
                         if expected {
                             assert!(check());
@@ -184,7 +183,7 @@ fn generated_rows_and_complete_ledgers_match_lean_and_native_policy() {
 #[test]
 fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
     let public = inputs(65540, 65540);
-    let witness = rom::generate::<F>(&public, &[]).unwrap();
+    let witness = rom::generate::<F>(&public, &[], 1).unwrap();
     assert_eq!(witness.tables.len(), 2);
     assert_eq!(witness.tables[0].len(), 4);
     assert_eq!(
@@ -197,30 +196,32 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
     assert!(witness.tables[1].iter().any(|row| row[7] == F::ZERO));
     let traces = witness.into_traces().unwrap();
     let heights: Vec<usize> = traces.iter().map(Matrix::height).collect();
-    let statement = rom::Statement::<F>::new(&heights).unwrap();
-    let config = config();
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let statement = rom::Statement::<F>::new(&heights, 1).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
     for column in 0..public.len() {
         let mut forged = public.clone();
         forged[column] += F::ONE;
-        assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+        assert!(key.verify(&statement, &proof, &forged).is_err());
     }
     // Address, activity, all endpoint limbs, and one auxiliary witness are mutable trace cells.
     for column in 0..11 {
         let mut forged = traces.clone();
         forged[0].values[column] += F::ONE;
         assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(config(), 1).unwrap();
+            let proof = key.prove(&statement, forged, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
     for row in 0..traces[1].height() {
         let mut forged = traces.clone();
         forged[1].values[row] += F::ONE;
         assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(config(), 1).unwrap();
+            let proof = key.prove(&statement, forged, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
     // A missing active request or an activated padding row must fail the closed ledger.
@@ -229,8 +230,9 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
         let mut forged = traces.clone();
         forged[0].values[row * width + 3] = enabled;
         assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(config(), 1).unwrap();
+            let proof = key.prove(&statement, forged, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
     // Disabled rows impose no address or child-witness obligations, even on noncanonical cells.
@@ -241,8 +243,11 @@ fn backend_rejects_forged_intervals_counts_public_inputs_and_witness_cells() {
             padding[0].values[3 * width + column] = F::from_u64(70000 + column as u64);
         }
     }
-    let (padding_proof, _) = prove_ensemble(&config, &statement, padding, &public).unwrap();
-    verify_ensemble(&config, &statement, &padding_proof, &public).unwrap();
-    assert_eq!(rom::Ensemble::FIXED_WIDTHS, &[0, 7]);
-    assert!(rom::Statement::<F>::new(&[heights[0], heights[1] * 2]).is_err());
+    let padding_proof = key.prove(&statement, padding, &public).unwrap();
+    key.verify(&statement, &padding_proof, &public).unwrap();
+    assert_eq!(
+        rom::Ensemble::FIXED_COLUMNS,
+        &[&[][..], &[0, 1, 2, 3, 4, 5, 6][..]]
+    );
+    assert!(rom::Statement::<F>::new(&[heights[0], heights[1] * 2], 1).is_err());
 }

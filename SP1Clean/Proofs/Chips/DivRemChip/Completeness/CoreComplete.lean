@@ -49,9 +49,9 @@ theorem mulLowerProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod 
   have hsumArg : ir + 0 + 0 + 0 + 0 = 0 ∨ ir + 0 + 0 + 0 + 0 = 1 := by
     simpa only [add_zero] using hbin
   rcases hbin with h0 | h1
-  · rw [populateMulLower, if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+  · rw [populateMulLower, ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
     exact MulOperation.productSpec_zero (populateQuotComp B C f) (cComp C f) a ir 0 0 0 0 h0
-  · rw [populateMulLower, if_pos h1]
+  · rw [populateMulLower, ite_eq_left h1]
     exact MulOperation.productSpec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
       ir 0 0 0 0 ir (Or.inr h1) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl) (Or.inl rfl)
       hsumArg
@@ -88,7 +88,7 @@ theorem mulUpperProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod 
     have hgate : ir * (1 - (f[4] + f[5] + f[6] + f[7])) = 1 := by
       rw [hcond.1, he2zero]
       ring_nf
-    rw [populateMulUpper, if_pos hcond]
+    rw [populateMulUpper, ite_eq_left hcond]
     exact MulOperation.productSpec_populate (populateQuotComp_isU64 B C f) (cComp_isU64 hcU f)
       0 (f[0] + f[2]) (f[1] + f[3]) 0 0
       (ir * (1 - (f[4] + f[5] + f[6] + f[7]))) (Or.inl rfl) hd_r hdu_r
@@ -100,7 +100,7 @@ theorem mulUpperProductSpec (ir : ZMod p) (B C : Word (ZMod p)) {a : Word (ZMod 
         · exact absurd ⟨h1, by linear_combination hsum - he20⟩ hcond
         · rw [h1, he21]
           ring_nf
-    rw [populateMulUpper, if_neg hcond]
+    rw [populateMulUpper, ite_eq_right hcond]
     exact MulOperation.productSpec_zero (populateQuotComp B C f) (cComp C f) a
       0 (f[0] + f[2]) (f[1] + f[3]) 0 0 hgate
 
@@ -123,7 +123,7 @@ theorem lowerGlue (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
   rcases hbin with h0 | h1
   · rw [hzero h0 0 (by norm_num), hzero h0 1 (by norm_num), hzero h0 2 (by norm_num),
       hzero h0 3 (by norm_num), populateMulLower,
-      if_neg (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
+      ite_eq_right (fun hx => absurd (h0.symm.trans hx) zero_ne_one)]
     simp [MulOperation.zeroCols]
   · exact ⟨hone h1 0 (by norm_num), hone h1 1 (by norm_num), hone h1 2 (by norm_num),
       hone h1 3 (by norm_num)⟩
@@ -153,7 +153,7 @@ theorem upperGlue (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
   rcases hbin with h0 | h1
   · rw [hzero h0 4 (by norm_num), hzero h0 5 (by norm_num), hzero h0 6 (by norm_num),
       hzero h0 7 (by norm_num), populateMulUpper,
-      if_neg (fun hx => absurd (h0.symm.trans hx.1) zero_ne_one)]
+      ite_eq_right (fun hx => absurd (h0.symm.trans hx.1) zero_ne_one)]
     simp [MulOperation.zeroCols]
   · exact ⟨hone h1 hg64 0 (by norm_num), hone h1 hg64 1 (by norm_num),
       hone h1 hg64 2 (by norm_num), hone h1 hg64 3 (by norm_num)⟩
@@ -163,13 +163,9 @@ parent-proof boundary: its result keeps `ProductSpec` opaque, and only this smal
 from explicit row offsets to semantic Mul/glue facts. -/
 theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inputs (ZMod p))
     (off : ℕ) (ir : ZMod p) (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
-    (hQC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + i }) = populateQuotComp B C f)
-    (hC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) = cComp C f)
-    (hCtq : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) = populateCtq B C f)
+    (hQC : (Vector.mapRange 4 fun i => env.get (off + 1 + i)) = populateQuotComp B C f)
+    (hC : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + i)) = cComp C f)
+    (hCtq : (Vector.mapRange 8 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i)) = populateCtq B C f)
     (hMulLo : ∀ i : Fin 45, env.get (off + 1 + 4 + 4 + 4 + 4 + ↑i) =
       (SubSpecs.mulWitnessElements (populateMulLower ir B C f)).get i)
     (hMulUp : ∀ i : Fin 45, env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + ↑i) =
@@ -236,7 +232,7 @@ theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inp
     rw [← hctq] at hglue
     obtain ⟨h0, h1, h2, h3⟩ := hglue
     simp only [MulOperation.resultWord, MulOperation.productVal, zero_ne_one, or_self,
-      if_false, Nat.reduceLT, dif_pos, h0, h1, h2, h3]
+      ite_false, Nat.reduceLT, dite_eq_left, h0, h1, h2, h3]
   · intro hs
     have h64 : f[0] + f[1] + f[2] + f[3] = 1 := by linear_combination hs
     have hglue := upperGlue ir B C f hcU hbin hf0 hf1 hf2 hf3
@@ -249,7 +245,7 @@ theorem evaluatedProductSpec (env : ProverEnvironment (ZMod p)) (input : Var Inp
       · right; linear_combination h64 - h
       · exact Or.inl h
     simp only [MulOperation.resultWord, MulOperation.productVal, zero_ne_one, or_false,
-      if_false, if_pos hhigh, Nat.reduceLT, dif_pos, h0, h1, h2, h3]
+      ite_false, ite_eq_left hhigh, Nat.reduceLT, dite_eq_left, h0, h1, h2, h3]
 
 /-! ## Own-assert evaluator boundary
 
@@ -293,9 +289,8 @@ set_option linter.unusedSectionVars false in
 private theorem evalAdd_value (env : Environment (ZMod p))
     (cols : Circuits.Types.AddOperation (Expression (ZMod p))) :
     (Eval.eval env cols).value =
-      Vector.map (Expression.eval env) cols.value := by
+      Eval.eval env cols.value := by
   provable_struct_simp
-  exact ProvableType.eval_fields env _
 
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
@@ -309,18 +304,16 @@ set_option linter.unusedSectionVars false in
 private theorem evalRType_opBPrev (env : Environment (ZMod p))
     (cols : Circuits.Types.RTypeReader (Expression (ZMod p))) :
     (Eval.eval env cols).op_b_memory.prev_value =
-      Vector.map (Expression.eval env) cols.op_b_memory.prev_value := by
+      Eval.eval env cols.op_b_memory.prev_value := by
   provable_struct_simp
-  exact ProvableType.eval_fields env _
 
 omit [Fact (2 ^ 24 < p)] in
 set_option linter.unusedSectionVars false in
 private theorem evalRType_opCPrev (env : Environment (ZMod p))
     (cols : Circuits.Types.RTypeReader (Expression (ZMod p))) :
     (Eval.eval env cols).op_c_memory.prev_value =
-      Vector.map (Expression.eval env) cols.op_c_memory.prev_value := by
+      Eval.eval env cols.op_c_memory.prev_value := by
   provable_struct_simp
-  exact ProvableType.eval_fields env _
 
 omit [Fact (2 ^ 24 < p)] in
 /-- Raw satisfaction of the Rust own-assert list transports to the folded value-row contract without
@@ -383,24 +376,24 @@ theorem evaluatedOwnAssertsHold (env : ProverEnvironment (ZMod p))
   case vCpv =>
     exact (evalRType_opCPrev env.toEnvironment colsV.adapter).symm.trans
       (congrArg (·.adapter.op_c_memory.prev_value) hEval)
-  case vA => simpa only [ProvableType.eval_fields] using congrArg (·.a) hEval
-  case vB => simpa only [ProvableType.eval_fields] using congrArg (·.b) hEval
-  case vC => simpa only [ProvableType.eval_fields] using congrArg (·.c) hEval
-  case vQ => simpa only [ProvableType.eval_fields] using congrArg (·.quotient) hEval
-  case vQC => simpa only [ProvableType.eval_fields] using congrArg (·.quotient_comp) hEval
-  case vR => simpa only [ProvableType.eval_fields] using congrArg (·.remainder) hEval
-  case vRC => simpa only [ProvableType.eval_fields] using congrArg (·.remainder_comp) hEval
-  case vAR => simpa only [ProvableType.eval_fields] using congrArg (·.abs_remainder) hEval
-  case vAC => simpa only [ProvableType.eval_fields] using congrArg (·.abs_c) hEval
-  case vMax => simpa only [ProvableType.eval_fields] using congrArg (·.max_abs_c_or_1) hEval
+  case vA => exact congrArg (·.a) hEval
+  case vB => exact congrArg (·.b) hEval
+  case vC => exact congrArg (·.c) hEval
+  case vQ => exact congrArg (·.quotient) hEval
+  case vQC => exact congrArg (·.quotient_comp) hEval
+  case vR => exact congrArg (·.remainder) hEval
+  case vRC => exact congrArg (·.remainder_comp) hEval
+  case vAR => exact congrArg (·.abs_remainder) hEval
+  case vAC => exact congrArg (·.abs_c) hEval
+  case vMax => exact congrArg (·.max_abs_c_or_1) hEval
   case vCnegV =>
     exact (evalAdd_value env.toEnvironment colsV.c_neg_operation).symm.trans
       (congrArg (·.c_neg_operation.value) hEval)
   case vRnegV =>
     exact (evalAdd_value env.toEnvironment colsV.rem_neg_operation).symm.trans
       (congrArg (·.rem_neg_operation.value) hEval)
-  case vCtq => simpa only [ProvableType.eval_fields] using congrArg (·.c_times_quotient) hEval
-  case vCarry => simpa only [ProvableType.eval_fields] using congrArg (·.carry) hEval
+  case vCtq => exact congrArg (·.c_times_quotient) hEval
+  case vCarry => exact congrArg (·.carry) hEval
 
 /-- Honest populate pins imply the folded own-assert contract directly.  Keeping the raw
 `∀ e ∈ ownAsserts ...` proposition internal is essential: substituting the 246-column
@@ -446,33 +439,33 @@ theorem evaluatedOwnAssertsComplete (env : ProverEnvironment (ZMod p))
     (eCM : Expression.eval env.toEnvironment colsV.c_msb.msb = cMsbCell C f)
     (eRM : Expression.eval env.toEnvironment colsV.rem_msb.msb = remMsbCell B C f)
     (eQM : Expression.eval env.toEnvironment colsV.quot_msb.msb = quotMsbCell B C f)
-    (eBvec : Vector.map (Expression.eval env.toEnvironment) colsV.b = bComp B f)
-    (eCvec : Vector.map (Expression.eval env.toEnvironment) colsV.c = cComp C f)
-    (eQvec : Vector.map (Expression.eval env.toEnvironment) colsV.quotient =
+    (eBvec : Eval.eval env.toEnvironment colsV.b = bComp B f)
+    (eCvec : Eval.eval env.toEnvironment colsV.c = cComp C f)
+    (eQvec : Eval.eval env.toEnvironment colsV.quotient =
       populateQuotient B C f)
-    (eQCvec : Vector.map (Expression.eval env.toEnvironment) colsV.quotient_comp =
+    (eQCvec : Eval.eval env.toEnvironment colsV.quotient_comp =
       populateQuotComp B C f)
-    (eRvec : Vector.map (Expression.eval env.toEnvironment) colsV.remainder =
+    (eRvec : Eval.eval env.toEnvironment colsV.remainder =
       populateRemainder B C f)
-    (eRCvec : Vector.map (Expression.eval env.toEnvironment) colsV.remainder_comp =
+    (eRCvec : Eval.eval env.toEnvironment colsV.remainder_comp =
       populateRemComp B C f)
-    (eAvec : Vector.map (Expression.eval env.toEnvironment) colsV.a = populateA B C f)
-    (eABSCvec : Vector.map (Expression.eval env.toEnvironment) colsV.abs_c = populateAbsC C f)
-    (eABSRvec : Vector.map (Expression.eval env.toEnvironment) colsV.abs_remainder =
+    (eAvec : Eval.eval env.toEnvironment colsV.a = populateA B C f)
+    (eABSCvec : Eval.eval env.toEnvironment colsV.abs_c = populateAbsC C f)
+    (eABSRvec : Eval.eval env.toEnvironment colsV.abs_remainder =
       populateAbsRem B C f)
-    (eMAXvec : Vector.map (Expression.eval env.toEnvironment) colsV.max_abs_c_or_1 =
+    (eMAXvec : Eval.eval env.toEnvironment colsV.max_abs_c_or_1 =
       populateMaxAbsCOr1 C f)
-    (eCTQvec : Vector.map (Expression.eval env.toEnvironment) colsV.c_times_quotient =
+    (eCTQvec : Eval.eval env.toEnvironment colsV.c_times_quotient =
       populateCtq B C f)
-    (eCARRYvec : Vector.map (Expression.eval env.toEnvironment) colsV.carry =
+    (eCARRYvec : Eval.eval env.toEnvironment colsV.carry =
       populateCarry B C f)
-    (eCNEGVvec : Vector.map (Expression.eval env.toEnvironment) colsV.c_neg_operation.value =
+    (eCNEGVvec : Eval.eval env.toEnvironment colsV.c_neg_operation.value =
       wCnegWitness ir C f)
-    (eRNEGVvec : Vector.map (Expression.eval env.toEnvironment) colsV.rem_neg_operation.value =
+    (eRNEGVvec : Eval.eval env.toEnvironment colsV.rem_neg_operation.value =
       wRnegWitness ir B C f)
-    (eBPVvec : Vector.map (Expression.eval env.toEnvironment)
+    (eBPVvec : Eval.eval env.toEnvironment
       colsV.adapter.op_b_memory.prev_value = B)
-    (eCPVvec : Vector.map (Expression.eval env.toEnvironment)
+    (eCPVvec : Eval.eval env.toEnvironment
       colsV.adapter.op_c_memory.prev_value = C)
     (eOVBR : Expression.eval env.toEnvironment colsV.is_overflow_b.is_diff_zero.result =
       (ovbWitness ir B f).is_diff_zero.result)
@@ -537,49 +530,35 @@ theorem evaluatedPopulatedOwnAssertsComplete
     (hQM : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
       + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1 + 1) =
       quotMsbCell B C f)
-    (hBvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + i }) = bComp B f)
-    (hCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + i }) = cComp C f)
-    (hQvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) =
+    (hBvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + i)) = bComp B f)
+    (hCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + i)) = cComp C f)
+    (hQvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i)) =
       populateQuotient B C f)
-    (hQCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + i }) = populateQuotComp B C f)
-    (hRvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) =
+    (hQCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + i)) = populateQuotComp B C f)
+    (hRvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i)) =
       populateRemainder B C f)
-    (hRCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + i }) = populateRemComp B C f)
-    (hAvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + i }) = populateA B C f)
-    (hABSCvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + i }) = populateAbsC C f)
-    (hABSRvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) = populateAbsRem B C f)
-    (hMAXvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + i }) = populateMaxAbsCOr1 C f)
-    (hCTQvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) =
+    (hRCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + i)) = populateRemComp B C f)
+    (hAvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + i)) = populateA B C f)
+    (hABSCvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + i)) = populateAbsC C f)
+    (hABSRvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i)) = populateAbsRem B C f)
+    (hMAXvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + i)) = populateMaxAbsCOr1 C f)
+    (hCTQvec : (Vector.mapRange 8 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i)) =
       populateCtq B C f)
-    (hCARRYvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i }) =
+    (hCARRYvec : (Vector.mapRange 8 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i)) =
       populateCarry B C f)
-    (hCNEGVvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + i }) = wCnegWitness ir C f)
-    (hRNEGVvec : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + i }) = wRnegWitness ir B C f)
-    (hBPVvec : Vector.map (Expression.eval env.toEnvironment)
+    (hCNEGVvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + i)) = wCnegWitness ir C f)
+    (hRNEGVvec : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + i)) = wRnegWitness ir B C f)
+    (hBPVvec : Eval.eval env.toEnvironment
       input.adapter.op_b_memory.prev_value = B)
-    (hCPVvec : Vector.map (Expression.eval env.toEnvironment)
+    (hCPVvec : Eval.eval env.toEnvironment
       input.adapter.op_c_memory.prev_value = C)
     (hOVB : ∀ i : Fin 11,
       env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + ↑i) =
@@ -619,22 +598,22 @@ theorem evaluatedPopulatedOwnAssertsComplete
   · rw [populatedRowAt_cMsb_eq]; simpa only [circuit_norm] using hCM
   · rw [populatedRowAt_remMsb_eq]; simpa only [circuit_norm] using hRM
   · rw [populatedRowAt_quotMsb_eq]; simpa only [circuit_norm] using hQM
-  · rw [populatedRowAt_b_eq]; exact hBvec
-  · rw [populatedRowAt_c_eq]; exact hCvec
-  · rw [populatedRowAt_quotient_eq]; exact hQvec
-  · rw [populatedRowAt_quotientComp_eq]; exact hQCvec
-  · rw [populatedRowAt_remainder_eq]; exact hRvec
-  · rw [populatedRowAt_remainderComp_eq]; exact hRCvec
-  · rw [populatedRowAt_a_eq]; exact hAvec
-  · rw [populatedRowAt_absC_eq]; exact hABSCvec
-  · rw [populatedRowAt_absRemainder_eq]; exact hABSRvec
-  · rw [populatedRowAt_maxAbsCOr1_eq]; exact hMAXvec
-  · rw [populatedRowAt_ctq_eq]; exact hCTQvec
-  · rw [populatedRowAt_carry_eq]; exact hCARRYvec
-  · rw [populatedRowAt_cNegValue_eq]; exact hCNEGVvec
-  · rw [populatedRowAt_remNegValue_eq]; exact hRNEGVvec
-  · rw [populatedRowAt_adapter_eq]; exact hBPVvec
-  · rw [populatedRowAt_adapter_eq]; exact hCPVvec
+  · rw [populatedRowAt_b_eq]; simpa only [circuit_norm] using hBvec
+  · rw [populatedRowAt_c_eq]; simpa only [circuit_norm] using hCvec
+  · rw [populatedRowAt_quotient_eq]; simpa only [circuit_norm] using hQvec
+  · rw [populatedRowAt_quotientComp_eq]; simpa only [circuit_norm] using hQCvec
+  · rw [populatedRowAt_remainder_eq]; simpa only [circuit_norm] using hRvec
+  · rw [populatedRowAt_remainderComp_eq]; simpa only [circuit_norm] using hRCvec
+  · rw [populatedRowAt_a_eq]; simpa only [circuit_norm] using hAvec
+  · rw [populatedRowAt_absC_eq]; simpa only [circuit_norm] using hABSCvec
+  · rw [populatedRowAt_absRemainder_eq]; simpa only [circuit_norm] using hABSRvec
+  · rw [populatedRowAt_maxAbsCOr1_eq]; simpa only [circuit_norm] using hMAXvec
+  · rw [populatedRowAt_ctq_eq]; simpa only [circuit_norm] using hCTQvec
+  · rw [populatedRowAt_carry_eq]; simpa only [circuit_norm] using hCARRYvec
+  · rw [populatedRowAt_cNegValue_eq]; simpa only [circuit_norm] using hCNEGVvec
+  · rw [populatedRowAt_remNegValue_eq]; simpa only [circuit_norm] using hRNEGVvec
+  · rw [populatedRowAt_adapter_eq]; simpa only [circuit_norm] using hBPVvec
+  · rw [populatedRowAt_adapter_eq]; simpa only [circuit_norm] using hCPVvec
   · rw [populatedRowAt_isOverflowB_eq]
     have hS : (ProvableType.fromElements (M := Circuits.Types.IsEqualWordOperation)
           (Vector.mapRange 11 fun j =>
@@ -731,29 +710,21 @@ these facts for non-real or non-word rows. -/
 theorem evaluatedRangeSpec
     (env : ProverEnvironment (ZMod p)) (input : Var Inputs (ZMod p)) (off : ℕ)
     (B C : Word (ZMod p)) (f : Vector (ZMod p) 8) (hcU : C.isU64)
-    (hCTQ : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i }) =
+    (hCTQ : (Vector.mapRange 8 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + i)) =
       populateCtq B C f)
-    (hCarry : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 8 fun i =>
-        var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i }) =
+    (hCarry : (Vector.mapRange 8 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + i)) =
       populateCarry B C f)
-    (hRC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + i }) = populateRemComp B C f)
-    (hAC : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + i }) = populateAbsC C f)
-    (hAR : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i }) = populateAbsRem B C f)
-    (hQ : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i }) =
+    (hRC : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + i)) = populateRemComp B C f)
+    (hAC : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + i)) = populateAbsC C f)
+    (hAR : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + i)) = populateAbsRem B C f)
+    (hQ : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + i)) =
       populateQuotient B C f)
-    (hR : Vector.map (Expression.eval env.toEnvironment)
-      (Vector.mapRange 4 fun i => var { index := off + 1 + 4 + 4 + 4 + 4 + 45 + 45
-        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i }) =
+    (hR : (Vector.mapRange 4 fun i => env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45
+        + 7 + 8 + 8 + 11 + 11 + 11 + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + i)) =
       populateRemainder B C f)
     (hRN : env.get (off + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 5) = populateRemNeg B C f) :
     DivRemCore.RangeSpec (Eval.eval env (populatedRowAt input off)) := by

@@ -54,7 +54,7 @@ theorem readGuest_of_cells (context : HostReadContext) (policy : HostMemoryPolic
     (observed : ∀ cell ∈ (MemorySpan.mk address length).cells,
       context.ObservesWord (cell * 8) (words cell)) :
     context.readGuest? policy address length = some (slice words address length) := by
-  rw [readGuest?, if_pos (show policy.lower ≤ address ∧ address + length ≤ policy.upper from
+  rw [readGuest?, ite_eq_left (show policy.lower ≤ address ∧ address + length ≤ policy.upper from
     ⟨lower, upper⟩)]
   exact readBytes_of_cells context words address length observed
 

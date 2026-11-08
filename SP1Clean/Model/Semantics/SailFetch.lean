@@ -7,7 +7,7 @@ fetch facts are derived only at an executed address; configuration itself remain
 These lemmas are shared by the semantic execution model and the existing instruction bridges.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Advance
 
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -62,12 +62,12 @@ theorem straightLineReady_writeMinstret
     StraightLineReady ({s with regs := s.regs.insert Register.minstret_increment b})
       (data₃ ++ data₂ ++ data₁ ++ data₀) where
   init := SailState.isInitialized_insert s hinit _ _
-  priv := by rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact h_priv
-  active := by rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact h_active
+  priv := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact h_priv
+  active := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact h_active
   no_interrupt := run_dispatchInterrupt_machine_none_writeMinstret s hinit b hmie hmideleg
   fetched := run_fetch_eq_F_Base_writeMinstret pc data₀ data₁ data₂ data₃ s hinit b hconfig h_pc
     h_access0 h_access1 h_aligned h_in_range h_align h_not_rvc hmem₀ hmem₁ hmem₂ hmem₃
-  no_landing_pad := by rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact h_elp
+  no_landing_pad := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact h_elp
 
 /-- **The PC-dependent local fetch predicate** — the *local* half of the `try_step` precondition (the
 persist-able global half is `SailConfigured`). At `s`'s current pc, the pc is 4-aligned and the 4 ROM
@@ -158,11 +158,11 @@ ladder needs to apply the (∀-configured-state) decode and `toStraightLineReady
 theorem SailConfigured.writeMinstret {s : SailState} (cfg : SailConfigured s) (b : Bool) :
     SailConfigured ({s with regs := s.regs.insert Register.minstret_increment b}) where
   init := SailState.isInitialized_insert s cfg.init _ _
-  priv := by rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.priv
-  active := by rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.active
+  priv := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.priv
+  active := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.active
   mie := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.mie
   mideleg := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.mideleg
-  no_landing_pad := by rw [Std.ExtDHashMap.get?_insert, dif_neg (by decide)]; exact cfg.no_landing_pad
+  no_landing_pad := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact cfg.no_landing_pad
   mprv_disabled := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.mprv_disabled
   mseccfg_disabled := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.mseccfg_disabled
   mseccfg_pmm := by rw [get_writeMinstret_ne (by decide) s b (cfg.init _)]; exact cfg.mseccfg_pmm
@@ -208,7 +208,7 @@ theorem currentlyEnabled_zca_eq_false (source : SailState) (cfg : SailConfigured
   have supportsC : hartSupports .Ext_C = true := by
     simp [hartSupports, LeanRV64D.Functions.xlen, LeanRV64D.Functions.not]
   simp only [currentlyEnabled,
-    show hartSupports .Ext_Zca = true by simp [hartSupports], supportsC, bind_assoc, pure_bind]
+    show hartSupports .Ext_Zca = true by simp [hartSupports], supportsC, andM, toBool, pure_bind, bind_assoc]
   rw [run_bind_of_run source _ _ (Sail.run_readReg_of_isInitialized source Register.misa cfg.init)]
   simp [cfg.misa_c_disabled, LeanRV64D.Functions.not]
 

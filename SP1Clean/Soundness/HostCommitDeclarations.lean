@@ -20,6 +20,8 @@ local instance declarationsLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.o
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 /-- Every commitment event of the actual instruction inventory requests its declaration. -/
 theorem rows_declared (valid : image.Valid)
@@ -37,7 +39,7 @@ theorem rows_declared (valid : image.Valid)
   obtain ⟨row, rowMem, rowEvent⟩ := List.mem_map.mp member
   have stamped : HostBankCPUReplay.stampedCPU deferred witness.data row =
       some (StateMsg.timeNat (row.edge witness.data).1, (call.arg1, call.arg2)) := by
-    simp only [HostBankCPUReplay.stampedCPU, rowEvent, bankEvent?, bankCall?, code, if_true,
+    simp only [HostBankCPUReplay.stampedCPU, rowEvent, bankEvent?, bankCall?, code, ite_true,
       Option.map_some]
   have tape : (StateMsg.timeNat (row.edge witness.data).1, (call.arg1, call.arg2)) ∈
       carrier.ordered.filterMap (HostBankCPUReplay.stampedCPU deferred witness.data) :=

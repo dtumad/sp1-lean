@@ -32,7 +32,7 @@ the generator.
 namespace SP1Clean.TraceGen
 
 open SP1Clean.Semantics
-open LeanRV64D.Defs
+open LeanRV64D
 open Sail LeanRV64D LeanRV64D.Functions
 
 /-- What a decoder must produce for a row to be routed to the two-register ALU family: the opcode

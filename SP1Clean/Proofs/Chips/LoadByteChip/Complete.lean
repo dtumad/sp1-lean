@@ -181,18 +181,18 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed)
       ↔ 128 ≤ (((loadByteSelected e.prevMem e.addr : ℕ) : ZMod p)).val
     rw [MemoryEvent.toLoadByteInputs_msb, ZMod.val_natCast_of_lt (by omega)]
     by_cases hb : 128 ≤ loadByteSelected e.prevMem e.addr
-    · rw [if_pos ⟨hlb, hb⟩]
+    · rw [ite_eq_left ⟨hlb, hb⟩]
       exact ⟨fun _ => hb, fun _ => rfl⟩
-    · rw [if_neg (by tauto)]
+    · rw [ite_eq_right (by tauto)]
       exact ⟨fun hz => absurd hz zero_ne_one, fun hc => absurd hc hb⟩
   -- `LBU` always zero-extends, independently of the selected byte's high bit.
   · intro hlbu_row
     have hnotlb : e.opcode ≠ 29 := by
       intro hlb
-      rw [MemoryEvent.toLoadByteInputs_is_lbu, if_pos hlb] at hlbu_row
+      rw [MemoryEvent.toLoadByteInputs_is_lbu, ite_eq_left hlb] at hlbu_row
       exact zero_ne_one hlbu_row
     show (e.toLoadByteInputs (p := p)).msb = 0
-    rw [MemoryEvent.toLoadByteInputs_msb, if_neg (fun h => hnotlb h.1)]
+    rw [MemoryEvent.toLoadByteInputs_msb, ite_eq_right (fun h => hnotlb h.1)]
   -- the four limb-selection gates
   · rcases hsel with ⟨h0, h1, hs⟩ | ⟨h0, h1, hs⟩ | ⟨h0, h1, hs⟩ | ⟨h0, h1, hs⟩ <;>
       simp only [MemoryEvent.toLoadByteInputs_offset_bit_one,
@@ -220,8 +220,8 @@ theorem proverAssumptions_of_event {e : MemoryEvent} (h : e.WellFormed)
     rw [MemoryEvent.toLoadByteInputs_selected_byte, MemoryEvent.toLoadByteInputs_offset_bit_zero,
       MemoryEvent.toLoadByteInputs_low_byte, hhigh, loadByteSelected]
     by_cases hb : e.addr % 2 = 0
-    · rw [if_pos hb, hb, Nat.cast_zero, zero_mul, zero_add, sub_zero, Nat.cast_one, one_mul]
-    · rw [if_neg hb, show e.addr % 2 = 1 from by omega, Nat.cast_one, one_mul, sub_self, zero_mul,
+    · rw [ite_eq_left hb, hb, Nat.cast_zero, zero_mul, zero_add, sub_zero, Nat.cast_one, one_mul]
+    · rw [ite_eq_right hb, show e.addr % 2 = 1 from by omega, Nat.cast_one, one_mul, sub_self, zero_mul,
         add_zero]
 
 /-! ## High-bit unsigned-load regression -/
@@ -278,7 +278,10 @@ theorem highBitLbuEvent_proverAssumptions (data : ProverData (ZMod p))
 /-- The LoadByte chip as a flat-AIR component: one circuit, checked independently on each row.
 
 A plain `def`, deliberately not an `abbrev` (see `AddChip.component` for the measurement). -/
-def component : Air.Flat.Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+def component : Air.Flat.Component (ZMod p) where
+  circuit := circuit
+  Assumptions := circuit.Assumptions
+  generation := generation
 
 /-- The rows a trace builds: one input row per `LB`/`LBU` event. -/
 def traceInputs (events : List MemoryEvent) : List (Inputs (ZMod p)) :=
@@ -298,29 +301,35 @@ theorem proverAssumptions_of_mem_traceInputs {events : List MemoryEvent}
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (h : ∀ e ∈ events, e.WellFormed ∧ (e.opcode = 29 ∨ e.opcode = 32))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The same table satisfies its **channel guarantees**. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (h : ∀ e ∈ events, e.WellFormed ∧ (e.opcode = 29 ∨ e.opcode = 32))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 /-- The table's interaction list on a channel, in closed form. -/
 theorem traceTable_interactionsWith (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))
-    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size) :
+    (bounded : (traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size Inputs) =
+      ((traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events) data
-        hint bounded).interactionsWith channel =
+        hint bounded (by trivial) consistent).interactionsWith channel =
       (traceInputs (p := p) events).flatMap fun input =>
         (component (p := p)).operations.interactionValuesWith channel
           (Environment.fromArray ((component (p := p)).buildRow input data hint) data) :=
-  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) data channel
+  Air.Flat.Table.build_interactions _ _ _ _ bounded (by trivial) consistent channel
 
 end SP1Clean.LoadByteChip

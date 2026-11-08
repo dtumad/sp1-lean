@@ -46,23 +46,30 @@ def ensemble (fixture : Fixture) : Ensemble Fp Requests where
   unique_names := by simp
   channels := [(table fixture).channel.toRaw]
   verifier := verifier fixture
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change [(table fixture).channel.toRaw] ⊆ _
+    simp
+  verifier_channels := by
+    intro channel member
+    simp [Verifier.Program.channels, Verifier.Program.channelsWithGuarantees,
+      Verifier.Program.channelsWithRequirements, Verifier.Program.operations, verifier,
+      circuit_norm] at member
+    simpa using member
 
 def emptyEnsemble (fixture : Fixture) : Ensemble Fp unit where
   tables := [(table fixture).component (height_bounded fixture)]
   unique_names := by simp
   channels := [(table fixture).channel.toRaw]
-
-def config (fixture : Fixture) : WitnessGeneration.Config Fp where
-  components := [((table fixture).provider.name, {
-    mode := .preallocated {
-      rows := UInt64.ofNat (table fixture).height
-      input := .ofFExprs #v[.const 0]
-      input_valid := by rfl
-      handlers := [{ interaction := 0, column := 2 }]
-    }
-    padding := { input := #[0, 0, 0], minimumRows := UInt64.ofNat (table fixture).height }
-  })]
-  fuel := 8
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change [(table fixture).channel.toRaw] ⊆ _
+    simp
+  verifier_channels := by simp [Verifier.Program.channels, circuit_norm]
 
 def description (fixture : Fixture) : Air.Flat.EnsembleCheck (ensemble fixture) where
   lookups := []
@@ -70,13 +77,6 @@ def description (fixture : Fixture) : Air.Flat.EnsembleCheck (ensemble fixture) 
   lookups_complete := by
     simp [ensemble, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, circuit_norm]
-  channels_unique := by simp [ensemble]
-  channels_complete := by
-    simp [ensemble, Component.interactions_eq, Component.rowOperations,
-      StaticTable.component, StaticTable.provider, circuit_norm]
-  verifier_channels_complete := by
-    simp [ensemble, Ensemble.verifierOperations, verifier,
-      Verifier.Program.circuitOperations, circuit_norm]
 
 def emptyDescription (fixture : Fixture) : Air.Flat.EnsembleCheck (emptyEnsemble fixture) where
   lookups := []
@@ -84,20 +84,13 @@ def emptyDescription (fixture : Fixture) : Air.Flat.EnsembleCheck (emptyEnsemble
   lookups_complete := by
     simp [emptyEnsemble, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, circuit_norm]
-  channels_unique := by simp [emptyEnsemble]
-  channels_complete := by
-    simp [emptyEnsemble, Component.interactions_eq, Component.rowOperations,
-      StaticTable.component, StaticTable.provider, circuit_norm]
-  verifier_channels_complete := by
-    simp [emptyEnsemble, Ensemble.verifierOperations, Verifier.Program.circuitOperations,
-      Verifier.Program.empty, circuit_norm]
 
 def generate (fixture : Fixture) (requests : Requests Fp) :
     Except String (EnsembleWitness (ensemble fixture)) :=
-  WitnessGeneration.generate (ComponentExport.fixture (ensemble fixture)) (config fixture) requests () |>.mapError toString
+  WitnessGeneration.generate (ensemble fixture) 8 requests () |>.mapError toString
 
 def generateEmpty (fixture : Fixture) : Except String (EnsembleWitness (emptyEnsemble fixture)) :=
-  WitnessGeneration.generate (ComponentExport.fixture (emptyEnsemble fixture)) (config fixture) () () |>.mapError toString
+  WitnessGeneration.generate (emptyEnsemble fixture) 8 () () |>.mapError toString
 
 /-- Include a real zero payload beside zero padding and repeated first/non-first payloads. -/
 def fixtures : List Fixture :=
@@ -109,18 +102,18 @@ def requests : List (Requests Fp) :=
     ([0, 7, 9, 11] : List Fp).map fun b => #v[a, b]
 
 def rustExports : List (String × Except String String) := fixtures.flatMap fun fixture =>
-  [(s!"static_{fixture.name}.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture (ensemble fixture)) (config fixture)),
-   (s!"static_{fixture.name}_unused.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture (emptyEnsemble fixture)) (config fixture))]
+  [(s!"static_{fixture.name}.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture (ensemble fixture)) 8),
+   (s!"static_{fixture.name}_unused.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture (emptyEnsemble fixture)) 8)]
 
 theorem cases_correct : fixtures.all (fun fixture => requests.all fun request =>
     (match generate fixture request with
-    | .ok witness => (description fixture).checkWitness SP1Clean.SP1Prime witness
+    | .ok witness => (description fixture).checkWitness witness
     | .error _ => false) == (fixture.rows.contains request[0] && fixture.rows.contains request[1])) = true := by
   native_decide
 
 theorem unused_correct : fixtures.all (fun fixture =>
     (generateEmpty fixture).map (fun witness =>
-      (emptyDescription fixture).checkWitness SP1Clean.SP1Prime witness &&
+      (emptyDescription fixture).checkWitness witness &&
         witness.interactions.length == (table fixture).height &&
         witness.interactions.all (·.mult == 0)) == .ok true) = true := by native_decide
 

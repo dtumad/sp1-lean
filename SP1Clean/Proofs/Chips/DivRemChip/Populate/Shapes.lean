@@ -288,7 +288,7 @@ private lemma quotBits_shape {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     | (simp only [h4, h5, h6, h7, add_zero, zero_add] at hW
        exact absurd hW zero_ne_one)
     | (simp only [quotBits, h0, h2, h4, h5, h6, h7, add_zero, zero_add, zero_ne_one,
-         eq_self_iff_true, if_true, if_false]
+         eq_self_iff_true, ite_true, ite_false]
        split
        · exact Or.inl rfl
        · exact Or.inr ⟨_, rfl⟩)
@@ -310,7 +310,7 @@ private lemma remBits_shape {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     | (simp only [h4, h5, h6, h7, add_zero, zero_add] at hW
        exact absurd hW zero_ne_one)
     | (simp only [remBits, h0, h2, h4, h5, h6, h7, add_zero, zero_add, zero_ne_one,
-         eq_self_iff_true, if_true, if_false]
+         eq_self_iff_true, ite_true, ite_false]
        split <;> exact Or.inr ⟨_, rfl⟩)
 
 set_option linter.unusedSimpArgs false in
@@ -383,7 +383,7 @@ zero (the computational quotient is the **zero**-extended low 32 bits). -/
 lemma quotComp_hi_unsignedW (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     (hW : f[6] + f[7] = 1) :
     (populateQuotComp B C f)[2] = 0 ∧ (populateQuotComp B C f)[3] = 0 := by
-  unfold populateQuotComp quotCompBits; rw [if_pos hW]
+  unfold populateQuotComp quotCompBits; rw [ite_eq_left hW]
   exact wordOfBits_setWidth32_hi _
 
 set_option linter.unusedSectionVars false in
@@ -391,7 +391,7 @@ set_option linter.unusedSectionVars false in
 lemma remComp_hi_unsignedW (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     (hW : f[6] + f[7] = 1) :
     (populateRemComp B C f)[2] = 0 ∧ (populateRemComp B C f)[3] = 0 := by
-  unfold populateRemComp remCompBits; rw [if_pos hW]
+  unfold populateRemComp remCompBits; rw [ite_eq_left hW]
   exact wordOfBits_setWidth32_hi _
 
 /-- E52–E54/E62–E64's value form: on the signed-word class `quotient_comp`'s high limbs are the
@@ -411,7 +411,7 @@ lemma quotComp_hi_signedW (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     simp [quotCompBits, h6, h7]
   have hcell : quotMsbCell B C f
       = U16MSBOperation.populate_msb (populateQuotient B C f)[1] := by
-    unfold quotMsbCell; rw [if_pos hword]
+    unfold quotMsbCell; rw [ite_eq_left hword]
   unfold populateQuotComp; rw [hcomp, hcell]
   exact wordOfBits_msb_fill (quotBits_shape hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum hword)
 
@@ -432,7 +432,7 @@ lemma remComp_hi_signedW (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     simp [remCompBits, h6, h7]
   have hcell : remMsbCell B C f
       = U16MSBOperation.populate_msb (populateRemainder B C f)[1] := by
-    unfold remMsbCell; rw [if_pos hword]
+    unfold remMsbCell; rw [ite_eq_left hword]
   unfold populateRemComp; rw [hcomp, hcell]
   exact wordOfBits_msb_fill (remBits_shape hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum hword)
 
@@ -449,7 +449,7 @@ lemma quotient_hi_word (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
       (populateQuotient B C f)[3] = quotMsbCell B C f * 65535 := by
   have hcell : quotMsbCell B C f
       = U16MSBOperation.populate_msb (populateQuotient B C f)[1] := by
-    unfold quotMsbCell; rw [if_pos hW]
+    unfold quotMsbCell; rw [ite_eq_left hW]
   rw [hcell]
   exact wordOfBits_msb_fill (quotBits_shape hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum hW)
 
@@ -465,7 +465,7 @@ lemma remainder_hi_word (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
       (populateRemainder B C f)[3] = remMsbCell B C f * 65535 := by
   have hcell : remMsbCell B C f
       = U16MSBOperation.populate_msb (populateRemainder B C f)[1] := by
-    unfold remMsbCell; rw [if_pos hW]
+    unfold remMsbCell; rw [ite_eq_left hW]
   rw [hcell]
   exact wordOfBits_msb_fill (remBits_shape hf0 hf1 hf2 hf3 hf4 hf5 hf6 hf7 hsum hW)
 
@@ -507,7 +507,7 @@ set_option linter.unusedSectionVars false in
 lemma populateA_div (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     (hdiv : f[0] + f[1] + f[4] + f[6] = 1) :
     populateA B C f = populateQuotient B C f := by
-  unfold populateA; rw [if_pos hdiv]
+  unfold populateA; rw [ite_eq_left hdiv]
 
 set_option linter.unusedSimpArgs false in
 /-- E189…E219's value form (rem family): the writeback `a` is the remainder (needs one-hot to
@@ -526,7 +526,7 @@ lemma populateA_rem (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
        exact absurd hrem zero_ne_one)
     | (have hdiv : ¬f[0] + f[1] + f[4] + f[6] = 1 := by
          rw [h0, h1, h4, h6]; simp
-       unfold populateA; rw [if_neg hdiv, if_pos hrem])
+       unfold populateA; rw [ite_eq_right hdiv, ite_eq_left hrem])
 
 /-! ## Scal/misc cell definitional forms (E13/E15/E17/E19/E96/E99/E103) -/
 

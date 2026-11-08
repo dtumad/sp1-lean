@@ -2,6 +2,7 @@ module
 
 public import Mathlib.Tactic.SplitIfs
 public import Aesop
+public import Batteries.Control.LawfulMonadState
 public import Mathlib.Tactic.Positivity
 public import Mathlib.Tactic.Ring
 public import Mathlib.Data.ZMod.Basic

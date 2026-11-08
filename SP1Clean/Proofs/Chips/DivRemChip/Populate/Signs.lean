@@ -51,7 +51,7 @@ lemma intMin_sdiv_allOnes {w : ℕ} :
 lemma intMin_srem_allOnes {w : ℕ} (hw : 0 < w) :
     (BitVec.intMin w).srem (BitVec.allOnes w) = 0 := by
   apply BitVec.srem_zero_of_dvd
-  rw [BitVec.toInt_allOnes, if_pos hw]
+  rw [BitVec.toInt_allOnes, ite_eq_left hw]
   exact ⟨-(BitVec.intMin w).toInt, by ring⟩
 
 /-- `srem` keeps a nonnegative dividend nonnegative. -/
@@ -79,14 +79,14 @@ lemma allOnes_ne_zero {w : ℕ} (hw : 0 < w) : BitVec.allOnes w ≠ 0 := by
 
 /-- Sign-extending the zero word gives zero. -/
 lemma signExtend_zero32 : (0 : BitVec 32).signExtend 64 = 0 := by
-  rw [← BitVec.toNat_inj, BitVec.toNat_signExtend, if_neg (by simp)]
+  rw [← BitVec.toNat_inj, BitVec.toNat_signExtend, ite_eq_right (by simp)]
   simp
 
 /-- The 64-bit sign extension of `intMin 32` is `0xFFFFFFFF80000000`. -/
 lemma toNat_signExtend_intMin32 :
     ((BitVec.intMin 32).signExtend 64).toNat = 2 ^ 64 - 2 ^ 31 := by
   have hmsb : (BitVec.intMin 32).msb = true := by rw [BitVec.msb_intMin]; rfl
-  rw [BitVec.toNat_signExtend, if_pos hmsb, BitVec.toNat_setWidth,
+  rw [BitVec.toNat_signExtend, ite_eq_left hmsb, BitVec.toNat_setWidth,
     BitVec.toNat_intMin_of_pos (by norm_num)]
   omega
 
@@ -95,14 +95,14 @@ lemma signExtend_toNat_limb1_ge {x : BitVec 32} (hm : x.msb = true) :
     32768 ≤ (x.signExtend 64).toNat / 2 ^ 16 % 2 ^ 16 := by
   have hx := x.isLt
   have hge := BitVec.le_toNat_of_msb_true hm
-  rw [BitVec.toNat_signExtend, if_pos hm, BitVec.toNat_setWidth]
+  rw [BitVec.toNat_signExtend, ite_eq_left hm, BitVec.toNat_setWidth]
   omega
 
 /-- u16 limb 1 of a sign-extended 32-bit value is `< 2^15` when the value is nonnegative. -/
 lemma signExtend_toNat_limb1_lt {x : BitVec 32} (hm : x.msb = false) :
     (x.signExtend 64).toNat / 2 ^ 16 % 2 ^ 16 < 32768 := by
   have hlt := BitVec.toNat_lt_of_msb_false hm
-  rw [BitVec.toNat_signExtend, if_neg (by rw [hm]; exact Bool.false_ne_true),
+  rw [BitVec.toNat_signExtend, ite_eq_right (by rw [hm]; exact Bool.false_ne_true),
     BitVec.toNat_setWidth]
   omega
 
@@ -161,7 +161,7 @@ lemma populateIsOverflow_zero_of_not_real {ir : ZMod p} (B C : Word (ZMod p))
     (f : Vector (ZMod p) 8) (h : ir ≠ 1) :
     populateIsOverflow ir B C f = 0 := by
   unfold populateIsOverflow ovbWitness ovcWitness
-  rw [if_neg h, if_neg h]
+  rw [ite_eq_right h, ite_eq_right h]
   show (0 : ZMod p) * 0 * _ = 0
   rw [zero_mul, zero_mul]
 
@@ -244,7 +244,7 @@ private lemma overflow_limbs_64 {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     rw [hw4, hw5, add_zero, add_zero]
     exact hsig64
   unfold populateIsOverflow ovbWitness ovcWitness at hov
-  rw [if_pos rfl, if_pos rfl, if_neg hW, if_neg hW, hsig, mul_one,
+  rw [ite_eq_left rfl, ite_eq_left rfl, ite_eq_right hW, ite_eq_right hW, hsig, mul_one,
     isEqualWord_populate_result, isEqualWord_populate_result] at hov
   simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ] at hov
@@ -285,17 +285,17 @@ lemma overflow_quotient_64 {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.isU64)
   constructor
   · have hquot : quotBits B C f = BitVec.intMin 64 := by
       simp only [quotBits]
-      rw [if_neg h45, if_neg h67, if_pos hsig64, if_neg hcne, hb, hc, intMin_sdiv_allOnes]
+      rw [ite_eq_right h45, ite_eq_right h67, ite_eq_left hsig64, ite_eq_right hcne, hb, hc, intMin_sdiv_allOnes]
     have hbComp : bComp B f = B := by
       simp only [bComp]
-      rw [if_neg h45, if_neg h67]
+      rw [ite_eq_right h45, ite_eq_right h67]
     rw [hbComp]
     unfold populateQuotient
     rw [hquot]
     exact word_eq_of_toBitVec64_eq (wordOfBits_isU64 _) hB (by rw [wordOfBits_toBitVec64, hb])
   · have hrem : remBits B C f = 0 := by
       simp only [remBits]
-      rw [if_neg h45, if_neg h67, if_pos hsig64, if_neg hcne, hb, hc,
+      rw [ite_eq_right h45, ite_eq_right h67, ite_eq_left hsig64, ite_eq_right hcne, hb, hc,
         intMin_srem_allOnes (by norm_num)]
     unfold populateRemainder
     rw [hrem]
@@ -315,7 +315,7 @@ private lemma overflow_limbs_word {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     rw [hf0, hf2, zero_add, zero_add]
     exact hsigW
   unfold populateIsOverflow ovbWitness ovcWitness at hov
-  rw [if_pos rfl, if_pos rfl, if_pos hW, if_pos hW, hsig, mul_one,
+  rw [ite_eq_left rfl, ite_eq_left rfl, ite_eq_left hW, ite_eq_left hW, hsig, mul_one,
     isEqualWord_populate_result, isEqualWord_populate_result] at hov
   simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ, and_true] at hov
@@ -355,11 +355,11 @@ lemma overflow_quotient_word {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.isU64)
   constructor
   · have hquot : quotBits B C f = (BitVec.intMin 32).signExtend 64 := by
       simp only [quotBits]
-      rw [if_pos hsigW, if_neg hcne, hsw, hcw, intMin_sdiv_allOnes]
+      rw [ite_eq_left hsigW, ite_eq_right hcne, hsw, hcw, intMin_sdiv_allOnes]
     have hbc : bComp B f = #v[B[0], B[1], U16MSBOperation.populate_msb B[1] * 65535,
         U16MSBOperation.populate_msb B[1] * 65535] := by
       simp only [bComp]
-      rw [if_pos hsigW]
+      rw [ite_eq_left hsigW]
     have hmsb1 : U16MSBOperation.populate_msb B[1] = 1 := by
       rw [hb1]
       exact populate_msb_32768
@@ -373,7 +373,7 @@ lemma overflow_quotient_word {B C : Word (ZMod p)} (hB : B.isU64) (hC : C.isU64)
     norm_num
   · have hrem : remBits B C f = 0 := by
       simp only [remBits]
-      rw [if_pos hsigW, if_neg hcne, hsw, hcw, intMin_srem_allOnes (by norm_num),
+      rw [ite_eq_left hsigW, ite_eq_right hcne, hsw, hcw, intMin_srem_allOnes (by norm_num),
         signExtend_zero32]
     unfold populateRemainder
     rw [hrem]
@@ -490,9 +490,9 @@ private lemma signCells_s64 (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     rw [h4, h5, h6, h7, add_zero, add_zero, add_zero]; exact zero_ne_one
   constructor
   · unfold populateRemNeg remMsbCell
-    rw [hsig, one_mul, if_neg hWne]
+    rw [hsig, one_mul, ite_eq_right hWne]
   · unfold populateBNeg bMsbCell
-    rw [hsig, one_mul, if_neg hWne]
+    rw [hsig, one_mul, ite_eq_right hWne]
 
 /-- As `signCells_s64`, on the signed word class: the sign cells read limb 1. -/
 private lemma signCells_sW (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
@@ -505,9 +505,9 @@ private lemma signCells_sW (B C : Word (ZMod p)) {f : Vector (ZMod p) 8}
     rw [h6, h7, add_zero, add_zero]; exact hcl
   constructor
   · unfold populateRemNeg remMsbCell
-    rw [hsig, one_mul, if_pos hW]
+    rw [hsig, one_mul, ite_eq_left hW]
   · unfold populateBNeg bMsbCell
-    rw [hsig, one_mul, if_pos hW]
+    rw [hsig, one_mul, ite_eq_left hW]
 
 /-- **E225 at the populate** (implication form): a negative populated remainder forces a negative
 dividend — truncated remainders carry the dividend's sign. -/
@@ -532,13 +532,13 @@ lemma remNeg_imp_bNeg {B C : Word (ZMod p)} (hB : B.isU64) {f : Vector (ZMod p) 
     have hbr : remBits B C f = if Word.toBitVec64 C = 0 then Word.toBitVec64 B
         else (Word.toBitVec64 B).srem (Word.toBitVec64 C) := by
       simp only [remBits]
-      rw [if_neg (by rw [h4, h5, add_zero]; exact zero_ne_one),
-        if_neg (by rw [h6, h7, add_zero]; exact zero_ne_one), if_pos hcl]
+      rw [ite_eq_right (by rw [h4, h5, add_zero]; exact zero_ne_one),
+        ite_eq_right (by rw [h6, h7, add_zero]; exact zero_ne_one), ite_eq_left hcl]
     rw [hbr] at hrmsb
     have hbmsb : (Word.toBitVec64 B).msb = true := by
       by_cases hc0 : Word.toBitVec64 C = 0
-      · rwa [if_pos hc0] at hrmsb
-      · rw [if_neg hc0] at hrmsb
+      · rwa [ite_eq_left hc0] at hrmsb
+      · rw [ite_eq_right hc0] at hrmsb
         rcases Bool.eq_false_or_eq_true (Word.toBitVec64 B).msb with hb | hb
         · exact hb
         · rw [srem_msb_false_of_msb_false _ hb] at hrmsb
@@ -555,7 +555,7 @@ lemma remNeg_imp_bNeg {B C : Word (ZMod p)} (hB : B.isU64) {f : Vector (ZMod p) 
       by_cases hc0 : (Word.toBitVec64 C).setWidth 32 = 0
       · have hbr : remBits B C f = ((Word.toBitVec64 B).setWidth 32).signExtend 64 := by
           simp only [remBits]
-          rw [if_pos hcl, if_pos hc0]
+          rw [ite_eq_left hcl, ite_eq_left hc0]
         rw [hbr] at hr1
         rcases Bool.eq_false_or_eq_true ((Word.toBitVec64 B).setWidth 32).msb with hb | hb
         · exact hb
@@ -563,7 +563,7 @@ lemma remNeg_imp_bNeg {B C : Word (ZMod p)} (hB : B.isU64) {f : Vector (ZMod p) 
       · have hbr : remBits B C f = (((Word.toBitVec64 B).setWidth 32).srem
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
           simp only [remBits]
-          rw [if_pos hcl, if_neg hc0]
+          rw [ite_eq_left hcl, ite_eq_right hc0]
         rw [hbr] at hr1
         have hsmsb : (((Word.toBitVec64 B).setWidth 32).srem
             ((Word.toBitVec64 C).setWidth 32)).msb = true := by
@@ -621,15 +621,15 @@ lemma rem_nonzero_nonneg_imp_bNonneg {B C : Word (ZMod p)} (hB : B.isU64)
       have hbr : remBits B C f = if Word.toBitVec64 C = 0 then Word.toBitVec64 B
           else (Word.toBitVec64 B).srem (Word.toBitVec64 C) := by
         simp only [remBits]
-        rw [if_neg (by rw [h4, h5, add_zero]; exact zero_ne_one),
-          if_neg (by rw [h6, h7, add_zero]; exact zero_ne_one), if_pos hcl]
+        rw [ite_eq_right (by rw [h4, h5, add_zero]; exact zero_ne_one),
+          ite_eq_right (by rw [h6, h7, add_zero]; exact zero_ne_one), ite_eq_left hcl]
       have hzero : remBits B C f = 0 := by
         rw [hbr] at hrmsb ⊢
         by_cases hc0 : Word.toBitVec64 C = 0
         · exfalso
-          rw [if_pos hc0, hbmsb] at hrmsb
+          rw [ite_eq_left hc0, hbmsb] at hrmsb
           exact Bool.false_ne_true hrmsb.symm
-        · rw [if_neg hc0] at hrmsb ⊢
+        · rw [ite_eq_right hc0] at hrmsb ⊢
           rcases srem_eq_zero_or_msb_of_msb (Word.toBitVec64 C) hbmsb with hz | hm
           · exact hz
           · rw [hm] at hrmsb
@@ -657,13 +657,13 @@ lemma rem_nonzero_nonneg_imp_bNonneg {B C : Word (ZMod p)} (hB : B.isU64)
       · exfalso
         have hbr : remBits B C f = ((Word.toBitVec64 B).setWidth 32).signExtend 64 := by
           simp only [remBits]
-          rw [if_pos hcl, if_pos hc0]
+          rw [ite_eq_left hcl, ite_eq_left hc0]
         rw [hbr] at hr1lt
         exact absurd hr1lt (Nat.not_lt.mpr (signExtend_toNat_limb1_ge hb32))
       · have hbr : remBits B C f = (((Word.toBitVec64 B).setWidth 32).srem
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
           simp only [remBits]
-          rw [if_pos hcl, if_neg hc0]
+          rw [ite_eq_left hcl, ite_eq_right hc0]
         rw [hbr] at hr1lt
         have hinner : ((Word.toBitVec64 B).setWidth 32).srem
             ((Word.toBitVec64 C).setWidth 32) = 0 := by

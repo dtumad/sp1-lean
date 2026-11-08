@@ -18,7 +18,7 @@ result register `rd`); the RISC-V Sail spec differs by variant — `spec_srl` (`
 (rs2) — SP1's shift chip inlines the register-read decomposition — so `h_rs1`/`h_rs2` read those
 adapter columns. `advance` is the four-way flag-dispatched transition. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.ShiftRightSail
 
 open Sail LeanRV64D LeanRV64D.Functions

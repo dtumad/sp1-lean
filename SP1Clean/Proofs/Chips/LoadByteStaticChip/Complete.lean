@@ -27,18 +27,22 @@ theorem buildRow_event_eq_original (event : MemoryEvent) (data : ProverData (ZMo
 theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (wellFormed : ∀ event ∈ events, event.WellFormed ∧ (event.opcode = 29 ∨ event.opcode = 32))
-    (bounded : (LoadByteChip.traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint bounded).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ computableWitnesses
+    (bounded : (LoadByteChip.traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size LoadByteChip.Inputs) =
+      ((LoadByteChip.traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
     (LoadByteChip.proverAssumptions_of_mem_traceInputs wellFormed data hint)
 
 /-- The alternative still supplies all of the existing channel guarantees. -/
 theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
     (wellFormed : ∀ event ∈ events, event.WellFormed ∧ (event.opcode = 29 ∨ event.opcode = 32))
-    (bounded : (LoadByteChip.traceInputs (p := p) events).length ≤ UInt64.size) :
-    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint bounded).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ computableWitnesses
+    (bounded : (LoadByteChip.traceInputs (p := p) events).length ≤ UInt64.size)
+    (consistent : data.tables (circuit (p := p)).name (size LoadByteChip.Inputs) =
+      ((LoadByteChip.traceInputs (p := p) events).map toElements).toArray) :
+    (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
     (LoadByteChip.proverAssumptions_of_mem_traceInputs wellFormed data hint)
 
 end SP1Clean.LoadByteStaticChip

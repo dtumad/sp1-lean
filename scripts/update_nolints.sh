@@ -4,7 +4,7 @@
 # Batteries' `runLinter --update` rewrites the file with the findings of ONE root module and stops
 # at the first root that has any, so a package with several roots has to run it per root and merge.
 # This script does that for the four hand-written roots and writes the sorted union. Needs the
-# full build (`lake build SP1Clean ToClean ToMathlib ToPolyFun`) first; `--no-build` refuses to
+# full build (`lake build SP1Clean ToClean ToMathlib`) first; `--no-build` refuses to
 # build missing oleans rather than silently building them.
 #
 # Usage: scripts/update_nolints.sh            (from anywhere; exit 0 = file regenerated)
@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 cp scripts/nolints.json "$tmp/original.json"
-for root in SP1Clean ToClean ToMathlib ToPolyFun; do
+for root in SP1Clean ToClean ToMathlib; do
   cp "$tmp/original.json" scripts/nolints.json
   lake exe runLinter --no-build --update "$root" > "$tmp/$root.log" 2>&1
   status=$?
@@ -27,7 +27,7 @@ python3 - "$tmp" <<'PYEOF'
 import json, sys
 tmp = sys.argv[1]
 entries = set()
-for root in ["SP1Clean", "ToClean", "ToMathlib", "ToPolyFun"]:
+for root in ["SP1Clean", "ToClean", "ToMathlib"]:
     for linter, decl in json.load(open(f"{tmp}/{root}.json")):
         entries.add((linter, decl))
 merged = sorted(entries)

@@ -22,7 +22,7 @@ This finite constructor does not replace the complete Sail execution relation or
 namespace SP1CleanTest.Alignment.HostProgram
 
 open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
-open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D.Defs
+open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D
 open SP1CleanTest.Alignment.InstalledAssembly
 
 /-- Register setup and actual host calls in the finite programs. -/
@@ -96,7 +96,7 @@ def addi (construction : Construction) (destination source : BitVec 5)
   let after : ExecutionSnapshot := { before with
     sail := { before.sail with registers := executed.regs.insert .PC (pc + 4) }
     clock := before.clock + 8 }
-  let decoded := LeanRV64D.Defs.instruction.ITYPE (immediate, .Regidx source, .Regidx destination, .ADDI)
+  let decoded := LeanRV64D.instruction.ITYPE (immediate, .Regidx source, .Regidx destination, .ADDI)
   let some routeKey := Target.instructionRouteKey decoded | throw "ADDI route missing"
   let view : SP1TransitionView := {
     pc, word := (Action.addi destination source immediate).encoding, decoded

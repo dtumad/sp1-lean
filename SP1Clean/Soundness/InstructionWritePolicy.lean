@@ -10,7 +10,7 @@ The result concerns incoming Sail operands, including stores that leave memory u
 
 namespace SP1Clean.Soundness
 
-open Model.Core Target Semantics LeanRV64D.Defs
+open Model.Core Target Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

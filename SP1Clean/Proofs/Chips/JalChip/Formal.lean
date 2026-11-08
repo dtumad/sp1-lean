@@ -1,3 +1,4 @@
+import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.JalChip.Defs
@@ -83,15 +84,10 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       input_adapter_op_a_0 = 0 ∨ input_adapter_op_a_0 = 1 :=
     h_jt.2.1 hr
   -- eval-of-pc rewrites: circuit's `a` operand `#v[eval pc[i], 0]` equals the concrete `pcWord`.
-  have hpc : Vector.map (Expression.eval env) input_var_state_pc = input_state_pc := h_input.2.1.2.2.2
-  have epc : ∀ i (hi : i < 3), Expression.eval env input_var_state_pc[i] = input_state_pc[i] :=
-    fun i hi => by rw [← hpc]; simp only [Vector.getElem_map]
-  have ha1eq : (#v[Expression.eval env input_var_state_pc[0], Expression.eval env input_var_state_pc[1],
-      Expression.eval env input_var_state_pc[2], 0] : Word (ZMod p))
-      = #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0] := by simp only [epc]
-  have ha1U : Word.isU64 (#v[Expression.eval env input_var_state_pc[0],
-      Expression.eval env input_var_state_pc[1], Expression.eval env input_var_state_pc[2], 0]
-        : Word (ZMod p)) := ha1eq ▸ h_pcU
+  have hpc : Eval.eval env input_var_state_pc = input_state_pc := h_input.2.1.2.2.2
+  have ha1U : Word.isU64 (#v[input_state_pc[0],
+      input_state_pc[1], input_state_pc[2], 0]
+        : Word (ZMod p)) := h_pcU
   have h4U : Word.isU64 (#v[(4 : ZMod p), 0, 0, 0] : Word (ZMod p)) := Word.isU64_four
   -- the link gate `is_real - op_a_0` is binary on every row (real: `op_a_0` binary; padding: `op_a_0 = 0`).
   -- `is_real - op_a_0` is binary: on real rows from `op_a_0 ∈ {0,1}`, on padding from `h_pad`.
@@ -102,12 +98,10 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   refine ⟨⟨h_jt, h_bin, ?_, ?_, ?_⟩, ?_, ?_, ?_⟩
   · intro hr1
     have := (h_add1 ⟨fun _ => ⟨ha1U, h_imm⟩, h_bin⟩ hr1).2
-    rw [ha1eq] at this
     simpa only [pcWord] using this
   · intro hr1 hop_a_0
     have hg1 : input_is_real - input_adapter_op_a_0 = 1 := by rw [hr1, hop_a_0]; simp
     have := (h_add2 ⟨fun _ => ⟨ha1U, h4U⟩, h_gate2⟩ hg1).2
-    rw [ha1eq] at this
     simpa only [pcWord] using this
   · -- 4-byte alignment of the jump target, from the in-circuit `÷4` byte-range pull `h_align`
     -- (`(value[0] · 4⁻¹).val < 2^14 ⇒ value[0].val % 4 = 0`). The Sail bridge lifts it to the whole word.
@@ -130,7 +124,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       rw [h0, one_mul] at z0 z1 z2 z3
       refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
         simp only [Vector.getElem_mapRange, circuit_norm] <;> simp_all
-  · exact fun h1 h0 => off_gate_vacuous h_bin h1 h0
+  · exact h_bin
 
 theorem completeness :
     GeneralFormalCircuit.Completeness (ZMod p) main ProverAssumptions (fun _ _ _ => True) := by
@@ -144,72 +138,62 @@ theorem completeness :
   -- completeness obligation (SC Phase 2pre); the witness equations are `he_av`/`he_oav`.
   obtain ⟨he_av, he_oav, -, _⟩ := h_env
   -- eval-of-input rewrites.
-  have hpc : Vector.map (Expression.eval env.toEnvironment) input_var_state_pc = input_state_pc :=
+  have hpc : Eval.eval env.toEnvironment input_var_state_pc = input_state_pc :=
     h_input.2.1.2.2.2
-  have hob : Vector.map (Expression.eval env.toEnvironment) input_var_adapter_op_b_imm
+  have hob : Eval.eval env.toEnvironment input_var_adapter_op_b_imm
       = input_adapter_op_b_imm := h_input.2.2.2.2.2.1
-  have epc : ∀ i (hi : i < 3),
-      Expression.eval env.toEnvironment input_var_state_pc[i] = input_state_pc[i] :=
-    fun i hi => by rw [← hpc]; simp only [Vector.getElem_map]
-  have ha1eq : (#v[Expression.eval env.toEnvironment input_var_state_pc[0],
-      Expression.eval env.toEnvironment input_var_state_pc[1],
-      Expression.eval env.toEnvironment input_var_state_pc[2], 0] : Word (ZMod p))
-      = #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0] := by simp only [epc]
-  have ha1U : Word.isU64 (#v[Expression.eval env.toEnvironment input_var_state_pc[0],
-      Expression.eval env.toEnvironment input_var_state_pc[1],
-      Expression.eval env.toEnvironment input_var_state_pc[2], 0] : Word (ZMod p)) := ha1eq ▸ h_pcU
+  have ha1U : Word.isU64 (#v[input_state_pc[0],
+      input_state_pc[1],
+      input_state_pc[2], 0] : Word (ZMod p)) := h_pcU
   have h4U : Word.isU64 (#v[(4 : ZMod p), 0, 0, 0] : Word (ZMod p)) := Word.isU64_four
   have hb1eq : (#v[Expression.eval env.toEnvironment input_var_adapter_op_b_imm[0],
       Expression.eval env.toEnvironment input_var_adapter_op_b_imm[1],
       Expression.eval env.toEnvironment input_var_adapter_op_b_imm[2],
       Expression.eval env.toEnvironment input_var_adapter_op_b_imm[3]] : Word (ZMod p))
       = input_adapter_op_b_imm := (vec4_eval _ _).trans hob
-  have hval1 : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var {index := i₀ + i}) : Word (ZMod p))
-      = AddOperation.populate #v[Expression.eval env.toEnvironment input_var_state_pc[0],
-          Expression.eval env.toEnvironment input_var_state_pc[1],
-          Expression.eval env.toEnvironment input_var_state_pc[2], 0] input_adapter_op_b_imm := by
+  have hval1 : (Vector.mapRange 4 fun i => env.get (i₀ + i) : Word (ZMod p))
+      = AddOperation.populate #v[input_state_pc[0],
+          input_state_pc[1],
+          input_state_pc[2], 0] input_adapter_op_b_imm := by
     rw [← AddOperation.populateIR_eval env
       #v[input_var_state_pc[0], input_var_state_pc[1], input_var_state_pc[2], 0]
-      input_var_adapter_op_b_imm _ _ (by simp [circuit_norm]) hb1eq ha1U h_imm]
+      input_var_adapter_op_b_imm _ _ (by simp [circuit_norm, h_input]) hb1eq ha1U h_imm]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact he_av ⟨i, hi⟩
   have hval2_off (hgate : input_is_real - input_adapter_op_a_0 = 1) :
-      (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var {index := i₀ + 4 + i}) : Word (ZMod p))
-      = AddOperation.populate #v[Expression.eval env.toEnvironment input_var_state_pc[0],
-          Expression.eval env.toEnvironment input_var_state_pc[1],
-          Expression.eval env.toEnvironment input_var_state_pc[2], 0] #v[4, 0, 0, 0] := by
+      (Vector.mapRange 4 fun i => env.get (i₀ + 4 + i) : Word (ZMod p))
+      = AddOperation.populate #v[input_state_pc[0],
+          input_state_pc[1],
+          input_state_pc[2], 0] #v[4, 0, 0, 0] := by
     rw [← AddOperation.populateIRGated_eval_off env
       (1 - (input_var_is_real - input_var_adapter_op_a_0))
       #v[input_var_state_pc[0], input_var_state_pc[1], input_var_state_pc[2], 0]
-      #v[4, 0, 0, 0] _ _ (by simp [circuit_norm]) (by simp [circuit_norm]) ha1U h4U
+      #v[4, 0, 0, 0] _ _ (by simp [circuit_norm, h_input]) (by simp [circuit_norm]) ha1U h4U
       (by simp [circuit_norm, h_input.1, h_input.2.2.2.2.1, hgate])]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact he_oav ⟨i, hi⟩
   have hval2_on (hgate : input_is_real - input_adapter_op_a_0 = 0) :
-      (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 4 fun i => var {index := i₀ + 4 + i}) : Word (ZMod p))
+      (Vector.mapRange 4 fun i => env.get (i₀ + 4 + i) : Word (ZMod p))
         = #v[0, 0, 0, 0] := by
     rw [← AddOperation.populateIRGated_eval_on env
       (1 - (input_var_is_real - input_var_adapter_op_a_0))
       #v[input_var_state_pc[0], input_var_state_pc[1], input_var_state_pc[2], 0]
       #v[4, 0, 0, 0] (by simp [circuit_norm, h_input.1, h_input.2.2.2.2.1, hgate])]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact he_oav ⟨i, hi⟩
   have hav0 : env.get i₀
       = (AddOperation.populate #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
           input_adapter_op_b_imm)[0] := by
     have := congrArg (·[0]) hval1
-    simpa only [Vector.getElem_map, Vector.getElem_mapRange, ha1eq, circuit_norm] using this
+    simpa only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] using this
   have hav3 : env.get (i₀ + 3)
       = (AddOperation.populate #v[input_state_pc[0], input_state_pc[1], input_state_pc[2], 0]
           input_adapter_op_b_imm)[3] := by
     have := congrArg (·[3]) hval1
-    simpa only [Vector.getElem_map, Vector.getElem_mapRange, ha1eq, circuit_norm] using this
+    simpa only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] using this
   have h_gate2 : input_is_real - input_adapter_op_a_0 = 0 ∨ input_is_real - input_adapter_op_a_0 = 1 := by
     rcases h_op_a_0 with h0 | ⟨hr, h1⟩
     · rw [h0, sub_zero]
@@ -229,7 +213,7 @@ theorem completeness :
     rcases h_op_a_0 with h0 | ⟨hr, h1⟩
     · rw [h0, zero_mul]
     · have hi := congrArg (fun v : Word (ZMod p) => v[(i : ℕ)]) (hval2_on (by rw [hr, h1, sub_self]))
-      simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] at hi
+      simp only [Vector.getElem_mapRange, circuit_norm] at hi
       rw [h1, one_mul, hi]
       fin_cases i <;> rfl
   refine ⟨⟨h_bin, h_cpu⟩, ⟨⟨fun _ => ⟨ha1U, h_imm⟩, h_bin⟩, ?_⟩, ?_, ⟨⟨fun _ => ⟨ha1U, h4U⟩, h_gate2⟩, ?_⟩, ?_,
@@ -246,7 +230,7 @@ theorem completeness :
     · have hoav3 := congrArg (·[3]) (hval2_on hg0)
       simpa only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm] using hoav3
     · have hoav3 := congrArg (·[3]) (hval2_off hg1)
-      simp only [Vector.getElem_map, Vector.getElem_mapRange, ha1eq, circuit_norm] at hoav3
+      simp only [Vector.getElem_mapRange, circuit_norm] at hoav3
       rw [hoav3]
       exact h_lt3
   · intro _
@@ -257,7 +241,7 @@ theorem completeness :
       exact (AddOperation.spec_populate ha1U h4U
         (input_is_real - input_adapter_op_a_0) hg1).1
   · intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have c14 : ((14 : ℕ) : ZMod p) = (14 : ZMod p) := Nat.cast_ofNat
     simp only [byteChannel, hav0]
     rw [← c14]
@@ -424,10 +408,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
         simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
         subst interaction
         right
-        rw [ChannelInteraction.toRaw_requirements]
-        intro h1 h0
-        simp only [circuit_norm] at h1 h0
-        exact off_gate_vacuous h_bool h1 h0,
+        exact h_bool,
     -- W11: expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair as chip-owned
     -- interactions (the Clean `VmTables` re-base that motivated the shape was investigated and deferred
     -- — roadmap W11). Unlike straight-line ALU chips, `next_pc` is the **witnessed** jump target
@@ -463,7 +444,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           Operations.interactionsWith_nil, List.nil_append]
         simp only [Operations.interactionsWith_subcircuit, FormalAssertion.toSubcircuit_interactions,
           Gadgets.Equality.main, circuit_norm, List.filter_nil, List.nil_append]
-        simp only [Channels.byteChannel_eq_stateChannel_false, if_false, List.append_nil]
+        simp only [Channels.byteChannel_eq_stateChannel_false, ite_false, List.append_nil]
         simp [Readers.CPUState.stateInteractions, Readers.CPUState.currentMsg,
           Readers.CPUState.nextMsg]
         exact ⟨rfl, rfl⟩
@@ -488,7 +469,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           Operations.interactionsWith_nil, Soundness.jTypeMemoryInteractions,
           Soundness.registerWriteMemoryInteractions, List.cons_append, List.nil_append]
         simp only [circuit_norm]
-        simp only [Channels.byteChannel_eq_memoryChannel_false, if_false,
+        simp only [Channels.byteChannel_eq_memoryChannel_false, ite_false,
           exposedMemoryInteractions, List.map_cons, List.map_nil]
         rfl
       · -- Program branch: compositional — the reader subcircuit keeps its fetch via the
@@ -513,7 +494,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
         simp only [Operations.interactionsWith_subcircuit,
           FormalAssertion.toSubcircuit_interactions, Gadgets.Equality.main, circuit_norm,
           List.filter_nil, List.nil_append]
-        simp only [Channels.byteChannel_eq_programChannel_false, if_false] }
+        simp only [Channels.byteChannel_eq_programChannel_false, ite_false] }
 
 /-- Folded circuit projections used by whole-chip row codecs without unfolding
 the proof-bearing circuit bundle. -/
@@ -736,10 +717,10 @@ theorem interactionsWith_program_eq (input : Var Inputs (ZMod p)) (offset : ℕ)
 
 /-- The row contains no Clean lookup operations; cross-table checks use channels. -/
 theorem lookups_empty :
-    ({ circuit := JalChip.circuit (p := p), Assumptions := (JalChip.circuit (p := p)).Assumptions } :
-      Air.Flat.Component (ZMod p)).operations.lookups = [] := by
-  rw [Air.Flat.Component.lookups_eq, Air.Flat.Component.rowOperations,
-    JalChip.circuit_main_eq]
+    ((JalChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat]
   simp [JalChip.main, Readers.CPUState.circuit,
     Readers.CPUState.main, Readers.JTypeReader.circuit,
     Readers.JTypeReader.main, Readers.RegisterWrite.circuit,
@@ -748,5 +729,10 @@ theorem lookups_empty :
     Readers.RegisterAccessTimestamp.circuit,
     Readers.RegisterAccessTimestamp.main, AddOperation.circuit,
     AddOperation.main, Gadgets.Equality.main, circuit_norm]
+
+/-- Upstream Clean creates one row per active State request using the shared hint layout. -/
+def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
+  Native.Witgen.stateDemand (circuit (p := p)).name (fun input : Inputs (Witgen.FExpr (ZMod p)) => input.state)
+    (fun input => input.is_real)
 
 end SP1Clean.JalChip

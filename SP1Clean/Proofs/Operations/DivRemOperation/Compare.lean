@@ -52,24 +52,10 @@ def Assumptions (cols : Inputs (ZMod p)) : Prop :=
   (e2 = 1 → bpv[1].val < 2 ^ 16 ∧ cpv[1].val < 2 ^ 16 ∧ cols.remainder[1].val < 2 ^ 16 ∧
     cols.quotient[1].val < 2 ^ 16)
 
-omit [Fact (2 ^ 17 < p)] in
-/-- Element-level reading of a whole-vector `h_input` eval equation: the assertion arguments read
-`bpv/cpv/remainder/quotient` through `getElem`, which the vector-shaped `h_input` rules miss. -/
-private lemma eval_getElem {n : ℕ} {env : Environment (ZMod p)}
-    {vs : Vector (Expression (ZMod p)) n} {ws : Vector (ZMod p) n}
-    (h : Vector.map (Expression.eval env) vs = ws) (i : ℕ) (_ : i < n) :
-    Expression.eval env vs[i] = ws[i] := by
-  rw [← h]; simp only [Vector.getElem_map]
-
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions CompareSpec := by
   circuit_proof_start [CompareSpec]
   obtain ⟨hbin_ir, hbin_irnw, hbin_e2, hbin_ace, hbin_are, hrcmGate,
     hU_ac, hU_ar, hU_lt, hR3, hR1⟩ := h_assumptions
-  have hb := eval_getElem h_input.1
-  have hc := eval_getElem h_input.2.1
-  have hr := eval_getElem h_input.2.2.2.2.2.1
-  have hq := eval_getElem h_input.2.2.2.1
-  simp only [hb, hc, hr, hq] at h_holds
   obtain ⟨hovb_full, hovc_full, hovb_low, hovc_low, hisc0, hadd_c, hadd_r, hlt,
     hmsb_b3, hmsb_c3, hmsb_r3, hmsb_b1, hmsb_c1, hmsb_r1, hmsb_q1⟩ := h_holds
   have hisc0Spec := hisc0 hbin_ir
@@ -95,11 +81,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Co
     hU_ac, hU_ar, hU_lt, hR3, hR1⟩ := h_assumptions
   obtain ⟨hs1, hs2, hs3, hs4, hs5, hs6, hs7, hs8, hs9, hs10, hs11, hs12, hs13, hs14, hs15⟩ :=
     h_spec
-  have hb := eval_getElem h_input.1
-  have hc := eval_getElem h_input.2.1
-  have hr := eval_getElem h_input.2.2.2.2.2.1
-  have hq := eval_getElem h_input.2.2.2.1
-  simp only [hb, hc, hr, hq]
   have hzbin : input_is_c_0_result = 0 ∨ input_is_c_0_result = 1 := by
     simpa only using hs5.1
   have hbin_rcm : input_remainder_check_multiplicity = 0 ∨

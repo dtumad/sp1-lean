@@ -40,7 +40,7 @@ theorem snapshotSpec (snapshot : MemorySnapshot) (input : Inputs (ZMod p))
     MemoryBoundary.SnapshotAtSpec snapshot input.index.val (message input) := by
   obtain ⟨bound, valueBound, valueEq⟩ := snapshot.registerTable_sound input member
   have decoded : MemoryMsg.locOf (message input) = MemLoc.reg (BitVec.ofNat 5 input.index.val) := by
-    simp only [MemoryMsg.locOf, message, bound, and_self, if_true]
+    simp only [MemoryMsg.locOf, message, bound, and_self, ite_true]
   refine ⟨⟨valueBound, by simp [MemoryMsg.ClkBound, message],
     by simp [MemoryMsg.timeNat, clkNat, message], ?_, ?_, ?_⟩,
     by simp [MemoryBoundary.address, message, Word.toNat]⟩
@@ -86,7 +86,7 @@ def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs M
   soundness := by
     circuit_proof_start [message, StaticTable.channel]
     have valid := snapshotSpec snapshot ⟨input_index, input_value⟩ h_holds
-    exact ⟨valid, fun _ _ => ⟨valid.1.1, valid.1.2.1⟩⟩
+    exact ⟨valid, fun _ => ⟨valid.1.1, valid.1.2.1⟩⟩
   completeness := by
     circuit_proof_start [message, StaticTable.channel]
     exact h_assumptions

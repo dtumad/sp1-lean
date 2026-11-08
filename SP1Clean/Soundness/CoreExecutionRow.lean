@@ -91,7 +91,7 @@ theorem activeSystemRows_member {α : Type} (table : Table (ZMod p))
 
 omit [Fact (2 ^ 25 < p)] in
 theorem syscall_halt_binary (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions }) (constraints : table.Constraints)
+    (component : table.component = { circuit := SyscallInstrsChip.circuit, Assumptions := (SyscallInstrsChip.circuit).Assumptions, generation := SyscallInstrsChip.generation }) (constraints : table.Constraints)
     {physical : Array (ZMod p)} (member : physical ∈ table.table) :
     (syscallInstrsRow data physical).is_halt = 0 ∨ (syscallInstrsRow data physical).is_halt = 1 := by
   have checked := constraints physical member

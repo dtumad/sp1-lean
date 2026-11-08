@@ -2,6 +2,7 @@ import SP1Clean.Soundness.HostFinalMemory
 import SP1Clean.Soundness.CommitmentEnsemble
 import ToClean.Air.ChannelRegistry
 import ToClean.Air.TableBuild
+import SP1CleanTest.Core.StaticMembership
 
 /-! # Shared complete installed assembly for export comparisons
 
@@ -37,8 +38,9 @@ structure Context where
 def withoutCommitments (context : Context) : Ensemble Fp SP1PublicIO :=
   HostFinalMemory.ensemble context.image context.source context.target
     context.finalHints context.finalHost HostCallReceivers.available
-    (HostHintReadLocal.sourceResources context.source.host.io.hints) []
+    (HostHintReadLocal.sourceResources context.source.host.io.hints) (HostFinalMemory.sourceChannels context.target)
     (HostFinalMemory.source_unique_names context.image context.source context.target)
+    (HostFinalMemory.source_registration context.image context.source context.target)
 
 /-- The declaration provider has a fresh name in the complete host inventory. -/
 theorem declaration_fresh (context : Context) :
@@ -60,9 +62,20 @@ theorem declaration_fresh (context : Context) :
     StaticTable.payloadProvider]
   exact of_decide_eq_true rfl
 
+/-- Commitment requests already belong to the production protocol registry. -/
+theorem declarations_registered (context : Context) :
+    CommitmentDeclaration.channel.toRaw ∈ (withoutCommitments context).channels := by
+  simp [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
+    HostFinalMemory.withReceipts, HostFinalMemory.withRegisters, FinalReceiptEnsemble.install,
+    Ensemble.replaceComponent, HostFinalMemory.base, HostHintQueueBoundary.ensemble,
+    HaltPadding.install, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
+    HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble,
+    HostLocalCore.registry, HostFinalMemory.sourceChannels]
+
 /-- Complete production assembly with the verifier-owned commitment statement installed. -/
 def assembly (context : Context) : Ensemble Fp SP1PublicIO :=
   CommitmentEnsemble.install context.commitments (withoutCommitments context) (declaration_fresh context)
+    (declarations_registered context)
 
 theorem without_tables_length (context : Context) : (withoutCommitments context).tables.length = 94 := by
   simp only [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
@@ -100,7 +113,7 @@ def Seed.build (seed : Seed) (component : Component Fp) (data : ProverData Fp) :
 def seedValid (tables : List (Component Fp)) (seed : Seed) : Bool :=
   match tables[seed.table]? with
   | none => false
-  | some component => component.fixedColumns.isNone && seed.cells.length == component.rowOffset
+  | some component => StaticMembership.acceptsSeed component && seed.cells.length == component.rowOffset
 
 /-- One complete register/RAM message, with canonical address and value limbs. -/
 def memoryRecord (address clock : ℕ) (value : BitVec 64) : Channels.MemoryMsg Fp :=

@@ -112,7 +112,10 @@ private theorem eval_message_fields (env : Environment (ZMod p))
       Message (Expression (ZMod p))) =
       (⟨env high, env low0 + env low1 * 65536, eval env code, eval env arg1, eval env arg2,
         eval env result, (eval env length).map (env flag * ·)⟩ : Message (ZMod p)) := by
-  simp only [circuit_norm, Vector.map_map, Function.comp_def]
+  simp only [circuit_norm]
+  apply Vector.ext
+  intro i hi
+  simp only [Vector.getElem_map, ProvableType.getElem_eval_fields]
 
 /-- The evaluated handoff exposes the instruction fields and the constraint-derived length gate. -/
 theorem host_values_of_constraints (input : Var Inputs (ZMod p)) (offset : ℕ)

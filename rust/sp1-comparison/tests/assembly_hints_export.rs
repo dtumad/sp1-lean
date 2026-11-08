@@ -25,9 +25,9 @@ mod host;
 use host::released_host_air;
 use sp1_core_executor::{Instruction, Opcode, Program as Sp1Program, SyscallCode};
 
-fixture!(hint_empty, "installed_hints_empty");
-fixture!(hint_tail, "installed_hints_tail");
-fixture!(hint_aligned, "installed_hints_aligned");
+fixture!(hint_empty, installed_hints_empty);
+fixture!(hint_tail, installed_hints_tail);
+fixture!(hint_aligned, installed_hints_aligned);
 
 fn addi(rd: u8, rs: u64, immediate: u64) -> Instruction {
     Instruction::new(Opcode::ADDI, rd, rs, immediate, false, true)
@@ -46,7 +46,7 @@ fn decode(cells: &[F]) -> u64 {
 fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = generate::<F, P>(&public, &fields(&case["privateInput"]), 1).unwrap();
     let mut code = vec![];
     execution::load_constant(&mut code, 5, 240);
     execution::load_constant(&mut code, 10, 65536);
@@ -138,7 +138,11 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
             actual.extend(
                 P::interactions(table, row)
                     .into_iter()
-                    .filter(|entry| entry.channel == "SP1Memory" && entry.multiplicity == F::ONE)
+                    .filter(|entry| {
+                        entry.channel == "SP1Memory"
+                            && entry.direction == clean_backend::witness_generation::Direction::Push
+                            && entry.multiplicity == F::ONE
+                    })
                     .map(|entry| {
                         entry
                             .message
@@ -202,7 +206,7 @@ fn mixed_padding_retains_zero_occurrences_and_rejects_fake_activity() {
     let reference = hint_aligned::reference();
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = hint_aligned::generate(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = hint_aligned::generate(&public, &fields(&case["privateInput"]), 1).unwrap();
     // Three nonfinal hint-word transfers require a fourth, disabled physical row.
     let table = 84;
     let enabled = <P as Program<F>>::HINT_TABLES[table].width - 1;

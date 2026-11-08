@@ -3,10 +3,10 @@ import SP1Clean.Soundness.TypedMemory
 
 /-! # Memory multiplicities are gated by the physical row selector
 
-Memory balance is useful as a permutation only when every interaction has signed multiplicity in
-`{-1, 0, 1}`, and padding rows must contribute no active message.  Both conclusions come from one
-local AIR fact: after evaluation, every Memory interaction multiplicity is either the row selector,
-its negation, or zero.
+Memory balance is useful as a permutation when every interaction has multiplicity in
+`{0, 1}`, and padding rows must contribute no active message.  Both conclusions come from one
+local AIR fact: after evaluation, every Memory interaction multiplicity is either the row selector
+or zero.
 
 This module states that fact at the whole-chip boundary.  Registry cases are proved from each chip's
 exact `interactionsWith_memory_eq` theorem; no hand-written lookup shadow or semantic execution
@@ -19,20 +19,19 @@ open SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
-/-- Every actual Memory interaction of a constrained physical circuit row evaluates to `-is_real`,
-`0`, or `is_real`, where `is_real` is the selector exposed by that same row. -/
+/-- Every actual Memory interaction of a constrained physical circuit row evaluates to
+`0` or `is_real`, where `is_real` is the selector exposed by that same row. -/
 def CircuitMemorySelectorGated {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
-  ∀ data physical,
-    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  ∀ generation data physical,
+    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
     let env := Environment.fromArray physical data
     component.operations.ConstraintsHold env →
       ∀ interaction ∈ component.operations.interactionsWith memoryChannel.toRaw,
         let selector := (view (component.rowInput env) (component.rowOutput env)).is_real
-        Expression.eval env interaction.mult = -selector ∨
-          Expression.eval env interaction.mult = 0 ∨
+        Expression.eval env interaction.mult = 0 ∨
             Expression.eval env interaction.mult = selector
 
 /-- Proof-sized form of selector gating at the typed `main` boundary.  Concrete chips reason only
@@ -44,8 +43,7 @@ def MainMemorySelectorGated {Input Output : TypeMap}
   ∀ input offset env,
     ((main input).operations offset).ConstraintsHold env →
       ∀ interaction ∈ ((main input).operations offset).interactionsWith memoryChannel.toRaw,
-        Expression.eval env interaction.mult = -Expression.eval env (selector input offset) ∨
-          Expression.eval env interaction.mult = 0 ∨
+        Expression.eval env interaction.mult = 0 ∨
             Expression.eval env interaction.mult = Expression.eval env (selector input offset)
 
 omit [Fact (2 ^ 24 < p)] in
@@ -63,8 +61,7 @@ theorem mainMemorySelectorGated_of_exposed {Input Output : TypeMap}
     (gated : ∀ input offset env,
       ((main input).operations offset).ConstraintsHold env →
         ∀ interaction ∈ exposed input offset,
-          Expression.eval env interaction.mult = -Expression.eval env (selector input offset) ∨
-            Expression.eval env interaction.mult = 0 ∨
+          Expression.eval env interaction.mult = 0 ∨
               Expression.eval env interaction.mult = Expression.eval env (selector input offset)) :
     MainMemorySelectorGated main selector := by
   intro input offset env constraints interaction interactionMem
@@ -77,7 +74,7 @@ theorem mainMemorySelectorGated_of_exposed {Input Output : TypeMap}
 local macro "finish_uniform_memory_gating" : tactic =>
   `(tactic| (
     simp only [List.forall_mem_cons, Channel.pulledIf, Channel.pushedIf,
-      pulledIf_mult, pushedIf_mult, Expression.eval, neg_one_mul, List.not_mem_nil,
+      pulledIf_mult, pushedIf_mult, Expression.eval, List.not_mem_nil,
       false_implies, true_and, true_or, or_true]
     intro
     trivial))
@@ -103,7 +100,7 @@ local macro "subGateMemoryGating " main:term ", " exposed:term ", " exactEq:term
     rcases subGate with subGate | subGate <;>
       simp only [$exposed:term, List.forall_mem_cons,
         Channel.pulledIf, Channel.pushedIf, pulledIf_mult, pushedIf_mult,
-        Expression.eval, neg_one_mul, List.not_mem_nil, false_implies, true_and,
+        Expression.eval, List.not_mem_nil, false_implies, true_and,
         subGate, true_or, or_true]
     all_goals simp))
 
@@ -339,10 +336,10 @@ theorem circuitMemorySelectorGated_of_main {Input Output : TypeMap}
           (Eval.eval env (circuit.output input offset))).is_real)
     (shape : MainMemorySelectorGated circuit.main selector) :
     CircuitMemorySelectorGated circuit view := by
-  intro data physical
+  intro generation data physical
   dsimp only
   intro constraints interaction interactionMem
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   let input : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -371,21 +368,21 @@ def MemorySelectorConstraintShape (chip : SupportedChip p) : Prop :=
       ∀ interaction ∈ chip.table.operations.interactionsWith memoryChannel.toRaw,
         let selector :=
           (chip.kind.view (chip.table.rowInput env) (chip.table.rowOutput env)).is_real
-        Expression.eval env interaction.mult = -selector ∨
-          Expression.eval env interaction.mult = 0 ∨
+        Expression.eval env interaction.mult = 0 ∨
             Expression.eval env interaction.mult = selector
 
 /-- A whole-circuit selector-gating theorem transports definitionally to its supported descriptor. -/
 theorem memorySelectorConstraintShape_of_circuit (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (specEq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (shape : @CircuitMemorySelectorGated p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
-    MemorySelectorConstraintShape ⟨id, kind, circuit, specEq⟩ :=
-  shape
+    MemorySelectorConstraintShape ⟨id, kind, circuit, generation, specEq⟩ :=
+  shape generation
 
 /-- Lift a chip's `main`-local Memory gating theorem to its completed whole-chip circuit. -/
 local macro "liftMemoryGating " circuit:term ", " rowView:term ", " selector:term ", "
@@ -861,7 +858,7 @@ theorem ShiftLeftChip.mainMemorySelectorGated :
   rcases subGate with subGate | subGate <;>
     simp only [ShiftLeftChip.exposedMemoryInteractions, List.forall_mem_cons,
       Channel.pulledIf, Channel.pushedIf, pulledIf_mult, pushedIf_mult,
-      Expression.eval, neg_one_mul, List.not_mem_nil, false_implies, true_and,
+      Expression.eval, List.not_mem_nil, false_implies, true_and,
       ShiftLeftChip.exposedGate, subGate, true_or, or_true]
   all_goals simp
 
@@ -928,7 +925,7 @@ theorem ShiftRightChip.mainMemorySelectorGated :
   rcases subGate with subGate | subGate <;>
     simp only [ShiftRightChip.exposedMemoryInteractions, List.forall_mem_cons,
       Channel.pulledIf, Channel.pushedIf, pulledIf_mult, pushedIf_mult,
-      Expression.eval, neg_one_mul, List.not_mem_nil, false_implies, true_and,
+      Expression.eval, List.not_mem_nil, false_implies, true_and,
       subGate, true_or, or_true]
   all_goals simp
 
@@ -1067,49 +1064,15 @@ theorem supportedChip_memorySelectorConstraintShape (chip : SupportedChip p)
 
 /-! ## Canonical decoded-row consequences -/
 
-/-- A field multiplicity gated by a binary selector has the signed integer range required by Clean's
-typed balance theorem. -/
-theorem signedVal_binary_of_selector_gated (selector mult : ZMod p)
-    (selectorBinary : selector = 0 ∨ selector = 1)
-    (gated : mult = -selector ∨ mult = 0 ∨ mult = selector) :
-    signedVal mult = -1 ∨ signedVal mult = 0 ∨ signedVal mult = 1 := by
-  have hp : 2 < p := by
-    have := Fact.out (p := 2 ^ 24 < p)
-    omega
-  rcases selectorBinary with selectorZero | selectorOne
-  · subst selector
-    simp only [neg_zero] at gated
-    rcases gated with multZero | multZero | multZero <;> subst mult
-    all_goals
-      right
-      left
-      simp [signedVal, ZMod.val_zero]
-  · subst selector
-    have oneVal : (1 : ZMod p).val = 1 := by
-      rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-    rcases gated with multNegative | multZero | multPositive
-    · left
-      rw [multNegative, signedVal_neg_is_real hp (Or.inr rfl), oneVal]
-      norm_num
-    · right
-      left
-      rw [multZero]
-      simp [signedVal, ZMod.val_zero]
-    · right
-      right
-      rw [multPositive, signedVal_is_real hp (Or.inr rfl), oneVal]
-      norm_num
-
 /-- Every evaluated Memory interaction of a constrained canonical instruction row is literally the
-negative selector, zero, or the selector exposed by that same decoded row. -/
+zero or the selector exposed by that same decoded row. -/
 theorem DecodedInstructionRow.memoryInteractionMult_selectorGated
     (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
     (tables : List (Table (ZMod p)))
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) tables)
     (constraints : decoded.chip.table.operations.ConstraintsHold (decoded.environment data)) :
     ∀ interaction ∈ decoded.interactionsWith data memoryChannel,
-      interaction.mult = -(decoded.toChipRow data).is_real ∨
-        interaction.mult = 0 ∨ interaction.mult = (decoded.toChipRow data).is_real := by
+      interaction.mult = 0 ∨ interaction.mult = (decoded.toChipRow data).is_real := by
   intro interaction interactionMem
   have shape := supportedChip_memorySelectorConstraintShape decoded.chip
     (decodedInstructionRows_chip_mem tables decodedMem) data decoded.physical constraints
@@ -1120,21 +1083,24 @@ theorem DecodedInstructionRow.memoryInteractionMult_selectorGated
     DecodedInstructionRow.environment, ChipRow.is_real,
     DecodedInstructionRow.toChipRow_view] using gated
 
-/-- Selector booleanity plus the registry-wide gating theorem gives signed-binary multiplicity for
+/-- Selector booleanity plus the registry-wide gating theorem gives boolean multiplicity for
 every actual Memory interaction of a canonical instruction row. -/
-theorem DecodedInstructionRow.memoryInteractions_signedBinary
+theorem DecodedInstructionRow.memoryInteractions_binary
     (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
     (tables : List (Table (ZMod p)))
     (decodedMem : decoded ∈ decodedInstructionRows (p := p) tables)
     (constraints : decoded.chip.table.operations.ConstraintsHold (decoded.environment data)) :
     ∀ interaction ∈ decoded.interactionsWith data memoryChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   intro interaction interactionMem
-  apply signedVal_binary_of_selector_gated (decoded.toChipRow data).is_real interaction.mult
-  · exact decoded.selectorBinary_of_constraints data tables decodedMem constraints
-  · exact decoded.memoryInteractionMult_selectorGated data tables decodedMem constraints
-      interaction interactionMem
+  rcases decoded.memoryInteractionMult_selectorGated data tables decodedMem constraints
+    interaction interactionMem with zero | selector
+  · exact Or.inl zero
+  · rw [selector]
+    exact decoded.selectorBinary_of_constraints data tables decodedMem constraints
+
+/-- Use the field instance consistently when filtering physical interaction counts. -/
+local instance memorySelectorDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 /-- A constrained padding instruction row emits no active Memory message on either side. -/
 theorem DecodedInstructionRow.paddingMemoryMessages_eq_nil
@@ -1152,30 +1118,23 @@ theorem DecodedInstructionRow.paddingMemoryMessages_eq_nil
       interaction.mult = 0 := by
     intro interaction interactionMem
     rcases decoded.memoryInteractionMult_selectorGated data tables decodedMem constraints
-      interaction interactionMem with negative | zero | positive
-    · simpa only [selectorZero, neg_zero] using negative
+      interaction interactionMem with zero | positive
     · exact zero
     · simpa only [selectorZero] using positive
-  have signedValZero : signedVal (0 : ZMod p) = 0 := by
-    simp [signedVal, ZMod.val_zero]
   constructor
   · unfold DecodedInstructionRow.producedMemoryMessages producedMessages
     have filtered : (decoded.interactionsWith data memoryChannel).filter
-        (fun interaction => signedVal interaction.mult = 1) = [] := by
-      rw [List.filter_eq_nil_iff]
+        (fun interaction => interaction.raw.direction = .push ∧ interaction.mult = 1) = [] := by
+      apply List.filter_eq_nil_iff.mpr
       intro interaction interactionMem
-      simp only [decide_eq_true_eq]
-      rw [multZero interaction interactionMem, signedValZero]
-      norm_num
+      simp [multZero interaction interactionMem]
     rw [filtered, List.map_nil]
   · unfold DecodedInstructionRow.consumedMemoryMessages consumedMessages
     have filtered : (decoded.interactionsWith data memoryChannel).filter
-        (fun interaction => signedVal interaction.mult = -1) = [] := by
-      rw [List.filter_eq_nil_iff]
+        (fun interaction => interaction.raw.direction = .pull ∧ interaction.mult = 1) = [] := by
+      apply List.filter_eq_nil_iff.mpr
       intro interaction interactionMem
-      simp only [decide_eq_true_eq]
-      rw [multZero interaction interactionMem, signedValZero]
-      norm_num
+      simp [multZero interaction interactionMem]
     rw [filtered, List.map_nil]
 
 end SP1Clean.Soundness

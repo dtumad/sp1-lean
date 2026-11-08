@@ -9,7 +9,7 @@ ordinary replay guard without assuming an execution step or inspecting instructi
 
 namespace SP1Clean.Soundness
 
-open Target SP1Clean.Semantics LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Target SP1Clean.Semantics LeanRV64D LeanRV64D LeanRV64D.Functions
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

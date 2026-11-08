@@ -134,7 +134,7 @@ theorem HostState.hintUpdate_sound {host : HostState} {policy : HostPolicy}
     · simpa only [effect] using suffix
   · obtain ⟨added, hints⟩ := HostState.executeKind_hintSuffix executed isRead
     refine ⟨HintQueue.prepend store head added, ?_, ?_⟩
-    · simp only [hintUpdate, if_neg isRead, hints, List.length_append, Nat.add_sub_cancel_right,
+    · simp only [hintUpdate, ite_eq_right isRead, hints, List.length_append, Nat.add_sub_cancel_right,
         List.take_left, HintQueue.Update.apply?]
     · rw [hints]
       exact HintQueue.prepend_represents represents added

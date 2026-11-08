@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HaltExecution
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 /-! # AIR witness relations and the semantic capstone
 

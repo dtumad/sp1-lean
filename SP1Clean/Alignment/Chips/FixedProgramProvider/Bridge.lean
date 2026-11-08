@@ -46,7 +46,7 @@ inventory's inert row cannot supply a counted fetch. -/
 theorem table_committed {image : ProgramImage} (valid : image.Valid)
     (table : Table (ZMod p))
     (same : table.component = component image)
-    (consistent : table.DataConsistency) (constraints : table.Constraints)
+    (constraints : table.Constraints)
     (row : Array (ZMod p)) (member : row ∈ table.table)
     (active : (valueFromOffset Input 0
       (table.environment row)).2 ≠ 0) :
@@ -54,7 +54,7 @@ theorem table_committed {image : ProgramImage} (valid : image.Valid)
       (Semantics.rowOfMsg (valueFromOffset Input 0
         (table.environment row)).1) := by
   have spec := (table_spec_and_requirements image
-    table same consistent constraints).1 row member
+    table same constraints).1 row member
   rw [same] at spec
   exact spec_committed valid spec active
 

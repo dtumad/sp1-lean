@@ -11,7 +11,7 @@ condition resolving `next_pc`. The taken arm's `jump_to` retires via `jump_to_of
 land `nextPC ← next_pc_word`. `branch_chip_reaches_sail` is the six-way BEQ/BNE/BLT/BGE/BLTU/BGEU
 conjunction. The whole chain is axiom-clean. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.BranchSail
 
 open Sail LeanRV64D LeanRV64D.Functions
@@ -95,7 +95,7 @@ theorem correct_branch_native
     · have hnpc := h_taken hc
       have htgt4 : (pc + sign_extend (m := 64) imm) % 4#64 = 0 := by
         rw [← hnpc]; apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
-      have hjump := jump_to_of_mod4_eq_zero (pc + sign_extend (m := 64) imm) sp hsp_init htgt4
+      have hjump := jump_to_of_mod4_eq_zero (pc + sign_extend (m := 64) imm) sp htgt4
       cases op <;> simp only [branchCond, not_not, ne_eq] at hc ⊢ <;>
         (simp [execute_BTYPE, run_rX_bits, hsp_rs1, hsp_rs2,
           Sail.run_readReg_bind_of_isInitialized _ _ hsp_init, hsp_pc, hjump, RETIRE_SUCCESS,

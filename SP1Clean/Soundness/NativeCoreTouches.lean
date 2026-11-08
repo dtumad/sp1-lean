@@ -40,7 +40,7 @@ theorem syscall_program_committed {image : ProgramImage} (valid : image.Valid)
       syscallInstrsRow_typedProgram_of_component _ witness.data (systemTable_component witness 3)]
     exact List.mem_cons_self
   exact program_pull_committed valid witness constraints balanced message interaction emitted
-    (by change -row.is_real = -1; rw [real]) rfl
+    (by exact ⟨rfl, real⟩) rfl
 
 private theorem syscall_operands {image : ProgramImage} (valid : image.Valid)
     (witness : EnsembleWitness (ensemble (p := p) image))

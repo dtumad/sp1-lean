@@ -7,7 +7,7 @@ non-wrapping physical window; neither is an extra premise of the instruction pre
 -/
 
 namespace SP1Clean.SailMem
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- The configured PMA check, including the out-of-region fault and misaligned split case. -/
@@ -36,7 +36,7 @@ theorem run_check_pma_store_all (source : SailState) (cfg : SailConfigured sourc
   · cases aligned : is_aligned_paddr (.Physaddr address) width <;>
       simp [SP1_PMA, override_PMA, mag_pma_check, is_mag_applicable_access,
         within_pma_mag, mag_of_pma, pma_misaligned_exception, is_vector_access, aligned,
-        LeanRV64D.assert, PreSail.assert, LeanRV64D.Functions.not, sys_misaligned_allowed_within_exp,
+        PreSail.sail_assert, LeanRV64D.Functions.not, sys_misaligned_allowed_within_exp,
         EStateM.bind, EStateM.map, EStateM.pure, ExceptT.bindCont, bind, pure]
   · have pmp := run_pmpCheck_none (.Physaddr address) width (.Store .Data) source cfg.init cfg.pmp_off
     change pmpCheck (.Physaddr address) width (.Store .Data) .Machine source = _ at pmp
@@ -53,7 +53,7 @@ theorem split_misaligned_span (source target : SailState) (address : BitVec 64)
   · cases ran
     exact ⟨by omega, by omega, by simp⟩
   · change (split_access address width).run source = .ok (count, size) target at ran
-    simp only [split_access, PreSail.assert] at ran
+    simp only [split_access, PreSail.sail_assert] at ran
     split at ran
     · rename_i checked
       cases ran

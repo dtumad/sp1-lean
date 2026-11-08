@@ -10,7 +10,7 @@ supplies the address domain. No successful compiler call is assumed.
 -/
 
 namespace SP1Clean.Model.Core
-open Machine Soundness.Target Semantics LeanRV64D.Defs
+open Machine Soundness.Target Semantics LeanRV64D
 
 /-- Reading eight present bytes always materializes the existing Memory-bus word projection. -/
 theorem ramWord64?_isSome_of_present (state : SailState) (address : BitVec 64)
@@ -55,7 +55,7 @@ theorem instructionMemoryEncoded.cells_present {decoded : instruction} {source t
     (incoming : ∀ address < NativeLayout.sailMemory.upper, (source.mem.get? address).isSome)
     (outgoing : ∀ address < NativeLayout.sailMemory.upper, (target.mem.get? address).isSome) :
     InstructionCellsPresent decoded source target := by
-  cases decoded <;> try trivial
+  cases decoded <;> rename_i chunk <;> cases chunk <;> try trivial
   · rename_i args
     rcases args with ⟨offset, rs1, rd, unsigned, width⟩
     obtain ⟨base, observed, inside, _⟩ := encoded

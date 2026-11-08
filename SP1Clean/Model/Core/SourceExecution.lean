@@ -11,7 +11,7 @@ clock endpoints for stopped sources; strict State progress then excludes active 
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs LeanRV64D.Functions SP1Clean.Soundness.Target
+open LeanRV64D LeanRV64D.Functions SP1Clean.Soundness.Target
 
 private instance (state : SailState) : Decidable state.isInitialized :=
   inferInstanceAs (Decidable (∀ reg : Register, reg ∈ state.regs))

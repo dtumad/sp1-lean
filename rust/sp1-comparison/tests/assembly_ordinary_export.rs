@@ -24,10 +24,10 @@ use sp1_core_executor::{
     events::MemoryRecordEnum, ITypeRecord, Instruction, Opcode, Program as Sp1Program, SyscallCode,
 };
 
-fixture!(ordinary, "installed_ordinary");
-fixture!(prefix, "installed_ordinary_prefix");
-fixture!(suffix, "installed_ordinary_suffix");
-fixture!(empty, "installed_ordinary_empty");
+fixture!(ordinary, installed_ordinary);
+fixture!(prefix, installed_ordinary_prefix);
+fixture!(suffix, installed_ordinary_suffix);
+fixture!(empty, installed_ordinary_empty);
 
 fn addi(rd: u8, rs: u64, immediate: u64) -> Instruction {
     Instruction::new(Opcode::ADDI, rd, rs, immediate, false, true)
@@ -124,7 +124,7 @@ fn check_cut<P: Program<F>>(
 ) {
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let witness = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    let witness = generate::<F, P>(&public, &fields(&case["privateInput"]), 1).unwrap();
     let initial_clock = 9 + 8 * start as u64;
     let initial_pc = steps.get(start).map_or(131112, |step| step.pc);
     let final_pc = if count == 0 {
@@ -174,16 +174,19 @@ fn check_cut<P: Program<F>>(
     }
     let mut actual = vec![];
     for table in [8, 18, 23, 28] {
-        let active = steps[start..start + count]
+        let slots = steps[start..start + count]
             .iter()
-            .filter(|step| step.table == table)
-            .count();
-        assert_eq!(P::HINT_TABLES[table].rows, active);
+            .enumerate()
+            .filter(|(_, step)| step.table == table)
+            .map(|(slot, _)| slot + 1)
+            .max()
+            .unwrap_or(0);
+        assert_eq!(P::HINT_TABLES[table].rows, slots);
         for row in &witness.tables[table] {
             for entry in P::interactions(table, row) {
                 if entry.channel == "SP1Memory" && entry.multiplicity != F::ZERO {
                     actual.push((
-                        entry.multiplicity.as_canonical_u64(),
+                        entry.signed_multiplicity().as_canonical_u64(),
                         entry
                             .message
                             .iter()

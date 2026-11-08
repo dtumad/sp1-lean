@@ -16,7 +16,7 @@ normal retirement or resources. `ExecutionWritePolicy` lifts it to occurrences i
 
 namespace SP1Clean.Model.Core.InstructionWrite
 
-open LeanRV64D.Defs SP1Clean.Semantics SP1Clean.Soundness.Target
+open LeanRV64D SP1Clean.Semantics SP1Clean.Soundness.Target
 
 /-- The exact write spans of a supported ordinary instruction, including same-value stores.
 Successful non-store instructions have an empty inventory; failure is distinct from no writes. -/

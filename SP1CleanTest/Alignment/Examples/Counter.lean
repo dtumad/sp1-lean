@@ -37,7 +37,7 @@ def validates (witness : EnsembleWitness ensemble) : Bool :=
     ledger.all fun key =>
       (ensemble.channels.map RawChannel.name).contains key.channel.name &&
         ((ledger.filter fun entry => entry.channel.name == key.channel.name &&
-          entry.msg == key.msg).map Interaction.mult).sum == 0
+          entry.msg == key.msg).map Interaction.signedMult).sum == 0
 
 /-- Compile data-only increment events and check the returned physical AIR witness. -/
 def compiledAccepted (initial final count : ℕ) : Bool :=
@@ -70,7 +70,7 @@ def results : List (String × Bool × Bool) :=
    ("decreasing-boundary", false, (compile (5, 2) []).isSome),
    ("empty-unequal-boundaries", false, (compile (2, 3) []).isSome),
    ("modular-wrap-row", false,
-     rowChecks { circuit := transition, Assumptions := (transition).Assumptions } (witnessOfRows (0, 0) [] (by decide)).data #[96, 0])]
+     rowChecks (ensemble.tables[0]) (witnessOfRows (0, 0) [] (by decide)).data #[96, 0])]
 
 /-- Both successful compilation and physical mutations have the stated executable outcomes. -/
 theorem casesMatch : results.all (fun (_, expected, actual) => expected == actual) = true := by
@@ -84,13 +84,13 @@ theorem exactCounts :
 /-- Only transition rows determine named prover data; the verifier adds no physical table. -/
 theorem physicalData :
     let witness := witnessOfRows (2, 5) [(2, 3), (3, 4), (4, 5)] (by decide)
-    witness.tables.length = 1 ∧ witness.data "CounterTransition" 2 =
+    witness.tables.length = 1 ∧ witness.data.tables "CounterTransition" 2 =
       #[#v[2, 3], #v[3, 4], #v[4, 5]] := by native_decide
 
 /-- The wrap row satisfies the field equation but fails the actual row's fixed lookup. -/
 theorem wrapNeedsLookup :
     (0 : F) = (96 : F) + 1 ∧
-      rowChecks { circuit := transition, Assumptions := (transition).Assumptions } (witnessOfRows (0, 0) [] (by decide)).data #[96, 0] = false := by
+      rowChecks (ensemble.tables[0]) (witnessOfRows (0, 0) [] (by decide)).data #[96, 0] = false := by
   native_decide
 
 /-- Print actual compiled rows and the complete positive/negative regression results. -/

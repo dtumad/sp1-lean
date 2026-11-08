@@ -15,12 +15,7 @@ open Air.Flat SP1Clean ComponentExport
 
 private def exportCircuit {Input : TypeMap} [ProvableType Input]
     (circuit : GeneralFormalCircuit Fp Input unit) : Except String String :=
-  let component : Component Fp := { circuit, Assumptions := circuit.Assumptions }
-  let description : Ensemble Fp unit := { ensemble component with
-    channels := (ensemble component).channels ++ [Channels.exitChannel.toRaw,
-      Channels.syscallChannel.toRaw, Channels.publicValuesChannel.toRaw,
-      HostCallChip.channel.toRaw] }
-  Backends.Plonky3.Print.ensembleToRust (fixture description Input) (config component)
+  exportRust circuit
 
 /-- The original instruction, its full-code profile, and the installed instruction-to-host row. -/
 def rustExports : List (String × Except String String) := [

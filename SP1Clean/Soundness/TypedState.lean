@@ -82,8 +82,8 @@ def CircuitStateEmissionShape {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p)) : Prop :=
-  ∀ data physical,
-    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  ∀ generation data physical,
+    let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
     let env := Environment.fromArray physical data
     let rowView := view (component.rowInput env) (component.rowOutput env)
     component.operations.interactionValuesWith stateChannel.toRaw env =
@@ -132,13 +132,14 @@ unfolding that descriptor.  This matters for large chips: definitional `change` 
 theorem stateEmissionShape_of_circuit (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (shape : @CircuitStateEmissionShape p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
-    StateEmissionShape ⟨id, kind, circuit, spec_eq⟩ := by
-  exact shape
+    StateEmissionShape ⟨id, kind, circuit, generation, spec_eq⟩ := by
+  exact shape generation
 
 omit [Fact (2 ^ 24 < p)] in
 /-- Reduce a chip's State-emission contract to its public Clean exposed-channel interface and three
@@ -152,8 +153,8 @@ theorem circuitStateEmissionShape_of_exposure {Input Output : TypeMap}
     (contract : CircuitStateExposureContract circuit view) :
     CircuitStateEmissionShape circuit view := by
   obtain ⟨gate, pullMessage, pushMessage, exposure, gate_eval, pull_eval, push_eval⟩ := contract
-  intro data physical
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  intro generation data physical
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   let inputVar : Var Input (ZMod p) := varFromOffset Input 0
   let offset := size Input
@@ -181,12 +182,13 @@ concrete `ChipKind` record. -/
 theorem stateEmissionShape_of_circuitExposure (kind : ChipKind p)
     (circuit : @GeneralFormalCircuit (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols)
+    (generation : @WitnessGeneration.Generation (ZMod p) inferInstance kind.Inputs kind.provableInputs)
     (spec_eq : @GeneralFormalCircuit.Spec (ZMod p) kind.Inputs kind.Cols inferInstance
       kind.provableInputs kind.provableCols circuit = kind.chipSpec)
     (id : InstructionChipId)
     (contract : @CircuitStateExposureContract p _ kind.Inputs kind.Cols kind.provableInputs
       kind.provableCols circuit kind.view) :
-    StateEmissionShape ⟨id, kind, circuit, spec_eq⟩ := by
+    StateEmissionShape ⟨id, kind, circuit, generation, spec_eq⟩ := by
   apply stateEmissionShape_of_circuit
   exact @circuitStateEmissionShape_of_exposure p _ kind.Inputs kind.Cols
     kind.provableInputs kind.provableCols circuit kind.view contract
@@ -227,89 +229,39 @@ theorem DecodedInstructionRow.stateInteractions_eq
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- One active State pair contributes exactly its successor to the produced-message list. -/
-theorem producedMessages_statePair_one [Fact p.Prime] [Fact (2 ^ 17 < p)]
+theorem producedMessages_statePair_one [Fact p.Prime]
     (source target : StateMsg (ZMod p)) :
     producedMessages
       [TypedInteraction.pulledIfValue stateChannel 1 source,
        TypedInteraction.pushedIfValue stateChannel 1 target] = [target] := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  have pullSigned : signedVal
-      (TypedInteraction.pulledIfValue stateChannel 1 source).mult = -1 := by
-    calc
-      _ = signedVal (-(1 : ZMod p)) := rfl
-      _ = -((1 : ZMod p).val : ℤ) := signedVal_neg_is_real hp (Or.inr rfl)
-      _ = -1 := by
-        rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-        norm_num
-  have pushSigned : signedVal
-      (TypedInteraction.pushedIfValue stateChannel 1 target).mult = 1 := by
-    calc
-      _ = signedVal (1 : ZMod p) := rfl
-      _ = ((1 : ZMod p).val : ℤ) := signedVal_is_real hp (Or.inr rfl)
-      _ = 1 := by
-        rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-        norm_num
-  have filtered : List.filter (fun interaction => signedVal interaction.mult = 1)
-      [TypedInteraction.pulledIfValue stateChannel 1 source,
-       TypedInteraction.pushedIfValue stateChannel 1 target] =
-        [TypedInteraction.pushedIfValue stateChannel 1 target] := by
-    simp only [List.filter_cons, List.filter_nil]
-    rw [pullSigned, pushSigned]
-    norm_num
-  rw [producedMessages, filtered]
-  simp only [List.map_cons, List.map_nil, TypedInteraction.pushedIfValue_message]
+  simp [producedMessages, Channel.pulledIfValue, Channel.pushedIfValue]
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- One active State pair contributes exactly its current state to the consumed-message list. -/
-theorem consumedMessages_statePair_one [Fact p.Prime] [Fact (2 ^ 17 < p)]
+theorem consumedMessages_statePair_one [Fact p.Prime]
     (source target : StateMsg (ZMod p)) :
     consumedMessages
       [TypedInteraction.pulledIfValue stateChannel 1 source,
        TypedInteraction.pushedIfValue stateChannel 1 target] = [source] := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  have pullSigned : signedVal
-      (TypedInteraction.pulledIfValue stateChannel 1 source).mult = -1 := by
-    calc
-      _ = signedVal (-(1 : ZMod p)) := rfl
-      _ = -((1 : ZMod p).val : ℤ) := signedVal_neg_is_real hp (Or.inr rfl)
-      _ = -1 := by
-        rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-        norm_num
-  have pushSigned : signedVal
-      (TypedInteraction.pushedIfValue stateChannel 1 target).mult = 1 := by
-    calc
-      _ = signedVal (1 : ZMod p) := rfl
-      _ = ((1 : ZMod p).val : ℤ) := signedVal_is_real hp (Or.inr rfl)
-      _ = 1 := by
-        rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-        norm_num
-  have filtered : List.filter (fun interaction => signedVal interaction.mult = -1)
-      [TypedInteraction.pulledIfValue stateChannel 1 source,
-       TypedInteraction.pushedIfValue stateChannel 1 target] =
-        [TypedInteraction.pulledIfValue stateChannel 1 source] := by
-    simp only [List.filter_cons, List.filter_nil]
-    rw [pullSigned, pushSigned]
-    norm_num
-  rw [consumedMessages, filtered]
-  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_message]
+  simp [consumedMessages, Channel.pulledIfValue, Channel.pushedIfValue]
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- A disabled State pair contributes no produced message. -/
-theorem producedMessages_statePair_zero [Fact p.Prime] [Fact (2 ^ 17 < p)]
+theorem producedMessages_statePair_zero [Fact p.Prime]
     (source target : StateMsg (ZMod p)) :
     producedMessages
       [TypedInteraction.pulledIfValue stateChannel 0 source,
        TypedInteraction.pushedIfValue stateChannel 0 target] = [] := by
-  simp [producedMessages, signedVal]
+  simp [producedMessages, Channel.pulledIfValue, Channel.pushedIfValue]
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- A disabled State pair contributes no consumed message. -/
-theorem consumedMessages_statePair_zero [Fact p.Prime] [Fact (2 ^ 17 < p)]
+theorem consumedMessages_statePair_zero [Fact p.Prime]
     (source target : StateMsg (ZMod p)) :
     consumedMessages
       [TypedInteraction.pulledIfValue stateChannel 0 source,
        TypedInteraction.pushedIfValue stateChannel 0 target] = [] := by
-  simp [consumedMessages, signedVal]
+  simp [consumedMessages, Channel.pulledIfValue, Channel.pushedIfValue]
 
 /-- Produced messages of flattened decoded State pairs are precisely the successor messages of the
 active rows. -/
@@ -389,37 +341,30 @@ theorem DecodedInstructionRow.consumedStateMessages_of_real
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- A gated pull/push State pair has the exact integer multiplicity range needed by typed balance. -/
-theorem statePair_signed_binary [Fact p.Prime] [Fact (2 ^ 17 < p)]
+theorem statePair_binary [Fact p.Prime]
     (gate : ZMod p) (binary : gate = 0 ∨ gate = 1) (source target : StateMsg (ZMod p)) :
     ∀ interaction ∈
       [TypedInteraction.pulledIfValue stateChannel gate source,
        TypedInteraction.pushedIfValue stateChannel gate target],
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
+      IsBool interaction.mult := by
   intro interaction member
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl
-  · rw [TypedInteraction.pulledIfValue_mult, signedVal_neg_is_real hp binary]
-    rcases val_of_binary hp binary with value | value <;> rw [value] <;> omega
-  · rw [TypedInteraction.pushedIfValue_mult, signedVal_is_real hp binary]
-    rcases val_of_binary hp binary with value | value <;> rw [value] <;> omega
+  rcases member with rfl | rfl <;> exact binary
 
 /-- The typed State interactions of a decoded row inherit binary multiplicities from its selector. -/
-theorem DecodedInstructionRow.stateInteractions_signed_binary
+theorem DecodedInstructionRow.stateInteractions_binary
     (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
     (contract : StateEmissionShape decoded.chip)
     (binary : (decoded.toChipRow data).is_real = 0 ∨
       (decoded.toChipRow data).is_real = 1) :
     ∀ interaction ∈ decoded.interactionsWith data stateChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   rw [decoded.stateInteractions_eq data contract]
-  exact statePair_signed_binary _ binary _ _
+  exact statePair_binary _ binary _ _
 
 /- Add is the first concrete check of the shared State-emission contract. -/
 theorem addChip_stateEmissionShape : StateEmissionShape
-    (⟨.add, AddChip.kind, AddChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.add, AddChip.kind, AddChip.circuit, AddChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (AddChip.circuit (p := p)), AddChip.rowView
   all_goals
     intros
@@ -427,7 +372,7 @@ theorem addChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, AddChip.rowView, circuit_norm]
 
 theorem addiChip_stateEmissionShape : StateEmissionShape
-    (⟨.addi, AddiChip.kind, AddiChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.addi, AddiChip.kind, AddiChip.circuit, AddiChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (AddiChip.circuit (p := p)), AddiChip.rowView
   all_goals
     intros
@@ -435,7 +380,7 @@ theorem addiChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, AddiChip.rowView, circuit_norm]
 
 theorem addwChip_stateEmissionShape : StateEmissionShape
-    (⟨.addw, AddwChip.kind, AddwChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.addw, AddwChip.kind, AddwChip.circuit, AddwChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (AddwChip.circuit (p := p)), AddwChip.rowView
   all_goals
     intros
@@ -443,7 +388,7 @@ theorem addwChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, AddwChip.rowView, circuit_norm]
 
 theorem subChip_stateEmissionShape : StateEmissionShape
-    (⟨.sub, SubChip.kind, SubChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.sub, SubChip.kind, SubChip.circuit, SubChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (SubChip.circuit (p := p)), SubChip.rowView
   all_goals
     intros
@@ -451,7 +396,7 @@ theorem subChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, SubChip.rowView, circuit_norm]
 
 theorem subwChip_stateEmissionShape : StateEmissionShape
-    (⟨.subw, SubwChip.kind, SubwChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.subw, SubwChip.kind, SubwChip.circuit, SubwChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (SubwChip.circuit (p := p)), SubwChip.rowView
   all_goals
     intros
@@ -459,7 +404,7 @@ theorem subwChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, SubwChip.rowView, circuit_norm]
 
 theorem bitwiseChip_stateEmissionShape : StateEmissionShape
-    (⟨.bitwise, BitwiseChip.kind, BitwiseChip.circuit, rfl⟩ :
+    (⟨.bitwise, BitwiseChip.kind, BitwiseChip.circuit, BitwiseChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStandard (BitwiseChip.circuit (p := p)), BitwiseChip.rowView
   · intros
@@ -472,7 +417,7 @@ theorem bitwiseChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, BitwiseChip.rowView, circuit_norm]
 
 theorem ltChip_stateEmissionShape : StateEmissionShape
-    (⟨.lt, LtChip.kind, LtChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.lt, LtChip.kind, LtChip.circuit, LtChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (LtChip.circuit (p := p)), LtChip.rowView
   · intros
     simp [LtChip.circuit, expose, LtChip.exposedStateInteractions,
@@ -483,7 +428,7 @@ theorem ltChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, LtChip.rowView, circuit_norm]
 
 theorem shiftLeftChip_stateEmissionShape : StateEmissionShape
-    (⟨.shiftLeft, ShiftLeftChip.kind, ShiftLeftChip.circuit, rfl⟩ :
+    (⟨.shiftLeft, ShiftLeftChip.kind, ShiftLeftChip.circuit, ShiftLeftChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStandard (ShiftLeftChip.circuit (p := p)), ShiftLeftChip.rowView
   all_goals
@@ -494,7 +439,7 @@ theorem shiftLeftChip_stateEmissionShape : StateEmissionShape
       ShiftLeftChip.rowView, circuit_norm]
 
 theorem shiftRightChip_stateEmissionShape : StateEmissionShape
-    (⟨.shiftRight, ShiftRightChip.kind, ShiftRightChip.circuit, rfl⟩ :
+    (⟨.shiftRight, ShiftRightChip.kind, ShiftRightChip.circuit, ShiftRightChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStandard (ShiftRightChip.circuit (p := p)), ShiftRightChip.rowView
   all_goals
@@ -505,7 +450,7 @@ theorem shiftRightChip_stateEmissionShape : StateEmissionShape
       ShiftRightChip.rowView, circuit_norm]
 
 theorem jalChip_stateEmissionShape : StateEmissionShape
-    (⟨.jal, JalChip.kind, JalChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.jal, JalChip.kind, JalChip.circuit, JalChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStart (JalChip.circuit (p := p)), JalChip.rowView
   refine ⟨fun input _ => input.is_real, fun input _ => cpuStatePullMessage input.state,
     fun input offset => cpuStateNextMessage input.state
@@ -520,7 +465,7 @@ theorem jalChip_stateEmissionShape : StateEmissionShape
       JalChip.rowView, circuit_norm]
 
 theorem jalrChip_stateEmissionShape : StateEmissionShape
-    (⟨.jalr, JalrChip.kind, JalrChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.jalr, JalrChip.kind, JalrChip.circuit, JalrChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStart (JalrChip.circuit (p := p)), JalrChip.rowView
   refine ⟨fun input _ => input.is_real, fun input _ => cpuStatePullMessage input.state,
     fun input offset => cpuStateNextMessage input.state
@@ -536,7 +481,7 @@ theorem jalrChip_stateEmissionShape : StateEmissionShape
       JalrChip.rowView, circuit_norm]
 
 theorem branchChip_stateEmissionShape : StateEmissionShape
-    (⟨.branch, BranchChip.kind, BranchChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.branch, BranchChip.kind, BranchChip.circuit, BranchChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStart (BranchChip.circuit (p := p)), BranchChip.rowView
   refine ⟨fun input _ => input.is_real, fun input _ => cpuStatePullMessage input.state,
     fun input offset => cpuStateNextMessage input.state
@@ -552,7 +497,7 @@ theorem branchChip_stateEmissionShape : StateEmissionShape
       circuit_norm]
 
 theorem uTypeChip_stateEmissionShape : StateEmissionShape
-    (⟨.uType, UTypeChip.kind, UTypeChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.uType, UTypeChip.kind, UTypeChip.circuit, UTypeChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (UTypeChip.circuit (p := p)), UTypeChip.rowView
   · intros
     simp [UTypeChip.circuit, expose, UTypeChip.exposedStateInteractions,
@@ -563,7 +508,7 @@ theorem uTypeChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, UTypeChip.rowView, circuit_norm]
 
 theorem loadDoubleChip_stateEmissionShape : StateEmissionShape
-    (⟨.loadDouble, LoadDoubleChip.kind, LoadDoubleChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.loadDouble, LoadDoubleChip.kind, LoadDoubleChip.circuit, LoadDoubleChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (LoadDoubleChip.circuit (p := p)), LoadDoubleChip.rowView
   all_goals
     intros
@@ -571,7 +516,7 @@ theorem loadDoubleChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, LoadDoubleChip.rowView, circuit_norm]
 
 theorem loadByteChip_stateEmissionShape : StateEmissionShape
-    (⟨.loadByte, LoadByteChip.kind, LoadByteChip.circuit, rfl⟩ :
+    (⟨.loadByte, LoadByteChip.kind, LoadByteChip.circuit, LoadByteChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStart (LoadByteChip.circuit (p := p)), LoadByteChip.rowView
   refine ⟨fun input _ => input.is_lb + input.is_lbu,
@@ -584,7 +529,7 @@ theorem loadByteChip_stateEmissionShape : StateEmissionShape
       circuit_norm]
 
 theorem loadHalfChip_stateEmissionShape : StateEmissionShape
-    (⟨.loadHalf, LoadHalfChip.kind, LoadHalfChip.circuit, rfl⟩ :
+    (⟨.loadHalf, LoadHalfChip.kind, LoadHalfChip.circuit, LoadHalfChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStart (LoadHalfChip.circuit (p := p)), LoadHalfChip.rowView
   refine ⟨fun input _ => input.is_lh + input.is_lhu,
@@ -597,7 +542,7 @@ theorem loadHalfChip_stateEmissionShape : StateEmissionShape
       circuit_norm]
 
 theorem loadWordChip_stateEmissionShape : StateEmissionShape
-    (⟨.loadWord, LoadWordChip.kind, LoadWordChip.circuit, rfl⟩ :
+    (⟨.loadWord, LoadWordChip.kind, LoadWordChip.circuit, LoadWordChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStart (LoadWordChip.circuit (p := p)), LoadWordChip.rowView
   refine ⟨fun input _ => input.is_lw + input.is_lwu,
@@ -610,7 +555,7 @@ theorem loadWordChip_stateEmissionShape : StateEmissionShape
       circuit_norm]
 
 theorem loadX0Chip_stateEmissionShape : StateEmissionShape
-    (⟨.loadX0, LoadX0Chip.kind, LoadX0Chip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.loadX0, LoadX0Chip.kind, LoadX0Chip.circuit, LoadX0Chip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStart (LoadX0Chip.circuit (p := p)), LoadX0Chip.rowView
   refine ⟨fun input _ => input.is_lb + input.is_lbu + input.is_lh + input.is_lhu
       + input.is_lw + input.is_lwu + input.is_ld,
@@ -624,7 +569,7 @@ theorem loadX0Chip_stateEmissionShape : StateEmissionShape
       circuit_norm]
 
 theorem storeByteChip_stateEmissionShape : StateEmissionShape
-    (⟨.storeByte, StoreByteChip.kind, StoreByteChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.storeByte, StoreByteChip.kind, StoreByteChip.circuit, StoreByteChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (StoreByteChip.circuit (p := p)), StoreByteChip.rowView
   all_goals
     intros
@@ -633,7 +578,7 @@ theorem storeByteChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, StoreByteChip.rowView, circuit_norm]
 
 theorem storeHalfChip_stateEmissionShape : StateEmissionShape
-    (⟨.storeHalf, StoreHalfChip.kind, StoreHalfChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.storeHalf, StoreHalfChip.kind, StoreHalfChip.circuit, StoreHalfChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (StoreHalfChip.circuit (p := p)), StoreHalfChip.rowView
   all_goals
     intros
@@ -641,7 +586,7 @@ theorem storeHalfChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, StoreHalfChip.rowView, circuit_norm]
 
 theorem storeWordChip_stateEmissionShape : StateEmissionShape
-    (⟨.storeWord, StoreWordChip.kind, StoreWordChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.storeWord, StoreWordChip.kind, StoreWordChip.circuit, StoreWordChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (StoreWordChip.circuit (p := p)), StoreWordChip.rowView
   all_goals
     intros
@@ -649,7 +594,7 @@ theorem storeWordChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, StoreWordChip.rowView, circuit_norm]
 
 theorem storeDoubleChip_stateEmissionShape : StateEmissionShape
-    (⟨.storeDouble, StoreDoubleChip.kind, StoreDoubleChip.circuit, rfl⟩ : SupportedChip p) := by
+    (⟨.storeDouble, StoreDoubleChip.kind, StoreDoubleChip.circuit, StoreDoubleChip.generation, rfl⟩ : SupportedChip p) := by
   stateExposureStandard (StoreDoubleChip.circuit (p := p)), StoreDoubleChip.rowView
   all_goals
     intros
@@ -657,7 +602,7 @@ theorem storeDoubleChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, StoreDoubleChip.rowView, circuit_norm]
 
 theorem mulChip_stateEmissionShape : StateEmissionShape
-    (⟨.mul, MulChip.kind, MulChip.circuit, rfl⟩ :
+    (⟨.mul, MulChip.kind, MulChip.circuit, MulChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStandard (MulChip.circuit (p := p)), MulChip.rowView
   all_goals
@@ -668,7 +613,7 @@ theorem mulChip_stateEmissionShape : StateEmissionShape
       cpuStatePullMessage, cpuStatePushMessage, MulChip.rowView, circuit_norm]
 
 theorem divRemChip_stateEmissionShape : StateEmissionShape
-    (⟨.divRem, DivRemChip.kind, DivRemChip.circuit, rfl⟩ :
+    (⟨.divRem, DivRemChip.kind, DivRemChip.circuit, DivRemChip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStandard (DivRemChip.circuit (p := p)), DivRemChip.rowView
   all_goals
@@ -680,7 +625,7 @@ theorem divRemChip_stateEmissionShape : StateEmissionShape
       DivRemChip.rowView, circuit_norm]
 
 theorem aluX0Chip_stateEmissionShape : StateEmissionShape
-    (⟨.aluX0, AluX0Chip.kind, AluX0Chip.circuit, rfl⟩ :
+    (⟨.aluX0, AluX0Chip.kind, AluX0Chip.circuit, AluX0Chip.generation, rfl⟩ :
       SupportedChip p) := by
   stateExposureStandard (AluX0Chip.circuit (p := p)), AluX0Chip.rowView
   all_goals
@@ -897,7 +842,7 @@ theorem typedEnsembleStateInteractions_eq
               (syscallInstrsRow witness.data row))]))) := by
   have verifier := stateVerifier_stateInteractions witness.publicInput witness.data
   change typedInteractionValuesWith (sp1Ensemble (p := p)).verifierOperations stateChannel
-    (Environment.fromInput witness.publicInput witness.data) = _ at verifier
+    witness.data.publicEnvironment = _ at verifier
   rw [typedEnsembleInteractionsWith_partition, verifier,
     decodedWitnessStateInteractions_eq]
   rw [show witness.tables.drop 25 =
@@ -1269,10 +1214,10 @@ theorem consumedMessages_typedEnsembleState_eq
     consumedMessages_syscallInstrsTablePairs _ _ syscallBinary]
   rfl
 
-/-- Binary decoded and StateBump selectors imply `{-1,0,1}` signed multiplicities for the whole
+/-- Binary decoded and StateBump selectors imply `{0,1}` multiplicities with explicit directions for the whole
 State channel; the verifier boundary is the constant active pair and the state-silent providers
 contribute nothing. -/
-theorem typedEnsembleStateInteractions_signed_binary
+theorem typedEnsembleStateInteractions_binary
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (binary : ∀ decoded ∈ decodedInstructionRows (p := p) witness.tables,
       (decoded.toChipRow witness.data).is_real = 0 ∨
@@ -1287,23 +1232,22 @@ theorem typedEnsembleStateInteractions_signed_binary
       (syscallInstrsRow witness.data row).is_real = 0 ∨
         (syscallInstrsRow witness.data row).is_real = 1) :
     ∀ interaction ∈ typedEnsembleInteractionsWith witness stateChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1 := by
+      IsBool interaction.mult := by
   rw [typedEnsembleStateInteractions_eq]
   intro interaction interactionMem
   rcases List.mem_append.mp interactionMem with instrMem | tailMem
   · rcases List.mem_append.mp instrMem with boundaryMem | rowMem
-    · exact statePair_signed_binary 1 (Or.inr rfl) _ _ interaction boundaryMem
+    · exact statePair_binary 1 (Or.inr rfl) _ _ interaction boundaryMem
     · obtain ⟨decoded, decodedMem, interactionMem⟩ := List.mem_flatMap.mp rowMem
-      exact statePair_signed_binary _ (binary decoded decodedMem) _ _ interaction interactionMem
+      exact statePair_binary _ (binary decoded decodedMem) _ _ interaction interactionMem
   · rcases List.mem_append.mp tailMem with bumpMem | tailMem
     · obtain ⟨row, rowMem, interactionMem⟩ := List.mem_flatMap.mp bumpMem
-      exact statePair_signed_binary _ (bumpBinary row rowMem) _ _ interaction interactionMem
+      exact statePair_binary _ (bumpBinary row rowMem) _ _ interaction interactionMem
     · rcases List.mem_append.mp tailMem with haltMem | syscallMem
       · obtain ⟨row, rowMem, interactionMem⟩ := List.mem_flatMap.mp haltMem
-        exact statePair_signed_binary _ (haltBinary row rowMem) _ _ interaction interactionMem
+        exact statePair_binary _ (haltBinary row rowMem) _ _ interaction interactionMem
       · obtain ⟨row, rowMem, interactionMem⟩ := List.mem_flatMap.mp syscallMem
-        exact statePair_signed_binary _ (syscallBinary row rowMem) _ _ interaction interactionMem
+        exact statePair_binary _ (syscallBinary row rowMem) _ _ interaction interactionMem
 
 /-- Clean State balance is an exact typed endpoint permutation over the active deterministically
 decoded instruction rows together with the active StateBump canonicalization rows.  No
@@ -1348,7 +1292,7 @@ theorem realDecodedStateMessages_perm
     (by simp [sp1Ensemble_channels])
   have messagePerm := producedMessages_perm_consumedMessages
     (typedEnsembleInteractionsWith witness stateChannel) channelBalanced
-      (typedEnsembleStateInteractions_signed_binary witness binary bumpBinary haltBinary
+      (typedEnsembleStateInteractions_binary witness binary bumpBinary haltBinary
         syscallBinary)
   rw [producedMessages_typedEnsembleState_eq witness binary bumpBinary haltBinary syscallBinary,
     consumedMessages_typedEnsembleState_eq witness binary bumpBinary haltBinary

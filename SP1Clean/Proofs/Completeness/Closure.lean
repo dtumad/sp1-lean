@@ -180,33 +180,41 @@ theorem preprocessedProviderLedger_eq (hwf : trace.WellFormed) (hfit : trace.Cou
       (trace.providerOccurrences (.byte .u8Range)).map u8RangeAccess :=
     u8Range_traceTable_cleanAccesses _ _ _ (trace.providerCapacity (.byte .u8Range))
       (hwf.provider (.byte .u8Range)) hfit.u8Range
+      (trace.providerDataFor_consistent (.byte .u8Range))
   have msb : tableCleanAccesses (trace.providerTableFor (.byte .msb)) =
       (trace.providerOccurrences (.byte .msb)).map msbAccess :=
     msb_traceTable_cleanAccesses _ _ _ (trace.providerCapacity (.byte .msb))
       (hwf.provider (.byte .msb)) hfit.msb
+      (trace.providerDataFor_consistent (.byte .msb))
   have andByte : tableCleanAccesses (trace.providerTableFor (.byte .andByte)) =
       (trace.providerOccurrences (.byte .andByte)).map andAccess :=
     and_traceTable_cleanAccesses _ _ _ (trace.providerCapacity (.byte .andByte))
       (hwf.provider (.byte .andByte)) hfit.andByte
+      (trace.providerDataFor_consistent (.byte .andByte))
   have orByte : tableCleanAccesses (trace.providerTableFor (.byte .orByte)) =
       (trace.providerOccurrences (.byte .orByte)).map orAccess :=
     or_traceTable_cleanAccesses _ _ _ (trace.providerCapacity (.byte .orByte))
       (hwf.provider (.byte .orByte)) hfit.orByte
+      (trace.providerDataFor_consistent (.byte .orByte))
   have xorByte : tableCleanAccesses (trace.providerTableFor (.byte .xorByte)) =
       (trace.providerOccurrences (.byte .xorByte)).map xorAccess :=
     xor_traceTable_cleanAccesses _ _ _ (trace.providerCapacity (.byte .xorByte))
       (hwf.provider (.byte .xorByte)) hfit.xorByte
+      (trace.providerDataFor_consistent (.byte .xorByte))
   have ltu : tableCleanAccesses (trace.providerTableFor (.byte .ltu)) =
       (trace.providerOccurrences (.byte .ltu)).map ltuAccess :=
     ltu_traceTable_cleanAccesses _ _ _ (trace.providerCapacity (.byte .ltu))
       (hwf.provider (.byte .ltu)) hfit.ltu
+      (trace.providerDataFor_consistent (.byte .ltu))
   have range (width : RangeChip.Width) : tableCleanAccesses (trace.providerTableFor (.range width)) =
       (trace.providerOccurrences (.range width)).map (rangeAccess width) :=
     range_traceTable_cleanAccesses _ _ _ _ (trace.providerCapacity (.range width))
       (hwf.provider (.range width)) (hfit.range width)
+      (trace.providerDataFor_consistent (.range width))
   have program : tableCleanAccesses (trace.providerTableFor .program) =
       (trace.providerOccurrences .program).map programEntryAccess :=
     program_traceTable_cleanAccesses _ _ _ (trace.providerCapacity .program) hfit.romKeys hfit.rom
+      (trace.providerDataFor_consistent .program)
   rw [preprocessedProviderTables_eq]
   simp only [tablesCleanAccesses, List.flatMap_cons, List.flatMap_nil, List.flatMap_append,
     List.append_nil, rangeTables, List.flatMap_map, providerLedger,

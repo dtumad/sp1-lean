@@ -93,12 +93,13 @@ theorem node_values (empty : Bool) (input : Var Inputs (ZMod p))
   cases empty <;> simp only [Operations.interactionValuesWith, main_node_interactions,
     Bool.false_eq_true, ↓reduceIte, List.map_cons, List.map_nil, Channel.eval_pulled]
 
-theorem component_spec_of_node (empty : Bool) (env : Environment (ZMod p))
-    (constraints : ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions } : Component (ZMod p)).operations.ConstraintsHold env)
-    (node : ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees nodeChannel.toRaw env) :
-    ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions } : Component (ZMod p)).Spec env := by
+theorem component_spec_of_node
+    {generation : WitnessGeneration.Generation (ZMod p) Inputs} (empty : Bool) (env : Environment (ZMod p))
+    (constraints : ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).operations.ConstraintsHold env)
+    (node : ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees nodeChannel.toRaw env) :
+    ({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).Spec env := by
   apply (Component.weakSoundness (by trivial) constraints ?_).1
-  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions } : Component (ZMod p)).inChannelsOrGuarantees env)]
+  rw [Operations.guarantees_iff _ _ _ (({ circuit := circuit empty, Assumptions := (circuit empty).Assumptions, generation } : Component (ZMod p)).inChannelsOrGuarantees env)]
   intro selected member
   cases empty
   · change selected ∈ [nodeChannel.toRaw, HostCallChip.channel.toRaw, stateChannel.toRaw] at member

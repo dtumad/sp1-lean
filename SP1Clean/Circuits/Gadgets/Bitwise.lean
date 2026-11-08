@@ -53,45 +53,19 @@ set_option linter.unusedSectionVars false in
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hop, hbin⟩ := h_assumptions
-  obtain ⟨hib, hic, ⟨hilb, hilc, _hires⟩, _hiop, _hireal⟩ := h_input
-  have eb : ∀ (k : ℕ) (_ : k < 4), Expression.eval env input_var_b[k] = input_b[k] :=
-    fun k _ => by rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ (k : ℕ) (_ : k < 4), Expression.eval env input_var_c[k] = input_c[k] :=
-    fun k _ => by rw [← hic]; simp only [Vector.getElem_map]
-  have elb : ∀ (k : ℕ) (_ : k < 4),
-      Expression.eval env input_var_cols_b_low_bytes_low_bytes[k]
-        = input_cols_b_low_bytes_low_bytes[k] :=
-    fun k _ => by rw [← hilb]; simp only [Vector.getElem_map]
-  have elc : ∀ (k : ℕ) (_ : k < 4),
-      Expression.eval env input_var_cols_c_low_bytes_low_bytes[k]
-        = input_cols_c_low_bytes_low_bytes[k] :=
-    fun k _ => by rw [← hilc]; simp only [Vector.getElem_map]
   obtain ⟨_h_gate, h_bw⟩ := h_holds
   have h_spec := h_bw ⟨hop, hbin⟩
   change BitwiseOperation.Spec _ at h_spec
   refine ⟨?_, Or.inr ⟨hop, hbin⟩⟩
-  simpa only [decompBytes, eb, ec, elb, elc, ← sub_eq_add_neg] using h_spec
+  simpa only [decompBytes, ← sub_eq_add_neg] using h_spec
 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hop, hbin⟩ := h_assumptions
-  obtain ⟨hib, hic, ⟨hilb, hilc, _hires⟩, _hiop, _hireal⟩ := h_input
-  have eb : ∀ (k : ℕ) (_ : k < 4), Expression.eval env.toEnvironment input_var_b[k] = input_b[k] :=
-    fun k _ => by rw [← hib]; simp only [Vector.getElem_map]
-  have ec : ∀ (k : ℕ) (_ : k < 4), Expression.eval env.toEnvironment input_var_c[k] = input_c[k] :=
-    fun k _ => by rw [← hic]; simp only [Vector.getElem_map]
-  have elb : ∀ (k : ℕ) (_ : k < 4),
-      Expression.eval env.toEnvironment input_var_cols_b_low_bytes_low_bytes[k]
-        = input_cols_b_low_bytes_low_bytes[k] :=
-    fun k _ => by rw [← hilb]; simp only [Vector.getElem_map]
-  have elc : ∀ (k : ℕ) (_ : k < 4),
-      Expression.eval env.toEnvironment input_var_cols_c_low_bytes_low_bytes[k]
-        = input_cols_c_low_bytes_low_bytes[k] :=
-    fun k _ => by rw [← hilc]; simp only [Vector.getElem_map]
   refine ⟨?_, ⟨hop, hbin⟩, ?_⟩
   · rcases hbin with h | h <;> rw [h] <;> simp
   · change BitwiseOperation.Spec _
-    simpa only [decompBytes, eb, ec, elb, elc, ← sub_eq_add_neg] using h_spec
+    simpa only [decompBytes, ← sub_eq_add_neg] using h_spec
 
 /-- SP1's `BitwiseU16Operation::eval` as a Clean-native `FormalAssertion`: the `is_real` binary gate
 plus the composed `BitwiseOperation` on the two `U16toU8` byte decompositions, witnessing nothing. -/

@@ -49,13 +49,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   obtain ⟨sameHigh, sameMiddle, gap⟩ := h_holds
   simp only [sub_eq_zero] at sameHigh sameMiddle
   rw [sameHigh, sameMiddle] at gap
-  have lowerEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_lower[index] = input_lower[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.1
-  have upperEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_upper[index] = input_upper[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.2
-  simp only [lowerEval, upperEval] at gap
   have l0 : input_lower[0].val < 2 ^ 16 := lower 0
   have l1 : input_lower[1].val < 2 ^ 16 := lower 1
   have l2 : input_lower[2].val < 2 ^ 16 := lower 2
@@ -64,18 +57,18 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
   have u2 : input_upper[2].val < 2 ^ 16 := upper 2
   dsimp only [value, Address.toNat]
   by_cases high : input_lower[2] = input_upper[2]
-  · simp only [if_pos high, sub_self, zero_mul, one_mul, zero_add] at gap
+  · simp only [ite_eq_left high, sub_self, zero_mul, one_mul, zero_add] at gap
     by_cases middle : input_lower[1] = input_upper[1]
-    · simp only [if_pos middle, sub_self, zero_mul, one_mul, zero_add] at gap
+    · simp only [ite_eq_left middle, sub_self, zero_mul, one_mul, zero_add] at gap
       have order := difference_le _ _ l0 gap
       rw [high, middle]
       omega
-    · simp only [if_neg middle, sub_zero, one_mul, zero_mul, add_zero] at gap
+    · simp only [ite_eq_right middle, sub_zero, one_mul, zero_mul, add_zero] at gap
       have order := difference_le _ _ l1 gap
       have different : input_lower[1].val ≠ input_upper[1].val := fun same => middle (ZMod.val_injective p same)
       rw [high]
       omega
-  · simp only [if_neg high, sub_zero, one_mul, zero_mul, add_zero] at gap
+  · simp only [ite_eq_right high, sub_zero, one_mul, zero_mul, add_zero] at gap
     have order := difference_le _ _ l2 gap
     have different : input_lower[2].val ≠ input_upper[2].val := fun same => high (ZMod.val_injective p same)
     omega
@@ -86,13 +79,6 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   obtain ⟨sameHigh, sameMiddle⟩ := h_env
   simp only [sub_eq_zero] at sameHigh sameMiddle
   rw [sameHigh, sameMiddle]
-  have lowerEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_lower[index] = input_lower[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.1
-  have upperEval (index : ℕ) (bound : index < 3) :
-      Expression.eval env input_var_upper[index] = input_upper[index] := by
-    simpa only [Vector.getElem_map] using congrArg (fun v : fields 3 (ZMod p) => v[index]) h_input.2
-  simp only [lowerEval, upperEval]
   have l0 : input_lower[0].val < 2 ^ 16 := lower 0
   have l1 : input_lower[1].val < 2 ^ 16 := lower 1
   have l2 : input_lower[2].val < 2 ^ 16 := lower 2
@@ -101,17 +87,17 @@ theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Sp
   have u2 : input_upper[2].val < 2 ^ 16 := upper 2
   dsimp only [value, Address.toNat] at h_spec
   by_cases high : input_lower[2] = input_upper[2]
-  · simp only [if_pos high, sub_self, zero_mul, one_mul, zero_add]
+  · simp only [ite_eq_left high, sub_self, zero_mul, one_mul, zero_add]
     by_cases middle : input_lower[1] = input_upper[1]
-    · simp only [if_pos middle, sub_self, zero_mul, one_mul, zero_add]
+    · simp only [ite_eq_left middle, sub_self, zero_mul, one_mul, zero_add]
       apply difference_bound _ _ u0
       rw [high, middle] at h_spec
       omega
-    · simp only [if_neg middle, sub_zero, one_mul, zero_mul, add_zero]
+    · simp only [ite_eq_right middle, sub_zero, one_mul, zero_mul, add_zero]
       apply difference_bound _ _ u1
       rw [high] at h_spec
       omega
-  · simp only [if_neg high, sub_zero, one_mul, zero_mul, add_zero]
+  · simp only [ite_eq_right high, sub_zero, one_mul, zero_mul, add_zero]
     apply difference_bound _ _ u2
     omega
 

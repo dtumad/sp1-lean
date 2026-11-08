@@ -24,7 +24,7 @@ the RV64 signature `f rs2_val rs1_val`. `advance` is the five-way flag-dispatche
 `Mul` carries `Fact (2 ^ 24 < p)`; `Fact (2 ^ 17 < p)` follows via the global
 `instFact_2_17_of_2_24` instance (`Math/Word.lean`). -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.MulSail
 
 open Sail LeanRV64D LeanRV64D.Functions

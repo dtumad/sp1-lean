@@ -24,10 +24,10 @@ use p3_field::PrimeCharacteristicRing;
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::Matrix;
 
-fixture!(commit_complete_halt, "installed_commit_complete_halt");
-fixture!(commit_partial_halt, "installed_commit_partial_halt");
-fixture!(deferred_repeat, "installed_deferred_repeat");
-fixture!(commit_repeat, "installed_commit_repeat");
+fixture!(commit_complete_halt, installed_commit_complete_halt);
+fixture!(commit_partial_halt, installed_commit_partial_halt);
+fixture!(deferred_repeat, installed_deferred_repeat);
+fixture!(commit_repeat, installed_commit_repeat);
 #[test]
 fn complete_commitment_rows_padding_and_public_mutations_match_native() {
     check_reference::<commit_repeat::Ensemble>(&commit_repeat::reference(), 9);
@@ -54,7 +54,7 @@ fn commitment_execution<P: Program<F> + GeneratedAirSpec>(
 
     let case = &reference["cases"][0];
     let public = fields(&case["publicInput"]);
-    let native = generate::<F, P>(&public, &fields(&case["privateInput"])).unwrap();
+    let native = generate::<F, P>(&public, &fields(&case["privateInput"]), 1).unwrap();
     let mut instructions = vec![];
     execution::load_constant(&mut instructions, 5, if deferred { 26 } else { 16 });
     execution::load_constant(&mut instructions, 10, if complete { 0 } else { 7 });

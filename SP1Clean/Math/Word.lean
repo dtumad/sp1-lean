@@ -323,10 +323,10 @@ lemma toBitVec64_signExtend_word [NeZero p] [Fact (2 ^ 17 < p)]
     rw [BitVec.msb_eq_decide, decide_eq_true_eq, hX]; omega
   split_ifs with hmsb
   · have hge : R[1].val ≥ 32768 := hmsb_iff.mp hmsb
-    have hmv : (m * 65535 : ZMod p).val = 65535 := by rw [hm, if_pos hge, one_mul, val_65535_zmod_p]
+    have hmv : (m * 65535 : ZMod p).val = 65535 := by rw [hm, ite_eq_left hge, one_mul, val_65535_zmod_p]
     rw [hr2, hr3, hmv]; omega
   · have hlt : ¬ R[1].val ≥ 32768 := fun hc => hmsb (hmsb_iff.mpr hc)
-    have hmv : (m * 65535 : ZMod p).val = 0 := by rw [hm, if_neg hlt, zero_mul, ZMod.val_zero]
+    have hmv : (m * 65535 : ZMod p).val = 0 := by rw [hm, ite_eq_right hlt, zero_mul, ZMod.val_zero]
     rw [hr2, hr3, hmv]; omega
 
 end SP1Clean

@@ -21,10 +21,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 theorem tables_getElem (image : ProgramImage) (source : ExecutionSnapshot)
     (index : ℕ) (bound : index < 61) :
     (tables (p := p) image source)[index]'(by rw [tables_length]; omega) =
-      if 28 = index then { circuit := ProtectedStore.double, Assumptions := (ProtectedStore.double).Assumptions } else
-      if 27 = index then { circuit := ProtectedStore.word, Assumptions := (ProtectedStore.word).Assumptions } else
-      if 26 = index then { circuit := ProtectedStore.half, Assumptions := (ProtectedStore.half).Assumptions } else
-      if 25 = index then { circuit := ProtectedStore.byte, Assumptions := (ProtectedStore.byte).Assumptions } else
+      if 28 = index then { circuit := ProtectedStore.double, Assumptions := (ProtectedStore.double).Assumptions, generation := StoreDoubleChip.generation } else
+      if 27 = index then { circuit := ProtectedStore.word, Assumptions := (ProtectedStore.word).Assumptions, generation := StoreWordChip.generation } else
+      if 26 = index then { circuit := ProtectedStore.half, Assumptions := (ProtectedStore.half).Assumptions, generation := StoreHalfChip.generation } else
+      if 25 = index then { circuit := ProtectedStore.byte, Assumptions := (ProtectedStore.byte).Assumptions, generation := StoreByteChip.generation } else
       (LocalCore.tables image source)[index]'(by rw [LocalCore.tables_length]; exact bound) := by
   simp only [tables]
   rw [List.getElem_append_left (by
@@ -63,15 +63,15 @@ theorem component_projection (image : ProgramImage) (source : ExecutionSnapshot)
     exact ⟨ProtectedStore.byte_constraints, ProtectedStore.byte_lookups, ProtectedStore.byte_interactions⟩
   simp [double, word, half, byte]
 
-/-- Permission interactions preserve physical widths and fixed-column contracts. -/
+/-- Permission interactions preserve physical widths and fixed-row contracts. -/
 theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot) (index : Fin 61) :
     let original := (LocalCore.tables (p := p) image source)[index.val]'(by
       rw [LocalCore.tables_length]; exact index.isLt)
     let extended := (tables (p := p) image source)[index.val]'(by rw [tables_length]; omega)
-    original.width = extended.width ∧ original.fixedColumns = extended.fixedColumns := by
+    original.width = extended.width ∧ original.FixedRowsMatch = extended.FixedRowsMatch := by
   -- Keep the predicate folded while rewriting the dependent component and its instances.
   let layout (original extended : Component (ZMod p)) : Prop :=
-    original.width = extended.width ∧ original.fixedColumns = extended.fixedColumns
+    original.width = extended.width ∧ original.FixedRowsMatch = extended.FixedRowsMatch
   change layout _ _
   rw [tables_getElem image source index.val index.isLt]
   rcases index with ⟨index, bound⟩
@@ -98,12 +98,12 @@ private theorem projectionWidth (image : ProgramImage) (source : ExecutionSnapsh
 
 private theorem projectionFixed (image : ProgramImage) (source : ExecutionSnapshot)
     (index : Fin (LocalCore.ensemble (p := p) image source).tables.length) :
-    (LocalCore.ensemble image source).tables[index.val].fixedColumns =
-      ((ensemble image source).tables[index.val]'(by have := projectionLength (p := p) image source; omega)).fixedColumns :=
+    (LocalCore.ensemble image source).tables[index.val].FixedRowsMatch =
+      ((ensemble image source).tables[index.val]'(by have := projectionLength (p := p) image source; omega)).FixedRowsMatch :=
   (component_layout image source ⟨index.val, by
     simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2
 
-/-- Project the same physical rows and public boundary; canonical data drops the permission key. -/
+/-- Project the same physical rows and public boundary; canonical data retains the original public input and drops the permission keys. -/
 def localWitness {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) :
     EnsembleWitness (LocalCore.ensemble (p := p) image source) :=
@@ -113,36 +113,17 @@ def localWitness {image : ProgramImage} {source : ExecutionSnapshot}
 /-- Each projected table retains its complete physical arrays under the original component. -/
 theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 61) :
-    (localWitness witness).tables[index.val]'(by
+    ((localWitness witness).tables[index.val]'(by
       rw [← (localWitness witness).same_length]
       change index.val < (LocalCore.tables (p := p) image source).length
-      rw [LocalCore.tables_length]; exact index.isLt) =
-      { (witness.tables[index.val]'(by
+      rw [LocalCore.tables_length]; exact index.isLt)).table =
+      (witness.tables[index.val]'(by
         rw [← witness.same_length]; change index.val < (tables image source).length
-        rw [tables_length]; omega)).withComponent
-        ((LocalCore.tables image source)[index.val]'(by rw [LocalCore.tables_length]; exact index.isLt))
-        (by rw [← witness.same_circuits]; exact (component_layout (p := p) image source index).1)
-        (by rw [← witness.same_circuits]; exact (component_layout image source index).2) with
-        data := (localWitness witness).data } := by
-  rw [localWitness, witness.projectPrefix_getElem (index := ⟨index.val, by
-    change index.val < (LocalCore.tables (p := p) image source).length
-    rw [LocalCore.tables_length]; exact index.isLt⟩)]
-  rw [Table.ext_iff]
-  refine ⟨rfl, ?_, rfl⟩
-  let original := witness.tables[index.val]'(by
-    rw [← witness.same_length]
-    change index.val < (tables image source).length
-    rw [tables_length]; omega)
-  let component := (LocalCore.tables (p := p) image source)[index.val]'(by
-    rw [LocalCore.tables_length]; exact index.isLt)
-  have sameWidth : component.width = original.component.width := by
-    rw [← witness.same_circuits]
-    exact (component_layout (p := p) image source index).1
-  have sameFixed : component.fixedColumns = original.component.fixedColumns := by
-    rw [← witness.same_circuits]
-    exact (component_layout (p := p) image source index).2
-  have rows := original.projectPrefix_rows_of_width_eq component sameWidth.le sameFixed sameWidth
-  exact rows
+        rw [tables_length]; omega)).table :=
+  witness.projectPrefix_getElem_rows_of_width_eq (projectionLength image source) _ _
+    ⟨index.val, by
+      change index.val < (LocalCore.tables (p := p) image source).length
+      rw [LocalCore.tables_length]; exact index.isLt⟩ (component_layout image source index).1
 
 theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
@@ -261,11 +242,23 @@ theorem localWitness_balanced {image : ProgramImage} {source : ExecutionSnapshot
 
 /-- The protected AIR refines the original local AIR at the same public boundary. -/
 theorem statement_implies_local (image : ProgramImage) (source : ExecutionSnapshot)
-    (publicInput : SP1PublicIO (ZMod p))
-    (statement : (ensemble image source).Statement publicInput) :
-    (LocalCore.ensemble image source).Statement publicInput := by
-  obtain ⟨witness, publicEq, constraints, balanced⟩ := statement
-  exact ⟨localWitness witness, publicEq, localWitness_constraints witness constraints,
-    localWitness_balanced witness balanced⟩
+    (balance : Balance (ZMod p)) (publicInput : SP1PublicIO (ZMod p)) (heights : List ℕ)
+    (statement : (ensemble image source).Statement balance publicInput heights) :
+    ∃ localHeights, (LocalCore.ensemble image source).Statement balance publicInput localHeights := by
+  obtain ⟨fit, witness, publicEq, heightsEq, constraints, balanced⟩ := statement
+  have sourceFit : witness.InteractionsFit balance :=
+    EnsembleWitness.interactionsFit_of_heights (heightsEq.symm ▸ fit)
+  refine ⟨(localWitness witness).heights, ?_, localWitness witness, publicEq, rfl,
+    localWitness_constraints witness constraints, ?_⟩
+  · apply List.all_eq_true.mpr
+    intro channel member
+    rw [← (localWitness witness).length_interactionsWith member,
+      localWitness_interactions witness channel (old_channel_ne_permission channel member)
+        (old_channel_ne_membership channel member)]
+    exact sourceFit channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ member))
+  · intro channel member
+    rw [localWitness_interactions witness channel (old_channel_ne_permission channel member)
+      (old_channel_ne_membership channel member)]
+    exact balanced channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ member))
 
 end SP1Clean.Soundness.ProtectedLocalCore

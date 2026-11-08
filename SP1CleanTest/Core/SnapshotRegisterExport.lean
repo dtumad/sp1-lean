@@ -40,38 +40,37 @@ def verifier : Verifier.Program Fp Requests where
 
 /-- Sparse Memory rows remain separate from the complete fixed register inventory. -/
 def ensemble : Ensemble Fp Requests where
-  tables := [{ circuit := SnapshotRegisterProvider.circuit snapshot, Assumptions := (SnapshotRegisterProvider.circuit snapshot).Assumptions }, membership]
+  tables := [{
+    circuit := SnapshotRegisterProvider.circuit snapshot
+    Assumptions := (SnapshotRegisterProvider.circuit snapshot).Assumptions
+    generation := .demand {
+      channel := Channels.memoryChannel
+      trigger := .pull
+      input message := pure ⟨.witness (.expr message.addr0),
+        message.value.map (fun value => .witness (.expr value))⟩ } }, membership]
   unique_names := by
     simp [membership, StaticTable.component, StaticTable.provider,
       SnapshotRegisterProvider.circuit, MemorySnapshot.registerTable, StaticTable.ofRows]
   channels := [Channels.memoryChannel.toRaw, snapshot.registerTable.channel.toRaw]
   verifier := verifier
-
-/-- Only the count column is mutable in the preallocated membership table. -/
-def membershipMode : WitnessGeneration.Mode Fp := .preallocated {
-  rows := 32
-  input := .ofFExprs #v[.const 0]
-  input_valid := by rfl
-  handlers := [{ interaction := 0, column := 6 }]
-}
-
-/-- Fixed membership uses one count column and keeps the complete register inventory. -/
-def membershipGeneration : WitnessGeneration.Generation Fp where
-  mode := membershipMode
-  padding := { input := #[0, 0, 0, 0, 0, 0, 0], minimumRows := 32 }
-
-/-- Allocate one sparse row per Memory occurrence, including repeated messages. -/
-def config : WitnessGeneration.Config Fp where
-  components := [((SnapshotRegisterProvider.circuit (p := SP1Prime) snapshot).name, {
-    mode := .demand {
-      channel := (Channels.memoryChannel (p := SP1Prime)).toRaw
-      direction := .pull
-      aggregation := .perOccurrence
-      input := ⟨[.message 2, .message 5, .message 6, .message 7, .message 8]⟩
-    }
-    padding := { input := #[0, 0, 0, 0, 0] }
-  }), (membership.circuit.name, membershipGeneration)]
-  fuel := 128
+  unique_channel_names := by
+    simp [Channel.toRaw, Channels.memoryChannel, StaticTable.channel,
+      MemorySnapshot.registerTable, StaticTable.ofRows]
+  tables_channels := by
+    intro component member channel used
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · change channel ∈ [snapshot.registerTable.channel.toRaw, Channels.memoryChannel.toRaw] at used
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at used ⊢
+      tauto
+    · change channel ∈ [snapshot.registerTable.channel.toRaw] at used
+      exact List.mem_cons_of_mem _ used
+  verifier_channels := by
+    intro channel member
+    simp [Verifier.Program.channels, Verifier.Program.channelsWithGuarantees,
+      Verifier.Program.channelsWithRequirements, Verifier.Program.operations, verifier,
+      circuit_norm] at member
+    simp [member]
 
 /-- Check complete raw constraints and both ledgers, retaining zero-count occurrences. -/
 def description : Air.Flat.EnsembleCheck ensemble where
@@ -81,26 +80,19 @@ def description : Air.Flat.EnsembleCheck ensemble where
     simp [ensemble, membership, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, SnapshotRegisterProvider.circuit,
       SnapshotRegisterProvider.main, circuit_norm]
-  channels_unique := by
-    simp [ensemble, Channel.toRaw, Channels.memoryChannel, StaticTable.channel,
-      MemorySnapshot.registerTable, StaticTable.ofRows]
-  channels_complete := by
-    simp [ensemble, membership, Component.interactions_eq, Component.rowOperations,
-      StaticTable.component, StaticTable.provider, SnapshotRegisterProvider.circuit,
-      SnapshotRegisterProvider.main, circuit_norm]
-  verifier_channels_complete := by
-    simp [ensemble, Ensemble.verifierOperations, verifier,
-      Verifier.Program.circuitOperations, circuit_norm]
 
 /-- No sparse consumer is installed when no Memory record is requested. -/
 def emptyEnsemble : Ensemble Fp unit where
   tables := [membership]
   unique_names := by simp
   channels := [snapshot.registerTable.channel.toRaw]
-
-def emptyConfig : WitnessGeneration.Config Fp where
-  components := [(membership.circuit.name, membershipGeneration)]
-  fuel := 1
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change [_] ⊆ [_]
+    exact List.Subset.refl _
+  verifier_channels := by simp [Verifier.Program.channels, circuit_norm]
 
 def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
   lookups := []
@@ -108,24 +100,17 @@ def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
   lookups_complete := by
     simp [emptyEnsemble, membership, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, circuit_norm]
-  channels_unique := by simp [emptyEnsemble]
-  channels_complete := by
-    simp [emptyEnsemble, membership, Component.interactions_eq, Component.rowOperations,
-      StaticTable.component, StaticTable.provider, circuit_norm]
-  verifier_channels_complete := by
-    simp [emptyEnsemble, Ensemble.verifierOperations, Verifier.Program.circuitOperations,
-      Verifier.Program.empty, circuit_norm]
 
 def generate (requests : Requests Fp) : Except String (EnsembleWitness ensemble) :=
-  WitnessGeneration.generate (ComponentExport.fixture ensemble) config requests () |>.mapError toString
+  WitnessGeneration.generate ensemble 128 requests () |>.mapError toString
 
 def generateEmpty : Except String (EnsembleWitness emptyEnsemble) :=
-  WitnessGeneration.generate (ComponentExport.fixture emptyEnsemble) emptyConfig () () |>.mapError toString
+  WitnessGeneration.generate emptyEnsemble 1 () () |>.mapError toString
 
 def rustExports : List (String × Except String String) :=
-  [("snapshot_registers.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) config),
+  [("snapshot_registers.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) 128),
    ("snapshot_registers_empty.rs",
-     Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture emptyEnsemble) emptyConfig)]
+     Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture emptyEnsemble) 1)]
 
 /-- All indices, one repeated demand, and independently forged indices and limbs. -/
 def cases : List (String × Requests Fp × Bool) :=
@@ -145,13 +130,13 @@ def cases : List (String × Requests Fp × Bool) :=
 /-- Independent raw checks validate successful generation and reject every forged request. -/
 theorem cases_correct : cases.all (fun (_, requests, expected) =>
     (match generate requests with
-    | .ok witness => description.checkWitness SP1Prime witness
+    | .ok witness => description.checkWitness witness
     | .error _ => false) == expected) = true := by native_decide
 
 /-- An unused fixed table keeps every row and every zero-count interaction. -/
 theorem empty_correct :
     (generateEmpty.map fun witness =>
-      emptyDescription.checkWitness SP1Prime witness &&
+      emptyDescription.checkWitness witness &&
       witness.tables.length == 1 && witness.interactions.length == 32 &&
       witness.interactions.all (·.mult == 0)) = .ok true := by native_decide
 
@@ -174,30 +159,44 @@ def verifier : Verifier.Program Fp Requests where
     Verifier.push (FinalMemoryValue.channel false) input[1]
 
 def ensemble : Ensemble Fp Requests where
-  tables := [{ circuit := FinalRegisterValue.circuit snapshot, Assumptions := (FinalRegisterValue.circuit snapshot).Assumptions }, membership]
+  tables := [{
+    circuit := FinalRegisterValue.circuit snapshot
+    Assumptions := (FinalRegisterValue.circuit snapshot).Assumptions
+    generation := .demand {
+      channel := FinalMemoryValue.channel false
+      trigger := .push
+      input message := pure (fromElements (M := Channels.MemoryMsg) ((toElements (M := Channels.MemoryMsg) message).map
+        (fun value => .witness (.expr value)))) } }, membership]
   unique_names := by
     simp [membership, StaticTable.component, StaticTable.provider,
       FinalRegisterValue.circuit, FinalRegisterValue.membership]
   channels := [(FinalMemoryValue.channel false).toRaw,
     (FinalRegisterValue.membership snapshot).channel.toRaw]
   verifier := verifier
-
-/-- Clean allocates one validation row per complete receipt and updates fixed-row counts. -/
-def config : WitnessGeneration.Config Fp where
-  components := [((FinalRegisterValue.circuit (p := SP1Prime) snapshot).name, {
-    mode := .demand {
-      channel := (FinalMemoryValue.channel (p := SP1Prime) false).toRaw
-      direction := .push
-      aggregation := .perOccurrence
-      input := ⟨(List.range 9).map .message⟩
-    }
-    padding := { input := #[0, 0, 0, 0, 0, 0, 0, 0, 0] }
-  }), (membership.circuit.name, membershipGeneration)]
-  fuel := 128
-
-def emptyConfig : WitnessGeneration.Config Fp where
-  components := [(membership.circuit.name, membershipGeneration)]
-  fuel := 1
+  unique_channel_names := by
+    simp [Channel.toRaw, FinalMemoryValue.channel, StaticTable.channel,
+      FinalRegisterValue.membership]
+  tables_channels := by
+    intro component member channel used
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · change channel ∈ (FinalRegisterValue.circuit snapshot).channels at used
+      rw [GeneralFormalCircuit.channels,
+        show (FinalRegisterValue.circuit snapshot).channelsWithGuarantees =
+          (FinalRegisterValue.elaborated snapshot).channelsWithGuarantees from rfl,
+        show (FinalRegisterValue.circuit snapshot).channelsWithRequirements =
+          [(FinalMemoryValue.channel false).toRaw] from rfl] at used
+      simp only [circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at used
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      tauto
+    · change channel ∈ [(FinalRegisterValue.membership snapshot).channel.toRaw] at used
+      exact List.mem_cons_of_mem _ used
+  verifier_channels := by
+    intro channel member
+    simp [Verifier.Program.channels, Verifier.Program.channelsWithGuarantees,
+      Verifier.Program.channelsWithRequirements, Verifier.Program.operations, verifier,
+      circuit_norm] at member
+    simp [member]
 
 def description : Air.Flat.EnsembleCheck ensemble where
   lookups := []
@@ -206,21 +205,18 @@ def description : Air.Flat.EnsembleCheck ensemble where
     simp [ensemble, membership, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, FinalRegisterValue.circuit,
       FinalRegisterValue.main, circuit_norm]
-  channels_unique := by
-    simp [ensemble, Channel.toRaw, FinalMemoryValue.channel, StaticTable.channel,
-      FinalRegisterValue.membership]
-  channels_complete := by
-    simp [ensemble, membership, Component.interactions_eq, Component.rowOperations,
-      StaticTable.component, StaticTable.provider, FinalRegisterValue.circuit,
-      FinalRegisterValue.main, circuit_norm]
-  verifier_channels_complete := by
-    simp [ensemble, Ensemble.verifierOperations, verifier,
-      Verifier.Program.circuitOperations, circuit_norm]
 
 def emptyEnsemble : Ensemble Fp unit where
   tables := [membership]
   unique_names := by simp
   channels := [(FinalRegisterValue.membership snapshot).channel.toRaw]
+  unique_channel_names := by simp
+  tables_channels := by
+    intro component member
+    obtain rfl := List.mem_singleton.mp member
+    change [_] ⊆ [_]
+    exact List.Subset.refl _
+  verifier_channels := by simp [Verifier.Program.channels, circuit_norm]
 
 def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
   lookups := []
@@ -228,24 +224,17 @@ def emptyDescription : Air.Flat.EnsembleCheck emptyEnsemble where
   lookups_complete := by
     simp [emptyEnsemble, membership, Component.lookups_eq, Component.rowOperations,
       StaticTable.component, StaticTable.provider, circuit_norm]
-  channels_unique := by simp [emptyEnsemble]
-  channels_complete := by
-    simp [emptyEnsemble, membership, Component.interactions_eq, Component.rowOperations,
-      StaticTable.component, StaticTable.provider, circuit_norm]
-  verifier_channels_complete := by
-    simp [emptyEnsemble, Ensemble.verifierOperations, Verifier.Program.circuitOperations,
-      Verifier.Program.empty, circuit_norm]
 
 def generate (requests : Requests Fp) : Except String (EnsembleWitness ensemble) :=
-  WitnessGeneration.generate (ComponentExport.fixture ensemble) config requests () |>.mapError toString
+  WitnessGeneration.generate ensemble 128 requests () |>.mapError toString
 
 def generateEmpty : Except String (EnsembleWitness emptyEnsemble) :=
-  WitnessGeneration.generate (ComponentExport.fixture emptyEnsemble) emptyConfig () () |>.mapError toString
+  WitnessGeneration.generate emptyEnsemble 1 () () |>.mapError toString
 
 def rustExports : List (String × Except String String) :=
-  [("target_registers.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) config),
+  [("target_registers.rs", Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture ensemble) 128),
    ("target_registers_empty.rs",
-     Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture emptyEnsemble) emptyConfig)]
+     Backends.Plonky3.Print.ensembleToRust (ComponentExport.fixture emptyEnsemble) 1)]
 
 def record (index clock : Nat) : Channels.MemoryMsg Fp :=
   { SnapshotRegisterProvider.message (snapshot.registerRow (BitVec.ofNat 5 index)) with
@@ -269,12 +258,12 @@ def cases : List (String × Requests Fp × Bool) :=
 /-- Generation alone is not acceptance: the independent raw checker also checks assertions. -/
 theorem cases_correct : cases.all (fun (_, requests, expected) =>
     (match generate requests with
-    | .ok witness => description.checkWitness SP1Prime witness
+    | .ok witness => description.checkWitness witness
     | .error _ => false) == expected) = true := by native_decide
 
 theorem empty_correct :
     (generateEmpty.map fun witness =>
-      emptyDescription.checkWitness SP1Prime witness &&
+      emptyDescription.checkWitness witness &&
       witness.tables.length == 1 && witness.interactions.length == 32 &&
       witness.interactions.all (·.mult == 0)) = .ok true := by native_decide
 

@@ -79,24 +79,36 @@ end Declared
 
 /-- Append the provider, retaining every original row, channel occurrence and table position. -/
 def withSource (statement : CommitmentStatement) (base : Ensemble (ZMod p) SP1PublicIO)
-    (fresh : (CommitmentDeclaration.source (p := p) statement).circuit.name ∉ base.tables.map (·.circuit.name)) :
+    (fresh : (CommitmentDeclaration.source (p := p) statement).circuit.name ∉ base.tables.map (·.circuit.name))
+    (declarations : CommitmentDeclaration.channel.toRaw ∈ base.channels := by assumption) :
     Ensemble (ZMod p) SP1PublicIO where
   tables := base.tables ++ [CommitmentDeclaration.source statement]
   unique_names := by
     simpa only [List.map_append, List.map_cons, List.map_nil, List.concat_eq_append] using base.unique_names.concat fresh
-  channels := base.channels ++ [CommitmentDeclaration.channel.toRaw]
+  channels := base.channels
+  unique_channel_names := base.unique_channel_names
+  tables_channels := by
+    intro table member channel used
+    rcases List.mem_append.mp member with original | provider
+    · exact base.tables_channels table original used
+    · obtain rfl := List.mem_singleton.mp provider
+      change channel ∈ [CommitmentDeclaration.channel.toRaw] at used
+      exact (List.mem_singleton.mp used) ▸ declarations
   verifier := base.verifier
+  verifier_channels := base.verifier_channels
 
 /-- Public bytes, deferred elements and flags are bound to the same fixed provider. -/
 def install (statement : CommitmentStatement) (base : Ensemble (ZMod p) SP1PublicIO)
-    (fresh : (CommitmentDeclaration.source (p := p) statement).circuit.name ∉ base.tables.map (·.circuit.name)) :
+    (fresh : (CommitmentDeclaration.source (p := p) statement).circuit.name ∉ base.tables.map (·.circuit.name))
+    (declarations : CommitmentDeclaration.channel.toRaw ∈ base.channels := by assumption) :
     Ensemble (ZMod p) SP1PublicIO :=
-  (CommitmentBoundary.checker statement).install (withSource statement base fresh)
+  (CommitmentBoundary.checker statement).install (withSource statement base fresh declarations)
 
 /-- Forget the statement checks and the appended provider, retaining every original physical row. -/
 def project {statement : CommitmentStatement} {base : Ensemble (ZMod p) SP1PublicIO}
     {fresh : (CommitmentDeclaration.source (p := p) statement).circuit.name ∉ base.tables.map (·.circuit.name)}
-    (witness : EnsembleWitness (install statement base fresh)) : EnsembleWitness base :=
+    {declarations : CommitmentDeclaration.channel.toRaw ∈ base.channels}
+    (witness : EnsembleWitness (install statement base fresh declarations)) : EnsembleWitness base :=
   ((CommitmentBoundary.checker statement).project witness).projectPrefix base
     (by simp [withSource])
     (fun index => by simp [withSource, List.getElem_append_left index.isLt])
@@ -104,38 +116,39 @@ def project {statement : CommitmentStatement} {base : Ensemble (ZMod p) SP1Publi
 
 variable {statement : CommitmentStatement} {base : Ensemble (ZMod p) SP1PublicIO}
   {fresh : (CommitmentDeclaration.source (p := p) statement).circuit.name ∉ base.tables.map (·.circuit.name)}
+    {declarations : CommitmentDeclaration.channel.toRaw ∈ base.channels}
 
-@[simp] theorem project_publicInput (witness : EnsembleWitness (install statement base fresh)) :
+@[simp] theorem project_publicInput (witness : EnsembleWitness (install statement base fresh declarations)) :
     (project witness).publicInput = witness.publicInput := rfl
 
 /-- Lookup-free original components keep their constraints across the changed canonical data. -/
-theorem project_constraints (witness : EnsembleWitness (install statement base fresh))
+theorem project_constraints (witness : EnsembleWitness (install statement base fresh declarations))
     (lookupFree : ∀ component ∈ base.tables, component.operations.lookups = [])
     (checked : witness.Constraints) : (project witness).Constraints := by
   apply EnsembleWitness.projectPrefix_constraints_of _ _ _ _ ?_
     (((CommitmentBoundary.checker statement).project_constraints witness).mp checked)
   intro index row width valid
-  have same : (withSource statement base fresh).tables[index.val]'(by simp [withSource]) =
+  have same : (withSource statement base fresh declarations).tables[index.val]'(by simp [withSource]) =
       base.tables[index.val] := List.getElem_append_left index.isLt
   rw [same] at valid width
   rw [← width, Array.extract_size]
   exact Component.constraintsHold_setData _ (lookupFree _ (List.getElem_mem _)) valid
 
 /-- Every original channel except the declarations keeps its complete ledger and balance. -/
-theorem project_balancedChannel (witness : EnsembleWitness (install statement base fresh))
+theorem project_balancedChannel (witness : EnsembleWitness (install statement base fresh declarations))
     (balanced : witness.BalancedChannels) (channel : RawChannel (ZMod p))
     (registered : channel ∈ base.channels) (different : channel ≠ CommitmentDeclaration.channel.toRaw) :
     (project witness).BalancedChannel channel := by
   have source := (((CommitmentBoundary.checker statement).project_balanced_iff witness).mp balanced).1
   let retained := (CommitmentBoundary.checker statement).project witness
   have preserves : ∀ index : Fin base.tables.length, ∀ row,
-      row.size = ((withSource statement base fresh).tables[index.val]'(by simp [withSource])).width →
+      row.size = ((withSource statement base fresh declarations).tables[index.val]'(by simp [withSource])).width →
       base.tables[index.val].operations.interactionValuesWith channel
           (Environment.fromArray (row.extract 0 base.tables[index.val].width) (project witness).data) =
-        ((withSource statement base fresh).tables[index.val]'(by simp [withSource])).operations.interactionValuesWith
+        ((withSource statement base fresh declarations).tables[index.val]'(by simp [withSource])).operations.interactionValuesWith
           channel (Environment.fromArray row retained.data) := by
     intro index row width
-    have same : (withSource statement base fresh).tables[index.val]'(by simp [withSource]) =
+    have same : (withSource statement base fresh declarations).tables[index.val]'(by simp [withSource]) =
         base.tables[index.val] := List.getElem_append_left index.isLt
     rw [same] at width ⊢
     rw [← width, Array.extract_size]
@@ -160,39 +173,39 @@ theorem project_balancedChannel (witness : EnsembleWitness (install statement ba
     retained.projectPrefix_interactions (target := base) _ _ _ rfl channel preserves silent
   change BalancedInteractions ((project witness).interactionsWith channel)
   rw [ledger]
-  exact source channel (List.mem_append_left _ registered)
+  exact source channel registered
 
 /-- The statement checks establish its public encoding, including well-formedness. -/
-theorem statement_spec (witness : EnsembleWitness (install statement base fresh))
+theorem statement_spec (witness : EnsembleWitness (install statement base fresh declarations))
     (balanced : witness.BalancedChannels) : CommitmentBoundary.Spec statement witness.publicInput :=
   CommitmentBoundary.spec_of_checks statement
-    (((CommitmentBoundary.checker statement).project_balanced_iff witness).mp balanced).2.2
+    (((CommitmentBoundary.checker statement).project_balanced_iff witness).mp balanced).2
 
 /-- The installed verifier adds nothing on the declaration channel to the original one. -/
-private theorem verifier_declarations (witness : EnsembleWitness (install statement base fresh))
+private theorem verifier_declarations (witness : EnsembleWitness (install statement base fresh declarations))
     (silent : ∀ env, base.verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = []) :
     witness.verifierInteractionsWith CommitmentDeclaration.channel.toRaw = [] := by
-  change ((CommitmentBoundary.checker statement).install (withSource statement base fresh)).verifierOperations.interactionValuesWith
+  change ((CommitmentBoundary.checker statement).install (withSource statement base fresh declarations)).verifierOperations.interactionValuesWith
     CommitmentDeclaration.channel.toRaw (Environment.fromInput witness.publicInput witness.data) = []
-  rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _
-    (List.mem_append_right _ (List.mem_singleton_self _))]
+  rw [PublicVerifier.install_verifier_interactions_of_mem _
+    (withSource statement base fresh declarations) _ _ declarations]
   exact silent _
 
 /-- Requests of the original components survive forgetting the provider and the checks. -/
-theorem project_declaration_mem (witness : EnsembleWitness (install statement base fresh))
+theorem project_declaration_mem (witness : EnsembleWitness (install statement base fresh declarations))
     (silent : ∀ env, base.verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = [])
     {interaction : Interaction (ZMod p)}
     (member : interaction ∈ (project witness).interactionsWith CommitmentDeclaration.channel.toRaw) :
     interaction ∈ witness.interactionsWith CommitmentDeclaration.channel.toRaw := by
   let retained := (CommitmentBoundary.checker statement).project witness
   have preserves : ∀ index : Fin base.tables.length, ∀ row,
-      row.size = ((withSource statement base fresh).tables[index.val]'(by simp [withSource])).width →
+      row.size = ((withSource statement base fresh declarations).tables[index.val]'(by simp [withSource])).width →
       base.tables[index.val].operations.interactionValuesWith CommitmentDeclaration.channel.toRaw
           (Environment.fromArray (row.extract 0 base.tables[index.val].width) (project witness).data) =
-        ((withSource statement base fresh).tables[index.val]'(by simp [withSource])).operations.interactionValuesWith
+        ((withSource statement base fresh declarations).tables[index.val]'(by simp [withSource])).operations.interactionValuesWith
           CommitmentDeclaration.channel.toRaw (Environment.fromArray row retained.data) := by
     intro index row width
-    have same : (withSource statement base fresh).tables[index.val]'(by simp [withSource]) =
+    have same : (withSource statement base fresh declarations).tables[index.val]'(by simp [withSource]) =
         base.tables[index.val] := List.getElem_append_left index.isLt
     rw [same] at width ⊢
     rw [← width, Array.extract_size]
@@ -215,7 +228,7 @@ theorem project_declaration_mem (witness : EnsembleWitness (install statement ba
 
 /-- When the original components only pull declarations and its verifier is silent on them, the
 fixed provider authenticates every request in the balanced ledger. -/
-theorem declared_member (witness : EnsembleWitness (install statement base fresh))
+theorem declared_member (witness : EnsembleWitness (install statement base fresh declarations))
     (sources : ∀ component ∈ base.tables,
       component.Authenticates CommitmentDeclaration.channel (· ∈ CommitmentDeclaration.rows statement))
     (silent : ∀ env, base.verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = [])
@@ -228,8 +241,8 @@ theorem declared_member (witness : EnsembleWitness (install statement base fresh
       witness.tables.flatMap (·.interactionsWith CommitmentDeclaration.channel.toRaw) := by
     simp only [EnsembleWitness.interactionsWith, verifier_declarations witness silent, List.nil_append,
       EnsembleWitness.toTables, Tables.interactionsWith]
-  have registered : CommitmentDeclaration.channel.toRaw ∈ (install statement base fresh).channels :=
-    List.mem_append_left _ (List.mem_append_right _ (List.mem_singleton_self _))
+  have registered : CommitmentDeclaration.channel.toRaw ∈ (install statement base fresh declarations).channels :=
+    List.mem_append_left _ declarations
   have bal := balanced _ registered
   change BalancedInteractions (witness.interactionsWith CommitmentDeclaration.channel.toRaw) at bal
   rw [ledger] at bal pulled
@@ -240,6 +253,6 @@ theorem declared_member (witness : EnsembleWitness (install statement base fresh
   rcases List.mem_append.mp component with original | provider
   · exact Table.Authenticates.of_component table _ _ (sources _ original) (constraints table tableMem)
   · exact CommitmentDeclaration.source_authenticates statement table (List.mem_singleton.mp provider)
-      (witness.dataConsistency_of_mem table tableMem) (constraints table tableMem)
+      (constraints table tableMem)
 
 end SP1Clean.Soundness.CommitmentEnsemble

@@ -84,7 +84,6 @@ omit [Fact (2 ^ 17 < p)] in
 private theorem equalityConstraint_mem (x y : Expression (ZMod p)) (offset : ℕ) :
     x - y ∈ ((Gadgets.Equality.main (M := field) (x, y)).operations offset).constraints := by
   simp [Gadgets.Equality.main, Circuit.forEach.operations_eq, circuit_norm]
-  rfl
 
 /-- The completed Branch columns at one physical component row (the folded `elaborated.output`;
 definitionally the component `rowOutput` of `BranchChip.circuit`). -/

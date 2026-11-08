@@ -8,7 +8,7 @@ execution are not additional premises. Trap outcomes cannot masquerade as normal
 -/
 
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- A jump either traps or stages its destination, preserving configuration and all memory. -/
@@ -18,21 +18,25 @@ theorem jump_to_frame (source : SailState) (cfg : SailConfigured source) (destin
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   simp only [jump_to, ext_control_check_pc, SailME.run, run_SailME_liftM_bind] at ran
   by_cases low : (BitVec.access destination 0 == 0#1) = true
-  · simp only [PreSail.assert, low, ↓reduceIte, pure_bind] at ran
-    rw [run_bind_of_run source _ _ (currentlyEnabled_zca_eq_false source cfg)] at ran
-    simp only [LeanRV64D.Functions.not, Bool.not_false, Bool.and_true] at ran
-    split at ran
-    · rw [run_SailME_liftM] at ran
+  · simp only [PreSail.sail_assert, low, ↓reduceIte, pure_bind, andM, toBool] at ran
+    cases misaligned : bit_to_bool (BitVec.access destination 1) with
+    | false =>
+      simp only [misaligned, pure_bind, Bool.false_eq_true, ite_false] at ran
+      rw [run_SailME_liftM_bind, run_SailME_pure] at ran
+      simp only [set_next_pc] at ran
+      cases ran
+      exact ⟨(fun _ h => nomatch h), SailConfigured.writeNextPC cfg _, rfl⟩
+    | true =>
+      simp only [misaligned, pure_bind, bind_assoc, run_SailME_liftM_bind] at ran
+      rw [run_bind_of_run source _ _ (currentlyEnabled_zca_eq_false source cfg)] at ran
+      simp only [LeanRV64D.Functions.not, Bool.not_false, ite_true] at ran
+      rw [run_SailME_liftM] at ran
       simp only [memory_exception, trap] at ran
       rw [run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init,
         run_readReg_bind_of_isInitialized source Register.PC cfg.init] at ran
       cases ran
       exact ⟨(fun _ h => nomatch h), cfg, rfl⟩
-    · rw [run_SailME_liftM_bind, run_SailME_pure] at ran
-      simp only [set_next_pc] at ran
-      cases ran
-      exact ⟨(fun _ h => nomatch h), SailConfigured.writeNextPC cfg _, rfl⟩
-  · simp only [PreSail.assert, low, bind, EStateM.bind, EStateM.run, throw] at ran
+  · simp only [PreSail.sail_assert, low, bind, EStateM.bind, EStateM.run, throw] at ran
     cases ran
 
 private theorem jump_and_link_frame (source : SailState) (cfg : SailConfigured source)

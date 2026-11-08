@@ -79,9 +79,9 @@ lemma microValue_reg (s0 : SailState) (c0 : ℕ) (i : BitVec 5) (τ : ℕ) :
       = (chainState s0 (regEpoch c0 τ)).bind (locContent · (MemLoc.reg i)) := by
   rw [microValue, regEpoch]
   by_cases h : τ < c0
-  · rw [if_pos h, if_pos h]
+  · rw [ite_eq_left h, ite_eq_left h]
     rfl
-  · rw [if_neg h, if_neg h]
+  · rw [ite_eq_right h, ite_eq_right h]
     by_cases h4 : 4 ≤ (τ - c0) % 8 <;> simp [h4]
 
 lemma regEpoch_eq_of {c0 τ n : ℕ} (h : c0 + 8 * n ≤ τ) (h' : τ < c0 + 8 * n + 4) :
@@ -162,9 +162,9 @@ lemma microValue_ram (s0 : SailState) (c0 : ℕ) (cell : RamCell) (τ : ℕ) :
       = (chainState s0 (ramEpoch c0 τ)).bind (locContent · (MemLoc.ram cell)) := by
   rw [microValue, ramEpoch]
   by_cases h : τ < c0
-  · rw [if_pos h, if_pos h]
+  · rw [ite_eq_left h, ite_eq_left h]
     rfl
-  · rw [if_neg h, if_neg h]
+  · rw [ite_eq_right h, ite_eq_right h]
     by_cases h1 : 1 ≤ (τ - c0) % 8 <;> simp [h1]
 
 lemma ramEpoch_eq_of {c0 τ n : ℕ} (h : c0 + 8 * n ≤ τ) (h' : τ < c0 + 8 * n + 1) :
@@ -780,7 +780,7 @@ lemma microValueT_reg_pre {s0 : SailState} {tl : Timeline} {i : BitVec 5} {n τ 
   have h0 : tl.start 0 ≤ tl.start n := tl.start_le_of_le (Nat.zero_le n)
   have hgap := tl.gap n
   unfold microValueT
-  rw [if_neg (by omega), tl.stepOf_eq hlo (by omega)]
+  rw [ite_eq_right (by omega), tl.stepOf_eq hlo (by omega)]
   have hpre : ¬ regEffectOffset ≤ τ - tl.start n := by
     simp only [regEffectOffset]; omega
   simp [hpre]
@@ -797,11 +797,11 @@ lemma microValueT_reg_post {s0 : SailState} {tl : Timeline} {i : BitVec 5} {n τ
   have hgap' := tl.gap (n + 1)
   unfold microValueT
   by_cases hwin : τ < tl.start (n + 1)
-  · rw [if_neg (by omega), tl.stepOf_eq (by omega) hwin]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (by omega) hwin]
     have hpost : regEffectOffset ≤ τ - tl.start n := by
       simp only [regEffectOffset]; omega
     simp [hpost]
-  · rw [if_neg (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
     have hpre : ¬ regEffectOffset ≤ τ - tl.start (n + 1) := by
       simp only [regEffectOffset]; omega
     simp [hpre]
@@ -815,7 +815,7 @@ lemma microValueT_ram_pre {s0 : SailState} {tl : Timeline} {cell : RamCell} {n �
   have h0 : tl.start 0 ≤ tl.start n := tl.start_le_of_le (Nat.zero_le n)
   have hgap := tl.gap n
   unfold microValueT
-  rw [if_neg (by omega), tl.stepOf_eq hlo (by omega)]
+  rw [ite_eq_right (by omega), tl.stepOf_eq hlo (by omega)]
   have hpre : ¬ ramEffectOffset ≤ τ - tl.start n := by
     simp only [ramEffectOffset]; omega
   simp [hpre]
@@ -832,11 +832,11 @@ lemma microValueT_ram_post {s0 : SailState} {tl : Timeline} {cell : RamCell} {n 
   have hgap' := tl.gap (n + 1)
   unfold microValueT
   by_cases hwin : τ < tl.start (n + 1)
-  · rw [if_neg (by omega), tl.stepOf_eq (by omega) hwin]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (by omega) hwin]
     have hpost : ramEffectOffset ≤ τ - tl.start n := by
       simp only [ramEffectOffset]; omega
     simp [hpost]
-  · rw [if_neg (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
+  · rw [ite_eq_right (by omega), tl.stepOf_eq (n := n + 1) (by omega) (by omega)]
     have hpre : ¬ ramEffectOffset ≤ τ - tl.start (n + 1) := by
       simp only [ramEffectOffset]; omega
     simp [hpre]

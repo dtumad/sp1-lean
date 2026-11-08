@@ -30,7 +30,7 @@ Three changes ride along, each already justified against SP1:
 
 namespace SP1Clean.Execution
 
-open LeanRV64D.Defs
+open LeanRV64D
 open Sail LeanRV64D
 open SP1Clean.Soundness.Target
 open SP1Clean.Semantics

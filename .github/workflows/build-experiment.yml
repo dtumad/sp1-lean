@@ -23,7 +23,7 @@ on:
       targets:
         description: "lake build targets"
         type: string
-        default: "SP1Core ToClean ToMathlib ToPolyFun"
+        default: "SP1Core ToClean ToMathlib"
       lean_num_threads:
         description: "LEAN_NUM_THREADS for lake and every child lean (empty = hardware default)"
         type: string

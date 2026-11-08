@@ -48,12 +48,17 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {final : State (ZMo
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
+  {boundaryChannels : HostHintQueueBoundary.BoundaryRegistered image source channels}
 
 /-- Every path prefix supplies its current queue from the AIR; callers supply no per-call head truth.
 The current handler registry requires extra resources without additional queue-state edges. -/
 theorem of_witness
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
-      HostCallReceivers.available resources channels names))
+      HostCallReceivers.available resources channels names channelNames tableChannels boundaryChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (upper : Store) (extension : Extends (ofList source.host.io.hints).1 upper)
     (authenticated : RecordAuthentication (projected witness) upper)
@@ -76,11 +81,14 @@ theorem of_witness
     (rows_spec _ (queueTables_aligned (projected witness)) specs row physical)
     (HostQueueHistory.records_of_witness (projected witness) upper authenticated records row physical)
 
+
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 /-- Source bytes and the installed AIR alone determine every observed length, queue pop, and final
 reachable queue. This theorem does not require current-head or record-authentication premises. -/
 theorem source_history
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing)))
+      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ path : List (Row (p := p)),
       path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧

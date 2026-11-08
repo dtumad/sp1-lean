@@ -1,3 +1,4 @@
+import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
 import SP1Clean.Model.Semantics.Decode
@@ -48,7 +49,7 @@ private def evaluate (input : Inputs Fp) : Bool × List (String × List Fp × Fp
       else interaction.channel.name == "sp1.native.host_ram_access"
   (valid, ((FlatOperation.interactions operations).filter fun interaction =>
     interaction.channel.name != "SP1Byte").map fun interaction =>
-      (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult))
+      (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult))
 
 private def row (address : ℕ) (previousHigh previousLow high low0 low1 : Fp) : Inputs Fp :=
   let key : Word Fp := bitVecToWord (BitVec.ofNat 64 address)

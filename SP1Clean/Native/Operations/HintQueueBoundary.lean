@@ -41,7 +41,7 @@ def circuit (hints : List Bytes) (final : State (ZMod p)) :
     · simp at h_holds
   completeness := by
     circuit_proof_start [main, stateChannel]
-    simp only [if_pos h_assumptions]
+    simp only [ite_eq_left h_assumptions]
 
 theorem interactions (hints : List Bytes) (final : State (ZMod p)) (offset : ℕ) :
     ((main hints final ()).operations offset).interactionsWith stateChannel.toRaw =
@@ -64,7 +64,7 @@ def closed (hints : List Bytes) (final : State (ZMod p)) : ClosedVerifier (ZMod 
     intro interaction member env
     simp only [circuit, main, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl <;>
-      simp [circuit_norm, ChannelInteraction.toRaw, AbstractInteraction.Guarantees,
+      simp [circuit_norm, ChannelInteraction.toRaw,
         AbstractInteraction.Requirements, Channel.toRaw, Expression.eval]
 
   length_zero := rfl

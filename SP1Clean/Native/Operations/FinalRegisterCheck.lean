@@ -1,4 +1,5 @@
 import ToClean.Circuit.Guarded
+import ToClean.Air.HintIndex
 import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
 import SP1Clean.Native.Operations.FinalMemoryChange
 import SP1Clean.Native.Operations.FinalRegisterValue
@@ -121,6 +122,13 @@ instance guardSupported (target : MemorySnapshot) : Guarded.Supported (activeCir
 def circuit (target : MemorySnapshot) : GeneralFormalCircuit (ZMod p) RowInput unit :=
   Guarded.circuit (activeCircuit target) inferInstance
 
+/-- Consume each complete finalizer receipt once, retaining the private coverage selector.
+The address index is only a routing aid; the guard compares the full clock, address and value. -/
+def generation (target : MemorySnapshot) : Air.Flat.WitnessGeneration.Generation (ZMod p) RowInput :=
+  Witgen.HintIndex.unitDemand (Input := RowInput) (circuit (p := p) target).name (FinalMemoryValue.channel false) .push
+    (fun message => message.addr0.val + message.addr1.val * 65536 + message.addr2.val * 4294967296)
+    (fun input => input.1.record) (fun input => input.2)
+
 /-- Every physical row retains a receipt occurrence at its constrained activity. -/
 theorem guarded_receipt_values (target : MemorySnapshot) (input : Var RowInput (ZMod p))
     (offset : ℕ) (env : Environment (ZMod p)) :
@@ -130,7 +138,7 @@ theorem guarded_receipt_values (target : MemorySnapshot) (input : Var RowInput (
   change ((Guarded.main (activeCircuit target) (guardSupported target) input).operations offset).interactionValuesWith _ env = _
   rw [Guarded.main_interactionValuesWith]
   simp only [activeCircuit, receipt_values, List.map_cons, List.map_nil,
-    Channel.pulledValue, Channel.pulledIfValue, mul_neg, mul_one]
+    Channel.pulledValue, Channel.pulledIfValue, mul_one]
 
 /-- The effective coverage coefficient is activity times the independent change selector. -/
 theorem guarded_change_values (target : MemorySnapshot) (input : Var RowInput (ZMod p))

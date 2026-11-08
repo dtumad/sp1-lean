@@ -49,7 +49,7 @@ private theorem inputAgreement {input : Var Inputs (ZMod p)}
     simpa only [eval_immC] using hv
 
 /-- Input agreement determines every shift witness, independently of prover hints. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnessesWithData := by
+theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
   intro n input env env'
   simp only [circuit, main, circuit_norm, Operations.forAllFlat, Operations.forAll]
   refine ⟨FlatOperation.forAll_witnessCongr_of_subcircuit _ _ ?_,

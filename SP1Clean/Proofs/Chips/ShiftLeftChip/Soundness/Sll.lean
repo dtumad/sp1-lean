@@ -75,7 +75,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
   clear h_holds hk1 hk2 hk3 hk4 hk7 hk8
   clear hk9 hk10 hk11 hk12 hk13 hk14 hk15 hk16 hk17
   have h_core' := h_core trivial
-  simp only [ShiftLeftCore.circuit, ShiftLeftChip.CoreSpec, Vector.getElem_map,
+  simp only [ShiftLeftCore.circuit, ShiftLeftChip.CoreSpec,
     Vector.getElem_mapRange, circuit_norm] at h_core'
   have hcb0b := h_core'.1
   have hc1 := h_core'.2
@@ -209,7 +209,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       have e2 := _hE2; rw [hsllw1] at e2
       exact ShiftLeftCore.eq_zero_of_mul_const h2ne (by linear_combination e2 - _hE4)
     have hgate1 : (input_isSll + input_isSllw : ZMod p) = 1 := by rw [hsll0, hsllw1, zero_add]
-    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
+    have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -246,7 +246,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       (env.get i₀).val < 2 ^ 16 ∧ (env.get (i₀+1)).val < 2 ^ 16 ∧
       (env.get (i₀+2)).val < 2 ^ 16 ∧ (env.get (i₀+3)).val < 2 ^ 16 := by
     intro hgate1
-    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
+    have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -349,22 +349,9 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     --      put it in `ll*v0123 (+hl)` form; feed the matching `sll_close_cb4cb5_{zero,one_zero,zero_one,
     --      one_one}_case` (its `h_b*_dec` are `hsplit*` after `op_b_val = op_b_memory.prev_value` via `hb_eq`).
     --   e. Read both physical operands from the ALU reader; conclude the `RV64.sll` identity.
-    have hbmem := h_input.2.1.2.2.2.2.1.1
-    have hcmem := h_input.2.1.2.2.2.2.2.2.1.1
     -- Operand evaluations: the constraint columns read back the physical ALU reader values.
-    have heb0 : Expression.eval env input_var_adapter_op_b_memory_prev_value[0] = input_adapter_op_b_memory_prev_value[0] := by
-      rw [← hbmem, Vector.getElem_map]
-    have heb1 : Expression.eval env input_var_adapter_op_b_memory_prev_value[1] = input_adapter_op_b_memory_prev_value[1] := by
-      rw [← hbmem, Vector.getElem_map]
-    have heb2 : Expression.eval env input_var_adapter_op_b_memory_prev_value[2] = input_adapter_op_b_memory_prev_value[2] := by
-      rw [← hbmem, Vector.getElem_map]
-    have heb3 : Expression.eval env input_var_adapter_op_b_memory_prev_value[3] = input_adapter_op_b_memory_prev_value[3] := by
-      rw [← hbmem, Vector.getElem_map]
-    have heval_c0 : Expression.eval env input_var_adapter_op_c_memory_prev_value[0] =
-        input_adapter_op_c_memory_prev_value[0] := by
-      rw [← hcmem, Vector.getElem_map]
     -- Fire and convert the nine byte-range guarantees (gate = 1 on the real `is_sll` row).
-    have hneg : -(input_isSll + input_isSllw) = -1 := by rw [hgate1]
+    have hneg : (input_isSll + input_isSllw) = 1 := by rw [hgate1]
     have hll0 : (env.get (i₀+4+6+3+4)).val < 2 ^ (16 - S) := by
       have hb := hbyte2 hneg; rw [hwidth_ll] at hb
       exact (byteRowSpec_range _ (show 16 - S < p by omega)).mp hb
@@ -396,7 +383,7 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
       have hbd := (byteRowSpec_range _ (show (10:ℕ) < p by omega)).mp hb
       rw [show (2:ℕ)^10 = 1024 from by norm_num] at hbd
       convert hbd using 3
-      rw [heval_c0]; ring
+      ring
     -- Bit-split decompositions, `limb_result` reassembly, and the `is_sll`-collapsed placements.
     have hb0dec : input_adapter_op_b_memory_prev_value[0] * env.get (i₀+4+6+2)
         = env.get (i₀+4+6+3+4+4) * ((65536:ℕ):ZMod p) + env.get (i₀+4+6+3+4) * env.get (i₀+4+6+2) := by
@@ -433,10 +420,10 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
     have h_c0_lt : input_adapter_op_c_memory_prev_value[0].val < 65536 := by
       have h := hc_u64 0; norm_num at h ⊢; exact h
     -- Reduce the goal and apply the native assembly.
-    have hLHS : Vector.map (Expression.eval env) (Vector.mapRange 4 fun i => var {index := i₀+ i})
+    have hLHS : (Vector.mapRange 4 fun i => env.get (i₀ + i))
         = (#v[env.get i₀, env.get (i₀+1), env.get (i₀+2), env.get (i₀+3)] : Word (ZMod p)) := by
       apply Vector.ext; intro i hi
-      simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+      simp only [Vector.getElem_mapRange, circuit_norm]
       interval_cases i <;> rfl
     have hbword : Word.toBitVec64 input_adapter_op_b_memory_prev_value
         = Word.toBitVec64 (#v[input_adapter_op_b_memory_prev_value[0], input_adapter_op_b_memory_prev_value[1], input_adapter_op_b_memory_prev_value[2], input_adapter_op_b_memory_prev_value[3]] : Word (ZMod p)) := by
@@ -459,17 +446,9 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main Assumptions Spe
         have hq2 := (a_isU64 hr).2.2.1
         have hq3 := (a_isU64 hr).2.2.2
         refine Word.isU64_of_cases ?_ ?_ ?_ ?_ <;>
-          simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+          simp only [Vector.getElem_mapRange, circuit_norm]
         exacts [hq0, hq1, hq2, hq3]),
         h_clk.at_four⟩,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0,
-      fun h1 h0 => off_gate_vacuous (bool_of_mul_pred _hE2) h1 h0⟩
+      (bool_of_mul_pred _hE2)⟩
 
 end SP1Clean.ShiftLeftChip.SoundSll

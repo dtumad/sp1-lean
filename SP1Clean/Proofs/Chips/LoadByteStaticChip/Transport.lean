@@ -92,7 +92,6 @@ theorem lookups_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     Readers.RegisterAccessCols.circuit, Readers.RegisterAccessCols.main,
     Readers.RegisterAccessTimestamp.circuit, Readers.RegisterAccessTimestamp.main,
     equality_lookups, general_lookups, assertion_lookups, circuit_norm]
-  rfl
 
 private theorem byte_lookup_contains (env : Environment (ZMod p)) (value : Expression (ZMod p)) :
     (Lookup.mk Gadgets.ByteTable.toRaw #v[value]).Contains env ↔ (env value).val < 256 := by

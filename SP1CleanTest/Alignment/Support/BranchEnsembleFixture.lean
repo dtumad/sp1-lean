@@ -77,7 +77,7 @@ abbrev Ledger := List (String × List Fp × Fp)
 def rowLedger (component : Component Fp) (row : Array Fp) : Ledger :=
   let env := Environment.fromArray row data
   component.rowOperations.interactions.map fun interaction =>
-    (interaction.channel.name, (interaction.msg.map env).toList, env interaction.mult)
+    (interaction.channel.name, (interaction.msg.map env).toList, (interaction.eval env).signedMult)
 /-- Actual compiler-built branch interactions; all providers are derived from this ledger. -/
 def branchLedger : Ledger := rowLedger BranchChip.component BranchCompilerRoundTrip.row
 /-- Decode Memory records of the requested polarity from the instruction's actual ledger. -/
@@ -124,7 +124,7 @@ def consumerSeeds : List Seed :=
 def seedLedger? (target : MemorySnapshot) (seed : Seed) : Option Ledger :=
   match (assembly (context target)).tables[seed.table]? with
   | none => none
-  | some component => if component.fixedColumns.isSome || seed.cells.length != component.rowOffset then none else
+  | some component => if !SP1CleanTest.StaticMembership.acceptsSeed component || seed.cells.length != component.rowOffset then none else
       some (rowLedger component (seed.build component data))
 /-- Demand one actual Byte or Range provider row, rejecting unsupported message shapes. -/
 def byteSeed? (entry : String × List Fp × Fp) : Option (Option Seed) :=
@@ -143,7 +143,7 @@ def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List 
   let ledgers ← consumers.mapM (seedLedger? target)
   let verifier := (assembly (context target)).verifierOperations.interactionValues
     (Environment.fromInput input data) |>.map fun interaction =>
-      (interaction.channel.name, interaction.msg.toList, interaction.mult)
+      (interaction.channel.name, interaction.msg.toList, interaction.signedMult)
   let providers ← (verifier ++ ledgers.flatten).mapM byteSeed?
   let generated := providers.filterMap id
   if generated.all (seedValid (assembly (context target)).tables) then some (consumers ++ generated) else none

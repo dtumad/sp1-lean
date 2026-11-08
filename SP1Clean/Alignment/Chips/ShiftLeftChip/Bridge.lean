@@ -14,7 +14,7 @@ logical left shift) vs `spec_sllw` (`ropw.SLLW`, the low-32 left shift sign-exte
 `SLL`/`SLLW` via `execute_RTYPE_pure_sll = RV64.sll` / `execute_RTYPEW_pure_sllw = RV64.sllw`.
 `advance` dispatches the SLL/SLLW cases; `shiftleft_chip_reaches_sail` remains the semantic helper. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.ShiftLeftSail
 
 open Sail LeanRV64D LeanRV64D.Functions

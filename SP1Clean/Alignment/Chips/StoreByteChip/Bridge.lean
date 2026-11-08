@@ -12,7 +12,7 @@ emulation: write `nextPC = pc + 4` and the low byte of `rs2` into `mem[addr]`, v
 `SailMem.run_vmem_write_of_width_1`. Bytes have no alignment; the 8-byte read-modify-write
 `store_value` bus representation is a separate trace-level concern. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.StoreByteSail
 
 open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
@@ -91,7 +91,7 @@ theorem correct_store_byte_native
   rw [EStateM.run_bind, run_readReg_of_isInitialized _ _ hs, hpc_get]
   simp only [EStateM.run_bind, run_writeReg]
   rw [show ({ s with regs := s.regs.insert Register.nextPC (pc + 4#64) } : SailState) = sp from rfl]
-  simp [execute_STORE, hse, LeanRV64D.Functions.xlen_bytes, PreSail.assert,
+  simp [execute_STORE, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert,
     hsp_rs2, hwrite]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -155,7 +155,7 @@ private theorem extHashMap_get?_insert_self (m : Std.ExtHashMap Nat (BitVec 8)) 
 private theorem extHashMap_get?_insert_ne (m : Std.ExtHashMap Nat (BitVec 8)) (k a : Nat) (v : BitVec 8)
     (h : k ≠ a) : (m.insert k v).get? a = m.get? a := by
   rw [Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert,
-    if_neg (by simpa using h)]
+    ite_eq_right (by simpa using h)]
 
 /-- **STORE's committed bus view** — opcode `36 = SB`, straight-line `next_pc = pc+4`, I-type adapter.
 `commit = .store ⟨addr, value, 1⟩`: a real 1-byte memory write — `addr` = the 3-limb `AddressOperation`

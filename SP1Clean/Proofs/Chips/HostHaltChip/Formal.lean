@@ -15,22 +15,16 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 def ProverAssumptions (input : Inputs (ZMod p)) : Prop :=
   Spec input ∧ input.comparison = LtOperationUnsigned.populate input.call.arg1 (BoundedWord.limit (bound p))
 
-omit [Fact (2 ^ 17 < p)] in
-private theorem eval_zero (env : Environment (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const (0 : Word (ZMod p))) = 0 := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
-
 theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) main
     (fun _ _ => True) (fun input _ _ => Spec input) := by
   circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
-  simpa only [eval_zero, CallSpec, BoundedWord.Spec] using h_holds
+  simpa only [Vector.map_id', CallSpec, BoundedWord.Spec] using h_holds
 
 theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod p) main
     (fun input _ _ => ProverAssumptions input) (fun _ _ _ => True) := by
   circuit_proof_start [Gadgets.Equality.circuit, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
   obtain ⟨⟨code, result, length, value⟩, comparison⟩ := h_assumptions
-  simpa only [eval_zero] using And.intro code ⟨result, length, value, comparison⟩
+  simpa only [Vector.map_id'] using And.intro code ⟨result, length, value, comparison⟩
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.host_halt"

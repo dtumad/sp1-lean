@@ -250,7 +250,7 @@ theorem soundness :
   simp only [circuit_norm] at h_aa
   have c13 : ((13 : ℕ) : ZMod p) = (13 : ZMod p) := by norm_cast
   have h13p : (13 : ℕ) < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  have hneg : - input_is_real = -1 := congrArg Neg.neg hr'
+  have hneg : input_is_real = 1 := hr'
   have h_range := h_range hneg
   simp only [byteChannel] at h_range
   rw [← c13] at h_range
@@ -260,12 +260,11 @@ theorem soundness :
     simpa only [hr'] using h_inv
   have hMetadata := metadata_of_constraints h_aa.2.1 h_aa.2.2.1 h_aa.2.2.2.1 b0 b1 b2
     h_inv_real h_range_nat
-  simp only [Spec, Vector.getElem_map, Vector.getElem_mapRange, Expression.eval]
+  simp only [Spec, Vector.getElem_mapRange]
   exact ⟨h_aa.1, b0, b1, b2, h_aa.2.2.2.2, by rw [← h_aa.1]; exact hMetadata.1,
     by rw [← h_aa.1]; exact hMetadata.2,
     h_aa.2.1, h_aa.2.2.1, h_aa.2.2.2.1⟩
-  · intro h1 h0
-    exact off_gate_vacuous hbin h1 h0
+  · exact hbin
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **Padding regression.** The literal all-zero operation input satisfies the honest-prover
@@ -287,7 +286,8 @@ theorem completeness :
       (fun input _ _ => Assumptions input) (fun _ _ _ => True) := by
   circuit_proof_start
   obtain ⟨hb, hcc, hbin, hfit, hob0, hob1, hob2, haddr_ge, hoff⟩ := h_assumptions
-  obtain ⟨hbi, hci, -, -, -, -⟩ := h_input
+  have hbi := h_input.1
+  have hci := h_input.2.1
   obtain ⟨h_value, h_inv_def⟩ := h_env
   have hp : 131072 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
   -- the witnessed `value` = `populate b cc`: discharges the AddrAdd assertion via `spec_populate`.
@@ -295,22 +295,21 @@ theorem completeness :
       Expression.eval env.toEnvironment input_var_b[1],
       Expression.eval env.toEnvironment input_var_b[2],
       Expression.eval env.toEnvironment input_var_b[3]] : Word (ZMod p)) = input_b := by
-    rw [← hbi]; exact vec4_eval _ _
+    exact (vec4_eval _ _).trans hbi
   have hceq : (#v[Expression.eval env.toEnvironment input_var_cc[0],
       Expression.eval env.toEnvironment input_var_cc[1],
       Expression.eval env.toEnvironment input_var_cc[2],
       Expression.eval env.toEnvironment input_var_cc[3]] : Word (ZMod p)) = input_cc := by
-    rw [← hci]; exact vec4_eval _ _
+    exact (vec4_eval _ _).trans hci
   -- The witness obligation is now stated against the exportable IR, so cross to `populate` once via
   -- `populateIR_eval` (rewriting the `populate` side, which is the syntactic one) and read the
   -- witnessed cells off `h_value` directly.
   have hIR := AddrAddOperation.populateIR_eval env input_var_b input_var_cc _ _ hbeq hceq hb hcc
-  have hval : (Vector.map (Expression.eval env.toEnvironment)
-        (Vector.mapRange 3 fun i => var {index := i₀ + i}) : Vector (ZMod p) 3)
+  have hval : (Vector.mapRange 3 fun i => env.get (i₀ + i) : Vector (ZMod p) 3)
       = AddrAddOperation.populate input_b input_cc := by
     rw [← hIR]
     apply Vector.ext; intro i hi
-    simp only [Vector.getElem_map, Vector.getElem_mapRange, circuit_norm]
+    simp only [Vector.getElem_mapRange, circuit_norm]
     exact h_value ⟨i, hi⟩
   -- the witnessed limbs equal `populate`'s, so the gadget `Spec` (sum + limb ranges) talks about them.
   have he0 : env.get i₀ = (AddrAddOperation.populate input_b input_cc)[0] := by
@@ -367,7 +366,7 @@ theorem completeness :
       simp
   · -- the byte-bus `Range(13)` guarantee: `ByteRowSpec ⟨6, arg, 13, 0⟩ ↔ arg.val < 2^13`.
     intro hneg
-    have hr1 : input_is_real = 1 := neg_inj.mp hneg
+    have hr1 : input_is_real = 1 := hneg
     have h13p : (13 : ℕ) < p := by omega
     have c13 : ((13 : ℕ) : ZMod p) = (13 : ZMod p) := by norm_cast
     simp only [circuit_norm, byteChannel]
@@ -397,10 +396,8 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Circuits.Types.AddressOperati
       preserve_tactic_target
       simp only [circuit_norm, main, byteChannel]
       refine ⟨List.nil_subset _, ?_⟩
-      intro env hgate hnotone hnotzero
-      rcases bool_of_mul_pred hgate with hzero | hone
-      · exact absurd hzero hnotzero
-      · exact absurd (congrArg Neg.neg hone) hnotone }
+      intro env hgate
+      exact bool_of_mul_pred hgate }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

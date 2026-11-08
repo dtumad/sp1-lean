@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use clean_backend::witness_generation::{generate, Program};
+use clean_backend::witness_generation::{Direction, Program};
 use clean_backend::GeneratedAirSpec;
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
@@ -14,7 +14,7 @@ mod ram;
 #[path = "support/export.rs"]
 #[allow(dead_code)]
 mod support;
-use support::RowWitness;
+use support::{complete_row, has_open_bus};
 
 macro_rules! generated {
     ($module:ident, $file:literal) => {
@@ -128,18 +128,19 @@ fn check<P: Program<F> + GeneratedAirSpec>(kind: &str, width: usize) {
     }
     let cases = reference[kind].as_array().unwrap();
     assert_eq!(cases.len(), inputs.len());
-    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[0]);
+    assert!(<P as Program<F>>::FIXED_COLUMNS
+        .iter()
+        .all(|columns| columns.is_empty()));
     for (input, case) in inputs.iter().zip(cases) {
         assert_eq!(case["input"], serde_json::json!(input));
         let input_fields = fields(input);
-        let witness = generate::<F, RowWitness<P>>(&[], &input_fields).unwrap();
-        let row = &witness.tables[0][0];
+        let row = &complete_row::<P>(&input_fields).unwrap();
         assert_eq!(row.len(), width);
         assert_eq!(serde_json::json!(values(row)), case["row"]);
         let actual = <P as Program<F>>::interactions(0, row);
         let ledger: Vec<_> = actual.iter().map(|entry| serde_json::json!({
             "channel": entry.channel, "message": values(&entry.message),
-            "multiplicity": entry.multiplicity.as_canonical_u64(), "assumeGuarantees": entry.assume_guarantees,
+            "multiplicity": entry.signed_multiplicity().as_canonical_u64(), "direction": if entry.direction == clean_backend::witness_generation::Direction::Pull { "pull" } else { "push" },
         })).collect();
         assert_eq!(serde_json::json!(ledger), case["interactions"]);
         let address_limbs = if kind == "target" {
@@ -155,7 +156,7 @@ fn check<P: Program<F> + GeneratedAirSpec>(kind: &str, width: usize) {
             && (kind != "target" || input[5..] == ram::word(ram::value(address)));
         assert_eq!(valid::<P>(row), expected, "{kind}: {input:?}");
         assert!(
-            generate::<F, P>(&[], &input_fields).is_err(),
+            has_open_bus::<P>(&input_fields),
             "open RAM buses must not balance"
         );
         if !expected {
@@ -175,8 +176,8 @@ fn check<P: Program<F> + GeneratedAirSpec>(kind: &str, width: usize) {
                     "sp1.native.initial_memory"
                 }
             );
-            assert_eq!(entry.multiplicity, -F::ONE);
-            assert!(entry.assume_guarantees);
+            assert_eq!(entry.signed_multiplicity(), -F::ONE);
+            assert_eq!(entry.direction, Direction::Pull);
             let message = values(&entry.message);
             assert!(unpack(&message[..4]) <= address + offset as u64);
             assert!(address + (offset as u64) < unpack(&message[4..8]));
@@ -206,7 +207,7 @@ fn check<P: Program<F> + GeneratedAirSpec>(kind: &str, width: usize) {
             };
             assert_eq!(values(&records[0].message), expected_record);
             assert_eq!(
-                records[0].multiplicity,
+                records[0].signed_multiplicity(),
                 if kind == "source" { F::ONE } else { -F::ONE }
             );
         }
@@ -214,8 +215,7 @@ fn check<P: Program<F> + GeneratedAirSpec>(kind: &str, width: usize) {
     // Exercise all committed cells of a live row. Bus-bound fields can remain locally free;
     // constraints and independently checked Byte/membership predicates must reject many changes.
     let input = &inputs[4];
-    let witness = generate::<F, RowWitness<P>>(&[], &fields(input)).unwrap();
-    let row = &witness.tables[0][0];
+    let row = &complete_row::<P>(&fields(input)).unwrap();
     let rejected = (0..row.len())
         .filter(|&cell| {
             let mut forged = row.clone();

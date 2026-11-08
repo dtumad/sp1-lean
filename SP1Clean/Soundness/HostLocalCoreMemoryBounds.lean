@@ -21,9 +21,11 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
   {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
 
 private theorem wrapper_extra_bound
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (bytes : ∀ table ∈ (localWitness witness).tables,
       table.ChannelGuarantees byteChannel.toRaw)
     (physical : Array (ZMod p)) (member : physical ∈ (hostCallTable witness).table)
@@ -46,7 +48,7 @@ private theorem wrapper_extra_bound
   exact MemoryMsg.clkBound_of_cpuState_bounds _ _ 1 1 (ZMod.val_one _) (by decide) bounds.1 bounds.2
 
 private theorem wrapper_push_bound
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints)
     (bytes : ∀ table ∈ (localWitness witness).tables,
       table.ChannelGuarantees byteChannel.toRaw) :
@@ -61,30 +63,22 @@ private theorem wrapper_push_bound
   have binary := HostCallLedger.binary_of_constraints (Environment.fromArray physical witness.data) checked
   have flag := HostCallChip.writeFlag_binary
     (HostCallLedger.input (Environment.fromArray physical witness.data)).instruction.op_a_memory.prev_value
-  have zero : signedVal (0 : ZMod p) = 0 := by simp [signedVal]
   rcases binary with inactive | real
   · simp [producedMessages, HostCallProjection.extraRead, HostCallChip.Inputs.read, inactive,
-      zero] at extra
+      Channel.pulledIfValue, Channel.pushedIfValue] at extra
   · have bound := wrapper_extra_bound witness bytes physical physicalMem real
     rcases flag with disabled | enabled
     · simp [producedMessages, HostCallProjection.extraRead, HostCallChip.Inputs.read, disabled,
-        zero] at extra
-    · have hp : 2 < p := by have := Fact.out (p := 2 ^ 25 < p); omega
-      have gate : (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).is_real = 1 := by
+        Channel.pulledIfValue, Channel.pushedIfValue] at extra
+    · have gate : (HostCallProjection.extraRead (Environment.fromArray physical witness.data)).is_real = 1 := by
         simp only [HostCallProjection.extraRead, HostCallChip.Inputs.read, real, enabled, mul_one]
-      have pos : signedVal (1 : ZMod p) = 1 := by
-        rw [signedVal_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-        norm_num
-      have neg : signedVal (-1 : ZMod p) = -1 := by
-        rw [signedVal_neg_is_real hp (Or.inr rfl), ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-        norm_num
-      simp [producedMessages, gate, pos, neg] at extra
+      simp [producedMessages, gate, Channel.pulledIfValue, Channel.pushedIfValue] at extra
       exact extra ▸ bound
 
 /-- Every physical interior push has a bounded low clock. The exact Memory decomposition
 retains original rows, WRITE's x12 read-back and all auxiliary pushes; Memory balance is not assumed. -/
 theorem memoryInterior_push_bound (valid : image.Valid)
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (constraints : witness.Constraints)
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (program : (localWitness witness).BalancedChannel programChannel.toRaw)

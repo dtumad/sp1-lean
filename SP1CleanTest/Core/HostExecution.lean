@@ -10,7 +10,7 @@ semantic regressions, not Rust trace conformance or evidence that the host effec
 
 namespace SP1CleanTest.Core.HostExecution
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Defs
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 

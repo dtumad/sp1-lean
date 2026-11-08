@@ -22,10 +22,11 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
   {names : UniqueNames image source target others resources}
+  {registration : Registration image source target others resources channels}
 
 /-- Complete comparison requires only inherited Byte guarantees and the actual membership and receipt balances. -/
 theorem checkFinal_of_channels
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (interface : PrivateInterface target others resources) (checked : witness.Constraints)
     (bytes : ∀ table ∈ witness.tables, table.ChannelGuarantees byteChannel.toRaw)
     (balances : ∀ channel ∈ privateChannels (p := p) target, witness.BalancedChannel channel) :
@@ -50,7 +51,7 @@ theorem checkFinal_of_channels
 /-- Complete raw host AIR acceptance implies the existing finite target Memory comparison.
 The two interfaces describe fixed installed circuits, never properties of the supplied witness. -/
 theorem checkFinal
-    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names))
+    (witness : EnsembleWitness (ensemble image source target final bankFinal others resources channels names registration))
     (interface : HostHintReadLocal.ExtensionInterface others resources)
     (privacy : PrivateInterface target others resources)
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
@@ -59,24 +60,19 @@ theorem checkFinal
   apply checkFinal_of_channels witness privacy checked (byte_guarantees witness interface checked (balanced _ ?_))
   · intro channel member
     apply balanced
-    simp only [privateChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl | rfl <;>
-      simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
-        FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit, circuit_norm]
-    all_goals apply Or.inl
-    all_goals simp [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
-      ClosedVerifier.install, ClosedVerifier.withInteractions, HostHintReadLocal.ensemble, HostLocalHandoff.ensemble,
-      HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble,
-      FinalMemoryChecks.checkTables, StaticTable.component, StaticTable.provider, circuit_norm]
-  · simp [ensemble, ClosedVerifier.install, ClosedVerifier.withInteractions, withReceipts, withRegisters, FinalReceiptEnsemble.install, Ensemble.replaceComponent,
-      base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent, HostHintReadLocal.ensemble,
-      HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install, HostLocalCore.baseEnsemble, LocalCore.baseEnsemble,
-      sp1Ensemble_channels]
+    apply List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ ?_))
+    obtain ⟨component, present, used⟩ := List.mem_flatMap.mp (check_channels channel member)
+    exact registration.tables component
+      (List.mem_append_right _ (List.mem_append_right _ (List.mem_append_right _ present))) used
+  · apply List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ ?_))
+    simp [HostLocalCore.baseEnsemble, HostLocalCore.registry, LocalCore.baseEnsemble, sp1Ensemble_channels]
 
 /-- The concrete six-call registration needs only raw acceptance, with no caller interface proofs. -/
 theorem source_checkFinal
+    [sourceRegistration : Registration image source target HostCallReceivers.available
+      (HostHintReadLocal.sourceResources source.host.io.hints) channels]
     (witness : EnsembleWitness (ensemble image source target final bankFinal HostCallReceivers.available
-      (HostHintReadLocal.sourceResources source.host.io.hints) channels (source_unique_names image source target)))
+      (HostHintReadLocal.sourceResources source.host.io.hints) channels (source_unique_names image source target) sourceRegistration))
     (checked : witness.Constraints) (balanced : witness.BalancedChannels) :
     source.sail.memorySnapshot.checkFinal target
       ((finalRecords witness).map fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value)) = true :=

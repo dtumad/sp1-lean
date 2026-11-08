@@ -107,25 +107,15 @@ theorem spec_populate {u16_values : Word (ZMod p)}
   · exact ⟨lowlt _, high_byte_lt _ h2, reassemble _ _⟩
   · exact ⟨lowlt _, high_byte_lt _ h3, reassemble _ _⟩
 
--- Keep the input/column evaluation projections factored; both proofs fit the default budget.
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   have hbin := h_assumptions
-  obtain ⟨hiu, hicols, _⟩ := h_input
   have e8 : (2 : ℕ) ^ 8 = 256 := by norm_num
-  have ea : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env input_var_u16_values[i] = input_u16_values[i] := by
-    intro i hi; rw [← hiu]; simp only [Vector.getElem_map]
-  have el : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env input_var_cols_low_bytes[i] = input_cols_low_bytes[i] := by
-    intro i hi; rw [← hicols]; simp only [Vector.getElem_map]
-  simp only [circuit_norm, byteChannel, ea, el] at h_holds ⊢
+  simp only [circuit_norm, byteChannel] at h_holds ⊢
   obtain ⟨hr0, hr1, hr2, hr3, _hbool⟩ := h_holds
   -- The four trailing conjuncts are the byte pulls' own `Requirements` — vacuous off-gate.
-  refine ⟨fun hr1eq => ?_, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0, fun h1 h0 => off_gate_vacuous hbin h1 h0,
-    fun h1 h0 => off_gate_vacuous hbin h1 h0⟩
-  have hneg : - input_is_real = -1 := by rw [hr1eq]
+  refine ⟨fun hr1eq => ?_, hbin⟩
+  have hneg : input_is_real = 1 := hr1eq
   have R0 := hr0 hneg; have R1 := hr1 hneg; have R2 := hr2 hneg; have R3 := hr3 hneg
   rw [byteRowSpec_u8range_pair, e8] at R0 R1 R2 R3
   intro i
@@ -138,18 +128,11 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   have hbin := h_assumptions
-  obtain ⟨hiu, hicols, _⟩ := h_input
   have e8 : (2 : ℕ) ^ 8 = 256 := by norm_num
-  have ea : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_u16_values[i] = input_u16_values[i] := by
-    intro i hi; rw [← hiu]; simp only [Vector.getElem_map]
-  have el : ∀ (i : ℕ) (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_cols_low_bytes[i] = input_cols_low_bytes[i] := by
-    intro i hi; rw [← hicols]; simp only [Vector.getElem_map]
-  simp only [circuit_norm, byteChannel, ea, el]
+  simp only [circuit_norm, byteChannel]
   refine ⟨?_, ?_, ?_, ?_, by rcases hbin with h | h <;> rw [h] <;> simp⟩
   all_goals intro hneg
-  all_goals have hsp := h_spec (neg_inj.mp hneg)
+  all_goals have hsp := h_spec hneg
   all_goals rw [byteRowSpec_u8range_pair, e8]
   · exact ⟨(hsp 0).1, (hsp 0).2.1⟩
   · exact ⟨(hsp 1).1, (hsp 1).2.1⟩

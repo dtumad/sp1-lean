@@ -40,10 +40,13 @@ private theorem instruction_staticInputs
       (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
       (fun table tableMem => program table (LocalCore.instructionTables_mem witness tableMem)) row member⟩
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem instruction_inputs (valid : image.Valid)
     (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing)))
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -75,7 +78,7 @@ private theorem instruction_inputs (valid : image.Valid)
 private theorem trajectory_ordinary (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -90,7 +93,7 @@ private theorem trajectory_ordinary (valid : image.Valid)
   subst m
   change (carrier.pairedTrajectory valid n).map ExecutionState.sail = some state at present
   obtain ⟨whole, paired, sail⟩ := Option.map_eq_some_iff.mp present
-  have atPc : whole.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  have atPc : whole.sail.regs.get? LeanRV64D.Register.PC =
       some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
     rw [sail, program_pc_eq_statePull]
     exact pc
@@ -110,7 +113,7 @@ as the hint handlers. ROM preservation and absence of added hint accesses follow
 theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -162,7 +165,7 @@ inside the registered chip contracts. -/
 theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -207,12 +210,12 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     simp only [GroundingCarrier.trajectory, present, Option.map_some]
   have sameState : state = current.sail := Option.some.inj (statePresent.symm.trans before)
   rw [sameState] at pc rom configured
-  change current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  change current.sail.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (row.ordinaryRowFacts witness.data).statePull) at pc
   obtain ⟨next, _, effect⟩ := wiring.advance_atG (ChipKind.advancePayload_of_migrated migrated)
     active.2 (checked.1.chipSpec inputs) checked.2 ready before time pc rom configured
     (fun mp hmp => ⟨(currency mp hmp).1, (currency mp hmp).2.2⟩)
-  have atPc : current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  have atPc : current.sail.regs.get? LeanRV64D.Register.PC =
       some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
     rw [program_pc_eq_statePull]
     exact pc
@@ -235,7 +238,7 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
 theorem GroundingCarrier.instruction_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈

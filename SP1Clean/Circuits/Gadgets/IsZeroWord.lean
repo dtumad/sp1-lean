@@ -172,10 +172,6 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
 theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hs0, hs1, hs2, hs3, _hbreal, hbres, hf, hsec, hg⟩ := h_holds
-  obtain ⟨hia, -⟩ := h_input
-  have ea : ∀ i (hi : i < 4), Expression.eval env input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  simp only [ea] at hs0 hs1 hs2 hs3
   refine ⟨⟨bool_of_mul_pred (by simpa only [sub_eq_add_neg] using hbres),
       eq_of_sub_eq_zero hf, eq_of_sub_eq_zero hsec, hs0 h_assumptions, hs1 h_assumptions,
       hs2 h_assumptions, hs3 h_assumptions, ?_⟩, Or.inl rfl, Or.inl rfl, Or.inl rfl, Or.inl rfl⟩
@@ -186,10 +182,6 @@ theorem soundness : FormalAssertion.Soundness (ZMod p) main Assumptions Spec := 
 theorem completeness : FormalAssertion.Completeness (ZMod p) main Assumptions Spec := by
   circuit_proof_start
   obtain ⟨hbres, hf, hsec, hS0, hS1, hS2, hS3, hg⟩ := h_spec
-  obtain ⟨hia, -⟩ := h_input
-  have ea : ∀ i (hi : i < 4), Expression.eval env.toEnvironment input_var_a[i] = input_a[i] := by
-    intro i hi; rw [← hia]; simp only [Vector.getElem_map]
-  simp only [ea]
   refine ⟨⟨h_assumptions, hS0⟩, ⟨h_assumptions, hS1⟩, ⟨h_assumptions, hS2⟩,
     ⟨h_assumptions, hS3⟩, ?_, ?_, ?_, ?_, ?_⟩
   · rcases h_assumptions with h | h <;> simp [h]

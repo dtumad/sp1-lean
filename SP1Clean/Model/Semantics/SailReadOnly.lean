@@ -8,7 +8,7 @@ composite action. No totality or memory-presence premise is needed.
 -/
 
 namespace SP1Clean.SailFrame
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Defs
+open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D
 open SP1Clean.Advance SP1Clean.TryStepReduction
 
 /-- Every successful result of this action leaves the entire input state unchanged. -/

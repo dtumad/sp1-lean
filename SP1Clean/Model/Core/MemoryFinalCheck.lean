@@ -191,7 +191,7 @@ private theorem selected_of_mem (records : List (MemLoc × BitVec 64))
       · have different : first.1 ≠ record.1 := by
           intro same
           exact unique.1 (List.mem_map.mpr ⟨record, later, same.symm⟩)
-        rw [List.filter_cons, if_neg (by simpa only [decide_eq_true_eq] using different)]
+        rw [List.filter_cons, ite_eq_right (by simpa only [decide_eq_true_eq] using different)]
         exact ih unique.2 later
 
 /-- For a unique bounded final inventory, the check is complete for exactly the pointwise

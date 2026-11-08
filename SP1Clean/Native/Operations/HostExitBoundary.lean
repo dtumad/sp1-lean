@@ -66,7 +66,7 @@ def closed (source target : Option (BitVec 32)) : ClosedVerifier (ZMod p) where
     intro interaction member env
     simp only [circuit, main, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
     obtain rfl := member
-    simp only [circuit_norm, ChannelInteraction.toRaw, ↓reduceIte,
+    simp only [circuit_norm, ChannelInteraction.toRaw,
       AbstractInteraction.Requirements, Channel.toRaw, Expression.eval]
     split_ifs <;> simp
 

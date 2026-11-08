@@ -10,8 +10,8 @@ import Clean.Utils.Tactics
 /-! # Canonical register finalization
 
 Each physical row consumes one final Memory record. Its address must be a five-bit register index;
-the higher address limbs must vanish. The negative emission assumes no Memory guarantee, so the
-shared ordering wrapper can establish uniqueness before values and clocks are grounded globally.
+the higher address limbs must vanish. The bundled address check establishes canonical locations
+without Memory guarantees; the finalizer additionally pulls the complete record.
 -/
 
 namespace SP1Clean.FinalRegisterProvider
@@ -31,7 +31,7 @@ omit [Fact (2 ^ 17 < p)] in
 theorem canonical (record : MemoryMsg (ZMod p)) (small : record.addr0.val < 32)
     (one : record.addr1 = 0) (two : record.addr2 = 0) : MemoryBoundary.CanonicalSpec record := by
   have decoded : MemoryMsg.locOf record = .reg (BitVec.ofNat 5 record.addr0.val) := by
-    simp only [MemoryMsg.locOf, small, one, two, and_self, if_true]
+    simp only [MemoryMsg.locOf, small, one, two, and_self, ite_true]
   refine ⟨by rw [decoded]; trivial, ?_, ?_⟩
   · apply Word.isU64_of_cases
     · exact lt_trans small (by norm_num)
@@ -39,22 +39,6 @@ theorem canonical (record : MemoryMsg (ZMod p)) (small : record.addr0.val < 32)
   · rw [decoded]
     simp [MemoryBoundary.address, Word.toNat, one, two, MemLoc.busAddress,
       Nat.mod_eq_of_lt small]
-
-def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
-  assertion (Gadgets.ToBits.rangeCheck 5 indexBound) input.addr0
-  assertZero input.addr1
-  assertZero input.addr2
-  memoryChannel.emit (-1) input
-  return input
-
-theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).interactionsWith memoryChannel.toRaw =
-      [(memoryChannel.emitted (-1) input).toRaw] := by
-  have rangeEmpty (n : ℕ) := InteractionRecovery.filter_interactions_formalAssertion_eq_nil
-    (Gadgets.ToBits.rangeCheck 5 indexBound) memoryChannel.toRaw input.addr0
-    (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil)
-    (by change memoryChannel.toRaw ∉ []; exact List.not_mem_nil) (n := n)
-  simp only [main, circuit_norm, rangeEmpty, List.nil_append]
 
 /-- The semantic domain of a register finalization row. -/
 def Domain (record : MemoryMsg (ZMod p)) : Prop :=
@@ -64,18 +48,20 @@ instance (record : MemoryMsg (ZMod p)) : Decidable (Domain record) := by
   unfold Domain
   infer_instance
 
-instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
-  localLength _ := 5
-  output input _ := input
-  channelsWithGuarantees := []
+/-- Validate the register index and preserve the complete Memory message. -/
+@[circuit_norm]
+def addressMain (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
+  assertion (Gadgets.ToBits.rangeCheck 5 indexBound) input.addr0
+  assertZero input.addr1
+  assertZero input.addr2
+  return input
 
-def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
-  name := "sp1.native.memory.final.registers"
-  main
-  elaborated := elaborated
+/-- Canonical register addressing needs no value or timestamp authentication. -/
+def addressCircuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.registers.address"
+  main := addressMain
   Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input _ _ := Domain input
-  channelsWithRequirements := [memoryChannel.toRaw]
   soundness := by
     circuit_proof_start [Gadgets.ToBits.rangeCheck, MemoryBoundary.address]
     exact ⟨canonical ⟨input_clk_high, input_clk_low, input_addr0, input_addr1, input_addr2, input_value⟩
@@ -84,10 +70,51 @@ def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
     circuit_proof_start [Gadgets.ToBits.rangeCheck]
     exact h_assumptions
 
+instance addressSupported : Guarded.Supported (addressCircuit (p := p)) :=
+  Guarded.Supported.of_emitted_requirements _
+    (by intro input offset; simp [addressCircuit, Gadgets.ToBits.rangeCheck,
+      Gadgets.ToBits.toBits, circuit_norm])
+    (by intro selected member; simp [addressCircuit, circuit_norm] at member)
+    (by simp [addressCircuit])
+
+def main (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
+  let record ← addressCircuit input
+  memoryChannel.pull record
+  return record
+
+theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).interactionsWith memoryChannel.toRaw =
+      [(memoryChannel.pulled input).toRaw] := by
+  have empty := InteractionRecovery.interactionsWith_main_eq_nil addressCircuit.base memoryChannel.toRaw
+    input offset (by simp [addressCircuit, circuit_norm])
+  change Operations.interactionsWith memoryChannel.toRaw [Operation.subcircuit (addressCircuit.toSubcircuit offset input),
+    Operation.interact (memoryChannel.pulled input).toRaw] = _
+  simp only [Operations.interactionsWith] at empty
+  simp only [circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, empty, List.nil_append]
+
+instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
+  localLength _ := 5
+  output input _ := input
+  channelsWithGuarantees := [memoryChannel.toRaw]
+
+def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
+  name := "sp1.native.memory.final.registers"
+  main
+  elaborated := elaborated
+  Spec input output _ := MemoryBoundary.FinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
+  ProverAssumptions input data _ := Domain input ∧ memoryChannel.Guarantees input data
+  channelsWithRequirements := [memoryChannel.toRaw]
+  soundness := by
+    circuit_proof_start [addressCircuit]
+    exact h_holds.1
+  completeness := by
+    circuit_proof_start [addressCircuit]
+    exact h_assumptions
+
 /-- Register finalization adds no static lookup table. -/
 @[circuit_norm] theorem main_lookups (input : Var MemoryMsg (ZMod p)) (offset : ℕ) :
     ((main input).operations offset).lookups = [] := by
-  simp [main, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
+  simp [main, addressCircuit, Gadgets.ToBits.rangeCheck, Gadgets.ToBits.toBits, circuit_norm]
 
 /-- Every physical interaction supports Boolean row activity without a legacy lookup. -/
 instance guardSupported : Guarded.Supported (circuit (p := p)) :=
@@ -95,20 +122,15 @@ instance guardSupported : Guarded.Supported (circuit (p := p)) :=
     (fun input offset => main_lookups input offset)
     (by
       intro selected member
-      change selected ∈ [memoryChannel.toRaw] at member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      change selected ∈ [memoryChannel.toRaw, memoryChannel.toRaw] at member
+      simp only [List.mem_cons, List.not_mem_nil, or_false, or_self] at member
       subst selected
       infer_instance)
     (by
-      intro input offset selected member _ interaction occurs
+      intro input offset selected member outside
       have same : selected = memoryChannel.toRaw := by
         simpa only [circuit, List.mem_singleton] using member
       subst selected
-      change interaction ∈ ((main input).operations offset).interactionsWith
-        memoryChannel.toRaw at occurs
-      rw [main_memory_interactions] at occurs
-      have same := List.mem_singleton.mp occurs
-      subst interaction
-      rfl)
+      exact False.elim (outside (by change memoryChannel.toRaw ∈ [memoryChannel.toRaw]; simp)))
 
 end SP1Clean.FinalRegisterProvider

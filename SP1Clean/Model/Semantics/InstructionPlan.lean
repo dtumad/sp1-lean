@@ -21,7 +21,7 @@ Facts connecting the target values to an official Sail step belong to the later 
 transparent `InstructionPlanReady` predicate exposes exactly when this pure extractor succeeds.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Semantics
 
@@ -244,18 +244,20 @@ theorem instructionAccessPlan_slots {decoded : instruction} {source target : Sai
     {plan : InstructionAccessPlan}
     (generated : instructionAccessPlan? decoded source target = some plan) :
     plan.map PlannedTouch.slot = instructionAccessSlots decoded := by
-  unfold instructionAccessPlan? certifiedInstructionPlan? at generated
-  split at generated
-  · contradiction
-  · cases decoded <;>
-      simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?,
-        loadPlan?, storePlan?, Option.map_eq_some_iff, Option.bind_eq_bind,
-        Option.bind_eq_some_iff, pure, Option.some.injEq] at generated
-    all_goals try contradiction
-    all_goals
-      rcases generated with ⟨certified, generated, rfl⟩
-      repeat' rcases generated with ⟨_, _, generated⟩
-      rfl
+  have byShape : (instructionPlanByShape? source target decoded).map (·.plan) = some plan := by
+    unfold instructionAccessPlan? certifiedInstructionPlan? at generated
+    split at generated
+    · contradiction
+    · exact generated
+  clear generated
+  cases decoded <;> rename_i chunk <;> cases chunk <;>
+    simp only [instructionPlanByShape?, cbaPlan?, baPlan?, aPlan?, baReadbackPlan?,
+      loadPlan?, storePlan?, Option.map_eq_some_iff, Option.bind_eq_bind,
+      Option.bind_eq_some_iff, pure, Option.some.injEq] at byShape
+  all_goals
+    rcases byShape with ⟨certified, generated, rfl⟩
+    repeat' rcases generated with ⟨_, _, generated⟩
+  all_goals rfl
 
 /-- A produced plan is routed by one of the twenty-five canonical instruction-table identities. -/
 theorem instructionRouteId_exists_of_accessPlan {decoded : instruction} {source target : SailState}

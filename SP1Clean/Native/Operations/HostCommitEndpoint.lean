@@ -55,7 +55,7 @@ theorem values (deferred : Bool) (source target : Vector (Word (ZMod p)) 8)
     simp only [HostCommitBoundary.verifierMain,
       Operations.interactionValuesWith, Operations.interactionsWith, circuit_norm,
       ChannelInteraction.toRaw, List.filter_cons, List.filter_nil, Ne.symm same, decide_false,
-      Bool.false_eq_true, ↓reduceIte, List.map_nil, if_neg same]
+      Bool.false_eq_true, ↓reduceIte, List.map_nil, ite_eq_right same]
 
 /-- The verifier extension cannot depend on witness-selected offsets or ambient row cells. -/
 def closed (deferred : Bool) (source target : Vector (Word (ZMod p)) 8) : ClosedVerifier (ZMod p) where
@@ -67,7 +67,7 @@ def closed (deferred : Bool) (source target : Vector (Word (ZMod p)) 8) : Closed
     intro interaction member env
     simp only [circuit, main, circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, HostCommitBoundary.verifier, HostCommitBoundary.verifierMain, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl <;>
-      simp [circuit_norm, ChannelInteraction.toRaw, AbstractInteraction.Guarantees,
+      simp [circuit_norm, ChannelInteraction.toRaw,
         AbstractInteraction.Requirements, Channel.toRaw, Expression.eval]
 
   length_zero := rfl

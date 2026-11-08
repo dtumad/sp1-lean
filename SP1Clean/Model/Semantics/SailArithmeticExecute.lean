@@ -7,7 +7,7 @@ These circuit-independent reductions describe the actual register update of each
 family, including x0. The instruction bridges and semantic frame laws share these declarations.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.Advance
 open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.SailMem

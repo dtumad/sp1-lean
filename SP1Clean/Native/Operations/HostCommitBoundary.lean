@@ -2,6 +2,7 @@ import SP1Clean.FormalModel.Contracts.HostCommitBoundary
 import Clean.Gadgets.Bits
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Circuit.VerifierInteractions
+import ToClean.Air.HintIndex
 
 /-! # Fixed endpoints for a mutable native bank
 
@@ -36,6 +37,21 @@ def terminal (deferred : Bool) : GeneralFormalCircuit (ZMod p) State unit where
     circuit_proof_start [terminalMain, Gadgets.ToBits.rangeCheck, stateChannel, final]
     exact h_assumptions
 
+/-- Exactly the complete private terminal state routes the bank's final cursor occurrence.
+A valid bank has one terminal row, so its physical height needs no extra padding. -/
+def terminalGeneration (deferred : Bool) : Air.Flat.WitnessGeneration.Generation (ZMod p) State :=
+  .demand {
+    channel := stateChannel deferred
+    trigger := .push
+    guard message :=
+      let candidate : State (Witgen.FExpr (ZMod p)) :=
+        fromElements (Vector.ofFn fun column =>
+          .hintGet (terminal (p := p) deferred).name (size State) 0 column)
+      Witgen.HintIndex.messageEq candidate message
+    input message := pure (fromElements ((toElements (M := State) message).map
+      (fun value => Air.Flat.WitnessGeneration.Cell.witness (.expr value))))
+  }
+
 def verifierMain (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8) (values : Var (ProvableVector Word 8) (ZMod p)) :
     Circuit (ZMod p) Unit := do
   (stateChannel deferred).push (const (start initialValues))
@@ -61,7 +77,7 @@ def verifierProgram (deferred : Bool) (initialValues : Vector (Word (ZMod p)) 8)
       intro interaction member env
       simp only [verifierMain, circuit_norm, List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl <;>
-        simp [AbstractInteraction.Requirements, AbstractInteraction.Guarantees,
+        simp [AbstractInteraction.Requirements,
           ChannelInteraction.toRaw, stateChannel, Channel.toRaw, circuit_norm])
 
 omit [Fact (2 ^ 25 < p)] in

@@ -43,15 +43,15 @@ private def evaluateRow (image : ProgramImage) (source : ExecutionSnapshot) (row
   | none => (false, [])
   | some component =>
     let result := evaluate image source component row.2
-    (component.fixedColumns.isNone && result.1, result.2)
+    (StaticMembership.acceptsSeed component && result.1, result.2)
 
 private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1PublicIO Fp) (rows : List Row)
     (guarded : Bool := false) : Bool :=
   let assembly := if guarded then Soundness.ProtectedLocalCore.ensemble (p := SP1Prime) image source
     else Soundness.LocalCore.ensemble image source
   let head := (true, assembly.verifierOperations.interactionValues
-    (Environment.fromInput pi (fun _ _ => #[])) |>.map fun interaction =>
-      (interaction.channel.name, interaction.msg.toList, interaction.mult))
+    (Environment.fromInput pi (ProverData.empty Fp)) |>.map fun interaction =>
+      (interaction.channel.name, interaction.msg.toList, interaction.signedMult))
   let initial := head :: rows.map (fun row => evaluateRow image source row guarded)
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map (fun row => evaluateRow image source row guarded)
@@ -326,20 +326,27 @@ private def commitStatement : CommitmentStatement :=
 
 /-- Separate Memory balance only to identify the cause of a negative fixture. Full acceptance
 below requires both checks. The first still checks every constraint, lookup and other channel. -/
+private def hostAssembly (source : ExecutionSnapshot) (target : HostState) : Ensemble Fp SP1PublicIO :=
+  let registered := HostFinalMemory.source_registration (p := SP1Prime) syscallImage source source.sail.memorySnapshot
+  HostHintQueueBoundary.ensemble syscallImage source
+    (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) target HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) (HostFinalMemory.sourceChannels source.sail.memorySnapshot)
+    (HostHintReadLocal.source_unique_names syscallImage source source.host.io.hints)
+    registered.unique (fun component member => registered.tables component (by
+      simpa only [List.append_assoc] using
+        List.mem_append_left (FinalMemoryChecks.checkTables source.sail.memorySnapshot) member)) registered.boundary
+
 private def installedChecks (source : ExecutionSnapshot) (input : SP1PublicIO Fp)
     (target : HostState) (rows : List Row) (statement : CommitmentStatement := default) : Bool × Bool :=
-  let assembly := HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage source
-    (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) target HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) []
-    (HostHintReadLocal.source_unique_names syscallImage source source.host.io.hints)
+  let assembly := hostAssembly source target
   let evaluateAt (row : Row) := match assembly.tables[row.1]? with
     | none => (false, [])
     | some component =>
       let result := evaluate syscallImage source component row.2
-      (component.fixedColumns.isNone && result.1, result.2)
+      (StaticMembership.acceptsSeed component && result.1, result.2)
   let head := (true, assembly.verifierOperations.interactionValues
-    (Environment.fromInput input (fun _ _ => #[])) |>.map fun interaction =>
-      (interaction.channel.name, interaction.msg.toList, interaction.mult))
+    (Environment.fromInput input (ProverData.empty Fp)) |>.map fun interaction =>
+      (interaction.channel.name, interaction.msg.toList, interaction.signedMult))
   let initial := head :: rows.map evaluateAt
   let demands := (initial.flatMap Prod.snd).filterMap byteProvider
   let evaluated := initial ++ demands.map evaluateAt
@@ -379,7 +386,7 @@ theorem activeCommitLocalShard : checkCommit commitTarget commitRows = true := b
 edge. Removing a touched final record still fails after repairing the boundary ordering chain. -/
 theorem untouchedCommitMemory :
     ((commitSource.hostStep? syscallPolicy syscallProgram).map (fun result =>
-      (result.1.sail.registers.get? LeanRV64D.Defs.Register.x20,
+      (result.1.sail.registers.get? LeanRV64D.Register.x20,
         result.1.sail.memory.read 8, result.1.sail.memory.read 80000,
         result.1.sail.memory.read (2 ^ 48 - 1)))) = some (some 907, 19, 42, 55) ∧
     commitChecks commitTarget (commitRows.take 6 ++ [terminal 5 11] ++ commitRows.drop 8) = (true, false) := by
@@ -396,10 +403,7 @@ theorem rejectsCommitBoundaries :
 
 /-- The installed interaction-only public verifier contains no native witness closure. -/
 theorem installedVerifier_exportable :
-    Witgen.unexportableWitnesses ((HostHintQueueBoundary.ensemble (p := SP1Prime) syscallImage commitSource
-      (SP1Clean.HostHintQueueBoundary.initial []) commitTarget HostCallReceivers.available
-      (HostHintReadLocal.sourceResources []) []
-      (HostHintReadLocal.source_unique_names syscallImage commitSource [])).verifierOperations.toFlat) = [] := by
+    Witgen.unexportableWitnesses ((hostAssembly commitSource commitTarget).verifierOperations.toFlat) = [] := by
   native_decide
 
 /-- info: exportable ✓ (0 witness cells) -/
@@ -447,7 +451,7 @@ close this before any local execution-equivalence theorem is claimed. -/
 theorem hintReturnNeedsHostBinding :
     check syscallImage syscallSource syscallPublic (syscallRows 4) = true ∧
       ((syscallSource.hostStep? syscallPolicy syscallProgram).map
-        (fun output => output.1.sail.registers.get? LeanRV64D.Defs.Register.x5)) = some (some 3) := by
+        (fun output => output.1.sail.registers.get? LeanRV64D.Register.x5)) = some (some 3) := by
   native_decide
 
 private def haltSource (exit : ℕ) : ExecutionSnapshot :=

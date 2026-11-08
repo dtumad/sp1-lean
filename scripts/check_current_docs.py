@@ -17,7 +17,7 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parent.parent
 
 
-LEAN_ROOTS = ("SP1Clean", "SP1CleanTest", "ToClean", "ToMathlib", "ToPolyFun")
+LEAN_ROOTS = ("SP1Clean", "SP1CleanTest", "ToClean", "ToMathlib")
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 
 
@@ -59,7 +59,7 @@ markdown = maintained_markdown()
 
 for source in markdown:
     text = source.read_text()
-    for quoted in re.findall(r"`((?:SP1Clean|SP1CleanTest|ToClean|ToMathlib|ToPolyFun|docs|scripts)/[A-Za-z0-9_/.-]+)`", text):
+    for quoted in re.findall(r"`((?:SP1Clean|SP1CleanTest|ToClean|ToMathlib|docs|scripts)/[A-Za-z0-9_/.-]+)`", text):
         if not (ROOT / quoted).exists():
             failures.append(f"{relative(source)} cites missing path `{quoted}`")
     for match in LINK_RE.finditer(text):

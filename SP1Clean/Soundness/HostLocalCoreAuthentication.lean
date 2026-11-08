@@ -21,10 +21,12 @@ local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); 
 theorem authenticated_auxiliary_pull {image : ProgramImage} {source : ExecutionSnapshot}
     {auxiliary : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
     {names : ((tables image source auxiliary).map (·.circuit.name)).Nodup}
+    {channelNames : ((registry image source channels).map (·.name)).Nodup}
+    {tableChannels : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry image source channels}
     {Record : TypeMap} [ProvableType Record]
-    (witness : EnsembleWitness (ensemble image source auxiliary channels names))
+    (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (channel : Channel (ZMod p) Record)
-    (registered : channel.toRaw ∈ (baseEnsemble image source auxiliary channels names).channels)
+    (registered : channel.toRaw ∈ (baseEnsemble image source auxiliary channels names channelNames tableChannels).channels)
     (fresh : channel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels)
     (permission : channel.toRaw ≠ WritePermissionProvider.channel.toRaw)
     (notMembership : channel.toRaw ≠ image.writePermissionTable.channel.toRaw)

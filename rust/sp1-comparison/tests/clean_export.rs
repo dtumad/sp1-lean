@@ -46,9 +46,7 @@ mod empty_target_registers {
 }
 
 use clean_backend::witness_generation::{Program, WitnessGenerationError};
-use clean_backend::{
-    prove_ensemble, verify_ensemble, EnsembleShapeError, GeneratedAirSpec, GeneratedEnsemble,
-};
+use clean_backend::{EnsembleKey, EnsembleShapeError, GeneratedAirSpec, GeneratedEnsemble};
 use p3_field::{PrimeCharacteristicRing, PrimeField64};
 use p3_koala_bear::KoalaBear as F;
 use p3_matrix::dense::RowMajorMatrix;
@@ -70,7 +68,7 @@ fn generated_witnesses_match_lean_and_independent_fixed_membership() {
     for (case, value) in reference.as_array().unwrap().iter().zip([7, 9, 8]) {
         assert_eq!(case["publicInput"], value);
         assert_eq!(case["accepted"], value != 8);
-        let generated = generated::generate(&[field(value)], &[]);
+        let generated = generated::generate(&[field(value)], &[], 1);
         if value == 8 {
             assert!(generated.is_err(), "forged membership must fail");
             continue;
@@ -95,9 +93,9 @@ fn generated_witnesses_match_lean_and_independent_fixed_membership() {
             ]]
         );
         assert_eq!(case["interactionCount"], 3);
-        let statement = generated::Statement::<F>::new(&[2]).unwrap();
+        let statement = generated::Statement::<F>::new(&[2], 1).unwrap();
         assert_eq!(
-            statement.interaction_count(),
+            statement.interaction_counts().values().sum::<u128>(),
             3,
             "zero-count rows retain their occurrence"
         );
@@ -107,75 +105,79 @@ fn generated_witnesses_match_lean_and_independent_fixed_membership() {
         assert_eq!(fixed.values, vec![field(7), field(9)]);
     }
     assert!(matches!(
-        generated::generate::<F>(&[], &[]),
+        generated::generate::<F>(&[], &[], 1),
         Err(WitnessGenerationError::PublicInputWidth { .. })
     ));
     assert!(matches!(
-        generated::generate(&[field(7)], &[field(1)]),
+        generated::generate(&[field(7)], &[field(1)], 1),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
 }
 
 #[test]
 fn generated_air_proves_and_binds_the_public_value() {
-    let config = config();
-    let statement = generated::Statement::<F>::new(&[2]).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let statement = generated::Statement::<F>::new(&[2], 1).unwrap();
     for value in [7, 9] {
         let public = [field(value)];
-        let traces = generated::generate(&public, &[])
+        let traces = generated::generate(&public, &[], 1)
             .unwrap()
             .into_traces()
             .unwrap();
-        let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
-        verify_ensemble(&config, &statement, &proof, &public).unwrap();
+        let proof = key.prove(&statement, traces, &public).unwrap();
+        key.verify(&statement, &proof, &public).unwrap();
         for wrong in [8, if value == 7 { 9 } else { 7 }] {
-            assert!(verify_ensemble(&config, &statement, &proof, &[field(wrong)]).is_err());
+            assert!(key.verify(&statement, &proof, &[field(wrong)]).is_err());
         }
     }
 }
 
 #[test]
 fn generated_air_rejects_wrong_shape_and_row_content() {
-    let config = config();
-    let statement = generated::Statement::<F>::new(&[2]).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let statement = generated::Statement::<F>::new(&[2], 1).unwrap();
     assert!(matches!(
-        generated::Statement::<F>::new(&[]),
+        generated::Statement::<F>::new(&[], 1),
         Err(EnsembleShapeError::ComponentCount { .. })
     ));
     assert!(matches!(
-        generated::Statement::<F>::new(&[2, 2]),
+        generated::Statement::<F>::new(&[2, 2], 1),
         Err(EnsembleShapeError::ComponentCount { .. })
     ));
     assert!(matches!(
-        generated::Statement::<F>::new(&[4]),
+        generated::Statement::<F>::new(&[4], 1),
         Err(EnsembleShapeError::FixedTraceHeight { .. })
     ));
     let public = [field(7)];
-    let traces = generated::generate(&public, &[])
+    let traces = generated::generate(&public, &[], 1)
         .unwrap()
         .into_traces()
         .unwrap();
     assert!(matches!(
-        prove_ensemble(&config, &statement, vec![], &public),
-        Err(EnsembleShapeError::TraceCount { .. })
+        key.prove(&statement, vec![], &public),
+        Err(clean_backend::EnsembleProvingError::Shape(
+            EnsembleShapeError::TraceCount { .. }
+        ))
     ));
     assert!(matches!(
-        prove_ensemble(
-            &config,
+        key.prove(
             &statement,
             vec![traces[0].clone(), traces[0].clone()],
             &public
         ),
-        Err(EnsembleShapeError::TraceCount { .. })
+        Err(clean_backend::EnsembleProvingError::Shape(
+            EnsembleShapeError::TraceCount { .. }
+        ))
     ));
     assert!(matches!(
-        prove_ensemble(
-            &config,
+        key.prove(
             &statement,
             vec![RowMajorMatrix::new(vec![field(1), field(0)], 1)],
             &public
         ),
-        Err(EnsembleShapeError::TraceWidth { .. })
+        Err(clean_backend::EnsembleProvingError::Shape(
+            EnsembleShapeError::TraceWidth { .. }
+        ))
     ));
 
     // Release mode reaches verification for invalid witnesses; debug mode may reject them earlier.
@@ -183,8 +185,9 @@ fn generated_air_rejects_wrong_shape_and_row_content() {
         let mut altered = traces.clone();
         altered[0].values[cell] = field(value);
         assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, altered, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(config(), 1).unwrap();
+            let proof = key.prove(&statement, altered, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
     assert_eq!(
@@ -230,7 +233,7 @@ fn check_padded_membership<P: Program<F> + GeneratedAirSpec>(
 ) {
     let rows = padded_membership_rows(source, public);
     let height = rows.len();
-    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[2]);
+    assert_eq!(<P as Program<F>>::FIXED_COLUMNS, &[&[0, 1][..]]);
     let fixed = fixed_trace::<P>(0);
     assert_eq!((fixed.height(), fixed.width()), (height, 2));
     assert_eq!(
@@ -241,7 +244,7 @@ fn check_padded_membership<P: Program<F> + GeneratedAirSpec>(
             .collect::<Vec<_>>()
     );
     let public_fields: Vec<_> = public.iter().copied().map(field).collect();
-    let result = clean_backend::witness_generation::generate::<F, P>(&public_fields, &[]);
+    let result = clean_backend::witness_generation::generate::<F, P>(&public_fields, &[], 1);
     let accepted = public.iter().all(|value| source.contains(value));
     assert_eq!(result.is_ok(), accepted);
     if !public.is_empty() {
@@ -277,23 +280,25 @@ fn check_padded_membership<P: Program<F> + GeneratedAirSpec>(
         actual,
         serde_json::json!({"tables": [rows], "interactions": ledger})
     );
-    let statement = GeneratedEnsemble::<F, P>::new(&[height]).unwrap();
+    let statement = GeneratedEnsemble::<F, P>::new(&[height], 1).unwrap();
     assert_eq!(
-        statement.interaction_count(),
+        statement.interaction_counts().values().sum::<u128>(),
         (height + public.len()) as u128
     );
     for invalid in [0, height + 1, height * 2] {
-        assert!(GeneratedEnsemble::<F, P>::new(&[invalid]).is_err());
+        assert!(GeneratedEnsemble::<F, P>::new(&[invalid], 1).is_err());
     }
-    let config = config();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
     let traces = witness.into_traces().unwrap();
     assert_eq!((traces[0].height(), traces[0].width()), (height, 1));
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public_fields).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public_fields).unwrap();
+    let proof = key
+        .prove(&statement, traces.clone(), &public_fields)
+        .unwrap();
+    key.verify(&statement, &proof, &public_fields).unwrap();
     for cell in 0..public.len() {
         let mut altered = public_fields.clone();
         altered[cell] += field(1);
-        assert!(verify_ensemble(&config, &statement, &proof, &altered).is_err());
+        assert!(key.verify(&statement, &proof, &altered).is_err());
     }
     // Includes every real, duplicate and padding row, in both directions.
     for row in 0..height {
@@ -301,9 +306,9 @@ fn check_padded_membership<P: Program<F> + GeneratedAirSpec>(
             let mut altered = traces.clone();
             altered[0].values[row] += delta;
             assert_backend_rejection(|| {
-                let (proof, _) =
-                    prove_ensemble(&config, &statement, altered, &public_fields).unwrap();
-                verify_ensemble(&config, &statement, &proof, &public_fields).is_err()
+                let mut key = EnsembleKey::new(config(), 1).unwrap();
+                let proof = key.prove(&statement, altered, &public_fields).unwrap();
+                key.verify(&statement, &proof, &public_fields).is_err()
             });
         }
     }
@@ -332,13 +337,16 @@ fn check_padded_membership<P: Program<F> + GeneratedAirSpec>(
             assert_eq!(left.channel, right.channel);
             assert_eq!(left.message, vec![field(rows[first][0]), field(0)]);
             assert_eq!(left.message, right.message);
-            assert!(!left.assume_guarantees && !right.assume_guarantees);
+            assert!(
+                left.direction == clean_backend::witness_generation::Direction::Push
+                    && right.direction == clean_backend::witness_generation::Direction::Push
+            );
             assert_eq!(left.multiplicity, delta);
             assert_eq!(right.multiplicity, -delta);
             assert_backend_rejection(|| {
-                let (proof, _) =
-                    prove_ensemble(&config, &statement, altered, &public_fields).unwrap();
-                verify_ensemble(&config, &statement, &proof, &public_fields).is_err()
+                let mut key = EnsembleKey::new(config(), 1).unwrap();
+                let proof = key.prove(&statement, altered, &public_fields).unwrap();
+                key.verify(&statement, &proof, &public_fields).is_err()
             });
         }
     }
@@ -452,7 +460,10 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
     }
     assert_eq!(reference["cases"].as_array().unwrap().len(), cases.len());
     assert_eq!(cases.len(), 40);
-    assert_eq!(<registers::Ensemble as Program<F>>::FIXED_WIDTHS, &[0, 6]);
+    assert_eq!(
+        <registers::Ensemble as Program<F>>::FIXED_COLUMNS,
+        &[&[][..], &[0, 1, 2, 3, 4, 5][..]]
+    );
     let fixed = fixed_trace::<registers::Ensemble>(1);
     assert_eq!((fixed.height(), fixed.width()), (32, 6));
     assert_eq!(
@@ -469,7 +480,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
         assert_eq!(case["publicInput"], serde_json::json!(public));
         assert_eq!(case["accepted"], accepted);
         let public_fields: Vec<_> = public.iter().copied().map(field).collect();
-        let result = registers::generate(&public_fields, &[]);
+        let result = registers::generate(&public_fields, &[], 1);
         assert_eq!(result.is_ok(), accepted, "{name}");
         if !accepted {
             continue;
@@ -513,8 +524,8 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
             38,
             "keep all repeated and zero-count occurrences"
         );
-        let statement = registers::Statement::<F>::new(&[2, 32]).unwrap();
-        assert_eq!(statement.interaction_count(), 38);
+        let statement = registers::Statement::<F>::new(&[2, 32], 1).unwrap();
+        assert_eq!(statement.interaction_counts().values().sum::<u128>(), 38);
         let traces = witness.into_traces().unwrap();
         assert_eq!((traces[0].height(), traces[0].width()), (2, 5));
         assert_eq!((traces[1].height(), traces[1].width()), (32, 1));
@@ -523,7 +534,7 @@ fn snapshot_registers_match_source_values_and_complete_lean_ledger() {
 
 #[test]
 fn unused_snapshot_registers_keep_all_fixed_rows_and_zero_occurrences() {
-    let witness = empty_registers::generate::<F>(&[], &[]).unwrap();
+    let witness = empty_registers::generate::<F>(&[], &[], 1).unwrap();
     let actual = physical_reference::<empty_registers::Ensemble>(&[], &witness.tables);
     assert_eq!(actual, register_reference()["empty"]);
     let rows: Vec<_> = (0..32)
@@ -547,75 +558,86 @@ fn unused_snapshot_registers_keep_all_fixed_rows_and_zero_occurrences() {
         actual,
         serde_json::json!({"tables": [rows], "interactions": ledger})
     );
-    let statement = empty_registers::Statement::<F>::new(&[32]).unwrap();
-    assert_eq!(statement.interaction_count(), 32);
-    let config = config();
+    let statement = empty_registers::Statement::<F>::new(&[32], 1).unwrap();
+    assert_eq!(statement.interaction_counts().values().sum::<u128>(), 32);
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
     let traces = witness.into_traces().unwrap();
     assert_eq!((traces[0].height(), traces[0].width()), (32, 1));
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &[]).unwrap();
-    verify_ensemble(&config, &statement, &proof, &[]).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &[]).unwrap();
+    key.verify(&statement, &proof, &[]).unwrap();
     for index in [0, 5, 31] {
         let mut altered = traces.clone();
         altered[0].values[index] = field(1);
-        let (proof, _) = prove_ensemble(&config, &statement, altered, &[]).unwrap();
-        assert!(verify_ensemble(&config, &statement, &proof, &[]).is_err());
+        let proof = key.prove(&statement, altered, &[]).unwrap();
+        assert!(key.verify(&statement, &proof, &[]).is_err());
     }
 }
 
 #[test]
 fn snapshot_register_proofs_bind_each_public_index_and_limb() {
-    let config = config();
-    let statement = registers::Statement::<F>::new(&[2, 32]).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let statement = registers::Statement::<F>::new(&[2, 32], 1).unwrap();
     for indices in [[0, 31], [5, 5]] {
         let public: Vec<_> = indices.into_iter().flat_map(register).map(field).collect();
-        let traces = registers::generate(&public, &[])
+        let traces = registers::generate(&public, &[], 1)
             .unwrap()
             .into_traces()
             .unwrap();
-        let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
-        verify_ensemble(&config, &statement, &proof, &public).unwrap();
+        let proof = key.prove(&statement, traces, &public).unwrap();
+        key.verify(&statement, &proof, &public).unwrap();
         for cell in 0..public.len() {
             let mut changed = public.clone();
             changed[cell] += field(1);
-            assert!(verify_ensemble(&config, &statement, &proof, &changed).is_err());
+            assert!(key.verify(&statement, &proof, &changed).is_err());
         }
     }
 }
 
 #[test]
 fn snapshot_register_air_rejects_shapes_sparse_row_and_count_mutations() {
-    // Keep the prototype's shape/count regression on an installed boundary. This check
-    // counts physical occurrences before any witness values or multiplicities are supplied.
-    assert!(registers::Statement::<F>::new(&[1usize << 29, 32]).is_ok());
+    // Capacity is per channel, and counts physical occurrences before witness values or
+    // multiplicities are supplied. The sum may exceed p while each channel remains below p.
+    let admitted = registers::Statement::<F>::new(&[1usize << 30, 32], 1).unwrap();
+    assert_eq!(
+        admitted.interaction_counts()["SP1Memory"],
+        (1u128 << 30) + 2
+    );
+    assert_eq!(
+        admitted.interaction_counts()["sp1.native.source_registers"],
+        (1u128 << 30) + 32
+    );
+    assert!(admitted.interaction_counts().values().sum::<u128>() > F::ORDER_U64 as u128);
     assert!(matches!(
-        registers::Statement::<F>::new(&[1usize << 30, 32]),
+        registers::Statement::<F>::new(&[1usize << 31, 32], 1),
         Err(EnsembleShapeError::InteractionCountBound { .. })
     ));
     assert!(matches!(
-        registers::Statement::<F>::new(&[3, 32]),
+        registers::Statement::<F>::new(&[3, 32], 1),
         Err(EnsembleShapeError::TraceHeight { .. })
     ));
     for heights in [vec![], vec![32], vec![2, 32, 32], vec![2, 16], vec![2, 64]] {
-        assert!(registers::Statement::<F>::new(&heights).is_err());
+        assert!(registers::Statement::<F>::new(&heights, 1).is_err());
     }
     assert!(matches!(
-        registers::generate::<F>(&[], &[]),
+        registers::generate::<F>(&[], &[], 1),
         Err(WitnessGenerationError::PublicInputWidth { .. })
     ));
     let public: Vec<_> = [5, 31].into_iter().flat_map(register).map(field).collect();
     assert!(matches!(
-        registers::generate(&public, &[field(1)]),
+        registers::generate(&public, &[field(1)], 1),
         Err(WitnessGenerationError::ProverInputWidth { .. })
     ));
-    let traces = registers::generate(&public, &[])
+    let traces = registers::generate(&public, &[], 1)
         .unwrap()
         .into_traces()
         .unwrap();
-    let config = config();
-    let statement = registers::Statement::<F>::new(&[2, 32]).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let statement = registers::Statement::<F>::new(&[2, 32], 1).unwrap();
     assert!(matches!(
-        prove_ensemble(&config, &statement, vec![traces[0].clone()], &public),
-        Err(EnsembleShapeError::TraceCount { .. })
+        key.prove(&statement, vec![traces[0].clone()], &public),
+        Err(clean_backend::EnsembleProvingError::Shape(
+            EnsembleShapeError::TraceCount { .. }
+        ))
     ));
     // Fixed values are verifier-owned and absent from committed traces. Mutate every
     // sparse index/limb and every count, including unused counts, in both directions.
@@ -624,9 +646,9 @@ fn snapshot_register_air_rejects_shapes_sparse_row_and_count_mutations() {
             for delta in [field(1), -field(1)] {
                 let mut changed = traces.clone();
                 changed[table].values[cell] += delta;
-                let (proof, _) = prove_ensemble(&config, &statement, changed, &public).unwrap();
+                let proof = key.prove(&statement, changed, &public).unwrap();
                 assert!(
-                    verify_ensemble(&config, &statement, &proof, &public).is_err(),
+                    key.verify(&statement, &proof, &public).is_err(),
                     "accepted mutation of table {table}, cell {cell}"
                 );
             }
@@ -698,8 +720,8 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
     assert_eq!(cases.len(), 42);
     assert_eq!(reference["cases"].as_array().unwrap().len(), cases.len());
     assert_eq!(
-        <target_registers::Ensemble as Program<F>>::FIXED_WIDTHS,
-        &[0, 6]
+        <target_registers::Ensemble as Program<F>>::FIXED_COLUMNS,
+        &[&[][..], &[0, 1, 2, 3, 4, 5][..]]
     );
     let fixed = fixed_trace::<target_registers::Ensemble>(1);
     assert_eq!((fixed.height(), fixed.width()), (32, 6));
@@ -710,15 +732,14 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
             .map(field)
             .collect::<Vec<_>>()
     );
-    let config = config();
-    let statement = target_registers::Statement::<F>::new(&[2, 32]).unwrap();
+    let statement = target_registers::Statement::<F>::new(&[2, 32], 1).unwrap();
     for (case, (name, public, accepted)) in reference["cases"].as_array().unwrap().iter().zip(cases)
     {
         assert_eq!(case["name"], name);
         assert_eq!(case["publicInput"], serde_json::json!(public));
         assert_eq!(case["accepted"], accepted);
         let public: Vec<_> = public.into_iter().map(field).collect();
-        let result = target_registers::generate(&public, &[]);
+        let result = target_registers::generate(&public, &[], 1);
         assert_eq!(result.is_ok(), case["witness"].is_object(), "{name}");
         let Ok(witness) = result else {
             assert!(!accepted, "{name}");
@@ -767,15 +788,16 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
         }
         assert_eq!(actual["interactions"], serde_json::json!(ledger));
         assert_eq!(ledger.len(), 38);
-        assert_eq!(statement.interaction_count(), 38);
+        assert_eq!(statement.interaction_counts().values().sum::<u128>(), 38);
         let traces = witness.into_traces().unwrap();
         assert_eq!((traces[0].height(), traces[0].width()), (2, 9));
         assert_eq!((traces[1].height(), traces[1].width()), (32, 1));
         // Malformed upper address limbs can balance and generate rows while failing AIR.
         if !accepted {
             assert_backend_rejection(|| {
-                let (proof, _) = prove_ensemble(&config, &statement, traces, &public).unwrap();
-                verify_ensemble(&config, &statement, &proof, &public).is_err()
+                let mut key = EnsembleKey::new(config(), 1).unwrap();
+                let proof = key.prove(&statement, traces, &public).unwrap();
+                key.verify(&statement, &proof, &public).is_err()
             });
         }
     }
@@ -783,7 +805,7 @@ fn target_registers_match_complete_receipts_and_independent_fixed_values() {
 
 #[test]
 fn unused_target_registers_retain_every_zero_count_occurrence() {
-    let witness = empty_target_registers::generate::<F>(&[], &[]).unwrap();
+    let witness = empty_target_registers::generate::<F>(&[], &[], 1).unwrap();
     let actual = physical_reference::<empty_target_registers::Ensemble>(&[], &witness.tables);
     assert_eq!(actual, target_register_reference()["empty"]);
     let rows: Vec<_> = (0..32)
@@ -807,32 +829,32 @@ fn unused_target_registers_retain_every_zero_count_occurrence() {
         actual,
         serde_json::json!({"tables": [rows], "interactions": ledger})
     );
-    let statement = empty_target_registers::Statement::<F>::new(&[32]).unwrap();
-    assert_eq!(statement.interaction_count(), 32);
-    let config = config();
+    let statement = empty_target_registers::Statement::<F>::new(&[32], 1).unwrap();
+    assert_eq!(statement.interaction_counts().values().sum::<u128>(), 32);
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
     let traces = witness.into_traces().unwrap();
     assert_eq!((traces[0].height(), traces[0].width()), (32, 1));
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &[]).unwrap();
-    verify_ensemble(&config, &statement, &proof, &[]).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &[]).unwrap();
+    key.verify(&statement, &proof, &[]).unwrap();
     for index in [0, 5, 31] {
         let mut altered = traces.clone();
         altered[0].values[index] = field(1);
-        let (proof, _) = prove_ensemble(&config, &statement, altered, &[]).unwrap();
-        assert!(verify_ensemble(&config, &statement, &proof, &[]).is_err());
+        let proof = key.prove(&statement, altered, &[]).unwrap();
+        assert!(key.verify(&statement, &proof, &[]).is_err());
     }
 }
 
 #[test]
 fn target_register_backend_binds_clocks_values_addresses_and_counts() {
     for heights in [vec![], vec![32], vec![2, 32, 32], vec![2, 16], vec![2, 64]] {
-        assert!(target_registers::Statement::<F>::new(&heights).is_err());
+        assert!(target_registers::Statement::<F>::new(&heights, 1).is_err());
     }
     assert!(matches!(
-        target_registers::generate::<F>(&[], &[]),
+        target_registers::generate::<F>(&[], &[], 1),
         Err(WitnessGenerationError::PublicInputWidth { .. })
     ));
-    let statement = target_registers::Statement::<F>::new(&[2, 32]).unwrap();
-    let config = config();
+    let statement = target_registers::Statement::<F>::new(&[2, 32], 1).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
     for indices in [[0, 31], [5, 5]] {
         let public: Vec<_> = indices
             .into_iter()
@@ -841,23 +863,25 @@ fn target_register_backend_binds_clocks_values_addresses_and_counts() {
             .map(field)
             .collect();
         assert!(matches!(
-            target_registers::generate(&public, &[field(1)]),
+            target_registers::generate(&public, &[field(1)], 1),
             Err(WitnessGenerationError::ProverInputWidth { .. })
         ));
-        let traces = target_registers::generate(&public, &[])
+        let traces = target_registers::generate(&public, &[], 1)
             .unwrap()
             .into_traces()
             .unwrap();
         assert!(matches!(
-            prove_ensemble(&config, &statement, vec![traces[0].clone()], &public),
-            Err(EnsembleShapeError::TraceCount { .. })
+            key.prove(&statement, vec![traces[0].clone()], &public),
+            Err(clean_backend::EnsembleProvingError::Shape(
+                EnsembleShapeError::TraceCount { .. }
+            ))
         ));
-        let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-        verify_ensemble(&config, &statement, &proof, &public).unwrap();
+        let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+        key.verify(&statement, &proof, &public).unwrap();
         for cell in 0..public.len() {
             let mut altered = public.clone();
             altered[cell] += field(1);
-            assert!(verify_ensemble(&config, &statement, &proof, &altered).is_err());
+            assert!(key.verify(&statement, &proof, &altered).is_err());
         }
         // Both clock limbs, every address/value limb, and all 32 counts remain bound.
         for (table, trace) in traces.iter().enumerate() {
@@ -866,9 +890,9 @@ fn target_register_backend_binds_clocks_values_addresses_and_counts() {
                     let mut altered = traces.clone();
                     altered[table].values[cell] += delta;
                     assert_backend_rejection(|| {
-                        let (proof, _) =
-                            prove_ensemble(&config, &statement, altered, &public).unwrap();
-                        verify_ensemble(&config, &statement, &proof, &public).is_err()
+                        let mut key = EnsembleKey::new(config(), 1).unwrap();
+                        let proof = key.prove(&statement, altered, &public).unwrap();
+                        key.verify(&statement, &proof, &public).is_err()
                     });
                 }
             }
@@ -900,7 +924,10 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
     ] {
         requests.push(([bad, first.clone()].concat(), false));
     }
-    assert_eq!(<P as Program<F>>::FIXED_WIDTHS, &[10]);
+    assert_eq!(
+        <P as Program<F>>::FIXED_COLUMNS,
+        &[&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9][..]]
+    );
     let fixed = fixed_trace::<P>(0);
     assert_eq!((fixed.height(), fixed.width()), (16, 10));
     let fixed_rows: Vec<_> = (0..16)
@@ -926,7 +953,7 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
         assert_eq!(case["publicInput"], serde_json::json!(public));
         assert_eq!(case["accepted"], *accepted);
         let fields: Vec<_> = public.iter().copied().map(field).collect();
-        let result = clean_backend::witness_generation::generate::<F, P>(&fields, &[]);
+        let result = clean_backend::witness_generation::generate::<F, P>(&fields, &[], 1);
         assert_eq!(result.is_ok(), *accepted);
         let Ok(witness) = result else { continue };
         let rows: Vec<_> = fixed_rows
@@ -970,31 +997,32 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
         .into_iter()
         .map(field)
         .collect();
-    let statement = GeneratedEnsemble::<F, P>::new(&[16]).unwrap();
-    assert_eq!(statement.interaction_count(), 18);
+    let statement = GeneratedEnsemble::<F, P>::new(&[16], 1).unwrap();
+    assert_eq!(statement.interaction_counts().values().sum::<u128>(), 18);
     for height in [0, 8, 32] {
-        assert!(GeneratedEnsemble::<F, P>::new(&[height]).is_err());
+        assert!(GeneratedEnsemble::<F, P>::new(&[height], 1).is_err());
     }
-    let traces = clean_backend::witness_generation::generate::<F, P>(&public, &[])
+    let traces = clean_backend::witness_generation::generate::<F, P>(&public, &[], 1)
         .unwrap()
         .into_traces()
         .unwrap();
     assert_eq!((traces[0].height(), traces[0].width()), (16, 1));
-    let config = config();
-    let (proof, _) = prove_ensemble(&config, &statement, traces.clone(), &public).unwrap();
-    verify_ensemble(&config, &statement, &proof, &public).unwrap();
+    let mut key = EnsembleKey::new(config(), 1).unwrap();
+    let proof = key.prove(&statement, traces.clone(), &public).unwrap();
+    key.verify(&statement, &proof, &public).unwrap();
     for cell in 0..public.len() {
         let mut forged = public.clone();
         forged[cell] += field(1);
-        assert!(verify_ensemble(&config, &statement, &proof, &forged).is_err());
+        assert!(key.verify(&statement, &proof, &forged).is_err());
     }
     // Every demanded, unused, empty-interval and padding row retains a bound count.
     for row in 0..16 {
         let mut forged = traces.clone();
         forged[0].values[row] += field(1);
         assert_backend_rejection(|| {
-            let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-            verify_ensemble(&config, &statement, &proof, &public).is_err()
+            let mut key = EnsembleKey::new(config(), 1).unwrap();
+            let proof = key.prove(&statement, forged, &public).unwrap();
+            key.verify(&statement, &proof, &public).is_err()
         });
     }
     // Equal padding messages can cancel; eligibility must still forbid both nonzero counts.
@@ -1002,8 +1030,9 @@ fn check_ram_membership<P: Program<F> + GeneratedAirSpec>(name: &str) {
     forged[0].values[14] = field(1);
     forged[0].values[15] = -field(1);
     assert_backend_rejection(|| {
-        let (proof, _) = prove_ensemble(&config, &statement, forged, &public).unwrap();
-        verify_ensemble(&config, &statement, &proof, &public).is_err()
+        let mut key = EnsembleKey::new(config(), 1).unwrap();
+        let proof = key.prove(&statement, forged, &public).unwrap();
+        key.verify(&statement, &proof, &public).is_err()
     });
 }
 

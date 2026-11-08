@@ -17,7 +17,7 @@ version. `SyscallInputs` provides the component-local syscall implementation; th
 the legacy assembly specializations. The mixed native carrier derives HALT separately through
 `HaltGrounding`. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -199,8 +199,7 @@ theorem walkedMemoryBalance
     (witness : EnsembleWitness (sp1Ensemble (p := p)))
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
-      signedVal interaction.mult = -1 ∨ signedVal interaction.mult = 0 ∨
-        signedVal interaction.mult = 1)
+      IsBool interaction.mult)
     (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
       memoryChannel) = [])
     (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)

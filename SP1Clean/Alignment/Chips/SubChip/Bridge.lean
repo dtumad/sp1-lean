@@ -11,7 +11,7 @@ given the chip's semantic fact `a_val = op_b - op_c` and the register/PC reads.
 `execute_RTYPE rs2 rs1 rd .SUB` computes `rX(rs1) - rX(rs2)`, so `rs1 ↦ op_b_val`,
 `rs2 ↦ op_c_val` — the non-commutative order is load-bearing. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 namespace SP1Clean.SubSail
 
 open Sail LeanRV64D LeanRV64D.Functions

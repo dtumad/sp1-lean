@@ -45,10 +45,10 @@ theorem providerTableFor_lookups_empty (id : ProviderTableId) :
   | memoryFinalize =>
     simp [providerTableFor, Component.lookups_eq, Component.rowOperations,
       MemoryFinalizeChip.circuit, MemoryFinalizeChip.main, circuit_norm]
-  | memoryBump => simp [providerTableFor, MemoryBumpChip.lookups_empty]
-  | stateBump => simp [providerTableFor, StateBumpChip.lookups_empty]
-  | halt => simp [providerTableFor, HaltChip.lookups_empty]
-  | syscallInstrs => simp [providerTableFor, SyscallInstrsChip.lookups_empty]
+  | memoryBump => exact MemoryBumpChip.lookups_empty
+  | stateBump => exact StateBumpChip.lookups_empty
+  | halt => exact HaltChip.lookups_empty
+  | syscallInstrs => exact SyscallInstrsChip.lookups_empty
 
 /-- Every native provider constraint depends on its physical cells alone. -/
 theorem providerTableFor_constraints_setData (id : ProviderTableId)

@@ -18,7 +18,7 @@ binding into an ensemble relation or claim certified AIR composition.
 
 namespace SP1Clean.Model.Core
 
-open LeanRV64D.Defs SP1Clean.Soundness.Target
+open LeanRV64D SP1Clean.Soundness.Target
 
 /-- All nontrivial fields of the official Sail state, with sparse native RAM. -/
 structure SailSnapshot where
@@ -98,7 +98,7 @@ theorem memorySnapshot_realizes (snapshot : SailSnapshot)
     (initialized : snapshot.skeleton.isInitialized) :
     snapshot.memorySnapshot.Realizes snapshot.realize := by
   refine ⟨?_, fun address bound =>
-    (snapshot.memory.toSailMemory_get? (2 ^ 48) address).trans (if_pos bound)⟩
+    (snapshot.memory.toSailMemory_get? (2 ^ 48) address).trans (ite_eq_left bound)⟩
   intro index
   simp only [MemorySnapshot.read, memorySnapshot, Vector.getElem_ofFn]
   rw [show BitVec.ofNat 5 index.toNat = index by simp]

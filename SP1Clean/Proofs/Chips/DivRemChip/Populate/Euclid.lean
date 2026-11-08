@@ -67,8 +67,8 @@ private lemma populate_msb_eq_ite {a : ZMod p} (ha : a.val < 2 ^ 16) :
     U16MSBOperation.populate_msb a = if 32768 ≤ a.val then 1 else 0 := by
   simp only [U16MSBOperation.populate_msb]
   by_cases h : 32768 ≤ a.val
-  · rw [if_pos h, (by omega : a.val / 32768 = 1), Nat.cast_one]
-  · rw [if_neg h, (by omega : a.val / 32768 = 0), Nat.cast_zero]
+  · rw [ite_eq_left h, (by omega : a.val / 32768 = 1), Nat.cast_one]
+  · rw [ite_eq_right h, (by omega : a.val / 32768 = 0), Nat.cast_zero]
 
 set_option linter.unusedSectionVars false in
 /-- The msb cell read off limb 3 of a committed 64-bit word is the word's sign bit. -/
@@ -80,8 +80,8 @@ private lemma populate_msb_limb3 (x : BitVec 64) :
   rw [populate_msb_eq_ite (by rw [h3]; exact Nat.mod_lt _ (by norm_num)), h3,
     BitVec.msb_eq_decide]
   rcases Nat.lt_or_ge x.toNat (2 ^ 63) with h | h
-  · rw [if_neg (by omega), if_neg (by simp only [decide_eq_true_eq]; omega)]
-  · rw [if_pos (by omega), if_pos (by simp only [decide_eq_true_eq]; omega)]
+  · rw [ite_eq_right (by omega), ite_eq_right (by simp only [decide_eq_true_eq]; omega)]
+  · rw [ite_eq_left (by omega), ite_eq_left (by simp only [decide_eq_true_eq]; omega)]
 
 set_option linter.unusedSectionVars false in
 /-- The msb cell read off limb 1 of a committed 64-bit word is bit 31 of its low half. -/
@@ -92,8 +92,8 @@ private lemma populate_msb_limb1 (x : BitVec 64) :
     wordOfNat_val x.toNat 1 (by norm_num)
   rw [populate_msb_eq_ite (by rw [h1]; exact Nat.mod_lt _ (by norm_num)), h1]
   rcases Nat.lt_or_ge (x.toNat % 2 ^ 32) (2 ^ 31) with h | h
-  · rw [if_neg (by omega), if_neg (by omega)]
-  · rw [if_pos (by omega), if_pos (by omega)]
+  · rw [ite_eq_right (by omega), ite_eq_right (by omega)]
+  · rw [ite_eq_left (by omega), ite_eq_left (by omega)]
 
 set_option linter.unusedSectionVars false in
 /-- `.val` of a boolean indicator. -/
@@ -124,8 +124,8 @@ private lemma extNat_int64 (v : BitVec 64) {fv : ℕ} (hf : fv = if v.msb then 1
   have hlt := v.isLt
   subst hf
   by_cases hm : v.msb
-  · rw [if_pos hm] at hI ⊢; rw [if_pos hm]; push_cast; omega
-  · rw [if_neg hm] at hI ⊢; rw [if_neg hm]; push_cast; omega
+  · rw [ite_eq_left hm] at hI ⊢; rw [ite_eq_left hm]; push_cast; omega
+  · rw [ite_eq_right hm] at hI ⊢; rw [ite_eq_right hm]; push_cast; omega
 
 /-- As `extNat_int64`, for a sign-extended 32-bit value (the word classes' committed shape). -/
 private lemma extNat_int32 (v : BitVec 32) {fv : ℕ} (hf : fv = if v.msb then 1 else 0) :
@@ -137,8 +137,8 @@ private lemma extNat_int32 (v : BitVec 32) {fv : ℕ} (hf : fv = if v.msb then 1
     rw [BitVec.toNat_signExtend, BitVec.toNat_setWidth_of_le (by norm_num)]
   subst hf
   by_cases hm : v.msb
-  · rw [if_pos hm] at hI hse ⊢; rw [if_pos hm, hse]; push_cast; omega
-  · rw [if_neg hm] at hI hse ⊢; rw [if_neg hm, hse]; push_cast; omega
+  · rw [ite_eq_left hm] at hI hse ⊢; rw [ite_eq_left hm, hse]; push_cast; omega
+  · rw [ite_eq_right hm] at hI hse ⊢; rw [ite_eq_right hm, hse]; push_cast; omega
 
 omit [Fact (Nat.Prime p)] in
 set_option linter.unusedSectionVars false in
@@ -177,7 +177,7 @@ private lemma populateRemComp_cast (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
     (i : ℕ) (hi : i < 4) :
     (populateRemComp B C f)[i]'hi = ((remAddendNat B C f i : ℕ) : ZMod p) := by
   simp only [remAddendNat]
-  rw [dif_pos hi, ZMod.natCast_zmod_val]
+  rw [dite_eq_left hi, ZMod.natCast_zmod_val]
 
 set_option linter.unusedSectionVars false in
 /-- The high-limb chain addend `rem_neg · 65535` is the cast of `remAddendNat i` (`i ≥ 4`). -/
@@ -185,7 +185,7 @@ private lemma remNeg_fill_cast (B C : Word (ZMod p)) (f : Vector (ZMod p) 8)
     {i : ℕ} (hi : ¬i < 4) :
     populateRemNeg B C f * 65535 = ((remAddendNat B C f i : ℕ) : ZMod p) := by
   simp only [remAddendNat]
-  rw [dif_neg hi, Nat.cast_mul, ZMod.natCast_zmod_val]
+  rw [dite_eq_right hi, Nat.cast_mul, ZMod.natCast_zmod_val]
   norm_num
 
 set_option linter.unusedSectionVars false in
@@ -688,37 +688,37 @@ private lemma euclid_limbs_s64_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8
   have hqb : quotBits B C f
       = if Word.toBitVec64 C = 0 then BitVec.allOnes 64
         else (Word.toBitVec64 B).sdiv (Word.toBitVec64 C) := by
-    simp only [quotBits]; rw [if_neg hn45, if_neg hn67, if_pos h02]
+    simp only [quotBits]; rw [ite_eq_right hn45, ite_eq_right hn67, ite_eq_left h02]
   have hrb : remBits B C f
       = if Word.toBitVec64 C = 0 then Word.toBitVec64 B
         else (Word.toBitVec64 B).srem (Word.toBitVec64 C) := by
-    simp only [remBits]; rw [if_neg hn45, if_neg hn67, if_pos h02]
+    simp only [remBits]; rw [ite_eq_right hn45, ite_eq_right hn67, ite_eq_left h02]
   have hqcb : quotCompBits B C f = quotBits B C f := by
-    simp only [quotCompBits]; rw [if_neg hn67]
+    simp only [quotCompBits]; rw [ite_eq_right hn67]
   have hrcb : remCompBits B C f = remBits B C f := by
-    simp only [remCompBits]; rw [if_neg hn67]
+    simp only [remCompBits]; rw [ite_eq_right hn67]
   have hbc : bComp B f = B := by
-    simp only [bComp]; rw [if_neg hn45, if_neg hn67]
+    simp only [bComp]; rw [ite_eq_right hn45, ite_eq_right hn67]
   have hcc : cComp C f = C := by
-    simp only [cComp]; rw [if_neg hn45, if_neg hn67]
+    simp only [cComp]; rw [ite_eq_right hn45, ite_eq_right hn67]
   have hprod : ctqProd B C f
       = (Word.toBitVec64 (populateQuotComp B C f)).signExtend 128
         * (Word.toBitVec64 (cComp C f)).signExtend 128 := by
-    simp only [ctqProd]; rw [if_pos hsig]
+    simp only [ctqProd]; rw [ite_eq_left hsig]
   have hqcv : Word.toBitVec64 (populateQuotComp B C f) = quotCompBits B C f :=
     wordOfBits_toBitVec64 _
   -- sign cells: `b_neg = msb b`, `rem_neg = msb remBits`
   have hbn : populateBNeg B f = if (Word.toBitVec64 B).msb then 1 else 0 := by
     rw [populateBNeg_def, hsig, one_mul]
     simp only [bMsbCell]
-    rw [if_neg hn4567, populate_msb_eq_ite hb3v]
+    rw [ite_eq_right hn4567, populate_msb_eq_ite hb3v]
     by_cases hge : 32768 ≤ B[3].val
-    · rw [if_pos hge, if_pos ((toBitVec64_msb_iff hB).mpr hge)]
-    · rw [if_neg hge, if_neg (fun hm => hge ((toBitVec64_msb_iff hB).mp hm))]
+    · rw [ite_eq_left hge, ite_eq_left ((toBitVec64_msb_iff hB).mpr hge)]
+    · rw [ite_eq_right hge, ite_eq_right (fun hm => hge ((toBitVec64_msb_iff hB).mp hm))]
   have hrn : populateRemNeg B C f = if (remBits B C f).msb then 1 else 0 := by
     rw [populateRemNeg_def, hsig, one_mul]
     simp only [remMsbCell, populateRemainder]
-    rw [if_neg hn4567]
+    rw [ite_eq_right hn4567]
     exact populate_msb_limb3 (remBits B C f)
   -- the extended values
   have hZdef : bExtNat B f = (Word.toBitVec64 B).toNat
@@ -738,15 +738,15 @@ private lemma euclid_limbs_s64_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8
         simp
       rw [hz1]
       simp
-    have hy : remBits B C f = Word.toBitVec64 B := by rw [hrb, if_pos hc0]
+    have hy : remBits B C f = Word.toBitVec64 B := by rw [hrb, ite_eq_left hc0]
     refine euclid_limbs_of_agg hB (Or.inr hsig) ⟨0, ?_⟩
     rw [hX0, hRdef_of _ hy, hZdef]
     simp
   · -- `c ≠ 0`: the signed Euclidean identity over `ℤ`, mod-`2^128` transfer
     have hq : quotCompBits B C f = (Word.toBitVec64 B).sdiv (Word.toBitVec64 C) := by
-      rw [hqcb, hqb, if_neg hc0]
+      rw [hqcb, hqb, ite_eq_right hc0]
     have hy : remBits B C f = (Word.toBitVec64 B).srem (Word.toBitVec64 C) := by
-      rw [hrb, if_neg hc0]
+      rw [hrb, ite_eq_right hc0]
     have hident := sdiv_srem_toInt_identity (not_and_or.mp hnotmin)
     have hPint : (ctqProd B C f).toInt
         = ((Word.toBitVec64 B).sdiv (Word.toBitVec64 C)).toInt
@@ -793,23 +793,23 @@ private lemma euclid_limbs_u64_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8
   have hqb : quotBits B C f
       = if Word.toBitVec64 C = 0 then BitVec.allOnes 64
         else (Word.toBitVec64 B).udiv (Word.toBitVec64 C) := by
-    simp only [quotBits]; rw [if_neg hn45, if_neg hn67, if_neg hn02]
+    simp only [quotBits]; rw [ite_eq_right hn45, ite_eq_right hn67, ite_eq_right hn02]
   have hrb : remBits B C f
       = if Word.toBitVec64 C = 0 then Word.toBitVec64 B
         else (Word.toBitVec64 B).umod (Word.toBitVec64 C) := by
-    simp only [remBits]; rw [if_neg hn45, if_neg hn67, if_neg hn02]
+    simp only [remBits]; rw [ite_eq_right hn45, ite_eq_right hn67, ite_eq_right hn02]
   have hqcb : quotCompBits B C f = quotBits B C f := by
-    simp only [quotCompBits]; rw [if_neg hn67]
+    simp only [quotCompBits]; rw [ite_eq_right hn67]
   have hrcb : remCompBits B C f = remBits B C f := by
-    simp only [remCompBits]; rw [if_neg hn67]
+    simp only [remCompBits]; rw [ite_eq_right hn67]
   have hbc : bComp B f = B := by
-    simp only [bComp]; rw [if_neg hn45, if_neg hn67]
+    simp only [bComp]; rw [ite_eq_right hn45, ite_eq_right hn67]
   have hcc : cComp C f = C := by
-    simp only [cComp]; rw [if_neg hn45, if_neg hn67]
+    simp only [cComp]; rw [ite_eq_right hn45, ite_eq_right hn67]
   have hprod : ctqProd B C f
       = (Word.toBitVec64 (populateQuotComp B C f)).setWidth 128
         * (Word.toBitVec64 (cComp C f)).setWidth 128 := by
-    simp only [ctqProd]; rw [if_neg hnsig]
+    simp only [ctqProd]; rw [ite_eq_right hnsig]
   have hbn0 : populateBNeg B f = 0 := by rw [populateBNeg_def, hsig0, zero_mul]
   have hrn0 : populateRemNeg B C f = 0 := by rw [populateRemNeg_def, hsig0, zero_mul]
   have hZn : bExtNat B f = (Word.toBitVec64 B).toNat := by
@@ -836,10 +836,10 @@ private lemma euclid_limbs_u64_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8
   by_cases hc0 : Word.toBitVec64 C = 0
   · refine euclid_limbs_of_agg hB (Or.inl hsig0) ⟨0, ?_⟩
     have hcz : (Word.toBitVec64 C).toNat = 0 := by rw [hc0]; rfl
-    rw [hXn, hcz, hRn, hrb, if_pos hc0, hZn]
+    rw [hXn, hcz, hRn, hrb, ite_eq_left hc0, hZn]
     omega
   · refine euclid_limbs_of_agg hB (Or.inl hsig0) ⟨0, ?_⟩
-    rw [hXn, hRn, hZn, hqb, if_neg hc0, hrb, if_neg hc0,
+    rw [hXn, hRn, hZn, hqb, ite_eq_right hc0, hrb, ite_eq_right hc0,
         BitVec.udiv_eq, BitVec.toNat_udiv, BitVec.umod_eq, BitVec.toNat_umod,
         Nat.mul_zero, Nat.add_zero,
         Nat.mul_comm ((Word.toBitVec64 B).toNat / (Word.toBitVec64 C).toNat)
@@ -864,29 +864,29 @@ private lemma euclid_limbs_sW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
       = if (Word.toBitVec64 C).setWidth 32 = 0 then BitVec.allOnes 64
         else (((Word.toBitVec64 B).setWidth 32).sdiv
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
-    simp only [quotBits]; rw [if_pos h45]
+    simp only [quotBits]; rw [ite_eq_left h45]
   have hrb : remBits B C f
       = if (Word.toBitVec64 C).setWidth 32 = 0
         then ((Word.toBitVec64 B).setWidth 32).signExtend 64
         else (((Word.toBitVec64 B).setWidth 32).srem
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
-    simp only [remBits]; rw [if_pos h45]
+    simp only [remBits]; rw [ite_eq_left h45]
   have hqcb : quotCompBits B C f = quotBits B C f := by
-    simp only [quotCompBits]; rw [if_neg hn67]
+    simp only [quotCompBits]; rw [ite_eq_right hn67]
   have hrcb : remCompBits B C f = remBits B C f := by
-    simp only [remCompBits]; rw [if_neg hn67]
+    simp only [remCompBits]; rw [ite_eq_right hn67]
   have hbc : bComp B f
       = #v[B[0], B[1], U16MSBOperation.populate_msb B[1] * 65535,
            U16MSBOperation.populate_msb B[1] * 65535] := by
-    simp only [bComp]; rw [if_pos h45]
+    simp only [bComp]; rw [ite_eq_left h45]
   have hcc : cComp C f
       = #v[C[0], C[1], U16MSBOperation.populate_msb C[1] * 65535,
            U16MSBOperation.populate_msb C[1] * 65535] := by
-    simp only [cComp]; rw [if_pos h45]
+    simp only [cComp]; rw [ite_eq_left h45]
   have hprod : ctqProd B C f
       = (Word.toBitVec64 (populateQuotComp B C f)).signExtend 128
         * (Word.toBitVec64 (cComp C f)).signExtend 128 := by
-    simp only [ctqProd]; rw [if_pos hsig]
+    simp only [ctqProd]; rw [ite_eq_left hsig]
   have hqcv : Word.toBitVec64 (populateQuotComp B C f) = quotCompBits B C f :=
     wordOfBits_toBitVec64 _
   -- low-32 values of the raw reads
@@ -913,18 +913,18 @@ private lemma euclid_limbs_sW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
   have hbn : populateBNeg B f = if ((Word.toBitVec64 B).setWidth 32).msb then 1 else 0 := by
     rw [populateBNeg_def, hsig, one_mul]
     simp only [bMsbCell]
-    rw [if_pos h4567, populate_msb_eq_ite hb1v]
+    rw [ite_eq_left h4567, populate_msb_eq_ite hb1v]
     have hiff : ((Word.toBitVec64 B).setWidth 32).msb = true ↔ 32768 ≤ B[1].val := by
       rw [BitVec.msb_eq_decide, decide_eq_true_eq, hb32]
       omega
     by_cases hge : 32768 ≤ B[1].val
-    · rw [if_pos hge, if_pos (hiff.mpr hge)]
-    · rw [if_neg hge, if_neg (fun hm => hge (hiff.mp hm))]
+    · rw [ite_eq_left hge, ite_eq_left (hiff.mpr hge)]
+    · rw [ite_eq_right hge, ite_eq_right (fun hm => hge (hiff.mp hm))]
   have hrn1 : populateRemNeg B C f
       = if 2 ^ 31 ≤ (remBits B C f).toNat % 2 ^ 32 then 1 else 0 := by
     rw [populateRemNeg_def, hsig, one_mul]
     simp only [remMsbCell, populateRemainder]
-    rw [if_pos h4567]
+    rw [ite_eq_left h4567]
     exact populate_msb_limb1 (remBits B C f)
   have hrn_of : ∀ y : BitVec 32, remBits B C f = y.signExtend 64 →
       populateRemNeg B C f = if y.msb then 1 else 0 := by
@@ -932,11 +932,11 @@ private lemma euclid_limbs_sW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     rw [hrn1, hy, sext64_toNat_mod32]
     have hms := BitVec.msb_eq_decide y
     by_cases hm : y.msb
-    · rw [if_pos (show 2 ^ 31 ≤ y.toNat by
-          rw [hm] at hms; exact of_decide_eq_true hms.symm), if_pos hm]
-    · rw [if_neg (show ¬2 ^ 31 ≤ y.toNat by
+    · rw [ite_eq_left (show 2 ^ 31 ≤ y.toNat by
+          rw [hm] at hms; exact of_decide_eq_true hms.symm), ite_eq_left hm]
+    · rw [ite_eq_right (show ¬2 ^ 31 ≤ y.toNat by
           rw [Bool.not_eq_true] at hm; rw [hm] at hms
-          exact of_decide_eq_false hms.symm), if_neg hm]
+          exact of_decide_eq_false hms.symm), ite_eq_right hm]
   -- the extended values
   have hZdef : bExtNat B f = (((Word.toBitVec64 B).setWidth 32).signExtend 64).toNat
       + (if ((Word.toBitVec64 B).setWidth 32).msb then 1 else 0) * (2 ^ 128 - 2 ^ 64) := by
@@ -954,7 +954,7 @@ private lemma euclid_limbs_sW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
   by_cases hc320 : (Word.toBitVec64 C).setWidth 32 = 0
   · -- divisor zero (low 32): `X = 0`, `R = Z`, `k = 0`
     have hy : remBits B C f = ((Word.toBitVec64 B).setWidth 32).signExtend 64 := by
-      rw [hrb, if_pos hc320]
+      rw [hrb, ite_eq_left hc320]
     have hX0 : (ctqProd B C f).toNat = 0 := by
       rw [hprod, hccbv, hc320]
       have hz1 : (((0 : BitVec 32).signExtend 64).signExtend 128) = 0 := by
@@ -969,11 +969,11 @@ private lemma euclid_limbs_sW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
     have hy : remBits B C f
         = (((Word.toBitVec64 B).setWidth 32).srem
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
-      rw [hrb, if_neg hc320]
+      rw [hrb, ite_eq_right hc320]
     have hq : quotCompBits B C f
         = (((Word.toBitVec64 B).setWidth 32).sdiv
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
-      rw [hqcb, hqb, if_neg hc320]
+      rw [hqcb, hqb, ite_eq_right hc320]
     have hident := sdiv_srem_toInt_identity (not_and_or.mp hnotmin)
     have hPint : (ctqProd B C f).toInt
         = (((Word.toBitVec64 B).setWidth 32).sdiv ((Word.toBitVec64 C).setWidth 32)).toInt
@@ -1020,25 +1020,25 @@ private lemma euclid_limbs_uW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
       = if (Word.toBitVec64 C).setWidth 32 = 0 then BitVec.allOnes 64
         else (((Word.toBitVec64 B).setWidth 32).udiv
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
-    simp only [quotBits]; rw [if_neg hn45, if_pos h67]
+    simp only [quotBits]; rw [ite_eq_right hn45, ite_eq_left h67]
   have hrb : remBits B C f
       = if (Word.toBitVec64 C).setWidth 32 = 0
         then ((Word.toBitVec64 B).setWidth 32).signExtend 64
         else (((Word.toBitVec64 B).setWidth 32).umod
             ((Word.toBitVec64 C).setWidth 32)).signExtend 64 := by
-    simp only [remBits]; rw [if_neg hn45, if_pos h67]
+    simp only [remBits]; rw [ite_eq_right hn45, ite_eq_left h67]
   have hqcb : quotCompBits B C f = ((quotBits B C f).setWidth 32).setWidth 64 := by
-    simp only [quotCompBits]; rw [if_pos h67]
+    simp only [quotCompBits]; rw [ite_eq_left h67]
   have hrcb : remCompBits B C f = ((remBits B C f).setWidth 32).setWidth 64 := by
-    simp only [remCompBits]; rw [if_pos h67]
+    simp only [remCompBits]; rw [ite_eq_left h67]
   have hbc : bComp B f = #v[B[0], B[1], 0, 0] := by
-    simp only [bComp]; rw [if_neg hn45, if_pos h67]
+    simp only [bComp]; rw [ite_eq_right hn45, ite_eq_left h67]
   have hcc : cComp C f = #v[C[0], C[1], 0, 0] := by
-    simp only [cComp]; rw [if_neg hn45, if_pos h67]
+    simp only [cComp]; rw [ite_eq_right hn45, ite_eq_left h67]
   have hprod : ctqProd B C f
       = (Word.toBitVec64 (populateQuotComp B C f)).setWidth 128
         * (Word.toBitVec64 (cComp C f)).setWidth 128 := by
-    simp only [ctqProd]; rw [if_neg hnsig]
+    simp only [ctqProd]; rw [ite_eq_right hnsig]
   have hbn0 : populateBNeg B f = 0 := by rw [populateBNeg_def, hsig0, zero_mul]
   have hrn0 : populateRemNeg B C f = 0 := by rw [populateRemNeg_def, hsig0, zero_mul]
   have hb32 := setWidth32_toNat hB
@@ -1084,17 +1084,17 @@ private lemma euclid_limbs_uW_core {B C : Word (ZMod p)} {f : Vector (ZMod p) 8}
   by_cases hc320 : (Word.toBitVec64 C).setWidth 32 = 0
   · refine euclid_limbs_of_agg hB (Or.inl hsig0) ⟨0, ?_⟩
     have hcz : ((Word.toBitVec64 C).setWidth 32).toNat = 0 := by rw [hc320]; rfl
-    rw [hXn, hcz, hRn, hrb, if_pos hc320, sext64_toNat_mod32, hZn]
+    rw [hXn, hcz, hRn, hrb, ite_eq_left hc320, sext64_toNat_mod32, hZn]
     omega
   · refine euclid_limbs_of_agg hB (Or.inl hsig0) ⟨0, ?_⟩
     have hquot : (quotBits B C f).toNat % 2 ^ 32
         = ((Word.toBitVec64 B).setWidth 32).toNat
           / ((Word.toBitVec64 C).setWidth 32).toNat := by
-      rw [hqb, if_neg hc320, sext64_toNat_mod32, BitVec.udiv_eq, BitVec.toNat_udiv]
+      rw [hqb, ite_eq_right hc320, sext64_toNat_mod32, BitVec.udiv_eq, BitVec.toNat_udiv]
     have hrem : remExtNat B C f
         = ((Word.toBitVec64 B).setWidth 32).toNat
           % ((Word.toBitVec64 C).setWidth 32).toNat := by
-      rw [hRn, hrb, if_neg hc320, sext64_toNat_mod32, BitVec.umod_eq, BitVec.toNat_umod]
+      rw [hRn, hrb, ite_eq_right hc320, sext64_toNat_mod32, BitVec.umod_eq, BitVec.toNat_umod]
     rw [hXn, hquot, hrem, hZn, Nat.mul_zero, Nat.add_zero,
         Nat.mul_comm (((Word.toBitVec64 B).setWidth 32).toNat
           / ((Word.toBitVec64 C).setWidth 32).toNat)

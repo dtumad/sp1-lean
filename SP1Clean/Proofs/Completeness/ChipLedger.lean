@@ -46,7 +46,7 @@ omit [Fact (2 ^ 24 < p)] in
 /-- The stable halt position of an assembled witness is its generated Halt table. -/
 theorem SupportedCoreTraceWitness.haltTable_witness
     (trace : SupportedCoreTraceWitness p) :
-    haltTable trace.witness = { trace.providerTableFor .halt with data := trace.data } := rfl
+    (haltTable trace.witness).table = (trace.providerTableFor .halt).table := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 /-- HALT decoding reads the input prefix independently of the evaluation data. -/
@@ -66,7 +66,7 @@ theorem SupportedCoreTraceWitness.haltTablePadding
       ∀ row ∈ (haltTable trace.witness).table,
         (haltRow trace.witness.data row).is_real = 0 := by
   have htab : (haltTable trace.witness).table =
-      [HaltChip.component.buildRow (HaltChip.paddingInputs (p := p)) trace.generationData trace.hint] := by
+      [HaltChip.component.buildRow (HaltChip.paddingInputs (p := p)) (trace.providerDataFor .halt) trace.hint] := by
     have hocc : trace.providerOccurrences ProviderTableId.halt = [] := by
       cases h : trace.providerOccurrences ProviderTableId.halt with
       | nil => rfl

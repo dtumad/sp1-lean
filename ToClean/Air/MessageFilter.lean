@@ -5,10 +5,10 @@ public import ToClean.Air.TransitionView
 /-! # Selecting complete message classes and physical rows
 
 Clean exposes channel balance and physical tables, but has no transport from global balance to
-a subset selected solely by message contents. This addition preserves the characteristic count
-bound, provides a typed selector for raw payloads, and selects physical rows using each table's
-stored data. A selection must preserve the component's fixed-column contract; it does not claim
-that the selected rows derive the original ensemble's data. The intended upstream homes are
+a subset selected solely by message contents. This addition provides a typed payload selector
+and selects semantic row environments at their original stored data. Count bounds remain checked
+on the complete physical witness before selection. A selection does not construct a new table or
+claim agreement with data derived from its selected rows. The intended upstream homes are
 `Clean/Air/Balance.lean` and `Clean/Air/FlatComponent.lean`.
 -/
 
@@ -18,6 +18,17 @@ variable {F : Type}
 
 section Balance
 variable [FiniteField F]
+
+/-- Reordering occurrences preserves every signed field sum. -/
+theorem balanceOf_perm {left right : List (Interaction F)} (perm : left.Perm right)
+    {message : Array F} : balanceOf left message = balanceOf right message := by
+  unfold balanceOf
+  exact ((perm.filter fun interaction => decide (interaction.msg = message)).map Interaction.signedMult).sum_eq
+
+/-- Concatenated ledgers add their signed field sums, retaining repeated occurrences. -/
+theorem balanceOf_append (left right : List (Interaction F)) (message : Array F) :
+    balanceOf (left ++ right) message = balanceOf left message + balanceOf right message := by
+  simp only [balanceOf, List.filter_append, List.map_append, List.sum_append]
 
 /-- Selecting by payload retains either every occurrence of a message or none of them. -/
 theorem balanceOf_filter_messages (interactions : List (Interaction F)) (keep : Array F → Bool)
@@ -33,15 +44,45 @@ theorem balanceOf_filter_messages (interactions : List (Interaction F)) (keep : 
     · cases selected : keep head.msg <;> cases wanted : keep message <;>
         simp [selected, wanted, balanceOf_cons, same, ih]
 
-/-- Global balance restricts to any class of complete payloads, with its count guard intact. -/
+/-- Global abstract balance restricts to complete payload classes. Physical count bounds
+remain obligations of the original witness and its chosen balance check. -/
 theorem BalancedInteractions.filter_messages {interactions : List (Interaction F)}
     (balanced : BalancedInteractions interactions) (keep : Array F → Bool) :
     BalancedInteractions (interactions.filter fun interaction => keep interaction.msg) := by
-  refine ⟨?_, ?_⟩
-  · exact balanced.1.imp (lt_of_le_of_lt (List.length_filter_le ..)) id
-  · intro message
-    rw [balanceOf_filter_messages, balanced.2]
-    simp
+  have counts (direction : Channel.Direction) (message : Array F) :
+      activeCount (interactions.filter fun interaction => keep interaction.msg) direction message =
+        if keep message then activeCount interactions direction message else 0 := by
+    simp only [activeCount, List.countP_filter]
+    have predicate : (fun i : Interaction F =>
+        decide (i.direction = direction ∧ i.msg = message ∧ i.mult ≠ 0) && keep i.msg) =
+        (fun i => if keep message then decide (i.direction = direction ∧ i.msg = message ∧ i.mult ≠ 0)
+          else false) := by
+      funext i
+      by_cases same : i.msg = message <;> simp [same, Bool.and_comm]
+    rw [predicate]
+    cases keep message <;> simp
+  constructor
+  · intro a member pull
+    obtain ⟨b, present, same, push⟩ :=
+      balanced.exists_push_of_pull a (List.mem_filter.mp member).1 pull
+    refine ⟨b, List.mem_filter.mpr ⟨present, ?_⟩, same, push⟩
+    simpa only [same] using (List.mem_filter.mp member).2
+  · intro message binary
+    rw [counts, counts]
+    split
+    · next selected =>
+      apply balanced.activeCount_push_eq_activeCount_pull_of_isBool
+      intro i member same
+      exact binary i (List.mem_filter.mpr ⟨member, by simpa only [same] using selected⟩) same
+    · rfl
+
+/-- Message selection also preserves the concrete signed field-sum relation. -/
+theorem LogUpBalanced.filter_messages {interactions : List (Interaction F)}
+    (balanced : LogUpBalanced interactions) (keep : Array F → Bool) :
+    LogUpBalanced (interactions.filter fun interaction => keep interaction.msg) := by
+  intro message
+  rw [balanceOf_filter_messages, balanced]
+  simp
 
 end Balance
 
@@ -60,180 +101,68 @@ theorem selectMessage_toElements (keep : Message F → Bool) (message : Message 
 
 end ProvableType
 
-namespace Air.Flat.Table
+namespace Air.Flat
 
 variable [FiniteField F]
 
-/-- Retain complete physical rows using the table's stored data, with the fixed-column contract checked for
-the selected row sequence. No new canonical prover-data agreement is asserted. -/
-def filterRows (table : Table F) (keep : Environment F → Bool)
-    (fixed : table.component.FixedRowsMatch
-      (table.table.filter fun row => keep (table.environment row))) : Table F :=
-  { table with
-    table := table.table.filter fun row => keep (table.environment row)
-    uniform_width := fun row member => table.uniform_width row (List.mem_filter.mp member).1
-    length_le := (List.length_filter_le ..).trans table.length_le
-    fixed_rows_match := fixed }
+/-- Select semantic environments while retaining each source table's actual prover data.
+This is a view of the original physical rows, not a newly committed table. -/
+def Table.selectedRows (table : Table F) (keep : Environment F → Bool) : List (Environment F) :=
+  (table.table.map table.environment).filter keep
 
-theorem filterRows_spec (table : Table F) (keep : Environment F → Bool)
-    (fixed : table.component.FixedRowsMatch
-      (table.table.filter fun row => keep (table.environment row)))
-    (valid : table.Spec) : (table.filterRows keep fixed).Spec := by
-  intro row member
-  exact valid row (List.mem_filter.mp member).1
+theorem Table.selectedRows_spec (table : Table F) (keep : Environment F → Bool)
+    (valid : table.Spec) : ∀ env ∈ table.selectedRows keep, table.component.Spec env := by
+  intro env member
+  obtain ⟨row, present, rfl⟩ := List.mem_map.mp (List.mem_filter.mp member).1
+  exact valid row present
 
-/-- A homogeneous row is retained exactly when its actual interactions are selected. -/
-theorem filterRows_interactions (table : Table F) (channel : RawChannel F)
-    (keep : Environment F → Bool)
-    (fixed : table.component.FixedRowsMatch
-      (table.table.filter fun row => keep (table.environment row)))
-    (select : Array F → Bool)
-    (homogeneous : ∀ row ∈ table.table, ∀ interaction ∈
-      table.component.operations.interactionValuesWith channel (table.environment row),
-      select interaction.msg = keep (table.environment row)) :
-    (table.filterRows keep fixed).interactionsWith channel =
-      (table.interactionsWith channel).filter (fun interaction => select interaction.msg) := by
-  simp only [interactionsWith, filterRows, environment]
-  clear fixed
-  generalize table.table = rows at homogeneous ⊢
+omit [FiniteField F] in
+/-- Selecting whole rows commutes with selecting complete message classes when each
+row's interactions agree on the selection. Repeated and zero-multiplicity occurrences remain. -/
+theorem selectedRows_interactions {Row : Type*} (rows : List Row)
+    (interactions : Row → List (Interaction F)) (keep : Row → Bool) (select : Array F → Bool)
+    (homogeneous : ∀ row ∈ rows, ∀ interaction ∈ interactions row,
+      select interaction.msg = keep row) :
+    ((rows.filter keep).flatMap interactions) =
+      (rows.flatMap interactions).filter (fun interaction => select interaction.msg) := by
   induction rows with
   | nil => rfl
   | cons row rows ih =>
     have same := homogeneous row (List.mem_cons_self ..)
     have rest := ih (fun other member => homogeneous other (List.mem_cons_of_mem _ member))
-    have selected :
-        (table.component.operations.interactionValuesWith channel (table.environment row)).filter
-          (fun interaction => select interaction.msg) =
-        if keep (table.environment row) then
-          table.component.operations.interactionValuesWith channel (table.environment row) else [] := by
+    have selected : (interactions row).filter (fun interaction => select interaction.msg) =
+        if keep row then interactions row else [] := by
       rw [List.filter_congr (fun interaction present => same interaction present)]
-      cases keep (table.environment row) <;> simp
+      cases keep row <;> simp
     simp only [List.filter_cons, List.flatMap_cons, List.filter_append]
-    dsimp only [environment] at selected
     rw [selected]
-    obtain hk | hk := Bool.eq_false_or_eq_true (keep (table.environment row))
-    all_goals
-      simp only [environment] at hk
-      simp [hk, rest]
+    cases keep row <;> simp [rest]
 
-end Air.Flat.Table
+namespace TransitionView
 
-namespace Air.Flat.TransitionView
-
-variable [FiniteField F]
 variable {Index : Type*}
 
-/-- A transition preserving a message class can be selected as a whole physical row. -/
-theorem filterRows_interactions {Message : TypeMap} [ProvableType Message] {channel : Channel F Message}
-    (view : TransitionView channel) (table : Table F) (aligned : view.component = table.component)
-    (keep : Message F → Bool)
-    (fixed : table.component.FixedRowsMatch
-      (table.table.filter fun row => keep (view.edge (table.environment row)).1))
-    (preserved : ∀ env, keep (view.edge env).2 = keep (view.edge env).1) :
-    (table.filterRows (fun env => keep (view.edge env).1) fixed).interactionsWith channel.toRaw =
-      (table.interactionsWith channel.toRaw).filter
-        (fun interaction => ProvableType.selectMessage keep interaction.msg) := by
-  apply table.filterRows_interactions
-  intro physical _ interaction member
-  rw [← aligned, view.interactions] at member
-  rcases List.mem_cons.mp member with equal | member
-  · rw [equal]
-    exact ProvableType.selectMessage_toElements _ _
-  · rw [List.mem_singleton.mp member]
-    exact (ProvableType.selectMessage_toElements _ _).trans (preserved _)
+/-- A selected semantic view retains the original component index and data environment. -/
+def selectRows (indices : List Index) (tables : List (Table F))
+    (keep : Index → Environment F → Bool) : List (Index × Environment F) :=
+  (readIndexedRows indices tables).filter fun (index, env) => keep index env
 
-/-- Select a row class separately in each registered component, retaining empty tables.
-Each selected sequence must still realize its component's fixed columns. -/
-def selectTables (indices : List Index) (tables : List (Table F))
-    (keep : Index → Environment F → Bool)
-    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
-      table.component.FixedRowsMatch
-        (table.table.filter fun row => keep index (table.environment row))) : List (Table F) :=
-  match indices, tables with
-  | index :: indices, table :: tables =>
-    table.filterRows (keep index) (fixed index table (List.mem_cons_self ..)) ::
-      selectTables indices tables keep
-        (fun index table member => fixed index table (List.mem_cons_of_mem _ member))
-  | _, _ => []
+/-- Selection retains physical occurrences in their original order. -/
+theorem selectRows_sublist (indices : List Index) (tables : List (Table F))
+    (keep : Index → Environment F → Bool) :
+    (selectRows indices tables keep).Sublist (readIndexedRows indices tables) :=
+  List.filter_sublist
 
-theorem selectTables_aligned (indices : List Index) (tables : List (Table F))
+/-- Selecting physical rows retains the source of every interaction, on any channel. -/
+theorem selectRows_interactions_sublist (indices : List Index) (tables : List (Table F))
     (component : Index → Component F) (keep : Index → Environment F → Bool)
-    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
-      table.component.FixedRowsMatch
-        (table.table.filter fun row => keep index (table.environment row)))
-    (aligned : List.Forall₂ (fun index table => component index = table.component) indices tables) :
-    List.Forall₂ (fun index table => component index = table.component) indices
-      (selectTables indices tables keep fixed) := by
-  induction aligned with
-  | nil => exact .nil
-  | cons same _ ih => exact .cons same (ih _)
-
-theorem selectTables_spec (indices : List Index) (tables : List (Table F))
-    (keep : Index → Environment F → Bool)
-    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
-      table.component.FixedRowsMatch
-        (table.table.filter fun row => keep index (table.environment row)))
-    (valid : ∀ table ∈ tables, table.Spec) :
-    ∀ table ∈ selectTables indices tables keep fixed, table.Spec := by
-  induction indices generalizing tables with
-  | nil => simp [selectTables]
-  | cons index indices ih =>
-    cases tables with
-    | nil => simp [selectTables]
-    | cons table tables =>
-      intro selected member
-      rcases List.mem_cons.mp member with rfl | member
-      · exact table.filterRows_spec (keep index) _ (valid table (List.mem_cons_self ..))
-      · exact ih tables _ (fun other present => valid other (List.mem_cons_of_mem _ present)) selected member
-
-/-- Selection commutes with decoding and preserves physical occurrences and their order. -/
-theorem readIndexedRows_selectTables (indices : List Index) (tables : List (Table F))
-    (keep : Index → Environment F → Bool)
-    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
-      table.component.FixedRowsMatch
-        (table.table.filter fun row => keep index (table.environment row))) :
-    readIndexedRows indices (selectTables indices tables keep fixed) =
-      (readIndexedRows indices tables).filter (fun (index, env) => keep index env) := by
-  induction indices generalizing tables with
-  | nil => simp [readIndexedRows, selectTables]
-  | cons index indices ih =>
-    cases tables with
-    | nil => simp [readIndexedRows, selectTables]
-    | cons table tables =>
-      simp only [selectTables, readIndexedRows, List.zip_cons_cons, List.flatMap_cons,
-        List.filter_append] at ih ⊢
-      rw [ih]
-      congr 1
-      simp only [Table.filterRows, Table.environment, List.filter_map, Function.comp_def]
-
-/-- Active semantic selection commutes with filtering the original physical rows. -/
-theorem readIndexedActiveRows_selectTables {Message : TypeMap} [ProvableType Message]
-    {channel : Channel F Message} (indices : List Index) (view : Index → TransitionView channel)
-    (tables : List (Table F)) (keep : Index → Environment F → Bool)
-    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
-      table.component.FixedRowsMatch
-        (table.table.filter fun row => keep index (table.environment row))) :
-    readIndexedActiveRows indices view (selectTables indices tables keep fixed) =
-      (readIndexedActiveRows indices view tables).filter (fun (index, env) => keep index env) := by
-  simp only [readIndexedActiveRows, readIndexedRows_selectTables, List.filter_filter]
-  congr 1
-  funext row
-  exact Bool.and_comm _ _
-
-/-- Selecting physical rows preserves the source of every interaction, on any channel. -/
-theorem selectTables_interactions_sublist (indices : List Index) (tables : List (Table F))
-    (component : Index → Component F) (keep : Index → Environment F → Bool)
-    (fixed : ∀ index table, (index, table) ∈ indices.zip tables →
-      table.component.FixedRowsMatch
-        (table.table.filter fun row => keep index (table.environment row)))
     (channel : RawChannel F)
     (aligned : List.Forall₂ (fun index table => component index = table.component) indices tables) :
-    ((selectTables indices tables keep fixed).flatMap (·.interactionsWith channel)).Sublist
+    ((selectRows indices tables keep).flatMap (fun (index, env) =>
+      (component index).operations.interactionValuesWith channel env)).Sublist
       (tables.flatMap (·.interactionsWith channel)) := by
-  rw [readIndexedRows_interactions indices component _ channel
-    (selectTables_aligned indices tables component keep fixed aligned),
-    readIndexedRows_interactions indices component tables channel aligned,
-    readIndexedRows_selectTables]
-  exact List.filter_sublist.flatMap _
+  rw [readIndexedRows_interactions indices component tables channel aligned]
+  exact (selectRows_sublist indices tables keep).flatMap _
 
-end Air.Flat.TransitionView
+end TransitionView
+end Air.Flat

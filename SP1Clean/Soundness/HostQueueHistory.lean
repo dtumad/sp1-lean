@@ -115,9 +115,13 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 private theorem pull_mem
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness))
     (channel : RawChannel (ZMod p)) (interaction : Interaction (ZMod p))
     (present : interaction ∈ (view row.1).component.operations.interactionValuesWith channel row.2) :
@@ -131,7 +135,7 @@ private theorem pull_mem
 
 /-- Authentication follows the very node/word pulls made by each physical queue row. -/
 theorem records_of_witness
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (store : Store) (authenticated : RecordAuthentication witness store) (balanced : RecordChannels witness)
     (row : Row (p := p)) (member : row ∈ TransitionView.readIndexedRows indices (queueTables witness)) :
     Records store row := by

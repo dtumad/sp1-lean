@@ -31,9 +31,9 @@ private theorem event_eq (left right : Machine.CoreSyscallEvent)
   have next : left.nextPc = right.nextPc := by
     simp only [Machine.CoreSyscallEvent.PcLaw, Machine.CoreSyscallEvent.syscallId, code, pc] at leftLaw rightLaw
     by_cases h : right.rawCode.toNat % 256 = Machine.haltSyscallId
-    · simp only [h, if_true] at leftLaw rightLaw
+    · simp only [h, ite_true] at leftLaw rightLaw
       exact leftLaw.trans rightLaw.symm
-    · simp only [h, if_false] at leftLaw rightLaw
+    · simp only [h, ite_false] at leftLaw rightLaw
       exact leftLaw.trans rightLaw.symm
   cases left
   cases right
@@ -68,7 +68,10 @@ private theorem event_of_run (wrapper : HostCallChip.Inputs (ZMod p)) (flag : ZM
 
 private theorem syscall_physical {auxiliary : List (Component (ZMod p))}
     {names : ((HostLocalCore.tables image source auxiliary).map (·.circuit.name)).Nodup}
-    (witness : EnsembleWitness (HostLocalCore.ensemble image source auxiliary channels names))
+  {channelNames : ((HostLocalCore.registry image source channels).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ auxiliary,
+    component.circuit.channels ⊆ HostLocalCore.registry image source channels}
+    (witness : EnsembleWitness (HostLocalCore.ensemble image source auxiliary channels names channelNames tableChannels))
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness)) :
     ∃ env ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable witness) witness.data,
@@ -88,10 +91,13 @@ private theorem control_not_read (event : ExecutionRow p) (wrapper : HostCallChi
   rw [← sameRow]
   exact code
 
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+
 private theorem control_step (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (event : ExecutionRow p)
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
@@ -121,7 +127,7 @@ private theorem control_step (valid : image.Valid)
   change (carrier.pairedTrajectory valid n).map ExecutionState.sail = some state at present
   obtain ⟨current, paired, sail⟩ := Option.map_eq_some_iff.mp present
   rw [← sail] at atPc rom
-  change current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  change current.sail.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (event.facts witness.data).statePull) at atPc
   have atIndex := ExecutionCarrier.ordered_at carrier member time
   have before : carrier.trajectory valid n = some current.sail := by
@@ -157,7 +163,7 @@ private theorem control_step (valid : image.Valid)
   have sourcePc : StateMsg.pcBits (event.facts witness.data).statePull =
       StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction) := by
     rw [sameEvent]; rfl
-  have atInstructionPc : current.sail.regs.get? LeanRV64D.Defs.Register.PC =
+  have atInstructionPc : current.sail.regs.get? LeanRV64D.Register.PC =
       some (StateMsg.pcBits (SyscallInstrsChip.statePulledMessage (HostCallLedger.input physical).instruction)) := by
     rwa [sourcePc] at atPc
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member paired atInstructionPc fetched
@@ -203,7 +209,7 @@ host returns and RAM effects; no handler or successful-dispatch premise is suppl
 theorem GroundingCarrier.syscall_engineFacts (valid : image.Valid)
     {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing))} (carrier : GroundingCarrier witness)
+      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈

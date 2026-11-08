@@ -18,13 +18,26 @@ variable {Input : TypeMap} [ProvableType Input]
 
 attribute [local circuit_norm] List.subset_append_left
 
+/-- Publish the counted final-memory receipt from the bundled provider output. -/
+@[circuit_norm]
+def main (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg)
+    (input : Var (ProvablePair Input field) (ZMod p)) : Circuit (ZMod p) (Var MemoryMsg (ZMod p)) := do
+  let record ← provider input
+  (FinalMemoryValue.channel ram).pushIf input.2 record
+  return record
+
+instance elaborated (ram : Bool)
+    (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg) :
+    ElaboratedCircuit (ZMod p) (ProvablePair Input field) MemoryMsg (main ram provider) where
+  localLength := provider.localLength
+  output := provider.output
+  channelsWithGuarantees := provider.channelsWithGuarantees
+
 def circuit (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg) :
     GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg where
   name := provider.name
-  main input := do
-    let record ← provider input
-    (FinalMemoryValue.channel ram).pushIf input.2 record
-    return record
+  main := main ram provider
+  elaborated := elaborated ram provider
   Assumptions := provider.Assumptions
   Spec := provider.Spec
   ProverAssumptions := provider.ProverAssumptions
@@ -37,17 +50,19 @@ def circuit (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair
     exact h_assumptions
 
 theorem width (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg) :
-    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).width = ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).width := rfl
+    (circuit ram provider).size = provider.size := rfl
 
 theorem constraints (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg) :
-    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.constraints =
-      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.constraints := by
-  simp only [Component.constraints_eq, Component.rowOperations, circuit, circuit_norm]
+    ((circuit ram provider).instantiate.operations 0).constraints =
+      (provider.instantiate.operations 0).constraints := by
+  simp only [circuit, circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat, FlatOperation.constraints, List.append_nil]
 
 theorem lookups (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg) :
-    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.lookups =
-      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.lookups := by
-  simp only [Component.lookups_eq, Component.rowOperations, circuit, circuit_norm]
+    ((circuit ram provider).instantiate.operations 0).lookups =
+      (provider.instantiate.operations 0).lookups := by
+  simp only [circuit, circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat, FlatOperation.lookups, List.append_nil]
 
 /-- One physical receipt occurrence is appended, with the original activity and full output record. -/
 theorem receipt_interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg)
@@ -60,10 +75,11 @@ theorem receipt_interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod
 
 theorem interactions (ram : Bool) (provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg)
     (selected : RawChannel (ZMod p)) (different : selected ≠ (FinalMemoryValue.channel ram).toRaw) :
-    ({ circuit := circuit ram provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.interactionsWith selected =
-      ({ circuit := provider, Assumptions := provider.Assumptions } : Component (ZMod p)).operations.interactionsWith selected := by
-  simp only [Component.interactionsWith_eq, Component.rowOperations, circuit, circuit_norm,
-    GeneralFormalCircuit.toSubcircuit_interactions, Ne.symm different, ↓reduceIte, List.append_nil]
-  rfl
+    ((circuit ram provider).instantiate.operations 0).interactionsWith selected =
+      (provider.instantiate.operations 0).interactionsWith selected := by
+  simp only [circuit, circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit, Operations.toNested_toFlat,
+    FlatOperation.interactions, List.filter_append, List.filter_cons, List.filter_nil,
+    ChannelInteraction.toRaw, Ne.symm different, ↓reduceIte, List.append_nil]
 
 end SP1Clean.FinalMemoryReceipt

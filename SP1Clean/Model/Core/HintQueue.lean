@@ -88,7 +88,7 @@ theorem extends_push (store : Store) (node : Node) : Extends store (store.push n
   | zero => contradiction
   | succ index =>
     have bound := (Array.getElem?_eq_some_iff.mp read).1
-    simpa only [node?, Array.getElem?_push, if_neg (by omega : index ≠ store.size)] using read
+    simpa only [node?, Array.getElem?_push, ite_eq_right (by omega : index ≠ store.size)] using read
 
 theorem node?_fresh (store : Store) (node : Node) :
     node? (store.push node) (store.size + 1) = some node := Array.getElem?_push_size
@@ -197,10 +197,10 @@ termination_by head
 theorem decode?_of_represents {store : Store} {head : ℕ} {hints : List Bytes}
     (represents : Represents store head hints) : decode? store head = some hints := by
   induction represents with
-  | nil => rw [decode?, if_pos rfl]
+  | nil => rw [decode?, ite_eq_left rfl]
   | cons read descending _ ih =>
-    rw [decode?, if_neg (by have := node?_bound read; omega), read]
-    simp only [bind, Option.bind_some, if_pos descending, ih, Functor.map, Option.map_some]
+    rw [decode?, ite_eq_right (by have := node?_bound read; omega), read]
+    simp only [bind, Option.bind_some, ite_eq_left descending, ih, Functor.map, Option.map_some]
 
 /-- Successful decoding is exactly the byte-level representation relation. -/
 theorem decode?_eq_some_iff (store : Store) (head : ℕ) (hints : List Bytes) :
@@ -241,7 +241,7 @@ theorem hintLength?_of_represents {store : Store} {head : ℕ} {host : HostIO}
   cases represents with
   | nil => simp [hintLength?, HostIO.hintLength, hintsEq]
   | cons read descending _ =>
-    rw [hintLength?, if_neg (by have := node?_bound read; omega), read]
+    rw [hintLength?, ite_eq_right (by have := node?_bound read; omega), read]
     simp [HostIO.hintLength, hintsEq]
 
 /-- Pop returns the complete unpadded hint and its persistent suffix pointer. -/

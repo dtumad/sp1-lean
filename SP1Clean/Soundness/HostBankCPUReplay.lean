@@ -93,13 +93,14 @@ private theorem quiet_projection (deferred : Bool) (receiver : HostLocalHandoff.
     (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env) :
     stamped deferred (receiver.message env) = none := by
   rcases List.mem_cons.mp member with rfl | member
-  · have spec := HostHaltChip.component_spec_of_byte env constraints bytes
+  · have spec := HostHaltChip.row_spec_of_byte env
+      ((Component.constraintsHold_iff env).mp constraints) ((Component.channelGuarantees_iff env _).mp bytes)
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at spec
     rw [HostCallReceivers.halt_message]
     cases deferred <;> simp [stamped, bankCall?, spec.1, bankKind, SyscallKind.code, Word.toBitVec64, Word.toNat]
   · have same := List.mem_singleton.mp member
     subst receiver
-    have spec := HostEnterChip.component_spec_of_constraints env constraints
+    have spec := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
     change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at spec
     have three : (3 : ZMod p).val = 3 := ZMod.val_natCast_of_lt
       (lt_trans (by decide : 3 < 2 ^ 17) (Fact.out (p := 2 ^ 17 < p)))
@@ -164,14 +165,14 @@ private theorem control_projection (deferred : Bool) (tables : List (Table (ZMod
   change (ReceiverView.messages (List.ofFn fun slot => HostCallReceivers.commit true slot)
     ((tables.drop 10).take 8)).filterMap (stamped deferred) = _ at deferredCalls
   rw [last, committed, deferredCalls]
-  cases deferred <;> simp only [Bool.false_eq_true, Bool.true_eq_false, if_false, if_true,
+  cases deferred <;> simp only [Bool.false_eq_true, Bool.true_eq_false, ite_false, ite_true,
     List.filterMap_eq_map', List.filterMap_none, List.nil_append, List.append_nil] <;> rfl
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem control_slot_tables (deferred : Bool) (tables : List (Table (ZMod p))) :
     (((tables.drop 1).take 18).drop (if deferred then 10 else 2)).take 8 =
       (tables.drop (if deferred then 11 else 3)).take 8 := by
-  cases deferred <;> simp only [Bool.false_eq_true, if_false, if_true, List.drop_take,
+  cases deferred <;> simp only [Bool.false_eq_true, ite_false, ite_true, List.drop_take,
     List.take_take, List.drop_drop, Nat.reduceSub, Nat.reduceAdd, min_eq_left (by decide : 8 ≤ 16), min_self]
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
@@ -180,6 +181,10 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
   {names : ((HostLocalCore.tables image source
     ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
+  {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+      (HostHintReadHandoff.wordResources ++ resources)),
+    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 private theorem project_split {Message Row Label : Type*}
     (project : Message → Option Label) (call : Row → Message)
@@ -195,7 +200,7 @@ private theorem project_split {Message Row Label : Type*}
   rwa [List.filterMap_append, erased, List.nil_append, selected] at projected
 
 private theorem control_calls (deferred : Bool)
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (bytes : witness.BalancedChannel Channels.byteChannel.toRaw) :
     (ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness)).filterMap
@@ -211,7 +216,7 @@ private theorem control_calls (deferred : Bool)
     (fun table member => byte_guarantees _ interface constraints bytes table (controlTables_mem witness table member))
 
 private theorem calls_projection_generic (deferred : Bool)
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
     (specs : ∀ table ∈ queueTables witness, table.Spec) :
@@ -223,6 +228,9 @@ private theorem calls_projection_generic (deferred : Bool)
     exact queue_silent deferred row (HostQueueOrder.rows_spec _ (queueTables_aligned witness) specs row member)
   · simpa only [controlTables, control_slot_tables] using
       control_calls deferred witness interface constraints bytes
+
+variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
 
 /-- Selecting a bank from the complete physical handoff retains exactly its handler occurrences. -/
 theorem calls_projection (deferred : Bool)
@@ -271,7 +279,7 @@ private theorem inventory_projection (deferred : Bool) (data : ProverData (ZMod 
   · exact syscall_projection deferred data
 
 private theorem cpu_inventory (deferred : Bool)
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (constraints : witness.Constraints) :
     ((LocalCore.executionRows (HostLocalCore.localWitness witness)).filterMap (stampedCPU deferred witness.data)) =
       (HostCallLedger.calls (HostLocalCore.hostCallTable witness) witness.data).filterMap (stamped deferred) := by
@@ -301,7 +309,7 @@ private theorem ordered_projection (deferred : Bool) (data : ProverData (ZMod p)
   · exact List.pairwise_map.mpr (List.pairwise_map.mp bankSorted)
 
 private theorem cpu_calls (deferred : Bool)
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
@@ -319,7 +327,7 @@ private theorem cpu_calls (deferred : Bool)
         (calls_projection_generic deferred witness interface constraints bytes specs)))
 
 private theorem cpu_ordered (deferred : Bool)
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names))
+    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (handoff : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
@@ -361,16 +369,25 @@ theorem cpu_projection (deferred : Bool)
       (HostHintReadBanks.bankTables deferred witness)).filterMap HostCommitBank.call?))
     (bankSorted : (calls.map fun call => clkNat call.clk_high call.clk_low).Pairwise (· < ·)) :
     cpu.filterMap (stampedCPU deferred witness.data) = calls.map label := by
-  have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
-  have handoff := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
-  have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
+  let retained := HostHintQueueBoundary.projected witness
+  have sameData : retained.data = witness.data := HostHintQueueBoundary.projected_data witness
+  have samePublic : retained.publicInput = witness.publicInput := HostHintQueueBoundary.projected_publicInput witness
+  have checks := by
+    exact HostHintQueueBoundary.projected_constraints witness constraints
+  have records := by
+    exact HostHintQueueBoundary.record_channels witness balanced
+  have interface := by
+    exact HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have handoff := by
+    exact HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
+  have ordering := by
+    exact HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   rw [HostHintReadBanks.calls_eq_slot_tables deferred witness] at bankExhaustive
-  have ordered := cpu_ordered deferred (HostHintQueueBoundary.projected witness) interface checks handoff records.byte ordering
-    (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
-    (cpu := cpu) (calls := calls)
-  simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at ordered
+  have ordered := by
+    exact cpu_ordered deferred retained interface checks handoff records.byte ordering
+      (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
+      (cpu := cpu) (calls := calls)
+  rw [sameData, samePublic] at ordered
   exact ordered exhaustive walk bankExhaustive bankSorted
 
 omit [Fact (2 ^ 25 < p)] in

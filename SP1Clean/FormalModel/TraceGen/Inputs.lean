@@ -269,7 +269,7 @@ def aluTypeOpCCols (e : ALUTypeEvent) : Circuits.Types.RegisterAccessCols (ZMod 
 about `registerAccessCols` applies to it verbatim. -/
 lemma aluTypeOpCCols_of_reg {e : ALUTypeEvent} (h : e.immC = 0) :
     aluTypeOpCCols (p := p) e = registerAccessCols e.c e.prevTsC (e.clk + 2) := by
-  rw [aluTypeOpCCols, if_neg (by omega)]
+  rw [aluTypeOpCCols, ite_eq_right (by omega)]
 
 /-- SP1's `ALUTypeReader::populate`: as the R-type block, but the `op_c` slot is the committed
 word `Word::from(record.op_c)` plus the row-dependent access block above, and the row commits the

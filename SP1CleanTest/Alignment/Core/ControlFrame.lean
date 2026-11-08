@@ -13,7 +13,7 @@ source data and operands; the retirement and preservation proofs run through the
 
 namespace SP1CleanTest.Core.ControlFrame
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D.Defs LeanRV64D.Functions
+open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Functions
 
 private def image (word : BitVec 32) : ProgramImage := ⟨[(65536, word)], 65536, []⟩
 

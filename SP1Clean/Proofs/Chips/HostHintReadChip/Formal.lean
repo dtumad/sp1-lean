@@ -19,15 +19,9 @@ def ProverAssumptions (input : Inputs (ZMod p)) : Prop :=
   HintReadSpan.ProverAssumptions input.span ∧ Spec input
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem eval_word (env : Environment (ZMod p)) (word : Word (ZMod p)) :
-    Vector.map (Expression.eval env) (Vector.map Expression.const word) = word := by
-  simp only [Vector.map_map, Function.comp_def, Expression.eval]
-  exact Vector.map_id _
-
-omit [Fact (2 ^ 25 < p)] in
 private theorem eval_asWord (env : Environment (ZMod p)) (address : fields 3 (Expression (ZMod p))) :
-    Vector.map (Expression.eval env) (Address.asWord address) =
-      Address.asWord (Vector.map (Expression.eval env) address) := by
+    Eval.eval env (Address.asWord address) =
+      Address.asWord (Eval.eval env address) := by
   simp only [Address.asWord, circuit_norm]
 
 omit [Fact (2 ^ 25 < p)] in
@@ -50,13 +44,13 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     circuit_proof_start [Gadgets.Equality.circuit, ClockOrder.circuit, HintReadSpan.circuit,
       HintReadStep.circuit, HostHintQueue.nodeChannel, HostCallChip.channel, HostHintQueue.stateChannel,
       HintReadWordChip.stateChannel, Inputs.clock, Inputs.next, Inputs.first, Inputs.final,
-      eval_word, eval_asWord, eval_endStep]
+      Vector.map_id', eval_asWord, eval_endStep]
     simpa only [h_input] using h_holds
   completeness := by
     circuit_proof_start [Gadgets.Equality.circuit, ClockOrder.circuit, HintReadSpan.circuit,
       HintReadStep.circuit, HostHintQueue.nodeChannel, HostCallChip.channel, HostHintQueue.stateChannel,
       HintReadWordChip.stateChannel, Inputs.clock, Inputs.next, Inputs.first, Inputs.final,
-      eval_word, eval_asWord, eval_endStep]
+      Vector.map_id', eval_asWord, eval_endStep]
     obtain ⟨span, valid⟩ := h_assumptions
     exact ⟨valid.1, valid.2.1, valid.2.2.1, valid.2.2.2.1, valid.2.2.2.2.1,
       valid.2.2.2.2.2.1, valid.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.1, span,

@@ -133,19 +133,6 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
     programChannel] at h_holds h_assumptions ⊢
   obtain ⟨h_rac_a, h_rac_b, h_trust, h_prog, z0, z1, z2, z3, h_mem_a, h_mem_b⟩ := h_holds
   have htbin := bool_of_mul_pred h_trust
-  have e : ∀ i (hi : i < 3), Expression.eval env input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
-  -- bridge the four `op_a_0 * prev_value_i` read-zeroing gates from `eval` form to value form
-  -- (the gates index into the nested `prev_value` vector limb-wise).
-  have eva : ∀ i (hi : i < 4),
-      Expression.eval env input_var_cols_op_a_memory_prev_value[i] =
-        input_cols_op_a_memory_prev_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1.2.1.1; simpa using this
-  rw [eva 0 (by norm_num)] at z0; rw [eva 1 (by norm_num)] at z1
-  rw [eva 2 (by norm_num)] at z2; rw [eva 3 (by norm_num)] at z3
-  -- Spec: decode bounds (program pull) + op_a/op_b `isU64` (memory pulls — the whole-`Word` messages make
-  -- the pull guarantees the Spec conjuncts verbatim). Requirements: 2 rac, program off-gate, then per
-  -- operand a pull off-gate (vacuous) + a push (op_a/op_b both reads → read-back = pull).
   refine ⟨⟨⟨z0, z1, z2, z3⟩, (fun ht => ?_),
       h_rac_a h_assumptions.1, h_rac_b h_assumptions.1, fun ht => ?_,
       fun ht2 => ⟨(h_mem_a (by rw [show input_is_real = 1 from ht2])).1,
@@ -153,15 +140,14 @@ theorem soundness : GeneralFormalCircuit.Soundness (ZMod p) main AssumptionsD Sp
         (h_mem_a (by rw [show input_is_real = 1 from ht2])).2,
         (h_mem_b (by rw [show input_is_real = 1 from ht2])).2⟩⟩,
     Or.inr h_assumptions.1, Or.inr h_assumptions.1,
-    fun h1 h0 => off_gate_vacuous htbin h1 h0,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_,
-    fun h1 h0 => off_gate_vacuous h_assumptions.1 h1 h0,
-    fun _ h0 => ?_⟩
+    htbin,
+    h_assumptions.1,
+    fun h0 => ?_,
+    h_assumptions.1,
+    fun h0 => ?_⟩
   · exact (h_prog (by rw [show input_is_trusted = 1 from ht])).2.2.2.2
   · -- Decode bounds are exactly the structural Program-channel guarantee.
     obtain ⟨ha, hp0, hp1, hp2, _⟩ := h_prog (by rw [show input_is_trusted = 1 from ht])
-    rw [e 0 (by norm_num)] at hp0; rw [e 1 (by norm_num)] at hp1; rw [e 2 (by norm_num)] at hp2
     exact ⟨ha, hp0, hp1, hp2⟩
   · -- push_a: read-back value = op_a prev, from the paired pull; its push clock `clk_low + 4`'s
     -- `ClkBound` is the chip-supplied assumption.
@@ -186,29 +172,19 @@ theorem completeness :
   -- `hbin`/`htrust` carry `{record}.field` projections (the `ProverAssumptionsD`/Contracts `Spec`
   -- reassembly); `dsimp` iota-reduces them to the destructured atoms so the `rw`-gates below match.
   dsimp only at hbin htrust
-  have e : ∀ i (hi : i < 3), Expression.eval env.toEnvironment input_var_pc[i] = input_pc[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.2.2.2.2.2.1; simpa using this
-  have eva : ∀ i (hi : i < 4),
-      Expression.eval env.toEnvironment input_var_cols_op_a_memory_prev_value[i] =
-        input_cols_op_a_memory_prev_value[i] := by
-    intro i hi; have := congrArg (fun v => v[i]'hi) h_input.1.2.1.1; simpa using this
-  -- bridge the read-zeroing gates from value form (in `Spec`) to `eval` form (the goal asserts).
-  rw [← eva 0 (by norm_num)] at z0; rw [← eva 1 (by norm_num)] at z1
-  rw [← eva 2 (by norm_num)] at z2; rw [← eva 3 (by norm_num)] at z3
   refine ⟨⟨hreal, hrac_a⟩, ⟨hreal, hrac_b⟩, ?_, ?_, z0, z1, z2, z3, ?_, ?_⟩
   · rcases htrust with h | h <;> rw [h] <;> simp   -- `is_trusted` gate
   · -- Prove the structural Program row from the semantic reader Spec.
     intro ht
-    rw [e 0 (by norm_num), e 1 (by norm_num), e 2 (by norm_num)]
-    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec (neg_inj.mp ht)
-    exact ⟨ha, hp0, hp1, hp2, hbin (neg_inj.mp ht)⟩
+    obtain ⟨ha, hp0, hp1, hp2⟩ := hdec ht
+    exact ⟨ha, hp0, hp1, hp2, hbin ht⟩
   · -- mem pull a: the guarantee pair (whole-`Word` `isU64` + the message `clk_low`, which *is* the block's
     -- `prev_low`) is read straight off the `Spec`'s gated four-fact tuple.
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).1, (hisu (neg_inj.mp hneg)).2.2.1⟩
+    exact fun hneg => ⟨(hisu hneg).1, (hisu hneg).2.2.1⟩
   · -- mem pull b
     simp only [memoryChannel, MemoryMsg.isU64, MemoryMsg.ClkBound]
-    exact fun hneg => ⟨(hisu (neg_inj.mp hneg)).2.1, (hisu (neg_inj.mp hneg)).2.2.2⟩
+    exact fun hneg => ⟨(hisu hneg).2.1, (hisu hneg).2.2.2⟩
 
 /-- The native immutable I-type reader as a Clean `GeneralFormalCircuit`: composes a
 `RegisterAccessCols` per operand (both reads), imposes the read-zeroing gates, and emits the
@@ -244,8 +220,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
         rcases h_interaction with rfl | rfl | rfl | rfl | rfl
         · right
-          rw [ChannelInteraction.toRaw_requirements]; intro h1 h0
-          simp only [circuit_norm] at h1 h0; exact off_gate_vacuous h_trusted h1 h0
+          exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
 
 set_option linter.unusedSectionVars false in

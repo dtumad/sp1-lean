@@ -9,7 +9,7 @@ source-B prior pull/read-back at `+3`, and destination write at `+4`.  This file
 once, builds its timed wiring/aligned carrier, and instantiates it for Addi.
 -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -46,67 +46,27 @@ structure ITypeMemoryInteractionShape (chip : SupportedChip p) : Prop where
   imm_c_eq_one : ∀ (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p)),
     decoded.chip = chip → (decoded.toChipRow data).view.adapter.imm_c = 1
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem itypePull_one_signed (msg : MemoryMsg (ZMod p)) :
-    signedVal (TypedInteraction.pulledIfValue (memoryChannel (p := p)) 1 msg).mult = -1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  calc
-    _ = signedVal (-(1 : ZMod p)) := rfl
-    _ = -((1 : ZMod p).val : ℤ) := signedVal_neg_is_real hp (Or.inr rfl)
-    _ = -1 := by
-      rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-      norm_num
-
-omit [Fact (2 ^ 25 < p)] in
-private theorem itypePush_one_signed (msg : MemoryMsg (ZMod p)) :
-    signedVal (TypedInteraction.pushedIfValue (memoryChannel (p := p)) 1 msg).mult = 1 := by
-  have hp : 2 < p := by have := Fact.out (p := 2 ^ 17 < p); omega
-  calc
-    _ = signedVal (1 : ZMod p) := rfl
-    _ = ((1 : ZMod p).val : ℤ) := signedVal_is_real hp (Or.inr rfl)
-    _ = 1 := by
-      rw [ZMod.val_one_eq_one_mod, Nat.mod_eq_of_lt (by omega)]
-      norm_num
-
-omit [Fact (2 ^ 25 < p)] in
+omit [Fact (2 ^ 25 < p)] [Fact (2 ^ 17 < p)] in
 private theorem consumedMessages_itypeFour (a b rb w : MemoryMsg (ZMod p)) :
     consumedMessages
       [TypedInteraction.pulledIfValue (memoryChannel (p := p)) 1 a,
        TypedInteraction.pulledIfValue memoryChannel 1 b,
        TypedInteraction.pushedIfValue memoryChannel 1 rb,
        TypedInteraction.pushedIfValue memoryChannel 1 w] = [a, b] := by
-  have filtered : List.filter (fun i => signedVal i.mult = -1)
-      [TypedInteraction.pulledIfValue (memoryChannel (p := p)) 1 a,
-       TypedInteraction.pulledIfValue memoryChannel 1 b,
-       TypedInteraction.pushedIfValue memoryChannel 1 rb,
-       TypedInteraction.pushedIfValue memoryChannel 1 w] =
-      [TypedInteraction.pulledIfValue memoryChannel 1 a,
-       TypedInteraction.pulledIfValue memoryChannel 1 b] := by
-    simp only [List.filter_cons, List.filter_nil, itypePull_one_signed,
-      itypePush_one_signed]
-    norm_num
-  rw [consumedMessages, filtered]
-  simp only [List.map_cons, List.map_nil, TypedInteraction.pulledIfValue_message]
+  simp [consumedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+    TypedInteraction.mult, TypedInteraction.message, Channel.pulledIfValue, Channel.pushedIfValue,
+    ProvableType.fromElements_toElements]
 
-omit [Fact (2 ^ 25 < p)] in
+omit [Fact (2 ^ 25 < p)] [Fact (2 ^ 17 < p)] in
 private theorem producedMessages_itypeFour (a b rb w : MemoryMsg (ZMod p)) :
     producedMessages
       [TypedInteraction.pulledIfValue (memoryChannel (p := p)) 1 a,
        TypedInteraction.pulledIfValue memoryChannel 1 b,
        TypedInteraction.pushedIfValue memoryChannel 1 rb,
        TypedInteraction.pushedIfValue memoryChannel 1 w] = [rb, w] := by
-  have filtered : List.filter (fun i => signedVal i.mult = 1)
-      [TypedInteraction.pulledIfValue (memoryChannel (p := p)) 1 a,
-       TypedInteraction.pulledIfValue memoryChannel 1 b,
-       TypedInteraction.pushedIfValue memoryChannel 1 rb,
-       TypedInteraction.pushedIfValue memoryChannel 1 w] =
-      [TypedInteraction.pushedIfValue memoryChannel 1 rb,
-       TypedInteraction.pushedIfValue memoryChannel 1 w] := by
-    simp only [List.filter_cons, List.filter_nil, itypePull_one_signed,
-      itypePush_one_signed]
-    norm_num
-  rw [producedMessages, filtered]
-  simp only [List.map_cons, List.map_nil, TypedInteraction.pushedIfValue_message]
+  simp [producedMessages, TypedInteraction.pulledIfValue, TypedInteraction.pushedIfValue,
+    TypedInteraction.mult, TypedInteraction.message, Channel.pulledIfValue, Channel.pushedIfValue,
+    ProvableType.fromElements_toElements]
 
 /-- An active I-type row consumes exactly its destination and source-B prior records. -/
 theorem consumedMemoryMessages_eq_of_itypeShape {chip : SupportedChip p}
@@ -405,11 +365,11 @@ theorem itypeOperandB_isU64_of_shape {chip : SupportedChip p}
   have pullBMem : pullB ∈ decoded.interactionsWith data memoryChannel := by
     rw [shape.interactions decoded data hchip]
     exact List.mem_cons_of_mem _ List.mem_cons_self
-  have pullBNegative : pullB.mult = -1 := by
+  have pullBActive : pullB.mult = 1 := by
     simp only [pullB, TypedInteraction.pulledIfValue_mult, view, real]
   have guarantee := TypedInteraction.guarantee_of_channelGuarantees
     decoded.chip.table.operations memoryChannel (decoded.environment data) pullB pullBMem
-    guarantees (by rfl) pullBNegative
+    guarantees ⟨rfl, pullBActive⟩
   simpa only [Channels.memoryChannel, pullB, TypedInteraction.pulledIfValue_message,
     MemoryMsg.isU64, rtypePriorMessage] using guarantee.1
 
@@ -463,19 +423,20 @@ inductive CircuitITypeTimestampContract {Input Output : TypeMap}
 theorem itypeTimestampBounds_of_contract {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (contract : CircuitITypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
-    ITypeTimestampBounds (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+    ITypeTimestampBounds (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))) := by
   obtain ⟨readerOffset, readerInput, readerMem, binding⟩ := contract
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   have rowGuarantees : component.rowOperations.ChannelGuarantees byteChannel.toRaw env :=
     (Component.channelGuarantees_iff env byteChannel.toRaw).mp guarantees
@@ -536,19 +497,20 @@ inductive CircuitImmutableITypeTimestampContract {Input Output : TypeMap}
 theorem immutableItypeTimestampBounds_of_contract {Input Output : TypeMap}
     [ProvableType Input] [ProvableType Output]
     (circuit : GeneralFormalCircuit (ZMod p) Input Output)
+    (generation : WitnessGeneration.Generation (ZMod p) Input)
     (view : Input (ZMod p) → Output (ZMod p) → Trace.RowView (ZMod p))
     (contract : CircuitImmutableITypeTimestampContract circuit view)
     (data : ProverData (ZMod p)) (physical : Array (ZMod p))
-    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).operations.ChannelGuarantees
+    (guarantees : ({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).operations.ChannelGuarantees
       byteChannel.toRaw (Environment.fromArray physical data))
-    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+    (real : (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))).is_real = 1) :
-    ImmutableITypeTimestampBounds (view (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowInput
-      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions } : Component (ZMod p)).rowOutput
+    ImmutableITypeTimestampBounds (view (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowInput
+      (Environment.fromArray physical data)) (({ circuit := circuit, Assumptions := (circuit).Assumptions, generation } : Component (ZMod p)).rowOutput
         (Environment.fromArray physical data))) := by
   obtain ⟨readerOffset, readerInput, readerMem, binding⟩ := contract
-  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions }
+  let component : Component (ZMod p) := { circuit := circuit, Assumptions := (circuit).Assumptions, generation }
   let env := Environment.fromArray physical data
   have rowGuarantees : component.rowOperations.ChannelGuarantees byteChannel.toRaw env :=
     (Component.channelGuarantees_iff env byteChannel.toRaw).mp guarantees
@@ -657,13 +619,13 @@ variable [Fact (2 ^ 25 < p)]
 omit [Fact (2 ^ 25 < p)] in
 /-- The Addi descriptor in the supported Core registry. -/
 def addiChipDescriptor : SupportedChip p :=
-  ⟨.addi, AddiChip.kind, AddiChip.circuit, rfl⟩
+  ⟨.addi, AddiChip.kind, AddiChip.circuit, AddiChip.generation, rfl⟩
 
 omit [Fact (2 ^ 25 < p)] in
 noncomputable def addiViewOf (env : Environment (ZMod p)) : Trace.RowView (ZMod p) :=
   AddiChip.rowView
-    (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env)
-    (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env)
+    (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowInput env)
+    (({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowOutput env)
 
 theorem addiViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMod p)) :
     ((addiChipDescriptor (p := p)).decodeRow data physical).view =
@@ -672,14 +634,14 @@ theorem addiViewOf_decodeRow (data : ProverData (ZMod p)) (physical : Array (ZMo
 omit [Fact (2 ^ 25 < p)] in
 theorem addiChipDescriptor_table :
     (addiChipDescriptor (p := p)).table =
-      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)) := rfl
+      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)) := rfl
 
 omit [Fact (2 ^ 25 < p)] in
 theorem addiViewOf_state (env : Environment (ZMod p)) :
     (addiViewOf env).state =
       (Eval.eval env (varFromOffset (F := ZMod p) AddiChip.Inputs 0)).state := by
   have inputEq : Eval.eval env (varFromOffset AddiChip.Inputs 0) =
-      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
   simp only [addiViewOf, AddiChip.rowView]
   exact (AddiChip.inputOutputState env).symm.trans
@@ -691,7 +653,7 @@ theorem addiViewOf_adapter (env : Environment (ZMod p)) :
       (Eval.eval env
         (varFromOffset (F := ZMod p) AddiChip.Inputs 0)).adapter.toAdapterView := by
   have inputEq : Eval.eval env (varFromOffset AddiChip.Inputs 0) =
-      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
   simp only [addiViewOf, AddiChip.rowView]
   exact congrArg Circuits.Types.ITypeReader.toAdapterView
@@ -716,7 +678,7 @@ theorem addiViewOf_isReal (env : Environment (ZMod p)) :
     (addiViewOf env).is_real =
       (Eval.eval env (varFromOffset (F := ZMod p) AddiChip.Inputs 0)).is_real := by
   have inputEq : Eval.eval env (varFromOffset AddiChip.Inputs 0) =
-      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowInput env :=
+      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowInput env :=
     eval_varFromOffset_valueFromOffset AddiChip.Inputs 0 env
   simpa only [addiViewOf, AddiChip.rowView] using
     congrArg (fun input : AddiChip.Inputs (ZMod p) => input.is_real) inputEq.symm
@@ -729,7 +691,7 @@ theorem addiViewOf_rdWrite (env : Environment (ZMod p)) :
   let input : Var AddiChip.Inputs (ZMod p) := varFromOffset AddiChip.Inputs 0
   let offset := size AddiChip.Inputs
   have outputEq : Eval.eval env ((AddiChip.circuit (p := p)).output input offset) =
-      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).rowOutput env := by
+      ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).rowOutput env := by
     simp only [input, offset, Component.rowOutput, circuit_norm]
   simp only [addiViewOf, AddiChip.rowView]
   rw [← outputEq]
@@ -741,7 +703,7 @@ theorem addiViewOf_rdWrite (env : Environment (ZMod p)) :
 omit [Fact (2 ^ 25 < p)] in
 /-- Addi's completed exposed Memory list evaluates to the canonical I-type four-pack. -/
 theorem addiChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
-    ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions } : Component (ZMod p)).operations.interactionValuesWith
+    ({ circuit := AddiChip.circuit (p := p), Assumptions := (AddiChip.circuit (p := p)).Assumptions, generation := AddiChip.generation } : Component (ZMod p)).operations.interactionValuesWith
         (memoryChannel (p := p)).toRaw env =
       (itypeMemoryInteractions (addiViewOf env)).map TypedInteraction.raw := by
   rw [Operations.interactionValuesWith_eq_map, Component.interactionsWith_eq]
@@ -816,7 +778,7 @@ theorem addiChip_viewClockBounds (decoded : DecodedInstructionRow p)
   obtain ⟨chip, physical⟩ := decoded
   have hchip' : chip = addiChipDescriptor (p := p) := hchip
   subst hchip'
-  exact viewClockBounds_of_cpuStateContract (AddiChip.circuit (p := p)) AddiChip.rowView
+  exact viewClockBounds_of_cpuStateContract (AddiChip.circuit (p := p)) AddiChip.generation AddiChip.rowView
     AddiChip.cpuStateTimeContract data physical guarantees real
 
 theorem addiChip_activeTimestampBounds (decoded : DecodedInstructionRow p)
@@ -828,7 +790,7 @@ theorem addiChip_activeTimestampBounds (decoded : DecodedInstructionRow p)
   obtain ⟨chip, physical⟩ := decoded
   have hchip' : chip = addiChipDescriptor (p := p) := hchip
   subst hchip'
-  exact itypeTimestampBounds_of_contract AddiChip.circuit AddiChip.rowView
+  exact itypeTimestampBounds_of_contract AddiChip.circuit AddiChip.generation AddiChip.rowView
     AddiChip.itypeTimestampContract data physical guarantees real
 
 /-- The committed Addi decode makes its immediate a canonical 64-bit word. -/

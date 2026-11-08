@@ -133,6 +133,19 @@ def check(root: Path, *, source_only: bool = False) -> list[str]:
                            ("compilerRevision", "modelRevision", "baseSnapshot")]:
         require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)), f"{name}: expected full commit")
     require(sail.get("moduleSystem") is True, "Sail must be generated in module mode")
+    historical, stock = sail["historicalStock"], sail["currentStock"]
+    for key in ("compilerRevision", "modelRevision", "baseSnapshot"):
+        require(bool(re.fullmatch(r"[0-9a-f]{40}", historical[key])),
+                f"historicalStock.{key}: expected full commit")
+    require(historical["baseSnapshot"] == sail["baseSnapshot"],
+            "historical stock control must authenticate the recorded base snapshot")
+    require(historical["modelRevision"] == sail["modelRevision"],
+            "stock compiler comparison requires the same model revision")
+    for label, control in (("historicalStock", historical), ("currentStock", stock)):
+        require(bool(re.fullmatch(r"[0-9a-f]{64}", control["configSha256"])),
+                f"{label}: invalid configuration fingerprint")
+    require(bool(re.fullmatch(r"[0-9a-f]{64}", stock["generatedTreeSha256"])) and
+            stock["generatedFiles"] > 0, "invalid stock Sail fingerprint")
     require(bool(re.fullmatch(r"[0-9a-f]{64}", sail["generatedTreeSha256"])) and
             sail["generatedFiles"] > 0, "invalid generated Sail fingerprint")
     if not source_only:

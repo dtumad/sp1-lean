@@ -9,7 +9,7 @@ separately consumes the universal compiler-totality theorem.
 -/
 
 namespace SP1CleanTest.Core.SemanticAccess
-open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target SP1Clean.TraceGen LeanRV64D.Defs
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target SP1Clean.TraceGen LeanRV64D
 
 private def source : SailState :=
   { configuredState 65536 with

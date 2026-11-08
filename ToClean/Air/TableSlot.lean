@@ -83,7 +83,7 @@ theorem table_mem (slot : TableSlot ens.tables component) (witness : EnsembleWit
 
 /-- The selected physical table determines its entry in the witness's canonical data. -/
 theorem table_data (slot : TableSlot ens.tables component) (witness : EnsembleWitness ens) (arity : ℕ) :
-    witness.data component.circuit.name arity = (slot.table witness).proverRows arity := by
+    witness.data.tables component.circuit.name arity = (slot.table witness).rowPrefixes arity := by
   have sameName := congrArg (fun component : Component F => component.circuit.name) (slot.table_component witness)
   simpa only [sameName, slot.table_component witness] using witness.data_of_mem_table (slot.table_mem witness) arity
 

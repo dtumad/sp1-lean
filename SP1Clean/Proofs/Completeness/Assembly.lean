@@ -261,11 +261,20 @@ def instructionHintFor : InstructionChipId → ProverHint (ZMod p)
   | .bitwise | .lt | .shiftLeft | .shiftRight | .branch | .mul | .divRem => ProverHint.empty _
   | _ => trace.hint
 
+/-- Initialize each instruction builder with its own actual input rows. -/
+def instructionDataFor (id : InstructionChipId) : ProverData (ZMod p) :=
+  (supportedChipFor id).table.inputData (trace.instructionInputsFor id) trace.generationData
+
+theorem instructionDataFor_consistent (id : InstructionChipId) :
+    (trace.instructionDataFor id).tables (supportedChipFor (p := p) id).table.circuit.name
+      (size (supportedChipFor (p := p) id).table.Input) = (trace.instructionInputsFor id |>.map toElements).toArray :=
+  Component.inputData_consistent _ _ _
+
 /-- Build each instruction table through the circuit-bearing registry and its indexed inputs. -/
 def instructionTableFor (id : InstructionChipId) : Table (ZMod p) :=
   Table.build (supportedChipFor id).table (trace.instructionInputsFor id)
-    trace.generationData (trace.instructionHintFor id) (trace.instructionInputsFor_capacity id)
-    (by cases id <;> trivial)
+    (trace.instructionDataFor id) (trace.instructionHintFor id) (trace.instructionInputsFor_capacity id)
+    (by cases id <;> trivial) (trace.instructionDataFor_consistent id)
 
 /-- The twenty-five built instruction tables, in the one physical order fixed by the neutral
 instruction registry. -/
@@ -284,79 +293,79 @@ theorem instructionTableFor_constraints (wf : trace.WellFormed) (id : Instructio
   cases id with
   | add =>
     exact AddChip.traceTable_constraints _ _ _ _ (wf.instruction .add)
-      (trace.instructionInputsFor_capacity .add)
+      (trace.instructionInputsFor_capacity .add) (trace.instructionDataFor_consistent .add)
   | addi =>
     exact AddiChip.traceTable_constraints _ _ _ _ (wf.instruction .addi)
-      (trace.instructionInputsFor_capacity .addi)
+      (trace.instructionInputsFor_capacity .addi) (trace.instructionDataFor_consistent .addi)
   | addw =>
     exact AddwChip.traceTable_constraints _ _ _ _ (wf.instruction .addw)
-      (trace.instructionInputsFor_capacity .addw)
+      (trace.instructionInputsFor_capacity .addw) (trace.instructionDataFor_consistent .addw)
   | sub =>
     exact SubChip.traceTable_constraints _ _ _ _ (wf.instruction .sub)
-      (trace.instructionInputsFor_capacity .sub)
+      (trace.instructionInputsFor_capacity .sub) (trace.instructionDataFor_consistent .sub)
   | subw =>
     exact SubwChip.traceTable_constraints _ _ _ _ (wf.instruction .subw)
-      (trace.instructionInputsFor_capacity .subw)
+      (trace.instructionInputsFor_capacity .subw) (trace.instructionDataFor_consistent .subw)
   | bitwise =>
     exact BitwiseChip.traceTable_constraints _ _ _ (wf.instruction .bitwise)
-      (trace.instructionInputsFor_capacity .bitwise)
+      (trace.instructionInputsFor_capacity .bitwise) (trace.instructionDataFor_consistent .bitwise)
   | lt =>
     exact LtChip.traceTable_constraints _ _ _ (wf.instruction .lt)
-      (trace.instructionInputsFor_capacity .lt)
+      (trace.instructionInputsFor_capacity .lt) (trace.instructionDataFor_consistent .lt)
   | shiftLeft =>
     exact ShiftLeftChip.traceTable_constraints _ _ _ (wf.instruction .shiftLeft)
-      (trace.instructionInputsFor_capacity .shiftLeft)
+      (trace.instructionInputsFor_capacity .shiftLeft) (trace.instructionDataFor_consistent .shiftLeft)
   | shiftRight =>
     exact ShiftRightChip.traceTable_constraints _ _ _ (wf.instruction .shiftRight)
-      (trace.instructionInputsFor_capacity .shiftRight)
+      (trace.instructionInputsFor_capacity .shiftRight) (trace.instructionDataFor_consistent .shiftRight)
   | jal =>
     exact JalChip.traceTable_constraints _ _ _ _ (wf.instruction .jal)
-      (trace.instructionInputsFor_capacity .jal)
+      (trace.instructionInputsFor_capacity .jal) (trace.instructionDataFor_consistent .jal)
   | jalr =>
     exact JalrChip.traceTable_constraints _ _ _ _ (wf.instruction .jalr)
-      (trace.instructionInputsFor_capacity .jalr)
+      (trace.instructionInputsFor_capacity .jalr) (trace.instructionDataFor_consistent .jalr)
   | branch =>
     exact BranchChip.traceTable_constraints _ _ _ (wf.instruction .branch)
-      (trace.instructionInputsFor_capacity .branch)
+      (trace.instructionInputsFor_capacity .branch) (trace.instructionDataFor_consistent .branch)
   | uType =>
     exact UTypeChip.traceTable_constraints _ _ _ _ (wf.instruction .uType)
-      (trace.instructionInputsFor_capacity .uType)
+      (trace.instructionInputsFor_capacity .uType) (trace.instructionDataFor_consistent .uType)
   | loadByte =>
     exact LoadByteChip.traceTable_constraints _ _ _ (wf.instruction .loadByte)
-      (trace.instructionInputsFor_capacity .loadByte)
+      (trace.instructionInputsFor_capacity .loadByte) (trace.instructionDataFor_consistent .loadByte)
   | loadHalf =>
     exact LoadHalfChip.traceTable_constraints _ _ _ (wf.instruction .loadHalf)
-      (trace.instructionInputsFor_capacity .loadHalf)
+      (trace.instructionInputsFor_capacity .loadHalf) (trace.instructionDataFor_consistent .loadHalf)
   | loadWord =>
     exact LoadWordChip.traceTable_constraints _ _ _ (wf.instruction .loadWord)
-      (trace.instructionInputsFor_capacity .loadWord)
+      (trace.instructionInputsFor_capacity .loadWord) (trace.instructionDataFor_consistent .loadWord)
   | loadDouble =>
     exact LoadDoubleChip.traceTable_constraints _ _ _ (wf.instruction .loadDouble)
-      (trace.instructionInputsFor_capacity .loadDouble)
+      (trace.instructionInputsFor_capacity .loadDouble) (trace.instructionDataFor_consistent .loadDouble)
   | loadX0 =>
     exact LoadX0Chip.traceTable_constraints _ _ _ (wf.instruction .loadX0)
-      (trace.instructionInputsFor_capacity .loadX0)
+      (trace.instructionInputsFor_capacity .loadX0) (trace.instructionDataFor_consistent .loadX0)
   | storeByte =>
     exact StoreByteChip.traceTable_constraints _ _ _ (wf.instruction .storeByte)
-      (trace.instructionInputsFor_capacity .storeByte)
+      (trace.instructionInputsFor_capacity .storeByte) (trace.instructionDataFor_consistent .storeByte)
   | storeHalf =>
     exact StoreHalfChip.traceTable_constraints _ _ _ (wf.instruction .storeHalf)
-      (trace.instructionInputsFor_capacity .storeHalf)
+      (trace.instructionInputsFor_capacity .storeHalf) (trace.instructionDataFor_consistent .storeHalf)
   | storeWord =>
     exact StoreWordChip.traceTable_constraints _ _ _ (wf.instruction .storeWord)
-      (trace.instructionInputsFor_capacity .storeWord)
+      (trace.instructionInputsFor_capacity .storeWord) (trace.instructionDataFor_consistent .storeWord)
   | storeDouble =>
     exact StoreDoubleChip.traceTable_constraints _ _ _ (wf.instruction .storeDouble)
-      (trace.instructionInputsFor_capacity .storeDouble)
+      (trace.instructionInputsFor_capacity .storeDouble) (trace.instructionDataFor_consistent .storeDouble)
   | mul =>
     exact MulChip.traceTable_constraints _ _ _ (wf.instruction .mul)
-      (trace.instructionInputsFor_capacity .mul)
+      (trace.instructionInputsFor_capacity .mul) (trace.instructionDataFor_consistent .mul)
   | divRem =>
     exact DivRemChip.traceTable_constraints _ _ _ (wf.instruction .divRem)
-      (trace.instructionInputsFor_capacity .divRem)
+      (trace.instructionInputsFor_capacity .divRem) (trace.instructionDataFor_consistent .divRem)
   | aluX0 =>
     exact AluX0Chip.traceTable_constraints _ _ _ _ (wf.instruction .aluX0)
-      (trace.instructionInputsFor_capacity .aluX0)
+      (trace.instructionInputsFor_capacity .aluX0) (trace.instructionDataFor_consistent .aluX0)
 
 /-- The completeness registry projects to the soundness registry component for component. -/
 theorem instructionTables_map_component :
@@ -424,13 +433,23 @@ theorem providerInputsFor_capacity (id : ProviderTableId) :
     | exact Nat.zero_le _
     | exact Nat.le_of_lt (by decide : 1 < UInt64.size)
 
+/-- Initialize each provider builder with its exact occurrence inputs, including padding. -/
+def providerDataFor (id : ProviderTableId) : ProverData (ZMod p) :=
+  (Soundness.providerTableFor id).inputData (trace.providerInputsFor id) trace.generationData
+
+theorem providerDataFor_consistent (id : ProviderTableId) :
+    (trace.providerDataFor id).tables (Soundness.providerTableFor (p := p) id).circuit.name
+      (size (Soundness.providerTableFor (p := p) id).Input) = (trace.providerInputsFor id |>.map toElements).toArray :=
+  Component.inputData_consistent _ _ _
+
 /-- Build a provider or boundary table through its registered circuit and semantic inputs. -/
 def providerTableFor (id : ProviderTableId) : Table (ZMod p) :=
   Table.build (Soundness.providerTableFor id) (trace.providerInputsFor id)
-    trace.generationData trace.hint (trace.providerInputsFor_capacity id)
+    (trace.providerDataFor id) trace.hint (trace.providerInputsFor_capacity id)
     (by cases id with
       | byte provider => cases provider <;> trivial
       | range _ | program | memoryInit | memoryFinalize | memoryBump | stateBump | halt | syscallInstrs => trivial)
+    (trace.providerDataFor_consistent id)
 
 /-- The range-provider segment in physical registry order. -/
 def rangeTables : List (Table (ZMod p)) :=
@@ -455,43 +474,44 @@ theorem providerTableFor_constraints (wf : trace.WellFormed) (id : ProviderTable
       cases provider with
       | u8Range =>
           exact ByteChip.U8Range.traceTable_constraints _ _ _
-            (wf.provider (.byte .u8Range)) (trace.providerInputsFor_capacity (.byte .u8Range))
-      | msb => exact ByteChip.MSB.traceTable_constraints _ _ _ (wf.provider (.byte .msb)) (trace.providerInputsFor_capacity (.byte .msb))
+            (wf.provider (.byte .u8Range)) (trace.providerInputsFor_capacity (.byte .u8Range)) (trace.providerDataFor_consistent (.byte .u8Range))
+      | msb => exact ByteChip.MSB.traceTable_constraints _ _ _ (wf.provider (.byte .msb)) (trace.providerInputsFor_capacity (.byte .msb)) (trace.providerDataFor_consistent (.byte .msb))
       | andByte =>
           exact ByteChip.AndByte.traceTable_constraints _ _ _
-            (wf.provider (.byte .andByte)) (trace.providerInputsFor_capacity (.byte .andByte))
+            (wf.provider (.byte .andByte)) (trace.providerInputsFor_capacity (.byte .andByte)) (trace.providerDataFor_consistent (.byte .andByte))
       | orByte =>
-          exact ByteChip.OrByte.traceTable_constraints _ _ _ (wf.provider (.byte .orByte)) (trace.providerInputsFor_capacity (.byte .orByte))
+          exact ByteChip.OrByte.traceTable_constraints _ _ _ (wf.provider (.byte .orByte)) (trace.providerInputsFor_capacity (.byte .orByte)) (trace.providerDataFor_consistent (.byte .orByte))
       | xorByte =>
           exact ByteChip.XorByte.traceTable_constraints _ _ _
-            (wf.provider (.byte .xorByte)) (trace.providerInputsFor_capacity (.byte .xorByte))
-      | ltu => exact ByteChip.Ltu.traceTable_constraints _ _ _ (wf.provider (.byte .ltu)) (trace.providerInputsFor_capacity (.byte .ltu))
+            (wf.provider (.byte .xorByte)) (trace.providerInputsFor_capacity (.byte .xorByte)) (trace.providerDataFor_consistent (.byte .xorByte))
+      | ltu => exact ByteChip.Ltu.traceTable_constraints _ _ _ (wf.provider (.byte .ltu)) (trace.providerInputsFor_capacity (.byte .ltu)) (trace.providerDataFor_consistent (.byte .ltu))
   | range width =>
       exact RangeChip.traceTable_constraints _ (Nat.le_of_lt_succ width.isLt) _ _ _
-        (wf.provider (.range width)) (trace.providerInputsFor_capacity (.range width))
+        (wf.provider (.range width)) (trace.providerInputsFor_capacity (.range width)) (trace.providerDataFor_consistent (.range width))
   | program =>
-      exact ProgramProviderChip.traceTable_constraints _ _ _ (wf.provider .program) (trace.providerInputsFor_capacity .program)
+      exact ProgramProviderChip.traceTable_constraints _ _ _ (wf.provider .program) (trace.providerInputsFor_capacity .program) (trace.providerDataFor_consistent .program)
   | memoryInit =>
-      exact MemoryProviderChip.traceTable_constraints _ _ _ (wf.provider .memoryInit) (trace.providerInputsFor_capacity .memoryInit)
-  | memoryFinalize => exact MemoryFinalizeChip.traceTable_constraints _ _ _ (trace.providerInputsFor_capacity .memoryFinalize)
+      exact MemoryProviderChip.traceTable_constraints _ _ _ (wf.provider .memoryInit) (trace.providerInputsFor_capacity .memoryInit) (trace.providerDataFor_consistent .memoryInit)
+  | memoryFinalize => exact MemoryFinalizeChip.traceTable_constraints _ _ _ (trace.providerInputsFor_capacity .memoryFinalize) (trace.providerDataFor_consistent .memoryFinalize)
   | memoryBump =>
       exact MemoryBumpChip.traceTable_constraints _ _ _
-        (memoryBumpTraceInputs_spec (wf.provider .memoryBump)) (trace.providerInputsFor_capacity .memoryBump)
+        (memoryBumpTraceInputs_spec (wf.provider .memoryBump)) (trace.providerInputsFor_capacity .memoryBump) (trace.providerDataFor_consistent .memoryBump)
   | stateBump =>
       exact StateBumpChip.traceTable_constraints _ _ _
-        (stateBumpTraceInputs_spec (wf.provider .stateBump)) (trace.providerInputsFor_capacity .stateBump)
+        (stateBumpTraceInputs_spec (wf.provider .stateBump)) (trace.providerInputsFor_capacity .stateBump) (trace.providerDataFor_consistent .stateBump)
   | halt =>
       exact HaltChip.traceTable_constraints _ _ _
-        (HaltChip.haltTraceInputs_spec (trace.providerOccurrences .halt)) (trace.providerInputsFor_capacity .halt)
+        (HaltChip.haltTraceInputs_spec (trace.providerOccurrences .halt)) (trace.providerInputsFor_capacity .halt) (trace.providerDataFor_consistent .halt)
   | syscallInstrs =>
       exact SyscallInstrsChip.traceTable_constraints (trace.providerOccurrences .syscallInstrs) _ _
+        (trace.providerDataFor_consistent .syscallInstrs)
 
 /-- The full 55-table assembly is the instruction registry followed by the provider segment. -/
 def tables : List (Table (ZMod p)) :=
   trace.instructionTables ++ trace.providerTables
 
 /-- Committed data is derived from complete physical table inputs, using Clean's canonical map. -/
-def data : ProverData (ZMod p) := Air.Flat.deriveProverData trace.tables
+def data : ProverData (ZMod p) := Air.Flat.deriveProverData trace.tables (toElements trace.publicValues).toArray
 
 /-- The provider segment projects to the ensemble's provider components in physical order. -/
 theorem providerTables_map_component :
@@ -526,7 +546,9 @@ def witness : EnsembleWitness (sp1Ensemble (p := p)) :=
 @[simp] theorem witness_data : trace.witness.data = trace.data :=
   EnsembleWitness.ofTables_data _ _ _ _
 @[simp] theorem witness_tables :
-    trace.witness.tables = Air.Flat.withDerivedData trace.tables := rfl
+    trace.witness.tables = Air.Flat.withDerivedData trace.tables
+      (by simpa only [← trace.tables_map_component, List.map_map, Function.comp_def] using (sp1Ensemble (p := p)).unique_names)
+      (toElements trace.publicValues).toArray := rfl
 
 /-! ## Constraints -/
 
@@ -539,11 +561,11 @@ theorem witness_syscallTable_nil :
     ∀ t : Air.Flat.Table (ZMod p),
       trace.witness.tables[syscallTablePosition]? = some t → t.table = [] := by
   intro t ht
-  have hpos : trace.witness.tables[syscallTablePosition]?
-      = some { trace.providerTableFor .syscallInstrs with data := trace.data } := rfl
-  rw [hpos] at ht
-  rw [← Option.some.inj ht]
-  rfl
+  have hpos : (trace.witness.tables[syscallTablePosition]?).map (·.table) = some [] := by
+    rw [← List.getElem?_map, witness_tables, Air.Flat.withDerivedData_map_table]
+    rfl
+  rw [ht] at hpos
+  exact Option.some.inj hpos
 
 /-- Every generated row satisfies the physical constraints at the data derived from all tables.
 The public verifier's assertions are channel obligations, proved separately from this theorem. -/
@@ -552,7 +574,7 @@ theorem witness_constraints (wf : trace.WellFormed) : trace.witness.Constraints 
   have componentMem :=
     EnsembleWitness.component_mem_tables_of_mem (witness := trace.witness) member
   rw [witness_tables, Air.Flat.withDerivedData] at member
-  obtain ⟨built, builtMem, rfl⟩ := List.mem_map.mp member
+  obtain ⟨⟨built, builtMem⟩, _, rfl⟩ := List.mem_map.mp member
   apply sp1Table_constraints_setData built.component componentMem (data := built.data)
   rw [tables] at builtMem
   rcases List.mem_append.mp builtMem with instructionMem | providerMem

@@ -28,7 +28,7 @@ thirteen inline codes are the boundary of this work.
 every later row's `align8` residue untouched. That is what lets the alignment machinery transfer
 with a hypothesis change rather than a redesign. -/
 
-open LeanRV64D.Defs
+open LeanRV64D
 
 namespace SP1Clean.Soundness
 
@@ -112,7 +112,7 @@ private theorem configFrame_pc (s : SailState) (v : RegisterType Register.PC)
   have hne : ¬((Register.PC == R) = true) := by
     rcases hR with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
   show (s.regs.insert Register.PC v).get? R = s.regs.get? R
-  rw [Std.ExtDHashMap.get?_insert, dif_neg hne]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right hne]
 
 private theorem configFrame_pc_x5 (s : SailState) (v : RegisterType Register.PC)
     (w : RegisterType Register.x5) (c : SailConfigured s) :
@@ -125,7 +125,7 @@ private theorem configFrame_pc_x5 (s : SailState) (v : RegisterType Register.PC)
   have hnex5 : ¬((Register.x5 == R) = true) := by
     rcases hR with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
   show ((s.regs.insert Register.PC v).insert Register.x5 w).get? R = s.regs.get? R
-  rw [Std.ExtDHashMap.get?_insert, dif_neg hnex5, Std.ExtDHashMap.get?_insert, dif_neg hnePC]
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right hnex5, Std.ExtDHashMap.get?_insert, dite_eq_right hnePC]
 
 /-- The payload holds for the thirteen-arm handler — `syscallTransition_of_row` packaged in the shape
 the grounding engine consumes, with the row effect read off the handler's own inserts. The two
@@ -356,7 +356,7 @@ theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
       rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       have hregs := heff.regs
-      rw [if_pos hw] at hregs
+      rw [ite_eq_left hw] at hregs
       exact hregs.1 idx hidx
     · -- a non-writing row's `op_a` read-back at the `+ 4` slot
       have hlocmp : Semantics.MemoryMsg.locOf mp.1 = MemLoc.reg idx := hloc.symm.trans hlocr
@@ -372,7 +372,7 @@ theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
       rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       have hregs := heff.regs
-      rw [if_neg (by simp [hnw])] at hregs
+      rw [ite_eq_right (by simp [hnw])] at hregs
       show locContent s' (MemLoc.reg idx) = some (Word.toBitVec64 mp.1.value)
       rw [show locContent s' (MemLoc.reg idx) = s'.get_reg? idx from rfl, hregs idx]
       rwa [TimedGrounding.localValueAtG_stepStart_iff htraj] at hc
@@ -493,14 +493,14 @@ theorem ordinaryFrameFactG_of_advanceOnTrajectory {kind : ChipKind p}
     show s'.get_reg? i = some (Word.toBitVec64 v)
     have hregs := heff.regs
     by_cases hw : (kind.view inp cols).commit.writesReg = true
-    · rw [if_pos hw] at hregs
+    · rw [ite_eq_left hw] at hregs
       by_cases hop : (i.toNat : ZMod p) = (kind.view inp cols).adapter.op_a
       · obtain ⟨m, hm, hlocm, hvalm⟩ := wiring.write_push hw i hop
         have hveq : m.value = v := hpush m hm hlocm
         rw [hregs.1 i hop, ← hvalm, hveq]
       · rw [hregs.2 i hop]
         exact hcontent
-    · rw [if_neg hw] at hregs
+    · rw [ite_eq_right hw] at hregs
       rw [hregs i]
       exact hcontent
 
@@ -834,9 +834,9 @@ theorem syscallStepFact_of_advance [Fact (2 ^ 25 < p)]
           (SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value))
         = some (Word.toBitVec64 r.op_a_value)
       rw [locPushA, htimeA]
-      simp only [Semantics.microValueG, if_neg (by omega : ¬ tl.start n + 4 < tl.start 0),
+      simp only [Semantics.microValueG, ite_eq_right (by omega : ¬ tl.start n + 4 < tl.start 0),
         hstep, Nat.add_sub_cancel_left, Semantics.regEffectOffset, le_refl, decide_true,
-        if_true, hsucc, Option.bind_some, Semantics.locContent]
+        ite_true, hsucc, Option.bind_some, Semantics.locContent]
       rw [heff.t0, result_syscallEventOfRow]
       rfl
     · refine ⟨currB.1, boundB, ?_⟩
