@@ -167,8 +167,8 @@ theorem project_balancedChannel (witness : EnsembleWitness (install statement ba
       exact List.mem_singleton.mp mapped
     rw [provider]
     simp only [CommitmentDeclaration.source, StaticTable.payloadComponent, StaticTable.payloadProvider]
-    simp only [circuit_norm, List.mem_append, List.mem_singleton, not_or]
-    exact ⟨List.not_mem_nil, different⟩
+    simp only [circuit_norm, List.mem_singleton]
+    exact different
   have ledger : (project witness).interactionsWith channel = retained.interactionsWith channel :=
     retained.projectPrefix_interactions (target := base) _ _ _ rfl channel preserves silent
   change BalancedInteractions ((project witness).interactionsWith channel)

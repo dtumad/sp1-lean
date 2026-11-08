@@ -367,11 +367,71 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
        #v[input.adapter.op_c, 0, 0, 0],
        input.adapter.op_a_0, 0, 0⟩ ]
 
+omit [Fact (2 ^ 24 < p)] in
+private theorem payload_congr (input : Var Inputs (ZMod p))
+    (env env' : ProverEnvironment (ZMod p))
+    (h_input : ProvableStruct.eval env.toEnvironment input =
+      ProvableStruct.eval env'.toEnvironment input) :
+    (Witgen.WitgenIR.ofCompositeFExpr (MulOperation.populateFE input.op_b_val input.op_c_val input.isMulh input.isMulhsu input.isMulw)).eval env =
+      (Witgen.WitgenIR.ofCompositeFExpr (MulOperation.populateFE input.op_b_val input.op_c_val input.isMulh input.isMulhsu input.isMulw)).eval env' := by
+  refine MulOperation.populateIR_congr env env' _ _ _ _ _
+    (fun i hi => ?_) (fun i hi => ?_) ?_ ?_ ?_
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
+    simpa only [eval_opBVal, eval_opCVal, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
+    simpa only [eval_opBVal, eval_opCVal, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+  · simpa only [Inputs.eval_isMulh, ProvableType.eval_field] using congrArg (fun r : Inputs (ZMod p) => r.isMulh) h_input
+  · simpa only [Inputs.eval_isMulhsu, ProvableType.eval_field] using congrArg (fun r : Inputs (ZMod p) => r.isMulhsu) h_input
+  · simpa only [Inputs.eval_isMulw, ProvableType.eval_field] using congrArg (fun r : Inputs (ZMod p) => r.isMulw) h_input
+
 /-- The `Mul` chip row as a `GeneralFormalCircuit`: flag-gated RV64 `mul`/`mulh`/`mulhu`/`mulhsu`/`mulw`
 semantic contract; output is the native `Columns` row. Soundness and completeness are both proved
 above (the former 4.31-migration completeness seam is closed). -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.mul", main, elaborated,
+    computableWitnesses := by
+      preserve_tactic_target
+      intro n input env env'
+      constructor
+      · simp only [main, circuit_norm, Nat.add_zero]
+        repeat' apply And.intro
+        all_goals intro h_input
+        all_goals first
+          | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+          | intro h_agree
+            first
+              | exact payload_congr input env env' h_input
+              | have hm := congrArg (fun r : Inputs (ZMod p) => r.isMul) h_input
+                have hh := congrArg (fun r : Inputs (ZMod p) => r.isMulh) h_input
+                have hu := congrArg (fun r : Inputs (ZMod p) => r.isMulhu) h_input
+                have hs := congrArg (fun r : Inputs (ZMod p) => r.isMulhsu) h_input
+                have hw := congrArg (fun r : Inputs (ZMod p) => r.isMulw) h_input
+                simp only [Inputs.eval_isMul, Inputs.eval_isMulh, Inputs.eval_isMulhu,
+                  Inputs.eval_isMulhsu, Inputs.eval_isMulw, ProvableType.eval_field] at hm hh hu hs hw
+                apply Vector.ext
+                intro i hi
+                simp only [Witgen.WitgenIR.getElem_eval_ofExprs]
+                interval_cases i <;> simp only [circuit_norm, hm, hh, hu, hs, hw]
+                · rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega),
+                    h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
+                · rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega),
+                    h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
+                · rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega),
+                    h_agree.get_eq (by omega), h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
+                · rw [h_agree.get_eq (by omega), h_agree.get_eq (by omega),
+                    h_agree.get_eq (by omega), h_agree.get_eq (by omega), h_agree.get_eq (by omega)]
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        have length_eq : (main input).localLength n = 49 :=
+          (elaborated.localLength_eq input n).trans (by rfl)
+        rw [length_eq] at h_agrees
+        rw [elaborated.output_eq]
+        simp (disch := omega) only [circuit_norm, h, h_agrees.get_eq]
+        repeat' apply And.intro
+        all_goals
+          apply Vector.ext
+          intro i hi
+          simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     -- `programChannel` dropped (W11 flip — now pulled via `RTypeReader`, a guarantee not a requirement).
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     requirementsChannelsLawful := requirementsChannelsLawful_main,

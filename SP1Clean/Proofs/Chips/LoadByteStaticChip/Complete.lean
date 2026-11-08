@@ -31,7 +31,7 @@ theorem traceTable_constraints (events : List MemoryEvent) (data : ProverData (Z
     (consistent : data.tables (circuit (p := p)).name (size LoadByteChip.Inputs) =
       ((LoadByteChip.traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint bounded (by trivial) consistent).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent
     (LoadByteChip.proverAssumptions_of_mem_traceInputs wellFormed data hint)
 
 /-- The alternative still supplies all of the existing channel guarantees. -/
@@ -42,7 +42,7 @@ theorem traceTable_guarantees (events : List MemoryEvent) (data : ProverData (ZM
     (consistent : data.tables (circuit (p := p)).name (size LoadByteChip.Inputs) =
       ((LoadByteChip.traceInputs (p := p) events).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (LoadByteChip.traceInputs events) data hint bounded (by trivial) consistent).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent
     (LoadByteChip.proverAssumptions_of_mem_traceInputs wellFormed data hint)
 
 end SP1Clean.LoadByteStaticChip

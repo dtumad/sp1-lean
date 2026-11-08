@@ -157,7 +157,7 @@ theorem completeness :
     simp only [Inputs.op_b_val, Inputs.op_c_val] at hb' hc'
     exact ⟨hb', hc', hFdef.trans hf'⟩
   -- element-wise var-word facts + the instantiated site-payload evaluations: `circuit_norm`'s
-  -- `getElem_eval_ofFExprs` exposes each pin's payload cell, these close it to the populate value
+  -- `getElem_eval_ofCompositeFExpr_fields` exposes each pin's payload cell, these close it to the populate value
   have hbpvE : ∀ (i : ℕ) (_ : i < 4), Expression.eval env.toEnvironment
       input_var_adapter_op_b_memory_prev_value[i] = B[i] := by
     intro i hi; rw [ProvableType.getElem_eval_fields, hbpv]
@@ -296,22 +296,22 @@ theorem completeness :
   have hBM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4)
       = bMsbCell B F := by
-    have h := h_env_bmsb
+    have h := h_env_bmsb ⟨0, by decide⟩
     simp only [circuit_norm, Nat.add_zero, eBM, hFlags] at h; exact h
   have hCM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1)
       = cMsbCell C F := by
-    have h := h_env_cmsb
+    have h := h_env_cmsb ⟨0, by decide⟩
     simp only [circuit_norm, Nat.add_zero, eCM, hFlags] at h; exact h
   have hRM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1)
       = remMsbCell B C F := by
-    have h := h_env_remmsb
+    have h := h_env_remmsb ⟨0, by decide⟩
     simp only [circuit_norm, Nat.add_zero, eRM, hFlags] at h; exact h
   have hQM : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 7 + 8 + 8 + 11 + 11 + 11
         + 4 + 4 + 4 + 4 + 4 + 4 + 3 + 2 + 4 + 1 + 1 + 4 + 4 + 1 + 1 + 1)
       = quotMsbCell B C F := by
-    have h := h_env_quotmsb
+    have h := h_env_quotmsb ⟨0, by decide⟩
     simp only [circuit_norm, Nat.add_zero, eQM, hFlags] at h; exact h
   -- vector pins: each witnessed operand vector (as it appears in the goal) = its populate word
   have hQCvec : (Vector.mapRange 4 fun i => env.get (i₀ + 1 + i) : Word (ZMod p))
@@ -427,7 +427,7 @@ theorem completeness :
     have h := h_env_ovb i
     dsimp only [] at h
     refine h.trans ?_
-    exact ((Witgen.WitgenIR.getElem_eval_ofFExprs _ env ↑i i.isLt).trans
+    exact ((Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields _ env ↑i i.isLt).trans
       ((congrArg (Witgen.FExpr.eval { env := env }) (Vector.getElem_cast _)).trans
         ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
           (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eOVB.trans (by rw [hFlags])))))).trans
@@ -441,7 +441,7 @@ theorem completeness :
     have h := h_env_ovc i
     dsimp only [] at h
     refine h.trans ?_
-    exact ((Witgen.WitgenIR.getElem_eval_ofFExprs _ env ↑i i.isLt).trans
+    exact ((Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields _ env ↑i i.isLt).trans
       ((congrArg (Witgen.FExpr.eval { env := env }) (Vector.getElem_cast _)).trans
         ((Witgen.getElem_eval_toElements { env := env } _ ↑i hsz).trans
           (congrArg (fun s => (toElements s)[(↑i : ℕ)]'hsz) (eOVC.trans (by rw [hFlags])))))).trans
@@ -452,7 +452,7 @@ theorem completeness :
         (SubSpecs.isZeroWitnessElements (p := p) isc0Witness).get i := by
     intro i
     have h := h_env_isc0 i
-    rw [Witgen.WitgenIR.getElem_eval_ofFExprs _ _ _ i.isLt, eISC0 ↑i i.isLt, hFlags] at h
+    rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields _ _ _ i.isLt, eISC0 ↑i i.isLt, hFlags] at h
     exact h.trans (SubSpecs.isZeroWitnessElements_get isc0Witness i).symm
   -- derived gate facts
   have hirnwbin : env.get (i₀ + 1 + 4 + 4 + 4 + 4 + 45 + 45 + 4) = 0

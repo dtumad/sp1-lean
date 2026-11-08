@@ -1,3 +1,4 @@
+import ToClean.Circuit.ComputableWitnesses
 import SP1Clean.Native.Operations.DivRemOperation.Core
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Circuits.Gadgets.DivRem.CoreContract
@@ -639,7 +640,7 @@ private theorem main_requirementsChannelsLawful (input_var : Var DivRemChip.Colu
       (by linear_combination - e367)
     have h_pull_ir (msg : ByteRow (Expression (ZMod p))) :
         (byteChannel.pulledIf input_var.is_real msg).toRaw.Requirements env := by
-      exact bIr
+      simpa only [circuit_norm] using bIr
     simp only [Operations.InChannelsOrRequirements, Operations.forAllNoOffset_append,
       Operations.forAllNoOffset, DivRemChip.forAllNoOffset_map_assert, List.not_mem_nil,
       false_or, true_and, and_true]
@@ -654,6 +655,8 @@ chip's own assertZero tail, and the 32 gated byte-range pulls over the committed
 witnesses, semantic contract `DivRemCore.CoreSpec`. -/
 def circuit : FormalAssertion (ZMod p) DivRemChip.Columns :=
   { main, elaborated,
+    computableWitnesses := FormalCircuitBase.computableWitnesses_unit_of_localLength_zero
+      elaborated (fun _ => rfl),
     Assumptions := Assumptions,
     Spec := CoreSpec,
     soundness := soundness,

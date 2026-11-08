@@ -1,3 +1,4 @@
+import ToClean.Circuit.WitgenEval
 import Mathlib.Tactic.IntervalCases
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Word
@@ -31,12 +32,12 @@ base-2^16 limbs of `(a + b) mod 2^48`. Every intermediate is `< 2^17`, far from 
 
 This is `AddOperation.populateIR` one limb shorter, and for the same reason its running sums are
 ordinary Lean `let`s: they inline into each output rather than becoming shared `letU` steps, which
-keeps the IR a plain `ofFExprs` with no locals array and keeps `populateIR_eval` a `simp only`. -/
+keeps the IR a plain `ofCompositeFExpr` with no locals array and keeps `populateIR_eval` a `simp only`. -/
 def populateIR (a b : Word (Expression (ZMod p))) : Witgen.WitgenIR (ZMod p) 3 :=
   let s0 : Witgen.U64Expr (ZMod p) := a[0].val + b[0].val
   let s1 : Witgen.U64Expr (ZMod p) := a[1].val + b[1].val + s0 / 65536
   let s2 : Witgen.U64Expr (ZMod p) := a[2].val + b[2].val + s1 / 65536
-  .ofFExprs #v[(s0 % 65536).toField, (s1 % 65536).toField, (s2 % 65536).toField]
+  .ofCompositeFExpr (value := fields _) #v[(s0 % 65536).toField, (s1 % 65536).toField, (s2 % 65536).toField]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluating the witness IR is exactly `populate` on the evaluated operand words, stated in the
@@ -68,7 +69,7 @@ omit [Fact (2 ^ 17 < p)] in
 expressions, so two environments agreeing there produce the same witnesses. This is the
 `ComputableWitnesses` counterpart of `populateIR_eval` (and needs no bounds — it is a congruence,
 not an evaluation). -/
-theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
     (a b : Word (Expression (ZMod p)))
     (hA : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment a[i] = Expression.eval env'.toEnvironment a[i])

@@ -230,7 +230,7 @@ def guard {offset : ℕ} (original : Subcircuit F offset) (enabled : Expression 
         apply (env.usesLocalWitnessesFlat_guard enabled _ offset).mp
         simpa only [operations, ProverEnvironment.UsesLocalWitnessesFlat,
           FlatOperation.forAll_cons, Condition.applyFlat, FlatOperation.singleLocalLength,
-          true_and, Nat.zero_add] using witnesses
+          true_and, Nat.add_zero] using witnesses
       have child := original.completeness env
         ((env.usesLocalWitnessesFlat_iff_extends offset).mp childWitnesses)
       refine ⟨?_, child.2⟩
@@ -302,6 +302,35 @@ theorem guard_channelsLawful {offset : ℕ} (original : Subcircuit F offset)
     simpa only [FlatOperation.channels, FlatOperation.interactions,
       FlatOperation.interactions_guard, List.map_map, AbstractInteraction.guard,
       Function.comp_def] using lawful.2.2
+
+/-- Guarding preserves the computability of every witness at its original offset. -/
+@[computable_witnesses] theorem computableWitnesses_guard {offset : ℕ}
+    (original : Subcircuit F offset) (enabled : Expression F)
+    (noLookups : FlatOperation.lookups original.ops.toFlat = [])
+    (neutral : ∀ interaction ∈ FlatOperation.interactions original.ops.toFlat,
+      interaction.channel.ZeroNeutral) (n : ℕ) (env env' : ProverEnvironment F) :
+    (original.guard enabled noLookups neutral).ComputableWitnesses n env env' ↔
+      original.ComputableWitnesses n env env' := by
+  have unchanged (ops : List (FlatOperation F)) (k : ℕ) :
+      FlatOperation.forAll k
+        { witness i _ compute := env.AgreesBelow i env' → compute.eval env = compute.eval env' }
+        (ops.map (FlatOperation.guard enabled)) ↔
+      FlatOperation.forAll k
+        { witness i _ compute := env.AgreesBelow i env' → compute.eval env = compute.eval env' }
+        ops := by
+    induction ops generalizing k with
+    | nil => rfl
+    | cons op ops ih =>
+      cases op <;> simp [FlatOperation.guard, FlatOperation.forAll, ih]
+  simpa [guard, Subcircuit.ComputableWitnesses, NestedOperations.toFlat,
+    List.flatMap_map, Function.comp_def, ← List.map_eq_flatMap, FlatOperation.forAll]
+    using unchanged original.ops.toFlat n
+
+
+/-- A guard allocates exactly the child's witness cells. -/
+@[circuit_norm] theorem guard_localLength {offset : ℕ}
+    (original : Subcircuit F offset) (enabled : Expression F) (noLookups neutral) :
+    (original.guard enabled noLookups neutral).localLength = original.localLength := rfl
 
 end Subcircuit
 
@@ -411,6 +440,16 @@ def circuit (provider : GeneralFormalCircuit F Input Output) (supported : Suppor
     refine ⟨h_assumptions, ?_⟩
     intro active
     exact (h_env (h_assumptions.2 active)).2
+
+/-- Guarding preserves the child's declared guarantee channels. -/
+@[circuit_norm] theorem circuit_channelsWithGuarantees
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider) :
+    (circuit provider supported).channelsWithGuarantees = provider.channelsWithGuarantees := rfl
+
+/-- Guarding preserves the child's declared requirement channels. -/
+@[circuit_norm] theorem circuit_channelsWithRequirements
+    (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider) :
+    (circuit provider supported).channelsWithRequirements = provider.channelsWithRequirements := rfl
 
 /-- Flattening retains the child operations, guarded at their actual witness offset. -/
 theorem main_toFlat (provider : GeneralFormalCircuit F Input Output) (supported : Supported provider)

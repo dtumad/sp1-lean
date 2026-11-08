@@ -71,6 +71,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := "sp1.native.host_call"
+  computableWitnesses := by computable_witnesses [Inputs.read]
   main
   elaborated
   Spec input _ _ := Spec input

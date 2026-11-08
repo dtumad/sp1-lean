@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
@@ -40,7 +41,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Folded evaluation of the ALU reader inputs, avoiding repeated normalization of the
 derived `ProvableStruct` instance in structural proofs. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ cols := Eval.eval env input.cols, is_real := Eval.eval env input.is_real,
@@ -54,7 +55,7 @@ derived `ProvableStruct` instance in structural proofs. -/
   rfl
 
 /-- Component-wise evaluation of the nested register-access block. -/
-@[circuit_norm] theorem eval_accessCols {F : Type} [FiniteField F]
+theorem eval_accessCols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value,
@@ -65,7 +66,7 @@ derived `ProvableStruct` instance in structural proofs. -/
 
 /-- Component-wise evaluation of the canonical immediate-capable ALU reader row.  Chip-level
 grounding proofs use this folded boundary instead of normalizing a completed reader circuit. -/
-@[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
+theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
@@ -80,25 +81,25 @@ grounding proofs use this folded boundary instead of normalizing a completed rea
   rfl
 
 /-- Evaluation of the destination-zero routing flag through the folded ALU reader row. -/
-@[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
+theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   simp only [circuit_norm]
 
 /-- Scalar immediate-selector projection through the folded ALU reader row. -/
-@[circuit_norm] theorem eval_immC {F : Type} [FiniteField F]
+theorem eval_immC {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).imm_c = Expression.eval env cols.imm_c := by
   simp only [circuit_norm]
 
 /-- Source-C word projection through the folded ALU reader row. -/
-@[circuit_norm] theorem eval_opC {F : Type} [FiniteField F]
+theorem eval_opC {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_c = Eval.eval env cols.op_c := by
   rw [eval_cols]
 
 /-- Source-C prior-value projection through the folded nested register-access row. -/
-@[circuit_norm] theorem eval_opCPrev {F : Type} [FiniteField F]
+theorem eval_opCPrev {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ALUTypeReader (Expression F)) :
     (Eval.eval env cols).op_c_memory.prev_value =
       Eval.eval env cols.op_c_memory.prev_value := by
@@ -380,6 +381,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
   -- `byteChannel` dropped (W11 Phase 0c); `programChannel` dropped (W11 flip — now pulled, its off-gate
   -- requirement vacuous via the inline `is_trusted` gate). Only the Memory bus's requirements remain.
   { main, elaborated,
+    computableWitnesses := by
+      intro n input env env'
+      simp only [main, circuit_norm, Nat.add_zero,
+        Gadgets.Equality.toSubcircuit_computableWitnesses, ProverEnvironment.OnlyAccessedBelow]
+      refine ⟨?_, ?_, ?_⟩ <;> intro h
+      all_goals
+        apply FormalAssertion.toSubcircuit_computableWitnesses _ rfl
+        intro _
+        simp only [circuit_norm, h],
     Assumptions := AssumptionsD, Spec := SpecD,
     ProverAssumptions := ProverAssumptionsD, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
@@ -409,6 +419,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         · right
           exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
+
+/-- Public channel metadata, without unfolding the bundled proof fields. -/
+@[circuit_norm ↓] theorem circuit_channelsWithGuarantees :
+    (circuit (p := p)).channelsWithGuarantees =
+      [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

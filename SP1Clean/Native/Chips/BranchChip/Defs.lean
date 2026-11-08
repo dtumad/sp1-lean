@@ -1,3 +1,4 @@
+import ToClean.Circuit.WitgenEval
 import SP1Clean.Semantics.Specs.Chips.Branch
 import SP1Clean.Native.Operations.AddOperation.Populate
 import SP1Clean.Circuits.Gadgets.LtSigned
@@ -47,7 +48,7 @@ def nextPcIR (pc : Vector (Expression (ZMod p)) 3) (imm : Word (Expression (ZMod
   let fs2 : Witgen.U64Expr (ZMod p) := pc[2].val + fs1 / 65536
   let br : Witgen.FExpr (ZMod p) := .expr is_branching
   let rl : Witgen.FExpr (ZMod p) := .expr is_real
-  .ofFExprs #v[br * (bs0 % 65536).toField + (rl - br) * (fs0 % 65536).toField,
+  .ofCompositeFExpr (value := fields _) #v[br * (bs0 % 65536).toField + (rl - br) * (fs0 % 65536).toField,
                br * (bs1 % 65536).toField + (rl - br) * (fs1 % 65536).toField,
                br * (bs2 % 65536).toField + (rl - br) * (fs2 % 65536).toField]
 
@@ -98,7 +99,7 @@ theorem nextPcIR_eval (env : ProverEnvironment (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the `next_pc` IR (no bounds — a congruence). -/
-theorem nextPcIR_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem nextPcIR_congr (env env' : ProverEnvironment (ZMod p))
     (pc : Vector (Expression (ZMod p)) 3) (imm : Word (Expression (ZMod p)))
     (is_branching is_real : Expression (ZMod p))
     (hP : ∀ (i : ℕ) (_ : i < 3),

@@ -1,3 +1,4 @@
+import SP1Clean.Proofs.Chips.DivRemChip.Populate.Congr
 import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
@@ -567,11 +568,190 @@ theorem requirementsChannelsLawful (input : Var Inputs (ZMod p)) (offset : ℕ) 
       List.nil_append] at hInteraction
     exact (List.not_mem_nil hInteraction).elim
 
+section Orientation
+
+/-! Operand projections, in `circuit_norm`'s own orientation (the `MulChip/Defs.lean`
+pattern) — the `ComputableWitnesses` proof projects the struct-level input agreement
+onto these. -/
+
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
+private theorem eval_opBPrev {F : Type} [FiniteField F]
+    (env : Environment F) (input : Inputs (Expression F)) :
+    (ProvableStruct.eval env input).adapter.op_b_memory.prev_value
+      = Eval.eval env input.adapter.op_b_memory.prev_value := by
+  rw [← ProvableStruct.eval_eq_eval]
+  simp only [eval_inputs, Readers.RTypeReader.eval_cols,
+    Readers.RTypeReader.eval_registerAccessCols]
+
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
+private theorem eval_opCPrev {F : Type} [FiniteField F]
+    (env : Environment F) (input : Inputs (Expression F)) :
+    (ProvableStruct.eval env input).adapter.op_c_memory.prev_value
+      = Eval.eval env input.adapter.op_c_memory.prev_value := by
+  rw [← ProvableStruct.eval_eq_eval]
+  simp only [eval_inputs, Readers.RTypeReader.eval_cols,
+    Readers.RTypeReader.eval_registerAccessCols]
+
+omit [Fact (2 ^ 24 < p)] in
+/-- The input facts every payload congruence consumes, projected once from the
+struct-level input agreement. -/
+private theorem inputFacts {env env' : ProverEnvironment (ZMod p)}
+    {input : Var Inputs (ZMod p)}
+    (h_input : ProvableStruct.eval env.toEnvironment input
+      = ProvableStruct.eval env'.toEnvironment input) :
+    (∀ (i : ℕ) (_ : i < 4),
+        Expression.eval env.toEnvironment input.adapter.op_b_memory.prev_value[i]
+          = Expression.eval env'.toEnvironment input.adapter.op_b_memory.prev_value[i]) ∧
+    (∀ (i : ℕ) (_ : i < 4),
+        Expression.eval env.toEnvironment input.adapter.op_c_memory.prev_value[i]
+          = Expression.eval env'.toEnvironment input.adapter.op_c_memory.prev_value[i]) ∧
+    Expression.eval env.toEnvironment input.is_real
+      = Expression.eval env'.toEnvironment input.is_real ∧
+    (∀ (i : ℕ) (_ : i < 7),
+        Expression.eval env.toEnvironment input.selectors[i]
+          = Expression.eval env'.toEnvironment input.selectors[i]) := by
+  refine ⟨fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
+  · have hv := congrArg
+      (fun r : Inputs (ZMod p) => r.adapter.op_b_memory.prev_value) h_input
+    rw [eval_opBPrev env.toEnvironment input, eval_opBPrev env'.toEnvironment input] at hv
+    simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
+  · have hv := congrArg
+      (fun r : Inputs (ZMod p) => r.adapter.op_c_memory.prev_value) h_input
+    rw [eval_opCPrev env.toEnvironment input, eval_opCPrev env'.toEnvironment input] at hv
+    simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]'hi) hv
+  · exact Inputs.eval_congr_is_real h_input
+  · have hv := Inputs.eval_congr_selectors h_input
+    simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 7 => v[i]'hi) hv
+
+end Orientation
+
 /-- The `DivRem` chip row as a `GeneralFormalCircuit`: the generated `Columns` row checked against
 the public reader/selection/eight-case contract. The disclosed whole-chip seams are
 `evidenceSoundness`, `completeness`, and the requirements-channel law below. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.div_rem", main, elaborated,
+    computableWitnesses := by
+      preserve_tactic_target
+      intro n input env env'
+      constructor
+      · simp only [main, populateRow, constrainRow, circuit_norm, Nat.add_zero]
+        refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · intro h_input _
+          obtain ⟨-, -, -, hselectors⟩ := inputFacts h_input
+          rw [flagF_congr input.selectors env env' hselectors 1 (by decide)]
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact quotCompCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact aCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact bCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact cCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact mulProgramCongr input.selectors env env' _ _ _ hB hC hir hselectors false
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact mulProgramCongr input.selectors env env' _ _ _ hB hC hir hselectors true
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact scalCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact ctqCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact carryCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact ovbCongr input.selectors env env' _ _ hB hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact ovcCongr input.selectors env env' _ _ hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact isC0Congr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact absCCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact absRemCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact remCompCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact maxAbsCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact wCnegCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact wRnegCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact miscCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact clCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact ltfCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact neiCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact bitCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact remCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          exact quotCongr input.selectors env env' _ _ _ hB hC hir hselectors
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          simpa only [Witgen.WitgenIR.eval_ofCompositeFExpr_one] using
+            congrArg Vector.toArray (bMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          simpa only [Witgen.WitgenIR.eval_ofCompositeFExpr_one] using
+            congrArg Vector.toArray (cMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          simpa only [Witgen.WitgenIR.eval_ofCompositeFExpr_one] using
+            congrArg Vector.toArray (remMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
+        · intro h_input _
+          obtain ⟨hB, hC, hir, hselectors⟩ := inputFacts h_input
+          simpa only [Witgen.WitgenIR.eval_ofCompositeFExpr_one] using
+            congrArg Vector.toArray (quotMsbCongr input.selectors env env' _ _ _ hB hC hir hselectors)
+        all_goals
+          intro _
+          exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        have length_eq : (main input).localLength n = 210 :=
+          (elaborated.localLength_eq input n).trans (by rfl)
+        rw [length_eq] at h_agrees
+        rw [elaborated.output_eq, output_eq_populatedRowAt]
+        simp (disch := omega) only [populatedRowAt, circuit_norm, h, h_agrees.get_eq]
+        repeat' apply And.intro
+        all_goals first
+          | apply Vector.ext
+            intro i hi
+            simp (disch := omega) only [circuit_norm, h_agrees.get_eq]
+          | rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval,
+                ProvableType.eval_fromElements, ProvableType.eval_fromElements]
+            apply congrArg fromElements
+            apply Vector.ext
+            intro i hi
+            change i < 11 at hi
+            simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

@@ -122,6 +122,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (Output := unit) (ZMod 
     ⟨Or.inr rfl, fun _ => word, Readers.ClkDiscipline.of_cpuState_spec (fun _ => ⟨low, high⟩)⟩, read⟩
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  computableWitnesses := by computable_witnesses [MemoryBoundary.address, Inputs.pushed, Inputs.clockLow, FinalRamProvider.addressInput, Inputs.reader]
   main
   elaborated
   Spec input _ _ := Spec input

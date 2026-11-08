@@ -623,6 +623,7 @@ theorem divRemChip_stateEmissionShape : StateEmissionShape
       Readers.CPUState.stateInteractions, Readers.CPUState.currentMsg, Readers.CPUState.nextMsg,
       statePullOfView, statePushOfView, stateAccess, cpuStatePullMessage, cpuStatePushMessage,
       DivRemChip.rowView, circuit_norm]
+    all_goals simp only [DivRemChip.Columns.eval_state, circuit_norm]
 
 theorem aluX0Chip_stateEmissionShape : StateEmissionShape
     (⟨.aluX0, AluX0Chip.kind, AluX0Chip.circuit, AluX0Chip.generation, rfl⟩ :

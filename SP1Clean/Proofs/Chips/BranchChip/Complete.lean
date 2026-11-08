@@ -1,5 +1,7 @@
 import SP1Clean.FormalModel.TraceGen.Arith
-import SP1Clean.Proofs.Chips.BranchChip.Witgen
+import SP1Clean.Proofs.Chips.BranchChip.Formal
+import Clean.Circuit.Theorems
+import Clean.Circuit.Subcircuit
 import ToClean.Air.TableBuild
 
 /-! # Branch event and table construction
@@ -272,7 +274,7 @@ theorem traceTable_constraints (events : List ITypeEvent) (padding : ℕ)
       ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
       (ProverHint.empty _) bounded (by trivial) consistent).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The built table satisfies its channel guarantees. -/
@@ -284,7 +286,7 @@ theorem traceTable_guarantees (events : List ITypeEvent) (padding : ℕ)
       ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data
       (ProverHint.empty _) bounded (by trivial) consistent).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The table interaction list, preserving row order and multiplicities. -/

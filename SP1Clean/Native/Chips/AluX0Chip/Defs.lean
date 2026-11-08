@@ -81,8 +81,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   channelsLawful := by
     preserve_tactic_target
-    simp only [circuit_norm, main, Readers.CPUState.circuit,
-      Readers.ALUTypeReaderImmutable.circuit]
+    simp only [circuit_norm, main, Readers.CPUState.circuit]
 
 /-- The completed AluX0 row is exactly its threaded input; the chip has no local witness cells. -/
 @[circuit_norm] theorem directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
@@ -90,7 +89,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
       (⟨input.state, input.adapter, input.opcode, input.is_real⟩ :
         Var Columns (ZMod p)) := rfl
 
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ state := Eval.eval env input.state, adapter := Eval.eval env input.adapter,
@@ -98,7 +97,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
         Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state, adapter := Eval.eval env cols.adapter,

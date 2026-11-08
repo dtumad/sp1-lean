@@ -1,3 +1,5 @@
+import ToClean.Circuit.ComputableWitnesses
+import ToClean.Circuit.WitgenEval
 import SP1Clean.Proofs.Chips.ShiftLeftChip.Populate
 
 /-! # `ShiftRightChip` — native witness generation (`populate`)
@@ -691,7 +693,7 @@ attribute [local circuit_norm ↓] Witgen.BExpr.eval_feq_iff
 
 /-- The three inverted power encodings, as IR (`2^n >>> s = 2^(n−s)`). -/
 def vPowersInvIR (c0e : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 3 :=
-  .ofFExprs #v[((65536 : Witgen.U64Expr (ZMod p)) >>> (c0e.val % 16)).toField,
+  .ofCompositeFExpr (value := fields _) #v[((65536 : Witgen.U64Expr (ZMod p)) >>> (c0e.val % 16)).toField,
                ((256 : Witgen.U64Expr (ZMod p)) >>> (c0e.val % 8)).toField,
                ((16 : Witgen.U64Expr (ZMod p)) >>> (c0e.val % 4)).toField]
 
@@ -710,14 +712,14 @@ def effU (f : Vector (Expression (ZMod p)) 4)
 def lowerLimbIR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 4 :=
-  .ofFExprs #v[(effU f b 0 % bitModU c0e).toField, (effU f b 1 % bitModU c0e).toField,
+  .ofCompositeFExpr (value := fields _) #v[(effU f b 0 % bitModU c0e).toField, (effU f b 1 % bitModU c0e).toField,
                (effU f b 2 % bitModU c0e).toField, (effU f b 3 % bitModU c0e).toField]
 
 /-- The per-limb high bit-split, as IR. -/
 def higherLimbIR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 4 :=
-  .ofFExprs #v[(effU f b 0 / bitModU c0e).toField, (effU f b 1 / bitModU c0e).toField,
+  .ofCompositeFExpr (value := fields _) #v[(effU f b 0 / bitModU c0e).toField, (effU f b 1 / bitModU c0e).toField,
                (effU f b 2 / bitModU c0e).toField, (effU f b 3 / bitModU c0e).toField]
 
 /-- The `limb_result` cell `i` as a bare `FExpr` (`higher[i] + lower[i+1] · 2^(16−s)`). -/
@@ -736,7 +738,7 @@ def lrF (f : Vector (Expression (ZMod p)) 4)
 def limbResultIR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 4 :=
-  .ofFExprs #v[lrF f b c0e 0, lrF f b c0e 1, lrF f b c0e 2, lrF f b c0e 3]
+  .ofCompositeFExpr (value := fields _) #v[lrF f b c0e 0, lrF f b c0e 1, lrF f b c0e 2, lrF f b c0e 3]
 
 /-- The arithmetic sign bit, as a bare `FExpr`. -/
 def bMsbF (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression (ZMod p))) : Witgen.FExpr (ZMod p) :=
@@ -746,13 +748,13 @@ def bMsbF (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression (ZMod p))) 
 /-- The sign bit as a one-cell payload. -/
 def bMsbIR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) : Witgen.WitgenIR (ZMod p) 1 :=
-  .ofFExprs #v[bMsbF f b]
+  .ofCompositeFExpr (value := fields _) #v[bMsbF f b]
 
 /-- The committed `b_msb · v_0123` product, as a one-cell payload. -/
 def sraMsbV0123IR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 1 :=
-  .ofFExprs #v[bMsbF f b * ((65536 : Witgen.U64Expr (ZMod p)) >>> (c0e.val % 16)).toField]
+  .ofCompositeFExpr (value := fields _) #v[bMsbF f b * ((65536 : Witgen.U64Expr (ZMod p)) >>> (c0e.val % 16)).toField]
 
 /-- The arithmetic sign fill `m·(65536 − 2^(16−s))`, subtraction-free
 (`65536 − v = (65535 / v) · v` for the power-of-two `v = 2^(16−s)`). -/
@@ -776,7 +778,7 @@ def byteShiftU (f : Vector (Expression (ZMod p)) 4) (c0e : Expression (ZMod p)) 
 def shiftU16IR (f : Vector (Expression (ZMod p)) 4) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 4 :=
   let gate : Witgen.FExpr (ZMod p) := .expr f[0] + .expr f[1] + .expr f[2] + .expr f[3]
-  .ofFExprs #v[.ite (byteShiftU f c0e =? (0 : ℕ)) gate 0,
+  .ofCompositeFExpr (value := fields _) #v[.ite (byteShiftU f c0e =? (0 : ℕ)) gate 0,
                .ite (byteShiftU f c0e =? (1 : ℕ)) gate 0,
                .ite (byteShiftU f c0e =? (2 : ℕ)) gate 0,
                .ite (byteShiftU f c0e =? (3 : ℕ)) gate 0]
@@ -816,18 +818,18 @@ def aF (f : Vector (Expression (ZMod p)) 4)
 def populateAIR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 4 :=
-  .ofFExprs #v[aF f b c0e 0, aF f b c0e 1, aF f b c0e 2, aF f b c0e 3]
+  .ofCompositeFExpr (value := fields _) #v[aF f b c0e 0, aF f b c0e 1, aF f b c0e 2, aF f b c0e 3]
 
 /-- The word-variant sign bit, as a one-cell payload. -/
 def srwMsbIR (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p)) :
     Witgen.WitgenIR (ZMod p) 1 :=
-  .ofFExprs #v[.ite (((.expr f[2] : Witgen.FExpr (ZMod p)) + (Witgen.FExpr.expr f[3])) =? (1 : ZMod p))
+  .ofCompositeFExpr (value := fields _) #v[.ite (((.expr f[2] : Witgen.FExpr (ZMod p)) + (Witgen.FExpr.expr f[3])) =? (1 : ZMod p))
     (U16MSBOperation.populate_msbF (aF f b c0e 1)) 0]
 
 /-- The product of the word-shift and immediate selectors, as IR. -/
 def wordImmIR (f : Vector (Expression (ZMod p)) 4) (imm_c : Expression (ZMod p)) : Witgen.WitgenIR (ZMod p) 1 :=
-  .ofFExprs #v[(Witgen.FExpr.expr f[2] + .expr f[3]) * .expr imm_c]
+  .ofCompositeFExpr (value := fields _) #v[(Witgen.FExpr.expr f[2] + .expr f[3]) * .expr imm_c]
 
 /-! ### Eval lemmas (the boundary: IR evaluation = the value-level witness functions) -/
 
@@ -842,7 +844,7 @@ theorem vPowersInvIR_eval (env : ProverEnvironment (ZMod p)) (c0e : Expression (
   apply Vector.ext
   intro i hi
   simp only [vPowersInvIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   · simp only [vPowersInv, circuit_norm, hc0]
     rw [show (65536 : ℕ) = 2 ^ 16 by norm_num, Nat.two_pow_shiftRight (by omega)]
@@ -885,7 +887,7 @@ theorem lowerLimbIR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvir
   apply Vector.ext
   intro i hi
   simp only [lowerLimbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   · simp only [effU, bitModU, lowerLimb, List.getD, List.getElem?_cons_zero,
       Option.getD_some, Vector.getElem_mk, List.getElem_toArray,
@@ -928,7 +930,7 @@ theorem higherLimbIR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvi
   apply Vector.ext
   intro i hi
   simp only [higherLimbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   · simp only [effU, bitModU, higherLimb, List.getD, List.getElem?_cons_zero,
       Option.getD_some, Vector.getElem_mk, List.getElem_toArray,
@@ -1032,7 +1034,7 @@ theorem limbResultIR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvi
   apply Vector.ext
   intro i hi
   simp only [limbResultIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
     simpa using lrF_eval f env b c0e vb c0 hW hc0 hbU hb he14 _ (by omega)
 
@@ -1066,7 +1068,7 @@ theorem bMsbIR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvironmen
   apply Vector.ext
   intro i hi
   simp only [bMsbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simpa using bMsbF_eval f env b vb hW hbU
 
@@ -1084,7 +1086,7 @@ theorem sraMsbV0123IR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnv
   apply Vector.ext
   intro i hi
   simp only [sraMsbV0123IR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simp only [sraMsbV0123, vPowersInv, Vector.getElem_mk, List.getElem_toArray,
     List.getElem_cons_zero, circuit_norm, hbm, hc0]
@@ -1138,7 +1140,7 @@ theorem shiftU16IR_eval (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [shiftU16IR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;> simp only [shiftU16, circuit_norm, hbs]
 
 /-- Evaluating a result-word cell is `populateA`'s cell (the variant dispatch resolves branch by
@@ -1312,7 +1314,7 @@ theorem populateAIR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvir
   apply Vector.ext
   intro i hi
   simp only [populateAIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
     simpa using aF_eval f env b c0e vb c0 hW hc0 hbU hb hf0 hf1 hf2 hf3 he14 hone hsum01
       _ (by omega)
@@ -1354,7 +1356,7 @@ theorem srwMsbIR_eval (f : Vector (Expression (ZMod p)) 4) (env : ProverEnvironm
   apply Vector.ext
   intro i hi
   simp only [srwMsbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simp only [srwMsb, circuit_norm, hmsbA]
 
@@ -1368,7 +1370,7 @@ theorem wordImmIR_eval (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [wordImmIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simp only [circuit_norm]
 
@@ -1382,17 +1384,17 @@ omit [Fact (2 ^ 17 < p)]
 variable (env env' : ProverEnvironment (ZMod p))
 
 /-- Congruence for the inverted power encodings. -/
-theorem vPowersInvIR_congr (c0e : Expression (ZMod p))
+@[computable_witnesses_law] theorem vPowersInvIR_congr (c0e : Expression (ZMod p))
     (hc : Expression.eval env.toEnvironment c0e = Expression.eval env'.toEnvironment c0e) :
     (vPowersInvIR c0e).eval env = (vPowersInvIR c0e).eval env' := by
   apply Vector.ext
   intro i hi
   simp only [vPowersInvIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;> simp only [circuit_norm, -Witgen.u64Wrap, hc]
 
 /-- Congruence for the low bit-split. -/
-theorem lowerLimbIR_congr (f : Vector (Expression (ZMod p)) 4)
+@[computable_witnesses_law] theorem lowerLimbIR_congr (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1403,14 +1405,14 @@ theorem lowerLimbIR_congr (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [lowerLimbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
     simp only [effU, bitModU, List.getD, List.getElem?_cons_zero,
       List.getElem?_cons_succ, Option.getD_some, circuit_norm, -Witgen.u64Wrap,
       hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega), hc, hf 0 (by omega), hf 1 (by omega)]
 
 /-- Congruence for the high bit-split. -/
-theorem higherLimbIR_congr (f : Vector (Expression (ZMod p)) 4)
+@[computable_witnesses_law] theorem higherLimbIR_congr (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1421,7 +1423,7 @@ theorem higherLimbIR_congr (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [higherLimbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
     simp only [effU, bitModU, List.getD, List.getElem?_cons_zero,
       List.getElem?_cons_succ, Option.getD_some, circuit_norm, -Witgen.u64Wrap,
@@ -1451,7 +1453,7 @@ theorem lrF_congr (f : Vector (Expression (ZMod p)) 4)
     rfl
 
 /-- Congruence for the `limb_result` reassembly. -/
-theorem limbResultIR_congr (f : Vector (Expression (ZMod p)) 4)
+@[computable_witnesses_law] theorem limbResultIR_congr (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1462,7 +1464,7 @@ theorem limbResultIR_congr (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [limbResultIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   · exact lrF_congr env env' f b c0e hB hc hf 0
   · exact lrF_congr env env' f b c0e hB hc hf 1
@@ -1484,7 +1486,7 @@ theorem bMsbF_congr (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression (
   simp only [bMsbF, circuit_norm, -Witgen.u64Wrap, hm3, hm1, hf 1 (by omega), hf 3 (by omega)]
 
 /-- Congruence for the one-cell sign-bit payload. -/
-theorem bMsbIR_congr (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression (ZMod p)))
+@[computable_witnesses_law] theorem bMsbIR_congr (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression (ZMod p)))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
     (hf : ∀ (i : ℕ) (_ : i < 4),
@@ -1493,12 +1495,12 @@ theorem bMsbIR_congr (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression 
   apply Vector.ext
   intro i hi
   simp only [bMsbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simpa using bMsbF_congr env env' f b hB hf
 
 /-- Congruence for the `b_msb · v_0123` product. -/
-theorem sraMsbV0123IR_congr (f : Vector (Expression (ZMod p)) 4)
+@[computable_witnesses_law] theorem sraMsbV0123IR_congr (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1510,7 +1512,7 @@ theorem sraMsbV0123IR_congr (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [sraMsbV0123IR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simp only [circuit_norm, -Witgen.u64Wrap, hbm, hc]
 
@@ -1539,7 +1541,7 @@ theorem mFillF_congr (f : Vector (Expression (ZMod p)) 4) (b : Word (Expression 
   simp only [mFillF, circuit_norm, -Witgen.u64Wrap, hbm]
 
 /-- Congruence for the byte-shift selector. -/
-theorem shiftU16IR_congr (f : Vector (Expression (ZMod p)) 4) (c0e : Expression (ZMod p))
+@[computable_witnesses_law] theorem shiftU16IR_congr (f : Vector (Expression (ZMod p)) 4) (c0e : Expression (ZMod p))
     (hc : Expression.eval env.toEnvironment c0e = Expression.eval env'.toEnvironment c0e)
     (hf : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment f[i] = Expression.eval env'.toEnvironment f[i]) :
@@ -1547,7 +1549,7 @@ theorem shiftU16IR_congr (f : Vector (Expression (ZMod p)) 4) (c0e : Expression 
   apply Vector.ext
   intro i hi
   simp only [shiftU16IR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
     simp only [byteShiftU, circuit_norm, -Witgen.u64Wrap, hc, hf 0 (by omega), hf 1 (by omega), hf 2 (by omega), hf 3 (by omega)]
 
@@ -1607,7 +1609,7 @@ theorem aF_congr (f : Vector (Expression (ZMod p)) 4)
     rfl
 
 /-- Congruence for the result word. -/
-theorem populateAIR_congr (f : Vector (Expression (ZMod p)) 4)
+@[computable_witnesses_law] theorem populateAIR_congr (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1618,7 +1620,7 @@ theorem populateAIR_congr (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [populateAIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   · exact aF_congr env env' f b c0e hB hc hf 0
   · exact aF_congr env env' f b c0e hB hc hf 1
@@ -1626,7 +1628,7 @@ theorem populateAIR_congr (f : Vector (Expression (ZMod p)) 4)
   · exact aF_congr env env' f b c0e hB hc hf 3
 
 /-- Congruence for the word-variant sign bit. -/
-theorem srwMsbIR_congr (f : Vector (Expression (ZMod p)) 4)
+@[computable_witnesses_law] theorem srwMsbIR_congr (f : Vector (Expression (ZMod p)) 4)
     (b : Word (Expression (ZMod p))) (c0e : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1640,12 +1642,12 @@ theorem srwMsbIR_congr (f : Vector (Expression (ZMod p)) 4)
   apply Vector.ext
   intro i hi
   simp only [srwMsbIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simp only [circuit_norm, -Witgen.u64Wrap, hmsbC, hf 2 (by omega), hf 3 (by omega)]
 
 /-- Congruence for the word-immediate product. -/
-theorem wordImmIR_congr (f : Vector (Expression (ZMod p)) 4) (imm_c : Expression (ZMod p))
+@[computable_witnesses_law] theorem wordImmIR_congr (f : Vector (Expression (ZMod p)) 4) (imm_c : Expression (ZMod p))
     (himm : Expression.eval env.toEnvironment imm_c = Expression.eval env'.toEnvironment imm_c)
     (hf : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment f[i] = Expression.eval env'.toEnvironment f[i]) :
@@ -1653,7 +1655,7 @@ theorem wordImmIR_congr (f : Vector (Expression (ZMod p)) 4) (imm_c : Expression
   apply Vector.ext
   intro i hi
   simp only [wordImmIR]
-  rw [Witgen.WitgenIR.getElem_eval_ofFExprs, Witgen.WitgenIR.getElem_eval_ofFExprs]
+  rw [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i
   simp only [circuit_norm, -Witgen.u64Wrap, himm, hf 2 (by omega), hf 3 (by omega)]
 

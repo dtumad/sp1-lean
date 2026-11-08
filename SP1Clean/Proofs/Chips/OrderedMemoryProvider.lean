@@ -127,6 +127,7 @@ def activeCircuit (name : String) (recordSpec : MemoryMsg (ZMod p) → Prop)
     GeneralFormalCircuit (ZMod p) (Inputs Payload) MemoryMsg where
   name := s!"{provider.name}.{name}"
   main := main name provider
+  computableWitnesses := by computable_witnesses [MemoryBoundary.address]
   elaborated := elaborated name provider
   Assumptions input data := provider.Assumptions input.payload data
   Spec input output _ := Spec recordSpec input.link output

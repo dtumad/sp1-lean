@@ -1,3 +1,4 @@
+import ToClean.Circuit.ComputableWitnesses
 import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
@@ -354,6 +355,7 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
       simpa only [circuit_norm] using h_dbool
     have h_bool := bool_of_mul_pred hb0
     have h_cbool := bool_of_mul_pred hb1
+    simp only [circuit_norm] at h_dbool_eval h_bool h_cbool h_dbool
     rw [Operations.inChannelsOrRequirements_iff_forall_mem]
     intro interaction h_interaction
     simp only [main, Circuit.operations, Circuit.bind_def, assertZero, subcircuitWithAssertion,
@@ -367,9 +369,9 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
         | exact Or.inl List.mem_cons_self
         | (right
            first
-             | exact h_bool
-             | exact h_cbool
-             | exact h_dbool
+             | (simpa only [circuit_norm] using h_bool)
+             | (simpa only [circuit_norm] using h_cbool)
+             | (simpa only [circuit_norm] using h_dbool)
              | exact fun _ => trivial
              | (solve | (rcases h_bool with h | h <;> simp [circuit_norm, h, h_dbool_eval])))
 
@@ -379,6 +381,8 @@ private theorem requirementsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ
 whose guarantee the row *requires* rather than supplies: the three register accesses pull a prior
 value the memory argument owns. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  computableWitnesses := FormalCircuitBase.computableWitnesses_unit_of_localLength_zero
+    elaborated localLength_eq
   name := "sp1.native.syscall_instrs"
   main
   elaborated

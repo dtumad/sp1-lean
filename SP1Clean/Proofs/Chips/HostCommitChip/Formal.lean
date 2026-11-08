@@ -55,6 +55,7 @@ theorem completeness (deferred : Bool) (slot : Fin 8) :
 def activeCircuit (deferred : Bool) (slot : Fin 8) : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := s!"sp1.native.{if deferred then "commit_deferred" else "commit"}.{slot.val}"
   main := main deferred slot
+  computableWitnesses := by cases deferred <;> computable_witnesses [Inputs.clock]
   elaborated := elaborated deferred slot
   Spec input _ _ := Spec deferred slot input
   ProverAssumptions input _ _ := ProverAssumptions deferred slot input

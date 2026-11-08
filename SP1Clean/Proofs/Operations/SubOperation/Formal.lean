@@ -88,10 +88,7 @@ def circuit : FormalAssertion (ZMod p) Inputs where
     preserve_tactic_target
     simp only [circuit_norm, main, byteChannel]
     intro env h_constraints
-    have h_bool : Expression.eval env input_var.is_real = 0 ∨
-        Expression.eval env input_var.is_real = 1 :=
-      bool_of_mul_pred h_constraints.1
-    exact h_bool
+    exact bool_of_mul_pred h_constraints.1
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

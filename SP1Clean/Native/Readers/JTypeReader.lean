@@ -39,7 +39,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 `RTypeReader.eval_cols` / `ITypeReader.eval_cols` / `ALUTypeReader.eval_cols`, which J-type lacked.
 Consumers rewrite this instead of asking unification to unfold the derived `ProvableStruct`
 evaluator through the nested register-access block. -/
-@[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
+theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.JTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,

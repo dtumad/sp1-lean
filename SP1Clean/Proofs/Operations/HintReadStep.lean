@@ -86,6 +86,7 @@ def circuit (last : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
   main := main last
   elaborated := elaborated last
   channelsWithRequirements := [HostHintQueue.wordChannel.toRaw]
+  computableWitnesses := by computable_witnesses [Address.asWord, increment]
   Spec input _ _ := Spec last input
   ProverAssumptions input _ _ := Spec last input
   soundness := by

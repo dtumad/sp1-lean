@@ -71,7 +71,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
       input.isXor, input.isOr, input.isAnd⟩
   channelsLawful := by
     preserve_tactic_target
-    simp only [Inputs.is_real, circuit_norm, main, BitwiseU16Operation.circuit, Readers.ALUTypeReader.circuit,
+    simp only [Inputs.is_real, circuit_norm, main, BitwiseU16Operation.circuit,
       Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
   -- Four low bytes per operand and eight result bytes; readers witness no cells.
   localLength _ := 16
@@ -91,7 +91,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
 /-! ### Operand words, in `circuit_norm`'s own orientation (the `AddChip/Defs.lean` pattern) —
 the `ComputableWitnesses` proof projects the struct-level input agreement onto these. -/
 
-@[circuit_norm] theorem eval_opBVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
       = Eval.eval env input.op_b_val := by
@@ -99,7 +99,7 @@ the `ComputableWitnesses` proof projects the struct-level input agreement onto t
   simp only [Inputs.op_b_val, eval_inputs, Readers.ALUTypeReader.eval_cols,
     Readers.ALUTypeReader.eval_accessCols]
 
-@[circuit_norm] theorem eval_opCVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_val
       = Eval.eval env input.op_c_val := by

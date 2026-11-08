@@ -60,7 +60,7 @@ provable_struct_eval_lemmas Inputs
 /-- Component-wise evaluation of the comparison input.  Keep this next to the derived
 `ProvableStruct` instance: large chip proofs can rewrite this theorem before projecting a field,
 instead of reducing the complete flattened evaluator merely to reach one nested operation. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ op_b_prev_value := Eval.eval env input.op_b_prev_value,

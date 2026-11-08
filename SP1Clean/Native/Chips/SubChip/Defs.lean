@@ -77,19 +77,19 @@ unfolding the full composed `main`. -/
         Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of Sub's independent native input row. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real, state := Eval.eval env input.state,
          adapter := Eval.eval env input.adapter } : Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_inputState {F : Type} [FiniteField F]
+theorem eval_inputState {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).state = Eval.eval env input.state := by
   rw [eval_inputs]
 
-@[circuit_norm] theorem eval_inputAdapter {F : Type} [FiniteField F]
+theorem eval_inputAdapter {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).adapter = Eval.eval env input.adapter := by
   rw [eval_inputs]
@@ -103,7 +103,7 @@ which is directly usable by any proof holding struct-level input agreement, chie
 `ComputableWitnesses`. Vector operands only; a scalar field is already in normal form and restating
 one loops. See `AddChip/Defs.lean` for the full rationale. -/
 
-@[circuit_norm] theorem eval_opBVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
       = Eval.eval env input.op_b_val := by
@@ -111,7 +111,7 @@ one loops. See `AddChip/Defs.lean` for the full rationale. -/
   simp only [Inputs.op_b_val, eval_inputs, Readers.RTypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
 
-@[circuit_norm] theorem eval_opCVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_val
       = Eval.eval env input.op_c_val := by

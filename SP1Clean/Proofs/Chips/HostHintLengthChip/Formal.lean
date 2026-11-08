@@ -18,6 +18,8 @@ def circuit (empty : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
   name := if empty then "sp1.native.hint_len.empty" else "sp1.native.hint_len.nonempty"
   main := main empty
   elaborated := elaborated empty
+  computableWitnesses := by
+    cases empty <;> computable_witnesses [Inputs.clock]
   Spec input _ _ := Spec empty input
   ProverAssumptions input _ _ := Spec empty input
   channelsWithRequirements :=

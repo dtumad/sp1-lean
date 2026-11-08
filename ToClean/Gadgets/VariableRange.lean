@@ -114,7 +114,7 @@ def rangeCheck (n : ℕ) (hn : 2 ^ n < p) : FormalAssertion (F p) fieldPair wher
     cases h_input
     obtain ⟨hwidth, hx⟩ := h_spec
     have hxn := lt_of_lt_of_le hx (Nat.pow_le_pow_right (by decide : 1 ≤ 2) hwidth)
-    obtain ⟨hbits, hmask, _⟩ := h_env
+    obtain ⟨hbits, hmask⟩ := h_env
     have hmask' (i : Fin n) : env.get (i₀ + n + i.val) =
         if i.val < (env input_var.2).val then 1 else 0 := by
       simpa only [decide_eq_true_eq, ZMod.val_natCast_of_lt

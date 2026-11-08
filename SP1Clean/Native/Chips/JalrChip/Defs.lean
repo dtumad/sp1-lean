@@ -115,7 +115,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
         Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of the independent JALR input prefix. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real,
@@ -125,7 +125,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-- Component-wise evaluation of the completed JALR row. -/
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ is_real := Eval.eval env cols.is_real,
@@ -144,7 +144,7 @@ These lemmas project whole-row input agreement into whole-vector operand agreeme
 to an immediate (I-type, like Addi), while the link value adds the program counter to a literal
 (like JAL). -/
 
-@[circuit_norm] theorem eval_rs1Prev {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_rs1Prev {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_memory.prev_value
       = Eval.eval env input.adapter.op_b_memory.prev_value := by
@@ -152,14 +152,14 @@ to an immediate (I-type, like Addi), while the link value adds the program count
   simp only [eval_inputs, Readers.ITypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
 
-@[circuit_norm] theorem eval_opCImm {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCImm {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_c_imm
       = Eval.eval env input.adapter.op_c_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ITypeReader.eval_cols]
 
-@[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
+theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_a_0
       = Expression.eval env input.adapter.op_a_0 := by
@@ -167,7 +167,7 @@ to an immediate (I-type, like Addi), while the link value adds the program count
   simp only [eval_inputs, Readers.ITypeReader.eval_cols]
   exact ProvableType.eval_field env _
 
-@[circuit_norm] theorem eval_statePc {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_statePc {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).state.pc
       = Eval.eval env input.state.pc := by

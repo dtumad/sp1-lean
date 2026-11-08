@@ -61,7 +61,7 @@ provable_struct_eval_lemmas Inputs
 @[reducible] def Inputs.op_b_val {F} (i : Inputs F) : Word F := i.adapter.op_b_memory.prev_value
 @[reducible] def Inputs.op_c_imm {F} (i : Inputs F) : Word F := i.adapter.op_c_imm
 
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real
@@ -142,7 +142,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
         Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of a completed StoreHalf row. -/
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state

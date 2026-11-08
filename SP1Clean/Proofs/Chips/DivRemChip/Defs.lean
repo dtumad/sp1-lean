@@ -1,3 +1,4 @@
+import ToClean.Circuit.WitgenEval
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.Circuits.Gadgets.Mul
 import SP1Clean.Proofs.Operations.DivRemOperation.Compare
@@ -122,16 +123,16 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   let is_remu := input.selectors[2]; let is_divw := input.selectors[3]
   let is_remw := input.selectors[4]; let is_divuw := input.selectors[5]
   let is_remuw := input.selectors[6]
-  let quotient_comp ← witnessVectorIR 4 (.ofFExprs (quotCompFE input.selectors bpv cpv))
-  let a ← witnessVectorIR 4 (.ofFExprs (aFE input.selectors bpv cpv))
+  let quotient_comp ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (quotCompFE input.selectors bpv cpv))
+  let a ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (aFE input.selectors bpv cpv))
   -- The arithmetic **operands** `b`/`c` — committed columns distinct from the raw register reads
   -- (`adapter.op_b/c_memory.prev_value`). The chip's own-asserts E20–E47 tie them to the reads: equal to the
   -- read for the 64-bit variants, the sign/zero-extension of the low 32 bits for the W-variants (`b[i] =
   -- read[i]·(1-isword) + b_neg·isword·0xFFFF`). Witnessed here (before the `MulOperation`s, which multiply by
   -- `c`); populated honestly (`bComp`/`cComp` compute the flag-dependent extension). Soundness does not
   -- depend on the populate value (E20–E47 pin the columns).
-  let b ← witnessVectorIR 4 (.ofFExprs (compF input.selectors bpv))
-  let c ← witnessVectorIR 4 (.ofFExprs (compF input.selectors cpv))
+  let b ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (compF input.selectors bpv))
+  let c ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (compF input.selectors cpv))
   -- (1,2) The two `c_times_quotient` product structs of `quotient_comp × c`, witnessed via the
   -- gated populates (`mul_lower` on real rows only; `mul_upper` only on the 64-bit variants —
   -- SP1's word rows and padding leave them all-zero). Their `MulOperation` product constraints
@@ -144,7 +145,7 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   -- Witnessed scalar sign/gate columns + the `c_times_quotient`/`carry` u16-limb vectors, all
   -- honestly populated (`populateScal`/`populateCtq`/`populateCarry`); the own-asserts
   -- `E13/E15/…` and the carry chain `E121…E151` pin them.
-  let scal ← witnessVectorIR 7 (.ofFExprs (scalFE input.selectors input.is_real bpv cpv))
+  let scal ← witnessVectorIR 7 (.ofCompositeFExpr (value := fields _) (scalFE input.selectors input.is_real bpv cpv))
   let is_overflow := scal[0]; let b_neg := scal[1]; let b_neg_not_overflow := scal[2]
   let b_not_neg_not_overflow := scal[3]; let is_real_not_word := scal[4]
   let rem_neg := scal[5]; let c_neg := scal[6]
@@ -153,21 +154,21 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   -- The `IsEqualWordOperation`/`IsZeroWordOperation` nested cols, witnessed flat via
   -- `fromElements (F := …)`; their overflow/divide-by-zero assertions live in
   -- `DivRemCompare.circuit` below.
-  let w_ovb ← witnessVectorIR 11 (.ofFExprs ((toElements (ovbFE input.selectors input.is_real bpv)).cast
+  let w_ovb ← witnessVectorIR 11 (.ofCompositeFExpr (value := fields _) ((toElements (ovbFE input.selectors input.is_real bpv)).cast
     (show size Circuits.Types.IsEqualWordOperation = 11 from rfl)))
-  let w_ovc ← witnessVectorIR 11 (.ofFExprs ((toElements (ovcFE input.selectors input.is_real cpv)).cast
+  let w_ovc ← witnessVectorIR 11 (.ofCompositeFExpr (value := fields _) ((toElements (ovcFE input.selectors input.is_real cpv)).cast
     (show size Circuits.Types.IsEqualWordOperation = 11 from rfl)))
-  let w_is_c_0 ← witnessVectorIR 11 (.ofFExprs (isC0FE input.selectors cpv))
+  let w_is_c_0 ← witnessVectorIR 11 (.ofCompositeFExpr (value := fields _) (isC0FE input.selectors cpv))
   -- The negation/comparison witness columns (`|c|`, `|remainder|`, `max(|c|,1)`, the two
   -- `AddOperation` nested cols, the `LtOperationUnsigned` comparison columns) via `populate_*`;
   -- the `AddOperation`×2 / `LtOperationUnsigned` assertions live in `DivRemCompare.circuit` below.
-  let abs_c ← witnessVectorIR 4 (.ofFExprs (absCFE input.selectors cpv))
-  let abs_remainder ← witnessVectorIR 4 (.ofFExprs (absRemFE input.selectors bpv cpv))
-  let remainder_comp ← witnessVectorIR 4 (.ofFExprs (remCompFE input.selectors bpv cpv))
-  let max_abs_c_or_1 ← witnessVectorIR 4 (.ofFExprs (maxAbsFE input.selectors cpv))
-  let w_cneg ← witnessVectorIR 4 (.ofFExprs (wCnegFE input.selectors input.is_real cpv))
+  let abs_c ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (absCFE input.selectors cpv))
+  let abs_remainder ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (absRemFE input.selectors bpv cpv))
+  let remainder_comp ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (remCompFE input.selectors bpv cpv))
+  let max_abs_c_or_1 ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (maxAbsFE input.selectors cpv))
+  let w_cneg ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (wCnegFE input.selectors input.is_real cpv))
   let w_rneg ← witnessProgram (var := Var (fields 4)) (wRnegProgram input.selectors input.is_real bpv cpv)
-  let misc ← witnessVectorIR 3 (.ofFExprs (miscFE input.selectors input.is_real bpv cpv))
+  let misc ← witnessVectorIR 3 (.ofCompositeFExpr (value := fields _) (miscFE input.selectors input.is_real bpv cpv))
   let abs_c_alu_event := misc[0]; let abs_rem_alu_event := misc[1]
   let remainder_check_multiplicity := misc[2]
   let cl ← witnessProgram (var := Var (fields 2)) (clProgram input.selectors input.is_real bpv cpv)
@@ -177,12 +178,12 @@ def populateRow (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (Z
   let lt_out : Var Circuits.Types.LtOperationUnsigned (ZMod p) := ⟨⟨bit[0]⟩, f, not_eq_inv[0], cl⟩
   -- The remainder/quotient result words and the four `U16MSBOperation` sign-bit cells; the seven
   -- MSB assertions live in `DivRemCompare.circuit` below.
-  let remainder ← witnessVectorIR 4 (.ofFExprs (remFE input.selectors bpv cpv))
-  let quotient ← witnessVectorIR 4 (.ofFExprs (quotFE input.selectors bpv cpv))
-  let w_bmsb ← witnessVectorIR 1 (.ofFExprs #v[bMsbFE input.selectors bpv])
-  let w_cmsb ← witnessVectorIR 1 (.ofFExprs #v[cMsbFE input.selectors cpv])
-  let w_remmsb ← witnessVectorIR 1 (.ofFExprs #v[remMsbFE input.selectors bpv cpv])
-  let w_quotmsb ← witnessVectorIR 1 (.ofFExprs #v[quotMsbFE input.selectors bpv cpv])
+  let remainder ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (remFE input.selectors bpv cpv))
+  let quotient ← witnessVectorIR 4 (.ofCompositeFExpr (value := fields _) (quotFE input.selectors bpv cpv))
+  let w_bmsb ← witnessVectorIR 1 (.ofCompositeFExpr (value := fields _) #v[bMsbFE input.selectors bpv])
+  let w_cmsb ← witnessVectorIR 1 (.ofCompositeFExpr (value := fields _) #v[cMsbFE input.selectors cpv])
+  let w_remmsb ← witnessVectorIR 1 (.ofCompositeFExpr (value := fields _) #v[remMsbFE input.selectors bpv cpv])
+  let w_quotmsb ← witnessVectorIR 1 (.ofCompositeFExpr (value := fields _) #v[quotMsbFE input.selectors bpv cpv])
   return ⟨input.state, input.adapter, a, b, c,
     quotient, quotient_comp, remainder_comp, remainder, abs_remainder, abs_c,
     max_abs_c_or_1, c_times_quotient, mul_lower, mul_upper, ⟨w_cneg⟩, ⟨w_rneg⟩, lt_out,
@@ -541,7 +542,7 @@ the elaborator normalize the entire generated struct during `whnf`. -/
 /-- Component-wise evaluation of the committed DivRem row. This is the whole-chip counterpart of
 the compact comparison input's evaluator: consumers rewrite it before projecting fields instead
 of normalizing the 246-column flattened evaluator. -/
-@[circuit_norm] theorem eval_divRemCols {F : Type} [FiniteField F]
+theorem eval_divRemCols {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env.toEnvironment cols.state,
@@ -595,7 +596,7 @@ of normalizing the 246-column flattened evaluator. -/
 /-- Verifier-environment form of `eval_divRemCols`.  The row is a `ProvableType`, so its prover
 and verifier evaluations coincide; exposing both spellings prevents soundness proofs from
 manufacturing a runtime hint merely to use the component-wise evaluator. -/
-@[circuit_norm] theorem eval_divRemCols_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state,
@@ -654,50 +655,50 @@ must not rewrite `eval_divRemCols_verifier` directly: doing so places the comple
 evaluated row in the goal and can make an otherwise structural proof normalize the full DivRem
 witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
 
-@[circuit_norm] theorem eval_divRemCols_state_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_state_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).state = Eval.eval env cols.state := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_adapter_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_adapter_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).adapter = Eval.eval env cols.adapter := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_a_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_a_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).a = Eval.eval env cols.a := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_c_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_c_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c = Eval.eval env cols.c := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_quotientComp_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_quotientComp_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).quotient_comp = Eval.eval env cols.quotient_comp := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_mulLower_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_mulLower_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c_times_quotient_lower =
       Eval.eval env cols.c_times_quotient_lower := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_mulUpper_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_mulUpper_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c_times_quotient_upper =
       Eval.eval env cols.c_times_quotient_upper := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_ctq_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_ctq_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c_times_quotient =
       Eval.eval env cols.c_times_quotient := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_ctq_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_ctq_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 8) :
     (Eval.eval env cols).c_times_quotient[i] =
@@ -705,7 +706,7 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_ctq_verifier]
   exact (ProvableType.getElem_eval_fields env cols.c_times_quotient i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_carry_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_carry_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 8) :
     (Eval.eval env cols).carry[i] =
@@ -713,7 +714,7 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_verifier]
   exact (ProvableType.getElem_eval_fields env cols.carry i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_remainderComp_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_remainderComp_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).remainder_comp[i] =
@@ -721,7 +722,7 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_verifier]
   exact (ProvableType.getElem_eval_fields env cols.remainder_comp i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_remainder_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_remainder_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).remainder[i] =
@@ -729,7 +730,7 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_verifier]
   exact (ProvableType.getElem_eval_fields env cols.remainder i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_quotient_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_quotient_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).quotient[i] =
@@ -737,7 +738,7 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_verifier]
   exact (ProvableType.getElem_eval_fields env cols.quotient i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_absRemainder_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_absRemainder_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).abs_remainder[i] =
@@ -745,7 +746,7 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_verifier]
   exact (ProvableType.getElem_eval_fields env cols.abs_remainder i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_absC_getElem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_absC_getElem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F))
     (i : ℕ) (hi : i < 4) :
     (Eval.eval env cols).abs_c[i] =
@@ -753,172 +754,172 @@ witness.  Each lemma below pays that cost once, behind an opaque declaration. -/
   rw [eval_divRemCols_verifier]
   exact (ProvableType.getElem_eval_fields env cols.abs_c i hi).symm
 
-@[circuit_norm] theorem eval_divRemCols_remNeg_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_remNeg_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).rem_neg = Eval.eval env cols.rem_neg := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isReal_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isReal_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_real = Eval.eval env cols.is_real := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isRealNotWord_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRealNotWord_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_real_not_word =
       Eval.eval env cols.is_real_not_word := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isDiv_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDiv_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_div = Eval.eval env cols.is_div := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isDivu_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDivu_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_divu = Eval.eval env cols.is_divu := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isRem_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRem_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_rem = Eval.eval env cols.is_rem := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isRemu_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRemu_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_remu = Eval.eval env cols.is_remu := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isDivw_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDivw_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_divw = Eval.eval env cols.is_divw := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isRemw_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRemw_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_remw = Eval.eval env cols.is_remw := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isDivuw_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDivuw_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_divuw = Eval.eval env cols.is_divuw := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_isRemuw_verifier {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRemuw_verifier {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_remuw = Eval.eval env cols.is_remuw := by
   rw [eval_divRemCols_verifier]
 
-@[circuit_norm] theorem eval_divRemCols_quotientComp {F : Type} [FiniteField F]
+theorem eval_divRemCols_quotientComp {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).quotient_comp = Eval.eval env.toEnvironment cols.quotient_comp := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_c {F : Type} [FiniteField F]
+theorem eval_divRemCols_c {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c = Eval.eval env.toEnvironment cols.c := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isRealNotWord {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRealNotWord {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_real_not_word =
       Eval.eval env.toEnvironment cols.is_real_not_word := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isReal {F : Type} [FiniteField F]
+theorem eval_divRemCols_isReal {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_real = Eval.eval env.toEnvironment cols.is_real := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_mulLower {F : Type} [FiniteField F]
+theorem eval_divRemCols_mulLower {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c_times_quotient_lower =
       Eval.eval env.toEnvironment cols.c_times_quotient_lower := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_mulUpper {F : Type} [FiniteField F]
+theorem eval_divRemCols_mulUpper {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c_times_quotient_upper =
       Eval.eval env.toEnvironment cols.c_times_quotient_upper := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_ctq {F : Type} [FiniteField F]
+theorem eval_divRemCols_ctq {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).c_times_quotient =
       Eval.eval env.toEnvironment cols.c_times_quotient := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_carry {F : Type} [FiniteField F]
+theorem eval_divRemCols_carry {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).carry = Eval.eval env.toEnvironment cols.carry := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_remainderComp {F : Type} [FiniteField F]
+theorem eval_divRemCols_remainderComp {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).remainder_comp = Eval.eval env.toEnvironment cols.remainder_comp := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_remainder {F : Type} [FiniteField F]
+theorem eval_divRemCols_remainder {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).remainder = Eval.eval env.toEnvironment cols.remainder := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_quotient {F : Type} [FiniteField F]
+theorem eval_divRemCols_quotient {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).quotient = Eval.eval env.toEnvironment cols.quotient := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_absRemainder {F : Type} [FiniteField F]
+theorem eval_divRemCols_absRemainder {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).abs_remainder = Eval.eval env.toEnvironment cols.abs_remainder := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_absC {F : Type} [FiniteField F]
+theorem eval_divRemCols_absC {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).abs_c = Eval.eval env.toEnvironment cols.abs_c := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_remNeg {F : Type} [FiniteField F]
+theorem eval_divRemCols_remNeg {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).rem_neg = Eval.eval env.toEnvironment cols.rem_neg := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isDiv {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDiv {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_div = Eval.eval env.toEnvironment cols.is_div := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isDivu {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDivu {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_divu = Eval.eval env.toEnvironment cols.is_divu := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isRem {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRem {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_rem = Eval.eval env.toEnvironment cols.is_rem := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isRemu {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRemu {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_remu = Eval.eval env.toEnvironment cols.is_remu := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isDivw {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDivw {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_divw = Eval.eval env.toEnvironment cols.is_divw := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isRemw {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRemw {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_remw = Eval.eval env.toEnvironment cols.is_remw := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isDivuw {F : Type} [FiniteField F]
+theorem eval_divRemCols_isDivuw {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_divuw = Eval.eval env.toEnvironment cols.is_divuw := by
   rw [eval_divRemCols]
 
-@[circuit_norm] theorem eval_divRemCols_isRemuw {F : Type} [FiniteField F]
+theorem eval_divRemCols_isRemuw {F : Type} [FiniteField F]
     (env : ProverEnvironment F) (cols : Columns (Expression F)) :
     (Eval.eval env cols).is_remuw = Eval.eval env.toEnvironment cols.is_remuw := by
   rw [eval_divRemCols]

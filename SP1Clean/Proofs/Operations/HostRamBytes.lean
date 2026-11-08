@@ -57,6 +57,7 @@ theorem completeness : GeneralFormalCircuit.Completeness (ZMod p) main
 def circuit : GeneralFormalCircuit (ZMod p) Inputs (fields 8) where
   main
   elaborated
+  computableWitnesses := by computable_witnesses [bytes]
   Spec input output _ := Spec input output
   ProverAssumptions input _ _ := ProverAssumptions input
   soundness

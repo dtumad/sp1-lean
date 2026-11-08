@@ -3,7 +3,7 @@ module
 public import SP1Clean.Circuits.Types.MulOperation
 public import SP1Clean.Semantics.Specs.IsEqualWord
 public import SP1Clean.Semantics.Specs.IsZeroWord
-import Batteries.Data.Vector.Lemmas
+import Clean.Utils.Vector
 
 /-! # DivRem witness-block readback
 
@@ -31,12 +31,12 @@ set_option linter.unusedSectionVars false in
 lemma eqWordWitnessElements_eq (wit : Circuits.Types.IsEqualWordOperation (ZMod p)) :
     eqWordWitnessElements wit = Vector.cast eqWord_size_eq (ProvableType.toElements wit) := rfl
 
-set_option linter.unusedSectionVars false in
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 lemma eqWordWitnessElements_get (wit : Circuits.Types.IsEqualWordOperation (ZMod p)) (i : Fin 11) :
     (eqWordWitnessElements wit).get i =
       (ProvableType.toElements wit)[i.val]'(by
         simpa only [eqWord_size_eq] using i.isLt) := by
-  rw [eqWordWitnessElements_eq, Vector.get_cast]; rfl
+  rfl
 
 /-- The generated `IsZeroWordOperation` witness block has eleven cells.  Keeping this equality
 opaque prevents parent proofs from reducing the nested operation's full `ProvableType` merely to
@@ -53,12 +53,12 @@ set_option linter.unusedSectionVars false in
 lemma isZeroWitnessElements_eq (wit : Circuits.Types.IsZeroWordOperation (ZMod p)) :
     isZeroWitnessElements wit = Vector.cast isZero_size_eq (ProvableType.toElements wit) := rfl
 
-set_option linter.unusedSectionVars false in
+omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 lemma isZeroWitnessElements_get (wit : Circuits.Types.IsZeroWordOperation (ZMod p)) (i : Fin 11) :
     (isZeroWitnessElements wit).get i =
       (ProvableType.toElements wit)[i.val]'(by
         simpa only [isZero_size_eq] using i.isLt) := by
-  rw [isZeroWitnessElements_eq, Vector.get_cast]; rfl
+  rfl
 
 set_option linter.unusedSectionVars false in
 /-- The generated `MulOperation` component spelling, exposed as a syntactic rewrite. -/
@@ -91,7 +91,7 @@ lemma mulWitnessElements_get (cols : Circuits.Types.MulOperation (ZMod p)) (i : 
     (mulWitnessElements cols).get i =
       (ProvableType.toElements cols)[i.val]'(by
         simpa only [mul_size_eq] using i.isLt) := by
-  rw [mulWitnessElements_eq, Vector.get_cast]; rfl
+  simp only [mulWitnessElements_eq, Vector.get_eq_getElem, Vector.getElem_cast]
 
 /-- The thirteen cells following `carry` and `product`.  Their internal layout is irrelevant to
 the DivRem parent proof, so it stays folded behind this definition. -/
@@ -167,7 +167,7 @@ theorem eqWord_cols_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
   intro i
   have hi : i.val < 11 := by simpa only [circuit_norm] using i.isLt
   have h := hpop ⟨i, hi⟩
-  rw [eqWordWitnessElements_eq, Vector.get_cast] at h
+  simp only [eqWordWitnessElements_eq, Vector.get_eq_getElem, Vector.getElem_cast] at h
   exact h
 
 set_option linter.unusedSectionVars false in
@@ -182,7 +182,7 @@ theorem isZero_cols_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
   intro i
   have hi : i.val < 11 := by simpa only [circuit_norm] using i.isLt
   have h := hpop ⟨i, hi⟩
-  rw [isZeroWitnessElements_eq, Vector.get_cast] at h
+  simp only [isZeroWitnessElements_eq, Vector.get_eq_getElem, Vector.getElem_cast] at h
   exact h
 
 set_option linter.unusedSectionVars false in
@@ -261,7 +261,7 @@ theorem mul_cols_eq_of_pins (env : Environment (ZMod p)) (off : ℕ)
   intro i
   have hi : i.val < 45 := by simpa only [circuit_norm] using i.isLt
   have h := hpop ⟨i, hi⟩
-  rw [mulWitnessElements_eq, Vector.get_cast] at h
+  simp only [mulWitnessElements_eq, Vector.get_eq_getElem, Vector.getElem_cast] at h
   exact h
 
 set_option linter.unusedSectionVars false in

@@ -69,7 +69,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
         ⟨var { index := offset + 2 }⟩⟩⟩
   channelsLawful := by
     preserve_tactic_target
-    simp only [circuit_norm, main, AddwOperation.circuit, Readers.ALUTypeReader.circuit,
+    simp only [circuit_norm, main, AddwOperation.circuit,
       Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
   -- 2 result limbs + 1 sign bit; readers are `assertion`s (`localLength 0`).
   localLength _ := 3
@@ -85,14 +85,14 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
         ⟨Vector.mapRange 2 fun i => var { index := offset + i },
           ⟨var { index := offset + 2 }⟩⟩⟩ : Var Columns (ZMod p)) := rfl
 
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real, state := Eval.eval env input.state,
          adapter := Eval.eval env input.adapter } : Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ is_real := Eval.eval env cols.is_real, state := Eval.eval env cols.state,
@@ -100,7 +100,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
          addw_operation := Eval.eval env cols.addw_operation } : Columns F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_inputAdapter {F : Type} [FiniteField F]
+theorem eval_inputAdapter {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).adapter = Eval.eval env input.adapter := by
   rw [eval_inputs]
@@ -111,7 +111,7 @@ These lemmas project whole-row input agreement into whole-vector operand agreeme
 `AddChip/Defs.lean`. Addw's adapter is the ALU-type reader, so
 both operands are register reads. -/
 
-@[circuit_norm] theorem eval_opBVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
       = Eval.eval env input.op_b_val := by
@@ -119,7 +119,7 @@ both operands are register reads. -/
   simp only [Inputs.op_b_val, eval_inputs, Readers.ALUTypeReader.eval_cols,
     Readers.ALUTypeReader.eval_accessCols]
 
-@[circuit_norm] theorem eval_opCVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_val
       = Eval.eval env input.op_c_val := by

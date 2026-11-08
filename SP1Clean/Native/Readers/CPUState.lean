@@ -38,7 +38,7 @@ open SP1Clean.Channels (stateChannel byteChannel StateMsg)
 variable {p : ℕ} [Fact p.Prime]
 
 /-- Component-wise evaluation of the canonical CPU-state row. -/
-@[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
+theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     Eval.eval env cols =
       ({ clk_high := Eval.eval env cols.clk_high,
@@ -48,13 +48,13 @@ variable {p : ℕ} [Fact p.Prime]
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
-@[circuit_norm] theorem eval_clk0 {F : Type} [FiniteField F]
+theorem eval_clk0 {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     (Eval.eval env cols).clk_0_16 = Expression.eval env cols.clk_0_16 := by
   rw [eval_cols]
   simp only [circuit_norm]
 
-@[circuit_norm] theorem eval_clk1 {F : Type} [FiniteField F]
+theorem eval_clk1 {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.CPUState (Expression F)) :
     (Eval.eval env cols).clk_16_24 = Expression.eval env cols.clk_16_24 := by
   rw [eval_cols]
@@ -235,7 +235,7 @@ def circuit [Fact (2 ^ 17 < p)] : GeneralFormalCircuit (ZMod p) Inputs unit wher
       -- unnegated multiplicity `is_real`, so it cannot go through `off_gate_vacuous`.)
       rcases h_interaction with rfl | rfl | rfl | rfl <;> right <;>
         simp only [circuit_norm, stateChannel, byteChannel]
-      all_goals trivial
+      all_goals simpa only [circuit_norm] using h_bool
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength [Fact (2 ^ 17 < p)] (x : Var Inputs (ZMod p)) :

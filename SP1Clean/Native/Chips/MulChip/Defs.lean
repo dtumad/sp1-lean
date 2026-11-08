@@ -171,7 +171,7 @@ def rTypeReaderInput (input : Var Inputs (ZMod p)) (offset : ℕ) :
 /-! ### Operand words, in `circuit_norm`'s own orientation (the `AddChip/Defs.lean` pattern) —
 the `ComputableWitnesses` proof projects the struct-level input agreement onto these. -/
 
-@[circuit_norm] theorem eval_opBVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
       = Eval.eval env input.op_b_val := by
@@ -179,7 +179,7 @@ the `ComputableWitnesses` proof projects the struct-level input agreement onto t
   simp only [Inputs.op_b_val, eval_inputs, Readers.RTypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
 
-@[circuit_norm] theorem eval_opCVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_val
       = Eval.eval env input.op_c_val := by

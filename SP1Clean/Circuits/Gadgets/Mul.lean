@@ -1,5 +1,7 @@
 module
 
+public import ToClean.Gadgets.Equality
+
 public import SP1Clean.Circuits.Gadgets.Mul.Constraints
 public import SP1Clean.Circuits.Gadgets.Mul.Witness
 public import SP1Clean.Model.ByteTable
@@ -871,6 +873,8 @@ private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)
 over populated product/carry columns, without fresh witnesses. -/
 def circuit : FormalAssertion (ZMod p) Inputs :=
   { main, elaborated,
+    computableWitnesses :=
+      FormalCircuitBase.computableWitnesses_unit_of_localLength_zero elaborated localLength_eq,
     Assumptions := Assumptions,
     Spec := Spec,
     soundness := soundness,

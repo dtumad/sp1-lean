@@ -53,7 +53,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   channelsLawful := by
     preserve_tactic_target
     simp only [Inputs.is_real, circuit_norm, main, LtOperationSigned.circuit,
-      Readers.ALUTypeReader.circuit, Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
+      Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
   localLength _ := 10
   channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
 
@@ -63,7 +63,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
       (⟨input.state, input.adapter, input.isSlt, input.isSltu,
         varFromOffset Circuits.Types.LtOperationSigned offset⟩ : Var Columns (ZMod p)) := rfl
 
-@[circuit_norm] theorem eval_opBVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
       = Eval.eval env input.op_b_val := by
@@ -71,7 +71,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
   simp only [Inputs.op_b_val, eval_inputs, Readers.ALUTypeReader.eval_cols,
     Readers.ALUTypeReader.eval_accessCols]
 
-@[circuit_norm] theorem eval_opCVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_val
       = Eval.eval env input.op_c_val := by

@@ -48,7 +48,10 @@ def registerView (image : ProgramImage) :
 def ramView (image : ProgramImage) :
     TransitionView (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName) :=
   providerView image (InitialRamProvider.circuit image) (fun _ _ _ valid => valid.1) (by
-    simp [GeneralFormalCircuit.channels, InitialRamProvider.circuit, circuit_norm,
+    change (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉
+      (InitialMemoryRead.circuit image.initialMemory).channelsWithGuarantees ++
+        [byteChannel.toRaw] ++ [memoryChannel.toRaw]
+    simp [InitialMemoryRead.circuit, InitialMemoryRead.circuitNamed_guarantees, circuit_norm,
       OrderedBoundary.channel, OrderedInitialProvider.channelName, memoryChannel, byteChannel])
 
 def terminalView :

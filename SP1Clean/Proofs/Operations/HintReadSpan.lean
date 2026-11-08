@@ -111,6 +111,7 @@ private theorem eval_quotient (env : Environment (ZMod p)) (output : Var Address
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   main
+  computableWitnesses := by computable_witnesses [Inputs.startDivision, Address.asWord]
   elaborated
   Spec input _ _ := Spec input
   ProverAssumptions input _ _ := ProverAssumptions input

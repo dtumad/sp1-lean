@@ -63,7 +63,7 @@ private theorem checkTables_channels (target : MemorySnapshot) (component : Comp
       (FinalMemoryValue.channel false).toRaw] ++
       [(FinalMemoryValue.channel false).toRaw, FinalMemoryChange.channel.toRaw] ⊆ _
     simp [registry]
-  · simp only [GeneralFormalCircuit.channels, FinalRamCheck.circuit, Guarded.circuit,
+  · simp only [GeneralFormalCircuit.channels, FinalRamCheck.circuit,
       FinalRamCheck.activeCircuit, FinalRamValue.circuit, circuit_norm,
       List.subset_def, List.mem_append,
       List.mem_flatten, List.mem_cons, List.not_mem_nil, or_false, registry]
@@ -507,7 +507,7 @@ theorem membership_guarantees (witness : EnsembleWitness (ensemble source target
         rcases consumer with same | same | same | same | same
         all_goals rw [same]
         all_goals simp [register_final_requirements, ram_final_requirements, FinalMemoryEnsemble.viewFor, OrderedMemoryEnsemble.terminalView,
-          OrderedBoundaryEnd.circuit, FinalRegisterCheck.circuit, Guarded.circuit, FinalRegisterCheck.activeCircuit, FinalRamCheck.circuit, Guarded.circuit, FinalRamCheck.activeCircuit,
+          OrderedBoundaryEnd.circuit, FinalRegisterCheck.circuit, FinalRegisterCheck.activeCircuit, FinalRamCheck.circuit, FinalRamCheck.activeCircuit,
           StaticTable.channel, FinalRegisterValue.membership, InitialMemoryLookup.membership,
           FinalMemoryValue.channel, FinalMemoryChange.channel, OrderedBoundary.channel,
           OrderedFinalProvider.channelName, memoryChannel, circuit_norm]
@@ -545,8 +545,8 @@ private theorem check_spec (component : Component (ZMod p)) (member : component 
         (FinalRegisterValue.membership target).channel.toRaw, (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw] := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl
-    · simp only [FinalRegisterCheck.circuit, Guarded.circuit, FinalRegisterCheck.activeCircuit, FinalRegisterValue.circuit, circuit_norm]
-    · simp only [FinalRamCheck.circuit, Guarded.circuit, FinalRamCheck.activeCircuit, FinalRamValue.circuit, circuit_norm]
+    · simp only [FinalRegisterCheck.circuit, FinalRegisterCheck.activeCircuit, FinalRegisterValue.circuit, circuit_norm]
+    · simp only [FinalRamCheck.circuit, FinalRamCheck.activeCircuit, FinalRamValue.circuit, circuit_norm]
       simp only [List.subset_def, List.mem_append, List.mem_cons, List.not_mem_nil, or_false,
         List.mem_flatten, List.mem_ofFn]
       aesop

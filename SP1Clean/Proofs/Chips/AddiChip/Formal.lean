@@ -105,7 +105,8 @@ theorem opBPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
 semantic contract over a register source + immediate, composing the witnessed `AddOperation` gadget;
 output is the native `Columns` row. Soundness/completeness are fully proven. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { name := "sp1.native.addi", main, elaborated,
+  { computableWitnesses := by computable_witnesses [Inputs.op_b_val, Inputs.op_c_val],
+    name := "sp1.native.addi", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

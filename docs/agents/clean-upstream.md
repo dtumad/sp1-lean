@@ -14,6 +14,7 @@ duplicate implementations or compatibility wrappers after consumers migrate.
 | Addition | Purpose |
 |---|---|
 | WitnessGenerationData | Honest witness construction at arbitrary committed data; upstream reference/honesty theorems still specialize to empty data |
+| ComputableWitnesses / Equality | Zero-cell assertions need no input or environment agreement; remove these transport laws when upstream supplies them |
 | TableBuild / EnsembleBuild | Typed row/table/ensemble construction with actual ledger and verifier proofs |
 | EnsembleCheck / FiniteLookup | Authenticated finite lookup inventory and executable raw-witness acceptance |
 | Realizes / CompleteEnsemble / EnsembleCompiler | Machine interpretation and constructive equivalence interfaces |
@@ -25,9 +26,12 @@ These are reusable additions, not alternate SP1 semantics. Their concrete consum
 whether an abstraction earns its place. When upstream accepts an API, migrate imports and delete
 the local copy.
 
-Clean #503 supplies canonical data/hint agreement, taking over #450. Computability proofs use
-upstream `AgreesBelow` and `ComputableWitnesses` directly. The composition lemmas and honesty
-extension remain additive; remove them when upstream supplies their full statements.
+Clean #503 supplies canonical data/hint agreement, taking over #450. Clean #426 bundles witness
+computability into formal circuits and assertions. Chip and table construction consume those
+bundles; standalone chip computability proofs and their composition bridge are retired. Prefer
+the upstream default tactic, with explicit metadata and focused evaluation lemmas for large
+structured outputs. The arbitrary-data honesty extension remains additive; bundled computability
+does not establish final-data agreement or complete ensemble witness generation.
 
 ## Built-in Rust export
 
@@ -46,8 +50,8 @@ positions; only nonempty AIRs enter the Plonky3 batch. Fixed heights remain mand
 
 The Lean and Rust backend pins must identify the same immutable revision. Complete an upgrade's
 strict builds and fresh export/comparison checks before selecting another upstream batch. Open
-#494 (resource histories and closed channels), #426 (bundled computability), and #480 (generator
-completeness) are follow-up candidates, not capabilities assumed by this pin. In particular,
+#494 (resource histories and closed channels) and #480 (generator completeness) are follow-up
+candidates, not capabilities assumed by this pin. In particular,
 channel-level guarantees do not replace exhaustive SP1 execution and mutable-resource grounding.
 
 See [export](../export.md) and #28/#29 for the integration contracts. Scheduler completeness,

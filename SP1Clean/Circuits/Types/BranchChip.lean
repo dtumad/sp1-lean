@@ -78,7 +78,7 @@ def branchDecision {F : Type} [Add F] [Sub F] [Mul F] [OfNat F 1]
   b0 * (1 - sum) + b1 * (1 - (1 - sum)) + (b3 + b5) * (1 - bit) + (b2 + b4) * bit
 
 /-- Component-wise evaluation of the independent Branch input prefix. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ state := Eval.eval env input.state, adapter := Eval.eval env input.adapter,
@@ -88,20 +88,20 @@ def branchDecision {F : Type} [Add F] [Sub F] [Mul F] [OfNat F 1]
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-- Evaluate derived activity without unfolding the completed circuit. -/
-@[circuit_norm] theorem eval_inputIsReal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_inputIsReal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).is_real = Expression.eval env input.is_real := by
   simpa only [Inputs.is_real, CircuitType.eval_expr, Expression.eval] using
     congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
 
 /-- Evaluation of derived activity at the struct boundary. -/
-@[circuit_norm] theorem eval_isReal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_isReal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).is_real = Expression.eval env input.is_real := by
   rw [← ProvableStruct.eval_eq_eval]
   exact eval_inputIsReal env input
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state,

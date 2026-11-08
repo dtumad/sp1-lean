@@ -412,11 +412,54 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
        input.adapter.op_a, #v[input.adapter.op_b, 0, 0, 0], input.adapter.op_c,
        input.adapter.op_a_0, 0, input.adapter.imm_c⟩ ]
 
+omit [Fact (2 ^ 17 < p)] in
+private theorem payload_congr (input : Var Inputs (ZMod p))
+    (env env' : ProverEnvironment (ZMod p))
+    (h_input : ProvableStruct.eval env.toEnvironment input =
+      ProvableStruct.eval env'.toEnvironment input) :
+    (Witgen.WitgenIR.ofCompositeFExpr (LtOperationSigned.populateFE input.op_b_val input.op_c_val input.isSlt input.is_real)).eval env =
+      (Witgen.WitgenIR.ofCompositeFExpr (LtOperationSigned.populateFE input.op_b_val input.op_c_val input.isSlt input.is_real)).eval env' := by
+  refine LtOperationSigned.populateIR_congr env env' _ _ _ _
+    (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_b_val) h_input
+    simpa only [eval_opBVal, eval_opCVal, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.op_c_val) h_input
+    simpa only [eval_opBVal, eval_opCVal, ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+  · exact Inputs.eval_congr_isSlt h_input
+  · have hs := Inputs.eval_congr_isSlt h_input
+    have hu := Inputs.eval_congr_isSltu h_input
+    simp only [circuit_norm, hs, hu]
+
 /-- The unified `Lt` chip row as a `GeneralFormalCircuit`: flag-gated RV64 `slt`/`sltu` semantic contract,
 composing the witnessed signed-compare gadget and the immediate-capable register reader; output is the
 native `Columns` row. Soundness/completeness are proven and axiom-clean. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.lt", main, elaborated,
+    computableWitnesses := by
+      preserve_tactic_target
+      intro n input env env'
+      constructor
+      · simp only [main, circuit_norm, Nat.add_zero,
+          Gadgets.Equality.toSubcircuit_computableWitnesses]
+        repeat' apply And.intro
+        all_goals intro h_input
+        all_goals first
+          | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+          | intro h_agree
+            first
+              | exact payload_congr input env env' h_input
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        have length_eq : (main input).localLength n = 10 :=
+          (elaborated.localLength_eq input n).trans (by rfl)
+        rw [length_eq] at h_agrees
+        rw [elaborated.output_eq]
+        simp (disch := omega) only [circuit_norm, h, h_agrees.get_eq]
+        repeat' apply And.intro
+        all_goals
+          apply Vector.ext
+          intro i hi
+          simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

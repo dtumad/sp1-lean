@@ -1,5 +1,7 @@
 import SP1Clean.Proofs.Chips.HaltChip.Formal
-import ToClean.Gadgets.ComputableWitnesses
+import Clean.Circuit.Theorems
+import Clean.Circuit.Subcircuit
+import ToClean.Gadgets.BitwiseByte
 import ToClean.Air.TableBuild
 
 /-! # Halt table: component, padding row, and honest witness generation
@@ -42,13 +44,6 @@ theorem spec_paddingInputs : Spec (paddingInputs (p := p)) := by
   exact ⟨Or.inl rfl, fun h => absurd h h0, fun h => absurd h h0, fun h => absurd h h0,
     fun h => absurd h h0, fun h => absurd h h0, fun h => absurd h h0⟩
 
-/-- Halt has computable witnesses vacuously: the table declares no cells (its composed readers are
-zero-witness input-takers). -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := fun k input env env' =>
-  Operations.forAllFlat_witnessCongr_of_localLength_zero _ _
-    (by simp [circuit, main, Readers.CPUState.circuit, Readers.RegisterAccessCols.circuit,
-      circuit_norm])
-
 /-- The halt table's row list from its (for now uninhabited) occurrence list: exactly one padding
 row. The deterministic compiler emits no real halt rows yet — `Occurrence .halt := Empty` makes
 that type-level; the 2.4b tranche replaces `Empty` with the semantic halt event and this map with
@@ -74,7 +69,7 @@ theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverDat
     (consistent : data.tables (circuit (p := p)).name (size Inputs) =
       (rows.map toElements).toArray) :
     (Table.build (component (p := p)) rows data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses fun r hr => h r hr
+  Table.build_constraints _ _ _ _ bounded _ consistent fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r)
@@ -82,7 +77,7 @@ theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData
     (consistent : data.tables (circuit (p := p)).name (size Inputs) =
       (rows.map toElements).toArray) :
     (Table.build (component (p := p)) rows data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses fun r hr => h r hr
+  Table.build_guarantees _ _ _ _ bounded _ consistent fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (channel : RawChannel (ZMod p))

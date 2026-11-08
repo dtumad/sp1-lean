@@ -87,6 +87,7 @@ private theorem eval_next (env : Environment (ZMod p)) (input : Var Inputs (ZMod
 def circuit : GeneralFormalCircuit (ZMod p) Inputs HostHintQueue.State where
   main
   elaborated
+  computableWitnesses := by computable_witnesses [Address.asWord, Inputs.addition, Inputs.next]
   Spec input output _ := Spec input ∧ output = input.next
   ProverAssumptions input _ _ := Spec input
   soundness := by

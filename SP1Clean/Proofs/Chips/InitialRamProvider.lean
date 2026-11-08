@@ -41,6 +41,7 @@ def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) Word MemoryMs
   name := "sp1.native.memory.initial.ram"
   main := main image
   elaborated := elaborated image
+  computableWitnesses := (SnapshotRamProvider.circuit image.memorySnapshot).computableWitnesses
   Spec input output _ := MemoryBoundary.InitialAtSpec image (Word.toNat input) output
   ProverAssumptions input _ _ :=
     InitialMemoryRead.ProverAssumptions input ∧

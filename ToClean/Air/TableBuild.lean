@@ -114,13 +114,13 @@ theorem valueFromOffset_congr (M : TypeMap) [ProvableType M] (offset : ℕ)
 
 /-- The canonical row input variable reads only the cells below `size M` — the side condition of
 `FormalCircuitBase.ComputableWitnesses'`, discharged once for the AIR row layout. -/
-theorem onlyAccessedBelow_varFromOffset_zero (M : TypeMap) [ProvableType M] :
+theorem onlyAccessedBelow_varFromOffset_zero (M : TypeMap) [ProvableType M] (env env' : ProverEnvironment F) :
     ProverEnvironment.OnlyAccessedBelow (size M) (F := F)
-      (Eval.eval · (varFromOffset (F := F) M 0)) := by
+      (Eval.eval · (varFromOffset (F := F) M 0)) env env' := by
   have h_eval : ∀ e : ProverEnvironment F,
       Eval.eval e (varFromOffset (F := F) M 0) = valueFromOffset M 0 e.toEnvironment :=
     fun e => by rw [eval_varFromOffset_prover]; rfl
-  intro env env' h
+  intro h
   simp only [h_eval]
   exact valueFromOffset_congr M 0 fun i _ => h.get_eq (by omega)
 
@@ -189,14 +189,14 @@ standard honest-prover side condition) and the semantic input satisfies the circ
 component's full per-row assertion system: `ConstraintsHold` and `FullGuarantees`.
 
 This is `GeneralFormalCircuit.original_full_completeness` transported onto the AIR row layout. The
-chain is: `FormalCircuitBase.computableWitnesses_implies` (with the row input variable reading only
+chain is: `FormalCircuitBase.computableWitnesses'_onlyAccessedBelow` (with the row input variable reading only
 cells below `size Input`) gives `Circuit.ComputableWitnesses` at the row offset;
 `Circuit.witgenWithData_usesLocalWitnesses` turns that into an honest environment carrying the
 committed `data`; `original_full_completeness` fires; and `Component.constraintsHold_iff` /
 `guarantees_iff` land the result on `Component.operations`.
 -/
 theorem buildRow_constraintsHold (c : Component F) (input : c.Input F) (data : ProverData F)
-    (hint : ProverHint F) (h_computable : c.circuit.base.ComputableWitnesses)
+    (hint : ProverHint F)
     (h_prover : c.circuit.ProverAssumptions input data hint) :
     c.operations.ConstraintsHold (Environment.fromArray (c.buildRow input data hint) data) ∧
       c.operations.FullGuarantees (Environment.fromArray (c.buildRow input data hint) data) := by
@@ -205,9 +205,11 @@ theorem buildRow_constraintsHold (c : Component F) (input : c.Input F) (data : P
     ProverEnvironment.fromArray (c.buildRow input data hint) data hint with h_env
   -- the row input variable only reads cells below the row offset, so the circuit's
   -- `ComputableWitnesses` obligation applies at that offset
-  have h_computable' : (c.circuit.main inputVar).ComputableWitnesses (size c.Input) :=
-    FormalCircuitBase.computableWitnesses_implies h_computable (size c.Input) inputVar
-      (ProvableType.onlyAccessedBelow_varFromOffset_zero c.Input)
+  have h_computable' : ∀ env env',
+      (c.circuit.main inputVar).ComputableWitnesses (size c.Input) env env' := by
+    intro env env'
+    exact FormalCircuitBase.computableWitnesses'_onlyAccessedBelow (circuit := c.circuit.base)
+      (ProvableType.onlyAccessedBelow_varFromOffset_zero c.Input env env')
   -- witness generation against the committed data is therefore honest
   have h_uses : env.UsesLocalWitnesses (size c.Input)
       ((c.circuit.main inputVar).operations (size c.Input)) := by
@@ -228,14 +230,13 @@ component's already-bundled soundness theorem; downstream table transports can u
 boundary without reopening a circuit's witness implementation. -/
 theorem buildRow_spec_requirements (c : Component F) (input : c.Input F)
     (data : ProverData F) (hint : ProverHint F)
-    (h_computable : c.circuit.base.ComputableWitnesses)
     (h_prover : c.circuit.ProverAssumptions input data hint)
     (h_assumptions : c.circuit.Assumptions input data) :
     let env := Environment.fromArray (c.buildRow input data hint) data
     c.Spec env ∧ c.operations.FullRequirements env := by
   dsimp only
   let env := Environment.fromArray (c.buildRow input data hint) data
-  have built := c.buildRow_constraintsHold input data hint h_computable h_prover
+  have built := c.buildRow_constraintsHold input data hint h_prover
   apply c.weakSoundness
   · change c.circuit.Assumptions (c.rowInput env) data
     rw [show env = Environment.fromArray (c.buildRow input data hint) data from rfl,
@@ -367,20 +368,20 @@ variable (c : Component F) (inputs : List (c.Input F)) (data : ProverData F) (hi
 @[simp] theorem build_data : (build c inputs data hint bounded fixed consistent).data = data := rfl
 
 /-- Honest constant-hint witnesses satisfy the physical constraints at the generation data. -/
-theorem build_constraints (h_computable : c.circuit.base.ComputableWitnesses)
+theorem build_constraints
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
     (build c inputs data hint bounded fixed consistent).Constraints := by
   intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
-  exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).1
+  exact (c.buildRow_constraintsHold input data hint (h_prover input h_input)).1
 
 /-- Honest constant-hint witnesses satisfy the channel guarantees at the generation data. -/
-theorem build_guarantees (h_computable : c.circuit.base.ComputableWitnesses)
+theorem build_guarantees
     (h_prover : ∀ input ∈ inputs, c.circuit.ProverAssumptions input data hint) :
     (build c inputs data hint bounded fixed consistent).Guarantees := by
   intro row member
   obtain ⟨input, h_input, rfl⟩ := List.mem_map.mp member
-  exact (c.buildRow_constraintsHold input data hint h_computable (h_prover input h_input)).2
+  exact (c.buildRow_constraintsHold input data hint (h_prover input h_input)).2
 
 /-- The literal per-channel ledger at the table's consistent evaluation data. -/
 theorem build_interactions (channel : RawChannel F) :

@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.Native.Chips.LoadByteStaticChip.Defs
 import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 
@@ -255,6 +256,25 @@ theorem completeness :
 
 /-- The alternative circuit has exactly the existing semantic contract. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns where
+  computableWitnesses := by
+    intro n input env env'
+    constructor
+    · simp only [main, circuit_norm, Nat.add_zero,
+        Gadgets.Equality.toSubcircuit_computableWitnesses]
+      repeat' apply And.intro
+      all_goals intro h
+      all_goals first
+        | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+        | apply GeneralFormalCircuit.toSubcircuit_computableWitnesses _ rfl
+          intro _
+          simp only [circuit_norm, LoadByteChip.Inputs.op_b_val, LoadByteChip.Inputs.op_c_imm, h]
+    · intro h h_agrees
+      simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+      simp only [main, circuit_norm, h]
+      rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval]
+      apply FormalCircuitBase.eval_output_congr
+      · simpa only [main, circuit_norm, Nat.add_zero] using h_agrees
+      · simp only [circuit_norm, LoadByteChip.Inputs.op_b_val, LoadByteChip.Inputs.op_c_imm, h]
   main
   elaborated
   Assumptions := LoadByteChip.Assumptions

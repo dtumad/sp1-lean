@@ -18,14 +18,14 @@ public import ToClean.Air.HintIndex
 public import ToClean.Air.MessageIndex
 public import ToClean.Air.StaticProvider
 public import ToClean.Circuit.WitnessCombinator
-public import ToClean.Circuit.WitgenBridge
+public import Clean.Circuit.Theorems
+public import Clean.Circuit.Subcircuit
 public import ToClean.Circuit.WitgenEval
 public import ToClean.Circuit.WitnessGenerationData
 public import ToClean.Circuit.IteDecide
 public import ToClean.Circuit.InteractionRecovery
 public import ToClean.Circuit.EmittedInteraction
 public import ToClean.Gadgets.LookupProjection
-public import ToClean.Gadgets.ComputableWitnesses
 public import ToClean.Gadgets.BitwiseByte
 public import ToClean.Gadgets.OneHot
 public import ToClean.Gadgets.VariableRange
@@ -51,3 +51,7 @@ public import ToClean.Air.ReceiverView
 public import ToClean.Air.MessageFilter
 public import ToClean.Tactic.GetElemFastPath
 public import ToClean.Air.Realizes
+
+public import ToClean.Gadgets.Equality
+
+import ToClean.Circuit.ComputableWitnesses

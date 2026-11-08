@@ -88,7 +88,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
         Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of the independent JAL input prefix. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real,
@@ -98,7 +98,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-- Component-wise evaluation of the completed JAL row. -/
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ is_real := Eval.eval env cols.is_real,
@@ -117,21 +117,21 @@ These lemmas project whole-row input agreement into whole-vector operand agreeme
 plus the literal `4`. So the pieces to project are the program counter and the immediate, and the
 constant limbs need nothing at all. -/
 
-@[circuit_norm] theorem eval_statePc {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_statePc {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).state.pc
       = Eval.eval env input.state.pc := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.CPUState.eval_cols]
 
-@[circuit_norm] theorem eval_opBImm {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBImm {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_imm
       = Eval.eval env input.adapter.op_b_imm := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.JTypeReader.eval_cols]
 
-@[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
+theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_a_0
       = Expression.eval env input.adapter.op_a_0 := by

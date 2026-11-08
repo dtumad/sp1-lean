@@ -1,3 +1,5 @@
+import ToClean.Circuit.ComputableWitnesses
+import ToClean.Circuit.WitgenEval
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
@@ -54,13 +56,13 @@ theorem val_complement {y : ZMod p} (hy : y.val < 2 ^ 16) :
 /-- The witness-IR form of `populate`: the four base-2^16 limbs of `(a - b) mod 2^64`. The complement
 `65535 - bᵢ` is a *field* expression (see `val_complement`); everything else is u64-sorted and stays
 far below the `2 ^ 64` wrap. Running sums are ordinary Lean `let`s that inline into each output, so
-the IR is a plain `ofFExprs` — see `AddOperation.populateIR` for why. -/
+the IR is a plain `ofCompositeFExpr` — see `AddOperation.populateIR` for why. -/
 def populateIR (a b : Word (Expression (ZMod p))) : WitgenIR (ZMod p) 4 :=
   let s0 : U64Expr (ZMod p) := a[0].val + ((65535 : Expression (ZMod p)) - b[0]).val + 1
   let s1 : U64Expr (ZMod p) := a[1].val + ((65535 : Expression (ZMod p)) - b[1]).val + s0 / 65536
   let s2 : U64Expr (ZMod p) := a[2].val + ((65535 : Expression (ZMod p)) - b[2]).val + s1 / 65536
   let s3 : U64Expr (ZMod p) := a[3].val + ((65535 : Expression (ZMod p)) - b[3]).val + s2 / 65536
-  .ofFExprs #v[(s0 % 65536).toField, (s1 % 65536).toField,
+  .ofCompositeFExpr (value := fields _) #v[(s0 % 65536).toField, (s1 % 65536).toField,
                (s2 % 65536).toField, (s3 % 65536).toField]
 
 /-- Evaluating the witness IR is exactly `populate` on the evaluated operand words. -/
@@ -93,7 +95,7 @@ congruence, not an evaluation).
 
 The two's-complement limbs need no separate hypothesis: `65535 - b[i]` is built from `b[i]` by
 `Expression` arithmetic, so rewriting with `hB` reaches inside it. -/
-theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
     (a b : Word (Expression (ZMod p)))
     (hA : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment a[i] = Expression.eval env'.toEnvironment a[i])

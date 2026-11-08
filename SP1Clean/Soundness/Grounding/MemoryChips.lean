@@ -2264,6 +2264,7 @@ theorem LoadByteChip.ramAddressContract :
     simp only [input, offset, addressInput, LoadByteChip.circuit,
       LoadByteChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, LoadByteChip.isReal, circuit_norm]
 
@@ -2700,6 +2701,7 @@ theorem loadByteChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     rtypeWriteMessage, LoadByteChip.rowView, LoadByteChip.ramAccessView,
     LoadByteChip.isReal, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, LoadByteChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 /-- Lift LoadByte's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadByteChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -2993,6 +2995,7 @@ theorem LoadHalfChip.ramAddressContract :
     simp only [input, offset, addressInput, LoadHalfChip.circuit,
       LoadHalfChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, LoadHalfChip.isReal, circuit_norm]
 
@@ -3126,6 +3129,7 @@ theorem loadHalfChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     rtypeWriteMessage, LoadHalfChip.rowView, LoadHalfChip.ramAccessView,
     LoadHalfChip.isReal, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, LoadHalfChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 /-- Lift LoadHalf's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadHalfChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -3416,6 +3420,7 @@ theorem LoadWordChip.ramAddressContract :
     simp only [input, offset, addressInput, LoadWordChip.circuit,
       LoadWordChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, LoadWordChip.isReal, circuit_norm]
 
@@ -3549,6 +3554,7 @@ theorem loadWordChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     rtypeWriteMessage, LoadWordChip.rowView, LoadWordChip.ramAccessView,
     LoadWordChip.isReal, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, LoadWordChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 /-- Lift LoadWord's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadWordChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -3709,6 +3715,7 @@ theorem LoadDoubleChip.ramAddressContract :
     simp only [input, offset, addressInput, LoadDoubleChip.circuit,
       LoadDoubleChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, circuit_norm]
 
@@ -3844,6 +3851,7 @@ theorem loadDoubleChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     rtypeWriteMessage, LoadDoubleChip.rowView, LoadDoubleChip.ramAccessView,
     AddressOperation.alignedValue, Circuits.Types.ITypeReader.toAdapterView,
     LoadDoubleChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 /-- Lift LoadDouble's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadDoubleChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -4474,6 +4482,7 @@ theorem LoadX0Chip.ramAddressContract :
     simp only [input, offset, addressInput, LoadX0Chip.circuit,
       LoadX0Chip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, LoadX0Chip.isReal, circuit_norm]
 
@@ -4609,6 +4618,7 @@ theorem loadX0Chip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
     LoadX0Chip.rowView, LoadX0Chip.ramAccessView, LoadX0Chip.isReal,
     AddressOperation.alignedValue, Circuits.Types.ITypeReader.toAdapterView,
     LoadX0Chip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 /-- Lift LoadX0's evaluated six-message list to the folded decoded-row boundary. -/
 theorem loadX0Chip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -5666,6 +5676,7 @@ theorem StoreByteChip.ramAddressContract :
     simp only [input, offset, addressInput, StoreByteChip.circuit,
       StoreByteChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, circuit_norm]
 
@@ -5796,6 +5807,7 @@ theorem storeByteChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreByteChip.rowView, StoreByteChip.ramAccessView, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, StoreByteChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 /-- Lift StoreByte's evaluated six-message list to the folded decoded-row boundary. -/
 theorem storeByteChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
@@ -6365,6 +6377,7 @@ theorem StoreHalfChip.ramAddressContract :
     simp only [input, offset, addressInput, StoreHalfChip.circuit,
       StoreHalfChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, circuit_norm]
 
@@ -6495,6 +6508,7 @@ theorem storeHalfChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreHalfChip.rowView, StoreHalfChip.ramAccessView, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, StoreHalfChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 theorem storeHalfChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))
@@ -6997,6 +7011,7 @@ theorem StoreWordChip.ramAddressContract :
     simp only [input, offset, addressInput, StoreWordChip.circuit,
       StoreWordChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, circuit_norm]
 
@@ -7127,6 +7142,7 @@ theorem storeWordChip_memoryInteractionValues_eq (env : Environment (ZMod p)) :
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreWordChip.rowView, StoreWordChip.ramAccessView, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, StoreWordChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 theorem storeWordChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))
@@ -7313,6 +7329,7 @@ theorem StoreDoubleChip.ramAddressContract :
     simp only [input, offset, addressInput, StoreDoubleChip.circuit,
       StoreDoubleChip.ramAccessView, AddressOperation.alignedValue,
       AddressOperation.circuit, circuit_norm]
+    simp only [FormalCircuitBase.output, circuit_norm]
   · intro env
     simp only [input, addressInput, circuit_norm]
 
@@ -7443,6 +7460,7 @@ theorem storeDoubleChip_memoryInteractionValues_eq (env : Environment (ZMod p)) 
   simp only [ramPriorMessage, ramPushMessage, rtypePriorMessage, rtypeReadBackMessage,
     StoreDoubleChip.rowView, StoreDoubleChip.ramAccessView, AddressOperation.alignedValue,
     Circuits.Types.ITypeReader.toAdapterView, StoreDoubleChip.circuit, circuit_norm]
+  simp only [FormalCircuitBase.output, circuit_norm]
 
 theorem storeDoubleChip_typedMemoryInteractions_eq (decoded : DecodedInstructionRow p)
     (data : ProverData (ZMod p))

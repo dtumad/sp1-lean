@@ -1,10 +1,20 @@
 import SP1Clean.Proofs.Operations.OrdinaryObservation
-import SP1Clean.Proofs.Completeness.ProviderWitgen
+import SP1Clean.Proofs.Chips.ByteChip.ByteChip
+import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+import SP1Clean.Proofs.Chips.ProgramProviderChip
+import SP1Clean.Proofs.Chips.MemoryProviderChip
+import SP1Clean.Proofs.Chips.MemoryFinalizeChip
+import SP1Clean.Proofs.Chips.StateBumpChip.Formal
+import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
+import SP1Clean.Proofs.Chips.HaltChip.Witgen
+import Clean.Circuit.Theorems
+import Clean.Circuit.Subcircuit
+import ToClean.Gadgets.BitwiseByte
 
 /-! # Constructing physical ordinary observation rows
 
 The standard Clean table builder uses the same local population and witness IR as the circuit.
-Computability is proved here, rather than supplied as a compiler-readiness premise. Clock order
+Computability comes from the bundled circuit proof. Clock order
 is a semantic input condition for this subsystem; the mixed compiler derives it from execution.
 -/
 
@@ -17,76 +27,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 /-- The composed word gadgets require only the weaker field bound. -/
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-omit [Fact (2 ^ 25 < p)] in
-private theorem zeroComputable :
-    (Gadgets.IsZeroField.circuit (F := ZMod p)).base.ComputableWitnesses := by
-  intro k input env env'
-  simp only [Gadgets.IsZeroField.circuit, circuit_norm, Operations.forAllFlat]
-  refine ⟨fun _ h => ?_, fun below h => ?_,
-    FlatOperation.forAll_witnessCongr_of_subcircuit _ _ (by simp [circuit_norm]),
-    FlatOperation.forAll_witnessCongr_of_subcircuit _ _ (by simp [circuit_norm])⟩
-  · simp only [h]
-  · have same := below.get_eq (by omega : k < 1 + k)
-    simp only [circuit_norm, h, same]
-
-namespace ClockOrder
-
-/-- Clock comparison witnesses depend only on the input and previously generated cells. -/
-theorem computableWitnesses : (circuit (p := p)).base.ComputableWitnesses := by
-  intro k input env env'
-  simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  refine ⟨FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.previousHigh h),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.previousLow h),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.currentHigh h),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _)
-      (fun _ h => by simpa [circuit_norm] using congrArg Inputs.currentLow h),
-    FlatOperation.forAll_witnessCongr_of_formalSubcircuit _ _ (by omega) zeroComputable
-      (fun _ h => ?_),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      (Gadgets.ToBits.rangeCheck_computableWitnesses _ _) (fun below h => ?_)⟩
-  · simp only [circuit_norm, Inputs.eval_congr_previousHigh h, Inputs.eval_congr_currentHigh h]
-  · have same := below.get_eq (by omega : k + 97 < k + 98)
-    simp only [Gadgets.IsZeroField.circuit, Gadgets.ToBits.rangeCheck, circuit_norm, Nat.add_assoc, same,
-      Inputs.eval_congr_previousHigh h, Inputs.eval_congr_previousLow h,
-      Inputs.eval_congr_currentHigh h, Inputs.eval_congr_currentLow h]
-
-end ClockOrder
-
 namespace OrdinaryObservation
-
-omit [Fact (2 ^ 25 < p)] in
-private theorem eval_clock (env : Environment (ZMod p)) (input : Var Inputs (ZMod p)) :
-    Eval.eval env input.clock = (Eval.eval env input).clock := by
-  rcases input with ⟨⟨high, low, pc0, pc1, pc2⟩, ⟨previousHigh, previousLow, counter, pc⟩, nextCounter⟩
-  simp only [Inputs.clock, circuit_norm]
-
-omit [Fact (2 ^ 25 < p)] in
-private theorem eval_counter (env : Environment (ZMod p)) (input : Var Inputs (ZMod p)) :
-    Eval.eval env input.previous.counter = (Eval.eval env input).previous.counter := by
-  rcases input with ⟨receipt, ⟨previousHigh, previousLow, counter, pc⟩, nextCounter⟩
-  simp only [circuit_norm]
-
-/-- All private cells are generated honestly by the existing clock and word gadgets. -/
-theorem computableWitnesses (enabled : Bool) :
-    (circuit (p := p) enabled).base.ComputableWitnesses := by
-  intro k input env env'
-  simp only [circuit, main, circuit_norm, Operations.forAllFlat]
-  refine ⟨FlatOperation.forAll_witnessCongr_of_generalSubcircuit _ _ _
-      ClockOrder.computableWitnesses (fun h => ?_),
-    FlatOperation.forAll_witnessCongr_of_assertionSubcircuit _ _ (by omega)
-      WordRangeCheck.computableWitnesses (fun _ h => ?_),
-    FlatOperation.forAll_witnessCongr_of_subcircuit _ _ (by simp [circuit_norm])⟩
-  · simp only [CircuitType.eval_expression_prover_to_verifier, eval_clock]
-    simpa only [ProvableStruct.eval_eq_eval] using congrArg Inputs.clock h
-  · simp only [CircuitType.eval_expression_prover_to_verifier, eval_counter]
-    simpa only [ProvableStruct.eval_eq_eval] using congrArg (fun input : Inputs (ZMod p) => input.previous.counter) h
 
 variable {generation : WitnessGeneration.DemandMode (ZMod p) Inputs}
 
@@ -103,14 +44,14 @@ theorem construct_constraints (enabled : Bool) (inputs : List (Inputs (ZMod p)))
     (bounded : inputs.length ≤ UInt64.size)
     (consistent : data.tables (circuit (p := p) enabled).name (size Inputs) = (inputs.map toElements).toArray)
     (valid : ∀ input ∈ inputs, Spec enabled input) : (construct (generation := generation) enabled inputs data bounded consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded _ consistent (computableWitnesses enabled) valid
+  Table.build_constraints _ _ _ _ bounded _ consistent valid
 
 /-- Generated rows also supply every local channel guarantee, including all counter Byte checks. -/
 theorem construct_guarantees (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (bounded : inputs.length ≤ UInt64.size)
     (consistent : data.tables (circuit (p := p) enabled).name (size Inputs) = (inputs.map toElements).toArray)
     (valid : ∀ input ∈ inputs, Spec enabled input) : (construct (generation := generation) enabled inputs data bounded consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded _ consistent (computableWitnesses enabled) valid
+  Table.build_guarantees _ _ _ _ bounded _ consistent valid
 
 /-- Physical height is exactly the supplied observation count. -/
 theorem construct_length (enabled : Bool) (inputs : List (Inputs (ZMod p))) (data : ProverData (ZMod p))

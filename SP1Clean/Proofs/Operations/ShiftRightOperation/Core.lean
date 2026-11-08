@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.Native.Operations.ShiftRightOperation.Core
 import ToClean.Circuit.InteractionRecovery
 import Clean.Utils.Tactics
@@ -36,6 +37,10 @@ theorem completeness :
 def circuit : FormalAssertion (ZMod p) ShiftRightChip.Columns where
   main
   elaborated
+  computableWitnesses := by
+    intro n input env env'
+    simp only [main, circuit_norm, Nat.add_zero,
+      Gadgets.Equality.toSubcircuit_computableWitnesses, ProverEnvironment.OnlyAccessedBelow]
   Assumptions := Assumptions
   Spec := ShiftRightChip.CoreSpec
   soundness := soundness

@@ -1,5 +1,9 @@
 module
 
+public import ToClean.Circuit.ComputableWitnesses
+
+public import ToClean.Circuit.WitgenEval
+
 public import SP1Clean.Semantics.Specs.Bitwise
 public import SP1Clean.Circuits.Gadgets.BitwiseBytes
 public import SP1Clean.Circuits.Gadgets.U16toU8Safe
@@ -310,20 +314,6 @@ theorem populateFE_eval_cell (env : ProverEnvironment (ZMod p))
   simpa [Vector.getElem_map] using h
 
 omit [Fact (2 ^ 17 < p)] in
-/-- `ofFExprs`-of-`toElements` evaluation is the flattened struct evaluation (the raw payload
-form the `ComputableWitnesses` obligations quantify over). -/
-private lemma ofFExprs_eval_eq (env : ProverEnvironment (ZMod p))
-    (xs : Columns (Witgen.FExpr (ZMod p))) :
-    (Witgen.WitgenIR.ofFExprs (toElements xs)).eval env
-      = toElements (Witgen.eval { env := env } xs) := by
-  rw [show (Witgen.eval { env := env } xs : Columns (ZMod p))
-        = fromElements ((toElements xs).map (Witgen.FExpr.eval { env := env })) from rfl,
-    ProvableType.toElements_fromElements]
-  apply Vector.ext
-  intro i hi
-  simp [circuit_norm, Vector.getElem_map]
-
-omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the witness IR (the `ComputableWitnesses` counterpart of
 `populateFE_eval` — a congruence, so it needs no bounds). -/
 theorem populateFE_congr (env env' : ProverEnvironment (ZMod p))
@@ -402,20 +392,19 @@ theorem populateFE_congr (env env' : ProverEnvironment (ZMod p))
       (congrArg _ (toElements_cell_result _ 7 (by omega))).symm
 
 omit [Fact (2 ^ 17 < p)] in
-/-- `populateFE_congr` in the raw `ofFExprs` payload form the `ComputableWitnesses` obligations
+/-- `populateFE_congr` in the raw `ofCompositeFExpr` payload form the `ComputableWitnesses` obligations
 quantify over. -/
-theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
     (b c : Word (Expression (ZMod p))) (opcode : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
     (hC : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment c[i] = Expression.eval env'.toEnvironment c[i])
     (hOp : Expression.eval env.toEnvironment opcode = Expression.eval env'.toEnvironment opcode) :
-    (Witgen.WitgenIR.ofFExprs (toElements (populateFE b c opcode))).eval env
-      = (Witgen.WitgenIR.ofFExprs (toElements (populateFE b c opcode))).eval env' :=
-  (ofFExprs_eval_eq env _).trans
-    ((congrArg toElements (populateFE_congr env env' b c opcode hB hC hOp)).trans
-      (ofFExprs_eval_eq env' _).symm)
+    (Witgen.WitgenIR.ofCompositeFExpr (populateFE b c opcode)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (populateFE b c opcode)).eval env' := by
+  rw [Witgen.WitgenIR.eval_ofCompositeFExpr, Witgen.WitgenIR.eval_ofCompositeFExpr]
+  exact congrArg toElements (populateFE_congr env env' b c opcode hB hC hOp)
 
 /-- The witnessed columns `populate b c opcode` satisfy the gadget `Spec` for any `is_real`, given the
 operands are 64-bit and the opcode is AND/OR/XOR: the populated low bytes (`w[i] % 256`) and the derived

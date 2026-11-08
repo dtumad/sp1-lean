@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.Native.Operations.DivRemOperation.Compare
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
@@ -100,6 +101,8 @@ composed sub-operation assertions over the committed row, no fresh witnesses, se
 `DivRemCompare.CompareSpec`. -/
 def circuit : FormalAssertion (ZMod p) Inputs :=
   { main, elaborated,
+    computableWitnesses :=
+      FormalCircuitBase.computableWitnesses_unit_of_localLength_zero elaborated localLength_eq,
     Assumptions := Assumptions,
     Spec := CompareSpec,
     soundness := soundness,

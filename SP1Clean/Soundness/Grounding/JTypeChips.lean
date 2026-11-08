@@ -631,13 +631,6 @@ theorem JalChip.jtypeTimestampContract :
   refine .intro (offset + 8) readerInput ?_ ?_
   · simp only [input, offset, readerInput, jalChipJTypeInput, JalChip.circuit,
       JalChip.main, Readers.JTypeReader.circuit, circuit_norm]
-    right
-    right
-    right
-    right
-    right
-    left
-    rfl
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, jalChipJTypeInput, JalChip.circuit,

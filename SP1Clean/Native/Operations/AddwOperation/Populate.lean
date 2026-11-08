@@ -1,3 +1,5 @@
+import ToClean.Circuit.ComputableWitnesses
+import ToClean.Circuit.WitgenEval
 import Mathlib.Tactic.IntervalCases
 import SP1Clean.Math.Word
 import SP1Clean.FormalModel.Contracts.Operations
@@ -46,13 +48,13 @@ Lean `let`s — see `AddOperation.populateIR`). -/
 def valueIR (a b : Word (Expression (ZMod p))) : WitgenIR (ZMod p) 2 :=
   let s0 : U64Expr (ZMod p) := a[0].val + b[0].val
   let s1 : U64Expr (ZMod p) := a[1].val + b[1].val + s0 / 65536
-  .ofFExprs #v[(s0 % 65536).toField, (s1 % 65536).toField]
+  .ofCompositeFExpr (value := fields _) #v[(s0 % 65536).toField, (s1 % 65536).toField]
 
 /-- Bit 15 of the high result limb, re-derived from the same carry chain. -/
 def msbIR (a b : Word (Expression (ZMod p))) : WitgenIR (ZMod p) 1 :=
   let s0 : U64Expr (ZMod p) := a[0].val + b[0].val
   let s1 : U64Expr (ZMod p) := a[1].val + b[1].val + s0 / 65536
-  .ofFExprs #v[(s1 % 65536 / 32768).toField]
+  .ofCompositeFExpr (value := fields _) #v[(s1 % 65536 / 32768).toField]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Evaluating the value IR is exactly `addwValueWitness` on the evaluated operand words. -/
@@ -104,7 +106,7 @@ theorem msbIR_eval (env : ProverEnvironment (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the value IR (the `ComputableWitnesses` counterpart of `valueIR_eval`). -/
-theorem valueIR_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem valueIR_congr (env env' : ProverEnvironment (ZMod p))
     (a b : Word (Expression (ZMod p)))
     (hA : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment a[i] = Expression.eval env'.toEnvironment a[i])
@@ -118,7 +120,7 @@ theorem valueIR_congr (env env' : ProverEnvironment (ZMod p))
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the msb IR. -/
-theorem msbIR_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem msbIR_congr (env env' : ProverEnvironment (ZMod p))
     (a b : Word (Expression (ZMod p)))
     (hA : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment a[i] = Expression.eval env'.toEnvironment a[i])

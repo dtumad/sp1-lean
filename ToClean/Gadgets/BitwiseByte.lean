@@ -1,6 +1,7 @@
 module
 
 public import Clean.Gadgets.Bits
+public import ToClean.Gadgets.Equality
 public import ToClean.Gadgets.LookupProjection
 
 /-! # Bitwise byte operations without static lookup tables
@@ -87,6 +88,8 @@ def main (op : Op) (hp : 2 ^ 8 < p) (input : Var fieldPair (F p)) :
 def circuit (op : Op) (hp : 2 ^ 8 < p) :
     GeneralFormalCircuit (F p) fieldPair field where
   main := main op hp
+  computableWitnesses := by
+    cases op <;> computable_witnesses
   Spec input output _ :=
     (input.1.val < 2 ^ 8 ∧ input.2.val < 2 ^ 8) ∧
       output.val = op.apply input.1.val input.2.val

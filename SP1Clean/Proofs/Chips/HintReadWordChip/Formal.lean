@@ -28,6 +28,7 @@ private theorem eval_step (env : Environment (ZMod p)) (last : Bool) (input : Va
 
 /-- One active RAM transfer and its successive authenticated hint-word cursor step. -/
 def activeCircuit (last : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  computableWitnesses := by computable_witnesses [Inputs.step, Inputs.address]
   name := if last then "sp1.native.hint_read_word.last" else "sp1.native.hint_read_word.next"
   main := main last
   elaborated := elaborated last

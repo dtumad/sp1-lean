@@ -133,9 +133,6 @@ theorem JalrChip.cpuStateTimeContract :
       #v[var { index := offset } - var { index := offset + 8 }, var { index := offset + 1 },
         var { index := offset + 2 }], 8, input.is_real⟩, ?_, ?_⟩
   · simp only [input, offset, JalrChip.circuit, JalrChip.main, circuit_norm]
-    right
-    left
-    rfl
   · intro env
     constructor <;> simp only [input, JalrChip.circuit, JalrChip.rowView, circuit_norm]
 
@@ -150,17 +147,6 @@ theorem BranchChip.cpuStateTimeContract :
       #v[var { index := offset + 11 }, var { index := offset + 12 },
         var { index := offset + 13 }], 8, input.is_real⟩, ?_, ?_⟩
   · simp only [input, offset, BranchChip.circuit, BranchChip.main, circuit_norm]
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    left
-    rfl
   · intro env
     constructor <;> simp only [input, BranchChip.circuit, BranchChip.rowView, circuit_norm]
 
@@ -239,6 +225,7 @@ theorem DivRemChip.cpuStateTimeContract :
   · intro env
     constructor <;>
       simp only [input, DivRemChip.circuit, DivRemChip.rowView, circuit_norm]
+    all_goals simp only [DivRemChip.Columns.eval_state, circuit_norm]
 
 theorem AluX0Chip.cpuStateTimeContract :
     CircuitCPUStateTimeContract (p := p) (AluX0Chip.circuit (p := p)) AluX0Chip.rowView := by

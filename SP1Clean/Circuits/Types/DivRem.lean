@@ -41,7 +41,7 @@ deriving ProvableStruct
 provable_struct_eval_lemmas Inputs
 
 /-- Component-wise verifier evaluation of the DivRem chip input. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real,

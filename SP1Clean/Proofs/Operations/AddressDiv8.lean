@@ -122,6 +122,7 @@ private theorem eval_output (env : Environment (ZMod p)) (input : Var Inputs (ZM
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Output where
   main
   elaborated
+  computableWitnesses := by computable_witnesses [Inputs.rest, Inputs.output]
   Spec input output _ := Spec input output
   ProverAssumptions input _ _ := ProverAssumptions input
   soundness := by

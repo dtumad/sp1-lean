@@ -291,6 +291,71 @@ def exposedProgramInteractions (input : Var Inputs (ZMod p)) :
 composing the witnessed `AddOperation` gadget and the J-type reader; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.u_type", main, elaborated,
+    computableWitnesses := by
+      preserve_tactic_target
+      intro n input env env'
+      constructor
+      · simp only [main, circuit_norm, Nat.add_zero]
+        repeat' apply And.intro
+        all_goals intro h_input
+        all_goals first
+          | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+          | intro h_agree
+            first
+              | -- the addend `is_auipc · pc`, a literal vector
+                have hpc : ∀ (j : ℕ) (hj : j < 3),
+                    Expression.eval env.toEnvironment input.state.pc[j]
+                      = Expression.eval env'.toEnvironment input.state.pc[j] := by
+                  intro j hj
+                  have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
+                  simp only [eval_statePc] at hv
+                  simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+                have hsel : Expression.eval env.toEnvironment input.is_auipc
+                    = Expression.eval env'.toEnvironment input.is_auipc := by
+                  have hv := Inputs.eval_congr_is_auipc h_input
+                  simpa [eval_inputs] using hv
+                -- the payload is a bare `FExpr` product, so unfold the IR evaluator alone: naming
+                -- `circuit_norm` here would reach the whole inline `main` (no `populateIR` opacity boundary)
+                -- and blow the budget.
+                apply Vector.ext; intro i hi
+                simp only [Witgen.WitgenIR.eval, Witgen.evalSteps, Witgen.VExpr.eval, Vector.getElem_map]
+                interval_cases i <;>
+                  simp [Witgen.FExpr.eval, hsel, hpc 0 (by omega), hpc 1 (by omega), hpc 2 (by omega)]
+              | -- the result word
+                have hpc : ∀ (j : ℕ) (hj : j < 3),
+                    Expression.eval env.toEnvironment input.state.pc[j]
+                      = Expression.eval env'.toEnvironment input.state.pc[j] := by
+                  intro j hj
+                  have hv := congrArg (fun r : Inputs (ZMod p) => r.state.pc) h_input
+                  simp only [eval_statePc] at hv
+                  simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Vector (ZMod p) 3 => v[j]) hv
+                have hsel : Expression.eval env.toEnvironment input.is_auipc
+                    = Expression.eval env'.toEnvironment input.is_auipc := by
+                  have hv := Inputs.eval_congr_is_auipc h_input
+                  simpa [eval_inputs] using hv
+                have hoa0 : Expression.eval env.toEnvironment input.adapter.op_a_0
+                    = Expression.eval env'.toEnvironment input.adapter.op_a_0 := by
+                  have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_a_0) h_input
+                  simpa only [eval_opA0] using hv
+                refine AddOperation.populateIRGated_congr env env' _ _ _ hoa0
+                  (fun i hi => ?_) (fun i hi => ?_)
+                · interval_cases i <;>
+                    simp [Expression.eval, hsel, hpc 0 (by omega), hpc 1 (by omega), hpc 2 (by omega)]
+                · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_b_imm) h_input
+                  simp only [eval_opBImm] at hv
+                  simpa only [ProvableType.getElem_eval_fields] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        have length_eq : (main input).localLength n = 7 :=
+          (elaborated.localLength_eq input n).trans (by rfl)
+        rw [length_eq] at h_agrees
+        rw [elaborated.output_eq]
+        simp (disch := omega) only [circuit_norm, h]
+        repeat' apply And.intro
+        all_goals
+          apply Vector.ext
+          intro i hi
+          simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
