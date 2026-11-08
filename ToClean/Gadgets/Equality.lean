@@ -17,8 +17,9 @@ namespace Gadgets.Equality
 variable {F : Type} [FiniteField F] {M : TypeMap} [ProvableType M]
 
 section
--- Match the instance captured by the polymorphic equality bundle.
-local instance (priority := high + 1) : ProvableType (ProvablePair field field) := ProvablePair.instance
+/-- Match the instance captured by the polymorphic equality bundle. -/
+local instance (priority := high + 1) equalityFieldPair : ProvableType (ProvablePair field field) :=
+  ProvablePair.instance
 
 /-- Field-specialized metadata key for literal pairs of expressions. -/
 @[circuit_norm ↓] theorem field_localLength (left right : Expression F) :
