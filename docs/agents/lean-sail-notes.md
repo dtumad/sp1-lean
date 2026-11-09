@@ -4,6 +4,10 @@ The authoritative Lean graph is lakefile.toml, lake-manifest.json and lean-toolc
 External generator inputs are in [provenance.json](../../scripts/provenance.json).
 No path dependencies or moving branches; update one Lake requirement at a time.
 
+Keep every dependency shared with Clean at the revision in the pinned Clean manifest.
+CompPoly remains inherited from Clean; upgrade it through Clean rather than adding a root
+override. Independent PolyFun or Sail updates must preserve this shared dependency graph.
+
 A commit must be reachable from a published branch/tag: a warm local git object can hide a pin
 that a fresh Lake clone cannot fetch. Validate a changed pin in a clean checkout.
 
