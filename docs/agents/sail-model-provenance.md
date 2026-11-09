@@ -73,7 +73,10 @@ jobs. Fingerprints authenticate the reviewed snapshot; fresh regeneration suppli
 evidence. Neither the preparation script nor a cache restore updates the expected fingerprint.
 
 The compiler carries the module-header adaptation from Sail #1742 on the active `sail2` branch.
-The runtime carries lean-sail #13. Both use published immutable revisions. Generated declarations
+The runtime carries lean-sail #13, the inclusive finite-range correction (#18), and explicit
+loop-limit failures (#21). Exhausting a bounded loop produces a Sail assertion error; successful
+execution proofs must not assume a loop returns normally merely because its body does.
+Both integrations use published immutable revisions. Generated declarations
 now live directly in `LeanRV64D`; `LeanRV64D.Defs` remains a module filename, not a declaration
 namespace. The generator also adjusts supplementary files that opened the former namespace.
 Consume compatible upstream revisions when these adaptations merge.

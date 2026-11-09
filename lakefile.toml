@@ -97,7 +97,7 @@ rev = "f8a4194c604488cb732024890aebd083968222ab"
 [[require]]
 name = "Sail"
 git = "https://github.com/dtumad/lean-sail"
-rev = "732e3cbe8cb8870492eacedeb402c3ea1b7bed39"
+rev = "888e408733fbe400602423d7163bbf34c21ea156"
 
 # PolyFun supplies the `DynSystem`/`Labeled`/`Prefix`/`ReachableIn` machine vocabulary. Lenses and
 # the broader extensible-machine theory are not used; circuit construction and bus proofs remain

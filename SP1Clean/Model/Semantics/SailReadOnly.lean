@@ -104,8 +104,9 @@ theorem untilE {α β : Type} (source : SailState) (fuel : ℕ) (condition : α 
     (step : ∀ value, ReadOnlyAt source (ExceptT.run (body value))) :
     ReadOnlyAt source (ExceptT.run (untilFuelM fuel condition initial body)) := by
   unfold untilFuelM
-  induction fuel generalizing initial with
-  | zero => exact pure source _
+  generalize fuel + 1 = remaining
+  induction remaining generalizing initial with
+  | zero => exact throw source (.Assertion "untilFuelM: termination limit reached")
   | succ fuel ih =>
     apply (step initial).bindE
     intro value
