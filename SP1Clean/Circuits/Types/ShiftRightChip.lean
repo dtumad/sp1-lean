@@ -80,7 +80,7 @@ structure Columns (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas Columns
 
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ state := Eval.eval env input.state, adapter := Eval.eval env input.adapter,
@@ -89,7 +89,7 @@ provable_struct_eval_lemmas Columns
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state, adapter := Eval.eval env cols.adapter,
@@ -108,14 +108,14 @@ provable_struct_eval_lemmas Columns
   rw [ProvableStruct.eval_eq_eval]
   rfl
 
-@[circuit_norm] theorem eval_inputIsReal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_inputIsReal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).is_real = Expression.eval env input.is_real := by
   simpa only [Inputs.is_real, CircuitType.eval_expr, Expression.eval] using
     congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
 
 /-- Activity evaluation at the struct boundary. -/
-@[circuit_norm] theorem eval_isReal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_isReal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).is_real = Expression.eval env input.is_real := by
   rw [← ProvableStruct.eval_eq_eval]

@@ -125,7 +125,8 @@ theorem opCPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
 /-- The Sub chip row as a `GeneralFormalCircuit`: semantic contract, composing the witnessed
 gadget + the two readers; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
-  { name := "sp1.native.sub", main, elaborated,
+  { computableWitnesses := by computable_witnesses [Inputs.op_b_val, Inputs.op_c_val],
+    name := "sp1.native.sub", main, elaborated,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

@@ -202,15 +202,8 @@ private theorem main_memory_values (input : Var HostCallChip.Inputs (ZMod p)) (o
   -- the selector is rewritten by its constraint-derived value. Operand words stay folded
   -- as whole-vector evaluations across the instruction and length-reader boundaries.
   have hsel := HostCallChip.selector_of_constraints input offset env constraints
-  have hv : (ProvableStruct.eval env input.instruction).op_a_memory.prev_value =
-      Eval.eval env input.instruction.op_a_memory.prev_value := by
-    rw [SyscallInstrsChip.Inputs.eval_op_a_memory, ProvableStruct.eval_eq_eval,
-      Circuits.Types.RegisterAccessCols.eval_prev_value]
-  have hv' : (ProvableStruct.eval env input.length).prev_value =
-      Eval.eval env input.length.prev_value := by
-    rw [Circuits.Types.RegisterAccessCols.eval_prev_value]
   simp only [HostCallChip.Inputs.read, Readers.RegisterRead.Inputs.prior,
-    Readers.RegisterRead.Inputs.pushed, circuit_norm, hsel, hv, hv']
+    Readers.RegisterRead.Inputs.pushed, circuit_norm, hsel]
 
 /-- The wrapper retains all original Memory interactions and adds exactly its gated x12 pair. -/
 theorem memory_values (env : Environment (ZMod p))

@@ -92,7 +92,7 @@ def selectors {F : Type} (cols : Columns F) : SelectorValues F :=
   ⟨cols.is_mul, cols.is_mulh, cols.is_mulhu, cols.is_mulhsu, cols.is_mulw⟩
 
 /-- Component-wise evaluation of MUL's independent input row. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ state := Eval.eval env input.state, adapter := Eval.eval env input.adapter,
@@ -102,7 +102,7 @@ def selectors {F : Type} (cols : Columns F) : SelectorValues F :=
   rw [ProvableStruct.eval_eq_eval]; rfl
 
 /-- Evaluation commutes with activity derived from the five input selectors. -/
-@[circuit_norm] theorem eval_isReal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_isReal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).is_real = Expression.eval env input.is_real := by
   rw [← ProvableStruct.eval_eq_eval]
@@ -110,7 +110,7 @@ def selectors {F : Type} (cols : Columns F) : SelectorValues F :=
     congrArg (fun value : Inputs F => value.is_real) (eval_inputs env input)
 
 /-- Component-wise evaluation of a completed Mul row. -/
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state

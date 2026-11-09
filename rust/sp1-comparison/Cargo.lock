@@ -215,7 +215,7 @@ dependencies = [
 [[package]]
 name = "clean_backend"
 version = "0.1.0"
-source = "git+https://github.com/Verified-zkEVM/clean?rev=2ca265f5c402d71911e4a2c865ea29c8e03fbef2#2ca265f5c402d71911e4a2c865ea29c8e03fbef2"
+source = "git+https://github.com/Verified-zkEVM/clean?rev=f8a4194c604488cb732024890aebd083968222ab#f8a4194c604488cb732024890aebd083968222ab"
 dependencies = [
  "p3-air 0.8.0",
  "p3-batch-stark",

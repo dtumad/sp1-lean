@@ -1,3 +1,4 @@
+import ToClean.Circuit.WitgenEval
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.EvalVec
@@ -193,13 +194,13 @@ def main (input : Var Inputs (ZMod p)) :
   -- exactly `FExpr.inv`'s convention, so the padding row (`is_real = 0`) needs no special case.
   -- `value` here is the *previous* witness's output, i.e. variables at strictly lower offsets, which
   -- is what an `.expr` leaf is for and what keeps the row's witnesses computable.
-  let inv ← witnessVectorIR 1 (.ofFExprs
-    #v[.mul (.expr input.is_real) (.inv (.add (.expr value[1]) (.expr value[2])))])
+  let inv ← witnessField
+    (.mul (.expr input.is_real) (.inv (.add (.expr value[1]) (.expr value[2]))))
   assertZero (input.is_real * (input.is_real - 1))
   input.offset_bit0 * (input.offset_bit0 - 1) === 0
   input.offset_bit1 * (input.offset_bit1 - 1) === 0
   input.offset_bit2 * (input.offset_bit2 - 1) === 0
-  inv[0] * (value[1] + value[2]) - input.is_real === 0
+  inv * (value[1] + value[2]) - input.is_real === 0
   -- offset low-3-bits range check via the **byte bus** (SP1's `Range(13)` send,
   -- the released AddressOperation AIR), not a `ToBits` bit-decomposition: the offset decomposition
   -- `(value[0] - 4·b₂ - 2·b₁ - b₀)/8 < 2^13` as a `byteChannel` `Range` receive at
@@ -207,7 +208,7 @@ def main (input : Var Inputs (ZMod p)) :
   byteChannel.pullIf input.is_real
     (⟨6, (value[0] - 4 * input.offset_bit2 - 2 * input.offset_bit1 - input.offset_bit0) * (8 : ZMod p)⁻¹,
        Expression.const ((13 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))
-  return ⟨⟨value⟩, inv[0]⟩
+  return ⟨⟨value⟩, inv⟩
 
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs Circuits.Types.AddressOperation main where
   -- 3 address limbs + 1 inverse witness; the offset range check is now a byte-bus `Range` receive

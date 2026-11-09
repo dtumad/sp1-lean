@@ -67,7 +67,6 @@ import SP1Clean.Proofs.Completeness.NativeStateAgreement
 import SP1Clean.Proofs.Completeness.NativeTraceCompiler
 import SP1Clean.Proofs.Completeness.ProviderInteractions
 import SP1Clean.Proofs.Completeness.ProviderTables
-import SP1Clean.Proofs.Completeness.ProviderWitgen
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.Proofs.Completeness.StateHistory
 import SP1Clean.Proofs.Completeness.StateInventory

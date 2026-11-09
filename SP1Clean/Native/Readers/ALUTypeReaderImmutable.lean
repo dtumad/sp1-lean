@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
@@ -243,6 +244,15 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
   -- `byteChannel` dropped (W11 Phase 0c); `programChannel` dropped (W11 flip — now pulled, its off-gate
   -- requirement vacuous via the inline `is_trusted` gate). Only the Memory bus's requirements remain.
   { main, elaborated,
+    computableWitnesses := by
+      intro n input env env'
+      simp only [main, circuit_norm, Nat.add_zero,
+        Gadgets.Equality.toSubcircuit_computableWitnesses, ProverEnvironment.OnlyAccessedBelow]
+      refine ⟨?_, ?_, ?_⟩ <;> intro h
+      all_goals
+        apply FormalAssertion.toSubcircuit_computableWitnesses _ rfl
+        intro _
+        simp only [circuit_norm, h],
     Assumptions := AssumptionsD, Spec := SpecD,
     ProverAssumptions := ProverAssumptionsD, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
@@ -272,6 +282,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
         · right
           exact h_trusted
         all_goals exact Or.inl List.mem_cons_self }
+
+/-- Public channel metadata, without unfolding the bundled proof fields. -/
+@[circuit_norm ↓] theorem circuit_channelsWithGuarantees :
+    (circuit (p := p)).channelsWithGuarantees =
+      [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 
 end SP1Clean.Readers.ALUTypeReaderImmutable
 

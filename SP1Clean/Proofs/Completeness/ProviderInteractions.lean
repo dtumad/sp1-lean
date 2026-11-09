@@ -200,8 +200,7 @@ theorem msb_buildRow_result
       if 128 ≤ input.b.val then 1 else 0 := by
   let component := ({ circuit := ByteChip.MSB.circuit, Assumptions := (ByteChip.MSB.circuit).Assumptions, generation := ByteChip.MSB.generation } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.MSB.computableWitnesses bound (by trivial)).1
+  have hspec := (component.buildRow_spec_requirements input data hint bound (by trivial)).1
   have hinput : component.rowInput env = input :=
     component.rowInput_buildRow input data data hint
   simp only [Air.Flat.Component.Spec] at hspec
@@ -302,8 +301,7 @@ theorem and_buildRow_result_val
       (ByteChip.AndByte.circuit.output (varFromOffset ByteChip.AndByte.Inputs 0)
         (size ByteChip.AndByte.Inputs))).val = input.b.val &&& input.c.val := by
   let component := ({ circuit := ByteChip.AndByte.circuit, Assumptions := (ByteChip.AndByte.circuit).Assumptions, generation := ByteChip.AndByte.generation } : Component (ZMod p))
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.AndByte.computableWitnesses bounds (by trivial)).1
+  have hspec := (component.buildRow_spec_requirements input data hint bounds (by trivial)).1
   simp only [Air.Flat.Component.Spec, component.rowInput_buildRow] at hspec
   simpa only [component, Air.Flat.Component.rowOutput, circuit_norm] using hspec.2
 
@@ -393,8 +391,7 @@ theorem or_buildRow_result_val
       (ByteChip.OrByte.circuit.output (varFromOffset ByteChip.OrByte.Inputs 0)
         (size ByteChip.OrByte.Inputs))).val = input.b.val ||| input.c.val := by
   let component := ({ circuit := ByteChip.OrByte.circuit, Assumptions := (ByteChip.OrByte.circuit).Assumptions, generation := ByteChip.OrByte.generation } : Component (ZMod p))
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.OrByte.computableWitnesses bounds (by trivial)).1
+  have hspec := (component.buildRow_spec_requirements input data hint bounds (by trivial)).1
   simp only [Air.Flat.Component.Spec, component.rowInput_buildRow] at hspec
   simpa only [component, Air.Flat.Component.rowOutput, circuit_norm] using hspec.2
 
@@ -484,8 +481,7 @@ theorem xor_buildRow_result
       (ByteChip.XorByte.circuit.output (varFromOffset ByteChip.XorByte.Inputs 0)
         (size ByteChip.XorByte.Inputs))).val = input.b.val ^^^ input.c.val := by
   let component := ({ circuit := ByteChip.XorByte.circuit, Assumptions := (ByteChip.XorByte.circuit).Assumptions, generation := ByteChip.XorByte.generation } : Component (ZMod p))
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.XorByte.computableWitnesses bounds (by trivial)).1
+  have hspec := (component.buildRow_spec_requirements input data hint bounds (by trivial)).1
   simp only [Air.Flat.Component.Spec, component.rowInput_buildRow] at hspec
   simpa only [component, Air.Flat.Component.rowOutput, circuit_norm] using hspec.2
 
@@ -589,8 +585,7 @@ theorem ltu_buildRow_result
       if input.b.val < input.c.val then 1 else 0 := by
   let component := ({ circuit := ByteChip.Ltu.circuit, Assumptions := (ByteChip.Ltu.circuit).Assumptions, generation := ByteChip.Ltu.generation } : Component (ZMod p))
   let env := Environment.fromArray (component.buildRow input data hint) data
-  have hspec := (component.buildRow_spec_requirements input data hint
-    ByteChip.Ltu.computableWitnesses bounds (by trivial)).1
+  have hspec := (component.buildRow_spec_requirements input data hint bounds (by trivial)).1
   have hinput : component.rowInput env = input :=
     component.rowInput_buildRow input data data hint
   simp only [Air.Flat.Component.Spec] at hspec

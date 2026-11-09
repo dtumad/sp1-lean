@@ -67,7 +67,7 @@ provable_struct_eval_lemmas Inputs
     AddressOperation.Inputs F :=
   ⟨input.op_b_val, input.op_c_imm, 0, 0, 0, input.is_real⟩
 
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real
@@ -76,7 +76,7 @@ provable_struct_eval_lemmas Inputs
          memory_access := Eval.eval env input.memory_access } : Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_addressInput {F : Type} [FiniteField F]
+theorem eval_addressInput {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env (addressInput input) = addressInput (Eval.eval env input) := by
   simp only [addressInput, Inputs.op_b_val, Inputs.op_c_imm, eval_inputs]
@@ -144,7 +144,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
         Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of a completed StoreDouble row. -/
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state

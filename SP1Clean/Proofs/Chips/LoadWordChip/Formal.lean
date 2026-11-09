@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
@@ -329,6 +330,24 @@ theorem opBPull_mem_exposedMemoryInteractions (input : Var Inputs (ZMod p)) (off
 /-- The `LoadWord` chip row as a `GeneralFormalCircuit`; output is the extracted `Columns`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.load_word", main, elaborated,
+    computableWitnesses := by
+      intro n input env env'
+      constructor
+      · simp only [main, circuit_norm, Nat.add_zero,
+          Gadgets.Equality.toSubcircuit_computableWitnesses]
+        refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intro h
+        all_goals first
+          | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+          | apply GeneralFormalCircuit.toSubcircuit_computableWitnesses _ rfl
+            intro _
+            simp only [circuit_norm, Inputs.op_b_val, Inputs.op_c_imm, h]
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        simp only [main, circuit_norm, h]
+        rw [← ProvableStruct.eval_eq_eval, ← ProvableStruct.eval_eq_eval]
+        apply FormalCircuitBase.eval_output_congr
+        · simpa only [main, circuit_norm, Nat.add_zero] using h_agrees
+        · simp only [circuit_norm, Inputs.op_b_val, Inputs.op_c_imm, h],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     channelsWithRequirements :=

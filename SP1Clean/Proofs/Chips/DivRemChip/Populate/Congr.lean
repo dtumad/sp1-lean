@@ -1,3 +1,4 @@
+import ToClean.Circuit.WitgenEval
 import SP1Clean.Proofs.Chips.DivRemChip.Populate.FE
 
 /-! # `DivRemChip` — witness-payload environment-locality (A7f)
@@ -73,15 +74,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `quotient_comp` site. -/
 theorem quotCompCongr :
-    (Witgen.WitgenIR.ofFExprs (quotCompFE selectors B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (quotCompFE selectors B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (quotCompFE selectors B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (quotCompFE selectors B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [quotCompFE, wordFOfU64, quotCompBitsU, quotBitsU, allOnesU, compU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -90,15 +92,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the result-word site. -/
 theorem aCongr :
-    (Witgen.WitgenIR.ofFExprs (aFE selectors B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (aFE selectors B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (aFE selectors B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (aFE selectors B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [aFE, quotFE, remFE, wordFOfU64, quotBitsU, remBitsU, allOnesU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -107,15 +110,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the committed `b` operand site. -/
 theorem bCongr :
-    (Witgen.WitgenIR.ofFExprs (compF selectors B)).eval env
-      = (Witgen.WitgenIR.ofFExprs (compF selectors B)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (compF selectors B)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (compF selectors B)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [compF, wSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -124,15 +128,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the committed `c` operand site. -/
 theorem cCongr :
-    (Witgen.WitgenIR.ofFExprs (compF selectors C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (compF selectors C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (compF selectors C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (compF selectors C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [compF, wSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -230,8 +235,8 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `scal` site. -/
 theorem scalCongr :
-    (Witgen.WitgenIR.ofFExprs (scalFE selectors ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (scalFE selectors ir B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (scalFE selectors ir B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (scalFE selectors ir B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
@@ -240,7 +245,8 @@ theorem scalCongr :
   have hovc := ovcResCongr selectors env env' C ir hC hir hselectors
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [scalFE, isOverflowFE, bNegFE, cNegFE, remNegFE, bMsbFE, cMsbFE, remMsbFE, signedSumF, wSumF, remFE, wordFOfU64, remBitsU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hovb, hovc, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -281,8 +287,8 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `is_c_0` site. -/
 theorem isC0Congr :
-    (Witgen.WitgenIR.ofFExprs (isC0FE selectors C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (isC0FE selectors C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (isC0FE selectors C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (isC0FE selectors C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
@@ -296,7 +302,8 @@ theorem isC0Congr :
         circuit_norm, -Witgen.u64Wrap, hC0, hC1, hC2, hC3, hselectors]
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs, isC0FE, Vector.getElem_cast,
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, isC0FE, Vector.getElem_cast,
     Witgen.getElem_eval_toElements,
     IsZeroWordOperation.populateFE_congr env env' (compF selectors C) hcells]
 
@@ -304,15 +311,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `abs_c` site. -/
 theorem absCCongr :
-    (Witgen.WitgenIR.ofFExprs (absCFE selectors C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (absCFE selectors C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (absCFE selectors C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (absCFE selectors C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [absCFE, compU, compF, wSumF, signedSumF, wordFOfU64, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -321,15 +329,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `abs_remainder` site. -/
 theorem absRemCongr :
-    (Witgen.WitgenIR.ofFExprs (absRemFE selectors B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (absRemFE selectors B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (absRemFE selectors B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (absRemFE selectors B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [absRemFE, remCompFE, wordFOfU64, remCompBitsU, remBitsU, compU, signedSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -338,15 +347,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `remainder_comp` site. -/
 theorem remCompCongr :
-    (Witgen.WitgenIR.ofFExprs (remCompFE selectors B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (remCompFE selectors B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (remCompFE selectors B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (remCompFE selectors B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [remCompFE, wordFOfU64, remCompBitsU, remBitsU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -355,15 +365,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `max_abs_c_or_1` site. -/
 theorem maxAbsCongr :
-    (Witgen.WitgenIR.ofFExprs (maxAbsFE selectors C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (maxAbsFE selectors C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (maxAbsFE selectors C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (maxAbsFE selectors C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [maxAbsFE, absCU, absCFE, compU, compF, wSumF, signedSumF, wordFOfU64, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -372,15 +383,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `c_neg_operation` site. -/
 theorem wCnegCongr :
-    (Witgen.WitgenIR.ofFExprs (wCnegFE selectors ir C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (wCnegFE selectors ir C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (wCnegFE selectors ir C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (wCnegFE selectors ir C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [wCnegFE, cNegFE, cMsbFE, absCFE, compU, compF, wSumF, signedSumF, wordFOfU64, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF, AddOperation.populateFW,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -389,15 +401,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `misc` site. -/
 theorem miscCongr :
-    (Witgen.WitgenIR.ofFExprs (miscFE selectors ir B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (miscFE selectors ir B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (miscFE selectors ir B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (miscFE selectors ir B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [miscFE, cNegFE, remNegFE, cMsbFE, remMsbFE, remFE, ltGateFE, compF, wordFOfU64, remBitsU, wSumF, signedSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF, IsZeroWordOperation.populateFE, IsZeroOperation.populateFE,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -515,15 +528,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `remainder` site. -/
 theorem remCongr :
-    (Witgen.WitgenIR.ofFExprs (remFE selectors B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (remFE selectors B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (remFE selectors B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (remFE selectors B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [remFE, wordFOfU64, remBitsU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -536,7 +550,7 @@ theorem wRnegCongr :
       = ((wRnegProgram selectors ir B C).toIRLiteral (value := fields 4)).eval env' := by
   have hgate : (remNegFE selectors B C).eval { env := env } * ir.eval env.toEnvironment =
       (remNegFE selectors B C).eval { env := env' } * ir.eval env'.toEnvironment := by
-    have h := Witgen.cell_congr_of_ofFExprs_congr
+    have h := Witgen.cell_congr_of_ofCompositeFExpr_congr
       (miscCongr selectors env env' B C ir hB hC hir hselectors) 1 (by omega)
     simpa only [miscFE, circuit_norm] using h
   rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
@@ -545,7 +559,7 @@ theorem wRnegCongr :
   intro i hi
   have hadd := AddOperation.populateFW_congr { env := env } { env := env' }
     (remFE selectors B C) (absRemFE selectors B C)
-    (Witgen.cell_congr_of_ofFExprs_congr (remCongr selectors env env' B C ir hB hC hir hselectors))
+    (Witgen.cell_congr_of_ofCompositeFExpr_congr (remCongr selectors env env' B C ir hB hC hir hselectors))
     (absRemCellCongr selectors env env' B C hB hC hselectors) i hi
   rw [wRnegProgram_eval_limb, (wRnegProgram_eval_limb selectors), hgate, hadd]
 
@@ -553,15 +567,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `quotient` site. -/
 theorem quotCongr :
-    (Witgen.WitgenIR.ofFExprs (quotFE selectors B C)).eval env
-      = (Witgen.WitgenIR.ofFExprs (quotFE selectors B C)).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (quotFE selectors B C)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (quotFE selectors B C)).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   interval_cases i <;>
   simp only [quotFE, wordFOfU64, quotBitsU, allOnesU, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -570,15 +585,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `b_msb` cell site. -/
 theorem bMsbCongr :
-    (Witgen.WitgenIR.ofFExprs (#v[bMsbFE selectors B])).eval env
-      = (Witgen.WitgenIR.ofFExprs (#v[bMsbFE selectors B])).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[bMsbFE selectors B])).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[bMsbFE selectors B])).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   obtain rfl : i = 0 := by omega
   simp only [bMsbFE, wSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -587,15 +603,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `c_msb` cell site. -/
 theorem cMsbCongr :
-    (Witgen.WitgenIR.ofFExprs (#v[cMsbFE selectors C])).eval env
-      = (Witgen.WitgenIR.ofFExprs (#v[cMsbFE selectors C])).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[cMsbFE selectors C])).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[cMsbFE selectors C])).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   obtain rfl : i = 0 := by omega
   simp only [cMsbFE, wSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -604,15 +621,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `rem_msb` cell site. -/
 theorem remMsbCongr :
-    (Witgen.WitgenIR.ofFExprs (#v[remMsbFE selectors B C])).eval env
-      = (Witgen.WitgenIR.ofFExprs (#v[remMsbFE selectors B C])).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[remMsbFE selectors B C])).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[remMsbFE selectors B C])).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   obtain rfl : i = 0 := by omega
   simp only [remMsbFE, remFE, wordFOfU64, remBitsU, wSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -621,15 +639,16 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hC hir hselectors in
 /-- Environment-locality of the `quot_msb` cell site. -/
 theorem quotMsbCongr :
-    (Witgen.WitgenIR.ofFExprs (#v[quotMsbFE selectors B C])).eval env
-      = (Witgen.WitgenIR.ofFExprs (#v[quotMsbFE selectors B C])).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[quotMsbFE selectors B C])).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) (#v[quotMsbFE selectors B C])).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
   apply Vector.ext
   intro i hi
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs]
+  simp only [size] at hi
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields]
   obtain rfl : i = 0 := by omega
   simp only [quotMsbFE, quotFE, wordFOfU64, quotBitsU, allOnesU, wSumF, negU, absU, sdivU, sremU, neg32U, sdiv32U, srem32U, low32U, sext32U, wordU, flagF, selectorF, U16MSBOperation.populate_msbF,
       circuit_norm, -Witgen.u64Wrap, hB0, hB1, hB2, hB3, hC0, hC1, hC2, hC3, hir, hselectors]
@@ -643,9 +662,9 @@ theorem mulProgramCongr (upper : Bool) :
   rw [Witgen.M.eval_toIRLiteral, Witgen.M.eval_toIRLiteral]
   apply congrArg toElements
   rw [mulProgram_eval, (mulProgram_eval selectors)]
-  have hq := Witgen.cell_congr_of_ofFExprs_congr
+  have hq := Witgen.cell_congr_of_ofCompositeFExpr_congr
     (quotCompCongr selectors env env' B C ir hB hC hir hselectors)
-  have hc := Witgen.cell_congr_of_ofFExprs_congr (cCongr selectors env env' B C ir hB hC hir hselectors)
+  have hc := Witgen.cell_congr_of_ofCompositeFExpr_congr (cCongr selectors env env' B C ir hB hC hir hselectors)
   refine Witgen.gateFE_congr _ _ _ _ ?_
     (MulOperation.populateFEW_congr { env := env } { env := env' }
       _ _ _ _ _ hq hc ?_ rfl rfl)
@@ -660,9 +679,9 @@ omit [Fact (2 ^ 24 < p)] in
 include hB hir hselectors in
 /-- Environment-locality of the flattened `is_overflow_b` struct site. -/
 theorem ovbCongr :
-    (Witgen.WitgenIR.ofFExprs ((toElements (ovbFE selectors ir B)).cast
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) ((toElements (ovbFE selectors ir B)).cast
         (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env
-      = (Witgen.WitgenIR.ofFExprs ((toElements (ovbFE selectors ir B)).cast
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) ((toElements (ovbFE selectors ir B)).cast
         (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env' := by
   have hB0 := hB 0 (by omega); have hB1 := hB 1 (by omega)
   have hB2 := hB 2 (by omega); have hB3 := hB 3 (by omega)
@@ -682,10 +701,11 @@ theorem ovbCongr :
     (simp only [wSumF, flagF, selectorF, circuit_norm, -Witgen.u64Wrap, hir, hselectors]; all_goals exact decide_eq_decide.mpr Iff.rfl)
   apply Vector.ext
   intro i hi
+  simp only [size] at hi
   have hsz : i < size Circuits.Types.IsEqualWordOperation := by
     have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs, Vector.getElem_cast]
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Vector.getElem_cast]
   exact (Witgen.getElem_eval_toElements _ _ i hsz).trans
     ((congrArg (fun s => (toElements s)[i]'hsz) hstruct).trans
       (Witgen.getElem_eval_toElements _ _ i hsz).symm)
@@ -694,9 +714,9 @@ omit [Fact (2 ^ 24 < p)] in
 include hC hir hselectors in
 /-- Environment-locality of the flattened `is_overflow_c` struct site. -/
 theorem ovcCongr :
-    (Witgen.WitgenIR.ofFExprs ((toElements (ovcFE selectors ir C)).cast
+    (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) ((toElements (ovcFE selectors ir C)).cast
         (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env
-      = (Witgen.WitgenIR.ofFExprs ((toElements (ovcFE selectors ir C)).cast
+      = (Witgen.WitgenIR.ofCompositeFExpr (value := fields _) ((toElements (ovcFE selectors ir C)).cast
         (show size Circuits.Types.IsEqualWordOperation = 11 from rfl))).eval env' := by
   have hC0 := hC 0 (by omega); have hC1 := hC 1 (by omega)
   have hC2 := hC 2 (by omega); have hC3 := hC 3 (by omega)
@@ -716,10 +736,11 @@ theorem ovcCongr :
     (simp only [wSumF, flagF, selectorF, circuit_norm, -Witgen.u64Wrap, hir, hselectors]; all_goals exact decide_eq_decide.mpr Iff.rfl)
   apply Vector.ext
   intro i hi
+  simp only [size] at hi
   have hsz : i < size Circuits.Types.IsEqualWordOperation := by
     have h : size Circuits.Types.IsEqualWordOperation = 11 := rfl
     omega
-  simp only [Witgen.WitgenIR.getElem_eval_ofFExprs, Vector.getElem_cast]
+  simp only [Witgen.WitgenIR.getElem_eval_ofCompositeFExpr_fields, Vector.getElem_cast]
   exact (Witgen.getElem_eval_toElements _ _ i hsz).trans
     ((congrArg (fun s => (toElements s)[i]'hsz) hstruct).trans
       (Witgen.getElem_eval_toElements _ _ i hsz).symm)
@@ -731,10 +752,10 @@ theorem carryCongr :
     ((carryProgram selectors B C).toIRLiteral (value := fields 8)).eval env
       = ((carryProgram selectors B C).toIRLiteral (value := fields 8)).eval env' := by
   have hargs := productArgsCongr selectors env env' B C hB hC hselectors
-  have hr := Witgen.cell_congr_of_ofFExprs_congr
+  have hr := Witgen.cell_congr_of_ofCompositeFExpr_congr
     (remCompCongr selectors env env' B C ir hB hC hir hselectors)
   have hmsb : (remMsbFE selectors B C).eval { env := env } = (remMsbFE selectors B C).eval { env := env' } :=
-    Witgen.cell_congr_of_ofFExprs_congr
+    Witgen.cell_congr_of_ofCompositeFExpr_congr
       (remMsbCongr selectors env env' B C ir hB hC hir hselectors) 0 (by decide)
   have hs : (remNegFE selectors B C).eval { env := env } = (remNegFE selectors B C).eval { env := env' } := by
     simp only [remNegFE, signedSumF, flagF, selectorF, circuit_norm, -Witgen.u64Wrap, hmsb, hselectors]

@@ -1,5 +1,10 @@
 module
 
+public import ToClean.Circuit.ComputableWitnesses
+
+public import ToClean.Gadgets.Equality
+public import ToClean.Circuit.WitgenEval
+
 public import SP1Clean.Semantics.Specs.LtSigned
 public import SP1Clean.Circuits.Gadgets.LtUnsigned
 public import SP1Clean.Circuits.Gadgets.U16MSB
@@ -444,22 +449,9 @@ theorem populateFE_eval_cell (env : ProverEnvironment (ZMod p))
   simpa [Vector.getElem_map] using h
 
 omit [Fact (2 ^ 17 < p)] in
-/-- `ofFExprs`-of-`toElements` evaluation is the flattened struct evaluation. -/
-private lemma ofFExprs_eval_eq (env : ProverEnvironment (ZMod p))
-    (xs : Circuits.Types.LtOperationSigned (Witgen.FExpr (ZMod p))) :
-    (Witgen.WitgenIR.ofFExprs (toElements xs)).eval env
-      = toElements (Witgen.eval { env := env } xs) := by
-  rw [show (Witgen.eval { env := env } xs : Circuits.Types.LtOperationSigned (ZMod p))
-        = fromElements ((toElements xs).map (Witgen.FExpr.eval { env := env })) from rfl,
-    ProvableType.toElements_fromElements]
-  apply Vector.ext
-  intro i hi
-  simp [circuit_norm, Vector.getElem_map]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Environment-locality of the witness IR, in the raw `ofFExprs` payload form the
+/-- Environment-locality of the witness IR, in the raw `ofCompositeFExpr` payload form the
 `ComputableWitnesses` obligations quantify over (a congruence, so it needs no bounds). -/
-theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
     (b cc : Word (Expression (ZMod p))) (is_signed is_real : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -469,8 +461,8 @@ theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
       = Expression.eval env'.toEnvironment is_signed)
     (hR : Expression.eval env.toEnvironment is_real
       = Expression.eval env'.toEnvironment is_real) :
-    (Witgen.WitgenIR.ofFExprs (toElements (populateFE b cc is_signed is_real))).eval env
-      = (Witgen.WitgenIR.ofFExprs (toElements (populateFE b cc is_signed is_real))).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (populateFE b cc is_signed is_real)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (populateFE b cc is_signed is_real)).eval env' := by
   have hmsbB := U16MSBOperation.populate_msbF_congr { env := env } { env := env' } (.expr b[3])
     (by simpa [circuit_norm] using hB 3 (by omega))
   have hmsbC := U16MSBOperation.populate_msbF_congr { env := env } { env := env' } (.expr cc[3])
@@ -491,7 +483,7 @@ theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
         hC 0 (by omega), hC 1 (by omega), hC 2 (by omega), hC 3 (by omega)]
   obtain ⟨hCL, hFL, hNI, hBit⟩ := LtOperationUnsigned.scanF_congr { env := env } { env := env' }
     (adjLimbsF b is_signed) (adjLimbsF cc is_signed) hAdjB hAdjC
-  rw [ofFExprs_eval_eq, ofFExprs_eval_eq]
+  rw [Witgen.WitgenIR.eval_ofCompositeFExpr, Witgen.WitgenIR.eval_ofCompositeFExpr]
   refine congrArg toElements ?_
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi10 : i < 10 := by

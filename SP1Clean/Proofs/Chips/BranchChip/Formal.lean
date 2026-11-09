@@ -204,9 +204,77 @@ private theorem main_exposedChannelsLawful
       Gadgets.Equality.main, circuit_norm, List.filter_nil, List.nil_append]
     simp only [Channels.byteChannel_eq_programChannel_false, ite_false, List.nil_append]
 
+omit [Fact (2 ^ 17 < p)] in
+private theorem comparison_congr (input : Var Inputs (ZMod p))
+    (env env' : ProverEnvironment (ZMod p))
+    (h_input : ProvableStruct.eval env.toEnvironment input =
+      ProvableStruct.eval env'.toEnvironment input) :
+    (Witgen.WitgenIR.ofCompositeFExpr (LtOperationSigned.populateFE #v[input.adapter.op_a_memory.prev_value[0], input.adapter.op_a_memory.prev_value[1],
+        input.adapter.op_a_memory.prev_value[2], input.adapter.op_a_memory.prev_value[3]]
+      #v[input.adapter.op_b_memory.prev_value[0], input.adapter.op_b_memory.prev_value[1],
+        input.adapter.op_b_memory.prev_value[2], input.adapter.op_b_memory.prev_value[3]]
+      (input.isBlt + input.isBge) input.is_real)).eval env =
+      (Witgen.WitgenIR.ofCompositeFExpr (LtOperationSigned.populateFE #v[input.adapter.op_a_memory.prev_value[0], input.adapter.op_a_memory.prev_value[1],
+        input.adapter.op_a_memory.prev_value[2], input.adapter.op_a_memory.prev_value[3]]
+      #v[input.adapter.op_b_memory.prev_value[0], input.adapter.op_b_memory.prev_value[1],
+        input.adapter.op_b_memory.prev_value[2], input.adapter.op_b_memory.prev_value[3]]
+      (input.isBlt + input.isBge) input.is_real)).eval env' := by
+  refine LtOperationSigned.populateIR_congr env env' _ _ _ _
+    (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_a_memory.prev_value) h_input
+    rw [eval_rs1In, eval_rs1In] at hv
+    have hi' := congrArg (fun v : Word (ZMod p) => v[i]) hv
+    interval_cases i <;> simpa only [Vector.getElem_mk, List.getElem_toArray,
+      List.getElem_cons_zero, List.getElem_cons_succ, ProvableType.getElem_eval_fields] using hi'
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_b_memory.prev_value) h_input
+    rw [eval_rs2In, eval_rs2In] at hv
+    have hi' := congrArg (fun v : Word (ZMod p) => v[i]) hv
+    interval_cases i <;> simpa only [Vector.getElem_mk, List.getElem_toArray,
+      List.getElem_cons_zero, List.getElem_cons_succ, ProvableType.getElem_eval_fields] using hi'
+  · simp only [circuit_norm, h_input]
+  · simpa only [eval_isReal] using congrArg Inputs.is_real h_input
+
 /-- The exact pinned-SP1 Branch `GeneralFormalCircuit`. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.branch", main, elaborated,
+    computableWitnesses := by
+      preserve_tactic_target
+      intro n input env env'
+      constructor
+      · simp only [main, circuit_norm, Nat.add_zero,
+          Gadgets.Equality.toSubcircuit_computableWitnesses]
+        repeat' apply And.intro
+        all_goals intro h_input
+        all_goals first
+          | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+          | intro h_agree
+            first
+              | exact comparison_congr input env env' h_input
+              | -- Decision from selectors and the comparison cells already written.
+                simp (disch := omega) only [branchDecision, circuit_norm,
+                  Inputs.eval_congr_isBeq h_input, Inputs.eval_congr_isBne h_input,
+                  Inputs.eval_congr_isBlt h_input, Inputs.eval_congr_isBge h_input,
+                  Inputs.eval_congr_isBltu h_input, Inputs.eval_congr_isBgeu h_input,
+                  h_agree.get_eq]
+              | -- The three `next_pc` cells: pc/imm inputs, the `is_branching` cell below, `is_real`.
+                refine nextPcIR_congr env env' _ _ _ _ (fun i hi => ?_) (fun i hi => ?_) ?_ ?_
+                · interval_cases i <;> simp only [circuit_norm, Inputs.eval_congr_state h_input]
+                · interval_cases i <;> simp only [circuit_norm, Inputs.eval_congr_adapter h_input]
+                · simp only [circuit_norm]
+                  exact h_agree.get_eq (by omega)
+                · simpa only [eval_isReal] using congrArg Inputs.is_real h_input
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        have length_eq : (main input).localLength n = 14 :=
+          (elaborated.localLength_eq input n).trans (by rfl)
+        rw [length_eq] at h_agrees
+        rw [elaborated.output_eq]
+        simp (disch := omega) only [circuit_norm, h, h_agrees.get_eq]
+        repeat' apply And.intro
+        all_goals
+          apply Vector.ext
+          intro i hi
+          simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     channelsWithRequirements := [memoryChannel.toRaw],
     Assumptions := Assumptions,
     Spec := Spec,

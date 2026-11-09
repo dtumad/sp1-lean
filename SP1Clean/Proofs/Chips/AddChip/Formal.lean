@@ -135,6 +135,7 @@ witnessed gadget; output is the native `Columns` row. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns where
   name := "sp1.native.add"
   main
+  computableWitnesses := by computable_witnesses [Inputs.op_b_val, Inputs.op_c_val]
   elaborated
   Assumptions := Assumptions
   Spec := Spec

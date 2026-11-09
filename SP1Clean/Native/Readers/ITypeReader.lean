@@ -34,7 +34,7 @@ open SP1Clean.Channels (byteChannel memoryChannel MemoryMsg programChannel Progr
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Folded evaluation of the canonical I-type reader row for chip grounding. -/
-@[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
+theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
@@ -47,7 +47,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
   rfl
 
 /-- Evaluation of the destination-zero routing flag through the folded I-type reader row. -/
-@[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
+theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.ITypeReader (Expression F)) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   simp only [circuit_norm]

@@ -483,10 +483,13 @@ local macro "divRemTimestampField" : tactic => do
   let input := Lean.mkIdent `input
   let offset := Lean.mkIdent `offset
   let readerInput := Lean.mkIdent `readerInput
-  `(tactic| simp only [$input:ident, $offset:ident, $readerInput:ident,
+  `(tactic| (
+    simp only [$input:ident, $offset:ident, $readerInput:ident,
       DivRemChip.rTypeReaderInput, DivRemChip.eval_inputs, ↓ DivRemChip.circuit_output_eq,
       DivRemChip.populatedRowAt_adapter_eq, DivRemChip.populatedRowAt_state_eq,
-      Circuits.Types.RTypeReader.toAdapterView, circuit_norm])
+      Circuits.Types.RTypeReader.toAdapterView, circuit_norm]
+    simp only [DivRemChip.Columns.eval_adapter, DivRemChip.Columns.eval_state,
+      DivRemChip.populatedRowAt_adapter_eq, DivRemChip.populatedRowAt_state_eq, circuit_norm]))
 
 theorem DivRemChip.rtypeTimestampContract :
     CircuitRTypeTimestampContract (p := p) (DivRemChip.circuit (p := p))

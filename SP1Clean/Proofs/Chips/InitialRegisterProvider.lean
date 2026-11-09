@@ -74,6 +74,7 @@ theorem main_memory_interactions (index : Var field (ZMod p)) (offset : ℕ) :
 def circuit (image : ProgramImage) : GeneralFormalCircuit (ZMod p) field MemoryMsg where
   name := "sp1.native.memory.initial.registers"
   main
+  computableWitnesses := by computable_witnesses [message]
   Spec index output _ := MemoryBoundary.InitialAtSpec image index.val output
   ProverAssumptions index _ _ := index.val < 32
   channelsWithRequirements := [memoryChannel.toRaw]

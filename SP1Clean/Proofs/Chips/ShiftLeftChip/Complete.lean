@@ -1,5 +1,7 @@
 import SP1Clean.FormalModel.TraceGen.Readers
-import SP1Clean.Proofs.Chips.ShiftLeftChip.Witgen
+import SP1Clean.Proofs.Chips.ShiftLeftChip.Formal
+import Clean.Circuit.Theorems
+import Clean.Circuit.Subcircuit
 import ToClean.Air.TableBuild
 
 /-! # Shift-left event and table construction
@@ -162,7 +164,7 @@ theorem traceTable_constraints (events : List ALUTypeEvent) (padding : ℕ)
     (consistent : data.tables (circuit (p := p)).name (size Inputs) =
       ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data (ProverHint.empty _) bounded (by trivial) consistent).Constraints :=
-  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent computableWitnesses
+  Air.Flat.Table.build_constraints _ _ _ _ bounded _ consistent
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The same table satisfies its **channel guarantees** — every message it pushes onto the State,
@@ -174,7 +176,7 @@ theorem traceTable_guarantees (events : List ALUTypeEvent) (padding : ℕ)
     (consistent : data.tables (circuit (p := p)).name (size Inputs) =
       ((traceInputs (p := p) events padding).map toElements).toArray) :
     (Air.Flat.Table.build (component (p := p)) (traceInputs events padding) data (ProverHint.empty _) bounded (by trivial) consistent).Guarantees :=
-  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent computableWitnesses
+  Air.Flat.Table.build_guarantees _ _ _ _ bounded _ consistent
     (proverAssumptions_of_mem_traceInputs h data (ProverHint.empty _))
 
 /-- The table's interaction list on a channel, in closed form: the per-row evaluated interactions,

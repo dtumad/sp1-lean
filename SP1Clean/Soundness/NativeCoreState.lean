@@ -60,7 +60,12 @@ private theorem boundary_state_silent (image : ProgramImage) (component : Compon
     all_goals simp [GeneralFormalCircuit.channels, InitialRegisterProvider.circuit, circuit_norm,
       stateChannel, memoryChannel, OrderedBoundary.channel, OrderedInitialProvider.channelName]
   · apply providerView_state_silent _ _ (by decide)
-    all_goals simp [GeneralFormalCircuit.channels, InitialRamProvider.circuit, circuit_norm,
+    all_goals
+      have channels : (InitialRamProvider.circuit (p := p) image).channelsWithGuarantees =
+          (InitialMemoryRead.circuit image.initialMemory).channelsWithGuarantees ++
+            [byteChannel.toRaw] := rfl
+      simp [GeneralFormalCircuit.channels, ↓ channels, InitialRamProvider.circuit,
+        InitialMemoryRead.circuit, InitialMemoryLookup.membership, circuit_norm,
       stateChannel, memoryChannel, byteChannel, OrderedBoundary.channel,
       OrderedInitialProvider.channelName]
   · exact terminalView_state_silent _ (by decide) (by decide)

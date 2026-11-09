@@ -38,12 +38,32 @@ namespace Witgen
 
 variable {F : Type} [FiniteField F] {M : TypeMap} [ProvableType M]
 
+/-- Evaluation of a vector payload, with an explicit vector key for simplification. -/
+@[circuit_norm] theorem WitgenIR.eval_ofCompositeFExpr_fields {n : ℕ}
+    (e : Vector (FExpr F) n) (env : ProverEnvironment F) :
+    (WitgenIR.ofCompositeFExpr (value := fields n) e).eval env =
+      e.map (FExpr.eval { env }) := rfl
+
+/-- Vector-specialized element evaluation of the generalized witness constructor. -/
+theorem WitgenIR.getElem_eval_ofCompositeFExpr_fields {n : ℕ}
+    (e : Vector (FExpr F) n) (env : ProverEnvironment F) (i : ℕ) (hi : i < n) :
+    ((WitgenIR.ofCompositeFExpr (value := fields n) e).eval env)[i] =
+      e[i].eval { env } := by
+  rw [WitgenIR.eval_ofCompositeFExpr_fields, Vector.getElem_map]
+
 /-- Flattening commutes with evaluation: the mapped `toElements` of a struct payload is the
 `toElements` of its struct-level evaluation (the `Witgen` counterpart of
 `ProvableType.toElements_eval`). -/
 theorem toElements_eval (ctx : Ctx F) (x : M (FExpr F)) :
     (toElements x).map (FExpr.eval ctx) = toElements (Witgen.eval ctx x) := by
   simp only [Witgen.eval, ProvableType.toElements_fromElements]
+
+/-- A typed witness program evaluates to the flattened value of its typed payload. -/
+theorem WitgenIR.eval_ofCompositeFExpr (x : M (FExpr F)) (env : ProverEnvironment F) :
+    (WitgenIR.ofCompositeFExpr x).eval env = toElements (Witgen.eval { env } x) := by
+  apply Vector.ext
+  intro i hi
+  rw [WitgenIR.getElem_eval_ofCompositeFExpr, ← toElements_eval, Vector.getElem_map]
 
 /-- Evaluating one flattened cell of a struct payload is the cell of the struct-level
 evaluation (the `Witgen` counterpart of `ProvableType.getElem_eval_toElements`). -/
@@ -93,41 +113,17 @@ theorem iteFE_congr (ctx ctx' : Ctx F) (c : BExpr F) (x y : M (FExpr F))
 
 /-! ### Congruence transport between the flattened site and the struct payload
 
-`ComputableWitnesses` obligations arrive at the flattened `WitgenIR.ofFExprs` level while the
-struct combinators above conclude at the `Witgen.eval` level; these three bridges move
-congruences between the two without ever unfolding a `toElements` tower. -/
+`ComputableWitnesses` obligations arrive at the flattened `WitgenIR.ofCompositeFExpr` level while the
+struct combinators above conclude at the `Witgen.eval` level; the cell-level bridge below reads
+a component of an agreed vector payload without unfolding
+a `toElements` tower. -/
 
-/-- Cell-level congruence from a site-level `ofFExprs` congruence. -/
-theorem cell_congr_of_ofFExprs_congr {n : ℕ} {v : Vector (FExpr F) n}
+/-- Cell-level congruence from a site-level `ofCompositeFExpr` congruence. -/
+theorem cell_congr_of_ofCompositeFExpr_congr {n : ℕ} {v : Vector (FExpr F) n}
     {env env' : ProverEnvironment F}
-    (h : (WitgenIR.ofFExprs v).eval env = (WitgenIR.ofFExprs v).eval env')
+    (h : (WitgenIR.ofCompositeFExpr (value := fields _) v).eval env = (WitgenIR.ofCompositeFExpr (value := fields _) v).eval env')
     (i : ℕ) (hi : i < n) :
     v[i].eval { env := env } = v[i].eval { env := env' } := by
-  rw [← WitgenIR.getElem_eval_ofFExprs v env i hi,
-    ← WitgenIR.getElem_eval_ofFExprs v env' i hi, h]
-
-/-- Struct-level congruence from the flattened site congruence. -/
-theorem structEval_congr_of_ofFExprs_congr {x : M (FExpr F)}
-    {env env' : ProverEnvironment F}
-    (h : (WitgenIR.ofFExprs (toElements x)).eval env
-      = (WitgenIR.ofFExprs (toElements x)).eval env') :
-    Witgen.eval { env := env } x = Witgen.eval { env := env' } x := by
-  rw [← ProvableType.fromElements_toElements (Witgen.eval { env := env } x),
-    ← ProvableType.fromElements_toElements (Witgen.eval { env := env' } x)]
-  refine congrArg fromElements (Vector.ext fun i hi => ?_)
-  rw [← getElem_eval_toElements { env := env } x i hi,
-    ← getElem_eval_toElements { env := env' } x i hi]
-  exact cell_congr_of_ofFExprs_congr h i hi
-
-/-- Flattened site congruence from the struct-level congruence. -/
-theorem ofFExprs_congr_of_structEval_congr {x : M (FExpr F)}
-    {env env' : ProverEnvironment F}
-    (h : Witgen.eval { env := env } x = Witgen.eval { env := env' } x) :
-    (WitgenIR.ofFExprs (toElements x)).eval env
-      = (WitgenIR.ofFExprs (toElements x)).eval env' := by
-  refine Vector.ext fun i hi => ?_
-  rw [WitgenIR.getElem_eval_ofFExprs _ _ i hi, WitgenIR.getElem_eval_ofFExprs _ _ i hi,
-    getElem_eval_toElements { env := env } x i hi,
-    getElem_eval_toElements { env := env' } x i hi, h]
-
+  rw [← WitgenIR.getElem_eval_ofCompositeFExpr_fields v env i hi,
+    ← WitgenIR.getElem_eval_ofCompositeFExpr_fields v env' i hi, h]
 end Witgen

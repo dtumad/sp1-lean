@@ -143,6 +143,7 @@ theorem main_memory_interactions (snapshot : MemorySnapshot) (input : Var Word (
     AddressOperation.circuit, circuit_norm]
 
 def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Word MemoryMsg where
+  computableWitnesses := by computable_witnesses [addressInput, message]
   name := "sp1.native.memory.snapshot.ram"
   main := main snapshot
   elaborated := elaborated snapshot

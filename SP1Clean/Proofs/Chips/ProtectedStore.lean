@@ -35,7 +35,8 @@ def byte : GeneralFormalCircuit (ZMod p) StoreByteChip.Inputs StoreByteChip.Colu
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreByteChip.circuit]
     have spec := h_holds h_assumptions
-    exact ⟨spec, h_assumptions, spec.2.2.2.2.2.2.2⟩
+    refine ⟨?_, h_assumptions, spec.2.2.2.2.2.2.2⟩
+    simpa only [FormalCircuitBase.output, circuit_norm, h_input] using spec
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreByteChip.circuit]
     exact h_assumptions
@@ -56,7 +57,8 @@ def half : GeneralFormalCircuit (ZMod p) StoreHalfChip.Inputs StoreHalfChip.Colu
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreHalfChip.circuit]
     have spec := h_holds h_assumptions
-    exact ⟨spec, h_assumptions, spec.2.2.2.2⟩
+    refine ⟨?_, h_assumptions, spec.2.2.2.2⟩
+    simpa only [FormalCircuitBase.output, circuit_norm, h_input] using spec
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreHalfChip.circuit]
     exact h_assumptions
@@ -77,7 +79,8 @@ def word : GeneralFormalCircuit (ZMod p) StoreWordChip.Inputs StoreWordChip.Colu
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreWordChip.circuit]
     have spec := h_holds h_assumptions
-    exact ⟨spec, h_assumptions, spec.2.2.2.2⟩
+    refine ⟨?_, h_assumptions, spec.2.2.2.2⟩
+    simpa only [FormalCircuitBase.output, circuit_norm, h_input] using spec
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreWordChip.circuit]
     exact h_assumptions
@@ -98,7 +101,8 @@ def double : GeneralFormalCircuit (ZMod p) StoreDoubleChip.Inputs StoreDoubleChi
   soundness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreDoubleChip.circuit]
     have spec := h_holds h_assumptions
-    exact ⟨spec, h_assumptions, spec.2.2.2⟩
+    refine ⟨?_, h_assumptions, spec.2.2.2⟩
+    simpa only [FormalCircuitBase.output, circuit_norm, h_input] using spec
   completeness := by
     circuit_proof_start [WritePermissionProvider.channel, StoreDoubleChip.circuit]
     exact h_assumptions

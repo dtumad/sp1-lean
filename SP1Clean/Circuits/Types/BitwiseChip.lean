@@ -59,7 +59,7 @@ provable_struct_eval_lemmas Columns
 /-- Second source operand, including the adapter's synthetic immediate access. -/
 @[reducible] def Inputs.op_c_val {F} (i : Inputs F) : Word F := i.adapter.op_c_memory.prev_value
 
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ state := Eval.eval env input.state, adapter := Eval.eval env input.adapter,
@@ -67,7 +67,7 @@ provable_struct_eval_lemmas Columns
          isAnd := Eval.eval env input.isAnd } : Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ state := Eval.eval env cols.state, adapter := Eval.eval env cols.adapter,
@@ -76,12 +76,12 @@ provable_struct_eval_lemmas Columns
          is_and := Eval.eval env cols.is_and } : Columns F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_inputAdapter {F : Type} [FiniteField F]
+theorem eval_inputAdapter {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).adapter = Eval.eval env input.adapter := by
   rw [eval_inputs]
 
-@[circuit_norm] theorem eval_inputIsReal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_inputIsReal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).is_real = Expression.eval env input.is_real := by
   simpa only [Inputs.is_real, CircuitType.eval_expr, Expression.eval] using

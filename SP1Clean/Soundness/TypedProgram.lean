@@ -682,13 +682,22 @@ theorem DivRemChip.programEmissionShape :
   · intro env
     simp only [DivRemChip.rowView]
     simp [DivRemChip.circuit, DivRemChip.exposedProgramMessage, ↓ DivRemChip.output_eq_populatedRowAt,
-      DivRemChip.populatedRowAt_state_eq, DivRemChip.populatedRowAt_adapter_eq,
       DivRemChip.populatedRowAt_isDiv_eq, DivRemChip.populatedRowAt_isDivu_eq,
       DivRemChip.populatedRowAt_isRem_eq, DivRemChip.populatedRowAt_isRemu_eq,
       DivRemChip.populatedRowAt_isDivw_eq, DivRemChip.populatedRowAt_isRemw_eq,
       DivRemChip.populatedRowAt_isDivuw_eq, DivRemChip.populatedRowAt_isRemuw_eq,
       DivRemContract.encodedOpcode,
       Circuits.Types.RTypeReader.toAdapterView, programMessageOfView, circuit_norm]
+    simp only [DivRemChip.Columns.eval_state, DivRemChip.Columns.eval_adapter,
+      DivRemChip.Columns.eval_is_div, DivRemChip.Columns.eval_is_divu,
+      DivRemChip.Columns.eval_is_rem, DivRemChip.Columns.eval_is_remu,
+      DivRemChip.Columns.eval_is_divw, DivRemChip.Columns.eval_is_remw,
+      DivRemChip.Columns.eval_is_divuw, DivRemChip.Columns.eval_is_remuw,
+      DivRemChip.populatedRowAt_state_eq, DivRemChip.populatedRowAt_adapter_eq,
+      DivRemChip.populatedRowAt_isDiv_eq, DivRemChip.populatedRowAt_isDivu_eq,
+      DivRemChip.populatedRowAt_isRem_eq, DivRemChip.populatedRowAt_isRemu_eq,
+      DivRemChip.populatedRowAt_isDivw_eq, DivRemChip.populatedRowAt_isRemw_eq,
+      DivRemChip.populatedRowAt_isDivuw_eq, DivRemChip.populatedRowAt_isRemuw_eq, circuit_norm]
 
 /-! ## Supported-machine registry -/
 

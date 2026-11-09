@@ -64,6 +64,7 @@ def addressMain (input : Var MemoryMsg (ZMod p)) : Circuit (ZMod p) (Var MemoryM
 def addressCircuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   name := "sp1.native.memory.final.ram.address"
   main := addressMain
+  computableWitnesses := by computable_witnesses [MemoryBoundary.address, addressInput]
   Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input _ _ := Word.isU64 (MemoryBoundary.address input) ∧
     AddressOperation.Assumptions (addressInput input)
@@ -116,6 +117,7 @@ instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   name := "sp1.native.memory.final.ram"
   main
+  computableWitnesses := by computable_witnesses [MemoryBoundary.address]
   elaborated := elaborated
   Spec input output _ := MemoryBoundary.RamFinalAtSpec (Word.toNat (MemoryBoundary.address input)) output
   ProverAssumptions input data _ := (Word.isU64 (MemoryBoundary.address input) ∧

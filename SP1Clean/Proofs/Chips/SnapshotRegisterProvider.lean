@@ -80,6 +80,7 @@ def circuit (snapshot : MemorySnapshot) : GeneralFormalCircuit (ZMod p) Inputs M
   name := "sp1.native.memory.snapshot.registers"
   main := main snapshot
   elaborated := elaborated snapshot
+  computableWitnesses := by computable_witnesses [message]
   Spec input output _ := MemoryBoundary.SnapshotAtSpec snapshot input.index.val output
   ProverAssumptions input _ _ := snapshot.registerTable.Spec input
   channelsWithRequirements := [memoryChannel.toRaw]

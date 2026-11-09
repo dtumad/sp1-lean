@@ -87,14 +87,14 @@ instead of unfolding the complete witnessed SUBW circuit at a concrete environme
           ⟨var { index := offset + 2 }⟩⟩⟩ : Var Columns (ZMod p)) := rfl
 
 /-- Component-wise evaluation of SUBW's independent input row. -/
-@[circuit_norm] theorem eval_inputs {F : Type} [FiniteField F]
+theorem eval_inputs {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     Eval.eval env input =
       ({ is_real := Eval.eval env input.is_real, state := Eval.eval env input.state,
          adapter := Eval.eval env input.adapter } : Inputs F) := by
   rw [ProvableStruct.eval_eq_eval]; rfl
 
-@[circuit_norm] theorem eval_columns {F : Type} [FiniteField F]
+theorem eval_columns {F : Type} [FiniteField F]
     (env : Environment F) (cols : Columns (Expression F)) :
     Eval.eval env cols =
       ({ is_real := Eval.eval env cols.is_real, state := Eval.eval env cols.state,
@@ -108,7 +108,7 @@ Projection outside `eval`, inert right-hand side — the form `ComputableWitness
 operands only; see `AddChip/Defs.lean` for the rationale. Subw's adapter is the R-type reader, so
 these are identical in shape to Sub's. -/
 
-@[circuit_norm] theorem eval_opBVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_b_val
       = Eval.eval env input.op_b_val := by
@@ -116,7 +116,7 @@ these are identical in shape to Sub's. -/
   simp only [Inputs.op_b_val, eval_inputs, Readers.RTypeReader.eval_cols,
     Readers.RTypeReader.eval_registerAccessCols]
 
-@[circuit_norm] theorem eval_opCVal {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCVal {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).op_c_val
       = Eval.eval env input.op_c_val := by

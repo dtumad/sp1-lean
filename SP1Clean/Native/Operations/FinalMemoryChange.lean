@@ -34,6 +34,7 @@ def circuit (ram : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
 
 theorem eval_key (ram : Bool) (record : Var MemoryMsg (ZMod p)) (env : Environment (ZMod p)) :
     eval env (key ram record) = key ram (eval env record) := by
+  cases record
   cases ram <;> simp only [key, MemoryBoundary.address, circuit_norm]
 
 theorem values (ram : Bool) (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :

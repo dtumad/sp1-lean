@@ -67,7 +67,7 @@ theorem AddChip.selectorBinary_of_shallow
     (shallow : ConstraintsHold.Shallow env ((AddChip.main input).operations offset)) :
     Expression.eval env input.is_real = 0 ∨ Expression.eval env input.is_real = 1 := by
   simp only [AddChip.main, circuit_norm] at shallow
-  exact bool_of_mul_pred shallow
+  simpa only [AddChip.Inputs.eval_is_real, ProvableType.eval_field] using bool_of_mul_pred shallow
 
 omit [Fact (2 ^ 24 < p)] in
 /-- A refresh row's first assertion forces its Memory selector binary, before any Memory

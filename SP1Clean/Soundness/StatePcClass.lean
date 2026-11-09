@@ -260,15 +260,8 @@ theorem jalrChip_jumpTargetContract :
   let input : Var JalrChip.Inputs (ZMod p) := varFromOffset JalrChip.Inputs 0
   let offset := size JalrChip.Inputs
   refine ⟨offset + 9, jalrTargetAddInput input offset, ?_, ?_⟩
-  · -- The `lsb` booleanity `===` precedes the target add, so its (defeq-zero) local length blocks
-    -- full arithmetic normalization of the retained offsets; select the disjunct and close by
-    -- definitional unfolding, as the CPUState clock contract does for this chip.
-    simp only [input, offset, jalrTargetAddInput, JalrChip.circuit, JalrChip.main,
+  · simp only [input, offset, jalrTargetAddInput, JalrChip.circuit, JalrChip.main,
       AddOperation.circuit, circuit_norm]
-    right
-    right
-    left
-    rfl
   · intro env
     constructor <;>
       simp only [input, offset, jalrTargetAddInput, JalrChip.circuit, JalrChip.rowView,

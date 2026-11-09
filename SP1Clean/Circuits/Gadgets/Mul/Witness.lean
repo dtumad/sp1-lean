@@ -1,5 +1,7 @@
 module
 
+public import ToClean.Circuit.ComputableWitnesses
+
 public import Mathlib.Data.List.GetD
 
 public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
@@ -865,19 +867,6 @@ omit [Fact (2 ^ 24 < p)]
 /-! Environment-locality (the `ComputableWitnesses` counterparts — congruences, so they need no
 bounds). One twin per shape, mirroring the eval ladder. -/
 
-/-- `ofFExprs`-of-`toElements` evaluation is the flattened struct evaluation (the raw payload
-form the `ComputableWitnesses` obligations quantify over). -/
-private lemma ofFExprs_eval_eq (env : ProverEnvironment (ZMod p))
-    (xs : Circuits.Types.MulOperation (Witgen.FExpr (ZMod p))) :
-    (Witgen.WitgenIR.ofFExprs (toElements xs)).eval env
-      = toElements (Witgen.eval { env := env } xs) := by
-  rw [show (Witgen.eval { env := env } xs : Circuits.Types.MulOperation (ZMod p))
-        = fromElements ((toElements xs).map (Witgen.FExpr.eval { env := env })) from rfl,
-    ProvableType.toElements_fromElements]
-  apply Vector.ext
-  intro i hi
-  simp [circuit_norm, Vector.getElem_map]
-
 /-- Congruence for a low-byte cell. -/
 private lemma lowByteFE_congr (env env' : ProverEnvironment (ZMod p))
     (e : Expression (ZMod p))
@@ -991,7 +980,7 @@ private lemma csgnF_congr (ctx ctx' : Witgen.Ctx (ZMod p))
 
 /-- Environment-locality of the whole witness payload (the `ComputableWitnesses` counterpart of
 `populateFE_eval` — a congruence, so it needs no bounds). -/
-theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
     (b c : Word (Expression (ZMod p))) (is_mulh is_mulhsu is_mulw : Expression (ZMod p))
     (hB : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment b[i] = Expression.eval env'.toEnvironment b[i])
@@ -1003,9 +992,8 @@ theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
       = Expression.eval env'.toEnvironment is_mulhsu)
     (hW : Expression.eval env.toEnvironment is_mulw
       = Expression.eval env'.toEnvironment is_mulw) :
-    (Witgen.WitgenIR.ofFExprs (toElements (populateFE b c is_mulh is_mulhsu is_mulw))).eval env
-      = (Witgen.WitgenIR.ofFExprs
-          (toElements (populateFE b c is_mulh is_mulhsu is_mulw))).eval env' := by
+    (Witgen.WitgenIR.ofCompositeFExpr (populateFE b c is_mulh is_mulhsu is_mulw)).eval env
+      = (Witgen.WitgenIR.ofCompositeFExpr (populateFE b c is_mulh is_mulhsu is_mulw)).eval env' := by
   have hbsgnC := bsgnF_congr { env := env } { env := env' } is_mulh is_mulhsu b[3]
     hH hHSU (hB 3 (by omega))
   have hcsgnC := csgnF_congr { env := env } { env := env' } is_mulh c[3]
@@ -1027,7 +1015,7 @@ theorem populateFE_congr_flat (env env' : ProverEnvironment (ZMod p))
   have hpmC := U16MSBOperation.populate_msbF_congr { env := env } { env := env' }
     (productF (streamF b (bsgnF is_mulh is_mulhsu b[3])) (streamF c (csgnF is_mulh c[3])) 2 + productF (streamF b (bsgnF is_mulh is_mulhsu b[3])) (streamF c (csgnF is_mulh c[3])) 3 * (256 : Witgen.FExpr (ZMod p)))
     (by simp only [circuit_norm, -Witgen.u64Wrap, hprodC 2, hprodC 3])
-  rw [ofFExprs_eval_eq, ofFExprs_eval_eq]
+  rw [Witgen.WitgenIR.eval_ofCompositeFExpr, Witgen.WitgenIR.eval_ofCompositeFExpr]
   refine congrArg toElements ?_
   refine (ProvableType.ext_iff _ _).mpr fun i hi => ?_
   have hi45 : i < 45 := by

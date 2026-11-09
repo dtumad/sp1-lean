@@ -132,13 +132,13 @@ theorem projection_agrees (id : InstructionChipId) :
     intro input offset env
     dsimp only [projection]
     simp only [BitwiseChip.circuit, BitwiseChip.rowView, statePushOfView, stateAccess,
-      cpuStatePushMessage, BitwiseChip.eval_isReal, circuit_norm]
+      cpuStatePushMessage, circuit_norm]
   | lt =>
     change AgreesWith LtChip.circuit (projection .lt) LtChip.rowView
     intro input offset env
     dsimp only [projection]
     simp only [LtChip.circuit, LtChip.rowView, statePushOfView, stateAccess,
-      cpuStatePushMessage, LtChip.eval_isReal, circuit_norm]
+      cpuStatePushMessage, circuit_norm]
   | shiftLeft =>
     change AgreesWith ShiftLeftChip.circuit (projection .shiftLeft) ShiftLeftChip.rowView
     intro input offset env
@@ -224,6 +224,7 @@ theorem projection_agrees (id : InstructionChipId) :
     intro input offset env
     dsimp only [projection]
     simp only [DivRemChip.circuit, DivRemChip.rowView, statePushOfView, stateAccess, cpuStatePushMessage, circuit_norm]
+    simp only [DivRemChip.Columns.eval_state, circuit_norm]
   | aluX0 =>
     change AgreesWith AluX0Chip.circuit (projection .aluX0) AluX0Chip.rowView
     intro input offset env

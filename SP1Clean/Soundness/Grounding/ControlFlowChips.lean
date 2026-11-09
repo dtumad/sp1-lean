@@ -339,14 +339,6 @@ theorem JalrChip.itypeTimestampContract :
   refine .intro (offset + 9) readerInput ?_ ?_
   · simp only [input, offset, readerInput, jalrChipITypeInput, JalrChip.circuit,
       JalrChip.main, Readers.ITypeReader.circuit, circuit_norm]
-    right
-    right
-    right
-    right
-    right
-    right
-    left
-    rfl
   · intro env
     constructor <;>
       simp only [input, offset, readerInput, jalrChipITypeInput, JalrChip.circuit,
@@ -909,17 +901,6 @@ theorem BranchChip.immutableItypeTimestampContract :
   refine .intro (offset + 14) readerInput ?_ ?_
   · simp only [input, offset, readerInput, branchChipITypeInput, BranchChip.exposedOpcode, BranchChip.circuit,
       BranchChip.main, Readers.ITypeReaderImmutable.circuit, circuit_norm]
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    right
-    rfl
   · intro env
     constructor <;>
       simp only [input, readerInput, branchChipITypeInput, BranchChip.exposedOpcode, BranchChip.circuit,

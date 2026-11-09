@@ -143,7 +143,7 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
       -- `is_real`-gated so their requirement is off-gate vacuous.
       rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> right <;>
         simp only [circuit_norm, stateChannel, byteChannel]
-      all_goals trivial
+      all_goals simpa only [circuit_norm] using h_bool
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

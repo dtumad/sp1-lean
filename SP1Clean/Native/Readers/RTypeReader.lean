@@ -47,7 +47,7 @@ open SP1Clean.Channels (byteChannel memoryChannel MemoryMsg programChannel Progr
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 /-- Folded evaluation of the canonical R-type reader row for chip soundness. -/
-@[circuit_norm] theorem eval_cols {F : Type} [FiniteField F]
+theorem eval_cols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     Eval.eval env cols =
       ({ op_a := Eval.eval env cols.op_a,
@@ -61,7 +61,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
   rfl
 
 /-- Component-wise evaluation of one nested register-access block. -/
-@[circuit_norm] theorem eval_registerAccessCols {F : Type} [FiniteField F]
+theorem eval_registerAccessCols {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RegisterAccessCols (Expression F)) :
     Eval.eval env cols =
       ({ prev_value := Eval.eval env cols.prev_value,
@@ -71,7 +71,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
   rfl
 
 /-- Component-wise evaluation of the innermost register timestamp block. -/
-@[circuit_norm] theorem eval_registerAccessTimestamp {F : Type} [FiniteField F]
+theorem eval_registerAccessTimestamp {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RegisterAccessTimestamp (Expression F)) :
     Eval.eval env cols =
       ({ prev_low := Eval.eval env cols.prev_low,
@@ -104,47 +104,47 @@ private theorem evalDiffLow_aux {F : Type} [FiniteField F]
     _ = _ := by simp only [circuit_norm]
 
 /-- Evaluation of the canonical zero-register indicator through the folded reader row. -/
-@[circuit_norm] theorem eval_opA0 {F : Type} [FiniteField F]
+theorem eval_opA0 {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_0 = Expression.eval env cols.op_a_0 := by
   simp only [circuit_norm]
 
-@[circuit_norm] theorem eval_opAPrevLow {F : Type} [FiniteField F]
+theorem eval_opAPrevLow {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_memory.access_timestamp.prev_low =
       Expression.eval env cols.op_a_memory.access_timestamp.prev_low := by
   rw [eval_cols]
   exact evalPrevLow_aux env cols.op_a_memory
 
-@[circuit_norm] theorem eval_opADiffLow {F : Type} [FiniteField F]
+theorem eval_opADiffLow {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_a_memory.access_timestamp.diff_low_limb =
       Expression.eval env cols.op_a_memory.access_timestamp.diff_low_limb := by
   rw [eval_cols]
   exact evalDiffLow_aux env cols.op_a_memory
 
-@[circuit_norm] theorem eval_opBPrevLow {F : Type} [FiniteField F]
+theorem eval_opBPrevLow {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_b_memory.access_timestamp.prev_low =
       Expression.eval env cols.op_b_memory.access_timestamp.prev_low := by
   rw [eval_cols]
   exact evalPrevLow_aux env cols.op_b_memory
 
-@[circuit_norm] theorem eval_opBDiffLow {F : Type} [FiniteField F]
+theorem eval_opBDiffLow {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_b_memory.access_timestamp.diff_low_limb =
       Expression.eval env cols.op_b_memory.access_timestamp.diff_low_limb := by
   rw [eval_cols]
   exact evalDiffLow_aux env cols.op_b_memory
 
-@[circuit_norm] theorem eval_opCPrevLow {F : Type} [FiniteField F]
+theorem eval_opCPrevLow {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_c_memory.access_timestamp.prev_low =
       Expression.eval env cols.op_c_memory.access_timestamp.prev_low := by
   rw [eval_cols]
   exact evalPrevLow_aux env cols.op_c_memory
 
-@[circuit_norm] theorem eval_opCDiffLow {F : Type} [FiniteField F]
+theorem eval_opCDiffLow {F : Type} [FiniteField F]
     (env : Environment F) (cols : Circuits.Types.RTypeReader (Expression F)) :
     (Eval.eval env cols).op_c_memory.access_timestamp.diff_low_limb =
       Expression.eval env cols.op_c_memory.access_timestamp.diff_low_limb := by

@@ -43,6 +43,22 @@ theorem comparisonFE_eval (ctx : Ctx (ZMod p)) (left right : Word (FExpr (ZMod p
   · ext i hi
     simpa only [Vector.getElem_ofFn, Function.comp_apply] using scan.1 ⟨i, hi⟩
 
+omit [Fact (2 ^ 17 < p)] in
+/-- Comparison population depends only on the evaluated input limbs, without range premises. -/
+@[computable_witnesses_law] theorem comparisonFE_congr (env env' : ProverEnvironment (ZMod p))
+    (left right : Word (FExpr (ZMod p)))
+    (hl : ∀ (i : ℕ) (_ : i < 4), left[i].eval {env} = left[i].eval {env := env'})
+    (hr : ∀ (i : ℕ) (_ : i < 4), right[i].eval {env} = right[i].eval {env := env'}) :
+    Witgen.eval {env} (comparisonFE left right) =
+      Witgen.eval {env := env'} (comparisonFE left right) := by
+  trans LtOperationUnsigned.populate (left.map (FExpr.eval {env})) (right.map (FExpr.eval {env}))
+  · exact comparisonFE_eval _ _ _ _ _ (by intros; simp only [Vector.getElem_map])
+      (by intros; simp only [Vector.getElem_map])
+  · symm
+    exact comparisonFE_eval _ _ _ _ _
+      (by intro i hi; simpa only [Vector.getElem_map] using (hl i hi).symm)
+      (by intro i hi; simpa only [Vector.getElem_map] using (hr i hi).symm)
+
 /-- Unsigned word comparison as a condition in the existing witness IR. -/
 private def lessThanFE (left right : Word (FExpr (ZMod p))) : BExpr (ZMod p) :=
   .flt (LtOperationUnsigned.comparisonLimbsF left right 0)
@@ -92,12 +108,39 @@ private theorem containsFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMo
       simp_all [MemoryInterval.Contains]
   exact decide_eq_false_iff_not.mpr (by omega)
 
+omit [Fact (2 ^ 17 < p)] in
+private theorem containsFE_congr (ctx ctx' : Ctx (ZMod p))
+    (address : Word (FExpr (ZMod p))) (interval : MemoryInterval)
+    (h : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = address[i].eval ctx') :
+    (containsFE address interval).eval ctx = (containsFE address interval).eval ctx' := by
+  have low := (LtOperationUnsigned.scanF_congr ctx ctx' address
+    ((interval.encode (p := p)).lower.map FExpr.const)
+    (cc' := (interval.encode (p := p)).lower.map FExpr.const) h
+    (by intros; simp only [Vector.getElem_map, FExpr.eval])).1
+  have high := (LtOperationUnsigned.scanF_congr ctx ctx' address
+    ((interval.encode (p := p)).upper.map FExpr.const)
+    (cc' := (interval.encode (p := p)).upper.map FExpr.const) h
+    (by intros; simp only [Vector.getElem_map, FExpr.eval])).1
+  simp only [containsFE, lessThanFE, BExpr.eval, low 0, low 1, high 0, high 1]
+
 /-- Select one fixed-row field, defaulting to zero outside every interval. -/
 def selectFE (address : Word (FExpr (ZMod p)))
     (field : MemoryInterval → ZMod p) : List MemoryInterval → FExpr (ZMod p)
   | [] => 0
   | interval :: rest => .ite (containsFE address interval) (.const (field interval))
       (selectFE address field rest)
+
+omit [Fact (2 ^ 17 < p)] in
+/-- Interval selection depends only on the evaluated address, without bounds. -/
+theorem selectFE_congr (ctx ctx' : Ctx (ZMod p))
+    (address : Word (FExpr (ZMod p))) (field : MemoryInterval → ZMod p)
+    (rows : List MemoryInterval)
+    (h : ∀ (i : ℕ) (_ : i < 4), address[i].eval ctx = address[i].eval ctx') :
+    (selectFE address field rows).eval ctx = (selectFE address field rows).eval ctx' := by
+  induction rows with
+  | nil => rfl
+  | cons row rows ih =>
+      simp only [selectFE, FExpr.eval, containsFE_congr ctx ctx' address row h, ih]
 
 /-- The shared interval selector agrees with finite semantic search for every selected field. -/
 theorem selectFE_eval (ctx : Ctx (ZMod p)) (address : Word (FExpr (ZMod p)))
@@ -171,6 +214,21 @@ theorem intervalIR_eval_cell (env : ProverEnvironment (ZMod p)) (memory : ByteMe
         (memory.intervals limit)).eval { env, idx := index.val } := by
   simp only [intervalIR, WitgenIR.eval, Witgen.evalSteps, VExpr.getElem_eval_mapRange]
   exact selectColumnFE_eval _ _ _ index.isLt
+
+omit [Fact (2 ^ 17 < p)] in
+/-- The fixed-memory selector depends only on its address, including malformed addresses. -/
+@[computable_witnesses_law] theorem intervalIR_congr (env env' : ProverEnvironment (ZMod p))
+    (memory : ByteMemory) (limit : ℕ) (address : Var Word (ZMod p))
+    (h : eval env.toEnvironment address = eval env'.toEnvironment address) :
+    (intervalIR memory limit address).eval env = (intervalIR memory limit address).eval env' := by
+  apply Vector.ext
+  intro i hi
+  rw [intervalIR_eval_cell env memory limit address ⟨i, hi⟩,
+    intervalIR_eval_cell env' memory limit address ⟨i, hi⟩]
+  apply selectFE_congr
+  intro j hj
+  simpa only [Vector.getElem_map, FExpr.eval, ProvableType.getElem_eval_fields] using
+    congrArg (fun value : Word (ZMod p) => value[j]) h
 
 /-- The compact witness program selects exactly the semantic interval row. -/
 theorem intervalIR_eval (env : ProverEnvironment (ZMod p)) (memory : ByteMemory) (limit : ℕ)

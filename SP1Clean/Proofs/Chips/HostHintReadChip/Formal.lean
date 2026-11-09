@@ -1,3 +1,4 @@
+import ToClean.Gadgets.Equality
 import SP1Clean.Native.Chips.HostHintReadChip.Defs
 
 /-! # Soundness and completeness of HINT_READ coordination
@@ -33,6 +34,20 @@ private theorem eval_endStep (env : Environment (ZMod p)) (input : Var Inputs (Z
   simp only [Inputs.endStep, circuit_norm]
 
 def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
+  computableWitnesses := by
+    intro n input env env'
+    constructor
+    · simp only [main, circuit_norm, Nat.add_zero,
+        Gadgets.Equality.toSubcircuit_computableWitnesses]
+      repeat' apply And.intro
+      all_goals intro h
+      all_goals first
+        | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+        | apply GeneralFormalCircuit.toSubcircuit_computableWitnesses _ rfl
+          intro _
+          simp only [circuit_norm, Inputs.clock, Inputs.endStep, h]
+    · intro _ _
+      rfl
   name := "sp1.native.hint_read"
   main
   elaborated

@@ -634,7 +634,7 @@ private theorem AddwChip.aluReaderConstraints
       Readers.CPUState.circuit,
       Readers.CPUState.localLength_eq, AddwOperation.circuit,
       AddwOperation.localLength_eq, Readers.ALUTypeReader.circuit,
-      Readers.ALUTypeReader.localLength_eq, Readers.RegisterWrite.circuit,
+      Readers.RegisterWrite.circuit,
       Operations.subcircuits_subcircuit, Operations.subcircuits_witness,
       AddwChip.aluReaderInput, Nat.add_zero, add_zero, List.append_nil,
       List.cons_append, List.nil_append, List.mem_cons,
@@ -755,7 +755,7 @@ theorem BitwiseChip.mainMemorySelectorGated :
 
 theorem BitwiseChip.circuitMemorySelectorGated :
     CircuitMemorySelectorGated (p := p) BitwiseChip.circuit BitwiseChip.rowView := by
-  liftMemoryGatingWith BitwiseChip.circuit, BitwiseChip.rowView, BitwiseChip.eval_isReal,
+  liftMemoryGating BitwiseChip.circuit, BitwiseChip.rowView,
     (fun input _ => input.is_real), BitwiseChip.mainMemorySelectorGated
 
 /-- The exact ALU-reader input assembled by Lt's `main`. -/
@@ -810,7 +810,7 @@ theorem LtChip.mainMemorySelectorGated :
 
 theorem LtChip.circuitMemorySelectorGated :
     CircuitMemorySelectorGated (p := p) LtChip.circuit LtChip.rowView := by
-  liftMemoryGatingWith LtChip.circuit, LtChip.rowView, LtChip.eval_isReal,
+  liftMemoryGating LtChip.circuit, LtChip.rowView,
     (fun input _ => input.is_real), LtChip.mainMemorySelectorGated
 
 /-! ## ShiftLeft's derived selector -/

@@ -496,6 +496,41 @@ private theorem main_exposedChannelsLawful (input : Var Inputs (ZMod p)) (offset
   · exact main_memoryInteractions_eq input offset
   · exact main_programInteractions_eq input offset
 
+omit [Fact (2 ^ 17 < p)] in
+private theorem inputAgreement {input : Var Inputs (ZMod p)}
+    {env env' : ProverEnvironment (ZMod p)}
+    (h : ProvableStruct.eval env.toEnvironment input = ProvableStruct.eval env'.toEnvironment input) :
+    (∀ (i : ℕ) (_ : i < 4),
+      Expression.eval env.toEnvironment input.adapter.op_b_memory.prev_value[i] =
+        Expression.eval env'.toEnvironment input.adapter.op_b_memory.prev_value[i]) ∧
+    Expression.eval env.toEnvironment input.adapter.op_c_memory.prev_value[0] =
+      Expression.eval env'.toEnvironment input.adapter.op_c_memory.prev_value[0] ∧
+    (∀ (i : ℕ) (_ : i < 4),
+      Expression.eval env.toEnvironment (#v[input.isSrl, input.isSra, input.isSrlw, input.isSraw])[i] =
+        Expression.eval env'.toEnvironment (#v[input.isSrl, input.isSra, input.isSrlw, input.isSraw])[i]) ∧
+    Expression.eval env.toEnvironment input.adapter.imm_c =
+      Expression.eval env'.toEnvironment input.adapter.imm_c := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro i hi
+    have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_b_memory.prev_value) h
+    change (ProvableStruct.eval env.toEnvironment input).adapter.op_b_memory.prev_value =
+      (ProvableStruct.eval env'.toEnvironment input).adapter.op_b_memory.prev_value at hv
+    rw [eval_opBPrev, eval_opBPrev] at hv
+    simpa only [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[i]) hv
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.op_c_memory.prev_value) h
+    change (ProvableStruct.eval env.toEnvironment input).adapter.op_c_memory.prev_value =
+      (ProvableStruct.eval env'.toEnvironment input).adapter.op_c_memory.prev_value at hv
+    rw [eval_opCPrev, eval_opCPrev] at hv
+    simpa only [Vector.getElem_map] using congrArg (fun v : Word (ZMod p) => v[0]) hv
+  · intro i hi
+    interval_cases i
+    · exact Inputs.eval_congr_isSrl h
+    · exact Inputs.eval_congr_isSra h
+    · exact Inputs.eval_congr_isSrlw h
+    · exact Inputs.eval_congr_isSraw h
+  · have hv := congrArg (fun r : Inputs (ZMod p) => r.adapter.imm_c) h
+    simpa only [eval_immC] using hv
+
 /-- The `ShiftRight` chip row as a `GeneralFormalCircuit`: flag-gated RV64 `srl`/`sra`/`srlw`/`sraw`
 semantic contract; output is the native `Columns` row struct. Soundness is proved (assembled
 from the four per-op `Soundness/<Op>.lean` files); completeness is proved above (the former
@@ -505,6 +540,42 @@ The former 4M ceiling was ~100× over: every field here is a reference to an alr
 so the bundle clears ≤40000 against the plain default. -/
 def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
   { name := "sp1.native.shift_right", main, elaborated,
+    computableWitnesses := by
+      preserve_tactic_target
+      intro n input env env'
+      constructor
+      · simp only [main, circuit_norm, Nat.add_zero,
+          Gadgets.Equality.toSubcircuit_computableWitnesses]
+        repeat' apply And.intro
+        all_goals intro h
+        all_goals first
+          | exact Subcircuit.computableWitnesses_of_localLength_zero _ _ _ _ rfl
+          | intro _
+            have hi := inputAgreement h
+            first
+              | exact populateAIR_congr env env' _ _ _ hi.1 hi.2.1 hi.2.2.1
+              | exact bMsbIR_congr env env' _ _ hi.1 hi.2.2.1
+              | exact srwMsbIR_congr env env' _ _ _ hi.1 hi.2.1 hi.2.2.1
+              | exact ShiftLeftChip.cBitsIR_congr env env' _ hi.2.1
+              | exact sraMsbV0123IR_congr env env' _ _ _ hi.1 hi.2.1 hi.2.2.1
+              | exact vPowersInvIR_congr env env' _ hi.2.1
+              | exact lowerLimbIR_congr env env' _ _ _ hi.1 hi.2.1 hi.2.2.1
+              | exact higherLimbIR_congr env env' _ _ _ hi.1 hi.2.1 hi.2.2.1
+              | exact limbResultIR_congr env env' _ _ _ hi.1 hi.2.1 hi.2.2.1
+              | exact shiftU16IR_congr env env' _ _ hi.2.1 hi.2.2.1
+              | exact wordImmIR_congr env env' _ _ hi.2.2.2 hi.2.2.1
+      · intro h h_agrees
+        simp only [CircuitType.eval_var_prover_to_verifier, ProvableStruct.eval_eq_eval] at h
+        have length_eq : (main input).localLength n = elaborated.localLength input :=
+          elaborated.localLength_eq input n
+        rw [length_eq, localLength_eq] at h_agrees
+        rw [elaborated.output_eq]
+        simp (disch := omega) only [circuit_norm, h, h_agrees.get_eq]
+        repeat' apply And.intro
+        all_goals
+          apply Vector.ext
+          intro i hi
+          simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

@@ -1,4 +1,14 @@
-import SP1Clean.Proofs.Completeness.ProviderWitgen
+import SP1Clean.Proofs.Chips.ByteChip.ByteChip
+import SP1Clean.Proofs.Chips.ByteChip.RangeChip
+import SP1Clean.Proofs.Chips.ProgramProviderChip
+import SP1Clean.Proofs.Chips.MemoryProviderChip
+import SP1Clean.Proofs.Chips.MemoryFinalizeChip
+import SP1Clean.Proofs.Chips.StateBumpChip.Formal
+import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
+import SP1Clean.Proofs.Chips.HaltChip.Witgen
+import Clean.Circuit.Theorems
+import Clean.Circuit.Subcircuit
+import ToClean.Gadgets.BitwiseByte
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.Soundness.SP1Ensemble
 import ToClean.Air.TableBuild
@@ -219,7 +229,7 @@ theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : Prove
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
@@ -228,7 +238,7 @@ theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
@@ -277,7 +287,7 @@ theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : Prove
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
@@ -286,7 +296,7 @@ theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
@@ -334,7 +344,7 @@ theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : Prove
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
@@ -343,7 +353,7 @@ theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
@@ -391,7 +401,7 @@ theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : Prove
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
@@ -400,7 +410,7 @@ theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
@@ -448,7 +458,7 @@ theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : Prove
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
@@ -457,7 +467,7 @@ theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
@@ -505,7 +515,7 @@ theorem traceTable_constraints (entries : List TraceGen.ByteEntry) (data : Prove
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : ProverData (ZMod p))
@@ -514,7 +524,7 @@ theorem traceTable_guarantees (entries : List TraceGen.ByteEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.ByteEntry)
@@ -578,7 +588,7 @@ theorem traceTable_constraints {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
     (consistent : data.tables (component (p := p) n hn).circuit.name (size (component (p := p) n hn).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p) n hn) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent (computableWitnesses n hn)
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs hn hle h data hint)
 
 theorem traceTable_guarantees {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
@@ -588,7 +598,7 @@ theorem traceTable_guarantees {n : ℕ} (hn : 2 ^ n < p) (hle : n ≤ 16)
     (consistent : data.tables (component (p := p) n hn).circuit.name (size (component (p := p) n hn).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p) n hn) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent (computableWitnesses n hn)
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs hn hle h data hint)
 
 theorem traceTable_interactionsWith {n : ℕ} (hn : 2 ^ n < p)
@@ -658,7 +668,7 @@ theorem traceTable_constraints (entries : List TraceGen.RomEntry) (data : Prover
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.RomEntry) (data : ProverData (ZMod p))
@@ -667,7 +677,7 @@ theorem traceTable_guarantees (entries : List TraceGen.RomEntry) (data : ProverD
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.RomEntry)
@@ -762,7 +772,7 @@ theorem traceTable_constraints (entries : List TraceGen.MemRecordEntry)
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.MemRecordEntry)
@@ -772,7 +782,7 @@ theorem traceTable_guarantees (entries : List TraceGen.MemRecordEntry)
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs h data hint)
 
 theorem traceTable_interactionsWith (entries : List TraceGen.MemRecordEntry)
@@ -836,7 +846,7 @@ theorem traceTable_constraints (entries : List TraceGen.MemRecordEntry)
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs entries data hint)
 
 theorem traceTable_guarantees (entries : List TraceGen.MemRecordEntry)
@@ -845,7 +855,7 @@ theorem traceTable_guarantees (entries : List TraceGen.MemRecordEntry)
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       ((traceInputs (p := p) entries).map toElements).toArray) :
     (Table.build (component (p := p)) (traceInputs entries) data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent
     (proverAssumptions_of_mem_traceInputs entries data hint)
 
 set_option linter.unusedSectionVars false in
@@ -906,7 +916,7 @@ theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverDat
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       (rows.map toElements).toArray) :
     (Table.build (component (p := p)) rows data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses fun r hr => h r hr
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r)
@@ -914,7 +924,7 @@ theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       (rows.map toElements).toArray) :
     (Table.build (component (p := p)) rows data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses fun r hr => h r hr
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
@@ -963,7 +973,7 @@ theorem traceTable_constraints (rows : List (Inputs (ZMod p))) (data : ProverDat
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       (rows.map toElements).toArray) :
     (Table.build (component (p := p)) rows data hint bounded (by trivial) consistent).Constraints :=
-  Table.build_constraints _ _ _ _ bounded (by trivial) consistent computableWitnesses fun r hr => h r hr
+  Table.build_constraints _ _ _ _ bounded (by trivial) consistent fun r hr => h r hr
 
 theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p)) (h : ∀ r ∈ rows, Spec r)
@@ -971,7 +981,7 @@ theorem traceTable_guarantees (rows : List (Inputs (ZMod p))) (data : ProverData
     (consistent : data.tables (component (p := p)).circuit.name (size (component (p := p)).Input) =
       (rows.map toElements).toArray) :
     (Table.build (component (p := p)) rows data hint bounded (by trivial) consistent).Guarantees :=
-  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent computableWitnesses fun r hr => h r hr
+  Table.build_guarantees _ _ _ _ bounded (by trivial) consistent fun r hr => h r hr
 
 theorem traceTable_interactionsWith (rows : List (Inputs (ZMod p))) (data : ProverData (ZMod p))
     (hint : ProverHint (ZMod p))
@@ -996,13 +1006,6 @@ committed public input. -/
 namespace Soundness
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-/-- The boundary verifier has computable witnesses vacuously: the row declares no cells. -/
-theorem sp1StateVerifier_computableWitnesses :
-    (sp1StateVerifier (p := p)).base.ComputableWitnesses := fun k input env env' =>
-  Operations.forAllFlat_witnessCongr_of_localLength_zero _ _
-    (by simp [sp1StateVerifier, sp1StateVerifierMain, circuit_norm,
-      Channels.stateChannel, Channels.byteChannel])
 
 /-- The verifier row for a committed initial and final `(clk, pc)`: both endpoints in the upstream
 `(16, 8, 8, 16)` clock limbs plus three 16-bit pc limbs. -/

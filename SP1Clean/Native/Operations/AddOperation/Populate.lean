@@ -1,3 +1,5 @@
+import ToClean.Circuit.ComputableWitnesses
+import ToClean.Circuit.WitgenEval
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.Math.Word
 import SP1Clean.Model.Channels
@@ -48,7 +50,7 @@ def populate (a b : Word (ZMod p)) : Word (ZMod p) :=
 of `(a + b) mod 2^64`. Every intermediate is `< 2^17`, far from the u64 wrap.
 
 The running sums are ordinary Lean `let`s, so they inline into each output expression rather than
-becoming shared `letU` steps. That keeps the IR a plain `ofFExprs` — no locals array — which is what
+becoming shared `letU` steps. That keeps the IR a plain `ofCompositeFExpr` — no locals array — which is what
 makes `populateIR_eval` a `simp only`. The cost is that the exported term repeats carry subterms
 (`O(n²)` nodes, i.e. ten for four limbs); `letU` sharing is the alternative if that ever matters. -/
 def populateIR (a b : Word (Expression (ZMod p))) : WitgenIR (ZMod p) 4 :=
@@ -56,7 +58,7 @@ def populateIR (a b : Word (Expression (ZMod p))) : WitgenIR (ZMod p) 4 :=
   let s1 : U64Expr (ZMod p) := a[1].val + b[1].val + s0 / 65536
   let s2 : U64Expr (ZMod p) := a[2].val + b[2].val + s1 / 65536
   let s3 : U64Expr (ZMod p) := a[3].val + b[3].val + s2 / 65536
-  .ofFExprs #v[(s0 % 65536).toField, (s1 % 65536).toField,
+  .ofCompositeFExpr (value := fields _) #v[(s0 % 65536).toField, (s1 % 65536).toField,
                (s2 % 65536).toField, (s3 % 65536).toField]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -89,7 +91,7 @@ omit [Fact (2 ^ 17 < p)] in
 expressions, so two environments agreeing there produce the same witnesses. This is the
 `ComputableWitnesses` counterpart of the semantic `populateIR_eval` (and needs no bounds — it is a
 congruence, not an evaluation). -/
-theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIR_congr (env env' : ProverEnvironment (ZMod p))
     (a b : Word (Expression (ZMod p)))
     (hA : ∀ (i : ℕ) (_ : i < 4),
       Expression.eval env.toEnvironment a[i] = Expression.eval env'.toEnvironment a[i])
@@ -115,7 +117,7 @@ def populateIRGated (op_a_0 : Expression (ZMod p)) (a b : Word (Expression (ZMod
   let s2 : U64Expr (ZMod p) := a[2].val + b[2].val + s1 / 65536
   let s3 : U64Expr (ZMod p) := a[3].val + b[3].val + s2 / 65536
   let gate : BExpr (ZMod p) := .feq (.expr op_a_0) (.const 0)
-  .ofFExprs #v[.ite gate (s0 % 65536).toField (.const 0),
+  .ofCompositeFExpr (value := fields _) #v[.ite gate (s0 % 65536).toField (.const 0),
                .ite gate (s1 % 65536).toField (.const 0),
                .ite gate (s2 % 65536).toField (.const 0),
                .ite gate (s3 % 65536).toField (.const 0)]
@@ -142,8 +144,7 @@ theorem populateIRGated_eval_off (env : ProverEnvironment (ZMod p))
   interval_cases i <;>
     simp only [populateIRGated, populate, circuit_norm, FiniteField.fromNat, hg,
       hA 0 (by omega), hA 1 (by omega), hA 2 (by omega), hA 3 (by omega),
-      hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega),
-      decide_true]
+      hB 0 (by omega), hB 1 (by omega), hB 2 (by omega), hB 3 (by omega)]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- With the gate on (`op_a_0 ≠ 0`, i.e. the `rd = x0` row), every gated limb is
@@ -154,13 +155,12 @@ theorem populateIRGated_eval_on (env : ProverEnvironment (ZMod p))
     (populateIRGated g a b).eval env = #v[0, 0, 0, 0] := by
   apply Vector.ext; intro i hi
   interval_cases i <;>
-    simp only [populateIRGated, circuit_norm, -Witgen.u64Wrap, hg,
-      decide_false, Bool.false_eq_true]
+    simp only [populateIRGated, circuit_norm, -Witgen.u64Wrap, hg]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Environment-locality of the gated witness IR (the `ComputableWitnesses`
 counterpart): agreement on the gate and operand expressions transfers evaluation. -/
-theorem populateIRGated_congr (env env' : ProverEnvironment (ZMod p))
+@[computable_witnesses_law] theorem populateIRGated_congr (env env' : ProverEnvironment (ZMod p))
     (g : Expression (ZMod p)) (a b : Word (Expression (ZMod p)))
     (hG : Expression.eval env.toEnvironment g = Expression.eval env'.toEnvironment g)
     (hA : ∀ (i : ℕ) (_ : i < 4),

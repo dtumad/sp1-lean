@@ -169,14 +169,16 @@ witness generators — at *any* committed data. Data-carrying counterpart of
 `Circuit.proverEnvironment_usesLocalWitnesses`. -/
 theorem proverEnvironmentWithData_usesLocalWitnesses (circuit : Circuit F α) (data : ProverData F)
     (hint : ProverHint F) (init : List F) :
-    circuit.ComputableWitnesses init.length →
+    (∀ env env', circuit.ComputableWitnesses init.length env env') →
       (circuit.proverEnvironmentWithData data hint init).UsesLocalWitnesses init.length
         (circuit.operations init.length) := by
   intro h_computable
-  simp_all only [proverEnvironmentWithData, Circuit.ComputableWitnesses,
-    Operations.ComputableWitnesses, ← Operations.forAll_toFlat_iff,
-    ProverEnvironment.UsesLocalWitnesses]
-  exact FlatOperation.proverEnvironmentWithData_usesLocalWitnesses init h_computable
+  rw [ProverEnvironment.usesLocalWitnesses_iff_flat]
+  apply FlatOperation.proverEnvironmentWithData_usesLocalWitnesses
+  intro env env'
+  rw [Operations.forAll_toFlat_iff]
+  exact h_computable env env'
+
 
 /-- Fast witness generation for a circuit against committed prover data: array-backed, single linear
 pass. `init` provides the witnesses below the circuit's starting offset (typically the inputs); the
@@ -202,7 +204,7 @@ witnesses. This is `Circuit.witgen_usesLocalWitnesses` with the empty commitment
 replaced by an arbitrary one, at the strengthened computability obligation. -/
 theorem witgenWithData_usesLocalWitnesses (circuit : Circuit F α) (data : ProverData F)
     (hint : ProverHint F) (init : Array F)
-    (h_computable : circuit.ComputableWitnesses init.size) :
+    (h_computable : ∀ env env', circuit.ComputableWitnesses init.size env env') :
     (ProverEnvironment.fromArray (circuit.witgenWithData data hint init) data
       hint).UsesLocalWitnesses init.size (circuit.operations init.size) := by
   rw [witgenWithData_proverEnvironment]

@@ -86,7 +86,7 @@ private theorem read_of_bytes (memory : ByteMemory) (address : Word (ZMod p))
     rfl
 
 omit [Fact (2 ^ 17 < p)] in
-private theorem eval_word (env : Environment (ZMod p)) (bytes : Vector (Expression (ZMod p)) 8) :
+@[local circuit_norm ↓] private theorem eval_word (env : Environment (ZMod p)) (bytes : Vector (Expression (ZMod p)) 8) :
     Eval.eval env (Word.ofBytes bytes) =
       Word.ofBytes (Eval.eval env bytes) := by
   ext index bound
@@ -113,13 +113,13 @@ instance elaborated (memory : ByteMemory) (tableName : String) :
 /-- Sound and complete word read with an explicit fixed-table identity. -/
 def circuitNamed (memory : ByteMemory) (tableName : String) : GeneralFormalCircuit (ZMod p) Word Word where
   main := main memory (tableName := tableName)
+  computableWitnesses := by computable_witnesses
   elaborated := elaborated memory tableName
   Spec input output _ := Spec memory input output
   ProverAssumptions input _ _ := ProverAssumptions input
   soundness := by
     circuit_proof_start [InitialMemoryLookup.circuitNamed, AddOperation.circuit]
     simp only [Vector.map_id'] at h_holds
-    rw [eval_word]
     apply read_of_bytes memory input _
       (Fin.cases input (fun index =>
         (Vector.mapRange 4 fun limb => env.get (i₀ + 89 + index.val * 93 + limb)))) rfl

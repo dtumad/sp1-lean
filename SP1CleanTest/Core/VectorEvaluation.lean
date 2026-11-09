@@ -1,4 +1,7 @@
 import SP1Clean.Model.BusMessages
+import SP1Clean.Circuits.Types.BitwiseChip
+import SP1Clean.Circuits.Types.LtChip
+import SP1Clean.Proofs.Chips.DivRemChip.Defs
 import Clean.Utils.Tactics
 
 /-! Regression proofs for Clean's vector evaluation normal form at SP1 message boundaries.
@@ -61,3 +64,30 @@ example (env : Environment F) (make : ℕ → fields n (Expression F)) (offset :
   exact readback i bound
 
 end SP1CleanTest.VectorEvaluation
+
+namespace SP1CleanTest.BundledComputability
+
+open SP1Clean
+
+variable {F : Type} [FiniteField F]
+
+-- Derived selectors must normalize in the same direction as upstream struct projections.
+example (env : Environment F) (input : Var BitwiseChip.Inputs F)
+    (value : BitwiseChip.Inputs F) (h : ProvableStruct.eval env input = value) :
+    Expression.eval env input.is_real = value.is_real := by
+  simp only [circuit_norm, h]
+
+example (env : Environment F) (input : Var LtChip.Inputs F)
+    (value : LtChip.Inputs F) (h : ProvableStruct.eval env input = value) :
+    Expression.eval env input.is_real = value.is_real := by
+  simp only [circuit_norm, h]
+
+-- A large output's unchanged state can be read without expanding its complete layout.
+example {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
+    (env : Environment (ZMod p)) (input : Var DivRemChip.Inputs (ZMod p)) (offset : ℕ) :
+    (ProvableStruct.eval env (DivRemChip.elaborated.output input offset)).state =
+      (ProvableStruct.eval env input).state := by
+  rw [DivRemChip.Columns.eval_state, DivRemChip.output_state_eq]
+  simp only [circuit_norm]
+
+end SP1CleanTest.BundledComputability

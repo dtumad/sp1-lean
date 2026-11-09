@@ -103,6 +103,23 @@ theorem intervalFE_eval (ctx : Witgen.Ctx (ZMod p)) (image : ProgramImage)
   congr 1 <;> ext i hi <;>
     simpa only [Vector.getElem_ofFn, Function.comp_apply, WritePermissionInterval.encode] using fieldEval _
 
+omit [Fact (2 ^ 17 < p)] in
+/-- Permission selection depends only on the address, including malformed addresses. -/
+@[computable_witnesses_law] theorem intervalFE_congr (env env' : ProverEnvironment (ZMod p))
+    (image : ProgramImage) (address : fields 3 (Witgen.FExpr (ZMod p)))
+    (h : ∀ (i : ℕ) (_ : i < 3), address[i].eval {env} = address[i].eval {env := env'}) :
+    Witgen.eval {env} (intervalFE image address) =
+      Witgen.eval {env := env'} (intervalFE image address) := by
+  have inputEval (i : ℕ) (hi : i < 4) :
+      (Address.asWord address)[i].eval {env} = (Address.asWord address)[i].eval {env := env'} := by
+    interval_cases i <;> simp only [Address.asWord, circuit_norm, h]
+  rw [Witgen.StructEval.eval_eq_eval, Witgen.StructEval.eval_eq_eval]
+  simp only [intervalFE, circuit_norm, ProvableStruct.toComponents,
+    ProvableStruct.fromComponents, Witgen.eval_fields', Vector.map_ofFn]
+  constructor <;> ext i hi <;>
+    simpa only [Vector.getElem_ofFn, Function.comp_apply] using
+      InitialMemoryLookup.selectFE_congr {env} {env := env'} _ _ _ inputEval
+
 /-- Select and authenticate the interval for one active byte request. -/
 def activeMain (image : ProgramImage) (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   let interval ← witness (var := Var WritePermissionInterval)

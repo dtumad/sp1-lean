@@ -398,7 +398,7 @@ private theorem postWitness_constraints_decompose
   simp only [postWitness, circuit_norm, List.map_append,
     List.forall_append, List.forall_cons,
     constraints_formalAssertion, constraints_generalFormalCircuit,
-    U16MSBOperation.circuit, Readers.ALUTypeReader.circuit,
+    U16MSBOperation.circuit, Readers.ALUTypeReader.circuit, FormalCircuitBase.localLength,
     Readers.RegisterWrite.circuit, Readers.RegisterWrite.main,
     ShiftLeftCore.circuit]
 
@@ -432,6 +432,12 @@ theorem interactionsWith_main_decompose (input : Var Inputs (ZMod p)) (offset : 
 private theorem postWitness_stateInteractions_eq (input : Var Inputs (ZMod p))
     (witnesses : WitnessVars (ZMod p)) (offset : ℕ) :
     ((postWitness input witnesses).operations offset).interactionsWith stateChannel.toRaw = [] := by
+  have heq (n : ℕ) (inp : Var (ProvablePair field field) (ZMod p))
+      (ops : Operations (ZMod p)) :=
+    @InteractionRecovery.interactionsWith_assertionSubcircuit_eq_nil
+      (ZMod p) _ (ProvablePair field field) ProvablePair.instance
+      (Gadgets.Equality.circuit field) stateChannel.toRaw n inp ops
+      List.not_mem_nil List.not_mem_nil
   unfold postWitness
   simp only [Circuit.bind_operations_eq, Circuit.pure_operations_eq, Circuit.operations,
     subcircuitWithAssertion, assertion, assertZero, HasAssertEq.assert_eq,
@@ -440,16 +446,15 @@ private theorem postWitness_stateInteractions_eq (input : Var Inputs (ZMod p))
     U16MSBOperation.circuit_localLength, Readers.ALUTypeReader.circuit_localLength,
     Readers.RegisterWrite.circuit_localLength, ShiftLeftCore.circuit_localLength,
     Gadgets.Equality.localLength_eq, Nat.add_zero]
-  simp only [Operations.interactionsWith_append,
+  simp only [heq, Operations.interactionsWith_append,
     ShiftLeftCore.interactionsWith_subcircuit_eq_nil,
     InteractionRecovery.interactionsWith_assertionSubcircuit_eq_nil,
     InteractionRecovery.interactionsWith_generalSubcircuit_eq_nil,
     U16MSBOperation.circuit, U16MSBOperation.channelsWithGuarantees_eq,
-    Readers.ALUTypeReader.circuit, Readers.RegisterWrite.circuit,
-    FormalCircuitBase.channelsWithGuarantees_def,
+    Readers.ALUTypeReader.circuit,
+    FormalCircuitBase.channelsWithGuarantees, Readers.RegisterWrite.circuit,
     Readers.ALUTypeReader.channelsWithGuarantees_eq,
     Readers.RegisterWrite.channelsWithGuarantees_eq,
-    Gadgets.Equality.channelsWithGuarantees_eq, Gadgets.Equality.channelsWithRequirements_eq,
     List.mem_cons, List.not_mem_nil, or_false,
     Channels.stateChannel_eq_byteChannel_false, Channels.stateChannel_eq_programChannel_false,
     Channels.stateChannel_eq_memoryChannel_false, not_false_eq_true,
@@ -1202,7 +1207,7 @@ set_option linter.unusedSectionVars false in
 /-! ### Operand projections, in `circuit_norm`'s own orientation (the `AddChip/Defs.lean`
 pattern) — the `ComputableWitnesses` proof projects the struct-level input agreement onto these. -/
 
-@[circuit_norm] theorem eval_opBPrev {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opBPrev {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_b_memory.prev_value
       = Vector.map (Expression.eval env) input.adapter.op_b_memory.prev_value := by
@@ -1210,7 +1215,7 @@ pattern) — the `ComputableWitnesses` proof projects the struct-level input agr
   simp only [eval_inputs, Readers.ALUTypeReader.eval_cols, Readers.ALUTypeReader.eval_accessCols]
   exact ProvableType.eval_fields env _
 
-@[circuit_norm] theorem eval_opCPrev {F : Type} [FiniteField F]
+@[circuit_norm ←] theorem eval_opCPrev {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.op_c_memory.prev_value
       = Vector.map (Expression.eval env) input.adapter.op_c_memory.prev_value := by
@@ -1218,14 +1223,14 @@ pattern) — the `ComputableWitnesses` proof projects the struct-level input agr
   simp only [eval_inputs, Readers.ALUTypeReader.eval_cols, Readers.ALUTypeReader.eval_accessCols]
   exact ProvableType.eval_fields env _
 
-@[circuit_norm] theorem eval_immC {F : Type} [FiniteField F]
+theorem eval_immC {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (ProvableStruct.eval env input).adapter.imm_c
       = Expression.eval env input.adapter.imm_c := by
   rw [← ProvableStruct.eval_eq_eval]
   simp only [eval_inputs, Readers.ALUTypeReader.eval_cols, CircuitType.eval_expr]
 
-@[circuit_norm] theorem eval_inputAdapter {F : Type} [FiniteField F]
+theorem eval_inputAdapter {F : Type} [FiniteField F]
     (env : Environment F) (input : Inputs (Expression F)) :
     (Eval.eval env input).adapter = Eval.eval env input.adapter := by
   rw [eval_inputs]

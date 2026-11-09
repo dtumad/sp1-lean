@@ -78,6 +78,7 @@ theorem completeness (enabled : Bool) :
 /-- A complete local observation contract with explicit receipt and state-link requirements. -/
 def circuit (enabled : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
   main := main enabled
+  computableWitnesses := by computable_witnesses [Inputs.clock, increment]
   elaborated := elaborated enabled
   Spec input _ _ := Spec enabled input
   ProverAssumptions input _ _ := Spec enabled input

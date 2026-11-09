@@ -45,6 +45,7 @@ theorem receipt_values (target : MemorySnapshot) (input : Var MemoryMsg (ZMod p)
   exact congrArg (fun value => [value]) Channel.eval_pulled
 
 def circuit (target : MemorySnapshot) : GeneralFormalCircuit (ZMod p) MemoryMsg unit where
+  computableWitnesses := by computable_witnesses [MemoryBoundary.address]
   name := "sp1.native.memory.check.ram"
   main := main target
   elaborated := elaborated target
