@@ -7,14 +7,14 @@ non-wrapping physical window; neither is an extra premise of the instruction pre
 -/
 
 namespace SP1Clean.SailMem
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- The configured PMA check, including the out-of-region fault and misaligned split case. -/
 theorem run_check_pma_store_all (source : SailState) (cfg : SailConfigured source)
     (address : BitVec 64) (width : ℕ) :
-    (check_pma_with_pmp_priority (.Store .Data) .PBMT_PMA .Machine (.Physaddr address)
-      width false).run source = .ok
+    (runSail (check_pma_with_pmp_priority (.Store .Data) .PBMT_PMA .Machine (.Physaddr address)
+      width false)) source = .ok
       (if range_subset address (to_bits width) (2#64 ^ 16) (2#64 ^ 48 - 2#64 ^ 16) then
         .Ok ⟨if is_aligned_paddr (.Physaddr address) width then .CannotSplit else .CanSplit, 0⟩
       else .Err (.E_SAMO_Access_Fault ())) source := by
@@ -26,33 +26,34 @@ theorem run_check_pma_store_all (source : SailState) (cfg : SailConfigured sourc
   by_cases inside : range_subset address (to_bits width) (2#64 ^ 16) (2#64 ^ 48 - 2#64 ^ 16) = true
   all_goals
     simp only [inside, ↓reduceIte] at region ⊢
-    simp only [check_pma_with_pmp_priority, pmaCheck, LeanRV64D.readReg, PreSail.readReg,
-    Std.ExtDHashMap.get?_eq_some_get (cfg.init _), cfg.pma_regions, region,
-    SailME.run, SailME.throw, PreSail.PreSailME.run, PreSail.PreSailME.throw,
-    ExceptT.run, ExceptT.bind, ExceptT.mk, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
-    MonadLift.monadLift, liftM, monadLift, Functor.map, Bind.bind, Pure.pure, bind, pure,
-    EStateM.bind, EStateM.map, EStateM.pure, EStateM.run,
-    getThe, MonadStateOf.get, MonadState.get, get, EStateM.get]
+    simp only [check_pma_with_pmp_priority, pmaCheck, LeanRV64D.SailME.run,
+      bind_assoc, pure_bind, PreSail.PreSailME.run_lift_bind,
+      runSail_bind, LeanRV64D.readReg, run_readReg,
+      Std.ExtDHashMap.get?_eq_some_get (cfg.init _), cfg.pma_regions, region]
   · cases aligned : is_aligned_paddr (.Physaddr address) width <;>
       simp [SP1_PMA, override_PMA, mag_pma_check, is_mag_applicable_access,
         within_pma_mag, mag_of_pma, pma_misaligned_exception, is_vector_access, aligned,
-        PreSail.sail_assert, LeanRV64D.Functions.not, sys_misaligned_allowed_within_exp,
-        EStateM.bind, EStateM.map, EStateM.pure, ExceptT.bindCont, bind, pure]
+        PreSail.sail_assert, LeanRV64D.not, sys_misaligned_allowed_within_exp] <;> rfl
   · have pmp := run_pmpCheck_none (.Physaddr address) width (.Store .Data) source cfg.init cfg.pmp_off
-    change pmpCheck (.Physaddr address) width (.Store .Data) .Machine source = _ at pmp
-    simp [accessFaultFromAccessType, EStateM.bind, EStateM.map, ExceptT.bindCont,
-      MonadExceptOf.throw, ExceptT.mk, pure, EStateM.pure, pmp]
+    simp only [accessFaultFromAccessType]
+    change runSail (pmpCheck (.Physaddr address) width (.Store .Data) .Machine >>= fun result =>
+      match result with
+      | some error => pure (Result.Err (α := Phys_Mem_Access_Info) error)
+      | none => pure (Result.Err (α := Phys_Mem_Access_Info) (.E_SAMO_Access_Fault ()))) source = _
+    simp only [runSail_bind, pmp, runSail_pure]
+    rfl
 
 /-- Successful physical splitting has positive pieces whose total is exactly the requested width. -/
 theorem split_misaligned_span (source target : SailState) (address : BitVec 64)
     (width granule : ℕ) (positive : 0 < width) (splittable : Splittability) (count size : ℤ)
-    (ran : (split_misaligned (.Physaddr address) width granule splittable).run source =
+    (ran : (runSail (split_misaligned (.Physaddr address) width granule splittable)) source =
       .ok (count, size) target) : 0 < count ∧ 0 < size ∧ count * size = width := by
   simp only [split_misaligned] at ran
   split at ran
-  · cases ran
+  · rw [runSail_pure] at ran
+    cases ran
     exact ⟨by omega, by omega, by simp⟩
-  · change (split_access address width).run source = .ok (count, size) target at ran
+  · change (runSail (split_access address width)) source = .ok (count, size) target at ran
     simp only [split_access, PreSail.sail_assert] at ran
     split at ran
     · rename_i checked
@@ -71,7 +72,8 @@ theorem split_misaligned_span (source target : SailState) (address : BitVec 64)
       · exact Int.pos_of_mul_pos_left productPositive power
       · change (↑width : ℤ).tdiv piece * piece = ↑width
         omega
-    · cases ran
+    · simp only [runSail_bind] at ran
+      cases ran
 
 /-- The actual PMA interval check bounds the entire nonempty access without address wraparound. -/
 theorem bounds_of_sp1_pma (address : BitVec 64) (width : ℕ) (small : width ≤ 8)

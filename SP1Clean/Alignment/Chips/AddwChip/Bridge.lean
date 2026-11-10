@@ -53,10 +53,10 @@ theorem correct_addw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 op_c_val))
     (h_addw : Word.toBitVec64 a_val =
       (BitVec.setWidth 32 (Word.toBitVec64 op_b_val + Word.toBitVec64 op_c_val)).signExtend 64) :
-    (spec_addw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_addw (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_addw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_addw (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_addw, sp1_addw]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -73,8 +73,8 @@ theorem addw_chip_reaches_sail
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
-    (spec_addw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_addw (.Regidx rd_idx) pc (AddwChip.resultWord cols)).run s :=
+    (runSail (spec_addw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_addw (.Regidx rd_idx) pc (AddwChip.resultWord cols))) s :=
   correct_addw_native input.op_b_val input.op_c_val (AddwChip.resultWord cols)
     rs1_idx rs2_idx rd_idx pc s h_pc h_rs1 h_rs2
     ((h_chip.2.2 h_real).trans
@@ -100,8 +100,8 @@ theorem correct_addiw_native
     (h_dec : Word.toBitVec64 op_c_val = sign_extend (m := 64) imm)
     (h_addw : Word.toBitVec64 a_val =
       (BitVec.setWidth 32 (Word.toBitVec64 op_b_val + Word.toBitVec64 op_c_val)).signExtend 64) :
-    (spec_addiw imm (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_addw (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_addiw imm (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_addw (.Regidx rd_idx) pc a_val)) s := by
   have harm : Word.toBitVec64 a_val
       = sign_extend (m := 64) (Sail.BitVec.extractLsb
           (Word.toBitVec64 op_b_val + sign_extend (m := 64) imm) 31 0) := by
@@ -109,7 +109,7 @@ theorem correct_addiw_native
     simp only [sign_extend, Sail.BitVec.signExtend]
     congr 1
   simp only [spec_addiw, sp1_addw]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -126,8 +126,8 @@ theorem addiw_chip_reaches_sail
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_dec : Word.toBitVec64 input.op_c_val = sign_extend (m := 64) imm) :
-    (spec_addiw imm (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_addw (.Regidx rd_idx) pc (AddwChip.resultWord cols)).run s :=
+    (runSail (spec_addiw imm (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_addw (.Regidx rd_idx) pc (AddwChip.resultWord cols))) s :=
   correct_addiw_native input.op_b_val input.op_c_val (AddwChip.resultWord cols)
     rs1_idx rd_idx imm pc s h_pc h_rs1 h_dec
     ((h_chip.2.2 h_real).trans

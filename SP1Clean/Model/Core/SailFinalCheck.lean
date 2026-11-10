@@ -5,7 +5,7 @@ import SP1Clean.Model.Core.ExecutionSnapshot
 The existing snapshots remain the complete state representation. This check compares the
 register-map entries that supported ordinary instructions and host calls preserve, including
 key presence, and checks the supplied target is initialized. Mutable GPR values are bound by
-the complete Memory check. PC/clock and dynamic nextPC/retirement observations have separate
+the complete Memory check. PC/clock, nextPC, retirement, interrupt refresh and event-marker observations have separate
 native bindings; this check alone does not assert complete outgoing state equality.
 -/
 
@@ -15,7 +15,7 @@ open LeanRV64D
 
 /-- The registers whose values can change along a supported native execution. -/
 def executionRegister (reg : Register) : Bool :=
-  decide (reg = .PC ∨ reg = .nextPC ∨ reg = .minstret ∨ reg = .minstret_increment ∨
+  decide (reg = .PC ∨ reg = .nextPC ∨ reg = .minstret ∨ reg = .minstret_increment ∨ reg = .mip ∨ reg = .written_event_index ∨
     ∃ index : BitVec 5, index ≠ 0 ∧ reg = reg_idx_to_Register index)
 
 /-- Retain exactly the register-map entries preserved by the supported execution semantics. -/
@@ -78,6 +78,8 @@ theorem realize_eq_of_observations {source target : SailSnapshot} {actual : Sail
     (nextPC : actual.regs.get? .nextPC = target.registers.get? .nextPC)
     (retirement : actual.regs.get? .minstret = target.registers.get? .minstret)
     (increment : actual.regs.get? .minstret_increment = target.registers.get? .minstret_increment)
+    (interrupts : actual.regs.get? .mip = target.registers.get? .mip)
+    (eventIndex : actual.regs.get? .written_event_index = target.registers.get? .written_event_index)
     (preserved : ∀ reg, executionRegister reg = false → actual.regs.get? reg = source.registers.get? reg)
     (runtime : actual.cycleCount = source.cycleCount ∧ actual.sailOutput = source.output) :
     actual = target.realize := by
@@ -88,11 +90,13 @@ theorem realize_eq_of_observations {source target : SailSnapshot} {actual : Sail
     intro reg
     by_cases mutable : executionRegister reg = true
     · simp only [executionRegister, decide_eq_true_eq] at mutable
-      rcases mutable with rfl | rfl | rfl | rfl | ⟨index, nonzero, rfl⟩
+      rcases mutable with rfl | rfl | rfl | rfl | rfl | rfl | ⟨index, nonzero, rfl⟩
       · exact pc
       · exact nextPC
       · exact retirement
       · exact increment
+      · exact interrupts
+      · exact eventIndex
       · have same := (gprs index).trans (observes.1 index).symm
         simp only [SailState.get_reg?, ite_eq_right nonzero, realize, skeleton] at same
         exact option_transport_injective (reg_idx_must_64 index) same

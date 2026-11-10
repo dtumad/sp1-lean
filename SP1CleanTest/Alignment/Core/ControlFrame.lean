@@ -45,7 +45,7 @@ private theorem retires (word : BitVec 32) (left right : BitVec 64) (decoded : i
       (∀ index, state.get_reg? index = (source word left right).sail.realize.get_reg? index) →
       state.regs.get? Register.PC = some 65536 →
       state.regs.get? Register.nextPC = some 65540 → ∃ next,
-      (execute decoded).run state = .ok (.Retire_Success ()) next ∧
+      (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧
         SailConfigured next ∧ next.mem = state.mem) : RetiresWithFrame word left right := by
   have valid := (checkExecutionSource_iff _ _).mp checked
   have pc : (source word left right).pc = 65536 := by

@@ -7,7 +7,7 @@ these same lemmas, while semantic fixtures and frame proofs can use them without
 -/
 
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
+open SP1Clean Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.SailMem
 
 /-- **The JAL execute stage reaches `Retire_Success`.** `execute (.JAL …)` reads the staged `nextPC` (the
@@ -19,7 +19,7 @@ theorem execute_JAL_reaches (imm : BitVec 21) (rd_idx : BitVec 5) (pc : BitVec 6
     (hpc : t.regs.get? Register.PC = some pc)
     (hnpc : t.regs.get? Register.nextPC = some (pc + 4#64))
     (halign : (pc + sign_extend (m := 64) imm) % 4#64 = 0) :
-    (execute (.JAL (imm, .Regidx rd_idx))).run t
+    (runSail (execute (.JAL (imm, .Regidx rd_idx)))) t
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then
             {t with regs := t.regs.insert Register.nextPC (pc + sign_extend (m := 64) imm)}
@@ -46,7 +46,7 @@ theorem execute_JALR_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5) (pc r
     (hnpc : t.regs.get? Register.nextPC = some (pc + 4#64))
     (h_rs1 : SailState.get_reg? t rs1_idx = some rs1_val)
     (halign : (BitVec.update (rs1_val + sign_extend (m := 64) imm) 0 0#1) % 4#64 = 0) :
-    (execute (.JALR (imm, .Regidx rs1_idx, .Regidx rd_idx))).run t
+    (runSail (execute (.JALR (imm, .Regidx rs1_idx, .Regidx rd_idx)))) t
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then
             {t with regs := (t.regs.insert Register.nextPC
@@ -57,7 +57,7 @@ theorem execute_JALR_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5) (pc r
               (reg_idx_to_Register rd_idx) (bitVecToRegidxVal rd_idx (pc + 4#64)))}) := by
   have hget_npc : t.regs.get Register.nextPC (hs _) = pc + 4#64 := by
     rw [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at hnpc; exact hnpc
-  have hupd : (update_elp_state (.Regidx rs1_idx)).run t = .ok () t :=
+  have hupd : (runSail (update_elp_state (.Regidx rs1_idx))) t = .ok () t :=
     update_elp_state_of_isInitialized _ t hs hconfig
   simp only [execute, execute_JALR, get_next_pc_eq]
   rw [run_bind_of_run' t _ _ () hupd]
@@ -97,7 +97,7 @@ theorem execute_BTYPE_reaches (imm : BitVec 13) (rs1_idx rs2_idx : BitVec 5) (op
     (h_taken : btypeTaken op rs1_val rs2_val = true → target = pc + sign_extend (m := 64) imm)
     (h_not_taken : btypeTaken op rs1_val rs2_val = false → target = pc + 4#64)
     (h_align : target.toNat % 4 = 0) :
-    (execute (.BTYPE (imm, .Regidx rs2_idx, .Regidx rs1_idx, op))).run t
+    (runSail (execute (.BTYPE (imm, .Regidx rs2_idx, .Regidx rs1_idx, op)))) t
       = .ok (ExecutionResult.Retire_Success ())
           {t with regs := t.regs.insert Register.nextPC target} := by
   have hpc_get : t.regs.get Register.PC (hs _) = pc := by

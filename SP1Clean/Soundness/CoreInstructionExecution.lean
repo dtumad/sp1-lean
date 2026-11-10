@@ -25,7 +25,7 @@ theorem Target.decodedInROM.notEcall {program : GuestProgram} {row : ProgramChip
   rw [same] at fetch
   obtain ⟨word, instruction, fetched, decode, projected⟩ := decoded
   have wordEq : word = ECALL_ENC := Option.some.inj (fetched.symm.trans fetch)
-  have actual : (ext_decode ECALL_ENC).run state = .ok (.ECALL ()) state := by
+  have actual : (runSail (ext_decode ECALL_ENC)) state = .ok (.ECALL ()) state := by
     simpa [ECALL_ENC] using SailDecode.decode_ECALL state configured.init configured.priv configured.mseccfg_disabled
   have decodedAt := decode state configured
   rw [wordEq, actual] at decodedAt

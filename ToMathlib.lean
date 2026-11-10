@@ -6,3 +6,4 @@ public import ToMathlib.ListFilterMap
 public import ToMathlib.ListMapMOption
 public import ToMathlib.ListChronology
 public import ToMathlib.BitVec
+public import ToMathlib.DeriveDecidableEq

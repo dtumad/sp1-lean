@@ -1,6 +1,18 @@
 {
+  "extensions": {
+    "Zicntr": {
+      "supported": false
+    },
+    "Sdtrig": {
+      "supported": false
+    }
+  },
   "platform": {
-    "clint": { "supported": false },
-    "simple_interrupt_generator": { "supported": false }
+    "clint": {
+      "supported": false
+    },
+    "simple_interrupt_generator": {
+      "supported": false
+    }
   }
 }

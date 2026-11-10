@@ -109,8 +109,14 @@ theorem source_execution (valid : image.Valid)
         target.sail.regs.get? Register.minstret = (source.sail.registers.get? Register.minstret).map
           (fun value => value + BitVec.ofNat 64
             (if retirementEnabled source.sail.realize then events.countP Machine.ExecutionEvent.isOrdinary else 0))) ∧
+      (target.sail.regs.get? Register.mip =
+        (if events.countP Machine.ExecutionEvent.isOrdinary = 0 then source.sail.registers.get? Register.mip
+          else some (TryStepReduction.refreshedMip source.sail.realize)) ∧
+        target.sail.regs.get? Register.written_event_index =
+          (if events.countP Machine.ExecutionEvent.isOrdinary = 0
+            then source.sail.registers.get? Register.written_event_index else some none)) ∧
       (∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
-        R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
+        R ≠ Register.minstret_increment → R ≠ Register.mip → R ≠ Register.written_event_index → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
           target.sail.regs.get? R = source.sail.registers.get? R) ∧
       HintQueue.decode? (HintQueue.ofList source.host.io.hints).1 (Address.toNat final.head) = some hints ∧
       target.host = { source.host with
@@ -124,7 +130,7 @@ theorem source_execution (valid : image.Valid)
   have checked := checkFinal_of_declarationsOpen witness constraints balanced
   have baseConstraints := baseWitness_constraints witness constraints
   have baseBalanced := baseWitness_hostBalanced witness balanced
-  obtain ⟨events, target, hints, path, permitted, inventory, clock, pc, -, -, runtime, nextPC, retirement,
+  obtain ⟨events, target, hints, path, permitted, inventory, clock, pc, -, -, runtime, nextPC, retirement, platform,
     preserved, decoded, host, exit, memory⟩ :=
     HostHintReadCPU.source_execution_with_memory valid (baseWitness witness) baseConstraints baseBalanced
   rw [finalRecords_eq_core] at checked
@@ -132,7 +138,7 @@ theorem source_execution (valid : image.Valid)
   rw [baseWitness_publicInput] at clock pc nextPC exit
   have declared := (HostCommitDeclarations.rows_declared valid (baseWitness witness) baseConstraints
     baseBalanced).of_perm inventory
-  refine ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC, retirement,
+  refine ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC, retirement, platform,
     preserved, decoded, host, exit, declared.transfer fun interaction member => ?_⟩
   rw [baseWitness_interactions witness _ (by simp [CommitmentDeclaration.channel, FinalMemoryValue.channel,
     Channel.toRaw]) (by simp [CommitmentDeclaration.channel, FinalMemoryValue.channel, Channel.toRaw])] at member

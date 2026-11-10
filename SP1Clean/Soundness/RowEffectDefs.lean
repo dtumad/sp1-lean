@@ -1,6 +1,7 @@
 import SP1Clean.Soundness.RowView
 import SP1Clean.Model.Semantics.GuestProgram
 import SP1Clean.Model.Semantics.Decode
+import SP1Clean.Model.SailPlatform
 
 /-! # The refinement invariant and per-row effect (`RowView`-level, below `ChipRow`)
 
@@ -110,7 +111,8 @@ register** (`commit.writesReg`), exactly `s` except at the `op_a` destination (�
 and **when it does not** (Branch / AluX0 / LoadX0, `commit.writesReg = false`) a pure frame. A
 Branch/Store row's `op_a` is a source read and does not overwrite that register. Initialization and
 configuration persist. The bookkeeping clauses retain `nextPC`, `minstret_increment`, and the exact
-`minstret` update; all other registers and simulator runtime fields are preserved. The **memory**
+`minstret` update, the platform interrupt refresh, and the cleared event marker; all other registers
+and simulator runtime fields are preserved. The **memory**
 clause is the orthogonal second axis: `commit.memWrite = none` (all chips but stores) → `s'.mem = s.mem`
 frame; `some mw` (a store) → the committed `width`-byte range at `mw.addrNat` becomes `mw.byteAt`, the rest
 framed.
@@ -142,12 +144,17 @@ structure RowEffect (_prog : GuestProgram) (r : Trace.RowView (ZMod p))
   /-- All other Sail register keys, including absent keys, survive the instruction. -/
   otherRegs : ∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC →
     R ≠ Register.minstret → R ≠ Register.minstret_increment →
+    R ≠ Register.mip → R ≠ Register.written_event_index →
     (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) → s'.regs.get? R = s.regs.get? R
+  /-- The platform refreshes pending interrupts before the instruction executes. -/
+  interrupts : s'.regs.get? Register.mip = some (TryStepReduction.refreshedMip s)
+  /-- Normal retirement clears the simulator's pending event marker. -/
+  eventIndex : s'.regs.get? Register.written_event_index = some none
   /-- Normal retirement commits the computed nextPC into PC. -/
   nextPC : s'.regs.get? Register.nextPC = s'.regs.get? Register.PC
   /-- The official privilege/filter check controls the exact retirement-counter update. -/
   retirement : ∃ increment : Bool,
-    (should_inc_minstret Privilege.Machine).run s = .ok increment s ∧
+    (runSail (should_inc_minstret Privilege.Machine)) s = .ok increment s ∧
     s'.regs.get? Register.minstret_increment = some increment ∧
     s'.regs.get? Register.minstret = (s.regs.get? Register.minstret).map
       (fun value => if increment then BitVec.addInt value 1 else value)

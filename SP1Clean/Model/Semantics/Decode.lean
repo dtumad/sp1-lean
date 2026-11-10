@@ -780,7 +780,7 @@ lemma rather than a buried existential. -/
 theorem decodedInROM.decodes {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (h : decodedInROM prog row) (s : SailState) (hs : SailConfigured s) :
     ∃ w i, prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (ext_decode w).run s = .ok i s ∧ instrToProgramRow (rowPcVec row) i = some row := by
+      (runSail (ext_decode w)) s = .ok i s ∧ instrToProgramRow (rowPcVec row) i = some row := by
   obtain ⟨w, I, hfetch, hrun, hrow⟩ := h
   exact ⟨w, I, hfetch, hrun s hs, instrToProgramRow'_some hrow⟩
 
@@ -1204,7 +1204,7 @@ theorem decodesRType {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op : rop
     (hop : row.opcode = ((ropToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.RTYPE (.Regidx rs2, .Regidx rs1, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1225,7 +1225,7 @@ theorem decodesRTypew {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op : ro
     (hop : row.opcode = ((ropwToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.RTYPEW (.Regidx rs2, .Regidx rs1, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1272,7 +1272,7 @@ theorem decodesIType {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op : iop
     (hop : row.opcode = ((iopToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.ITYPE (imm, .Regidx rs1, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1289,7 +1289,7 @@ theorem decodesShiftIType {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op 
     (hop : row.opcode = ((sopToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (shamt : BitVec 6) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.SHIFTIOP (shamt, .Regidx rs1, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1306,7 +1306,7 @@ theorem decodesShiftIWType {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op
     (hop : row.opcode = ((sopwToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (shamt : BitVec 5) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.SHIFTIWOP (shamt, .Regidx rs1, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1326,7 +1326,7 @@ theorem decodesADDIW {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (hop : row.opcode = ((Opcode.ADDW).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.ADDIW (imm, .Regidx rs1, .Regidx rd)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1379,7 +1379,7 @@ theorem decodesUType {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op : uop
     (hop : row.opcode = ((uopToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 20) (rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.UTYPE (imm, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = bitVecToWord ((imm.signExtend 64) <<< 12) := by
@@ -1449,7 +1449,7 @@ theorem decodesJal {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (hop : row.opcode = ((Opcode.JAL).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 21) (rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.JAL (imm, .Regidx rd)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = bitVecToWord (imm.signExtend 64) ∧
@@ -1510,7 +1510,7 @@ theorem decodesJalr {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (hop : row.opcode = ((Opcode.JALR).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.JALR (imm, .Regidx rs1, .Regidx rd)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1670,7 +1670,7 @@ theorem decodesDiv {prog : GuestProgram} {row : ProgramRow (ZMod p)} (isU : Bool
     (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.DIV (.Regidx rs2, .Regidx rs1, .Regidx rd, isU)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1688,7 +1688,7 @@ theorem decodesRem {prog : GuestProgram} {row : ProgramRow (ZMod p)} (isU : Bool
     (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.REM (.Regidx rs2, .Regidx rs1, .Regidx rd, isU)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1706,7 +1706,7 @@ theorem decodesDivw {prog : GuestProgram} {row : ProgramRow (ZMod p)} (isU : Boo
     (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.DIVW (.Regidx rs2, .Regidx rs1, .Regidx rd, isU)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1724,7 +1724,7 @@ theorem decodesRemw {prog : GuestProgram} {row : ProgramRow (ZMod p)} (isU : Boo
     (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.REMW (.Regidx rs2, .Regidx rs1, .Regidx rd, isU)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1912,7 +1912,7 @@ theorem decodesMul {prog : GuestProgram} {row : ProgramRow (ZMod p)} (op : mul_o
     (hop : row.opcode = ((mulOpToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.MUL (.Regidx rs2, .Regidx rs1, .Regidx rd, op)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -1929,7 +1929,7 @@ theorem decodesMulw {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (hop : row.opcode = ((Opcode.MULW).toNat : ZMod p)) (himm : row.imm_c = 0) :
     ∃ (w : BitVec 32) (rs2 rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.MULW (.Regidx rs2, .Regidx rs1, .Regidx rd)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -2008,7 +2008,7 @@ theorem decodesBType {prog : GuestProgram} {row : ProgramChip.ProgramRow (ZMod p
     (hop : row.opcode = ((bopToOpcode op).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 13) (rs2 rs1 : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.BTYPE (imm, .Regidx rs2, .Regidx rs1, op)) sc) ∧
       row.op_a = (rs1.toNat : ZMod p) ∧
       row.op_b = #v[(rs2.toNat : ZMod p), 0, 0, 0] ∧
@@ -2129,7 +2129,7 @@ theorem decodesLoad {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (hop : row.opcode = ((loadOpcode width isU).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.LOAD (imm, .Regidx rs1, .Regidx rd, isU, width)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -2206,7 +2206,7 @@ theorem decodesLoad' {prog : GuestProgram} {row : ProgramRow (ZMod p)}
     (hop : row.opcode = ((loadOpcode width isU).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs1 rd : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.LOAD (imm, .Regidx rs1, .Regidx rd, isU, width)) sc) ∧
       row.op_a = (rd.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -2377,7 +2377,7 @@ theorem decodesStore {prog : GuestProgram} {row : ProgramChip.ProgramRow (ZMod p
     (hpin : ∀ w' : word_width, (storeOpcode w').toNat = (storeOpcode width).toNat → w' = width) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs2 rs1 : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.STORE (imm, .Regidx rs2, .Regidx rs1, width)) sc) ∧
       row.op_a = (rs2.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧
@@ -2488,7 +2488,7 @@ theorem decodesStore' {prog : GuestProgram} {row : ProgramChip.ProgramRow (ZMod 
     (hop : row.opcode = ((storeOpcode width).toNat : ZMod p)) (himm : row.imm_c = 1) :
     ∃ (w : BitVec 32) (imm : BitVec 12) (rs2 rs1 : BitVec 5),
       prog.fetchWord (pcBitsOfRow row) = some w ∧
-      (∀ sc, SailConfigured sc → (ext_decode w).run sc
+      (∀ sc, SailConfigured sc → (runSail (ext_decode w)) sc
         = .ok (instruction.STORE (imm, .Regidx rs2, .Regidx rs1, width)) sc) ∧
       row.op_a = (rs2.toNat : ZMod p) ∧
       row.op_b = #v[(rs1.toNat : ZMod p), 0, 0, 0] ∧

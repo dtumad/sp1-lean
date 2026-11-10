@@ -3,16 +3,14 @@ import Aesop
 import Mathlib.Tactic.Ring
 import Mathlib.Data.ZMod.Basic
 import LeanRV64D.Regs
+import SP1Clean.Model.SailRun
 import ToMathlib.General
 
 /-! # Sail machine state and register-index decoding
 
 The seam between the generated Sail model and this project's 5-bit register indices:
 
-- `SailState` — the concrete machine-state type every semantic statement ranges over: the
-  lean-sail v5 `Sail.ConcurrencyInterfaceV1.SequentialState` specialized to the generated
-  `RegisterType` with the trivial (deterministic) choice source. Neither component has a
-  `LeanRV64D.*` shim, so the specialization lives here.
+- `SailState` — the upstream ArchSem sequential state specialized in `Model/SailRun.lean`.
 - `SailState.isInitialized` — every architectural register is present in the state's register
   map (the boot predicate's shape for "the register file exists").
 - `reg_idx_to_Register` — the 5-bit operand index as a generated-model `Register`, total via a
@@ -27,13 +25,6 @@ The seam between the generated Sail model and this project's 5-bit register indi
 set_option linter.unusedSimpArgs false
 
 open LeanRV64D
--- `SequentialState` and `trivialChoiceSource` both live in `Sail.ConcurrencyInterfaceV1` as of
--- lean-sail v5 (v4 had them at `PreSail.` and `Sail.` respectively). Neither has a `LeanRV64D.*`
--- shim in `SpecializationV1.lean`, so they are spelled out here.
-@[simp] abbrev SailState :=
-  Sail.ConcurrencyInterfaceV1.SequentialState RegisterType
-    Sail.ConcurrencyInterfaceV1.trivialChoiceSource
-
 /-- Every register has been initialized to some unspecified value. -/
 @[reducible] def SailState.isInitialized (s : SailState) : Prop :=
   ∀ reg : Register, reg ∈ s.regs

@@ -42,8 +42,8 @@ theorem correct_jal_native
     (h_jump : Word.toBitVec64 next_pc_word = pc + sign_extend (m := 64) imm)
     (h_link : Word.toBitVec64 op_a_word = pc + 4#64)
     (h_align : (Word.toBitVec64 next_pc_word).toNat % 4 = 0) :
-    (spec_jal imm (.Regidx rd)).run s
-      = (sp1_jal (.Regidx rd) pc next_pc_word op_a_word).run s := by
+    (runSail (spec_jal imm (.Regidx rd))) s
+      = (runSail (sp1_jal (.Regidx rd) pc next_pc_word op_a_word)) s := by
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
   set sp : SailState := { s with regs := s.regs.insert Register.nextPC (pc + 4#64) } with hsp
@@ -61,14 +61,14 @@ theorem correct_jal_native
     rw [Std.ExtDHashMap.get_insert]; simp
   have htgt4 : Word.toBitVec64 next_pc_word % 4#64 = 0 := by
     apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
-  have hjump : EStateM.run (jump_to (pc + sign_extend (m := 64) imm)) sp
+  have hjump : runSail (jump_to (pc + sign_extend (m := 64) imm)) sp
       = .ok RETIRE_SUCCESS { sp with regs := sp.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
     rw [← h_jump]; exact jump_to_of_mod4_eq_zero _ sp htgt4
   simp [spec_jal, sp1_jal, execute_JAL, hsp.symm,
     Sail.run_readReg_bind_of_isInitialized _ _ hs, hpc_get,
     Sail.run_readReg_bind_of_isInitialized _ _ hsp_init,
     hsp_pc, hjump, RETIRE_SUCCESS, h_jump, h_link]
-  simp only [hsp, ExtDHashMap_insert_insert_self]
+  simp only [hsp, ExtDHashMap_insert_insert_self, Std.ExtDHashMap.get_insert_self]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- Native Sail equivalence for `jal x0` (the `j` pseudo-instruction). When `rd = x0` the link write is a
@@ -81,8 +81,8 @@ theorem correct_jal_native_x0
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_jump : Word.toBitVec64 next_pc_word = pc + sign_extend (m := 64) imm)
     (h_align : (Word.toBitVec64 next_pc_word).toNat % 4 = 0) :
-    (spec_jal imm (.Regidx 0#5)).run s
-      = (sp1_jal (.Regidx 0#5) pc next_pc_word op_a_word).run s := by
+    (runSail (spec_jal imm (.Regidx 0#5))) s
+      = (runSail (sp1_jal (.Regidx 0#5) pc next_pc_word op_a_word)) s := by
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
   set sp : SailState := { s with regs := s.regs.insert Register.nextPC (pc + 4#64) } with hsp
@@ -100,7 +100,7 @@ theorem correct_jal_native_x0
     rw [Std.ExtDHashMap.get_insert]; simp
   have htgt4 : Word.toBitVec64 next_pc_word % 4#64 = 0 := by
     apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
-  have hjump : EStateM.run (jump_to (pc + sign_extend (m := 64) imm)) sp
+  have hjump : runSail (jump_to (pc + sign_extend (m := 64) imm)) sp
       = .ok RETIRE_SUCCESS { sp with regs := sp.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
     rw [← h_jump]; exact jump_to_of_mod4_eq_zero _ sp htgt4
   simp [spec_jal, sp1_jal, execute_JAL, hsp.symm,
@@ -140,8 +140,8 @@ theorem jal_chip_reaches_sail
     (h_pcw : Word.toBitVec64 (JalChip.pcWord cols) = pc)
     (h_dec : Word.toBitVec64 cols.adapter.op_b_imm = sign_extend (m := 64) imm)
     (h_op_a : cols.adapter.op_a_0 = 0 ∨ (cols.adapter.op_a_0 = 1 ∧ rd = 0#5)) :
-    (spec_jal imm (.Regidx rd)).run s
-      = (sp1_jal (.Regidx rd) pc cols.add_operation.value cols.op_a_operation.value).run s := by
+    (runSail (spec_jal imm (.Regidx rd))) s
+      = (runSail (sp1_jal (.Regidx rd) pc cols.add_operation.value cols.op_a_operation.value)) s := by
   have h_jump : Word.toBitVec64 cols.add_operation.value = pc + sign_extend (m := 64) imm := by
     rw [h_chip.2.2.1 h_real, h_pcw, h_dec]
   -- 4-byte alignment is now a verified `Spec` conjunct (the in-circuit `÷4` range check), not an assumed

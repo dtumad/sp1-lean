@@ -26,7 +26,7 @@ noncomputable def decodeLocated? (program : GuestProgram) (located : Machine.Loc
     Option instruction := do
   let pc ← located.source.regs.get? Register.PC
   let word ← program.fetchWord pc
-  match (ext_decode word).run located.source with
+  match (runSail (ext_decode word)) located.source with
   | .ok decoded _ => some decoded
   | _ => none
 
@@ -36,7 +36,7 @@ theorem decodeLocated?_eq_some_of
     {pc : BitVec 64} {word : BitVec 32} {decoded : instruction}
     (pcEq : located.source.regs.get? Register.PC = some pc)
     (fetch : program.fetchWord pc = some word)
-    (decode : (ext_decode word).run located.source = .ok decoded located.source) :
+    (decode : (runSail (ext_decode word)) located.source = .ok decoded located.source) :
     decodeLocated? program located = some decoded := by
   simp [decodeLocated?, pcEq, fetch, decode]
 
@@ -47,7 +47,7 @@ theorem decodeLocated?_components
     ∃ pc : BitVec 64, ∃ word : BitVec 32, ∃ decoderState : SailState,
       located.source.regs.get? Register.PC = some pc ∧
         program.fetchWord pc = some word ∧
-        (ext_decode word).run located.source = .ok decoded decoderState := by
+        (runSail (ext_decode word)) located.source = .ok decoded decoderState := by
   unfold decodeLocated? at generated
   cases pcEq : located.source.regs.get? Register.PC with
   | none => simp [pcEq] at generated
@@ -57,10 +57,10 @@ theorem decodeLocated?_components
       | none => simp [fetchEq] at generated
       | some word =>
           rw [fetchEq] at generated
-          change (match (ext_decode word).run located.source with
+          change (match (runSail (ext_decode word)) located.source with
             | .ok value _ => some value
             | _ => none) = some decoded at generated
-          cases decodeEq : (ext_decode word).run located.source with
+          cases decodeEq : (runSail (ext_decode word)) located.source with
           | ok value decoderState =>
               rw [decodeEq] at generated
               injection generated

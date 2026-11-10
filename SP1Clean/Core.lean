@@ -224,7 +224,10 @@ import SP1Clean.Model.SP1Constraint
 import SP1Clean.Model.SP1Field
 import SP1Clean.Model.SailDecode
 import SP1Clean.Model.SailMemory
+import SP1Clean.Model.SailPlatform
+import SP1Clean.Model.SailMemoryBytes
 import SP1Clean.Model.SailPure
+import SP1Clean.Model.SailRun
 import SP1Clean.Model.SailWrap
 import SP1Clean.Model.Semantics.AccessPlan
 import SP1Clean.Model.Semantics.AccessSchedule

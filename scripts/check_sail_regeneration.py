@@ -13,6 +13,49 @@ CONFIG_SITES = {
     "LeanRV64D/ValidateConfig.lean": ("let clint_supported", "let sig_supported"),
 }
 
+# The current model also embeds these configuration reads in its MMIO validation.
+# Match the surrounding expression within this one function, never arbitrary Booleans.
+MMIO_CONFIG_SITES = (
+    "if (((true : Bool) && ((Sail.BitVec.extractLsb plat_sig_base",
+    "let valid : Bool :=\n    if ((true : Bool) : Bool)",
+    "(if ((not (true : Bool)) : Bool)",
+    "let _ : Unit :=\n    if ((true : Bool) : Bool)",
+)
+
+
+def replace_once(source, old, new):
+    if source.count(old) != 1:
+        raise ValueError(f"Missing or ambiguous config site: {old}")
+    return source.replace(old, new, 1)
+
+
+def sp1_configuration(source, name):
+    for site in CONFIG_SITES.get(name, ()):
+        source = replace_once(source, site + " : Bool := true", site + " : Bool := false")
+    if name == "LeanRV64D/PlatformConfig.lean":
+        for extension in ("Zicntr", "Sdtrig"):
+            source = replace_once(source, f"  | .Ext_{extension} => true",
+                                  f"  | .Ext_{extension} => false")
+    if name == "LeanRV64D/ValidateConfig.lean":
+        sdtrig_site = """  if ((true : Bool) : Bool)
+  then
+    (let valid : Bool :=
+      if (((true : Bool) && (not (true : Bool))) : Bool)
+      then
+        (let valid : Bool := false
+        let _ : Unit :=
+          (print_endline
+            "The `hcontext` CSR is supported but the H extension is not: `hcontext` requires H to be supported.")"""
+        source = replace_once(source, sdtrig_site, sdtrig_site.replace("true", "false", 1))
+        match = re.search(r"^def check_mmio_devices .*?(?=^def |\Z)", source, flags=re.M | re.S)
+        if match is None:
+            raise ValueError("Missing MMIO configuration validation")
+        body = match.group()
+        for site in MMIO_CONFIG_SITES:
+            body = replace_once(body, site, site.replace("true", "false", 1))
+        source = source[:match.start()] + body + source[match.end():]
+    return source
+
 
 def sources(root):
     paths = [root / "LeanRV64D.lean", *sorted((root / "LeanRV64D").rglob("*"))]
@@ -37,33 +80,28 @@ def check_matrix(stock, sp1, stock_module, sp1_module):
     if not set(CONFIG_SITES) <= set(a):
         raise ValueError("Missing platform configuration controls")
     for name, source in a.items():
-        expected = source
-        for site in CONFIG_SITES.get(name, ()):
-            old = site + " : Bool := true"
-            if expected.count(old) != 1:
-                raise ValueError(f"Missing or ambiguous config site: {name}: {site}")
-            expected = expected.replace(old, site + " : Bool := false", 1)
+        expected = sp1_configuration(source, name)
         if expected != b[name]:
             raise ValueError(f"Unexpected stock/SP1 body delta: {name}")
         if legacy_headers(c[name]) != source or legacy_headers(d[name]) != b[name]:
             raise ValueError(f"Module mode changed generated bodies: {name}")
 
 
-def check_stock(path, pins):
-    stock = pins["currentStock"]
+def check_stock(path, pins, key="currentStock"):
+    stock = pins[key]
     validate_sail(path, {**stock, "moduleSystem": False})
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=["stock", "matrix"])
+    parser.add_argument("mode", choices=["stock", "previous-stock", "matrix"])
     parser.add_argument("paths", type=Path, nargs="+")
     args = parser.parse_args()
     pins = json.loads((ROOT / "scripts/provenance.json").read_text())["sail"]
-    if args.mode == "stock":
+    if args.mode in {"stock", "previous-stock"}:
         if len(args.paths) != 1:
             parser.error("stock requires one directory")
-        check_stock(args.paths[0], pins)
+        check_stock(args.paths[0], pins, "previousModelStock" if args.mode == "previous-stock" else "currentStock")
     else:
         if len(args.paths) != 4:
             parser.error("matrix requires stock, SP1, module stock, module SP1 directories")

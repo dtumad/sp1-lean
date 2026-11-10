@@ -106,7 +106,7 @@ an engine that **consumes** one needs to read a step back out of it. -/
 lemma sailStep_of_stepOnce {s s' : SailState} (h : stepOnce s = some s') : SailStep s s' := by
   change SP1Clean.Machine.stepOnce s = some s' at h
   unfold SP1Clean.Machine.stepOnce at h
-  cases hrun : (try_step 0 false).run s with
+  cases hrun : (runSail (try_step 0 false)) s with
   | ok b next =>
       rw [hrun] at h
       exact ⟨b, by rw [hrun, Option.some.inj h]⟩

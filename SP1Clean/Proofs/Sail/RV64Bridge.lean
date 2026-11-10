@@ -30,7 +30,7 @@ open Sail LeanRV64D LeanRV64D.Functions
 theorem div_eq (rs2_val : BitVec 64) (rs1_val : BitVec 64) :
     SailRV64.div rs1_val rs2_val false = div rs1_val rs2_val := by
   simp only [SailRV64.div, LeanRV64D.Functions.to_bits_truncate, Sail.get_slice_int, Nat.reduceAdd,
-    LeanRV64D.Functions.not, Bool.false_eq_true, ↓reduceIte, beq_iff_eq, Int.reduceNeg,
+    LeanRV64D.not, Bool.false_eq_true, ↓reduceIte, beq_iff_eq, Int.reduceNeg,
     LeanRV64D.Functions.xlen, Int.cast_ofNat_Int, Int.reduceSub, ge_iff_le, Bool.not_false,
     Bool.true_and, decide_eq_true_eq, div]
   rw [BitVec.extractLsb'_ofInt_eq_ofInt (by omega)]
@@ -56,7 +56,7 @@ theorem div_eq (rs2_val : BitVec 64) (rs1_val : BitVec 64) :
 theorem divu_eq (rs2_val : BitVec 64) (rs1_val : BitVec 64) :
     SailRV64.div rs1_val rs2_val true = divu rs1_val rs2_val := by
   simp only [SailRV64.div, LeanRV64D.Functions.to_bits_truncate, Sail.get_slice_int, Nat.reduceAdd,
-    LeanRV64D.Functions.not, Bool.not_true, ↓reduceIte, beq_iff_eq, Sail.BitVec.toNatInt, Int.ofNat_eq_natCast,
+    LeanRV64D.not, Bool.not_true, ↓reduceIte, beq_iff_eq, Sail.BitVec.toNatInt, Int.ofNat_eq_natCast,
     Int.natCast_eq_zero, LeanRV64D.Functions.xlen, ge_iff_le, Bool.false_and, Bool.false_eq_true,
     divu, BitVec.ofNat_eq_ofNat, BitVec.udiv_eq]
   rw [BitVec.extractLsb'_ofInt_eq_ofInt (by omega)]
@@ -75,7 +75,7 @@ theorem divu_eq (rs2_val : BitVec 64) (rs1_val : BitVec 64) :
 theorem divw_eq (rs2_val : BitVec 64) (rs1_val : BitVec 64) :
     SailRV64.divw rs1_val rs2_val false = divw rs1_val rs2_val := by
   simp only [SailRV64.divw, LeanRV64D.Functions.to_bits_truncate, Sail.get_slice_int, Nat.reduceAdd,
-    LeanRV64D.Functions.not, Bool.false_eq_true, ↓reduceIte, beq_iff_eq, Int.reduceNeg, ge_iff_le,
+    LeanRV64D.not, Bool.false_eq_true, ↓reduceIte, beq_iff_eq, Int.reduceNeg, ge_iff_le,
     Bool.not_false, Bool.true_and, decide_eq_true_eq, divw, LeanRV64D.Functions.sign_extend,
     Sail.BitVec.extractLsb, Sail.BitVec.signExtend]
   rw [BitVec.extractLsb'_ofInt_eq_ofInt (by omega)]
@@ -105,7 +105,7 @@ theorem divuw_eq (rs2_val : BitVec 64) (rs1_val : BitVec 64) :
     SailRV64.divw rs1_val rs2_val true = divuw rs1_val rs2_val := by
   simp only [SailRV64.divw, LeanRV64D.Functions.sign_extend, Sail.BitVec.signExtend,
     LeanRV64D.Functions.to_bits_truncate, Sail.get_slice_int, Nat.reduceAdd,
-    LeanRV64D.Functions.not, Bool.not_true, ↓reduceIte, Sail.BitVec.extractLsb, Sail.BitVec.toNatInt, Int.ofNat_eq_natCast,
+    LeanRV64D.not, Bool.not_true, ↓reduceIte, Sail.BitVec.extractLsb, Sail.BitVec.toNatInt, Int.ofNat_eq_natCast,
     beq_iff_eq, Int.natCast_eq_zero, ge_iff_le, Bool.false_and, Bool.false_eq_true, divuw,
     BitVec.udiv_eq]
   rw [BitVec.extractLsb'_ofInt_eq_ofInt (by omega)]

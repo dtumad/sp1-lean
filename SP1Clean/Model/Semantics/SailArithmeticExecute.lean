@@ -9,7 +9,7 @@ family, including x0. The instruction bridges and semantic frame laws share thes
 
 open LeanRV64D
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open SP1Clean Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.SailMem
 
 /-- **The RTYPE execute stage reaches `Retire_Success`.** `execute (.RTYPE …)` on a state whose `rs1`/`rs2`
@@ -20,7 +20,7 @@ theorem rtype_execute_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (op : rop)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b)
     (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.RTYPE (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, op))).run s_a
+    (runSail (execute (.RTYPE (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, op)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -40,7 +40,7 @@ theorem rtypew_execute_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (op : ropw)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b)
     (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.RTYPEW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, op))).run s_a
+    (runSail (execute (.RTYPEW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, op)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -80,7 +80,7 @@ immediate, no `rs2`). Serves the whole immediate-ALU family via `op`. -/
 theorem itype_execute_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5) (op : iop)
     (op_b : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) :
-    (execute (.ITYPE (imm, .Regidx rs1_idx, .Regidx rd_idx, op))).run s_a
+    (runSail (execute (.ITYPE (imm, .Regidx rs1_idx, .Regidx rd_idx, op)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -122,7 +122,7 @@ writing the result of the official six-bit shift operation to `rd`. -/
 theorem shiftitype_execute_reaches (shamt : BitVec 6) (rs1_idx rd_idx : BitVec 5) (op : sop)
     (op_b : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) :
-    (execute (.SHIFTIOP (shamt, .Regidx rs1_idx, .Regidx rd_idx, op))).run s_a
+    (runSail (execute (.SHIFTIOP (shamt, .Regidx rs1_idx, .Regidx rd_idx, op)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -157,7 +157,7 @@ def execute_SHIFTIWOP' (shamt : BitVec 5) (rs1 rd : regidx) (op : sopw) : SailM 
 theorem shiftiwtype_execute_reaches (shamt : BitVec 5) (rs1_idx rd_idx : BitVec 5) (op : sopw)
     (op_b : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) :
-    (execute (.SHIFTIWOP (shamt, .Regidx rs1_idx, .Regidx rd_idx, op))).run s_a
+    (runSail (execute (.SHIFTIWOP (shamt, .Regidx rs1_idx, .Regidx rd_idx, op)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -180,7 +180,7 @@ via `pure_bind`). -/
 theorem execute_ADDIW_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5)
     (op_b : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) :
-    (execute (.ADDIW (imm, .Regidx rs1_idx, .Regidx rd_idx))).run s_a
+    (runSail (execute (.ADDIW (imm, .Regidx rs1_idx, .Regidx rd_idx)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -203,13 +203,13 @@ def execute_UTYPE_pure (op : uop) (pc : BitVec 64) (imm : BitVec 20) : BitVec 64
 AUIPC reads the pc (`get_arch_pc = readReg PC`), threaded via `hpct`. -/
 theorem execute_UTYPE_reaches (imm : BitVec 20) (rd_idx : BitVec 5) (op : uop) (pc : BitVec 64)
     (t : SailState) (hpct : t.regs.get? Register.PC = some pc) :
-    (execute (.UTYPE (imm, .Regidx rd_idx, op))).run t
+    (runSail (execute (.UTYPE (imm, .Regidx rd_idx, op)))) t
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then t
            else {t with regs := (t.regs.insert (reg_idx_to_Register rd_idx)
              (bitVecToRegidxVal rd_idx (execute_UTYPE_pure op pc imm)))}) := by
-  have harchpc : (get_arch_pc ()).run t = .ok pc t := by
-    simp [get_arch_pc, PreSail.readReg, hpct]
+  have harchpc : (runSail (get_arch_pc ())) t = .ok pc t := by
+    simp only [get_arch_pc, LeanRV64D.readReg, Sail.run_readReg, hpct]
   cases op
   · simp only [execute, execute_UTYPE, execute_UTYPE_pure, pure_bind]
     rw [run_bind_of_run' t _ _ () (run_wX_bits (regidx.Regidx rd_idx) _)]; rfl
@@ -224,7 +224,7 @@ The div-by-zero/overflow special cases are fully inside `SailRV64.div`; `div_eq`
 theorem execute_DIV_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.DIV (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU))).run s_a
+    (runSail (execute (.DIV (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -241,7 +241,7 @@ inline `show … from rfl` (holds for a variable `isU` — the body threads `is_
 theorem execute_REM_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.REM (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU))).run s_a
+    (runSail (execute (.REM (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -258,7 +258,7 @@ theorem execute_REM_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
 theorem execute_DIVW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.DIVW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU))).run s_a
+    (runSail (execute (.DIVW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -273,7 +273,7 @@ theorem execute_DIVW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
 theorem execute_REMW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (isU : Bool)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.REMW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU))).run s_a
+    (runSail (execute (.REMW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, isU)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -292,7 +292,7 @@ via `SailRV64.execute_MUL_eq`/`SailRV64.skeleton_binary`. -/
 theorem execute_MUL_reaches (rs2_idx rs1_idx rd_idx : BitVec 5) (op : mul_op)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.MUL (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, op))).run s_a
+    (runSail (execute (.MUL (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx, op)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)
@@ -308,7 +308,7 @@ Mirrors `execute_DIVW_reaches` via `SailRV64.execute_MULW_eq`/`SailRV64.skeleton
 theorem execute_MULW_reaches (rs2_idx rs1_idx rd_idx : BitVec 5)
     (op_b op_c : BitVec 64) (s_a : SailState)
     (h_rs1 : s_a.get_reg? rs1_idx = some op_b) (h_rs2 : s_a.get_reg? rs2_idx = some op_c) :
-    (execute (.MULW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx))).run s_a
+    (runSail (execute (.MULW (.Regidx rs2_idx, .Regidx rs1_idx, .Regidx rd_idx)))) s_a
       = .ok (ExecutionResult.Retire_Success ())
           (if rd_idx = 0#5 then s_a
            else {s_a with regs := (s_a.regs.insert (reg_idx_to_Register rd_idx)

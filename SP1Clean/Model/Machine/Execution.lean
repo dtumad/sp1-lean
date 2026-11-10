@@ -67,7 +67,7 @@ theorem ExecutionCtx.registersZero {model : SP1MachineModel} (ctx : ExecutionCtx
 
 /-- One deterministic Sail step, totalized with `Option`. -/
 noncomputable def stepOnce (state : SailState) : Option SailState :=
-  match (try_step 0 false).run state with
+  match (runSail (try_step 0 false)) state with
   | .ok _ next => some next
   | .error _ _ => none
 

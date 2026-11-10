@@ -8,43 +8,45 @@ execution are not additional premises. Trap outcomes cannot masquerade as normal
 -/
 
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
+open SP1Clean Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- A jump either traps or stages its destination, preserving configuration and all memory. -/
 theorem jump_to_frame (source : SailState) (cfg : SailConfigured source) (destination : BitVec 64)
     (result : ExecutionResult) (target : SailState)
-    (ran : (jump_to destination).run source = .ok result target) :
+    (ran : (runSail (jump_to destination)) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
-  simp only [jump_to, ext_control_check_pc, SailME.run, run_SailME_liftM_bind] at ran
+  simp only [jump_to, ext_control_check_pc, SailME.run, PreSail.PreSailME.run_lift_bind] at ran
   by_cases low : (BitVec.access destination 0 == 0#1) = true
   · simp only [PreSail.sail_assert, low, ↓reduceIte, pure_bind, andM, toBool] at ran
     cases misaligned : bit_to_bool (BitVec.access destination 1) with
     | false =>
       simp only [misaligned, pure_bind, Bool.false_eq_true, ite_false] at ran
-      rw [run_SailME_liftM_bind, run_SailME_pure] at ran
+      rw [PreSail.PreSailME.run_lift_bind, PreSail.PreSailME.run_pure] at ran
       simp only [set_next_pc] at ran
       cases ran
       exact ⟨(fun _ h => nomatch h), SailConfigured.writeNextPC cfg _, rfl⟩
     | true =>
-      simp only [misaligned, pure_bind, bind_assoc, run_SailME_liftM_bind] at ran
-      rw [run_bind_of_run source _ _ (currentlyEnabled_zca_eq_false source cfg)] at ran
-      simp only [LeanRV64D.Functions.not, Bool.not_false, ite_true] at ran
-      rw [run_SailME_liftM] at ran
-      simp only [memory_exception, trap] at ran
+      simp only [misaligned, pure_bind, bind_assoc, PreSail.PreSailME.run_lift_bind] at ran
+      rw [run_bind_of_run source (FreeM.pure ()) () rfl,
+        run_bind_of_run source _ _ (currentlyEnabled_zca_eq_false source cfg)] at ran
+      simp only [LeanRV64D.not, Bool.not_false, ite_true] at ran
+      simp only [exception_context, inVirtualPrivilege, bind_assoc, pure_bind,
+        PreSail.PreSailME.run_lift_bind, PreSail.PreSailME.run_lift, trap] at ran
+      rw [run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init] at ran
       rw [run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init,
         run_readReg_bind_of_isInitialized source Register.PC cfg.init] at ran
       cases ran
       exact ⟨(fun _ h => nomatch h), cfg, rfl⟩
-  · simp only [PreSail.sail_assert, low, bind, EStateM.bind, EStateM.run, throw] at ran
+  · simp only [PreSail.sail_assert, low, bind] at ran
     cases ran
 
 private theorem jump_and_link_frame (source : SailState) (cfg : SailConfigured source)
     (destination link : BitVec 64) (rd : BitVec 5) (result : ExecutionResult) (target : SailState)
-    (ran : (do
+    (ran : (runSail (do
       match ← jump_to destination with
       | .Retire_Success () => wX_bits (.Regidx rd) link; pure (ExecutionResult.Retire_Success ())
-      | failure => pure failure).run source = .ok result target) :
+      | failure => pure failure)) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   obtain ⟨middle, outcome, jumpRun, suffix⟩ := run_bind_success _ _ source target result ran
   obtain ⟨direct, configured, memory⟩ := jump_to_frame source cfg destination outcome middle jumpRun
@@ -59,7 +61,7 @@ private theorem jump_and_link_frame (source : SailState) (cfg : SailConfigured s
 /-- JAL preserves configuration and every byte for every successful execute result. -/
 theorem jal_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 21) (rd : BitVec 5) (result : ExecutionResult) (target : SailState)
-    (ran : (execute (.JAL (imm, .Regidx rd))).run source = .ok result target) :
+    (ran : (runSail (execute (.JAL (imm, .Regidx rd)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   simp only [execute, execute_JAL, get_next_pc] at ran
   rw [run_readReg_bind_of_isInitialized source Register.nextPC cfg.init,
@@ -69,7 +71,7 @@ theorem jal_execute_frame (source : SailState) (cfg : SailConfigured source)
 /-- JALR preserves configuration and every byte, using Sail’s masked target and ELP handling. -/
 theorem jalr_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs1 rd : BitVec 5) (result : ExecutionResult) (target : SailState)
-    (ran : (execute (.JALR (imm, .Regidx rs1, .Regidx rd))).run source = .ok result target) :
+    (ran : (runSail (execute (.JALR (imm, .Regidx rs1, .Regidx rd)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   obtain ⟨value, read⟩ := initialized_gpr source cfg.init rs1
   simp only [execute, execute_JALR, get_next_pc] at ran
@@ -82,12 +84,12 @@ theorem jalr_execute_frame (source : SailState) (cfg : SailConfigured source)
 /-- Every branch condition preserves configuration and every byte, taken or not taken. -/
 theorem branch_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 13) (rs1 rs2 : BitVec 5) (op : bop) (result : ExecutionResult) (target : SailState)
-    (ran : (execute (.BTYPE (imm, .Regidx rs2, .Regidx rs1, op))).run source = .ok result target) :
+    (ran : (runSail (execute (.BTYPE (imm, .Regidx rs2, .Regidx rs1, op)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   obtain ⟨left, leftRead⟩ := initialized_gpr source cfg.init rs1
   obtain ⟨right, rightRead⟩ := initialized_gpr source cfg.init rs2
-  have leftRun : (rX_bits (.Regidx rs1)).run source = .ok left source := by rw [run_rX_bits, leftRead]
-  have rightRun : (rX_bits (.Regidx rs2)).run source = .ok right source := by rw [run_rX_bits, rightRead]
+  have leftRun : (runSail (rX_bits (.Regidx rs1))) source = .ok left source := by rw [run_rX_bits, leftRead]
+  have rightRun : (runSail (rX_bits (.Regidx rs2))) source = .ok right source := by rw [run_rX_bits, rightRead]
   cases op <;>
     simp only [execute, execute_BTYPE, bind_assoc,
       run_bind_of_run source _ left leftRun, run_bind_of_run source _ right rightRun, pure_bind] at ran

@@ -129,7 +129,7 @@ is intentionally about one word/instruction pair; execution-wide quantification 
 relation that owns the transition list, not to a second aggregate decode predicate. -/
 def ConfiguredDecode (word : BitVec 32) (decoded : instruction) : Prop :=
   ∀ state, SailConfigured state →
-    (ext_decode word).run state = .ok decoded state
+    (runSail (ext_decode word)) state = .ok decoded state
 
 /-- The SP1 memory configuration (`isValidMemConfig`) the low-level fetch/load/store lemmas consume,
 reconstructed from the flattened `SailConfigured` fields (`h_cur_privilege` derives from `priv`; the
@@ -164,29 +164,32 @@ PC commit — so nothing of the interpreter is bypassed. -/
 
 /-- One real interpreter step: `try_step` runs to completion (no trap-out of the model). -/
 def SailStep (s s' : SailState) : Prop :=
-  ∃ b : Bool, (try_step 0 false).run s = .ok b s'
+  ∃ b : Bool, (runSail (try_step 0 false)) s = .ok b s'
 
 /-- One real interpreter step whose active-hart branch executed an instruction to
 `Retire_Success`, rather than taking one of `run_hart_active`'s trap, illegal-instruction,
 wait, or extension-failure exits.
 
-The `should_inc_minstret` equation pins `b` to the value actually selected by `try_step`; the
-`run_hart_active` equation then observes the corresponding post-`minstret_increment` state.  The
-final equation retains the actual `try_step` target, including its PC/minstret tail.  Keeping this
+The prelude equation observes the upstream `update_mip` result. The `should_inc_minstret`
+equation pins the flag selected in that prepared state, and `run_hart_active` observes the
+corresponding post-`minstret_increment` state and complete instruction metadata. The final
+equation retains the actual `try_step` target, including PC, counter and event bookkeeping.  Keeping this
 predicate below the row model lets both the semantic shard relation and `RowEffect` use the same
 official-Sail notion of normal retirement. -/
 def SailRetiresNormally (s s' : SailState) : Prop :=
-  ∃ minstretIncrement : Bool, ∃ instructionBits : instbits, ∃ postExecute : SailState,
-    (should_inc_minstret Privilege.Machine).run s = .ok minstretIncrement s ∧
-    (run_hart_active 0).run
-        ({s with regs := s.regs.insert Register.minstret_increment minstretIncrement}) =
-      .ok (Step.Step_Execute (ExecutionResult.Retire_Success (), instructionBits)) postExecute ∧
-    (try_step 0 false).run s = .ok false s'
+  ∃ prepared : SailState,
+    runSail (update_mip ()) s = .ok () prepared ∧
+    ∃ minstretIncrement : Bool, ∃ instructionInfo : instr_info, ∃ postExecute : SailState,
+    (runSail (should_inc_minstret Privilege.Machine)) prepared = .ok minstretIncrement prepared ∧
+    (runSail (run_hart_active 0))
+        ({prepared with regs := prepared.regs.insert Register.minstret_increment minstretIncrement}) =
+      .ok (Step.Step_Execute (ExecutionResult.Retire_Success (), instructionInfo)) postExecute ∧
+    (runSail (try_step 0 false)) s = .ok false s'
 
 /-- Normal retirement is, in particular, a real Sail step. -/
 theorem SailRetiresNormally.sailStep {s s' : SailState}
     (normal : SailRetiresNormally s s') : SailStep s s' := by
-  obtain ⟨_, _, _, _, _, step⟩ := normal
+  obtain ⟨_, _, _, _, _, _, _, step⟩ := normal
   exact ⟨false, step⟩
 
 /-- An `n`-step Sail execution chain. -/

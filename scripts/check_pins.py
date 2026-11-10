@@ -107,6 +107,23 @@ def check(root: Path, *, source_only: bool = False) -> list[str]:
         require(revision == package.get("rev" if commit else "inputRev"),
                 f"{name}: requested and resolved revisions disagree")
 
+    # Clean owns the complete shared dependency graph. Compare its checked-out manifest
+    # rather than keeping a second list of transitive versions in this repository.
+    if not source_only:
+        clean_manifest = root / ".lake/packages/Clean/lake-manifest.json"
+        try:
+            shared = json.loads(clean_manifest.read_text())["packages"]
+            for dependency in shared:
+                name = dependency["name"]
+                resolved = manifest.get(name, {})
+                require(dependency.get("type") == resolved.get("type") == "git" and
+                        dependency.get("rev") == resolved.get("rev") and
+                        dependency.get("url", "").removesuffix(".git") ==
+                        resolved.get("url", "").removesuffix(".git"),
+                        f"{name}: shared dependency must match Clean's pin")
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            errors.append(f"cannot inspect Clean's dependency pins: {error}; prepare Lake dependencies")
+
     # The generated program and its runtime must come from the same Clean revision.
     cargo = (root / "rust/sp1-comparison/Cargo.toml").read_text()
     backend = re.search(r'^clean_backend\s*=\s*\{([^}\n]+)\}', cargo, re.M)
@@ -130,22 +147,25 @@ def check(root: Path, *, source_only: bool = False) -> list[str]:
     sail, sp1 = provenance["sail"], provenance["sp1"]
     errors.extend(sp1_pin_errors(cargo, locked, sp1))
     for name, revision in [(key, sail[key]) for key in
-                           ("compilerRevision", "modelRevision", "baseSnapshot")]:
+                           ("compilerRevision", "modelRevision")]:
         require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)), f"{name}: expected full commit")
     require(sail.get("moduleSystem") is True, "Sail must be generated in module mode")
-    historical, stock = sail["historicalStock"], sail["currentStock"]
+    historical, previous, stock = sail["historicalStock"], sail["previousModelStock"], sail["currentStock"]
     for key in ("compilerRevision", "modelRevision", "baseSnapshot"):
         require(bool(re.fullmatch(r"[0-9a-f]{40}", historical[key])),
                 f"historicalStock.{key}: expected full commit")
-    require(historical["baseSnapshot"] == sail["baseSnapshot"],
-            "historical stock control must authenticate the recorded base snapshot")
-    require(historical["modelRevision"] == sail["modelRevision"],
+    require(historical["modelRevision"] == previous["modelRevision"] and
+            historical["modelRepository"] == previous["modelRepository"],
             "stock compiler comparison requires the same model revision")
-    for label, control in (("historicalStock", historical), ("currentStock", stock)):
+    for label, control in (("current", sail), ("historicalStock", historical), ("previousModelStock", previous)):
+        require(bool(re.fullmatch(r"https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", control["modelRepository"])),
+                f"{label}: expected published model repository")
+    for label, control in (("historicalStock", historical), ("previousModelStock", previous), ("currentStock", stock)):
         require(bool(re.fullmatch(r"[0-9a-f]{64}", control["configSha256"])),
                 f"{label}: invalid configuration fingerprint")
-    require(bool(re.fullmatch(r"[0-9a-f]{64}", stock["generatedTreeSha256"])) and
-            stock["generatedFiles"] > 0, "invalid stock Sail fingerprint")
+    for label, control in (("previousModelStock", previous), ("currentStock", stock)):
+        require(bool(re.fullmatch(r"[0-9a-f]{64}", control["generatedTreeSha256"])) and
+                control["generatedFiles"] > 0, f"invalid {label} Sail fingerprint")
     require(bool(re.fullmatch(r"[0-9a-f]{64}", sail["generatedTreeSha256"])) and
             sail["generatedFiles"] > 0, "invalid generated Sail fingerprint")
     if not source_only:

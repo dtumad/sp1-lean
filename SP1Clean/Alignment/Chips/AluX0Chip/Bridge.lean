@@ -82,9 +82,9 @@ theorem correct_aluX0_rtype (op : rop) (rs1 rs2 : BitVec 5) (rs1_val rs2_val : B
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_rtype op (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_rtype op (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_rtype, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -97,9 +97,9 @@ theorem correct_aluX0_rtypew (op : ropw) (rs1 rs2 : BitVec 5) (rs1_val rs2_val :
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_rtypew op (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_rtypew op (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_rtypew, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -112,9 +112,9 @@ theorem correct_aluX0_addi (imm : BitVec 12) (rs1 : BitVec 5) (rs1_val : BitVec 
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) :
-    (spec_aluX0_addi imm (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_addi imm (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_addi, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -127,9 +127,9 @@ theorem correct_aluX0_mul (op : mul_op) (rs1 rs2 : BitVec 5) (rs1_val rs2_val : 
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_mul op (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_mul op (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_mul, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -142,9 +142,9 @@ theorem correct_aluX0_mulw (rs1 rs2 : BitVec 5) (rs1_val rs2_val : BitVec 64)
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_mulw (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_mulw (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_mulw, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -181,9 +181,9 @@ theorem correct_aluX0_div (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs2
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_div is_unsigned (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_div is_unsigned (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_div, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -196,9 +196,9 @@ theorem correct_aluX0_rem (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs2
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_rem is_unsigned (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_rem is_unsigned (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_rem, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -212,9 +212,9 @@ theorem correct_aluX0_divw (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_divw is_unsigned (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_divw is_unsigned (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_divw, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
@@ -227,9 +227,9 @@ theorem correct_aluX0_remw (is_unsigned : Bool) (rs1 rs2 : BitVec 5) (rs1_val rs
     (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1 = some rs1_val) (h_rs2 : s.get_reg? rs2 = some rs2_val) :
-    (spec_aluX0_remw is_unsigned (.Regidx rs2) (.Regidx rs1)).run s = (sp1_aluX0 pc).run s := by
+    (runSail (spec_aluX0_remw is_unsigned (.Regidx rs2) (.Regidx rs1))) s = (runSail (sp1_aluX0 pc)) s := by
   simp only [spec_aluX0_remw, sp1_aluX0]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by
     rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]

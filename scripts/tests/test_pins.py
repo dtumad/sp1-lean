@@ -22,6 +22,11 @@ class PinTests(unittest.TestCase):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(check_pins.ROOT / name, path)
+        manifest = json.loads((self.root / "lake-manifest.json").read_text())
+        shared = next(p for p in manifest["packages"] if p["name"] == "CompPoly")
+        clean_manifest = self.root / ".lake/packages/Clean/lake-manifest.json"
+        clean_manifest.parent.mkdir(parents=True)
+        clean_manifest.write_text(json.dumps({"packages": [shared]}))
         self.model = self.root / check_pins.SAIL_MODEL_DIR
         (self.model / "LeanRV64D").mkdir(parents=True)
         (self.model / "LeanRV64D.lean").write_text("module\npublic import LeanRV64D.Defs\n")
@@ -53,6 +58,14 @@ class PinTests(unittest.TestCase):
         self.edit_json("lake-manifest.json", lambda data: data["packages"].append(
             {"name": "hidden", "type": "path", "inherited": True, "rev": "0" * 40}))
         self.assertTrue(any("git pin" in e for e in check_pins.check(self.root)))
+
+    def test_shared_dependency_override(self):
+        # Both root files agree, but the override must still be rejected against Clean.
+        clean = json.loads((self.root / ".lake/packages/Clean/lake-manifest.json").read_text())
+        name = clean["packages"][0]["name"]
+        self.edit_json("lake-manifest.json", lambda data: next(
+            p for p in data["packages"] if p["name"] == name).update(rev="0" * 40))
+        self.assertTrue(any("must match Clean's pin" in e for e in check_pins.check(self.root)))
 
     def test_generated_drift(self):
         with (self.model / "LeanRV64D.lean").open("a") as output:

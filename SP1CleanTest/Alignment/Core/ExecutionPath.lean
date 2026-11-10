@@ -268,7 +268,7 @@ theorem ordinaryBookkeeping (inhibit : Bool) :
         show LeanRV64D.Functions.sign_extend (m := 64) imm = imm.signExtend 64 from rfl, ← value]
       decide)
   obtain ⟨increment, enabled, flag, retired⟩ := effect.retirement
-  have observed : (LeanRV64D.Functions.should_inc_minstret Privilege.Machine).run
+  have observed : (runSail (LeanRV64D.Functions.should_inc_minstret Privilege.Machine))
       (bookkeepingSource inhibit) = .ok (!inhibit) (bookkeepingSource inhibit) := by
     rw [TryStepReduction.run_should_inc_minstret _ configured.init]
     congr 1
@@ -286,7 +286,7 @@ theorem ordinaryBookkeeping (inhibit : Bool) :
   · rw [retired]
     simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert]
     cases inhibit <;> decide
-  · rw [effect.otherRegs Register.mcycle (by decide) (by decide) (by decide) (by decide)
+  · rw [effect.otherRegs Register.mcycle (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
       (fun index => by unfold reg_idx_to_Register; split <;> decide)]
     exact Std.ExtDHashMap.get?_insert_self
 

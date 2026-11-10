@@ -28,7 +28,7 @@ memory bytes as direct hypotheses (in the full system these come from the reader
 open LeanRV64D
 namespace SP1Clean.LoadSail
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -138,7 +138,7 @@ theorem correct_load_double_native
       = some (BitVec.ofNat 8 loaded[3].val))
     (hmem₇ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 7]?
       = some (BitVec.ofNat 8 (loaded[3].val >>> 8))) :
-    (spec_ld imm rs1_idx rd_idx).run s = (sp1_ld rd_idx pc loaded).run s := by
+    (runSail (spec_ld imm rs1_idx rd_idx)) s = (runSail (sp1_ld rd_idx pc loaded)) s := by
   obtain ⟨h0, h1, h2, h3⟩ := Word.lt_cases_of_isU64 hloaded
   have hse : (sign_extend imm : BitVec 64) = BitVec.signExtend 64 imm := by simp [sign_extend]
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
@@ -233,8 +233,8 @@ theorem correct_load_double_native
   -- assert, resolve the read via `hread`, and match the `extend_value` write against
   -- `wX_bits rd (Word.toBitVec64 loaded)` via `hextend`.
   simp [spec_ld, sp1_ld, run_readReg_of_isInitialized _ _ hs,
-    EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hextend]
+    execute_LOAD, hpc_get, hse,
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, hread, hextend]
 
 omit [Fact (2 ^ 17 < p)] in
 /-- **End-to-end composition.** From the `LoadDouble` chip's prover assumptions (the operand `isU64`s
@@ -271,8 +271,8 @@ theorem ld_chip_reaches_sail
       = some (BitVec.ofNat 8 cols.memory_access.prev_value[3].val))
     (hmem₇ : s.mem[(Word.toBitVec64 input.op_b_val + BitVec.signExtend 64 imm).toNat + 7]?
       = some (BitVec.ofNat 8 (cols.memory_access.prev_value[3].val >>> 8))) :
-    (spec_ld imm rs1_idx rd_idx).run s
-      = (sp1_ld rd_idx pc cols.memory_access.prev_value).run s := by
+    (runSail (spec_ld imm rs1_idx rd_idx)) s
+      = (runSail (sp1_ld rd_idx pc cols.memory_access.prev_value)) s := by
   obtain ⟨h_b, h_c, _h_pv_isu64⟩ := h_assum
   have h_address' := AddressOperation.effectiveAddress_facts h_b h_c h_address
   simp only [AddressOperation.effectiveAddress, ZMod.val_zero, zero_add] at h_address'
@@ -289,7 +289,7 @@ end SP1Clean.LoadSail
 namespace SP1Clean.LoadDoubleChip
 
 open SP1Clean.LoadSail
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Trace SP1Clean.Advance
 

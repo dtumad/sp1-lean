@@ -11,6 +11,7 @@ proof library; these regressions also witness the official hint-extension priori
 namespace SP1CleanTest.Core.InstructionDecode
 
 open Circuit LeanRV64D SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
+open SP1Clean (runSail)
 
 private abbrev Fp := ZMod SP1Clean.SP1Prime
 
@@ -79,22 +80,22 @@ open Sail LeanRV64D.Functions in
 /-- Official Sail recognizes the overlapping NTL and prefetch encodings as hint constructors.
 These kernel-checked witnesses explain why literal ADD/ORI decoding must reject the aliases. -/
 theorem sailHintPriority (s : SailState) :
-    (ext_decode 0x00200033#32).run s = .ok (.NTL .NTL_P1) s ∧
-    (ext_decode 0x00006013#32).run s = .ok (.ZICBOP (.PREFETCH_I, .Regidx 0#5, 0#12)) s := by
+    (runSail (ext_decode 0x00200033#32)) s = .ok (.NTL .NTL_P1) s ∧
+    (runSail (ext_decode 0x00006013#32)) s = .ok (.ZICBOP (.PREFETCH_I, .Regidx 0#5, 0#12)) s := by
   constructor
-  · conv_lhs => whnf
-    refine (SP1Clean.SailDecode.run_match_step _ (some (instruction.NTL .NTL_P1))
-      _ _ s ?_).trans rfl
-    conv_lhs => whnf
-    rw [show currentlyEnabled extension.Ext_Zihintntl s = .ok true s by
-      simp [currentlyEnabled, hartSupports, pure, EStateM.pure]]
+  · conv_lhs => arg 1; whnf
+    refine (SP1Clean.SailDecode.run_bind_step _ (some (instruction.NTL .NTL_P1))
+      _ s ?_).trans rfl
+    conv_lhs => arg 1; whnf
+    rw [show currentlyEnabled extension.Ext_Zihintntl = (pure true : SailM Bool) by
+      simp [currentlyEnabled, hartSupports]]
     rfl
-  · conv_lhs => whnf
-    refine (SP1Clean.SailDecode.run_match_step _
-      (some (instruction.ZICBOP (.PREFETCH_I, .Regidx 0#5, 0#12))) _ _ s ?_).trans rfl
-    conv_lhs => whnf
-    rw [show currentlyEnabled extension.Ext_Zicbop s = .ok true s by
-      simp [currentlyEnabled, hartSupports, pure, EStateM.pure]]
+  · conv_lhs => arg 1; whnf
+    refine (SP1Clean.SailDecode.run_bind_step _
+      (some (instruction.ZICBOP (.PREFETCH_I, .Regidx 0#5, 0#12))) _ s ?_).trans rfl
+    conv_lhs => arg 1; whnf
+    rw [show currentlyEnabled extension.Ext_Zicbop = (pure true : SailM Bool) by
+      simp [currentlyEnabled, hartSupports]]
     rfl
 
 private def image : ProgramImage := ⟨[(65536, 0x003100b3), (65540, 0x73)], 65536, []⟩

@@ -179,8 +179,14 @@ theorem source_execution_with_memory (valid : image.Valid)
         target.sail.regs.get? Register.minstret = (source.sail.registers.get? Register.minstret).map
           (fun value => value + BitVec.ofNat 64
             (if retirementEnabled source.sail.realize then events.countP Machine.ExecutionEvent.isOrdinary else 0))) ∧
+      (target.sail.regs.get? Register.mip =
+        (if events.countP Machine.ExecutionEvent.isOrdinary = 0 then source.sail.registers.get? Register.mip
+          else some (TryStepReduction.refreshedMip source.sail.realize)) ∧
+        target.sail.regs.get? Register.written_event_index =
+          (if events.countP Machine.ExecutionEvent.isOrdinary = 0
+            then source.sail.registers.get? Register.written_event_index else some none)) ∧
       (∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
-        R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
+        R ≠ Register.minstret_increment → R ≠ Register.mip → R ≠ Register.written_event_index → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
           target.sail.regs.get? R = source.sail.registers.get? R) ∧
       HintQueue.decode? (HintQueue.ofList source.host.io.hints).1 (Address.toNat final.head) = some hints ∧
       target.host = { source.host with
@@ -203,7 +209,7 @@ theorem source_execution_with_memory (valid : image.Valid)
   have nextPc := carrier.nextPC valid constraints balanced path.replay
   rw [pc] at nextPc
   refine ⟨carrier.events, target, hints, path, ?_, ?_, clock, pc, ?_, ?_, ?_,
-    nextPc, ?_, ?_, decoded, host, ?_, ?_⟩
+    nextPc, ?_, ?_, ?_, decoded, host, ?_, ?_⟩
   · exact carrier.writesPermitted valid constraints balanced
   · exact carrier.exhaustive.map ExecutionRow.event
   · intro loc bound
@@ -214,6 +220,7 @@ theorem source_execution_with_memory (valid : image.Valid)
   · exact carrier.final_memory_domain valid constraints balanced path.replay
   · exact carrier.runtime valid constraints balanced path.replay
   · exact carrier.retirement valid constraints balanced path.replay
+  · exact carrier.platform valid constraints balanced path.replay
   · exact carrier.other_registers valid constraints balanced path.replay
   · exact fun _ running halted => carrier.final_exit valid constraints balanced path running halted
   · exact fun candidate => carrier.checkFinal_iff valid constraints balanced candidate path.replay

@@ -39,7 +39,7 @@ theorem correct_utype_lui_native
     (result : Word (ZMod p)) (rd : BitVec 5) (imm : BitVec 20) (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_result : Word.toBitVec64 result = RV64.lui imm) :
-    (spec_utype imm (.Regidx rd) uop.LUI).run s = (sp1_utype (.Regidx rd) pc result).run s := by
+    (runSail (spec_utype imm (.Regidx rd) uop.LUI)) s = (runSail (sp1_utype (.Regidx rd) pc result)) s := by
   simp [spec_utype, sp1_utype, execute_UTYPE, sign_extend, Sail.BitVec.signExtend, RV64.lui,
     Sail.run_wX_bits, SailState.get_reg?_insert_nextPC, run_readReg _ Register.PC, h_pc, h_result]
 
@@ -52,7 +52,7 @@ theorem correct_utype_auipc_native
     (result : Word (ZMod p)) (rd : BitVec 5) (imm : BitVec 20) (pc : BitVec 64) (s : SailState)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_result : Word.toBitVec64 result = RV64.auipc imm pc) :
-    (spec_utype imm (.Regidx rd) uop.AUIPC).run s = (sp1_utype (.Regidx rd) pc result).run s := by
+    (runSail (spec_utype imm (.Regidx rd) uop.AUIPC)) s = (runSail (sp1_utype (.Regidx rd) pc result)) s := by
   rw [UTypeChip.auipc_eq_add_lui] at h_result
   simp [spec_utype, sp1_utype, execute_UTYPE, get_arch_pc, sign_extend, Sail.BitVec.signExtend, RV64.lui,
     Sail.run_wX_bits, Std.ExtDHashMap.get?_insert, run_readReg _ Register.PC,
@@ -67,7 +67,7 @@ the row reaches Sail for **either** op with no result fact — which is why the 
 theorem correct_utype_native_x0
     (result : Word (ZMod p)) (imm : BitVec 20) (pc : BitVec 64) (s : SailState) (op : uop)
     (h_pc : s.regs.get? Register.PC = some pc) :
-    (spec_utype imm (.Regidx 0#5) op).run s = (sp1_utype (.Regidx 0#5) pc result).run s := by
+    (runSail (spec_utype imm (.Regidx 0#5) op)) s = (runSail (sp1_utype (.Regidx 0#5) pc result)) s := by
   cases op <;>
     simp [spec_utype, sp1_utype, execute_UTYPE, get_arch_pc, sign_extend, Sail.BitVec.signExtend, RV64.lui,
       Sail.run_wX_bits, Std.ExtDHashMap.get?_insert, run_readReg _ Register.PC,
@@ -83,8 +83,8 @@ theorem utype_chip_reaches_sail_lui
     (h_op_a : cols.adapter.op_a_0 = 0 ∨ (cols.adapter.op_a_0 = 1 ∧ rd = 0#5))
     (h_chip : UTypeChip.Spec input cols data)
     (h_pc : s.regs.get? Register.PC = some pc) :
-    (spec_utype (UTypeChip.immOf cols.adapter) (.Regidx rd) uop.LUI).run s
-      = (sp1_utype (.Regidx rd) pc cols.add_operation.value).run s := by
+    (runSail (spec_utype (UTypeChip.immOf cols.adapter) (.Regidx rd) uop.LUI)) s
+      = (runSail (sp1_utype (.Regidx rd) pc cols.add_operation.value)) s := by
   rcases h_op_a with h_op0 | ⟨_, hrd0⟩
   · exact correct_utype_lui_native cols.add_operation.value rd (UTypeChip.immOf cols.adapter) pc s h_pc
       (h_chip.2.2.2.1 h_real h_op0 h_iaui0)
@@ -102,8 +102,8 @@ theorem utype_chip_reaches_sail_auipc
     (h_chip : UTypeChip.Spec input cols data)
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_pcw : Word.toBitVec64 (UTypeChip.pcWord cols) = pc) :
-    (spec_utype (UTypeChip.immOf cols.adapter) (.Regidx rd) uop.AUIPC).run s
-      = (sp1_utype (.Regidx rd) pc cols.add_operation.value).run s := by
+    (runSail (spec_utype (UTypeChip.immOf cols.adapter) (.Regidx rd) uop.AUIPC)) s
+      = (runSail (sp1_utype (.Regidx rd) pc cols.add_operation.value)) s := by
   rcases h_op_a with h_op0 | ⟨_, hrd0⟩
   · have hr := h_chip.2.2.2.2 h_real h_op0 h_iaui1
     rw [h_pcw] at hr

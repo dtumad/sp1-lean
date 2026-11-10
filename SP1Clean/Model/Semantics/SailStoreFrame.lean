@@ -8,7 +8,7 @@ follows actual virtual/physical checks and split writes through normal Sail reti
 -/
 
 namespace SP1Clean.Advance
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- Virtual stores preserve registers and protected bytes, including fault outcomes. -/
@@ -16,41 +16,45 @@ theorem vmem_write_addr_frame (readOnly : ℕ → Bool) (source : SailState) (cf
     (address : BitVec 64) (width : ℕ) (positive : 0 < width) (small : width ≤ 8)
     (data : BitVec (8 * width)) (allowed : ∀ index < width, readOnly (address.toNat + index) = false)
     (result : Result Bool ExecutionResult) (target : SailState)
-    (ran : (vmem_write_addr (.Virtaddr address) width data (.Store .Data)
-      false false false).run source = .ok result target) :
+    (ran : (runSail (vmem_write_addr (.Virtaddr address) width data (.Store .Data)
+      sp1AccessInfo false false false)) source = .ok result target) :
     ProtectedMemoryFrame readOnly source target ∧ ∀ other, result ≠ .Err (.ExecuteAs other) := by
-  simp only [vmem_write_addr, plat_misaligned_exception, is_amo_access, is_vector_access,
-    plat_misaligned_access, Bool.false_eq_true, ↓reduceIte, ite_self, pure_bind,
-    SailME.run, run_SailME_liftM_bind] at ran
+  simp only [vmem_write_addr, SailME.run, bind_assoc, PreSail.PreSailME.run_lift_bind] at ran
+  rw [run_bind_of_run source _ _ (show runSail
+    (PreSail.sail_assert (false == is_store_conditional (.Store mem_payload.Data)) "sys/vmem_utils.sail:303.44-303.45")
+    source = .ok () source from rfl),
+    run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init] at ran
+  simp only [match_memory_trigger_before_sp1, pure_bind, plat_misaligned_exception, is_amo_access,
+    is_vector_access, plat_misaligned_access, Bool.false_eq_true, ↓reduceIte, ite_self,
+    PreSail.PreSailME.run_lift_bind] at ran
   obtain ⟨middle, pages, pageRun, rest⟩ := run_bind_success _ _ source target result ran
   have same := readOnly_split_on_page_boundary source address width pages middle pageRun
   subst middle
   rcases pages with ⟨inPage, nextPage⟩
-  rw [run_readReg_bind_of_isInitialized source Register.mstatus cfg.init,
-    run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init,
-    run_bind_of_run source _ _ (run_effectivePrivilege_configured source cfg _),
-    run_bind_of_run source _ _ (run_translationMode_machine source)] at rest
-  simp only [show (SATPMode.Bare != SATPMode.Bare) = false from rfl,
-    Bool.false_and, pure_bind, sys_misaligned_order_decreasing, Bool.false_eq_true,
-    ↓reduceIte, LeanRV64D.Functions.not, Bool.not_false, Bool.true_and,
-    bind_assoc, run_SailME_liftM_bind] at rest
+  simp only [show sp1AccessInfo.eff_privilege = Privilege.Machine from rfl] at rest
+  rw [run_bind_of_run source _ _ (run_is_vmem_active_machine source)] at rest
+  simp only [Bool.false_and, pure_bind, sys_misaligned_order_decreasing, Bool.false_eq_true,
+    ↓reduceIte, LeanRV64D.not, Bool.not_false, Bool.true_and,
+    PreSail.PreSailME.run_lift_bind] at rest
   rw [run_bind_of_run source _ _
-    (run_translateAddr_store_of_isInitialized address source cfg.init cfg.toValidMemConfig)] at rest
-  simp only [is_store_conditional, beq_self_eq_true, PreSail.sail_assert, ↓reduceIte, pure_bind,
-    bind_assoc, run_SailME_liftM_bind] at rest
+    (run_translateAddr_machine address (.Store .Data) rfl source cfg.init cfg.toValidMemConfig.h_cur_privilege)] at rest
+  simp only [bind_assoc, PreSail.PreSailME.run_lift_bind] at rest
   obtain ⟨middle, validated, checked, suffix⟩ := run_bind_success _ _ source target result rest
   have same := readOnly_mem_write_ea source cfg _ _ validated middle checked
   subst middle
   cases validated with
   | Err error =>
     rcases error with ⟨faultAddress, error⟩
-    simp only [bind_assoc, run_SailME_liftM_bind] at suffix
-    rw [run_bind_of_run source _ _ (run_memory_exception source cfg _ error)] at suffix
+    simp only [bind_assoc, PreSail.PreSailME.run_lift_bind] at suffix
+    obtain ⟨faultVirtual, addressRun⟩ := run_exception_vaddr_sp1 source cfg
+      (.Virtaddr address) (.Physaddr (zero_extend address)) faultAddress
+    rw [run_bind_of_run source _ _ addressRun,
+      run_bind_of_run source _ _ (run_memory_exception source cfg faultVirtual error sp1AccessInfo)] at suffix
     cases suffix
     exact ⟨.refl readOnly source, fun _ h => nomatch h⟩
   | Ok value =>
     cases value
-    simp only [bind_assoc, run_SailME_liftM_bind] at suffix
+    simp only [bind_assoc, PreSail.PreSailME.run_lift_bind] at suffix
     obtain ⟨middle, written, writeRun, tail⟩ := run_bind_success _ _ source target result suffix
     have frame := mem_write_value_frame readOnly source cfg _ width positive small _
       (by simpa [zero_extend, Sail.BitVec.zeroExtend] using allowed) written middle writeRun
@@ -60,8 +64,11 @@ theorem vmem_write_addr_frame (readOnly : ℕ → Bool) (source : SailState) (cf
       exact ⟨frame, fun _ h => nomatch h⟩
     | Err error =>
       rcases error with ⟨faultAddress, error⟩
-      simp only [bind_assoc, run_SailME_liftM_bind] at tail
-      rw [run_bind_of_run middle _ _ (run_memory_exception middle (frame.configured cfg) _ error)] at tail
+      simp only [bind_assoc, PreSail.PreSailME.run_lift_bind] at tail
+      obtain ⟨faultVirtual, addressRun⟩ := run_exception_vaddr_sp1 middle (frame.configured cfg)
+        (.Virtaddr address) (.Physaddr (zero_extend address)) faultAddress
+      rw [run_bind_of_run middle _ _ addressRun,
+        run_bind_of_run middle _ _ (run_memory_exception middle (frame.configured cfg) faultVirtual error sp1AccessInfo)] at tail
       cases tail
       exact ⟨frame, fun _ h => nomatch h⟩
 
@@ -71,14 +78,27 @@ theorem vmem_write_frame (readOnly : ℕ → Bool) (source : SailState) (cfg : S
     (width : ℕ) (positive : 0 < width) (small : width ≤ 8) (data : BitVec (8 * width))
     (allowed : ∀ index < width, readOnly ((base + offset).toNat + index) = false)
     (result : Result Bool ExecutionResult) (target : SailState)
-    (ran : (vmem_write (.Regidx rs1) offset width data (.Store .Data)
-      false false false).run source = .ok result target) :
+    (ran : (runSail (vmem_write (.Regidx rs1) offset width data (.Store .Data)
+      false false false)) source = .ok result target) :
     ProtectedMemoryFrame readOnly source target ∧ ∀ other, result ≠ .Err (.ExecuteAs other) := by
-  simp only [vmem_write, bind_assoc, SailME.run, run_SailME_liftM_bind] at ran
-  rw [run_bind_of_run source _ _ (run_get_transformed_data_addr_load rs1 base offset width
-    (.Store .Data) (by decide) (by decide) (by decide) source cfg.init observed cfg.toValidMemConfig)] at ran
-  simp only [pure_bind, run_SailME_liftM] at ran
-  exact vmem_write_addr_frame readOnly source cfg _ width positive small data allowed result target ran
+  unfold vmem_write at ran
+  rw [run_bind_of_run source _ _ (run_default_access_info (.Store .Data) source cfg.init cfg.toValidMemConfig)] at ran
+  simp only [vmem_write_explicit, bind_assoc, SailME.run, PreSail.PreSailME.run_lift_bind] at ran
+  rw [run_bind_of_run source _ _ (run_get_transformed_data_addr_sp1 rs1 base offset width
+    (.Store .Data) source observed)] at ran
+  simp only [pure_bind, PreSail.PreSailME.run_lift_bind] at ran
+  obtain ⟨middle, value, writeRun, rest⟩ := run_bind_success _ _ source target result ran
+  obtain ⟨frame, direct⟩ := vmem_write_addr_frame readOnly source cfg _ width positive small data allowed value middle writeRun
+  cases value with
+  | Ok value =>
+    cases rest
+    exact ⟨frame, fun _ h => nomatch h⟩
+  | Err error =>
+    cases rest
+    refine ⟨frame, ?_⟩
+    intro other same
+    cases error <;> simp only [with_excinst_offset] at same <;>
+      first | exact direct other same | cases same
 
 private theorem store_width_bounds (width : word_width) (valid : storeWidthOK width = true) :
     0 < width.toNat ∧ width.toNat ≤ 8 := by
@@ -91,7 +111,7 @@ theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState
     (permission : Model.Core.InstructionWrite.check readOnly source.get_reg?
       (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true)
     (result : ExecutionResult) (target : SailState)
-    (ran : (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width))).run source = .ok result target) :
+    (ran : (runSail (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ ProtectedMemoryFrame readOnly source target := by
   have valid := (Model.Core.InstructionWrite.check_supported readOnly source.get_reg? _ permission).1
   change storeWidthOK width = true at valid
@@ -101,8 +121,9 @@ theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState
   obtain ⟨data, dataRead⟩ := initialized_gpr source cfg.init rs2
   simp only [execute, execute_STORE, PreSail.sail_assert] at ran
   split at ran
-  · simp only [pure_bind] at ran
+  · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran
     rw [run_bind_of_run source _ data (by rw [run_rX_bits, dataRead])] at ran
+    simp only [pure_bind] at ran
     obtain ⟨middle, value, written, rest⟩ := run_bind_success _ _ source target result ran
     obtain ⟨frame, direct⟩ := vmem_write_frame readOnly source cfg rs1 base _ observed
       width.toNat positive small _ allowed value middle written
@@ -121,7 +142,7 @@ theorem store_execute_frame (readOnly : ℕ → Bool) (source : SailState) (cfg 
     (permission : Model.Core.InstructionWrite.check readOnly source.get_reg?
       (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true)
     (result : ExecutionResult) (target : SailState)
-    (ran : (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width))).run source = .ok result target) :
+    (ran : (runSail (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧
       ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by
   obtain ⟨direct, frame⟩ := store_execute_memory_frame readOnly source cfg imm rs2 rs1 width permission result target ran

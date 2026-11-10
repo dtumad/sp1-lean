@@ -119,7 +119,7 @@ theorem SupportedSP1Transition.notAboutToExecuteEcall
     exact Option.some.inj ecallFetch
   rw [wordEq] at decode
   have ecallDecode :
-      (ext_decode ECALL_ENC).run located.source =
+      (runSail (ext_decode ECALL_ENC)) located.source =
         .ok (LeanRV64D.instruction.ECALL ()) located.source := by
     simpa [ECALL_ENC] using SailDecode.decode_ECALL located.source cfg.init cfg.priv
       cfg.mseccfg_disabled

@@ -46,13 +46,13 @@ theorem program_fetch : program.fetchWord 65536#64 = some 0x7e208ee3#32 := by na
 
 /-- Actual generated Sail decoding, valid in every configured state used by the retirement ladder. -/
 theorem decode_branch (state : SailState) (cfg : SailConfigured state) :
-    (ext_decode 0x7e208ee3#32).run state =
+    (runSail (ext_decode 0x7e208ee3#32)) state =
       .ok (.BTYPE (4092#13, .Regidx 2#5, .Regidx 1#5, .BEQ)) state := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [SailDecode.cePause_apply]
-  conv_lhs => whnf
-  rw [SailDecode.ceZicfilp_bind_apply state cfg.init cfg.priv cfg.mseccfg_disabled]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [SailDecode.free_bind_eq_bind, bind_assoc, SailDecode.ceZicfilp_bind_apply state cfg.init cfg.priv cfg.mseccfg_disabled]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- A computable normal form of the canonical access plan, with both source observations proved below. -/
@@ -204,8 +204,8 @@ theorem target_effect : RowEffect program rowView source target :=
   (Classical.choose_spec official_step_exists).2
 
 /-- The full official interpreter step returns this target, including retirement bookkeeping. -/
-theorem official_try_step : (try_step 0 false).run source = .ok false target := by
-  obtain ⟨_, _, _, _, _, stepped⟩ := target_effect.normal
+theorem official_try_step : (runSail (try_step 0 false)) source = .ok false target := by
+  obtain ⟨_, _, _, _, _, _, _, stepped⟩ := target_effect.normal
   exact stepped
 
 /-- The PC observed in the actual retired Sail state agrees with the generated row. -/
@@ -228,7 +228,7 @@ theorem execution_step (policy : HostPolicy) :
 /-- One joined claim: official normal execution, canonical projection, exact compiler output,
 the event/physical-row target, and acceptance of the single real local circuit row. -/
 theorem joined (policy : HostPolicy) :
-    (try_step 0 false).run source = .ok false target ∧
+    (runSail (try_step 0 false)) source = .ok false target ∧
     ExecutionStep policy program ⟨source, {}, 1⟩ .ordinary ⟨target, {}, 9⟩ ∧
     target.regs.get? Register.PC = some 69628#64 ∧
     projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view ∧

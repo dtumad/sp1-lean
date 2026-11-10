@@ -84,10 +84,10 @@ theorem correct_sltu_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 op_c_val))
     (h_sltu : Word.toBitVec64 a_val
         = RV64.sltu (Word.toBitVec64 op_c_val) (Word.toBitVec64 op_b_val)) :
-    (spec_sltu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_lt (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_sltu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_lt (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_sltu, sp1_lt]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPE_eq_execute_RTYPE', execute_RTYPE', execute_RTYPE_pure_sltu,
@@ -105,10 +105,10 @@ theorem correct_slt_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 op_c_val))
     (h_slt : Word.toBitVec64 a_val
         = RV64.slt (Word.toBitVec64 op_c_val) (Word.toBitVec64 op_b_val)) :
-    (spec_slt (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_lt (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_slt (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_lt (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_slt, sp1_lt]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPE_eq_execute_RTYPE', execute_RTYPE', execute_RTYPE_pure_slt,
@@ -141,14 +141,14 @@ theorem correct_slti_native
     (h_dec : Word.toBitVec64 op_c_val = sign_extend (m := 64) imm)
     (h_slt : Word.toBitVec64 a_val
         = RV64.slt (Word.toBitVec64 op_c_val) (Word.toBitVec64 op_b_val)) :
-    (spec_slti imm (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_lt (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_slti imm (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_lt (.Regidx rd_idx) pc a_val)) s := by
   have harm : Word.toBitVec64 a_val
       = zero_extend (m := 64) (bool_to_bit (zopz0zI_s (Word.toBitVec64 op_b_val)
           (sign_extend (m := 64) imm))) := by
     rw [h_slt, ← h_dec, ← execute_RTYPE_pure_slt]; simp [execute_RTYPE_pure]
   simp only [spec_slti, sp1_lt]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [SP1Clean.Advance.execute_ITYPE', SP1Clean.Advance.execute_ITYPE_pure, h_rs1, harm]
@@ -165,14 +165,14 @@ theorem correct_sltiu_native
     (h_dec : Word.toBitVec64 op_c_val = sign_extend (m := 64) imm)
     (h_sltu : Word.toBitVec64 a_val
         = RV64.sltu (Word.toBitVec64 op_c_val) (Word.toBitVec64 op_b_val)) :
-    (spec_sltiu imm (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_lt (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_sltiu imm (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_lt (.Regidx rd_idx) pc a_val)) s := by
   have harm : Word.toBitVec64 a_val
       = zero_extend (m := 64) (bool_to_bit (zopz0zI_u (Word.toBitVec64 op_b_val)
           (sign_extend (m := 64) imm))) := by
     rw [h_sltu, ← h_dec, ← execute_RTYPE_pure_sltu]; simp [execute_RTYPE_pure]
   simp only [spec_sltiu, sp1_lt]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [SP1Clean.Advance.execute_ITYPE', SP1Clean.Advance.execute_ITYPE_pure, h_rs1, harm]
@@ -189,11 +189,11 @@ theorem lt_chip_reaches_sail
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
     (cols.is_slt = 1 →
-        (spec_slt (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols)).run s) ∧
+        (runSail (spec_slt (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols))) s) ∧
     (cols.is_sltu = 1 →
-        (spec_sltu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols)).run s) := by
+        (runSail (spec_sltu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols))) s) := by
   obtain ⟨-, -, h_gated⟩ := h_chip
   refine ⟨fun hslt => ?_, fun hsltu => ?_⟩
   · exact correct_slt_native input.op_b_val input.op_c_val (LtChip.resultWord cols)
@@ -215,11 +215,11 @@ theorem lt_chip_reaches_sail_imm
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_dec : Word.toBitVec64 input.op_c_val = sign_extend (m := 64) imm) :
     (cols.is_slt = 1 →
-        (spec_slti imm (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols)).run s) ∧
+        (runSail (spec_slti imm (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols))) s) ∧
     (cols.is_sltu = 1 →
-        (spec_sltiu imm (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols)).run s) := by
+        (runSail (spec_sltiu imm (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_lt (.Regidx rd_idx) pc (LtChip.resultWord cols))) s) := by
   obtain ⟨-, -, h_gated⟩ := h_chip
   refine ⟨fun hslt => ?_, fun hsltu => ?_⟩
   · exact correct_slti_native input.op_b_val input.op_c_val (LtChip.resultWord cols)

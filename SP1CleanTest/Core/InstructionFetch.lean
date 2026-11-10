@@ -25,7 +25,7 @@ private theorem source_valid : ExecutionSourceValid image source := by
   native_decide
 
 /-- The official Sail fetch observes the authenticated JALR word, without a chip witness. -/
-theorem ordinaryFetch : (fetch ()).run source.sail.realize =
+theorem ordinaryFetch : (runSail (fetch ())) source.sail.realize =
     .ok (FetchResult.F_Base 0x00008067) source.sail.realize :=
   source_valid.fetch_eq (by native_decide)
 

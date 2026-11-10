@@ -8,18 +8,19 @@ the successful instruction result.
 -/
 
 namespace SP1Clean.Advance
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem SP1Clean.SailFrame SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 private theorem translate_read_frame (source : SailState) (cfg : SailConfigured source)
     (address : BitVec 64) (width : ℕ) (result : Result (physaddr × BitVec (8 * width)) ExecutionResult)
     (target : SailState)
-    (ran : (translate_and_read_value (.Virtaddr address) width (.Load .Data)
-      false false false).run source = .ok result target) :
+    (ran : (runSail (translate_and_read_value (.Virtaddr address) width (.Load .Data)
+      sp1AccessInfo false false false)) source = .ok result target) :
     target = source ∧ ∀ other, result ≠ .Err (.ExecuteAs other) := by
-  unfold translate_and_read_value at ran
+  dsimp only [translate_and_read_value] at ran
+  simp only [show sp1AccessInfo.eff_privilege = Privilege.Machine from rfl] at ran
   rw [run_bind_of_run source _ _
-    (run_translateAddr_load_of_isInitialized address source cfg.init cfg.toValidMemConfig)] at ran
+    (run_translateAddr_machine address (.Load .Data) rfl source cfg.init cfg.toValidMemConfig.h_cur_privilege)] at ran
   obtain ⟨middle, value, readRun, rest⟩ := run_bind_success _ _ source target result ran
   have same := readOnly_mem_read source cfg _ _ value middle readRun
   subst middle
@@ -29,7 +30,10 @@ private theorem translate_read_frame (source : SailState) (cfg : SailConfigured 
     exact ⟨rfl, fun _ h => nomatch h⟩
   | Err error =>
     rcases error with ⟨faultAddress, error⟩
-    rw [run_bind_of_run source _ _ (run_memory_exception source cfg _ error)] at rest
+    obtain ⟨faultVirtual, addressRun⟩ := run_exception_vaddr_sp1 source cfg
+      (.Virtaddr address) (.Physaddr (zero_extend address)) faultAddress
+    rw [run_bind_of_run source _ _ addressRun,
+      run_bind_of_run source _ _ (run_memory_exception source cfg faultVirtual error sp1AccessInfo)] at rest
     cases rest
     exact ⟨rfl, fun _ h => nomatch h⟩
 
@@ -37,30 +41,35 @@ private theorem translate_read_frame (source : SailState) (cfg : SailConfigured 
 theorem vmem_read_addr_frame (source : SailState) (cfg : SailConfigured source)
     (address : BitVec 64) (width : ℕ) (result : Result (BitVec (8 * width)) ExecutionResult)
     (target : SailState)
-    (ran : (vmem_read_addr (.Virtaddr address) width (.Load .Data)
-      false false false).run source = .ok result target) :
+    (ran : (runSail (vmem_read_addr (.Virtaddr address) width (.Load .Data)
+      sp1AccessInfo false false false)) source = .ok result target) :
     target = source ∧ ∀ other, result ≠ .Err (.ExecuteAs other) := by
-  simp only [vmem_read_addr, plat_misaligned_exception, is_amo_access, is_vector_access,
-    plat_misaligned_access, Bool.false_eq_true, ↓reduceIte, ite_self, pure_bind,
-    SailME.run, run_SailME_liftM_bind] at ran
+  simp only [vmem_read_addr, SailME.run, bind_assoc, PreSail.PreSailME.run_lift_bind] at ran
+  rw [run_bind_of_run source _ _ (show runSail
+    (PreSail.sail_assert (false == is_load_reserved (.Load mem_payload.Data)) "sys/vmem_utils.sail:188.40-188.41")
+    source = .ok () source from rfl),
+    run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init] at ran
+  simp only [match_memory_trigger_before_sp1, pure_bind, plat_misaligned_exception, is_amo_access,
+    is_vector_access, plat_misaligned_access, Bool.false_eq_true, ↓reduceIte, ite_self,
+    PreSail.PreSailME.run_lift_bind] at ran
   obtain ⟨middle, pages, pageRun, rest⟩ := run_bind_success _ _ source target result ran
   have same := readOnly_split_on_page_boundary source address width pages middle pageRun
   subst middle
   rcases pages with ⟨inPage, nextPage⟩
-  rw [run_readReg_bind_of_isInitialized source Register.mstatus cfg.init,
-    run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init,
-    run_bind_of_run source _ _ (run_effectivePrivilege_configured source cfg _),
-    run_bind_of_run source _ _ (run_translationMode_machine source)] at rest
-  simp only [show (SATPMode.Bare != SATPMode.Bare) = false from rfl,
-    Bool.false_and, pure_bind, sys_misaligned_order_decreasing,
-    Bool.false_eq_true, ↓reduceIte, LeanRV64D.Functions.not, Bool.not_false, Bool.true_and,
-    bind_assoc, run_SailME_liftM_bind] at rest
+  simp only [show sp1AccessInfo.eff_privilege = Privilege.Machine from rfl] at rest
+  rw [run_bind_of_run source _ _ (run_is_vmem_active_machine source)] at rest
+  simp only [Bool.false_and, pure_bind, sys_misaligned_order_decreasing,
+    Bool.false_eq_true, ↓reduceIte, LeanRV64D.not, Bool.not_false, Bool.true_and,
+    PreSail.PreSailME.run_lift_bind] at rest
   obtain ⟨middle, value, readRun, suffix⟩ := run_bind_success _ _ source target result rest
   obtain ⟨same, direct⟩ := translate_read_frame source cfg address width value middle readRun
   subst middle
   cases value with
   | Ok value =>
     rcases value with ⟨physical, bytes⟩
+    simp only [pure_bind, PreSail.PreSailME.run_lift_bind] at suffix
+    rw [run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init] at suffix
+    simp only [match_memory_trigger_after_sp1, pure_bind] at suffix
     cases suffix
     exact ⟨rfl, fun _ h => nomatch h⟩
   | Err error =>
@@ -73,26 +82,40 @@ theorem vmem_read_addr_frame (source : SailState) (cfg : SailConfigured source)
 theorem vmem_read_frame (source : SailState) (cfg : SailConfigured source)
     (rs1 : BitVec 5) (offset : BitVec 64) (width : ℕ)
     (result : Result (BitVec (8 * width)) ExecutionResult) (target : SailState)
-    (ran : (vmem_read (.Regidx rs1) offset width (.Load .Data)
-      false false false).run source = .ok result target) :
+    (ran : (runSail (vmem_read (.Regidx rs1) offset width (.Load .Data)
+      false false false)) source = .ok result target) :
     target = source ∧ ∀ other, result ≠ .Err (.ExecuteAs other) := by
   obtain ⟨base, observed⟩ := initialized_gpr source cfg.init rs1
-  simp only [vmem_read, bind_assoc, SailME.run, run_SailME_liftM_bind] at ran
-  rw [run_bind_of_run source _ _ (run_get_transformed_data_addr_load rs1 base offset width
-    (.Load .Data) (by decide) (by decide) (by decide) source cfg.init observed cfg.toValidMemConfig)] at ran
-  simp only [pure_bind, run_SailME_liftM] at ran
-  exact vmem_read_addr_frame source cfg _ width result target ran
+  unfold vmem_read at ran
+  rw [run_bind_of_run source _ _ (run_default_access_info (.Load .Data) source cfg.init cfg.toValidMemConfig)] at ran
+  simp only [vmem_read_explicit, bind_assoc, SailME.run, PreSail.PreSailME.run_lift_bind] at ran
+  rw [run_bind_of_run source _ _ (run_get_transformed_data_addr_sp1 rs1 base offset width
+    (.Load .Data) source observed)] at ran
+  simp only [pure_bind, PreSail.PreSailME.run_lift_bind] at ran
+  obtain ⟨middle, value, readRun, rest⟩ := run_bind_success _ _ source target result ran
+  obtain ⟨same, direct⟩ := vmem_read_addr_frame source cfg _ width value middle readRun
+  subst middle
+  cases value with
+  | Ok value =>
+    cases rest
+    exact ⟨rfl, fun _ h => nomatch h⟩
+  | Err error =>
+    cases rest
+    refine ⟨rfl, ?_⟩
+    intro other same
+    cases error <;> simp only [with_excinst_offset] at same <;>
+      first | exact direct other same | cases same
 
 /-- Loads preserve configuration and memory for every actual execute result, including x0. -/
 theorem load_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs1 rd : BitVec 5) (unsigned : Bool) (width : word_width)
     (result : ExecutionResult) (target : SailState)
-    (ran : (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width))).run source =
+    (ran : (runSail (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))) source =
       .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   simp only [execute, execute_LOAD, PreSail.sail_assert] at ran
   split at ran
-  · simp only [pure_bind] at ran
+  · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran
     obtain ⟨middle, value, readRun, rest⟩ := run_bind_success _ _ source target result ran
     obtain ⟨same, direct⟩ := vmem_read_frame source cfg rs1 _ _ value middle readRun
     subst middle

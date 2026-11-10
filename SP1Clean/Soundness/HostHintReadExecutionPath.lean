@@ -127,7 +127,7 @@ private theorem step_of_replay (valid : image.Valid)
       (∀ address, 2 ^ 48 ≤ address → next.sail.mem.get? address = current.sail.mem.get? address) ∧
       (next.sail.cycleCount = current.sail.cycleCount ∧ next.sail.sailOutput = current.sail.sailOutput) ∧
       ∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
-        R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
+        R ≠ Register.minstret_increment → R ≠ Register.mip → R ≠ Register.written_event_index → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
           next.sail.regs.get? R = current.sail.regs.get? R := by
   simp only [ExecutionCarrier.events, List.getElem?_map] at atEvent
   obtain ⟨row, atRow, rfl⟩ := Option.map_eq_some_iff.mp atEvent
@@ -160,7 +160,7 @@ private theorem step_of_replay (valid : image.Valid)
         exact HostExecution.preserves_memory_outside ran pc address (Or.inr outside)
       · rw [sail]
         exact ⟨rfl, rfl⟩
-      · intro R notPc _ _ _ notGpr
+      · intro R notPc _ _ _ _ _ notGpr
         rw [sail]
         exact execution.other_register_frame current.sail pc R notPc (notGpr 5)
 
@@ -260,12 +260,13 @@ theorem GroundingCarrier.other_registers (valid : image.Valid)
       source.realize carrier.events = some target)
     (R : Register) (notPc : R ≠ Register.PC) (notNext : R ≠ Register.nextPC)
     (notRetired : R ≠ Register.minstret) (notIncrement : R ≠ Register.minstret_increment)
+    (notMip : R ≠ Register.mip) (notEvent : R ≠ Register.written_event_index)
     (notGpr : ∀ index : BitVec 5, R ≠ reg_idx_to_Register index) :
     target.sail.regs.get? R = source.sail.registers.get? R := by
   exact replayEvents?_preserves (fun state => state.sail.regs.get? R) replay
     (fun n current next event atEvent prefixReplay replay =>
       (step_of_replay valid carrier constraints balanced n current next event atEvent prefixReplay replay).2.2.2
-        R notPc notNext notRetired notIncrement notGpr)
+        R notPc notNext notRetired notIncrement notMip notEvent notGpr)
 
 /-- The installed ensemble proves a local RISC-V/host path without caller-supplied ordering,
 grounding, or event semantics. The path exhausts the active physical inventory, preserving repeated
