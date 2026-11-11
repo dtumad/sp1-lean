@@ -16,18 +16,23 @@ case "$MODE" in
 esac
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 PROFILE="${SAIL_GEN_PROFILE:-current}"
-case "$PROFILE" in current|historical) ;; *) echo "unknown generator profile: $PROFILE" >&2; exit 2 ;; esac
+case "$PROFILE" in current|historical|previous) ;; *) echo "unknown generator profile: $PROFILE" >&2; exit 2 ;; esac
 if [ "$PROFILE" = historical ]; then
   case "$MODE" in --deps|--stock) ;; *) echo "historical profile supports only --deps and --stock" >&2; exit 2 ;; esac
 fi
-read -r SAIL_URL SAIL_SHA SAIL_RISCV_SHA OCAML_VERSION BASE_SNAPSHOT STOCK_CONFIG_SHA < <(
+if [ "$PROFILE" = previous ]; then
+  [ "$MODE" = --stock ] || { echo "previous profile supports only --stock" >&2; exit 2; }
+fi
+read -r SAIL_URL SAIL_SHA MODEL_URL SAIL_RISCV_SHA OCAML_VERSION BASE_SNAPSHOT STOCK_CONFIG_SHA < <(
   python3 - "$REPO_ROOT/scripts/provenance.json" "$PROFILE" <<'PYPROVENANCE'
 import json, sys
 sail = json.load(open(sys.argv[1]))["sail"]
 if sys.argv[2] == "historical":
     sail = sail["historicalStock"]
-print(*(sail[key] for key in ("compilerRepository", "compilerRevision", "modelRevision", "ocamlVersion", "baseSnapshot")),
-      (sail if sys.argv[2] == "historical" else sail["currentStock"])["configSha256"])
+model = sail["previousModelStock"] if sys.argv[2] == "previous" else sail
+stock = model if sys.argv[2] != "current" else sail["currentStock"]
+print(sail["compilerRepository"], sail["compilerRevision"], model["modelRepository"],
+      model["modelRevision"], sail["ocamlVersion"], sail.get("baseSnapshot", "-"), stock["configSha256"])
 PYPROVENANCE
 )
 WORK="${SAIL_GEN_DIR:-$REPO_ROOT/.lake/sail-gen}"
@@ -40,14 +45,19 @@ export OPAMYES=1
 export OPAMJOBS="${OPAMJOBS:-2}"
 
 cd "$WORK"
+MODEL=sail-riscv
+if [ "$PROFILE" = previous ]; then
+  mkdir -p previous
+  MODEL=previous/sail-riscv
+fi
 [ -d sail ] || git clone --quiet "$SAIL_URL"
-[ -d sail-riscv ] || git clone --quiet https://github.com/riscv/sail-riscv
+[ -d "$MODEL" ] || git clone --quiet "$MODEL_URL" "$MODEL"
 git -C sail cat-file -e "$SAIL_SHA^{commit}" 2>/dev/null || git -C sail fetch --quiet "$SAIL_URL" "$SAIL_SHA"
-git -C sail-riscv cat-file -e "$SAIL_RISCV_SHA^{commit}" 2>/dev/null || git -C sail-riscv fetch --quiet origin "$SAIL_RISCV_SHA"
+git -C "$MODEL" cat-file -e "$SAIL_RISCV_SHA^{commit}" 2>/dev/null || git -C "$MODEL" fetch --quiet "$MODEL_URL" "$SAIL_RISCV_SHA"
 [ -z "$(git -C sail status --porcelain)" ] || { echo "dirty compiler checkout: $WORK/sail" >&2; exit 1; }
-[ -z "$(git -C sail-riscv status --porcelain)" ] || { echo "dirty model checkout: $WORK/sail-riscv" >&2; exit 1; }
+[ -z "$(git -C "$MODEL" status --porcelain)" ] || { echo "dirty model checkout: $WORK/$MODEL" >&2; exit 1; }
 git -C sail checkout --quiet "$SAIL_SHA"
-git -C sail-riscv checkout --quiet "$SAIL_RISCV_SHA"
+git -C "$MODEL" checkout --quiet "$SAIL_RISCV_SHA"
 
 compiler_matches() {
   [ -f "$WORK/compiler-revision" ] &&
@@ -80,9 +90,17 @@ echo "sail: $(sail --version)"
 # Configure (writes the stock build/config/rv64d_v256_e64.json from config/config.json.in).
 modules="--all-modules;--lean-module-system"
 case "$MODE" in --stock|--generate-stock|--legacy-sp1) modules="--all-modules" ;; esac
-cmake -S sail-riscv -B sail-riscv/build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  "-DSAIL_BIN=$OPAMROOT/$SWITCH/bin/sail" "-DSAIL_MODULES=$modules" >/dev/null
-CFG=sail-riscv/build/config/rv64d_v256_e64.json
+config_args=(-DCMAKE_BUILD_TYPE=RelWithDebInfo
+  "-DSAIL_BIN=$OPAMROOT/$SWITCH/bin/sail" "-DSAIL_MODULES=$modules")
+if [ "$PROFILE" = current ]; then
+  config_override=""
+  case "$MODE" in
+    --sp1|--generate|--legacy-sp1) config_override="$HERE/sp1_rv64d_cfg.json" ;;
+  esac
+  config_args+=("-DSAIL_FORMAL_CONFIG_RV64D=$config_override")
+fi
+cmake -S "$MODEL" -B "$MODEL/build" "${config_args[@]}" >/dev/null
+CFG="$MODEL/build/config/rv64d_v256_e64.json"
 
 if [ "$MODE" = --make-config ]; then
   # The generated config carries //-comments; strip them before merging, and write via a temp
@@ -113,7 +131,7 @@ fi
 
 if [ "$MODE" = --sp1 ] || [ "$MODE" = --generate ] || [ "$MODE" = --legacy-sp1 ]; then
   [ -f "$HERE/sp1_rv64d_cfg.json" ] || { echo "missing sp1_rv64d_cfg.json — run --make-config"; exit 1; }
-  cp "$HERE/sp1_rv64d_cfg.json" "$CFG"
+  CFG="$HERE/sp1_rv64d_cfg.json"
 fi
 
 # Build the Lean model; the hash guard catches a cmake re-configure clobbering the SP1 config.
@@ -123,7 +141,7 @@ case "$MODE" in
     [ "$H0" = "$STOCK_CONFIG_SHA" ] || { echo "FAIL: stock config differs from provenance" >&2; exit 1; } ;;
 esac
 # Remove only this generator-owned output, so every verification is a fresh generation.
-OUT=sail-riscv/build/model/Lean_RV64D
+OUT="$MODEL/build/model/Lean_RV64D"
 python3 - "$OUT" <<'PYCLEAN'
 from pathlib import Path
 import shutil, sys
@@ -131,7 +149,7 @@ path = Path(sys.argv[1])
 if path.exists():
     shutil.rmtree(path)
 PYCLEAN
-cmake --build sail-riscv/build --target generated_lean_rv64d
+cmake --build "$MODEL/build" --target generated_lean_rv64d
 H1=$(shasum -a 256 "$CFG" | cut -d' ' -f1)
 [ "$H0" = "$H1" ] || { echo "FAIL: cmake regenerated the config mid-build"; exit 1; }
 
@@ -157,6 +175,8 @@ case "$MODE" in
   --stock)
     if [ "$PROFILE" = historical ]; then
       diff_against "$BASE_SNAPSHOT" "historical opencompl base" || verdict=1
+    elif [ "$PROFILE" = previous ]; then
+      python3 "$REPO_ROOT/scripts/check_sail_regeneration.py" previous-stock "$OUT"
     else
       python3 "$REPO_ROOT/scripts/check_sail_regeneration.py" stock "$OUT"
     fi ;;

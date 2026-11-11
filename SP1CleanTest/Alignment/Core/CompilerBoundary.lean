@@ -44,7 +44,7 @@ private def jalTarget (rd : BitVec 5) : SailState :=
 /-- Official Sail JAL execute succeeds for every destination at the top instruction slot.
 In particular Sail does not require the link value to be a 48-bit program counter. -/
 theorem lastSlot_jal_executes (rd : BitVec 5) :
-    (execute (.JAL (0, .Regidx rd))).run (staged lastPc) =
+    (runSail (execute (.JAL (0, .Regidx rd)))) (staged lastPc) =
       .ok (.Retire_Success ()) (jalTarget rd) := by
   exact Advance.execute_JAL_reaches 0 rd lastPc (staged lastPc)
       (staged_initialized lastPc) (staged_pc lastPc)
@@ -121,7 +121,7 @@ theorem untakenBranch_selected_valid_candidate_invalid :
 /-- Official Sail also executes that untaken branch: no target-address check is imposed on the
 candidate that the instruction does not select. -/
 theorem untakenBranch_executes :
-    ∃ target, (execute (.BTYPE (16, .Regidx 0, .Regidx 0, .BNE))).run
+    ∃ target, (runSail (execute (.BTYPE (16, .Regidx 0, .Regidx 0, .BNE))))
       (staged (BitVec.ofNat 64 (2 ^ 48 - 8))) = .ok (.Retire_Success ()) target := by
   exact ⟨_, Advance.execute_BTYPE_reaches 16 0 0 .BNE _ _ 0 0 _
     (staged_initialized _) (staged_pc _)

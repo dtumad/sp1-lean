@@ -70,7 +70,7 @@ theorem branch_is_real :
 theorem joined (policy : HostPolicy) :
     source.realize = ⟨BranchCompilerRoundTrip.source, {}, 1⟩ ∧
     target.Realizes BranchCompilerRoundTrip.target ∧
-    (try_step 0 false).run BranchCompilerRoundTrip.source =
+    (runSail (try_step 0 false)) BranchCompilerRoundTrip.source =
       .ok false BranchCompilerRoundTrip.target ∧
     ExecutionStep policy BranchCompilerRoundTrip.program source.realize .ordinary
       ⟨BranchCompilerRoundTrip.target, {}, 9⟩ ∧

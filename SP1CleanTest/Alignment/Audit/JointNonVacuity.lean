@@ -1066,13 +1066,13 @@ theorem decode_jal_x0 (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x0000006F#32).run s
+    (runSail (ext_decode 0x0000006F#32)) s
       = .ok (instruction.JAL (0#21, regidx.Regidx 0#5)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [SailDecode.cePause_apply]
-  conv_lhs => whnf
-  rw [SailDecode.ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [SailDecode.free_bind_eq_bind, bind_assoc, SailDecode.ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- The committed Program row of the self-jump view is the decode of the fetched ROM word. -/

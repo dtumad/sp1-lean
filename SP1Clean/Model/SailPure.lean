@@ -20,7 +20,7 @@ open LeanRV64D
 
 namespace SP1Clean.SailRV64
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 
 /-- The shape of every binary register-register clause: read `rs1` and `rs2`, write
 `execute_func rs1 rs2` to `rd`, retire successfully. -/
@@ -72,7 +72,7 @@ def div (rs2_val : BitVec 64) (rs1_val : BitVec 64) (is_unsigned : Bool) : BitVe
   let quotient : Int :=
     if ((rs2_int == 0) : Bool) then (Neg.neg 1) else (Int.tdiv rs1_int rs2_int)
   let quotient : Int :=
-    if (((LeanRV64D.Functions.not is_unsigned)
+    if (((LeanRV64D.not is_unsigned)
           && (quotient ≥b (2 ^i (LeanRV64D.Functions.xlen -i 1)))) : Bool)
       then (Neg.neg (2 ^i (LeanRV64D.Functions.xlen -i 1)))
     else quotient
@@ -88,7 +88,7 @@ def divw (rs2_val : BitVec 64) (rs1_val : BitVec 64) (is_unsigned : Bool) : BitV
   let quotient : Int :=
     if ((rs2_int == 0) : Bool) then (Neg.neg 1) else (Int.tdiv rs1_int rs2_int)
   let quotient : Int :=
-    if (((LeanRV64D.Functions.not is_unsigned) && (quotient ≥b (2 ^i 31))) : Bool)
+    if (((LeanRV64D.not is_unsigned) && (quotient ≥b (2 ^i 31))) : Bool)
       then (Neg.neg (2 ^i 31))
     else quotient
   sign_extend (m := 64) (to_bits_truncate (l := 32) quotient)

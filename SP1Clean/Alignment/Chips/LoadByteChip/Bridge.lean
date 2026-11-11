@@ -18,7 +18,7 @@ extend to `#v[selected_byte + 65280·msb, 65535·msb, 65535·msb, 65535·msb]` �
 open LeanRV64D
 namespace SP1Clean.LoadByteSail
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -113,7 +113,7 @@ theorem correct_load_byte_native
     (h_lo : 2 ^ 16 ≤ (reg_val + BitVec.signExtend 64 imm).toNat)
     (hext : extend_value is_unsigned data₀ = val64)
     (hmem₀ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat]? = some data₀) :
-    (spec_lb imm rs1_idx rd_idx is_unsigned).run s = (sp1_lb rd_idx pc val64).run s := by
+    (runSail (spec_lb imm rs1_idx rd_idx is_unsigned)) s = (runSail (sp1_lb rd_idx pc val64)) s := by
   have hse : (sign_extend imm : BitVec 64) = BitVec.signExtend 64 imm := by simp [sign_extend]
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
@@ -151,8 +151,8 @@ theorem correct_load_byte_native
   simp only at hread
   rw [hsp] at hread
   simp [spec_lb, sp1_lb, run_readReg_of_isInitialized _ _ hs,
-    EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hext]
+    execute_LOAD, hpc_get, hse,
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, hread, hext]
 
 /-- End-to-end: from chip + decode + register/PC reads + selected memory byte, Sail's `LB`/`LBU`
 agrees with the SP1 chip emulation. -/
@@ -171,10 +171,10 @@ theorem lb_chip_reaches_sail
     (h_rs1 : s.get_reg? rs1_idx = some reg_val)
     (hmem₀ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat]?
       = some (BitVec.ofNat 8 input.selected_byte.val)) :
-    (spec_lb imm rs1_idx rd_idx is_unsigned).run s
-      = (sp1_lb rd_idx pc (Word.toBitVec64
+    (runSail (spec_lb imm rs1_idx rd_idx is_unsigned)) s
+      = (runSail (sp1_lb rd_idx pc (Word.toBitVec64
           #v[input.selected_byte + 65280 * input.msb, 65535 * input.msb, 65535 * input.msb,
-            65535 * input.msb])).run s := by
+            65535 * input.msb]))) s := by
   have hext : extend_value is_unsigned (BitVec.ofNat 8 input.selected_byte.val)
       = Word.toBitVec64 #v[input.selected_byte + 65280 * input.msb, 65535 * input.msb,
           65535 * input.msb, 65535 * input.msb] := by
@@ -198,7 +198,7 @@ end SP1Clean.LoadByteSail
 namespace SP1Clean.LoadByteChip
 
 open SP1Clean.LoadByteSail
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 open SP1Clean SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Trace SP1Clean.Advance
 

@@ -87,7 +87,7 @@ theorem ExecutionStep.fetch_eq {policy : HostPolicy} {program : GuestProgram}
     (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail)
     (permitted : event = .ordinary → InstructionWrite.PermittedAt policy.memory.readOnly program source.sail) :
     ∃ pc word, source.sail.regs.get? Register.PC = some pc ∧ program.fetchWord pc = some word ∧
-      (fetch ()).run source.sail = .ok (FetchResult.F_Base word) source.sail := by
+      (runSail (fetch ())) source.sail = .ok (FetchResult.F_Base word) source.sail := by
   suffices ∃ pc word, source.sail.regs.get? Register.PC = some pc ∧ program.fetchWord pc = some word by
     obtain ⟨pc, word, atPc, fetched⟩ := this
     exact ⟨pc, word, atPc, fetched, Advance.fetch_eq_of_romLoaded configured loaded atPc fetched⟩
@@ -147,7 +147,7 @@ theorem fetch_at (path : ExecutionPath policy (image.toGuestProgram valid) sourc
     (cut : ℕ) (active : cut < events.length) :
     ∃ current pc word, executionTrajectory policy (image.toGuestProgram valid) source events cut = some current ∧
       current.sail.regs.get? Register.PC = some pc ∧ (image.toGuestProgram valid).fetchWord pc = some word ∧
-      (fetch ()).run current.sail = .ok (FetchResult.F_Base word) current.sail := by
+      (runSail (fetch ())) current.sail = .ok (FetchResult.F_Base word) current.sail := by
   obtain ⟨middle, left, right, allowed, remaining⟩ := permitted.split path cut
   have preserved := left.frame valid allowed protectsRom configured loaded
   cases suffix : events.drop cut with

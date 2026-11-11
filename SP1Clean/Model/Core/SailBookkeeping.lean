@@ -20,26 +20,20 @@ def retirementEnabled (state : SailState) : Bool :=
 
 /-- The data-only decision agrees with the actual successful Sail filter computation. -/
 theorem retirementEnabled_of_run {state : SailState} {enabled : Bool}
-    (success : (should_inc_minstret Privilege.Machine).run state = .ok enabled state) :
+    (success : (runSail (should_inc_minstret Privilege.Machine)) state = .ok enabled state) :
     retirementEnabled state = enabled := by
-  simp only [should_inc_minstret, andM, toBool, bind, EStateM.bind, EStateM.run] at success
-  have readInhibit := Sail.run_readReg state Register.mcountinhibit
-  simp only [EStateM.run] at readInhibit
-  rw [readInhibit] at success
+  simp only [should_inc_minstret, andM, toBool, runSail_bind, Sail.run_readReg] at success
   cases inhibit : state.regs.get? Register.mcountinhibit with
   | none => simp only [inhibit] at success; cases success
   | some inhibitValue =>
     simp only [inhibit] at success
     cases active : (_get_Counterin_IR inhibitValue == 0#1) with
     | false =>
-      simp only [active, pure, EStateM.pure] at success
+      simp only [active, runSail_pure] at success
       cases success
       simp only [retirementEnabled, inhibit, Option.getD_some, active, Bool.false_and]
     | true =>
-      simp only [active, pure, EStateM.pure, EStateM.bind] at success
-      have readFilter := Sail.run_readReg state Register.minstretcfg
-      simp only [EStateM.run] at readFilter
-      rw [readFilter] at success
+      simp only [active, runSail_pure, runSail_bind, Sail.run_readReg] at success
       cases filter : state.regs.get? Register.minstretcfg with
       | none => simp only [filter] at success; cases success
       | some filterValue =>

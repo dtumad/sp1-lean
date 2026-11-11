@@ -10,7 +10,7 @@ Memory and control-flow instruction families require separate semantic proofs.
 -/
 
 namespace SP1Clean.Advance
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
+open SP1Clean Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction
 
 /-- Arithmetic constructors whose execute stage writes at most one GPR. This is a proof
@@ -35,7 +35,7 @@ def ArithmeticInstruction : instruction → Prop
 including the x0 and signed/unsigned multiply/divide cases. No chip witness is constructed. -/
 theorem arithmetic_execute_frame (state : SailState) (cfg : SailConfigured state)
     (decoded : instruction) (arithmetic : ArithmeticInstruction decoded) : ∃ next,
-      (execute decoded).run state = .ok (.Retire_Success ()) next ∧
+      (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧
         SailConfigured next ∧ next.mem = state.mem := by
   unfold ArithmeticInstruction at arithmetic
   split at arithmetic
@@ -147,8 +147,8 @@ theorem arithmetic_normal_frame {program : GuestProgram} {source target : SailSt
     (arithmetic : ArithmeticInstruction decoded) (normal : SailRetiresNormally source target) :
     SailConfigured target ∧ target.mem = source.mem := by
   obtain ⟨actual, retired, frame⟩ := arithmetic_retire configured loaded atPc fetched decode arithmetic
-  obtain ⟨_, _, _, _, _, actualRun⟩ := retired
-  obtain ⟨_, _, _, _, _, targetRun⟩ := normal
+  obtain ⟨_, _, _, _, _, _, _, actualRun⟩ := retired
+  obtain ⟨_, _, _, _, _, _, _, targetRun⟩ := normal
   rw [actualRun] at targetRun
   cases targetRun
   exact frame

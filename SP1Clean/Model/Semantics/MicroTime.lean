@@ -191,7 +191,7 @@ theorem sailChain_of_chainState {s0 s : SailState} :
     rcases hbind : Machine.trajectory s0 k with _ | s'
     · rw [hbind] at h; cases h
     · rw [hbind, Option.bind_some] at h; unfold Machine.stepOnce at h
-      rcases hrun : (try_step 0 false).run s' with b | e
+      rcases hrun : (runSail (try_step 0 false)) s' with b | e
       · rw [hrun] at h; cases h; exact (ih hbind).snoc ⟨_, hrun⟩
       · rw [hrun] at h; cases h
 

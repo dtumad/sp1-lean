@@ -1,12 +1,11 @@
 {
   "sail": {
-    "compilerRevision": "a569a70392ca2b6ee446fa721465f4fff72c7fc5",
-    "modelRevision": "61266bd4dede6c7dd6e903e52dc80bcbf644b1b8",
-    "baseSnapshot": "11d8fa212a60c05dcc9fe5db925dd4d06dad65b5",
+    "compilerRevision": "4739807be5c269ff9b44af58325792396f0d516b",
+    "modelRevision": "7fc11895b856f902f6ebdfa69b72decb6f5ebc4f",
     "ocamlVersion": "5.2.1",
-    "configSha256": "41311181e4cad458c21b01a0160a0087b407ee15e616243013169d52d3c1a854",
-    "generatedTreeSha256": "1e413b113dd260a5fe6f0f7102826d6837cba6a382a150f214b5f3f3fff9f189",
-    "generatedFiles": 161,
+    "configSha256": "f18b648c34b9e28876b3f4744a52c235cee7f239fd62102e461b4f997cd1c3d1",
+    "generatedTreeSha256": "85722d32f7d1061a8ec6e163a5512aaa6b344cee361ab5f52d29babef0709ac4",
+    "generatedFiles": 175,
     "compilerRepository": "https://github.com/dtumad/sail",
     "moduleSystem": true,
     "historicalStock": {
@@ -15,12 +14,21 @@
       "modelRevision": "61266bd4dede6c7dd6e903e52dc80bcbf644b1b8",
       "baseSnapshot": "11d8fa212a60c05dcc9fe5db925dd4d06dad65b5",
       "ocamlVersion": "5.2.1",
-      "configSha256": "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
+      "configSha256": "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674",
+      "modelRepository": "https://github.com/riscv/sail-riscv"
     },
     "currentStock": {
-      "generatedTreeSha256": "5e709ab6a08dcf35d33d0f7f344fde3269adaf989dd645338989bce163e36f7f",
+      "generatedTreeSha256": "27103b005cf5ba0dbdc24eba2033f9073c4a6ea43933029ea02374bc89b660b9",
+      "generatedFiles": 175,
+      "configSha256": "a02cfbe01257cffa09f0e1cd74c7e60b35f0685cc6714f020900522c92bc0459"
+    },
+    "modelRepository": "https://github.com/dtumad/sail-riscv",
+    "previousModelStock": {
+      "generatedTreeSha256": "10f7c0b27bb6bf6403075bbab7ecabdb67e987e492ea9cd25b8be427c2acc1b3",
       "generatedFiles": 161,
-      "configSha256": "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
+      "configSha256": "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674",
+      "modelRepository": "https://github.com/riscv/sail-riscv",
+      "modelRevision": "61266bd4dede6c7dd6e903e52dc80bcbf644b1b8"
     }
   },
   "sp1": {

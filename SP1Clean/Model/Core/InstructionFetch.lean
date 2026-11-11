@@ -16,7 +16,7 @@ open LeanRV64D LeanRV64D.Functions SP1Clean.Advance
 theorem ExecutionSourceValid.fetch_eq {image : ProgramImage} {source : ExecutionSnapshot}
     (valid : ExecutionSourceValid image source) {word : BitVec 32}
     (fetched : (image.toGuestProgram valid.1.1).fetchWord source.pc = some word) :
-    (fetch ()).run source.sail.realize = .ok (FetchResult.F_Base word) source.sail.realize :=
+    (runSail (fetch ())) source.sail.realize = .ok (FetchResult.F_Base word) source.sail.realize :=
   fetch_eq_of_romLoaded valid.configured valid.romLoaded valid.pc fetched
 
 end SP1Clean.Model.Core

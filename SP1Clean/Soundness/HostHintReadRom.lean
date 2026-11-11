@@ -84,7 +84,7 @@ theorem GroundingCarrier.fetch_at (valid : image.Valid)
     ∃ current pc word, carrier.pairedTrajectory valid cut = some current ∧
       current.sail.regs.get? LeanRV64D.Register.PC = some pc ∧
       (image.toGuestProgram valid).fetchWord pc = some word ∧
-      (LeanRV64D.Functions.fetch ()).run current.sail =
+      (runSail (LeanRV64D.Functions.fetch ())) current.sail =
         .ok (LeanRV64D.FetchResult.F_Base word) current.sail := by
   have checked := source_valid witness constraints balanced
   obtain ⟨_, path, _⟩ := carrier.execution valid constraints balanced

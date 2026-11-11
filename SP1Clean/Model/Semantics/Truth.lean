@@ -307,7 +307,7 @@ surface the Phase-4 per-chip `advance` consumes (its opcode-based Sail dispatch)
 theorem ProgTruth.decodes {m : ProgramMsg (ZMod p)} {program : GuestProgram}
     (h : ProgTruth m program) (s : SailState) (hs : SailConfigured s) :
     ∃ w i, program.fetchWord (pcBitsOfRow (rowOfMsg m)) = some w ∧
-      (ext_decode w).run s = .ok i s ∧
+      (runSail (ext_decode w)) s = .ok i s ∧
       instrToProgramRow (rowPcVec (rowOfMsg m)) i = some (rowOfMsg m) :=
   h.2.decodes s hs
 

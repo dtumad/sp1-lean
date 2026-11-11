@@ -90,10 +90,10 @@ theorem correct_mul_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_mul : Word.toBitVec64 a_val
         = RV64.mul (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_mul (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_mul (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_mul (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_mul (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_mul, sp1_mul, mulOp_mul]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_MUL_eq, RV64.mul_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mul]
@@ -109,10 +109,10 @@ theorem correct_mulh_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_mulh : Word.toBitVec64 a_val
         = RV64.mulh (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_mulh (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_mul (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_mulh (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_mul (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_mulh, sp1_mul, mulOp_mulh]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_MUL_eq, RV64.mulh_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulh]
@@ -128,10 +128,10 @@ theorem correct_mulhu_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_mulhu : Word.toBitVec64 a_val
         = RV64.mulhu (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_mulhu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_mul (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_mulhu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_mul (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_mulhu, sp1_mul, mulOp_mulhu]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_MUL_eq, RV64.mulhu_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulhu]
@@ -147,10 +147,10 @@ theorem correct_mulhsu_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_mulhsu : Word.toBitVec64 a_val
         = RV64.mulhsu (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_mulhsu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_mul (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_mulhsu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_mul (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_mulhsu, sp1_mul, mulOp_mulhsu]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_MUL_eq, RV64.mulhsu_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulhsu]
@@ -167,10 +167,10 @@ theorem correct_mulw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_mulw : Word.toBitVec64 a_val
         = RV64.mulw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_mulw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_mul (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_mulw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_mul (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_mulw, sp1_mul]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_MULW_eq, RV64.mulw_eq, SailRV64.skeleton_binary, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_mulw]
@@ -187,20 +187,20 @@ theorem mul_chip_reaches_sail
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
     (cols.is_mul = 1 →
-        (spec_mul (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_mul (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_mul (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_mul (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_mulh = 1 →
-        (spec_mulh (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_mul (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_mulh (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_mul (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_mulhu = 1 →
-        (spec_mulhu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_mul (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_mulhu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_mul (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_mulhsu = 1 →
-        (spec_mulhsu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_mul (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_mulhsu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_mul (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_mulw = 1 →
-        (spec_mulw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_mul (.Regidx rd_idx) pc cols.a).run s) := by
+        (runSail (spec_mulw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_mul (.Regidx rd_idx) pc cols.a)) s) := by
   -- `MulChip.Spec` is `RTypeReader.Spec ∧ is_real-binary ∧ (is_real = 1 → 5 flag conjuncts) ∧
   -- (is_real = 1 → SelectorOneHot)`; the arithmetic the bridge needs is the third conjunct.
   obtain ⟨h_mul, h_mulh, h_mulhu, h_mulhsu, h_mulw⟩ := h_chip.2.2.1 h_real

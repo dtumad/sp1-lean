@@ -18,7 +18,7 @@ emulation (write `nextPC = pc + 4` and the extended half into `rd`), via
 open LeanRV64D
 namespace SP1Clean.LoadHalfSail
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -122,7 +122,7 @@ theorem correct_load_half_native
     (hext : extend_value is_unsigned (data₁ ++ data₀) = val64)
     (hmem₀ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat]? = some data₀)
     (hmem₁ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 1]? = some data₁) :
-    (spec_lh imm rs1_idx rd_idx is_unsigned).run s = (sp1_lh rd_idx pc val64).run s := by
+    (runSail (spec_lh imm rs1_idx rd_idx is_unsigned)) s = (runSail (sp1_lh rd_idx pc val64)) s := by
   have hse : (sign_extend imm : BitVec 64) = BitVec.signExtend 64 imm := by simp [sign_extend]
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
@@ -162,8 +162,8 @@ theorem correct_load_half_native
   simp only at hread
   rw [hsp] at hread
   simp [spec_lh, sp1_lh, run_readReg_of_isInitialized _ _ hs,
-    EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hext]
+    execute_LOAD, hpc_get, hse,
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, hread, hext]
 
 /-- End-to-end: from chip + decode + register/PC reads + selected memory bytes, Sail's `LH`/`LHU`
 agrees with the SP1 chip emulation. -/
@@ -185,9 +185,9 @@ theorem lh_chip_reaches_sail
       = some (BitVec.ofNat 8 input.selected_half.val))
     (hmem₁ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 1]?
       = some (BitVec.ofNat 8 (input.selected_half.val >>> 8))) :
-    (spec_lh imm rs1_idx rd_idx is_unsigned).run s
-      = (sp1_lh rd_idx pc (Word.toBitVec64
-          #v[input.selected_half, 65535 * input.msb, 65535 * input.msb, 65535 * input.msb])).run s := by
+    (runSail (spec_lh imm rs1_idx rd_idx is_unsigned)) s
+      = (runSail (sp1_lh rd_idx pc (Word.toBitVec64
+          #v[input.selected_half, 65535 * input.msb, 65535 * input.msb, 65535 * input.msb]))) s := by
   have hext : extend_value is_unsigned
       (BitVec.ofNat 8 (input.selected_half.val >>> 8) ++ BitVec.ofNat 8 input.selected_half.val)
       = Word.toBitVec64 #v[input.selected_half, 65535 * input.msb, 65535 * input.msb,
@@ -213,7 +213,7 @@ end SP1Clean.LoadHalfSail
 namespace SP1Clean.LoadHalfChip
 
 open SP1Clean.LoadHalfSail
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 open SP1Clean SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Trace SP1Clean.Advance
 

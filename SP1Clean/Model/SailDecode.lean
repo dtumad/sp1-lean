@@ -4,16 +4,16 @@ import SP1Clean.Model.SailWrap
 
 `try_step` decodes via `ext_decode = encdec_backwards` (`LeanRV64D/InstsEnd.lean`), a `noncomputable`
 ~395-arm nested cascade. The `decodedInROM` Program-channel contract demands, per committed row, the
-∀-state fact `∀ s, SailConfigured s → (ext_decode w).run s = .ok I s`; nothing else in the tree
+∀-state fact `∀ s, SailConfigured s → (runSail (ext_decode w)) s = .ok I s`; nothing else in the tree
 derives that fact, so its satisfiability needs a concrete witness per instruction family — the
 external PR110 report's Finding 3 ("a mis-transcribed `instrToProgramRow` family would make the
 capstone silently vacuous for its rows, with no test failing"). This file proves the decode half of
-those witnesses: one `(ext_decode w).run s = .ok I s` reduction per supported instruction family,
+those witnesses: one `(runSail (ext_decode w)) s = .ok I s` reduction per supported instruction family,
 against the real generated decoder, axiom-clean, at the default elaboration budget.
 
 **The technique: a `whnf` cascade with per-read "unstick" rewrites.** The generated cascade is
 `if`-headed per arm (the 4.32 do-elaborator's join-point rewrite), and every arm guard except a
-handful is a pure bit test on the literal word — kernel-reducible. So `conv_lhs => whnf` drives the
+handful is a pure bit test on the literal word — kernel-reducible. So `conv_lhs => arg 1; whnf` drives the
 whole pure prefix in one step, at native reduction speed, without ever traversing the untaken arms'
 bodies (weak-head only). It parks exactly at the guards that consult machine state, each of which is
 whnf-opaque for a *stated* reason:
@@ -46,26 +46,30 @@ which is costly and unnecessary for this scope, so it is deliberately not pursue
 open LeanRV64D
 namespace SP1Clean.SailDecode
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 
 set_option linter.unusedSimpArgs false
 
+/-- Keep the decoder's large continuation folded while exposing a bind rewrite. -/
+theorem free_bind_eq_bind {α β : Type} (m : SailM α) (f : α → SailM β) :
+    FreeM.bind m f = m >>= f := rfl
+
 /-- Peel one **non-matching** decoder branch at a bind-headed node: if the guard block runs to
 `.ok none s` (guard false, state-preserving), `match (← gb) with | some r => pure r | none => rest`
-collapses to `rest`. Stated in `.run s` form so `rw`/`refine` apply it without descending into the
+collapses to `rest`. Stated in `runSail s` form so `rw`/`refine` apply it without descending into the
 (untaken) rest of the cascade. The `whnf` cascade below supersedes it on the pure prefix; it remains
 the tool for bind-headed read-guard arms a future deeper walk may meet. -/
 theorem run_bind_ok_none {α β} (m : SailM (Option α)) (k : Option α → SailM β) (s : SailState)
-    (h : EStateM.run m s = .ok none s) :
-    EStateM.run (m >>= k) s = EStateM.run (k none) s := by
-  simp only [bind, EStateM.bind, EStateM.run] at h ⊢; rw [h]
+    (h : runSail m s = .ok none s) :
+    runSail (m >>= k) s = runSail (k none) s := by
+  simp only [runSail_bind, h]
 
 /-- Take the **matching** decoder branch at a bind-headed node: the guard block runs to
 `.ok (some r) s`. -/
 theorem run_bind_ok_some {α β} (m : SailM (Option α)) (k : Option α → SailM β) (s : SailState)
-    (r : α) (h : EStateM.run m s = .ok (some r) s) :
-    EStateM.run (m >>= k) s = EStateM.run (k (some r)) s := by
-  simp only [bind, EStateM.bind, EStateM.run] at h ⊢; rw [h]
+    (r : α) (h : runSail m s = .ok (some r) s) :
+    runSail (m >>= k) s = runSail (k (some r)) s := by
+  simp only [runSail_bind, h]
 
 /-! ## The unstick rewrites — one per whnf-opaque guard head on the base-family walk -/
 
@@ -73,9 +77,9 @@ theorem run_bind_ok_some {α β} (m : SailM (Option α)) (k : Option α → Sail
 `hartSupports Ext_Zihintpause` (no state read), but `currentlyEnabled` is well-founded-recursive so
 it never whnf-reduces; this equation lets the walk continue. Stated applied to `s` — the form the
 whnf'd goal exposes. -/
-theorem cePause_apply (s : SailState) :
-    currentlyEnabled extension.Ext_Zihintpause s = EStateM.Result.ok true s := by
-  simp [currentlyEnabled, hartSupports, pure, EStateM.pure]
+theorem cePause_apply :
+    currentlyEnabled extension.Ext_Zihintpause = (pure true : SailM Bool) := by
+  simp [currentlyEnabled, hartSupports]
 
 /-- The Zicfilp/forward-CFI cluster head: under machine mode with `mseccfg.MLPE = 0` (bit 10, the
 `SailConfigured.mseccfg_disabled` residue), `currentlyEnabled Ext_Zicfilp` resolves to `false` —
@@ -86,7 +90,7 @@ theorem ceZicfilp_bind_apply {α : Type} (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (k : Bool → SailM α) :
-    (currentlyEnabled extension.Ext_Zicfilp >>= k) s = k false s := by
+    runSail (currentlyEnabled extension.Ext_Zicfilp >>= k) s = runSail (k false) s := by
   have hpriv' : s.regs.get Register.cur_privilege (hs _) = Privilege.Machine := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at hpriv
   have hmlpe : Sail.BitVec.extractLsb (s.regs.get Register.mseccfg (hs _)) 10 10 = 0#1 := by
@@ -95,7 +99,7 @@ theorem ceZicfilp_bind_apply {α : Type} (s : SailState) (hs : s.isInitialized)
     have h2 := congrArg BitVec.toNat hseccfg
     simp only [BitVec.toNat_ofNat] at h2 ⊢
     omega
-  show ((currentlyEnabled extension.Ext_Zicfilp >>= k) : SailM α).run s = (k false).run s
+  show (runSail ((currentlyEnabled extension.Ext_Zicfilp >>= k) : SailM α)) s = (runSail (k false)) s
   simp only [andM, orM, toBool, currentlyEnabled, get_xLPE, hartSupports, _get_Seccfg_MLPE,
     bool_bit_backwards, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hpriv', hmlpe,
@@ -115,26 +119,27 @@ theorem decode_ECALL (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x00000073#32).run s = .ok (instruction.ECALL ()) s := by
-  conv_lhs => whnf
+    (runSail (ext_decode 0x00000073#32)) s = .ok (instruction.ECALL ()) s := by
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rfl
 
 /-- `ADD x1, x2, x3` (R-type). -/
 theorem decode_ADD (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x003100B3#32).run s
+    (runSail (ext_decode 0x003100B3#32)) s
       = .ok (instruction.RTYPE (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, rop.ADD))
           s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `ADDI x1, x2, 5` (I-type ALU). -/
@@ -142,13 +147,13 @@ theorem decode_ADDI (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x00510093#32).run s
+    (runSail (ext_decode 0x00510093#32)) s
       = .ok (instruction.ITYPE (5#12, regidx.Regidx 2#5, regidx.Regidx 1#5, iop.ADDI)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `SLLI x1, x2, 3` (I-type shift). -/
@@ -156,13 +161,13 @@ theorem decode_SLLI (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x00311093#32).run s
+    (runSail (ext_decode 0x00311093#32)) s
       = .ok (instruction.SHIFTIOP (3#6, regidx.Regidx 2#5, regidx.Regidx 1#5, sop.SLLI)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `ADDIW x1, x2, 5` (the W-form I-type). -/
@@ -170,13 +175,13 @@ theorem decode_ADDIW (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x0051009B#32).run s
+    (runSail (ext_decode 0x0051009B#32)) s
       = .ok (instruction.ADDIW (5#12, regidx.Regidx 2#5, regidx.Regidx 1#5)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `ADDW x1, x2, x3` (the W-form R-type). -/
@@ -184,14 +189,14 @@ theorem decode_ADDW (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x003100BB#32).run s
+    (runSail (ext_decode 0x003100BB#32)) s
       = .ok (instruction.RTYPEW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5,
           ropw.ADDW)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `SLLIW x1, x2, 3` (the W-form I-type shift). -/
@@ -199,13 +204,13 @@ theorem decode_SLLIW (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x0031109B#32).run s
+    (runSail (ext_decode 0x0031109B#32)) s
       = .ok (instruction.SHIFTIWOP (3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, sopw.SLLIW)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `LUI x1, 1` (U-type). -/
@@ -213,13 +218,13 @@ theorem decode_LUI (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x000010B7#32).run s
+    (runSail (ext_decode 0x000010B7#32)) s
       = .ok (instruction.UTYPE (1#20, regidx.Regidx 1#5, uop.LUI)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `JAL x1, 8` (J-type). -/
@@ -227,13 +232,13 @@ theorem decode_JAL (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x008000EF#32).run s
+    (runSail (ext_decode 0x008000EF#32)) s
       = .ok (instruction.JAL (8#21, regidx.Regidx 1#5)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `JALR x1, x2, 4`. -/
@@ -241,13 +246,13 @@ theorem decode_JALR (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x004100E7#32).run s
+    (runSail (ext_decode 0x004100E7#32)) s
       = .ok (instruction.JALR (4#12, regidx.Regidx 2#5, regidx.Regidx 1#5)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `BEQ x1, x2, 8` (B-type). -/
@@ -255,13 +260,13 @@ theorem decode_BEQ (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x00208463#32).run s
+    (runSail (ext_decode 0x00208463#32)) s
       = .ok (instruction.BTYPE (8#13, regidx.Regidx 2#5, regidx.Regidx 1#5, bop.BEQ)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `LW x1, 0(x2)` (load; the LOAD arm covers all widths/signs via its parameters). -/
@@ -269,13 +274,13 @@ theorem decode_LW (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x00012083#32).run s
+    (runSail (ext_decode 0x00012083#32)) s
       = .ok (instruction.LOAD (0#12, regidx.Regidx 2#5, regidx.Regidx 1#5, false, 4)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-- `SW x1, 0(x2)` (store; the STORE arm covers all widths via its parameter). -/
@@ -283,13 +288,13 @@ theorem decode_SW (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1) :
-    (ext_decode 0x00112023#32).run s
+    (runSail (ext_decode 0x00112023#32)) s
       = .ok (instruction.STORE (0#12, regidx.Regidx 1#5, regidx.Regidx 2#5, 4)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
   rfl
 
 /-! ## The M-extension family — the `misa.M` unsticks and witnesses
@@ -299,23 +304,20 @@ The MUL/DIV arms guard on `currentlyEnabled Ext_M` (directly, or through `Ext_Zm
 pinned by `SailConfigured.misa_m` — without it these witnesses would be unprovable and `decodedInROM`
 unsatisfiable for every M-family row (the vacuity hazard the pin closes). The whnf walk parks at the
 matching arm's own guard here (the reads sit inside the taken arm), so the take goes through
-`run_match_step` — a generic peel of the `EStateM`-bind match at a state-preserving `.ok`. -/
+`run_bind_step` — a generic peel of the `EStateM`-bind match at a state-preserving `.ok`. -/
 
-/-- Peel an `EStateM` bind-match whose scrutinee runs to a state-preserving `.ok v s` — the applied
-form `whnf` exposes. Generic; the decode walks feed it guard-block and `currentlyEnabled` values. -/
-theorem run_match_step {ε σ α β : Type} (m : EStateM ε σ α) (v : α)
-    (k : α → σ → EStateM.Result ε σ β) (e : ε → σ → EStateM.Result ε σ β)
-    (s : σ) (h : m s = .ok v s) :
-    (match m s with
-      | EStateM.Result.ok a s' => k a s'
-      | EStateM.Result.error err s' => e err s') = k v s := by rw [h]
+/-- Execute a known state-preserving prefix, leaving its continuation folded. -/
+theorem run_bind_step {α β : Type} (m : SailM α) (v : α) (k : α → SailM β)
+    (s : SailState) (h : runSail m s = .ok v s) :
+    runSail (m >>= k) s = runSail (k v) s := by
+  rw [runSail_bind, h]
 
 /-- `currentlyEnabled Ext_M` is `true` under the `misa.M` pin (`hartSupports Ext_M` is a config
 `true`; the guard is exactly the `misa.M` bit). -/
 theorem ceM_apply (s : SailState) (hs : s.isInitialized)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    currentlyEnabled extension.Ext_M s = EStateM.Result.ok true s := by
-  show (currentlyEnabled extension.Ext_M).run s = .ok true s
+    runSail (currentlyEnabled extension.Ext_M) s = EStateM.Result.ok true s := by
+  show (runSail (currentlyEnabled extension.Ext_M)) s = .ok true s
   simp only [andM, orM, toBool, currentlyEnabled, hartSupports, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hmisa, Bool.true_and, beq_self_eq_true]
   rfl
@@ -324,8 +326,8 @@ theorem ceM_apply (s : SailState) (hs : s.isInitialized)
 config `false`), hence `true` under the same pin. -/
 theorem ceZmmul_apply (s : SailState) (hs : s.isInitialized)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    currentlyEnabled extension.Ext_Zmmul s = EStateM.Result.ok true s := by
-  show (currentlyEnabled extension.Ext_Zmmul).run s = .ok true s
+    runSail (currentlyEnabled extension.Ext_Zmmul) s = EStateM.Result.ok true s := by
+  show (runSail (currentlyEnabled extension.Ext_Zmmul)) s = .ok true s
   simp only [andM, orM, toBool, currentlyEnabled, hartSupports, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hmisa, Bool.true_and, Bool.false_or,
     beq_self_eq_true]
@@ -337,23 +339,27 @@ theorem decode_MUL (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    (ext_decode 0x023100B3#32).run s
+    (runSail (ext_decode 0x023100B3#32)) s
       = .ok (instruction.MUL (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5,
           { result_part := VectorHalf.Low, signed_rs1 := Signedness.Signed,
             signed_rs2 := Signedness.Signed })) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
-  refine (run_match_step _
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind]
+  refine (run_bind_step _
       (some (instruction.MUL (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5,
         { result_part := VectorHalf.Low, signed_rs1 := Signedness.Signed,
-          signed_rs2 := Signedness.Signed }))) _ _ s ?_).trans (by conv_lhs => whnf)
-  · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s ?_).trans (by rfl)
-    simp only [andM, orM, toBool, pure_bind, Bind.bind, EStateM.bind,
-      ceM_apply s hs hmisa, pure, EStateM.pure, Functions.xlen, beq_self_eq_true]
+          signed_rs2 := Signedness.Signed }))) _ s ?_).trans (by
+    conv_lhs => arg 1; whnf
+    rfl)
+  · conv_lhs => arg 1; whnf
+    rw [free_bind_eq_bind]
+    refine (run_bind_step _ true _ s ?_).trans (by rfl)
+    simp only [andM, orM, toBool, pure_bind, runSail_bind,
+      ceM_apply s hs hmisa, runSail_pure, Functions.xlen, beq_self_eq_true]
 
 /-- `MULW x1, x2, x3`. -/
 theorem decode_MULW (s : SailState) (hs : s.isInitialized)
@@ -361,20 +367,24 @@ theorem decode_MULW (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    (ext_decode 0x023100BB#32).run s
+    (runSail (ext_decode 0x023100BB#32)) s
       = .ok (instruction.MULW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5)) s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
-  refine (run_match_step _
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind]
+  refine (run_bind_step _
       (some (instruction.MULW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5)))
-      _ _ s ?_).trans (by conv_lhs => whnf)
-  · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s ?_).trans (by rfl)
-    simp only [andM, orM, toBool, pure_bind, Bind.bind, EStateM.bind,
-      ceM_apply s hs hmisa, pure, EStateM.pure, Functions.xlen, beq_self_eq_true]
+      _ s ?_).trans (by
+    conv_lhs => arg 1; whnf
+    rfl)
+  · conv_lhs => arg 1; whnf
+    rw [free_bind_eq_bind]
+    refine (run_bind_step _ true _ s ?_).trans (by rfl)
+    simp only [andM, orM, toBool, pure_bind, runSail_bind,
+      ceM_apply s hs hmisa, runSail_pure, Functions.xlen, beq_self_eq_true]
 
 /-- `DIV x1, x2, x3` (signed). -/
 theorem decode_DIV (s : SailState) (hs : s.isInitialized)
@@ -382,19 +392,23 @@ theorem decode_DIV (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    (ext_decode 0x023140B3#32).run s
+    (runSail (ext_decode 0x023140B3#32)) s
       = .ok (instruction.DIV (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false))
           s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
-  refine (run_match_step _
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind]
+  refine (run_bind_step _
       (some (instruction.DIV (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false)))
-      _ _ s ?_).trans (by conv_lhs => whnf)
-  · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceM_apply s hs hmisa)).trans ?_
+      _ s ?_).trans (by
+    conv_lhs => arg 1; whnf
+    rfl)
+  · conv_lhs => arg 1; whnf
+    rw [free_bind_eq_bind]
+    refine (run_bind_step _ true _ s (ceM_apply s hs hmisa)).trans ?_
     rfl
 
 /-- `REM x1, x2, x3` (signed). -/
@@ -403,19 +417,23 @@ theorem decode_REM (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    (ext_decode 0x023160B3#32).run s
+    (runSail (ext_decode 0x023160B3#32)) s
       = .ok (instruction.REM (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false))
           s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
-  refine (run_match_step _
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind]
+  refine (run_bind_step _
       (some (instruction.REM (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false)))
-      _ _ s ?_).trans (by conv_lhs => whnf)
-  · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceM_apply s hs hmisa)).trans ?_
+      _ s ?_).trans (by
+    conv_lhs => arg 1; whnf
+    rfl)
+  · conv_lhs => arg 1; whnf
+    rw [free_bind_eq_bind]
+    refine (run_bind_step _ true _ s (ceM_apply s hs hmisa)).trans ?_
     rfl
 
 /-- `DIVW x1, x2, x3` (signed). -/
@@ -424,19 +442,23 @@ theorem decode_DIVW (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    (ext_decode 0x023140BB#32).run s
+    (runSail (ext_decode 0x023140BB#32)) s
       = .ok (instruction.DIVW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false))
           s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
-  refine (run_match_step _
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind]
+  refine (run_bind_step _
       (some (instruction.DIVW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false)))
-      _ _ s ?_).trans (by conv_lhs => whnf)
-  · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceM_apply s hs hmisa)).trans ?_
+      _ s ?_).trans (by
+    conv_lhs => arg 1; whnf
+    rfl)
+  · conv_lhs => arg 1; whnf
+    rw [free_bind_eq_bind]
+    refine (run_bind_step _ true _ s (ceM_apply s hs hmisa)).trans ?_
     rfl
 
 /-- `REMW x1, x2, x3` (signed). -/
@@ -445,19 +467,23 @@ theorem decode_REMW (s : SailState) (hs : s.isInitialized)
     (hseccfg :
       BitVec.ofNat 1 ((s.regs.get Register.mseccfg (hs Register.mseccfg)).toNat >>> 10) = 0#1)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
-    (ext_decode 0x023160BB#32).run s
+    (runSail (ext_decode 0x023160BB#32)) s
       = .ok (instruction.REMW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false))
           s := by
-  conv_lhs => whnf
+  conv_lhs => arg 1; whnf
   rw [cePause_apply]
-  conv_lhs => whnf
-  rw [ceZicfilp_bind_apply s hs hpriv hseccfg]
-  conv_lhs => whnf
-  refine (run_match_step _
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind, bind_assoc, ceZicfilp_bind_apply s hs hpriv hseccfg]
+  conv_lhs => arg 1; whnf
+  rw [free_bind_eq_bind]
+  refine (run_bind_step _
       (some (instruction.REMW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false)))
-      _ _ s ?_).trans (by conv_lhs => whnf)
-  · conv_lhs => whnf
-    refine (run_match_step _ true _ _ s (ceM_apply s hs hmisa)).trans ?_
+      _ s ?_).trans (by
+    conv_lhs => arg 1; whnf
+    rfl)
+  · conv_lhs => arg 1; whnf
+    rw [free_bind_eq_bind]
+    refine (run_bind_step _ true _ s (ceM_apply s hs hmisa)).trans ?_
     rfl
 
 end SP1Clean.SailDecode

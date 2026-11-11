@@ -156,7 +156,7 @@ point; syscall events use the executable handler supplied by the model. -/
 noncomputable def executeEvent? (handler : ExecutableSyscallHandler) (program : GuestProgram)
     (source : SailState) : ExecutionEvent → Option SailState
   | .ordinary =>
-      match (try_step 0 false).run source with
+      match (runSail (try_step 0 false)) source with
       | .ok _ target => some target
       | .error _ _ => none
   | .syscall event => handler.run program event source

@@ -95,7 +95,7 @@ private def Preserved (word : BitVec 32) (left right : BitVec 64) : Prop :=
         (source word left right).realize tape cut = some current ∧
       current.sail.regs.get? Register.PC = some pc ∧
       ((image word).toGuestProgram valid.1.1).fetchWord pc = some instructionWord ∧
-      (fetch ()).run current.sail = .ok (FetchResult.F_Base instructionWord) current.sail)
+      (runSail (fetch ())) current.sail = .ok (FetchResult.F_Base instructionWord) current.sail)
 
 private theorem mixed (word : BitVec 32) (left right : BitVec 64) (decoded : instruction)
     (valid : ExecutionSourceValid (image word) (source word left right))
@@ -108,7 +108,7 @@ private theorem mixed (word : BitVec 32) (left right : BitVec 64) (decoded : ins
     (executeFrame : ∀ state, SailConfigured state → state.get_reg? 2 = some left →
       state.get_reg? 3 = some right → state.regs.get? Register.PC = some 65540 →
       state.regs.get? Register.nextPC = some 65544 → ∃ next,
-      (execute decoded).run state = .ok (.Retire_Success ()) next ∧
+      (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧
         SailConfigured next ∧ next.mem = state.mem) : Preserved word left right := by
   have first := hostStep_of_check (by rfl : (FormalModel.Shard.policy SP1Prime (image word)).memory.upper = 2 ^ 48)
     hostChecked

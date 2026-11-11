@@ -59,7 +59,7 @@ private theorem retires_from_state (initial : SailState) (program : GuestProgram
     (executeFrame : ∀ state, SailConfigured state → state.get_reg? 2 = some base →
       state.get_reg? 3 = some data →
       (∀ index : Fin 4, state.mem.get? (65536 + index) = some (word.extractLsb' (8 * index) 8)) →
-      ∃ next, (execute decoded).run state = .ok (.Retire_Success ()) next ∧ SailConfigured next) :
+      ∃ next, (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧ SailConfigured next) :
     ∃ target, SailRetiresNormally initial target ∧ SailConfigured target ∧
       ∀ address, readOnly address = true → target.mem.get? address = initial.mem.get? address := by
   have permission : InstructionWrite.PermittedAt readOnly program initial :=
@@ -82,7 +82,7 @@ private theorem retires (word : BitVec 32) (base data : BitVec 64) (readOnly : �
     (executeFrame : ∀ state, SailConfigured state → state.get_reg? 2 = some base →
       state.get_reg? 3 = some data →
       (∀ index : Fin 4, state.mem.get? (65536 + index) = some (word.extractLsb' (8 * index) 8)) →
-      ∃ next, (execute decoded).run state = .ok (.Retire_Success ()) next ∧ SailConfigured next) :
+      ∃ next, (runSail (execute decoded)) state = .ok (.Retire_Success ()) next ∧ SailConfigured next) :
     RetiresWithFrame word base data readOnly := by
   have valid := (checkExecutionSource_iff _ _).mp checked
   have atPc : (source word base data).sail.realize.regs.get? Register.PC = some 65536 := by
@@ -149,23 +149,23 @@ private theorem split_eight (state : SailState) (address : BitVec 64) (alignment
     (addressZeros : address.countTrailingZeros = alignment)
     (remainder : (address.toNatInt.tmod (8 : ℕ) == (0 : ℤ)) = false)
     (checked : (8 : ℕ) = ((8 : ℤ).tdiv (2 ^ min (alignment : ℤ) 3) * 2 ^ min (alignment : ℤ) 3).toNat) :
-    (split_misaligned (.Physaddr address) 8 0 .CanSplit).run state =
+    (runSail (split_misaligned (.Physaddr address) 8 0 .CanSplit)) state =
       .ok ((8 : ℤ).tdiv (2 ^ min (alignment : ℤ) 3), 2 ^ min (alignment : ℤ) 3) state := by
   have widthZeros : (to_bits (l := 13) 8).countTrailingZeros = 3 := by decide +kernel
-  change (if ((address.toNatInt.tmod (8 : ℕ) == (0 : ℤ)) || false) then
-    pure (1, 8) else split_access address 8).run state = _
+  change (runSail (if ((address.toNatInt.tmod (8 : ℕ) == (0 : ℤ)) || false) then
+    pure (1, 8) else split_access address 8)) state = _
   rw [remainder]
-  change (split_access address 8).run state = _
+  change (runSail (split_access address 8)) state = _
   simp only [split_access, addressZeros, widthZeros, Nat.cast_ofNat]
   rw [← checked]
   rfl
 
 /-- Real misaligned accesses split into eight bytes, four halfwords or two words as appropriate. -/
 theorem actualMisalignedSplits (state : SailState) :
-    (split_misaligned (.Physaddr 65541) 8 0 .CanSplit).run state = .ok (8, 1) state ∧
-    (split_misaligned (.Physaddr 65542) 8 0 .CanSplit).run state = .ok (4, 2) state ∧
-    (split_misaligned (.Physaddr 65540) 8 0 .CanSplit).run state = .ok (2, 4) state ∧
-    (split_misaligned (.Physaddr 69631) 8 0 .CanSplit).run state = .ok (8, 1) state := by
+    (runSail (split_misaligned (.Physaddr 65541) 8 0 .CanSplit)) state = .ok (8, 1) state ∧
+    (runSail (split_misaligned (.Physaddr 65542) 8 0 .CanSplit)) state = .ok (4, 2) state ∧
+    (runSail (split_misaligned (.Physaddr 65540) 8 0 .CanSplit)) state = .ok (2, 4) state ∧
+    (runSail (split_misaligned (.Physaddr 69631) 8 0 .CanSplit)) state = .ok (8, 1) state := by
   exact ⟨split_eight state _ 0 (by decide +kernel) (by decide +kernel) (by decide +kernel),
     split_eight state _ 1 (by decide +kernel) (by decide +kernel) (by decide +kernel),
     split_eight state _ 2 (by decide +kernel) (by decide +kernel) (by decide +kernel),

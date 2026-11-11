@@ -34,7 +34,7 @@ theorem compressedSourcesRejected :
 
 /-- The actual generated Sail query observes the disabled compressed mode at a checked source. -/
 theorem officialSailMode :
-    (currentlyEnabled .Ext_Zca).run source.sail.realize = .ok false source.sail.realize :=
+    (runSail (currentlyEnabled .Ext_Zca)) source.sail.realize = .ok false source.sail.realize :=
   Advance.currentlyEnabled_zca_eq_false _
     ((checkExecutionSource_iff _ _).mp nativeSourceAccepted).configured
 

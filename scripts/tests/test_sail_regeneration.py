@@ -19,6 +19,30 @@ class RegenerationTests(unittest.TestCase):
             for name, sites in CONFIG_SITES.items():
                 files[name] = "import Sail.Sail\n\n" + "\n".join(
                     site + " : Bool := " + ("true" if n % 2 == 0 else "false") for site in sites)
+            enabled = "true" if n % 2 == 0 else "false"
+            files["LeanRV64D/PlatformConfig.lean"] += f"""
+  | .Ext_Zicntr => {enabled}
+  | .Ext_Sdtrig => {enabled}
+"""
+            # Keep the nested H/hcontext checks true: only Sdtrig's outer guard changes.
+            files["LeanRV64D/ValidateConfig.lean"] += f'''
+  if (({enabled} : Bool) : Bool)
+  then
+    (let valid : Bool :=
+      if (((true : Bool) && (not (true : Bool))) : Bool)
+      then
+        (let valid : Bool := false
+        let _ : Unit :=
+          (print_endline
+            "The `hcontext` CSR is supported but the H extension is not: `hcontext` requires H to be supported.")
+def check_mmio_devices (_ : Unit) :=
+  if ((({enabled} : Bool) && ((Sail.BitVec.extractLsb plat_sig_base
+  let valid : Bool :=
+    if (({enabled} : Bool) : Bool)
+  (if ((not ({enabled} : Bool)) : Bool)
+  let _ : Unit :=
+    if (({enabled} : Bool) : Bool)
+'''
             for name, source in files.items():
                 if n >= 2:
                     source = "module\n\n" + source.replace(

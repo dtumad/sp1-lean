@@ -21,7 +21,7 @@ written word `#v[selected_word[0], selected_word[1], 65535·msb, 65535·msb]`. -
 open LeanRV64D
 namespace SP1Clean.LoadWordSail
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -151,7 +151,7 @@ theorem correct_load_word_native
     (hmem₁ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 1]? = some data₁)
     (hmem₂ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 2]? = some data₂)
     (hmem₃ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 3]? = some data₃) :
-    (spec_lw imm rs1_idx rd_idx is_unsigned).run s = (sp1_lw rd_idx pc val64).run s := by
+    (runSail (spec_lw imm rs1_idx rd_idx is_unsigned)) s = (runSail (sp1_lw rd_idx pc val64)) s := by
   have hse : (sign_extend imm : BitVec 64) = BitVec.signExtend 64 imm := by simp [sign_extend]
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
@@ -196,8 +196,8 @@ theorem correct_load_word_native
   simp only at hread
   rw [hsp] at hread
   simp [spec_lw, sp1_lw, run_readReg_of_isInitialized _ _ hs,
-    EStateM.Result.map, execute_LOAD, hpc_get, hse,
-    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, hread, hext]
+    execute_LOAD, hpc_get, hse,
+    LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, hread, hext]
 
 /-- **End-to-end composition.** From the `LoadWord` chip prover assumptions + decode + register/PC reads
 + the four selected memory bytes, a width-4 Sail `LOAD` (sign-extended for `LW`, zero-extended for `LWU`)
@@ -225,9 +225,9 @@ theorem lw_chip_reaches_sail
       = some (BitVec.ofNat 8 input.selected_word[1].val))
     (hmem₃ : s.mem[(reg_val + BitVec.signExtend 64 imm).toNat + 3]?
       = some (BitVec.ofNat 8 (input.selected_word[1].val >>> 8))) :
-    (spec_lw imm rs1_idx rd_idx is_unsigned).run s
-      = (sp1_lw rd_idx pc (Word.toBitVec64
-          #v[input.selected_word[0], input.selected_word[1], 65535 * input.msb, 65535 * input.msb])).run s := by
+    (runSail (spec_lw imm rs1_idx rd_idx is_unsigned)) s
+      = (runSail (sp1_lw rd_idx pc (Word.toBitVec64
+          #v[input.selected_word[0], input.selected_word[1], 65535 * input.msb, 65535 * input.msb]))) s := by
   -- the `extend_value` equation: sign-extend (LW) or zero-extend (LWU) the read = the written word.
   have hext : extend_value is_unsigned
       (BitVec.ofNat 8 (input.selected_word[1].val >>> 8) ++ BitVec.ofNat 8 input.selected_word[1].val ++
@@ -256,7 +256,7 @@ end SP1Clean.LoadWordSail
 namespace SP1Clean.LoadWordChip
 
 open SP1Clean.LoadWordSail
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 open SP1Clean SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Trace SP1Clean.Advance
 

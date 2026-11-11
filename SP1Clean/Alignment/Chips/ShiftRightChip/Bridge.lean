@@ -132,10 +132,10 @@ theorem correct_srl_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_srl : Word.toBitVec64 a_val
         = RV64.srl (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_srl (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_sr (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_srl (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_sr (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_srl, sp1_sr]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPE_eq_execute_RTYPE', execute_RTYPE', execute_RTYPE_pure_srl,
@@ -153,10 +153,10 @@ theorem correct_sra_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_sra : Word.toBitVec64 a_val
         = RV64.sra (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_sra (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_sr (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_sra (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_sr (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_sra, sp1_sr]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPE_eq_execute_RTYPE', execute_RTYPE', execute_RTYPE_pure_sra,
@@ -174,10 +174,10 @@ theorem correct_srlw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_srlw : Word.toBitVec64 a_val
         = RV64.srlw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_srlw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_sr (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_srlw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_sr (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_srlw, sp1_sr]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPEW_eq_execute_RTYPEW', execute_RTYPEW', execute_RTYPEW_pure_srlw,
@@ -195,10 +195,10 @@ theorem correct_sraw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_sraw : Word.toBitVec64 a_val
         = RV64.sraw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_sraw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_sr (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_sraw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_sr (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_sraw, sp1_sr]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPEW_eq_execute_RTYPEW', execute_RTYPEW', execute_RTYPEW_pure_sraw,
@@ -216,17 +216,17 @@ theorem shiftright_chip_reaches_sail
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.adapter.op_b_memory.prev_value))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.adapter.op_c_memory.prev_value)) :
     (cols.is_srl = 1 →
-        (spec_srl (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_sr (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_srl (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_sr (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_sra = 1 →
-        (spec_sra (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_sr (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_sra (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_sr (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_srlw = 1 →
-        (spec_srlw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_sr (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_srlw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_sr (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_sraw = 1 →
-        (spec_sraw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_sr (.Regidx rd_idx) pc cols.a).run s) := by
+        (runSail (spec_sraw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_sr (.Regidx rd_idx) pc cols.a)) s) := by
   obtain ⟨h_srl, h_sra, h_srlw, h_sraw⟩ := h_chip h_real
   exact ⟨fun h => correct_srl_native _ _ _ rs1_idx rs2_idx rd_idx pc s h_pc h_rs1 h_rs2 (h_srl h),
     fun h => correct_sra_native _ _ _ rs1_idx rs2_idx rd_idx pc s h_pc h_rs1 h_rs2 (h_sra h),

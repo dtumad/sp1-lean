@@ -94,6 +94,13 @@ jobs:
           scripts/sail-config/generate_lean_rv64d.sh --stock-module
           cp -R .lake/sail-gen/sail-riscv/build/model/Lean_RV64D .lake/sail-controls/stock-module
 
+      - name: Generate the previous model with the current compiler
+        env:
+          SAIL_GEN_PROFILE: previous
+        run: |
+          scripts/sail-config/generate_lean_rv64d.sh --stock
+          cp -R .lake/sail-gen/previous/sail-riscv/build/model/Lean_RV64D .lake/sail-controls/previous-model-stock
+
       - name: Independently regenerate and check the SP1-configured fingerprint
         run: |
           scripts/sail-config/generate_lean_rv64d.sh --sp1
@@ -105,7 +112,9 @@ jobs:
             .lake/sail-controls/stock .lake/sail-controls/sp1 \
             .lake/sail-controls/stock-module .lake/generated/sail
           diff -ru .lake/sail-gen/historical/sail-riscv/build/model/Lean_RV64D \
-            .lake/sail-controls/stock > .lake/sail-controls/compiler-delta.diff || test "$?" = 1
+            .lake/sail-controls/previous-model-stock > .lake/sail-controls/compiler-delta.diff || test "$?" = 1
+          diff -ru .lake/sail-controls/previous-model-stock \
+            .lake/sail-controls/stock > .lake/sail-controls/model-delta.diff || test "$?" = 1
 
       - name: Archive regeneration controls
         uses: actions/upload-artifact@v4

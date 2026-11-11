@@ -4,39 +4,22 @@ import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Lift
 import Mathlib.Data.ZMod.Basic
-import Batteries.Lean.EStateM
 import LeanRV64D.Step
 import ToMathlib.General
 import SP1Clean.Model.Register
 set_option linter.unusedSimpArgs false
 
-/-! # The Sail-monad wrapper layer
+/-! # Register execution lemmas for the Sail model
 
-The general run-lemma substrate every chip Sail bridge elaborates against — not just the Add
-bridge it was first extracted for:
-
-- `toSailM` and the `run_dite`/`run_ite`/EStateM lemmas — evaluate the generated model's monadic
-  plumbing under `.run`.
-- `write_reg` / `write_reg'` — project-side register writes over the `SailState` register map,
-  with the self-overwrite and commutation lemmas (`write_reg'` is the `wX_bits`-shaped variant
-  that drops an `x0` write; `write_reg_eq_write_reg'` names the exact agreement condition).
-- The `run_readReg`/`run_writeReg` battery — evaluates the generated accessors against an
-  `isInitialized` state, including the insert/lookup interaction lemmas.
-- `rX_bits_eq_get_reg?` / `wX_bits_eq_write_reg'` / `run_rX_bits` / `run_wX_bits` — the bridges
-  from the generated model's register accessors to the project-side map operations.
-- `execute_RTYPE_pure`/`execute_RTYPE'` and `execute_RTYPEW_pure`/`execute_RTYPEW'` — pure twins
-  of the generated R-type executors plus their equivalence lemmas (no `pure_w`/`bv_to_w` shift
-  machinery; the shift chips carry their own reductions).
-- `jump_to_of_mod4_eq_zero` — the aligned control-flow commit used by the jump/branch bridges.
-- The file-scope `simp`/`local simp`/`grind` attribute blocks that make the generated helpers
-  reduce during bridge proofs. -/
+The generated model's register accessors are evaluated through `SP1Clean.runSail`, using
+upstream ArchSem semantics. These lemmas connect architectural register reads and writes to
+SP1's register indices, isolate the pure arithmetic of R-type instructions, and reduce aligned
+control transfers. No separate state interpreter or register-writing model is introduced.
+-/
 
 open LeanRV64D
 open LeanRV64D.Functions
--- lean-sail v5 moved the state/monad machinery under `Sail.ConcurrencyInterfaceV1`; the root
--- `PreSail` namespace it leaves behind is empty, so an unqualified `PreSail.foo` resolves to
--- nothing without this. See `docs/agents/sail-model-provenance.md`.
-open Sail.ConcurrencyInterfaceV1
+open Sail.ArchSem SP1Clean
 
 set_option linter.style.setOption false
 
@@ -45,12 +28,11 @@ attribute [simp] bit_to_bool bits_of_virtaddr bool_bit_backwards Sail.BitVec.acc
   ext_control_check_pc currentlyEnabled Sail.BitVec.signExtend
 
 attribute [local simp]
+  LeanRV64D.readReg
   regidxToRegister_inj
   nextPC_ne_reg_idx_toRegister
   PC_ne_reg_idx_toRegister
   encdec_reg_forwards_matches
-  LeanRV64D.readReg
-  PreSail.readReg
   Std.ExtDHashMap.get?_insert
   Std.ExtDHashMap.get?_insert_self
   Sail.BitVec.toNatInt
@@ -58,9 +40,8 @@ attribute [local simp]
 attribute [local grind =]
   nextPC_ne_reg_idx_toRegister
   PC_ne_reg_idx_toRegister
-  EStateM.run_pure
-  EStateM.run_throw
-  EStateM.run_modify
+  runSail_pure
+  runSail_throw
 
 grind_pattern Std.ExtDHashMap.get?_insert_self => (m.insert k v).get? k
 grind_pattern BitVec.ofNat_eq_ofNat => (@OfNat.ofNat.{0} (BitVec n) i (@BitVec.instOfNat n i))
@@ -94,8 +75,6 @@ def toSailM {α} (x : Option α) : SailM α :=
 
 @[simp] lemma toSailM_some (x : α) : toSailM (some x) = pure x := rfl
 
-@[simp] lemma toSailM_map (f : α → β) (x : Option α) :
-    (Option.map f x).toSailM = f <$> x.toSailM := match x with | none => rfl | some _ => rfl
 
 end Option
 
@@ -140,118 +119,26 @@ namespace Sail
 
 @[simp low]
 lemma run_dite (p : Prop) [Decidable p] (mx : p → SailM α) (mx' : ¬ p → SailM α) :
-  (if h : p then mx h else mx' h).run = if h : p then (mx h).run else (mx' h).run :=
-    apply_dite EStateM.run p mx mx'
+  (runSail (if h : p then mx h else mx' h)) = if h : p then (runSail (mx h)) else (runSail (mx' h)) :=
+    apply_dite runSail p mx mx'
 
 @[simp low]
 lemma run_ite (p : Prop) [Decidable p] (mx mx' : SailM α) :
-  (if p then mx else mx').run = if p then mx.run else mx'.run :=
-    apply_ite EStateM.run p mx mx'
+  (runSail (if p then mx else mx')) = if p then (runSail mx) else (runSail mx') :=
+    apply_ite runSail p mx mx'
 
-section write_reg
-
-/-- Alternative to `write_reg` that takes a `BitVec` rather than an explicit `Register`. -/
-def write_reg (idx : BitVec 5) (val : BitVec 64) : SailM Unit := do
-  let reg : Register := reg_idx_to_Register idx
-  if idx != 0 then modify fun s =>
-    { s with regs := s.regs.insert reg (reg_idx_must_64 idx ▸ val) }
-  else if val ≠ 0 then throw Sail.Error.Unreachable
-
-@[simp, grind =]
-lemma run_write_reg :
-    (write_reg idx val).run s =
-      let reg : Register := reg_idx_to_Register idx
-      if idx = 0 then if val = 0 then .ok () s else .error Sail.Error.Unreachable s
-        else .ok () { s with regs := s.regs.insert reg (reg_idx_must_64 idx ▸ val) }
-  := by unfold write_reg; aesop
-
-@[simp]
-lemma write_reg_write_reg_self :
-    (do write_reg idx val; write_reg idx val') =
-      if idx = 0 ∧ val ≠ 0 then throw .Unreachable else write_reg idx val'
-:= by aesop
-
-/-- Swap writes to two distinct registers, assuming only `0#5` written to the `0` register. -/
-@[simp]
-lemma write_reg_write_reg_comm
-  (h : idx ≠ idx') (hval : idx = 0 → val = 0) (hval' : idx' = 0 → val' = 0) :
-  (do write_reg idx val; write_reg idx' val') =
-    (do write_reg idx' val'; write_reg idx val)
-  := by
-  -- The two `generalize`s are load-bearing for performance, not for the maths. This goal needs the
-  -- permutative `@[simp] Std.ExtDHashMap.insert_insert_comm` (`Math/Misc.lean`), whose rewrite
-  -- direction `simp` decides with the `Lean.Meta.acLt` term ordering — and left folded the inserted
-  -- values are `reg_idx_must_64 idx ▸ val`, whose cast proof is the 31-arm `match` of
-  -- `reg_idx_to_Register`. Ordering those repeatedly was the whole cost. Abstracting them first
-  -- (Clean `doc/performance-problems.md`) takes this proof from >400k heartbeats to under default.
-  unfold write_reg
-  generalize (reg_idx_must_64 idx ▸ val : RegisterType (reg_idx_to_Register idx)) = v
-  generalize (reg_idx_must_64 idx' ▸ val' : RegisterType (reg_idx_to_Register idx')) = v'
-  aesop (add unsafe (by simp (disch := aesop)))
-
-end write_reg
-
-section write_reg'
-
-/-- Version of `write_reg` that doesn't throw an error writing to the `0` register.
-This matches more closely with the behavior of `wX_bits` -/
-def write_reg' (idx : BitVec 5) (val : BitVec 64) : SailM Unit :=
-  do if idx != 0 then modify fun s =>
-    { s with regs := s.regs.insert (reg_idx_to_Register idx) (reg_idx_must_64 idx ▸ val) }
-
-@[simp]
-lemma run_write_reg' :
-  (write_reg' idx val).run s =
-    let reg : Register := reg_idx_to_Register idx
-    .ok () (if idx = 0 then s
-      else { s with regs := s.regs.insert reg (reg_idx_must_64 idx ▸ val) })
-  := by unfold write_reg'; aesop
-
-/-- `write_reg` and `write_reg'` align if not the `0` index of the value written is `0`. -/
-@[simp]
-lemma write_reg_eq_write_reg' (h : idx ≠ 0 ∨ val = 0) :
-  write_reg idx val = write_reg' idx val := by unfold write_reg write_reg'; aesop
-
-@[simp]
-lemma write_reg'_write_reg'_self :
-  (do write_reg' idx val; write_reg' idx val') = write_reg' idx val' := by aesop
-
-/-- Swap writes to two distinct registers. -/
-@[simp]
-lemma write_reg'_write_reg'_comm (h : idx ≠ idx') :
-  (do write_reg' idx val; write_reg' idx' val') =
-    (do write_reg' idx' val'; write_reg' idx val)
-  := by
-  -- `generalize` first, for the `acLt` reason documented on `write_reg_write_reg_comm`.
-  unfold write_reg'
-  generalize (reg_idx_must_64 idx ▸ val : RegisterType (reg_idx_to_Register idx)) = v
-  generalize (reg_idx_must_64 idx' ▸ val' : RegisterType (reg_idx_to_Register idx')) = v'
-  aesop (add unsafe (by simp (disch := aesop)))
-
-end write_reg'
 
 section writeReg
 
 @[simp]
 lemma run_writeReg :
-  (LeanRV64D.writeReg reg v).run s =
+  (runSail (LeanRV64D.writeReg reg v)) s =
     .ok PUnit.unit { s with regs := s.regs.insert reg v} := rfl
 
 @[simp]
 lemma run_writeReg_bind (mx : Unit → SailM α) :
-  (LeanRV64D.writeReg reg v >>= mx).run s =
-    (mx ()).run {s with regs := s.regs.insert reg v} := by aesop
-
-@[simp]
-lemma writeReg_writeReg_self {v' : RegisterType reg} :
-  (do LeanRV64D.writeReg reg v; LeanRV64D.writeReg reg v') = LeanRV64D.writeReg reg v' := by aesop
-
-/-- Swap writes to two different registers. -/
-@[simp]
-lemma writeReg_writeReg_comm (h : reg ≠ reg') :
-  (do LeanRV64D.writeReg reg v; LeanRV64D.writeReg reg' v') =
-    (do LeanRV64D.writeReg reg' v'; LeanRV64D.writeReg reg v)
-  := by aesop (add unsafe (by simp (disch := aesop)))
+  (runSail (LeanRV64D.writeReg reg v >>= mx)) s =
+    (runSail (mx ())) {s with regs := s.regs.insert reg v} := by aesop
 
 end writeReg
 
@@ -260,56 +147,41 @@ section readReg
 -- dt: `run_readReg_of_isInitialized` works better with `simp`.
 @[simp]
 lemma run_readReg (s : SailState) (reg : Register) :
-  (LeanRV64D.readReg reg).run s = match s.regs.get? reg with
+  (runSail (α := no_index (RegisterType reg)) (PreSail.readReg reg)) s = match s.regs.get? reg with
   | some v => .ok v s
-  | none => .error Sail.Error.Unreachable s := by aesop
+  | none => .error Sail.Error.Unreachable s := by
+  simp [runSail, PreSail.readReg, interpretSailEffects,
+    FreeM.liftM, interpretInstructionEffect]
+  cases s.regs.get? reg <;> rfl
 
 lemma run_readReg_of_isInitialized (s : SailState) (reg : Register)
     (hs : SailState.isInitialized s) :
-    (LeanRV64D.readReg reg).run s = .ok (s.regs.get reg (hs reg)) s := by
+    (runSail (PreSail.readReg reg)) s = .ok (s.regs.get reg (hs reg)) s := by
   rw [run_readReg]
   simp [Std.ExtDHashMap.get?_eq_some_get (hs _)]
 
 /-- Bind version of `run_readReg_of_isInitialized`: inside an `EStateM.bind`,
 the `readReg reg` step resolves to `s.regs.get reg _` under `isInitialized`.
 Useful when the `readReg` is buried in a `do`-block that can't be collapsed
-directly by the `.run s` form. -/
+directly by the `runSail action s` form. -/
 lemma run_readReg_bind_of_isInitialized {α : Type}
     (s : SailState) (reg : Register) (hs : SailState.isInitialized s)
     (k : RegisterType reg → SailM α) :
-    (LeanRV64D.readReg reg >>= k).run s = (k (s.regs.get reg (hs reg))).run s := by
-  simp only [bind, Bind.bind, EStateM.bind, EStateM.run]
-  rw [show (LeanRV64D.readReg reg : SailM _) s = .ok (s.regs.get reg (hs reg)) s from
-    run_readReg_of_isInitialized s reg hs]
+    (runSail (PreSail.readReg reg >>= k)) s = (runSail (k (s.regs.get reg (hs reg)))) s := by
+  simp only [runSail_bind, run_readReg_of_isInitialized s reg hs]
 
-/-- Direct-application variant of `run_readReg_bind_of_isInitialized`. Useful
-when the `readReg reg >>= k` is syntactically applied to a state without a
-visible `.run`, e.g. inside a `match … s with …` scrutinee. -/
-lemma readReg_bind_apply_of_isInitialized {α : Type}
-    (s : SailState) (reg : Register) (hs : SailState.isInitialized s)
-    (k : RegisterType reg → SailM α) :
-    (LeanRV64D.readReg reg >>= k) s = k (s.regs.get reg (hs reg)) s :=
-  run_readReg_bind_of_isInitialized s reg hs k
 
 @[simp]
 lemma run_readReg_insert_of_ne (s : SailState) (h : reg ≠ reg') :
-  (LeanRV64D.readReg reg').run { s with regs := s.regs.insert reg v} =
+  (runSail (PreSail.readReg reg')) { s with regs := s.regs.insert reg v} =
     match s.regs.get? reg' with
     | some w => .ok w { s with regs := s.regs.insert reg v }
     | none => .error .Unreachable { s with regs := s.regs.insert reg v } := by aesop
 
 @[simp]
 lemma run_readReg_insert_self (s : SailState) :
-  (LeanRV64D.readReg reg).run { s with regs := s.regs.insert reg v } =
+  (runSail (PreSail.readReg reg)) { s with regs := s.regs.insert reg v } =
     .ok v { s with regs := s.regs.insert reg v } := by aesop
-
-@[simp]
-lemma map_const_run_readReg
-  (h : (s.regs.get? reg).isSome) :
-  ((LeanRV64D.readReg reg).run s).map (fun _ => x) = .ok x s
-    := by
-  rw [Option.isSome_iff_exists] at h
-  aesop
 
 /-- Inside `SailME.run`, reading one register (which must be present) and then writing
     another register while discarding the read value simplifies to just the writeReg's
@@ -318,18 +190,15 @@ lemma map_const_run_readReg
 lemma SailME_run_readReg_map_writeReg
     {α : Type} (s : SailState) (reg_r reg_w : Register)
     (hs_r : (s.regs.get? reg_r).isSome) (v : RegisterType reg_w) (f : Unit → α) :
-    EStateM.run ((PreSail.PreSailME.run do
+    runSail ((PreSail.PreSailME.run do
         let _ ← liftM (LeanRV64D.readReg reg_r)
         f <$> liftM (LeanRV64D.writeReg reg_w v)) : SailM α) s =
       .ok (f ()) { s with regs := s.regs.insert reg_w v } := by
   rw [Option.isSome_iff_exists] at hs_r
   obtain ⟨v_r, hv_r⟩ := hs_r
-  simp only [PreSail.PreSailME.run, LeanRV64D.readReg, LeanRV64D.writeReg, PreSail.readReg,
-    PreSail.writeReg, ExceptT.run, ExceptT.mk, ExceptT.bindCont, ExceptT.bind, ExceptT.lift,
-    ExceptT.map, Functor.map, Except.map, MonadLift.monadLift, liftM, monadLift, pure, bind,
-    EStateM.run, EStateM.bind, EStateM.pure, EStateM.modifyGet, EStateM.map, EStateM.get,
-    getThe, MonadStateOf.get, MonadState.get, get,
-    MonadStateOf.modifyGet, modifyGet, MonadState.modifyGet, modify, hv_r]
+  simp only [map_eq_pure_bind, PreSail.PreSailME.run_lift_bind,
+    PreSail.PreSailME.run_pure, runSail_bind, run_readReg, hv_r, run_writeReg, runSail_pure]
+
 
 end readReg
 
@@ -338,14 +207,14 @@ section rX_bits
 -- A 32-way `fin_cases` peel of `rX_bits`/`rX`, each arm closed by a deep `simp` over the
 -- generated Sail definitions.
 lemma rX_bits_eq_get_reg? {s : SailState} :
-  (rX_bits (regidx.Regidx idx)).run s = (s.get_reg? idx).toSailM.run s := by
+  (runSail (rX_bits (regidx.Regidx idx))) s = (runSail (s.get_reg? idx).toSailM) s := by
   fin_cases idx <;>
-    simp [Option.toSailM, SailState.get_reg?, Option.elim, reg_idx_to_Register, rX_bits, rX] <;>
+    simp [Option.toSailM, SailState.get_reg?, Option.elim, reg_idx_to_Register, rX_bits, rX, regval_from_reg, map_eq_pure_bind] <;>
     (first | rfl | (cases s.regs.get? _ <;> rfl))
 
 @[simp high]
 lemma run_rX_bits :
-  (rX_bits (.Regidx idx)).run s =
+  (runSail (rX_bits (.Regidx idx))) s =
   match SailState.get_reg? s idx with
   | some v => .ok v s
   | none => .error Sail.Error.Unreachable s
@@ -356,62 +225,19 @@ end rX_bits
 
 section wX_bits
 
-lemma wX_bits_eq_write_reg' (idx : BitVec 5) (val : BitVec 64) :
-    wX_bits (.Regidx idx) val = write_reg' idx val := by
-    symm
-    simp [write_reg', wX_bits]
-    by_cases x_is_31 : idx = 31#5
-    · rw [x_is_31]
-      simp
-      simp [wX, LeanRV64D.writeReg, PreSail.writeReg, xreg_write_callback, xreg_full_write_callback,
-        reg_name_forwards, get_config_use_abi_names, LeanRV64D.Functions.not, regval_into_reg]
-    fin_cases idx
-    · simp [wX, BitVec.toNatInt]
-    all_goals
-      simp [wX, LeanRV64D.writeReg, PreSail.writeReg, xreg_write_callback, xreg_full_write_callback,
-        reg_name_forwards, get_config_use_abi_names, LeanRV64D.Functions.not, regval_into_reg,
-        reg_idx_to_Register, BitVec.toNatInt]
-
 @[simp high]
 lemma run_wX_bits (reg : regidx) (data : BitVec 64) :
-  (wX_bits reg data).run s = let .Regidx idx := reg
+  (runSail (wX_bits reg data)) s = let .Regidx idx := reg
     .ok () (if idx = 0#5 then s else {s with
       regs := s.regs.insert (reg_idx_to_Register idx) (bitVecToRegidxVal idx data)}) := by
   let .Regidx idx := reg
-  simp [wX_bits_eq_write_reg']
-  fin_cases idx <;> simp [xreg_write_callback, reg_name_forwards, get_config_use_abi_names, LeanRV64D.Functions.not] <;> rfl
+  fin_cases idx <;>
+    simp [wX_bits, wX, xreg_write_callback, xreg_full_write_callback, reg_name_forwards,
+      get_config_use_abi_names, LeanRV64D.not, regval_into_reg, reg_idx_to_Register,
+      BitVec.toNatInt, bitVecToRegidxVal]
 
-@[simp high]
-lemma wX_bits_eq_writeReg :
-  wX_bits (.Regidx idx) val = if idx = 0#5 then pure () else
-    LeanRV64D.writeReg (reg_idx_to_Register idx) (bitVecToRegidxVal idx val) := by
-  simp [wX_bits_eq_write_reg', write_reg']
-  aesop
 
 end wX_bits
-
-section write_read_bind
-
-/-- Reading a just written value looks like just using the written value. -/
-@[simp]
-lemma writeReg_readReg_bind
-  (mx : RegisterType reg → SailM α) :
-  (do LeanRV64D.writeReg reg v; let w ← LeanRV64D.readReg reg; mx w) =
-    (do LeanRV64D.writeReg reg v; mx v) := by aesop
-
-end write_read_bind
-
-@[simp]
-lemma writeReg_bind_map_readReg
-  (f : RegisterType reg → α) :
-  (do LeanRV64D.writeReg reg v; f <$> LeanRV64D.readReg reg) =
-    (do LeanRV64D.writeReg reg v; return f v) := by aesop
-
-/-- Writing a value overwrites the previous write. -/
-@[simp]
-lemma writeReg_wX_bits_writeReg {v' : RegisterType reg} :
-  (do LeanRV64D.writeReg reg v; wX_bits typ_0 data; LeanRV64D.writeReg reg v') =
-    (do wX_bits typ_0 data; LeanRV64D.writeReg reg v') := by aesop
 
 section pc
 
@@ -419,14 +245,15 @@ section pc
   set_next_pc pc = LeanRV64D.writeReg Register.nextPC pc := rfl
 
 @[simp] lemma get_next_pc_eq :
-  get_next_pc u = LeanRV64D.readReg Register.nextPC := rfl
+  get_next_pc u = PreSail.readReg Register.nextPC := rfl
 
-@[simp] lemma tick_pc_eq :
-  tick_pc u = (do LeanRV64D.writeReg Register.PC (← LeanRV64D.readReg Register.nextPC))
-  := by unfold tick_pc; aesop
+@[simp] lemma run_tick_pc (s : SailState) :
+  runSail (tick_pc u) s =
+    runSail (do LeanRV64D.writeReg Register.PC (← PreSail.readReg Register.nextPC)) s := by
+  simp only [tick_pc, LeanRV64D.readReg, map_eq_pure_bind, runSail_bind, run_readReg, run_writeReg,
+    Std.ExtDHashMap.get?_insert_self, pc_write_callback, runSail_pure]
+  cases s.regs.get? Register.nextPC <;> rfl
 
--- @[simp] lemma force_pc_eq :
---   force_pc pc = LeanRV64D.writeReg Register.PC pc := rfl
 
 end pc
 
@@ -521,7 +348,7 @@ conjunction short-circuits before reading the Zca extension flag. No initializat
 needed for this step. The control-flow bridges use this to reduce `jump_to` to one `nextPC` write. -/
 theorem jump_to_of_mod4_eq_zero (target : BitVec 64) (s : SailState)
     (h_aligned : target % 4#64 = 0) :
-    EStateM.run (jump_to target) s =
+    runSail (jump_to target) s =
       EStateM.Result.ok LeanRV64D.Functions.RETIRE_SUCCESS
         { s with regs := s.regs.insert Register.nextPC target } := by
   have h0 : target[0] = false := by bv_decide

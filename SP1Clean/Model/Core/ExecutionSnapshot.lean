@@ -6,7 +6,7 @@ import SP1Clean.Model.Core.ExecutionBoot
 
 Unlike a MemorySnapshot, this representation retains every Sail register (including absent keys),
 the runtime cycle counter and output, the complete host state, and the execution clock. Sail's
-choice state and tags are Unit. Only RAM changes representation: sparse zero-default bytes realize
+memory tags are Unit. Only RAM changes representation: sparse zero-default bytes realize
 the exact bounded Sail map, with every address outside the native window absent.
 
 Executable equality compares the full state without enumerating the address space. Its theorem
@@ -32,7 +32,6 @@ namespace SailSnapshot
 /-- The register/runtime carrier is executable without materializing the dense Sail memory. -/
 def skeleton (snapshot : SailSnapshot) : SailState where
   regs := snapshot.registers
-  choiceState := ()
   mem := ∅
   tags := ()
   cycleCount := snapshot.cycleCount
@@ -50,8 +49,7 @@ theorem realize_capture (state : SailState) (memory : ByteMemory)
     (represents : memory.toSailMemory (2 ^ 48) = state.mem) :
     (capture state memory).realize = state := by
   cases state with
-  | mk registers choice mem tags cycles output =>
-      cases choice
+  | mk registers mem tags cycles output =>
       cases tags
       simp only [capture, realize, skeleton, represents]
 

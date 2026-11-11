@@ -96,12 +96,12 @@ theorem correct_div_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_div : Word.toBitVec64 a_val
         = RV64.div (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_div (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_div (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.div (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) false
       = RV64.div (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.div_eq _ _
   simp only [spec_div, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_div]
@@ -117,12 +117,12 @@ theorem correct_divu_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_divu : Word.toBitVec64 a_val
         = RV64.divu (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_divu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_divu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.div (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) true
       = RV64.divu (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.divu_eq _ _
   simp only [spec_divu, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIV_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divu]
@@ -138,12 +138,12 @@ theorem correct_rem_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_rem : Word.toBitVec64 a_val
         = RV64.rem (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_rem (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_rem (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.rem false (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)
       = RV64.rem (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.rem_eq _ _
   simp only [spec_rem, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_rem]
@@ -159,12 +159,12 @@ theorem correct_remu_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_remu : Word.toBitVec64 a_val
         = RV64.remu (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_remu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_remu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.rem true (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)
       = RV64.remu (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.remu_eq _ _
   simp only [spec_remu, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REM_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remu]
@@ -180,12 +180,12 @@ theorem correct_divw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_divw : Word.toBitVec64 a_val
         = RV64.divw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_divw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_divw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.divw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) false
       = RV64.divw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.divw_eq _ _
   simp only [spec_divw, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divw]
@@ -201,12 +201,12 @@ theorem correct_divuw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_divuw : Word.toBitVec64 a_val
         = RV64.divuw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_divuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_divuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.divw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) true
       = RV64.divuw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.divuw_eq _ _
   simp only [spec_divuw, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_DIVW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_divuw]
@@ -222,12 +222,12 @@ theorem correct_remw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_remw : Word.toBitVec64 a_val
         = RV64.remw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_remw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_remw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.remw false (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)
       = RV64.remw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.remw_eq _ _
   simp only [spec_remw, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remw]
@@ -243,12 +243,12 @@ theorem correct_remuw_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 rs2_val))
     (h_remuw : Word.toBitVec64 a_val
         = RV64.remuw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)) :
-    (spec_remuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_divrem (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_remuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_divrem (.Regidx rd_idx) pc a_val)) s := by
   have hb : SailRV64.remw true (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val)
       = RV64.remuw (Word.toBitVec64 rs2_val) (Word.toBitVec64 rs1_val) := RV64.remuw_eq _ _
   simp only [spec_remuw, sp1_divrem]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun]
   simp [SailRV64.execute_REMW_eq, SailRV64.skeleton_binary, hb, Sail.run_rX_bits, Sail.run_wX_bits,
     run_writeReg_bind, SailState.get_reg?_insert_nextPC, h_rs1, h_rs2, h_remuw]
@@ -266,29 +266,29 @@ theorem divrem_chip_reaches_sail
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
     (cols.is_div = 1 →
-        (spec_div (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_div (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_divu = 1 →
-        (spec_divu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_divu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_rem = 1 →
-        (spec_rem (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_rem (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_remu = 1 →
-        (spec_remu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_remu (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_divw = 1 →
-        (spec_divw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_divw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_remw = 1 →
-        (spec_remw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_remw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_divuw = 1 →
-        (spec_divuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) ∧
+        (runSail (spec_divuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) ∧
     (cols.is_remuw = 1 →
-        (spec_remuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-          = (sp1_divrem (.Regidx rd_idx) pc cols.a).run s) := by
+        (runSail (spec_remuw (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+          = (runSail (sp1_divrem (.Regidx rd_idx) pc cols.a)) s) := by
   have hcases := h_chip.2.cases
   exact ⟨fun h => correct_div_native _ _ _
       rs1_idx rs2_idx rd_idx pc s h_pc h_rs1 h_rs2 (hcases .div h_real h),

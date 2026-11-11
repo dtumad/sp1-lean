@@ -94,7 +94,7 @@ LOAD/STORE riding their guarded (`'`) inversions exactly as MUL does. -/
 /-- The weak ∀s form over the *guarded* projection — what the Program provider certifies pre-hoist. -/
 def decodedInROMg (prog : GuestProgram) (row : ProgramRow (ZMod p)) : Prop :=
   ∃ w, prog.fetchWord (pcBitsOfRow row) = some w ∧
-    ∀ s, SailConfigured s → ∃ i, (ext_decode w).run s = .ok i s ∧
+    ∀ s, SailConfigured s → ∃ i, (runSail (ext_decode w)) s = .ok i s ∧
       instrToProgramRow' (rowPcVec row) i = some row
 
 /-- A configured Sail state exists **unconditionally** (the empty-program initial state) — the side

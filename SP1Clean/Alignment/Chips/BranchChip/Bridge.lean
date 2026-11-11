@@ -71,8 +71,8 @@ theorem correct_branch_native
     (h_not_taken : ¬ branchCond op rs1_val rs2_val →
         Word.toBitVec64 next_pc_word = pc + 4#64)
     (h_align : (Word.toBitVec64 next_pc_word).toNat % 4 = 0) :
-    (spec_btype imm (.Regidx rs2) (.Regidx rs1) op).run s
-      = (sp1_branch next_pc_word).run s := by
+    (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) op)) s
+      = (runSail (sp1_branch next_pc_word)) s := by
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
   set sp : SailState := { s with regs := s.regs.insert Register.nextPC (pc + 4#64) } with hsp
@@ -89,7 +89,7 @@ theorem correct_branch_native
     rwa [hsp, SailState.get_reg?_insert_nextPC]
   have hsp_rs2 : SailState.get_reg? sp rs2 = some rs2_val := by
     rwa [hsp, SailState.get_reg?_insert_nextPC]
-  have hexec : EStateM.run (execute_BTYPE imm (.Regidx rs2) (.Regidx rs1) op) sp
+  have hexec : runSail (execute_BTYPE imm (.Regidx rs2) (.Regidx rs1) op) sp
       = .ok RETIRE_SUCCESS { s with regs := s.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
     rcases em (branchCond op rs1_val rs2_val) with hc | hc
     · have hnpc := h_taken hc
@@ -132,23 +132,23 @@ theorem branch_chip_reaches_sail
     (h_dec : Word.toBitVec64 cols.adapter.op_c_imm = sign_extend (m := 64) imm)
     (h_pcw : Word.toBitVec64 (BranchChip.pcWord cols) = pc) :
     (cols.is_beq = 1 →
-        (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BEQ).run s
-          = (sp1_branch (BranchChip.nextPcWord cols)).run s) ∧
+        (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BEQ)) s
+          = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s) ∧
     (cols.is_bne = 1 →
-        (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BNE).run s
-          = (sp1_branch (BranchChip.nextPcWord cols)).run s) ∧
+        (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BNE)) s
+          = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s) ∧
     (cols.is_blt = 1 →
-        (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BLT).run s
-          = (sp1_branch (BranchChip.nextPcWord cols)).run s) ∧
+        (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BLT)) s
+          = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s) ∧
     (cols.is_bge = 1 →
-        (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BGE).run s
-          = (sp1_branch (BranchChip.nextPcWord cols)).run s) ∧
+        (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BGE)) s
+          = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s) ∧
     (cols.is_bltu = 1 →
-        (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BLTU).run s
-          = (sp1_branch (BranchChip.nextPcWord cols)).run s) ∧
+        (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BLTU)) s
+          = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s) ∧
     (cols.is_bgeu = 1 →
-        (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BGEU).run s
-          = (sp1_branch (BranchChip.nextPcWord cols)).run s) := by
+        (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) bop.BGEU)) s
+          = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s) := by
   obtain ⟨_, _, h_flags, _, h_taken_gated, h_fall_gated, h_decision, h_div⟩ := h_chip
   -- 4-byte alignment is now a verified `Spec` conjunct (the in-circuit `÷4` range check), not an assumed
   -- precondition: lift the low-limb divisibility to the committed `next_pc` word.
@@ -158,8 +158,8 @@ theorem branch_chip_reaches_sail
       List.getElem_cons_zero] using h_div h_real
   have h_brbin : cols.is_branching = 0 ∨ cols.is_branching = 1 := h_flags.2.2.2.2.2.2
   have key : ∀ op : bop, (cols.is_branching = 1 ↔ branchCond op rs1_val rs2_val) →
-      (spec_btype imm (.Regidx rs2) (.Regidx rs1) op).run s
-        = (sp1_branch (BranchChip.nextPcWord cols)).run s := by
+      (runSail (spec_btype imm (.Regidx rs2) (.Regidx rs1) op)) s
+        = (runSail (sp1_branch (BranchChip.nextPcWord cols))) s := by
     intro op hbr
     refine correct_branch_native (BranchChip.nextPcWord cols) rs1 rs2 imm pc rs1_val rs2_val op s
       hs h_pc h_rs1 h_rs2 ?_ ?_ h_align

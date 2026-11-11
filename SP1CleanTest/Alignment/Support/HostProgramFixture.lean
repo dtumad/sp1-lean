@@ -91,7 +91,7 @@ def addi (construction : Construction) (destination source : BitVec 5)
     (immediate : BitVec 12) : Except String Construction := do
   let before := construction.current
   let some pc := before.sail.registers.get? .PC | throw "absent ADDI PC"
-  let .ok _ executed := (Advance.execute_ITYPE' immediate (.Regidx source) (.Regidx destination) .ADDI).run
+  let .ok _ executed := (runSail (Advance.execute_ITYPE' immediate (.Regidx source) (.Regidx destination) .ADDI))
       before.sail.skeleton | throw "Sail ADDI execute stage failed"
   let after : ExecutionSnapshot := { before with
     sail := { before.sail with registers := executed.regs.insert .PC (pc + 4) }

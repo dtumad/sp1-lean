@@ -10,7 +10,7 @@ These lemmas are shared by the semantic execution model and the existing instruc
 open LeanRV64D
 namespace SP1Clean.Advance
 
-open SP1Clean Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open SP1Clean Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.SailMem
 
 /-- **L1 — little-endian byte reassembly.** The four `RomLoaded` bytes of a fetched word `w`
@@ -45,7 +45,6 @@ theorem straightLineReady_writeMinstret
     (hinit : s.isInitialized)
     (hconfig : SailMem.SailState.isValidMemConfig s hinit)
     (hmie : _get_Mstatus_MIE (s.regs.get Register.mstatus (hinit _)) = 0#1)
-    (hmideleg : s.regs.get Register.mideleg (hinit _) = zeros)
     (h_priv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (h_active : s.regs.get? Register.hart_state = some (HartState.HART_ACTIVE ()))
     (h_elp : s.regs.get? Register.elp
@@ -64,7 +63,7 @@ theorem straightLineReady_writeMinstret
   init := SailState.isInitialized_insert s hinit _ _
   priv := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact h_priv
   active := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact h_active
-  no_interrupt := run_dispatchInterrupt_machine_none_writeMinstret s hinit b hmie hmideleg
+  no_interrupt := run_dispatchInterrupt_machine_none_writeMinstret s hinit b hmie
   fetched := run_fetch_eq_F_Base_writeMinstret pc data₀ data₁ data₂ data₃ s hinit b hconfig h_pc
     h_access0 h_access1 h_aligned h_in_range h_align h_not_rvc hmem₀ hmem₁ hmem₂ hmem₃
   no_landing_pad := by rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]; exact h_elp
@@ -100,7 +99,7 @@ theorem SailConfigured.toStraightLineReady {s : SailState} (cfg : SailConfigured
     StraightLineReady ({s with regs := s.regs.insert Register.minstret_increment b})
       (data₃ ++ data₂ ++ data₁ ++ data₀) :=
   straightLineReady_writeMinstret s b pc data₀ data₁ data₂ data₃
-    cfg.init cfg.toValidMemConfig cfg.mie cfg.mideleg cfg.priv cfg.active cfg.no_landing_pad
+    cfg.init cfg.toValidMemConfig cfg.mie cfg.priv cfg.active cfg.no_landing_pad
     (by have h := hfetch.pc_eq; rwa [Std.ExtDHashMap.get?_eq_some_get (cfg.init _), Option.some_inj] at h)
     hfetch.access0 hfetch.access1 hfetch.aligned hfetch.in_range hfetch.align hfetch.not_rvc
     hfetch.mem0 hfetch.mem1 hfetch.mem2 hfetch.mem3
@@ -201,16 +200,23 @@ theorem SailConfigured.congr {sf s : SailState} (cfg : SailConfigured s) (hinit 
       misa_c_disabled := by rw [hget Register.misa (hinit _) (hf _ (by tauto))]; exact cfg.misa_c_disabled
       pma_regions := by rw [hget Register.pma_regions (hinit _) (hf _ (by tauto))]; exact cfg.pma_regions }
 
+/-- Refreshing the interrupt-pending register preserves the configured SP1 platform. -/
+theorem SailConfigured.writeMip {source : SailState} (cfg : SailConfigured source) (value : BitVec 64) :
+    SailConfigured {source with regs := source.regs.insert Register.mip value} := by
+  apply SailConfigured.congr cfg (source.isInitialized_insert cfg.init _ _)
+  rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
+    rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
+
 /-- The native platform disables the compressed-instruction mode consulted by Sail jump alignment.
 The generated model supports C/Zca, so this follows from the checked CSR, not a constant platform hook. -/
 theorem currentlyEnabled_zca_eq_false (source : SailState) (cfg : SailConfigured source) :
-    (currentlyEnabled .Ext_Zca).run source = .ok false source := by
+    (runSail (currentlyEnabled .Ext_Zca)) source = .ok false source := by
   have supportsC : hartSupports .Ext_C = true := by
-    simp [hartSupports, LeanRV64D.Functions.xlen, LeanRV64D.Functions.not]
+    simp [hartSupports, LeanRV64D.Functions.xlen, LeanRV64D.not]
   simp only [currentlyEnabled,
     show hartSupports .Ext_Zca = true by simp [hartSupports], supportsC, andM, toBool, pure_bind, bind_assoc]
   rw [run_bind_of_run source _ _ (Sail.run_readReg_of_isInitialized source Register.misa cfg.init)]
-  simp [cfg.misa_c_disabled, LeanRV64D.Functions.not]
+  simp [cfg.misa_c_disabled, LeanRV64D.not]
 
 /-- Actual Sail fetch returns the authenticated committed word without changing state. This
 requires a fetch only at the current executed PC, never at a successor or terminal boundary. -/
@@ -219,7 +225,7 @@ theorem fetch_eq_of_romLoaded {program : GuestProgram} {source : SailState}
     {pc : BitVec 64} {word : BitVec 32}
     (atPc : source.regs.get? Register.PC = some pc)
     (fetched : program.fetchWord pc = some word) :
-    (fetch ()).run source = .ok (FetchResult.F_Base word) source := by
+    (runSail (fetch ())) source = .ok (FetchResult.F_Base word) source := by
   have ready := fetchReady_of_romLoaded program source pc word loaded fetched atPc
   have actual := SailMem.run_fetch_eq_F_Base_of_isInitialized pc _ _ _ _ source
     configured.init configured.toValidMemConfig

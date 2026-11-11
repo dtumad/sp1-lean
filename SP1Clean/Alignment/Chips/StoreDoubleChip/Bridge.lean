@@ -15,7 +15,7 @@ register/PC reads and alignment / fits / non-reserved-address facts. -/
 open LeanRV64D
 namespace SP1Clean.StoreSail
 
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
@@ -31,8 +31,8 @@ noncomputable def spec_sd (imm : BitVec 12) (rs1 rs2 : BitVec 5) : SailM Executi
 stored word into `mem[addr … addr+7]`, then retire. The byte shape matches
 `run_vmem_write_of_width_8`'s RHS (`BitVec.ofNat 8 (data.toNat >>> 8·k)` with
 `data = Word.toBitVec64 stored`). -/
-def sp1_sd (pc : BitVec 64) (addr : BitVec 64) (stored : Word (ZMod p)) : SailM ExecutionResult := do
-  LeanRV64D.writeReg Register.nextPC (pc + 4#64)
+def sp1_sd (pc : BitVec 64) (addr : BitVec 64) (stored : Word (ZMod p)) : ArchSemSeqM exception ExecutionResult := do
+  modify fun st => { st with regs := st.regs.insert Register.nextPC (pc + 4#64) }
   let data := Word.toBitVec64 stored
   modify fun st => { st with mem :=
     ((((((((st.mem.insert addr.toNat (BitVec.ofNat 8 data.toNat)).insert
@@ -57,8 +57,8 @@ theorem correct_store_double_native
     (h_hi : (reg_val + BitVec.signExtend 64 imm).toNat + 8 ≤ 2 ^ 48)
     (h_lo : 2 ^ 16 ≤ (reg_val + BitVec.signExtend 64 imm).toNat)
     (_hstored : Word.isU64 stored) :
-    (spec_sd imm rs1_idx rs2_idx).run s
-      = (sp1_sd pc (reg_val + BitVec.signExtend 64 imm) stored).run s := by
+    (runSail (spec_sd imm rs1_idx rs2_idx)) s
+      = ((sp1_sd pc (reg_val + BitVec.signExtend 64 imm) stored).run) s := by
   have hse : (sign_extend imm : BitVec 64) = BitVec.signExtend 64 imm := by simp [sign_extend]
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
@@ -102,7 +102,7 @@ theorem correct_store_double_native
   have hext : Sail.BitVec.extractLsb (Word.toBitVec64 stored) 63 0 = Word.toBitVec64 stored := by
     simp [Sail.BitVec.extractLsb, BitVec.extractLsb, BitVec.extractLsb']
   -- Reduce the SP1 side: thread the `nextPC` write, then run the `modify` of memory.
-  have hsp1 : (sp1_sd pc (reg_val + BitVec.signExtend 64 imm) stored).run s
+  have hsp1 : ((sp1_sd pc (reg_val + BitVec.signExtend 64 imm) stored).run) s
       = .ok RETIRE_SUCCESS { sp with mem :=
           ((((((((s.mem.insert
             (reg_val + BitVec.signExtend 64 imm).toNat
@@ -121,13 +121,13 @@ theorem correct_store_double_native
               (BitVec.ofNat 8 ((Word.toBitVec64 stored).toNat >>> 48))).insert
             ((reg_val + BitVec.signExtend 64 imm).toNat + 7)
               (BitVec.ofNat 8 ((Word.toBitVec64 stored).toNat >>> 56))) } := by
-    rw [sp1_sd, EStateM.run_bind, run_writeReg]; rfl
+    rfl
   rw [hsp1]
   simp only [spec_sd]
-  rw [EStateM.run_bind, run_readReg_of_isInitialized _ _ hs, hpc_get]
-  simp only [EStateM.run_bind, run_writeReg]
+  rw [runSail_bind, run_readReg_of_isInitialized _ _ hs, hpc_get]
+  simp only [runSail_bind, run_writeReg]
   rw [show ({ s with regs := s.regs.insert Register.nextPC (pc + 4#64) } : SailState) = sp from rfl]
-  simp [execute_STORE, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert,
+  simp [execute_STORE, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl,
     hsp_rs2, hext, hwrite]
 
 omit [Fact (2 ^ 17 < p)] in
@@ -146,9 +146,9 @@ theorem sd_chip_reaches_sail
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.adapter.op_a_memory.prev_value)) :
-    (spec_sd imm rs1_idx rs2_idx).run s
-      = (sp1_sd pc (Word.toBitVec64 input.op_b_val + BitVec.signExtend 64 imm)
-          input.adapter.op_a_memory.prev_value).run s := by
+    (runSail (spec_sd imm rs1_idx rs2_idx)) s
+      = ((sp1_sd pc (Word.toBitVec64 input.op_b_val + BitVec.signExtend 64 imm)
+          input.adapter.op_a_memory.prev_value).run) s := by
   obtain ⟨h_b, h_c⟩ := h_assum
   have hfacts := AddressOperation.effectiveAddress_facts h_b h_c h_address
   unfold AddressOperation.effectiveAddress at hfacts
@@ -168,7 +168,7 @@ end SP1Clean.StoreSail
 namespace SP1Clean.StoreDoubleChip
 
 open SP1Clean.StoreSail
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D.Functions
+open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions
 open SP1Clean.SailMem
 open SP1Clean SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Trace SP1Clean.Advance
 

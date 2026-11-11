@@ -46,8 +46,8 @@ theorem correct_jalr_native
         = BitVec.update (rs1_val + sign_extend (m := 64) imm) 0 0#1)
     (h_link : Word.toBitVec64 op_a_word = pc + 4#64)
     (h_align : (Word.toBitVec64 next_pc_word).toNat % 4 = 0) :
-    (spec_jalr imm (.Regidx rs1) (.Regidx rd)).run s
-      = (sp1_jalr (.Regidx rd) next_pc_word op_a_word).run s := by
+    (runSail (spec_jalr imm (.Regidx rs1) (.Regidx rd))) s
+      = (runSail (sp1_jalr (.Regidx rd) next_pc_word op_a_word)) s := by
   have hpc_get : s.regs.get Register.PC (hs _) = pc := by
     rwa [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at h_pc
   set sp : SailState := { s with regs := s.regs.insert Register.nextPC (pc + 4#64) } with hsp
@@ -66,13 +66,13 @@ theorem correct_jalr_native
       h_htif_disabled := by rw [key _ (hs _) (hsp_init _) (by decide)]; exact hconfig.h_htif_disabled
       h_pma_regions := by rw [key _ (hs _) (hsp_init _) (by decide)]; exact hconfig.h_pma_regions
       h_pmp_off := by rw [key _ (hs _) (hsp_init _) (by decide)]; exact hconfig.h_pmp_off }
-  have hupd : EStateM.run (update_elp_state (.Regidx rs1)) sp = .ok () sp :=
+  have hupd : runSail (update_elp_state (.Regidx rs1)) sp = .ok () sp :=
     update_elp_state_of_isInitialized _ sp hsp_init hsp_config
   have hsp_rs1 : SailState.get_reg? sp rs1 = some rs1_val := by
     rw [hsp, SailState.get_reg?_insert_nextPC]; exact h_rs1
   have htgt4 : BitVec.update (rs1_val + sign_extend (m := 64) imm) 0 0#1 % 4#64 = 0 := by
     rw [← h_lsbclear]; apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
-  have hjump : EStateM.run (jump_to (BitVec.update (rs1_val + sign_extend (m := 64) imm) 0 0#1)) sp
+  have hjump : runSail (jump_to (BitVec.update (rs1_val + sign_extend (m := 64) imm) 0 0#1)) sp
       = .ok RETIRE_SUCCESS { sp with regs := sp.regs.insert Register.nextPC (Word.toBitVec64 next_pc_word) } := by
     rw [jump_to_of_mod4_eq_zero _ sp htgt4, ← h_lsbclear]
   simp [spec_jalr, sp1_jalr, execute_JALR, hsp.symm,
@@ -98,8 +98,8 @@ theorem jalr_chip_reaches_sail
     (h_dec : Word.toBitVec64 cols.adapter.op_c_imm = sign_extend (m := 64) imm)
     (h_op_a_0 : cols.adapter.op_a_0 = 0)
     (h_pcw : Word.toBitVec64 (JalrChip.pcWord cols) = pc) :
-    (spec_jalr imm (.Regidx rs1) (.Regidx rd)).run s
-      = (sp1_jalr (.Regidx rd) (JalrChip.nextPcWord cols) cols.op_a_operation.value).run s := by
+    (runSail (spec_jalr imm (.Regidx rs1) (.Regidx rd))) s
+      = (runSail (sp1_jalr (.Regidx rd) (JalrChip.nextPcWord cols) cols.op_a_operation.value)) s := by
   have h_jump : Word.toBitVec64 cols.add_operation.value = rs1_val + sign_extend (m := 64) imm := by
     rw [h_chip.2.2.1 h_real, h_rs1v, h_dec]
   have h_link : Word.toBitVec64 cols.op_a_operation.value = pc + 4#64 := by

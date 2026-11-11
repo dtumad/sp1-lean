@@ -7,8 +7,8 @@ proved for Sail's byte writes and composed through its actual bounded physical-a
 -/
 
 namespace SP1Clean.SailMem
-open Sail Sail.ConcurrencyInterfaceV1 LeanRV64D LeanRV64D LeanRV64D.Functions
-open SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.Advance
+open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions
+open SP1Clean.SailEarlyReturn SP1Clean.Soundness.Target SP1Clean.TryStepReduction SP1Clean.Advance
 
 /-- Register identity and byte-level preservation on a specified selected region. -/
 structure ProtectedMemoryFrame (readOnly : ℕ → Bool) (source target : SailState) : Prop where
@@ -43,7 +43,7 @@ theorem ProtectedMemoryFrame.configured {readOnly : ℕ → Bool} {source target
 
 private theorem run_writeByte_frame (readOnly : ℕ → Bool) (source : SailState)
     (address : ℕ) (value : BitVec 8) (allowed : readOnly address = false) :
-    ∃ target, (PreSail.writeByte address value : SailM PUnit).run source = .ok () target ∧
+    ∃ target, (Sail.ArchSem.writeByte address value : ArchSemSeqM exception PUnit).run source = .ok () target ∧
       ProtectedMemoryFrame readOnly source target := by
   refine ⟨{ source with mem := source.mem.insert address value }, rfl, rfl, ?_, ?_⟩
   · intro query selected
@@ -56,7 +56,7 @@ private theorem run_writeByte_frame (readOnly : ℕ → Bool) (source : SailStat
 
 private theorem run_writeList_frame (readOnly : ℕ → Bool) (source : SailState)
     (bytes : List (ℕ × BitVec 8)) (allowed : ∀ entry ∈ bytes, readOnly entry.1 = false) :
-    ∃ target, (bytes.forM fun entry => PreSail.writeByte entry.1 entry.2 : SailM PUnit).run source =
+    ∃ target, (bytes.forM fun entry => Sail.ArchSem.writeByte entry.1 entry.2 : ArchSemSeqM exception PUnit).run source =
       .ok () target ∧ ProtectedMemoryFrame readOnly source target := by
   induction bytes generalizing source with
   | nil => exact ⟨source, rfl, .refl readOnly source⟩
@@ -65,103 +65,61 @@ private theorem run_writeList_frame (readOnly : ℕ → Bool) (source : SailStat
       (allowed byte List.mem_cons_self)
     obtain ⟨target, rest, tail⟩ := ih middle (fun entry member => allowed entry (List.mem_cons_of_mem _ member))
     refine ⟨target, ?_, frame.trans tail⟩
-    change (PreSail.writeByte byte.1 byte.2 >>= fun _ => _).run source = _
-    rw [run_bind_of_run' source middle _ () first]
+    change (Sail.ArchSem.writeByte byte.1 byte.2 >>= fun _ => _ : ArchSemSeqM exception PUnit).run source = _
+    rw [run_seq_bind_eq _ _ source middle () first]
     exact rest
 
 /-- Sail's little-endian bulk write preserves every byte outside the requested interval. -/
 theorem run_writeBytes_frame (readOnly : ℕ → Bool) (source : SailState) (address width : ℕ)
     (value : BitVec (8 * width)) (allowed : ∀ index < width, readOnly (address + index) = false) :
-    ∃ target, (PreSail.writeBytes address value : SailM Bool).run source = .ok true target ∧
+    ∃ target, (Sail.ArchSem.writeBytes address value : ArchSemSeqM exception PUnit).run source = .ok () target ∧
       ProtectedMemoryFrame readOnly source target := by
   obtain ⟨target, written, frame⟩ := run_writeList_frame readOnly source
     (List.ofFn fun index : Fin width => (address + index.val, value.extractLsb' (8 * index.val) 8)) (by
       intro entry member
       obtain ⟨index, rfl⟩ := List.mem_ofFn.mp member
       exact allowed index.val index.isLt)
-  refine ⟨target, ?_, frame⟩
-  unfold PreSail.writeBytes
-  rw [run_bind_of_run' source target _ () written]
-  rfl
+  exact ⟨target, written, frame⟩
 
 /-- A physical RAM write is total and preserves registers and all selected bytes. -/
-theorem run_write_ram_frame (readOnly : ℕ → Bool) (source : SailState) (address : BitVec 64)
+theorem run_write_ram_frame (readOnly : ℕ → Bool) (source : SailState) (access : MemoryAccessType mem_payload) (address : BitVec 64)
     (width : ℕ) (value : BitVec (8 * width))
     (allowed : ∀ index < width, readOnly (address.toNat + index) = false) :
-    ∃ target, (write_ram .Write_plain (.Physaddr address) width value ()).run source = .ok true target ∧
+    ∃ target, (runSail (write_ram .Write_plain access (.Physaddr address) width value ())) source = .ok true target ∧
       ProtectedMemoryFrame readOnly source target := by
-  obtain ⟨target, written, frame⟩ := run_writeBytes_frame readOnly source address.toNat width value allowed
+  obtain ⟨target, written, frame⟩ := run_writeBytes_frame readOnly source address.toNat width
+    (vecbytes_to_bitvec (to_bytes_le value)) allowed
   refine ⟨target, ?_, frame⟩
-  simp only [write_ram, pure_bind, LeanRV64D.ConcurrencyInterfaceV1.sail_mem_write,
-    PreSail.sail_mem_write, bind_assoc]
-  rw [run_bind_of_run' source target _ true written]
+  rw [run_write_ram_eq, run_seq_bind_eq _ _ source target () written]
   rfl
 
-/-- Successful bounded-loop results preserve the invariant. Exhaustion is an underlying Sail
-error, and a body that always returns normally cannot introduce an early return. -/
-theorem run_untilFuelM_invariant {α β : Type} (condition : α → Bool) (body : α → SailME β α)
-    (invariant : α → SailState → Prop)
-    (step : ∀ value source, invariant value source → ∃ next target,
-      (ExceptT.run (body value)).run source = .ok (.ok next) target ∧ invariant next target)
-    (fuel : ℕ) (initial : α) (source : SailState) (start : invariant initial source) :
-    match (ExceptT.run (untilFuelM fuel (fun value => pure (condition value)) initial body)).run source with
-    | .ok (.ok value) target => invariant value target
-    | .ok (.error _) _ => False
-    | .error _ _ => True := by
-  unfold untilFuelM
-  generalize fuel + 1 = remaining
-  induction remaining generalizing initial source with
-  | zero => trivial
-  | succ fuel ih =>
-    obtain ⟨value, middle, executed, preserved⟩ := step initial source start
-    simp only [untilFuelM.go]
-    rw [run_ME_bind_ok _ _ source middle value executed]
-    rw [run_ME_bind_ok _ _ middle middle (condition value) (run_ME_pure _ middle)]
-    cases checked : condition value
-    · exact ih value middle preserved
-    · exact preserved
-
+/-- Successful runs of a bounded physical-access loop retain its state invariant. Body actions
+complete normally; exhaustion is still an upstream Sail error. -/
 private theorem frame_of_untilFuelM {α β : Type} (condition : α → Bool) (body : α → SailME β α)
     (finish : α → β) (invariant : α → SailState → Prop) (frame : SailState → Prop)
     (step : ∀ value source, invariant value source → ∃ next target,
-      (ExceptT.run (body value)).run source = .ok (.ok next) target ∧ invariant next target)
+      ContinuesWith (body value) source next target ∧ invariant next target)
     (fuel : ℕ) (initial : α) (source target : SailState) (result : β)
     (start : invariant initial source) (conclude : ∀ value state, invariant value state → frame state)
-    (ran : (SailME.run (do
+    (ran : runSail (SailME.run (do
       let value ← untilFuelM fuel (fun value => pure (condition value)) initial body
-      pure (finish value))).run source = .ok result target) : frame target := by
-  have preserved :=
-    run_untilFuelM_invariant condition body invariant step fuel initial source start
-  have outer := ran
-  change (ExceptT.run (do
-    let value ← untilFuelM fuel (fun value => pure (condition value)) initial body
-    pure (finish value)) >>= _).run source = .ok result target at outer
-  obtain ⟨middle, intermediate, bodyRun, _⟩ :=
-    run_bind_success _ _ source target result outer
-  change (ExceptT.run (untilFuelM fuel (fun value => pure (condition value)) initial body) >>= _).run
-    source = .ok intermediate middle at bodyRun
-  obtain ⟨actual, value, loopRun, _⟩ := run_bind_success _ _ source middle intermediate bodyRun
-  rw [loopRun] at preserved
-  cases value with
-  | error error => exact False.elim preserved
-  | ok value =>
-    have complete : (SailME.run (do
-      let value ← untilFuelM fuel (fun value => pure (condition value)) initial body
-      pure (finish value))).run source = .ok (finish value) actual :=
-      run_PreSailME_of_ok _ source actual _ ((run_ME_bind_ok _ _ source actual value loopRun).trans rfl)
-    rw [complete] at ran
-    cases ran
-    exact conclude _ _ preserved
-
-/-- MMIO writes are absent at every physical address in the configured platform. -/
-theorem run_mmio_writable_false (source : SailState) (cfg : SailConfigured source)
-    (address : physaddr) (width : ℕ) :
-    (within_mmio_writable address width).run source = .ok false source := by
-  rcases address with ⟨address⟩
-  have ran := run_within_mmio_writable_mmio address 0 width source cfg.init cfg.htif_disabled
-  change (within_mmio_writable (.Physaddr (address + 0#64 + 0#64)) width).run source = _ at ran
-  have zero : ∀ a : BitVec 64, a + 0#64 = a := BitVec.add_zero
-  simpa only [zero] using ran
+      pure (finish value))) source = .ok result target) : frame target := by
+  unfold untilFuelM at ran
+  generalize fuel + 1 = remaining at ran
+  induction remaining generalizing initial source with
+  | zero => cases ran
+  | succ fuel ih =>
+    obtain ⟨value, middle, executed, preserved⟩ := step initial source start
+    simp only [untilFuelM.go, bind_assoc, SailME.run] at ran
+    rw [executed] at ran
+    simp only [pure_bind] at ran
+    cases checked : condition value
+    · simp only [checked, Bool.false_eq_true, ite_false] at ran
+      exact ih value middle preserved ran
+    · simp only [checked, ite_true, pure_bind,
+        PreSail.PreSailME.run_pure, runSail_pure] at ran
+      cases ran
+      exact conclude value _ preserved
 
 /-- Actual checked writes preserve every protected byte under permission for the decoded span.
 The physical window and split geometry are recovered from the executed checks. -/
@@ -170,13 +128,13 @@ theorem checked_mem_write_frame (readOnly : ℕ → Bool) (source : SailState)
     (positive : 0 < width) (small : width ≤ 8) (data : BitVec (8 * width))
     (allowed : ∀ index < width, readOnly (address.toNat + index) = false)
     (result : Result Bool (physaddr × ExceptionType)) (target : SailState)
-    (ran : (checked_mem_write (.Physaddr address) width data (.Store .Data) .PBMT_PMA
-      .Machine () false false false).run source = .ok result target) :
+    (ran : (runSail (checked_mem_write (.Physaddr address) width data (.Store .Data) .PBMT_PMA
+      .Machine () false false false)) source = .ok result target) :
     ProtectedMemoryFrame readOnly source target := by
-  simp only [checked_mem_write, bind_assoc, SailME.run, run_SailME_liftM_bind] at ran
+  simp only [checked_mem_write, bind_assoc, SailME.run, PreSail.PreSailME.run_lift_bind] at ran
   rw [run_bind_of_run source _ _ (run_check_pma_store_all source cfg address width)] at ran
   by_cases inside : range_subset address (to_bits width) (2#64 ^ 16) (2#64 ^ 48 - 2#64 ^ 16) = true
-  · simp only [inside, ↓reduceIte, pure_bind, run_SailME_liftM_bind] at ran
+  · simp only [inside, ↓reduceIte, pure_bind, PreSail.PreSailME.run_lift_bind] at ran
     obtain ⟨middle, pieces, splitRun, rest⟩ := run_bind_success _ _ source target result ran
     have unchanged := readOnly_split_misaligned source (.Physaddr address) width 0 _ pieces middle splitRun
     subst middle
@@ -184,7 +142,7 @@ theorem checked_mem_write_frame (readOnly : ℕ → Bool) (source : SailState)
     obtain ⟨countPositive, sizePositive, total⟩ :=
       split_misaligned_span source source address width 0 positive _ count size splitRun
     have bounded := (bounds_of_sp1_pma address width small inside).2
-    rw [run_bind_of_run source _ _ (show (write_kind_of_flags false false false).run source =
+    rw [run_bind_of_run source _ _ (show (runSail (write_kind_of_flags false false false)) source =
       .ok write_kind.Write_plain source from rfl)] at rest
     clear ran splitRun inside
     refine frame_of_untilFuelM _ _ _
@@ -202,22 +160,21 @@ theorem checked_mem_write_frame (readOnly : ℕ → Bool) (source : SailState)
         countPositive sizePositive total bounded index byte indexBound byteBound
       rw [same]
       exact allowed offset offsetBound
-    obtain ⟨next, written, preserved⟩ := run_write_ram_frame readOnly state
+    obtain ⟨next, written, preserved⟩ := run_write_ram_frame readOnly state (.Store .Data)
       (BitVec.addInt address (↑index * size)) size.toNat
       ((Sail.BitVec.extractLsb data (8 * (↑index + 1) * size - 1).toNat
         (8 * ↑index * size).toNat).setWidth (8 * size.toNat)) permitted
     let control : Bool × ℕ := if index == (count - 1).toNat then
       (true, index) else (finished, (↑index + 1 : ℤ).toNat)
     refine ⟨(control.1, control.2, success && true), next, ?_, ?_, frame.trans preserved⟩
-    · refine (run_ME_bind_ok _ _ state state ()
-        (run_ME_liftM _ state state () rfl)).trans ?_
-      refine (run_ME_bind_ok _ _ state state none (run_ME_liftM _ state state _
-        (run_pmpCheck_none _ _ _ state stateCfg.init stateCfg.pmp_off))).trans ?_
+    · refine (ContinuesWith.lift (show runSail (PreSail.sail_assert true "loop dummy assert") state =
+        .ok () state from rfl)).bind ?_
+      refine (ContinuesWith.lift
+        (run_pmpCheck_none _ _ _ state stateCfg.init stateCfg.pmp_off)).bind ?_
       dsimp only
-      refine (run_ME_bind_ok _ _ state state false (run_ME_liftM _ state state _
-        (run_mmio_writable_false state stateCfg _ _))).trans ?_
+      refine (ContinuesWith.lift (run_mmio_writable_false state stateCfg _ _)).bind ?_
       simp only [Bool.false_eq_true, ite_false, bind_assoc, pure_bind]
-      exact (run_ME_bind_ok _ _ state next true (run_ME_liftM _ state next _ written)).trans rfl
+      exact (ContinuesWith.lift written).bind (ContinuesWith.pure _ next)
     · dsimp only [control]
       split
       · exact indexBound
@@ -236,13 +193,10 @@ theorem mem_write_value_frame (readOnly : ℕ → Bool) (source : SailState)
     (positive : 0 < width) (small : width ≤ 8) (data : BitVec (8 * width))
     (allowed : ∀ index < width, readOnly (address.toNat + index) = false)
     (result : Result Bool (physaddr × ExceptionType)) (target : SailState)
-    (ran : (mem_write_value (.Physaddr address) width data (.Store .Data) .PBMT_PMA
-      false false false).run source = .ok result target) :
+    (ran : (runSail (mem_write_value (.Physaddr address) width data .Machine (.Store .Data) .PBMT_PMA
+      false false false)) source = .ok result target) :
     ProtectedMemoryFrame readOnly source target := by
-  unfold mem_write_value mem_write_value_meta mem_write_value_priv_meta at ran
-  rw [run_readReg_bind_of_isInitialized source Register.mstatus cfg.init,
-    run_readReg_bind_of_isInitialized source Register.cur_privilege cfg.init,
-    run_bind_of_run source _ _ (run_effectivePrivilege_configured source cfg _)] at ran
+  unfold mem_write_value mem_write_value_priv_meta at ran
   obtain ⟨middle, value, written, rest⟩ := run_bind_success _ _ source target result ran
   have frame := checked_mem_write_frame readOnly source cfg address width positive small data allowed
     value middle written

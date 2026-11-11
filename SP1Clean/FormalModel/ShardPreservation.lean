@@ -54,7 +54,7 @@ theorem fetch_at (execution : Executes characteristic image source target events
       executionTrajectory (policy characteristic image) (image.toGuestProgram execution.1.1.1)
         source.realize events cut = some current ∧
       current.sail.regs.get? Register.PC = some pc ∧ (image.toGuestProgram execution.1.1.1).fetchWord pc = some word ∧
-      (fetch ()).run current.sail = .ok (FetchResult.F_Base word) current.sail :=
+      (runSail (fetch ())) current.sail = .ok (FetchResult.F_Base word) current.sail :=
   execution.2.1.fetch_at execution.1.1.1 execution.2.2 (fun _ selected => selected)
     execution.1.configured execution.1.romLoaded cut active
 

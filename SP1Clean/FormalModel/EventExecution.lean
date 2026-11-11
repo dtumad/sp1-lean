@@ -173,7 +173,7 @@ theorem retiresAt_of_sailRetireChain : ∀ {n : ℕ} {a b : SailState}, SailReti
   | refl s => intro k hk; omega
   | @step m x y z hstep rest ih =>
       have hstep1 : Machine.trajectory x 1 = some y := by
-        obtain ⟨-, -, -, -, -, hrun⟩ := hstep
+        obtain ⟨-, -, -, -, -, -, -, hrun⟩ := hstep
         simp [Machine.trajectory, Machine.stepOnce, hrun]
       have hshift : ∀ i : ℕ, Machine.trajectory x (i + 1) = Machine.trajectory y i := by
         intro i

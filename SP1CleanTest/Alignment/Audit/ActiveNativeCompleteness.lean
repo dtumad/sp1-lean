@@ -60,7 +60,7 @@ theorem anchorProgram_fetchWord_selfJump :
 
 /-- The configured Sail decoder recognizes the committed word as `JAL x0, 0`. -/
 theorem anchor_decode_selfJump :
-    (ext_decode 0x0000006F#32).run anchorState =
+    (runSail (ext_decode 0x0000006F#32)) anchorState =
       .ok (instruction.JAL (0#21, .Regidx 0#5)) anchorState :=
   decode_jal_x0 anchorState anchorState_configured.init anchorState_configured.priv
     anchorState_configured.mseccfg_disabled

@@ -13,8 +13,28 @@ implement: CLINT and the simple interrupt generator. Their stock address windows
 native memory interval. Leaving them enabled would route permitted RAM accesses through MMIO and
 make the memory-bridge lemmas false as stated.
 
-The two keys affect four generated sites: plat_have_clint / plat_have_sig in PlatformConfig, and
-clint_supported / sig_supported in ValidateConfig. Other platform restrictions remain explicit
+The overlay also disables Zicntr, whose counter-reading instructions are outside the SP1 profile.
+The current upstream configuration validator requires CLINT as the time source when Zicntr is
+enabled. Keeping Zicntr enabled with CLINT disabled would therefore select a rejected platform.
+The overlay also disables Sdtrig, which SP1 does not implement. Its new hardware-breakpoint
+checks can otherwise trap before an instruction executes for register states allowed by the
+existing SP1 contract. Disabling the extension preserves that domain without adding a
+caller-supplied trigger-inactivity premise.
+The model integration carries [sail-riscv #2097](https://github.com/riscv/sail-riscv/pull/2097), which removes the disabled branch's assertion about
+`written_trigger_index`. That marker belongs to trigger bookkeeping; inspecting it when Sdtrig
+is absent would still reject otherwise admissible SP1 states. Enabled trigger behavior is
+unchanged. This source patch must be retired when upstream supplies the same disabled-extension
+behavior; generated output continues to come exclusively from the pinned source pipeline.
+The four switches affect eleven generated sites in PlatformConfig and ValidateConfig, including
+the MMIO validation branches. All other stock settings, including H, remain unchanged.
+
+Normal retirement retains upstream's interrupt refresh and event bookkeeping: `mip` is refreshed
+before execution, and `written_event_index` is cleared afterward. Row effects and trace endpoints
+record their exact values separately from the preserved-register frame. Repeated refreshes are
+idempotent while `misa` and `hvip` remain fixed; empty and host-only segments preserve the original
+values. No initial-value restriction on either bookkeeping register is required.
+
+Other platform restrictions remain explicit
 configured-state hypotheses. In particular PMP uses the stock 16 entries with every entry OFF
 as a Lean state condition, not a generator patch. Moving a condition from configuration to Lean
 makes it visible; it does not remove the assumption.
@@ -35,22 +55,24 @@ on a cache miss. Generated sources are portable; compiler caches are specific to
 |---|---|
 | --deps | Prepare the pinned OCaml/Sail toolchain |
 | --make-config | Deep-merge stock generated configuration with the SP1 overlay |
-| --stock | Verify the current stock fingerprint; with `SAIL_GEN_PROFILE=historical`, reproduce the independent base snapshot |
+| --stock | Verify current stock; `SAIL_GEN_PROFILE=historical` reproduces the independent base snapshot, and `previous` runs the preceding model with the current compiler |
 | --generate-stock | Generate current stock output for explicit fingerprint review |
 | --legacy-sp1 / --stock-module | Generate the other two configuration/module controls |
 | --sp1 | Regenerate with SP1 configuration and verify the recorded fingerprint |
 | --generate | Generate a candidate and print its fingerprint for explicit review |
 
-The SP1-config path currently copies the configuration into the upstream build and checks its
-hash before/after generation. Replace that workaround when the selected upstream build supports
-an equivalent config override without changing model identity.
+The SP1 configuration is passed through `SAIL_FORMAL_CONFIG_RV64D`, preserving the generated
+package and namespace identity. The model integration carries sail-riscv #1861 for this CMake
+interface; consume an upstream revision when it merges. The generator checks the selected
+configuration's hash before and after generation and clears the override for stock controls.
 
 ## Update the pair
 
-1. Select compatible compiler, model, base snapshot and runtime revisions. Update provenance and
+1. Select compatible compiler, model and runtime revisions. Update provenance and
    the single Lake requirement deliberately; do not run bare lake update.
 2. Reproduce the historical stock control with `SAIL_GEN_PROFILE=historical` (a separate toolchain cache).
-   Generate current stock with `--generate-stock`, review the compiler delta and record `currentStock`.
+   Generate the previous-model stock control with the current compiler and review the compiler
+   delta. Generate current stock with `--generate-stock`, review the model delta and record `currentStock`.
    Regenerate the configuration, inspect the platform delta and run `--generate`.
 3. Review the generated diff and update generatedTreeSha256, generatedFiles and configSha256.
    scripts/check_pins.py uses a deterministic path/content tree hash; import its tree_hash helper
@@ -60,11 +82,12 @@ an equivalent config override without changing model identity.
 5. Record commands and generator environment with the PR evidence.
 
 Sail regeneration CI checks four current-compiler outputs (stock/SP1 × legacy/module).
-`scripts/check_sail_regeneration.py` permits exactly the four documented Boolean changes
+`scripts/check_sail_regeneration.py` permits exactly the eleven documented Boolean changes
 and reverses only the generated module/import/exposure headers. All remaining bytes and
 file inventories must agree. The historical compiler must independently reproduce the
-opencompl snapshot; its compiler/model/configuration is distinct from the reviewed current
-stock fingerprint. Historical-to-current differences are archived, not erased by normalization.
+opencompl snapshot; it owns its compiler/model/base-snapshot revisions independently of current
+pins. The previous-model control shares the historical model and the current compiler, so the
+compiler and model deltas are archived separately, without normalization.
 These controls test reproducibility and bounded configuration changes, not compiler correctness.
 
 Sail regeneration CI independently checks configuration and byte identity. The normal pin check
@@ -74,7 +97,7 @@ evidence. Neither the preparation script nor a cache restore updates the expecte
 
 The compiler carries the module-header adaptation from Sail #1742 on the active `sail2` branch.
 The runtime carries lean-sail #13, the inclusive finite-range correction (#18), and explicit
-loop-limit failures (#21). Exhausting a bounded loop produces a Sail assertion error; successful
+loop-limit failures (#21), and ArchSem composition laws (#23). Exhausting a bounded loop produces a Sail assertion error; successful
 execution proofs must not assume a loop returns normally merely because its body does.
 Both integrations use published immutable revisions. Generated declarations
 now live directly in `LeanRV64D`; `LeanRV64D.Defs` remains a module filename, not a declaration
@@ -83,11 +106,16 @@ Consume compatible upstream revisions when these adaptations merge.
 
 Lean 4.35 rejects a flat variant with more than 244 constructors carrying fields during layout
 computation, including noncomputable declarations. The generator splits large variants into
-mutually defined chunks and exposes the original constructor names as match-pattern abbreviations.
+nonrecursive chunks and exposes the original constructor names as match-pattern abbreviations.
 Every alternative and its arguments remain represented, and exhaustive matches still cover all
 alternatives. This is a generator-owned representation workaround; remove it when the pinned Lean
 compiler supports the original flat variants. The generator's large-union regression covers the
-chunk boundary. Generated instruction matches and the complete model must also compile before a
+chunk boundary with generic constructor payloads and consumer-derived structural equality. Sail
+forbids recursive source types, so the chunks are emitted in dependency order without a mutual
+block. The fix is proposed in Sail #1823. Sail #1824 reruns recursion analysis after mutual-recursion
+specialization, removing stale termination measures only where recursion has disappeared;
+this keeps the current page-table model warning-free without changing its function bodies.
+Generated instruction matches and the complete model must also compile before a
 replacement is accepted.
 
 The narrow RvfiDii legacy-do Lake library is a temporary elaboration workaround (#6), not a

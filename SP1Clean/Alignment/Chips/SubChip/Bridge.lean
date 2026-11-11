@@ -41,8 +41,8 @@ theorem correct_sub_native
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 op_c_val))
     (h_sub : Word.toBitVec64 a_val = Word.toBitVec64 op_b_val - Word.toBitVec64 op_c_val) :
-    (spec_sub (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_sub (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_sub (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_sub (.Regidx rd_idx) pc a_val)) s := by
   simp [spec_sub, sp1_sub, execute_RTYPE_eq_execute_RTYPE', execute_RTYPE',
     execute_RTYPE_pure, run_readReg _ Register.PC,
     Sail.run_rX_bits, Sail.run_wX_bits, SailState.get_reg?_insert_nextPC,
@@ -57,8 +57,8 @@ theorem sub_chip_reaches_sail
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
-    (spec_sub (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx)).run s
-      = (sp1_sub (.Regidx rd_idx) pc cols.sub_operation.value).run s :=
+    (runSail (spec_sub (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx))) s
+      = (runSail (sp1_sub (.Regidx rd_idx) pc cols.sub_operation.value)) s :=
   correct_sub_native input.op_b_val input.op_c_val cols.sub_operation.value
     rs1_idx rs2_idx rd_idx pc s h_pc h_rs1 h_rs2 (h_chip.2.2 h_real)
 

@@ -24,9 +24,9 @@ private theorem ordinary_retirement {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
     retirementObservation next = retirementTick (retirementObservation current) true := by
   have enabledFrame : retirementEnabled next = retirementEnabled current := by
     unfold retirementEnabled
-    rw [effect.otherRegs Register.mcountinhibit (by decide) (by decide) (by decide) (by decide)
+    rw [effect.otherRegs Register.mcountinhibit (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
       (fun index => by unfold reg_idx_to_Register; split <;> decide),
-      effect.otherRegs Register.minstretcfg (by decide) (by decide) (by decide) (by decide)
+      effect.otherRegs Register.minstretcfg (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
         (fun index => by unfold reg_idx_to_Register; split <;> decide)]
   obtain ⟨enabled, ran, flag, counter⟩ := effect.retirement
   have observed := retirementEnabled_of_run ran
@@ -41,6 +41,50 @@ private theorem host_retirement (execution : HostExecution) (current : SailState
     execution.other_register_frame current pc Register.minstretcfg (by decide) (by decide),
     execution.other_register_frame current pc Register.minstret_increment (by decide) (by decide),
     execution.other_register_frame current pc Register.minstret (by decide) (by decide)]
+
+/-- Observe the eventual refresh value and the two platform bookkeeping slots. -/
+private def platformObservation (state : SailState) :
+    BitVec 64 × Option (BitVec 64) × Option (Option (Nat × LeanRV64D.event_csr)) :=
+  (TryStepReduction.refreshedMip state, state.regs.get? Register.mip,
+    state.regs.get? Register.written_event_index)
+
+private def platformTick
+    (values : BitVec 64 × Option (BitVec 64) × Option (Option (Nat × LeanRV64D.event_csr))) (ordinary : Bool) :=
+  if ordinary then (values.1, some values.1, some none) else values
+
+private theorem platformTick_fold {ρ : Type*} (ordinary : ρ → Bool) (rows : List ρ)
+    (pending : BitVec 64) (initial : Option (BitVec 64)) (marker : Option (Option (Nat × LeanRV64D.event_csr))) :
+    rows.foldl (fun values row => platformTick values (ordinary row)) (pending, initial, marker) =
+      (pending, if rows.countP ordinary = 0 then initial else some pending,
+        if rows.countP ordinary = 0 then marker else some none) := by
+  induction rows generalizing initial marker with
+  | nil => rfl
+  | cons row rest ih =>
+    cases active : ordinary row
+    · simpa [List.foldl_cons, platformTick, active] using ih initial marker
+    · simpa [List.foldl_cons, platformTick, active] using ih (some pending) (some none)
+
+private theorem ordinary_platform {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] {program : Target.GuestProgram}
+    {row : Trace.RowView (ZMod p)} {current next : SailState}
+    (effect : Target.RowEffect program row current next) :
+    platformObservation next = platformTick (platformObservation current) true := by
+  have refreshed : TryStepReduction.refreshedMip next = TryStepReduction.refreshedMip current := by
+    unfold TryStepReduction.refreshedMip
+    rw [effect.otherRegs Register.misa (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (fun index => by unfold reg_idx_to_Register; split <;> decide),
+      effect.otherRegs Register.hvip (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+        (fun index => by unfold reg_idx_to_Register; split <;> decide),
+      effect.interrupts, Option.getD_some]
+    exact TryStepReduction.refreshedMipBits_idempotent _ _ _
+  exact Prod.ext refreshed (Prod.ext effect.interrupts effect.eventIndex)
+
+private theorem host_platform (execution : HostExecution) (current : SailState) (pc : BitVec 64) :
+    platformObservation (execution.apply current pc) = platformObservation current := by
+  unfold platformObservation TryStepReduction.refreshedMip
+  rw [execution.other_register_frame current pc Register.misa (by decide) (by decide),
+    execution.other_register_frame current pc Register.hvip (by decide) (by decide),
+    execution.other_register_frame current pc Register.mip (by decide) (by decide),
+    execution.other_register_frame current pc Register.written_event_index (by decide) (by decide)]
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}
@@ -76,6 +120,57 @@ private theorem step_bookkeeping (valid : image.Valid)
       rw [sail]
       exact ⟨host_retirement execution current.sail pc,
         execution.other_register_frame current.sail pc Register.nextPC (by decide) (by decide)⟩
+
+private theorem step_platform (valid : image.Valid)
+    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
+    {n : ℕ} {current next : ExecutionState} {row : ExecutionRow p}
+    (atRow : carrier.ordered[n]? = some row)
+    (prefixReplay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize (carrier.events.take n) = some current)
+    (replay : replayStep? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      current row.event = some next) :
+    platformObservation next.sail = platformTick (platformObservation current.sail) row.event.isOrdinary := by
+  cases row with
+  | instruction row =>
+    exact ordinary_platform (carrier.instruction_effect_at valid constraints balanced atRow prefixReplay replay).2
+  | syscall row | halt row =>
+    have step := (replayHost?_eq_some_iff _ _ _ _ _).mp replay
+    cases step with
+    | syscall ran =>
+      obtain ⟨pc, execution, _, _, _, _, sail, _⟩ := HostState.step_observations ran
+      rw [sail]
+      exact host_platform execution current.sail pc
+
+/-- One ordinary retirement refreshes interrupts and clears event bookkeeping. Further
+retirements are idempotent, and every host adapter preserves both observations. Empty and
+host-only tapes retain the original values, including the original event marker. -/
+theorem GroundingCarrier.platform (valid : image.Valid)
+    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
+    {target : ExecutionState}
+    (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
+      source.realize carrier.events = some target) :
+    target.sail.regs.get? Register.mip =
+        (if carrier.events.countP Machine.ExecutionEvent.isOrdinary = 0
+          then source.sail.registers.get? Register.mip
+          else some (TryStepReduction.refreshedMip source.sail.realize)) ∧
+      target.sail.regs.get? Register.written_event_index =
+        (if carrier.events.countP Machine.ExecutionEvent.isOrdinary = 0
+          then source.sail.registers.get? Register.written_event_index else some none) := by
+  have folded := replayEvents?_fold ExecutionRow.event (fun state => platformObservation state.sail)
+    (fun values row => platformTick values row.event.isOrdinary) replay
+    (fun n current next row atRow prefixReplay step =>
+      step_platform valid carrier constraints balanced atRow
+        (by simpa only [ExecutionCarrier.events, List.map_take] using prefixReplay) step)
+  rw [platformTick_fold] at folded
+  have count : carrier.ordered.countP (fun row => row.event.isOrdinary) =
+      carrier.events.countP Machine.ExecutionEvent.isOrdinary := by
+    simp only [ExecutionCarrier.events, List.countP_map, Function.comp_def]
+  rw [count] at folded
+  exact (Prod.mk.inj (Prod.mk.inj folded).2)
 
 /-- The actual ordinary inventory fixes both retirement slots, preserving the source enable
 policy and handling empty segments, inhibited counting, and wraparound uniformly. -/

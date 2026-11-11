@@ -50,7 +50,8 @@ private theorem declarations_registered (image : ProgramImage) (source : Executi
   simp [HostLocalCore.baseEnsemble, HostLocalCore.registry, HostFinalMemory.sourceChannels]
 
 /-- What the public header and verifier endpoints fix about the final state of an accepted trace.
-The retirement bookkeeping is the exact function of the trace that official Sail computes. -/
+Retirement, interrupt refresh and event bookkeeping are exact functions of the trace,
+including preservation of the initial values on empty or host-only segments. -/
 structure Endpoint (source : ExecutionSnapshot) (outgoing : MemorySnapshot)
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (header : SP1PublicIO (ZMod p))
     (events : List ExecutionEvent) (target : ExecutionState) : Prop where
@@ -65,8 +66,14 @@ structure Endpoint (source : ExecutionSnapshot) (outgoing : MemorySnapshot)
   retired : target.sail.regs.get? Register.minstret = (source.sail.registers.get? Register.minstret).map
     (fun value => value + BitVec.ofNat 64
       (if retirementEnabled source.sail.realize then events.countP ExecutionEvent.isOrdinary else 0))
+  interrupts : target.sail.regs.get? Register.mip =
+    if events.countP ExecutionEvent.isOrdinary = 0 then source.sail.registers.get? Register.mip
+      else some (TryStepReduction.refreshedMip source.sail.realize)
+  eventIndex : target.sail.regs.get? Register.written_event_index =
+    if events.countP ExecutionEvent.isOrdinary = 0
+      then source.sail.registers.get? Register.written_event_index else some none
   preserved : ∀ R : Register, R ≠ Register.PC → R ≠ Register.nextPC → R ≠ Register.minstret →
-    R ≠ Register.minstret_increment → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
+    R ≠ Register.minstret_increment → R ≠ Register.mip → R ≠ Register.written_event_index → (∀ index : BitVec 5, R ≠ reg_idx_to_Register index) →
       target.sail.regs.get? R = source.sail.registers.get? R
   runtime : target.sail.cycleCount = source.sail.cycleCount ∧ target.sail.sailOutput = source.sail.output
   registers : ∀ index, target.sail.get_reg? index = some (outgoing.read (.reg index))
@@ -116,10 +123,10 @@ theorem trace_of_witness (valid : image.Valid)
   rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput,
     HostFinalMemory.baseWitness_publicInput] at contract
   obtain ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC,
-    ⟨increment, retired⟩, preserved, decoded, host, exit, declared⟩ :=
+    ⟨increment, retired⟩, ⟨interrupts, eventIndex⟩, preserved, decoded, host, exit, declared⟩ :=
     HostFinalMemory.source_execution valid witness constraints balanced
   exact ⟨contract.2.1, contract.2.2.1, events, target, trace_iff_executionPath.mpr path, permitted,
-    { clock, pc, nextPC, increment, retired, preserved, runtime, registers, ram
+    { clock, pc, nextPC, increment, retired, interrupts, eventIndex, preserved, runtime, registers, ram
       host := ⟨hints, decoded, host⟩
       exit }, declared⟩
 

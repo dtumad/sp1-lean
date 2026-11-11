@@ -41,10 +41,10 @@ theorem correct_bitwise_native
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 op_c_val))
     (h_op : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
         = execute_RTYPE_pure (Word.toBitVec64 op_b_val) (Word.toBitVec64 op_c_val) op) :
-    (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) op).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) op)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc a_val)) s := by
   simp only [spec_bitwise, sp1_bitwise]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [execute_RTYPE_eq_execute_RTYPE', execute_RTYPE', h_rs1, h_rs2, h_op]
@@ -67,13 +67,13 @@ theorem correct_andi_native
     (h_dec : Word.toBitVec64 op_c_val = sign_extend (m := 64) imm)
     (h_op : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
         = execute_RTYPE_pure (Word.toBitVec64 op_b_val) (Word.toBitVec64 op_c_val) rop.AND) :
-    (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ANDI).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ANDI)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc a_val)) s := by
   have harm : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
       = (Word.toBitVec64 op_b_val) &&& (sign_extend (m := 64) imm) := by
     rw [h_op, ← h_dec]; simp [execute_RTYPE_pure]
   simp only [spec_bitwise_imm, sp1_bitwise]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [SP1Clean.Advance.execute_ITYPE', SP1Clean.Advance.execute_ITYPE_pure, h_rs1, harm]
@@ -88,13 +88,13 @@ theorem correct_ori_native
     (h_dec : Word.toBitVec64 op_c_val = sign_extend (m := 64) imm)
     (h_op : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
         = execute_RTYPE_pure (Word.toBitVec64 op_b_val) (Word.toBitVec64 op_c_val) rop.OR) :
-    (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ORI).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ORI)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc a_val)) s := by
   have harm : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
       = (Word.toBitVec64 op_b_val) ||| (sign_extend (m := 64) imm) := by
     rw [h_op, ← h_dec]; simp [execute_RTYPE_pure]
   simp only [spec_bitwise_imm, sp1_bitwise]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [SP1Clean.Advance.execute_ITYPE', SP1Clean.Advance.execute_ITYPE_pure, h_rs1, harm]
@@ -109,13 +109,13 @@ theorem correct_xori_native
     (h_dec : Word.toBitVec64 op_c_val = sign_extend (m := 64) imm)
     (h_op : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
         = execute_RTYPE_pure (Word.toBitVec64 op_b_val) (Word.toBitVec64 op_c_val) rop.XOR) :
-    (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.XORI).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc a_val).run s := by
+    (runSail (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.XORI)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc a_val)) s := by
   have harm : Word.toBitVec64 (BitwiseU16Operation.resultWord a_val)
       = (Word.toBitVec64 op_b_val) ^^^ (sign_extend (m := 64) imm) := by
     rw [h_op, ← h_dec]; simp [execute_RTYPE_pure]
   simp only [spec_bitwise_imm, sp1_bitwise]
-  have hpcrun : (LeanRV64D.readReg Register.PC).run s = .ok pc s := by rw [run_readReg, h_pc]
+  have hpcrun : (runSail (LeanRV64D.readReg Register.PC)) s = .ok pc s := by rw [run_readReg, h_pc]
   rw [SP1Clean.TryStepReduction.run_bind_of_run s _ pc hpcrun,
     SP1Clean.TryStepReduction.run_bind_of_run' s _ _ () run_writeReg]
   simp [SP1Clean.Advance.execute_ITYPE', SP1Clean.Advance.execute_ITYPE_pure, h_rs1, harm]
@@ -129,8 +129,8 @@ theorem bitwise_chip_reaches_sail_and
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
-    (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) rop.AND).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result).run s := by
+    (runSail (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) rop.AND)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result)) s := by
   refine correct_bitwise_native input.op_b_val input.op_c_val cols.bitwise_operation.bitwise_operation.result rs1_idx rs2_idx rd_idx pc s
     rop.AND h_pc h_rs1 h_rs2 ?_
   exact (h_chip.2.1 h_real).1 h_and
@@ -144,8 +144,8 @@ theorem bitwise_chip_reaches_sail_or
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
-    (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) rop.OR).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result).run s := by
+    (runSail (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) rop.OR)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result)) s := by
   refine correct_bitwise_native input.op_b_val input.op_c_val cols.bitwise_operation.bitwise_operation.result rs1_idx rs2_idx rd_idx pc s
     rop.OR h_pc h_rs1 h_rs2 ?_
   exact (h_chip.2.1 h_real).2.1 h_or
@@ -159,8 +159,8 @@ theorem bitwise_chip_reaches_sail_xor
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_rs2 : s.get_reg? rs2_idx = some (Word.toBitVec64 input.op_c_val)) :
-    (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) rop.XOR).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result).run s := by
+    (runSail (spec_bitwise (.Regidx rs2_idx) (.Regidx rs1_idx) (.Regidx rd_idx) rop.XOR)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result)) s := by
   refine correct_bitwise_native input.op_b_val input.op_c_val cols.bitwise_operation.bitwise_operation.result rs1_idx rs2_idx rd_idx pc s
     rop.XOR h_pc h_rs1 h_rs2 ?_
   exact (h_chip.2.1 h_real).2.2 h_xor
@@ -175,8 +175,8 @@ theorem bitwise_chip_reaches_sail_andi
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_dec : Word.toBitVec64 input.op_c_val = sign_extend (m := 64) imm) :
-    (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ANDI).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result).run s := by
+    (runSail (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ANDI)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result)) s := by
   refine correct_andi_native input.op_b_val input.op_c_val cols.bitwise_operation.bitwise_operation.result
     rs1_idx rd_idx imm pc s h_pc h_rs1 h_dec ?_
   exact (h_chip.2.1 h_real).1 h_and
@@ -190,8 +190,8 @@ theorem bitwise_chip_reaches_sail_ori
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_dec : Word.toBitVec64 input.op_c_val = sign_extend (m := 64) imm) :
-    (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ORI).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result).run s := by
+    (runSail (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.ORI)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result)) s := by
   refine correct_ori_native input.op_b_val input.op_c_val cols.bitwise_operation.bitwise_operation.result
     rs1_idx rd_idx imm pc s h_pc h_rs1 h_dec ?_
   exact (h_chip.2.1 h_real).2.1 h_or
@@ -205,8 +205,8 @@ theorem bitwise_chip_reaches_sail_xori
     (h_pc : s.regs.get? Register.PC = some pc)
     (h_rs1 : s.get_reg? rs1_idx = some (Word.toBitVec64 input.op_b_val))
     (h_dec : Word.toBitVec64 input.op_c_val = sign_extend (m := 64) imm) :
-    (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.XORI).run s
-      = (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result).run s := by
+    (runSail (spec_bitwise_imm imm (.Regidx rs1_idx) (.Regidx rd_idx) iop.XORI)) s
+      = (runSail (sp1_bitwise (.Regidx rd_idx) pc cols.bitwise_operation.bitwise_operation.result)) s := by
   refine correct_xori_native input.op_b_val input.op_c_val cols.bitwise_operation.bitwise_operation.result
     rs1_idx rd_idx imm pc s h_pc h_rs1 h_dec ?_
   exact (h_chip.2.1 h_real).2.2 h_xor
