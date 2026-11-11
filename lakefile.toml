@@ -109,7 +109,7 @@ rev = "732e3cbe8cb8870492eacedeb402c3ea1b7bed39"
 [[require]]
 name = "PolyFun"
 git = "https://github.com/Verified-zkEVM/PolyFun"
-rev = "4f7fe15d685cbed39bb7349280fd6f3da84a22d6"
+rev = "ea7cf9f69d015d8320ea538f1cf4b10eedadea46"
 
 # ---- Libraries ---------------------------------------------------------------------------------
 # Ownership (Lake `Package.findModule?` = `leanLibs.findSomeRev?`): a module belongs to the LAST
