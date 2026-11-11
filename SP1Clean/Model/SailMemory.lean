@@ -530,8 +530,8 @@ theorem run_PreSailME_of_ok {γ : Type} (m : SailME γ γ) (s s' : SailState) (a
   simp only [PreSail.PreSailME.run, bind, EStateM.bind, EStateM.run, pure, EStateM.pure] at h ⊢
   rw [h]; rfl
 
-/-- `untilFuelM` at fuel 1 runs its body exactly once; when the body returns with the `finished` flag
-set, the loop yields that value. This handles the split loop **structurally** — backward `refine`
+/-- When the first body execution returns with the `finished` flag set, `untilFuelM` yields that
+value without using the remaining fuel. This handles the split loop **structurally** — backward `refine`
 cannot peel into it, because Lean cannot infer the bind's result type without already knowing the
 loop's value. -/
 private theorem run_untilFuelM_one {γ α : Type} (cond : α → SailME γ Bool) (init : α)

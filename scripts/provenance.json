@@ -1,11 +1,11 @@
 {
   "sail": {
-    "compilerRevision": "3735523114c46eea5f43850ea7464b9cb7d222dc",
+    "compilerRevision": "a569a70392ca2b6ee446fa721465f4fff72c7fc5",
     "modelRevision": "61266bd4dede6c7dd6e903e52dc80bcbf644b1b8",
     "baseSnapshot": "11d8fa212a60c05dcc9fe5db925dd4d06dad65b5",
     "ocamlVersion": "5.2.1",
     "configSha256": "41311181e4cad458c21b01a0160a0087b407ee15e616243013169d52d3c1a854",
-    "generatedTreeSha256": "14e4f03264cdb6a86d1cdd4803765a7bbccb70dc43abf98b84754c736cd5baa3",
+    "generatedTreeSha256": "1e413b113dd260a5fe6f0f7102826d6837cba6a382a150f214b5f3f3fff9f189",
     "generatedFiles": 161,
     "compilerRepository": "https://github.com/dtumad/sail",
     "moduleSystem": true,
@@ -18,7 +18,7 @@
       "configSha256": "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
     },
     "currentStock": {
-      "generatedTreeSha256": "f881e5a7f425258772ab4d1ddc6ccd447c1bb3b30bc88d04773ad9d762a93b56",
+      "generatedTreeSha256": "5e709ab6a08dcf35d33d0f7f344fde3269adaf989dd645338989bce163e36f7f",
       "generatedFiles": 161,
       "configSha256": "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
     }

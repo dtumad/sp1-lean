@@ -97,17 +97,21 @@ theorem run_write_ram_frame (readOnly : ℕ → Bool) (source : SailState) (addr
   rw [run_bind_of_run' source target _ true written]
   rfl
 
-/-- An invariant of the real bounded Sail loop follows from state-threaded body executions. -/
+/-- Successful bounded-loop results preserve the invariant. Exhaustion is an underlying Sail
+error, and a body that always returns normally cannot introduce an early return. -/
 theorem run_untilFuelM_invariant {α β : Type} (condition : α → Bool) (body : α → SailME β α)
     (invariant : α → SailState → Prop)
     (step : ∀ value source, invariant value source → ∃ next target,
       (ExceptT.run (body value)).run source = .ok (.ok next) target ∧ invariant next target)
     (fuel : ℕ) (initial : α) (source : SailState) (start : invariant initial source) :
-    ∃ value target, (ExceptT.run (untilFuelM fuel (fun value => pure (condition value)) initial body)).run source =
-      .ok (.ok value) target ∧ invariant value target := by
+    match (ExceptT.run (untilFuelM fuel (fun value => pure (condition value)) initial body)).run source with
+    | .ok (.ok value) target => invariant value target
+    | .ok (.error _) _ => False
+    | .error _ _ => True := by
   unfold untilFuelM
-  induction fuel generalizing initial source with
-  | zero => exact ⟨initial, source, rfl, start⟩
+  generalize fuel + 1 = remaining
+  induction remaining generalizing initial source with
+  | zero => trivial
   | succ fuel ih =>
     obtain ⟨value, middle, executed, preserved⟩ := step initial source start
     simp only [untilFuelM.go]
@@ -115,7 +119,7 @@ theorem run_untilFuelM_invariant {α β : Type} (condition : α → Bool) (body 
     rw [run_ME_bind_ok _ _ middle middle (condition value) (run_ME_pure _ middle)]
     cases checked : condition value
     · exact ih value middle preserved
-    · exact ⟨value, middle, rfl, preserved⟩
+    · exact preserved
 
 private theorem frame_of_untilFuelM {α β : Type} (condition : α → Bool) (body : α → SailME β α)
     (finish : α → β) (invariant : α → SailState → Prop) (frame : SailState → Prop)
@@ -126,15 +130,28 @@ private theorem frame_of_untilFuelM {α β : Type} (condition : α → Bool) (bo
     (ran : (SailME.run (do
       let value ← untilFuelM fuel (fun value => pure (condition value)) initial body
       pure (finish value))).run source = .ok result target) : frame target := by
-  obtain ⟨value, actual, loopRun, preserved⟩ :=
+  have preserved :=
     run_untilFuelM_invariant condition body invariant step fuel initial source start
-  have complete : (SailME.run (do
+  have outer := ran
+  change (ExceptT.run (do
+    let value ← untilFuelM fuel (fun value => pure (condition value)) initial body
+    pure (finish value)) >>= _).run source = .ok result target at outer
+  obtain ⟨middle, intermediate, bodyRun, _⟩ :=
+    run_bind_success _ _ source target result outer
+  change (ExceptT.run (untilFuelM fuel (fun value => pure (condition value)) initial body) >>= _).run
+    source = .ok intermediate middle at bodyRun
+  obtain ⟨actual, value, loopRun, _⟩ := run_bind_success _ _ source middle intermediate bodyRun
+  rw [loopRun] at preserved
+  cases value with
+  | error error => exact False.elim preserved
+  | ok value =>
+    have complete : (SailME.run (do
       let value ← untilFuelM fuel (fun value => pure (condition value)) initial body
       pure (finish value))).run source = .ok (finish value) actual :=
-    run_PreSailME_of_ok _ source actual _ ((run_ME_bind_ok _ _ source actual value loopRun).trans rfl)
-  rw [complete] at ran
-  cases ran
-  exact conclude _ _ preserved
+      run_PreSailME_of_ok _ source actual _ ((run_ME_bind_ok _ _ source actual value loopRun).trans rfl)
+    rw [complete] at ran
+    cases ran
+    exact conclude _ _ preserved
 
 /-- MMIO writes are absent at every physical address in the configured platform. -/
 theorem run_mmio_writable_false (source : SailState) (cfg : SailConfigured source)
