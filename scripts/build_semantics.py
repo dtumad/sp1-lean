@@ -64,7 +64,6 @@ LAYERS = [
     ("SP1Clean/Alignment/", "L3"),
     ("SP1Clean/FormalModel/Shard", "L3"),
     ("SP1Clean/FormalModel/Execution.lean", "L3"),
-    ("SP1Clean/FormalModel/EventExecution.lean", "L3"),
     ("SP1Clean/FormalModel/SupportedShard.lean", "L3"),
     ("SP1Clean/FormalModel/CoreShard.lean", "L3"),
     ("SP1Clean/FormalModel/Relations.lean", "L3"),

@@ -98,7 +98,6 @@ import SP1Clean.FormalModel.Contracts.SyscallInstrsChip
 import SP1Clean.FormalModel.Contracts.SystemChips
 import SP1Clean.FormalModel.Contracts.WritePermission
 import SP1Clean.FormalModel.CoreShard
-import SP1Clean.FormalModel.EventExecution
 import SP1Clean.FormalModel.Execution
 import SP1Clean.FormalModel.Relations
 import SP1Clean.FormalModel.Shard
@@ -133,7 +132,6 @@ import SP1Clean.Math.WordEquality
 import SP1Clean.Model.BalanceBridge
 import SP1Clean.Model.BusMessages
 import SP1Clean.Model.ByteTable
-import SP1Clean.Model.ByteProvider
 import SP1Clean.Model.Channels
 import SP1Clean.Model.CleanLedger
 import SP1Clean.Model.Core.AddressRange
@@ -234,7 +232,6 @@ import SP1Clean.Model.Semantics.AccessSchedule
 import SP1Clean.Model.Semantics.Decode
 import SP1Clean.Model.Semantics.DurationTime
 import SP1Clean.Model.Semantics.EventTime
-import SP1Clean.Model.Semantics.EventTruth
 import SP1Clean.Model.Semantics.GenericTruth
 import SP1Clean.Model.Semantics.GuestProgram
 import SP1Clean.Model.Semantics.ImageContent
@@ -403,7 +400,6 @@ import SP1Clean.Proofs.Chips.BranchChip.Core
 import SP1Clean.Proofs.Chips.BranchChip.Decision
 import SP1Clean.Proofs.Chips.BranchChip.Formal
 import SP1Clean.Proofs.Chips.ByteChip.ByteChip
-import SP1Clean.Proofs.Chips.ByteChip.Provider
 import SP1Clean.Proofs.Chips.ByteChip.RangeChip
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Bridge
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
@@ -455,7 +451,6 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Interactions
 import SP1Clean.Proofs.Chips.HostCommitChip.Formal
 import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Proofs.Chips.HostControlCompatibility
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
@@ -501,7 +496,6 @@ import SP1Clean.Proofs.Chips.LtChip.Complete
 import SP1Clean.Proofs.Chips.LtChip.Formal
 import SP1Clean.Proofs.Chips.MemoryBumpChip.Formal
 import SP1Clean.Proofs.Chips.MemoryFinalizeChip
-import SP1Clean.Proofs.Chips.MemoryProvider
 import SP1Clean.Proofs.Chips.MemoryProviderChip
 import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Formal
