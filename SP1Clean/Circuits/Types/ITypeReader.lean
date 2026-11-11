@@ -7,8 +7,8 @@ public import SP1Clean.Circuits.Types.RegisterAccess
 
 /-! # Native ITypeReader columns
 
-These circuit value types are owned by the native library. The transitional Rust
-extractor checks their field order and shapes before reusing them in its oracles.
+These circuit value types are owned by the native library. Their field names mirror SP1's
+Rust column structs.
 -/
 
 @[expose] public section
@@ -32,7 +32,8 @@ structure ITypeReader (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas ITypeReader
 
--- Preserve Rust field spelling for independent layout checks while reverse extraction remains.
+-- Temporary: field names mirror SP1's Rust column structs; rename them to lowerCamelCase
+-- together with their consumers (#16).
 attribute [nolint defsWithUnderscore]
   ITypeReader.op_a
   ITypeReader.op_a_memory

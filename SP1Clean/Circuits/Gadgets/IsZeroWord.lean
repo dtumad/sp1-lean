@@ -8,8 +8,7 @@ import Clean.Utils.Tactics.CircuitProofStart
 /-! # Word zero-test gadget
 
 The typed and Clean-IR witnesses, circuit and bundled correctness proofs share this module.
-The pure contract is in `Semantics/Specs/IsZeroWord`. `AssertSpec` supports the
-transitional comparison with independently extracted Rust assertions.
+The pure contract is in `Semantics/Specs/IsZeroWord`.
 -/
 
 @[expose] public section
@@ -120,28 +119,6 @@ lemma fromElements_zero :
   intro i hi
   rw [ProvableType.toElements_fromElements, Vector.getElem_replicate]
   exact (zc_cell i hi).symm
-
-/-- Literal meaning of SP1's `IsZeroWordOperation` constraint list at `is_real = 1`: the four
-per-limb `IsZeroOperation.AssertSpec`s, `result` boolean, and the half-product gluing equalities. -/
-def AssertSpec (a : Word (ZMod p)) (cols : Circuits.Types.IsZeroWordOperation (ZMod p)) : Prop :=
-  IsZeroOperation.AssertSpec a[0] cols.is_zero_limb_0 ∧
-  IsZeroOperation.AssertSpec a[1] cols.is_zero_limb_1 ∧
-  IsZeroOperation.AssertSpec a[2] cols.is_zero_limb_2 ∧
-  IsZeroOperation.AssertSpec a[3] cols.is_zero_limb_3 ∧
-  (cols.result = 0 ∨ cols.result = 1) ∧
-  (cols.is_zero_first_half - cols.is_zero_limb_0.result * cols.is_zero_limb_1.result = 0) ∧
-  (cols.is_zero_second_half - cols.is_zero_limb_2.result * cols.is_zero_limb_3.result = 0) ∧
-  (cols.result - cols.is_zero_first_half * cols.is_zero_second_half = 0)
-
-/-- Soundness core: the per-limb `IsZeroOperation.AssertSpec`s + AND-tree gluing force the word
-zero-indicator. -/
-theorem isZeroWord_of_assert {a : Word (ZMod p)} {cols : Circuits.Types.IsZeroWordOperation (ZMod p)}
-    (h_raw : AssertSpec a cols) :
-    cols.result = if (a[0] = 0 ∧ a[1] = 0 ∧ a[2] = 0 ∧ a[3] = 0) then 1 else 0 := by
-  obtain ⟨r0, r1, r2, r3, _, hf, hs, hr⟩ := h_raw
-  exact result_collapse (IsZeroOperation.isZero_of_assert r0) (IsZeroOperation.isZero_of_assert r1)
-    (IsZeroOperation.isZero_of_assert r2) (IsZeroOperation.isZero_of_assert r3)
-    (eq_of_sub_eq_zero hf) (eq_of_sub_eq_zero hs) (eq_of_sub_eq_zero hr)
 
 /-- Compose the zero-test assertions and enforce the activity/result gates. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do

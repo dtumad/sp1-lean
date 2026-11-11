@@ -20,7 +20,7 @@ open Sail LeanRV64D LeanRV64D.Functions
 open SP1Clean.Soundness.Target
 open SP1Clean.Semantics
 
-/-- Public execution coordinates shared by the native and exact Core statements.  `exit` is the
+/-- Public execution coordinates shared by the native and executable-host statements.  `exit` is the
 committed exit-code cell decoded to the Sail width; it becomes meaningful on halting shards
 (the halt row binds the cell to the reduced `a0` word). -/
 structure CoreShardBoundary where

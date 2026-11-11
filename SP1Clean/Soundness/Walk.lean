@@ -6,10 +6,8 @@ import Mathlib.Tactic.Linarith
 /-! # Walks and balance ⇒ trail: the abstract multigraph core
 
 The shared graph substrate of the whole-machine soundness layer, stated abstractly over a directed
-multigraph and **independent of SP1 / channels / fields**. (Relocated from `GatedVm/Chain.lean`: the
-content is live — `IsWalk` is the walk predicate of the production capstone (`Soundness/AIR.lean`)
-and `exists_trail` powers `RankedGrounding.exists_exhaustiveTrail` — only its original
-Eulerian-capstone consumer is the frozen legacy path.)
+multigraph and **independent of SP1 / channels / fields**. `IsWalk` is the walk predicate of the
+local and host grounding chains, and `exists_trail` powers `RankedGrounding.exists_exhaustiveTrail`.
 
 Model the state bus as a directed multigraph: each real row is an edge
 `current_state → next_state` (`edge a = (current, next)` for `a` ranging over a multiset `E` of row

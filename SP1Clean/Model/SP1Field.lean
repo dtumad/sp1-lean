@@ -12,7 +12,7 @@ higher layers must use `SP1Prime` directly rather than introduce local aliases.
 
 namespace SP1Clean
 
-/-- The characteristic of SP1 v6.4.0's KoalaBear field, `2^31 - 2^24 + 1`. -/
+/-- The characteristic of SP1's KoalaBear field, `2^31 - 2^24 + 1`. -/
 abbrev SP1Prime : ℕ := 2130706433
 
 /-- KoalaBear's characteristic is prime, proved without the test-only compiled decision procedure.

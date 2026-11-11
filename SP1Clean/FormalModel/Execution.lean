@@ -287,7 +287,7 @@ def sp1CoreShardBoundary {p : ℕ} {Digest : Type}
   finalPc := statement.publicValues.nextPcBits
   exit := statement.publicValues.exitCodeBits
 
-/-- Exact Core operational model.  The executable host handler supplies both evaluation and the
+/-- Executable-host operational model.  The executable host handler supplies both evaluation and the
 relational graph checked by the shared semantics. -/
 def sp1CoreShardModel {p : ℕ} {Digest : Type}
     (handler : Machine.ExecutableSyscallHandler)
@@ -297,7 +297,7 @@ def sp1CoreShardModel {p : ℕ} {Digest : Type}
   programBound := fun statement program => programBinding statement.verifyingKey program
   syscalls := handler
 
-/-- Exact-profile laws around the fixed shared execution semantics.  COMMIT behavior is stated once
+/-- Executable-host laws around the fixed shared execution semantics.  COMMIT behavior is stated once
 on the common syscall transcript and therefore applies uniformly to both shard branches. -/
 def sp1CoreShardContract {p : ℕ} {Digest : Type}
     (layout : SP1PublicValuesLayout) :
@@ -324,14 +324,14 @@ def sp1CoreShardContract {p : ℕ} {Digest : Type}
   -- constructor via `HaltsWith` and trace validity.
   haltValid := fun _ _ _ => True
 
-/-- Exact Core validity is a specialization of the one canonical shard validity record. -/
+/-- Executable-host validity is a specialization of the one canonical shard validity record. -/
 abbrev SP1CoreShardSemanticValid {p : ℕ} {Digest : Type}
     (layout : SP1PublicValuesLayout) (handler : Machine.ExecutableSyscallHandler)
     (programBinding : ProgramBinding p Digest) :=
   CoreShardExecutionValid (sp1CoreShardModel handler programBinding)
     (sp1CoreShardContract layout)
 
-/-- Exact Core semantic target used by the paired AIR refinement and ArkLib composition seam. -/
+/-- Executable-host semantic target consumed by the ArkLib boundary (`FormalModel/Verifier`). -/
 def SP1CoreShardSemanticRelation {p : ℕ} {Digest : Type}
     (layout : SP1PublicValuesLayout) (handler : Machine.ExecutableSyscallHandler)
     (programBinding : ProgramBinding p Digest) :

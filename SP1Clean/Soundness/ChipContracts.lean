@@ -33,9 +33,8 @@ time. Refresh lemmas combine local pushed-record bounds with explicit prior-reco
 assembly derives the latter from balance before eliminating refresh rows. Neither local witness
 generation nor a received Memory guarantee supplies this chronology.
 
-The legacy `sp1Ensemble` capstone still consumes witness-specialized contracts and ledger views.
-Those adapters can disappear when its consumers use the component-local interfaces shared by the
-native boot and local assemblies.
+Witness-specialized contracts and ledger views over `sp1Ensemble` remain for consumers that have
+not moved to the component-local interfaces shared by the native boot and local assemblies (#16).
 -/
 
 open LeanRV64D

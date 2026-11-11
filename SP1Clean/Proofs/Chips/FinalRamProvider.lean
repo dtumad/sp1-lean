@@ -1,7 +1,6 @@
 import ToClean.Circuit.Guarded
 import SP1Clean.FormalModel.Contracts.FinalRam
 import ToClean.Circuit.InteractionRecovery
-import ToClean.Circuit.EmittedInteraction
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Native.Operations.AddressOperation
 

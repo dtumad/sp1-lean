@@ -1,15 +1,17 @@
 import SP1Clean.FormalModel.Relations
 import SP1Clean.Model.Machine.Shard
 
-/-! # Shared legacy ordinary/exact-Core shard relation
+/-! # Shared event-trace shard relation
 
-This relation is shared by the retained ordinary compiler and exact-Core contracts. Its witness
+This relation is shared by the supported-core (`supportedCoreShardModel`) and executable-host
+(`sp1CoreShardModel`) specializations. Its witness
 has a Sail trace and a finite touched Memory boundary; it does not thread the complete evolving
 host state. `FormalModel/Shard` is the full-state native capstone contract, using the existing
 `Model/Core/ExecutionPath` and complete snapshots. An adapter between these surfaces must prove
-its scope explicitly; they are not interchangeable semantic models.
+its scope explicitly; they are not interchangeable semantic models. Temporary: the single
+execution trace replaces this relation (#16).
 
-The common legacy clauses here fix deterministic event evaluation, official Sail validity,
+The common clauses here fix deterministic event evaluation, official Sail validity,
 clock/PC endpoints, code loading, configuration, and a finite canonical Memory boundary.
 Specializations add their profile facts through `CoreShardContract` without replacing those
 common clauses. -/
@@ -100,7 +102,7 @@ structure CoreShardExecutionValid {Statement : Type} (model : CoreShardModel Sta
     (witness.evaluatedTrace model).finalState
   shardCase : CoreShardCase model contract statement witness
 
-/-- The shared semantic relation for the legacy ordinary and exact-Core specializations. -/
+/-- The shared semantic relation for the supported-core and executable-host specializations. -/
 def CoreShardExecutionRelation {Statement : Type} (model : CoreShardModel Statement)
     (contract : CoreShardContract Statement) :
     WitnessRelation.Relation Statement CoreShardSemanticWitness :=
