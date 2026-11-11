@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Model.BalanceBridge
-import SP1CleanTest.Alignment.Audit.JointNonVacuity
+import ToClean.Air.TableEvaluation
 import SP1CleanTest.TraceGenTests.Conformance
 
 /-! # Provider multiplicity witness-generation regressions
@@ -26,6 +26,24 @@ namespace SP1Clean.Audit.ProviderMultiplicity
 
 open Air.Flat Circuit
 open SP1Clean SP1Clean.TraceGenTests
+
+/-- A table whose circuit uses only `ch` has its whole ledger on `ch`. -/
+private theorem table_interactionsWith_eq_interactions {t : Table (ZMod SP1Prime)}
+    {ch : RawChannel (ZMod SP1Prime)}
+    (h : ∀ c ∈ t.component.circuit.channels, c = ch) :
+    t.interactionsWith ch = t.interactions := by
+  rw [Table.interactionsWith_eq_filter]
+  apply List.filter_eq_self.mpr
+  intro i hi
+  simp only [decide_eq_true_eq]
+  obtain ⟨row, -, hrow⟩ := List.mem_flatMap.mp hi
+  obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hrow
+  rw [AbstractInteraction.eval_channel]
+  apply h
+  apply t.component.circuit.channels_subset t.component.rowInputVar t.component.rowOffset
+  apply List.mem_map_of_mem
+  exact Component.interactions_eq (component := t.component) ▸ hi'
+
 
 /-- Initialize the tested provider's canonical input entry from its actual rows. -/
 def data (component : Component (ZMod SP1Prime)) (inputs : List (component.Input (ZMod SP1Prime))) :
@@ -141,7 +159,7 @@ theorem byteAggregateLedger_balancedInteractions :
     simp only [byteAggregateLedger, List.mem_append] at interactionMem
     rcases interactionMem with interactionMem | interactionMem
     · apply byteAggregateTable.channel_eq_of_mem_interactionsWith
-      rw [SP1Clean.Audit.JointNonVacuity.table_interactionsWith_eq_interactions
+      rw [table_interactionsWith_eq_interactions
         byteAggregateTable_channels]
       exact interactionMem
     · rw [List.eq_of_mem_replicate interactionMem]

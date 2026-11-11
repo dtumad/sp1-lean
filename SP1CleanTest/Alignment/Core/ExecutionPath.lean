@@ -4,7 +4,7 @@ import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.SailBookkeeping
 import SP1Clean.Model.Core.QueueReplay
 import SP1Clean.Model.SP1Field
-import SP1CleanTest.Alignment.Audit.ActiveNativeCompleteness
+import SP1CleanTest.Alignment.Support.AnchorShard
 
 /-! # Native local-path and terminal-boundary regressions
 
@@ -155,30 +155,30 @@ theorem rejectsForgedEvent :
 
 /-- The existing official-Sail/AIR self-jump anchor embeds as an ordinary local step. -/
 theorem ordinaryContinues (host : HostState) (running : host.exitCode = none) (clock : ℕ) :
-    ExecutionStep policy Audit.JointNonVacuity.anchorProgram
-      ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ .ordinary
-      ⟨Audit.ActiveNativeCompleteness.activeTarget, host, clock + 8⟩ :=
-  .ordinary running Audit.ActiveNativeCompleteness.anchor_notAboutToExecuteEcall
-    Audit.ActiveNativeCompleteness.activeTarget_effect.normal
+    ExecutionStep policy Audit.AnchorShard.anchorProgram
+      ⟨Audit.AnchorShard.anchorState, host, clock⟩ .ordinary
+      ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ :=
+  .ordinary running Audit.AnchorShard.anchor_notAboutToExecuteEcall
+    Audit.AnchorShard.activeTarget_effect.normal
 
 /-- A genuinely retiring JAL remains admitted by the write policy, even if every byte is read-only. -/
 theorem ordinaryWritePermission (host : HostState) (running : host.exitCode = none) (clock : ℕ) :
-    ExecutionPath { policy with memory.readOnly := fun _ => true } Audit.JointNonVacuity.anchorProgram
-      ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary]
-      ⟨Audit.ActiveNativeCompleteness.activeTarget, host, clock + 8⟩ ∧
+    ExecutionPath { policy with memory.readOnly := fun _ => true } Audit.AnchorShard.anchorProgram
+      ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary]
+      ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ ∧
     ExecutionPath.WritesPermitted { policy with memory.readOnly := fun _ => true }
-      Audit.JointNonVacuity.anchorProgram ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary] := by
-  refine ⟨.cons (.ordinary running Audit.ActiveNativeCompleteness.anchor_notAboutToExecuteEcall
-    Audit.ActiveNativeCompleteness.activeTarget_effect.normal) (.nil _), ?_⟩
+      Audit.AnchorShard.anchorProgram ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary] := by
+  refine ⟨.cons (.ordinary running Audit.AnchorShard.anchor_notAboutToExecuteEcall
+    Audit.AnchorShard.activeTarget_effect.normal) (.nil _), ?_⟩
   intro n current atEvent replay
   have zero : n = 0 := by
     obtain ⟨bound, _⟩ := List.getElem?_eq_some_iff.mp atEvent
     simpa using bound
   subst n
   obtain rfl := Option.some.inj replay
-  refine ⟨65536, 0x6f, .JAL (0, .Regidx 0), Audit.JointNonVacuity.anchorState_pc,
-    Audit.ActiveNativeCompleteness.anchorProgram_fetchWord_selfJump,
-    Audit.ActiveNativeCompleteness.activeExecution_configuredDecode, ?_⟩
+  refine ⟨65536, 0x6f, .JAL (0, .Regidx 0), Audit.AnchorShard.anchorState_pc,
+    Audit.AnchorShard.anchorProgram_fetchWord_selfJump,
+    Audit.AnchorShard.activeExecution_configuredDecode, ?_⟩
   rfl
 
 /-- Host-only composition needs no artificial ordinary-write obligation. -/
@@ -190,11 +190,11 @@ theorem hostWritePermission : ExecutionPath.WritesPermitted policy program sourc
 
 /-- A real normally-retiring Sail instruction is still forbidden after the host has halted. -/
 theorem rejectsRunnableAfterHalt :
-    SailRetiresNormally Audit.JointNonVacuity.anchorState Audit.ActiveNativeCompleteness.activeTarget ∧
-      ¬ ExecutionStep policy Audit.JointNonVacuity.anchorProgram
-        ⟨Audit.JointNonVacuity.anchorState, { exitCode := some 0 }, 17⟩ .ordinary
-        ⟨Audit.ActiveNativeCompleteness.activeTarget, { exitCode := some 0 }, 25⟩ :=
-  ⟨Audit.ActiveNativeCompleteness.activeTarget_effect.normal,
+    SailRetiresNormally Audit.AnchorShard.anchorState Audit.AnchorShard.activeTarget ∧
+      ¬ ExecutionStep policy Audit.AnchorShard.anchorProgram
+        ⟨Audit.AnchorShard.anchorState, { exitCode := some 0 }, 17⟩ .ordinary
+        ⟨Audit.AnchorShard.activeTarget, { exitCode := some 0 }, 25⟩ :=
+  ⟨Audit.AnchorShard.activeTarget_effect.normal,
     ExecutionStep.not_of_halted (by decide)⟩
 
 /-- Prefix replay observes the complete intermediate host/Sail state and holds the exact endpoint
@@ -217,24 +217,24 @@ theorem replayStopsAfterHalt :
 
 /-- Official ordinary replay threads any running host unchanged, with its full state and clock. -/
 theorem replayOrdinaryPreservesHost (host : HostState) (running : host.exitCode = none) (clock : ℕ) :
-    executionTrajectory policy Audit.JointNonVacuity.anchorProgram
-      ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary] 1 =
-        some ⟨Audit.ActiveNativeCompleteness.activeTarget, host, clock + 8⟩ :=
+    executionTrajectory policy Audit.AnchorShard.anchorProgram
+      ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary] 1 =
+        some ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ :=
   (ExecutionPath.cons (ordinaryContinues host running clock) (.nil _)).replay
 
 private noncomputable def bookkeepingSource (inhibit : Bool) : SailState :=
-  { Audit.JointNonVacuity.anchorState with
-    regs := (((((Audit.JointNonVacuity.anchorState.regs.insert .mcountinhibit
+  { Audit.AnchorShard.anchorState with
+    regs := (((((Audit.AnchorShard.anchorState.regs.insert .mcountinhibit
       (if inhibit then 4 else 0)).insert .minstretcfg 0).insert .minstret (BitVec.allOnes 64)).insert
       .nextPC 80000).insert .mcycle 73)
     cycleCount := 29
     sailOutput := #["earlier Sail output"] }
 
 private theorem bookkeepingConfigured (inhibit : Bool) : SailConfigured (bookkeepingSource inhibit) := by
-  apply Advance.SailConfigured.congr Audit.JointNonVacuity.anchorState_configured
+  apply Advance.SailConfigured.congr Audit.AnchorShard.anchorState_configured
   · exact SailState.isInitialized_insert _ (SailState.isInitialized_insert _
       (SailState.isInitialized_insert _ (SailState.isInitialized_insert _
-        (SailState.isInitialized_insert _ Audit.JointNonVacuity.anchorState_configured.init _ _) _ _) _ _) _ _) _ _
+        (SailState.isInitialized_insert _ Audit.AnchorShard.anchorState_configured.init _ _) _ _) _ _) _ _) _ _
   · intro R member
     rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert] <;> rfl
@@ -251,20 +251,20 @@ theorem ordinaryBookkeeping (inhibit : Bool) :
   have configured := bookkeepingConfigured inhibit
   have pc : (bookkeepingSource inhibit).regs.get? Register.PC = some 65536#64 := by
     simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert]
-    exact Audit.JointNonVacuity.anchorState_pc
-  have rom : RomLoaded Audit.JointNonVacuity.anchorProgram (bookkeepingSource inhibit) :=
-    Audit.JointNonVacuity.anchorState_romLoaded
+    exact Audit.AnchorShard.anchorState_pc
+  have rom : RomLoaded Audit.AnchorShard.anchorProgram (bookkeepingSource inhibit) :=
+    Audit.AnchorShard.anchorState_romLoaded
   obtain ⟨next, _, effect⟩ := Advance.advance_of_jal_x0 (p := SP1Prime)
-    (prog := Audit.JointNonVacuity.anchorProgram) (r := Audit.JointNonVacuity.jalView)
-    configured rom (by rw [Audit.JointNonVacuity.jalView_rcvPc]; exact pc)
-    Audit.JointNonVacuity.jalView_decodedInROM rfl rfl rfl
-    (by rw [Audit.JointNonVacuity.jalView_sndPc]; decide)
+    (prog := Audit.AnchorShard.anchorProgram) (r := Audit.AnchorShard.jalView)
+    configured rom (by rw [Audit.AnchorShard.jalView_rcvPc]; exact pc)
+    Audit.AnchorShard.jalView_decodedInROM rfl rfl rfl
+    (by rw [Audit.AnchorShard.jalView_sndPc]; decide)
     (fun imm bound => by
       have bytes : bitVecToWord (p := SP1Prime) ((0#21 : BitVec 21).signExtend 64) =
           bitVecToWord (imm.signExtend 64) := bound
       have value := congrArg Word.toBitVec64 bytes
       rw [toBitVec64_bitVecToWord, toBitVec64_bitVecToWord] at value
-      rw [Audit.JointNonVacuity.jalView_rcvPc, Audit.JointNonVacuity.jalView_sndPc,
+      rw [Audit.AnchorShard.jalView_rcvPc, Audit.AnchorShard.jalView_sndPc,
         show LeanRV64D.Functions.sign_extend (m := 64) imm = imm.signExtend 64 from rfl, ← value]
       decide)
   obtain ⟨increment, enabled, flag, retired⟩ := effect.retirement
@@ -281,7 +281,7 @@ theorem ordinaryBookkeeping (inhibit : Bool) :
     rfl
   rw [incrementEq] at flag retired
   refine ⟨next, effect.normal, ?_, flag, ?_, ?_, effect.runtime⟩
-  · rw [effect.nextPC, effect.pc, Audit.JointNonVacuity.jalView_sndPc]
+  · rw [effect.nextPC, effect.pc, Audit.AnchorShard.jalView_sndPc]
     decide
   · rw [retired]
     simp only [bookkeepingSource, Std.ExtDHashMap.get?_insert]
@@ -415,10 +415,10 @@ theorem legacyHaltEndpoint (handler : ExecutableSyscallHandler) :
 /-- The legacy ordinary trajectory and complete replay agree throughout a genuine Sail step. -/
 theorem legacyOrdinaryTrajectory (host : HostState) (running : host.exitCode = none)
     (clock position : ℕ) (covered : position ≤ 1) (handler : ExecutableSyscallHandler) :
-    Semantics.eventTrajectory handler.withHalt Audit.JointNonVacuity.anchorProgram
-      [.ordinary] Audit.JointNonVacuity.anchorState position =
-      (executionTrajectory policy Audit.JointNonVacuity.anchorProgram
-        ⟨Audit.JointNonVacuity.anchorState, host, clock⟩ [.ordinary] position).map ExecutionState.sail :=
+    Semantics.eventTrajectory handler.withHalt Audit.AnchorShard.anchorProgram
+      [.ordinary] Audit.AnchorShard.anchorState position =
+      (executionTrajectory policy Audit.AnchorShard.anchorProgram
+        ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary] position).map ExecutionState.sail :=
   (SP1Clean.Model.Core.ExecutionPath.cons (ordinaryContinues host running clock) (.nil _)).ordinaryHalt_trajectory
     (by simp [OrdinaryOrHalt]) handler position covered
 

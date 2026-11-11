@@ -158,8 +158,7 @@ def supportedCoreShardContract {p : ℕ} [Fact p.Prime] :
     CoreShardContract (SupportedCoreStatement p) where
   statementValid := fun statement => statement.publicValues.LimbBounds
   programValid := fun _ program => Commit.Encodable program
-  -- Deliberately trivial: the native provider binding travels in
-  -- `SupportedCoreNativeRelation`'s boundary conjunct, not in the shard contract.
+  -- Deliberately trivial: native provider binding is not part of the shard contract.
   witnessValid := fun _ _ => True
   haltValid := fun _ witness execution => SupportedHaltingTrace witness.program execution
   -- `HaltFree`, not `AllOrdinary`: the execution branch's real content is that this shard does not
@@ -212,9 +211,8 @@ theorem programEncodable {p : ℕ} [Fact p.Prime]
   valid.programValid
 
 /-- The deterministic trace selected by a valid common witness, together with every native profile
-fact.  This is the sole trace-elimination rule used by the compiler; its `ordinary` premise is
-the compiler's syscall-free domain restriction (`NativeTraceReady.syscallFree`), which also
-refutes the `.halted` branch of the shared case. -/
+fact.  Its `ordinary` premise restricts the trace to ordinary transitions, which also refutes the
+`.halted` branch of the shared case. -/
 theorem evaluatedTrace_facts {p : ℕ} [Fact p.Prime]
     {statement : SupportedCoreStatement p} {witness : Machine.CoreShardSemanticWitness}
     (valid : SupportedCoreShardExecutionValid statement witness)

@@ -32,9 +32,9 @@ soundness facts are proven separately (byte/program grounding via the finished-c
 State via the trail; memory `isU64` via the boundary balance). The SP1 argument needs an explicitly
 ordered execution and per-location memory history in addition to Clean's channel-level results.
 
-`SupportedCoreNativeRelation` supplies the semantic program/provider binding and restricts the
-syscall table to inactive rows. These are separate from `Ensemble.Statement`; neither follows
-from constraints and balance alone. Memory timestamp bounds are derived by the grounding proof. -/
+Semantic program/provider binding and syscall-row semantics do not follow from
+`Ensemble.Statement` alone; the installed assemblies establish them separately. Memory timestamp
+bounds are derived by the grounding proof. -/
 
 namespace SP1Clean.Soundness
 

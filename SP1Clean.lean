@@ -60,11 +60,6 @@ import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
 import SP1Clean.Proofs.Completeness.NativeBaseTrace
 import SP1Clean.Proofs.Completeness.NativeClosureCapacity
-import SP1Clean.Proofs.Completeness.NativeBoundaryAgreement
-import SP1Clean.Proofs.Completeness.NativeMemoryAgreement
-import SP1Clean.Proofs.Completeness.NativeProgramAgreement
-import SP1Clean.Proofs.Completeness.NativeStateAgreement
-import SP1Clean.Proofs.Completeness.NativeTraceCompiler
 import SP1Clean.Proofs.Completeness.ProviderInteractions
 import SP1Clean.Proofs.Completeness.ProviderTables
 import SP1Clean.Proofs.Completeness.Providers
@@ -75,10 +70,7 @@ import SP1Clean.Proofs.Sail.InstructionDecode
 import SP1Clean.Proofs.Sail.InstructionDecode.Families
 import SP1Clean.Proofs.Sail.InstructionDecode.Tactic
 import SP1Clean.Proofs.Sail.RV64Bridge
-import SP1Clean.Soundness.AIR
-import SP1Clean.Soundness.AIRCompleteness
 import SP1Clean.Soundness.AlignedCarrier
-import SP1Clean.Soundness.BootHalt
 import SP1Clean.Soundness.BumpDecode
 import SP1Clean.Soundness.ChipContracts
 import SP1Clean.Soundness.ChipRegistry
@@ -138,8 +130,6 @@ import SP1Clean.Soundness.Grounding.MemoryCell
 import SP1Clean.Soundness.Grounding.MemoryChips
 import SP1Clean.Soundness.Grounding.RTypeChips
 import SP1Clean.Soundness.GroundingAdapter
-import SP1Clean.Soundness.GroundingInternal
-import SP1Clean.Soundness.HaltExecution
 import SP1Clean.Soundness.HaltGrounding
 import SP1Clean.Soundness.HaltPadding
 import SP1Clean.Soundness.HintQueueHistory
@@ -235,10 +225,8 @@ import SP1Clean.Soundness.LocalCoreTouches
 import SP1Clean.Soundness.LocalCoreTrajectory
 import SP1Clean.Soundness.LocalCoreTransport
 import SP1Clean.Soundness.LocalExecution
-import SP1Clean.Soundness.MemoryBoundaryTruth
 import SP1Clean.Soundness.MemoryFrontier
 import SP1Clean.Soundness.MixedRowTransport
-import SP1Clean.Soundness.NativeCompleteness
 import SP1Clean.Soundness.NativeCoreBoundaries
 import SP1Clean.Soundness.NativeCoreEnsemble
 import SP1Clean.Soundness.NativeCoreFinalBoundary

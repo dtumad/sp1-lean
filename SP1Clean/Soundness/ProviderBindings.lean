@@ -256,24 +256,8 @@ theorem MemoryInitProviderBound.localMemTruth_of_mem_produced
   rw [reboundEq, messageEq] at semantic
   exact Semantics.localMemTruth_of_initial isU64 clkBound semantic.1 semantic.2
 
-/-- The genuinely-external application contracts of the semantic boundary: the provider-table
-semantics and per-location uniqueness facts that no native constraint proves (upstream discharges
-them through the verifying key's preprocessed commitment and its boundary mechanisms).  Everything
-else in the boundary premise is a commitment or start-state fact derivable from a configured,
-committed state; the audit rule (F2) is that these four fields stay visible in the final theorem
-type rather than being folded into derived structure. -/
-structure ProviderBindingContracts (program : GuestProgram)
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (initial : SailState) (initialClock : ℕ) : Prop where
-  programProvider : ProgramProviderBound program witness
-  memoryProvider : MemoryInitProviderBound witness initial initialClock
-  memoryInitUnique : MemoryInitProviderUnique witness
-  memoryFinalizeUnique : MemoryFinalizeProviderUnique witness
-
 /-- Proof-only facts tying one selected initial Sail state to the public and provider boundary.
-This flat record is the proof-layer carrier consumed by the timed-grounding engine; the public
-premise is the regrouped `SemanticBoundaryBinding` below, and `semanticBoundaryBinding_iff`
-records their equivalence. -/
+This flat record is the proof-layer carrier consumed by the timed-grounding engine. -/
 structure InitialBoundaryFacts
     (statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p)))
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (initial : SailState) : Prop where
@@ -307,59 +291,6 @@ theorem InitialBoundaryFacts.localStateTruth
       Semantics.pcBits, supportedPcBits] using boundary.initialPc
   · exact boundary.romLoaded
   · exact boundary.configured
-
-/-- The non-execution companion relation required by supported-core AIR soundness: a well-formed,
-representable program, a shard start state, code/data compatibility, and the four external provider
-contracts. The statement supplies the program and initial clock; raw ensemble validity separately
-binds the witness's public input to this statement. -/
-def SemanticBoundaryBinding
-    (statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p)))
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) : Prop :=
-  ∃ initial,
-    statement.program.WellFormed ∧
-    Commit.Encodable statement.program ∧
-    ShardStartState statement initial ∧
-    SailCodeMemoryCompatible statement.program initial ∧
-    ProviderBindingContracts statement.program witness initial statement.initClkNat
-
-/-- Repackage the flat proof-layer record as the regrouped public binding. -/
-theorem InitialBoundaryFacts.binding
-    {statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p))}
-    {witness : EnsembleWitness (sp1Ensemble (p := p))} {initial : SailState}
-    (boundary : InitialBoundaryFacts statement witness initial) :
-    SemanticBoundaryBinding statement witness :=
-  ⟨initial, boundary.programWellFormed, boundary.programEncodable,
-    ⟨boundary.initialPc, boundary.romLoaded, boundary.configured⟩,
-    boundary.codeMemoryCompatible,
-    ⟨boundary.programProvider, boundary.memoryProvider, boundary.memoryProviderUnique,
-      boundary.memoryFinalizeProviderUnique⟩⟩
-
-/-- Recover the flat proof-layer record from the regrouped public binding. -/
-theorem SemanticBoundaryBinding.boundaryFacts
-    {statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p))}
-    {witness : EnsembleWitness (sp1Ensemble (p := p))}
-    (binding : SemanticBoundaryBinding statement witness) :
-    ∃ initial, InitialBoundaryFacts statement witness initial := by
-  obtain ⟨initial, wellFormed, encodable, start, codeMem, contracts⟩ := binding
-  exact ⟨initial,
-    { programWellFormed := wellFormed
-      programEncodable := encodable
-      initialPc := start.pc
-      romLoaded := start.romLoaded
-      configured := start.configured
-      codeMemoryCompatible := codeMem
-      programProvider := contracts.programProvider
-      memoryProvider := contracts.memoryProvider
-      memoryProviderUnique := contracts.memoryInitUnique
-      memoryFinalizeProviderUnique := contracts.memoryFinalizeUnique }⟩
-
-/-- The public binding and the flat proof-layer record carry exactly the same facts. -/
-theorem semanticBoundaryBinding_iff
-    (statement : ProgramStatement (SupportedCorePrefixPublicValues (ZMod p)))
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    SemanticBoundaryBinding statement witness ↔
-      ∃ initial, InitialBoundaryFacts statement witness initial :=
-  ⟨SemanticBoundaryBinding.boundaryFacts, fun ⟨_, boundary⟩ => boundary.binding⟩
 
 /-! ## The boot boundary -/
 

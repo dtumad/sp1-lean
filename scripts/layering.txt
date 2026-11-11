@@ -54,7 +54,3 @@
 
 # 9 — assembly: a trace record becomes built tables and an EnsembleWitness.
 9   Soundness     SP1Clean/Proofs/Completeness/
-
-# 10 — the converse capstone.
-10  Soundness     SP1Clean/Soundness/AIRCompleteness.lean
-10  Soundness     SP1Clean/Soundness/NativeCompleteness.lean
