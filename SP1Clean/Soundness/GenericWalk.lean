@@ -684,46 +684,6 @@ theorem walkT_of_walkG (program : GuestProgram) (initial : SailState) (tl : Time
   obtain ⟨hkey, htruth, hval, htime⟩ := hfinM loc m hm
   exact ⟨hkey, localMemTruthG_sail.mp htruth, localValueAtG_sail.mp hval, htime⟩
 
-omit [Fact (2 ^ 17 < p)] in
-/-- **The event instantiation.** A step may be an ordinary Sail step or a handled syscall, and the
-timeline is the transcript's own prefix-summed durations — so a 264-tick row occupies exactly one
-timeline step, by construction rather than by hypothesis. -/
-theorem walkE (handler : Machine.ExecutableSyscallHandler) (program : GuestProgram)
-    (events : List Machine.ExecutionEvent) (initial : SailState) (initialClock : ℕ)
-    (fin : StateMsg (ZMod p)) (finM : MemLoc → Option (MemoryMsg (ZMod p))) :
-    ∀ (N : ℕ) (rows : List (RowFacts p)) (head : StateMsg (ZMod p))
-      (live : MemLoc → Option (MemoryMsg (ZMod p))),
-      rows.length = N →
-      (∀ r ∈ rows, LocalStepFactG program (eventTrajectory handler program events initial) initial
-        (eventTimeline events initialClock) r) →
-      (∀ r ∈ rows, FrameFactG program (eventTrajectory handler program events initial) initial
-        (eventTimeline events initialClock) r) →
-      (∀ r ∈ rows, RowOKCore initialClock r) →
-      (∀ r ∈ rows, ∀ n : ℕ,
-        StateMsg.timeNat r.statePull = (eventTimeline events initialClock).start n →
-        StateMsg.timeNat r.statePush = (eventTimeline events initialClock).start (n + 1)) →
-      LocalStateTruthG program (eventTrajectory handler program events initial)
-        (eventTimeline events initialClock) head →
-      LiveOKG (eventTrajectory handler program events initial) initial
-        (eventTimeline events initialClock) (StateMsg.timeNat head) live →
-      (head ::ₘ (↑(rows.map (·.statePush)) : Multiset (StateMsg (ZMod p)))
-        = fin ::ₘ ↑(rows.map (·.statePull))) →
-      (∀ loc : MemLoc, optMS (live loc) + pushesAt rows loc
-        = optMS (finM loc) + pullsAt rows loc) →
-      (∀ r ∈ rows, GroundedG program (eventTrajectory handler program events initial) initial
-          (eventTimeline events initialClock) r) ∧
-        LocalStateTruthG program (eventTrajectory handler program events initial)
-          (eventTimeline events initialClock) fin ∧
-        ∀ (loc : MemLoc) (m : MemoryMsg (ZMod p)), finM loc = some m →
-          MemoryMsg.locOf m = loc ∧
-          LocalMemTruthG (eventTrajectory handler program events initial) initial
-            (eventTimeline events initialClock) m ∧
-          LocalValueAtG (eventTrajectory handler program events initial) initial
-            (eventTimeline events initialClock) loc (StateMsg.timeNat fin) m.value ∧
-          MemoryMsg.timeNat m ≤ StateMsg.timeNat fin :=
-  walkG program (eventTrajectory handler program events initial) initial
-    (eventTimeline events initialClock) initialClock fin finM
-
 end SP1Clean.Soundness.TimedGrounding
 
 namespace SP1Clean.Soundness

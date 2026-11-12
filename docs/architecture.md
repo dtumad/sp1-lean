@@ -118,11 +118,9 @@ decision's binary and semantic properties. All 25 instruction chips now use empt
 Providers may still require external witness data under their own contracts.
 
 The instruction-event registry lives with semantic trace contracts, below physical assembly.
-Chronological inventories derive refresh and Memory boundary records before `NativeBaseTrace`
-assembles tables through registry-indexed input builders. The checked compiler supplies physical
-capacity from the existing semantic shard limit. `NativeClosureCapacity` also bounds recounted
-provider lists from the actual consumer circuits; its internal estimates add no caller premise.
-Exact channel accounting and fixed-table padding remain separate obligations.
+Chronological State/Memory inventories and the provider-closure builders in `Proofs/Completeness`
+are starting material for the mixed compiler; capacity, exact channel accounting and fixed-table
+padding remain its obligations (#12 C9/C10).
 
 Complete API migrations replace old objects and all in-repository consumers. There is no external
 compatibility requirement. Prefer one transition/trace, one interpretation/Realizes boundary,
@@ -199,8 +197,8 @@ the abstraction.
 
 Native readers and operations own their shared column types under `Circuits/Types`. These modules
 and the word foundation use Lean module mode. The import gate keeps pure contracts and native columns below circuit implementations.
-Commit-event contracts live in `FormalModel/Contracts/Commit`. The retired exact-AIR layer has
-no maintained consumer; SP1 agreement is checked independently in Rust.
+Commitment semantics live in `Model/Core/CommitmentStatement`. SP1 agreement is checked
+independently in Rust.
 
 ## Upstream and generated boundaries
 

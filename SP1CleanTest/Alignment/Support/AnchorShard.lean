@@ -1,8 +1,13 @@
-import SP1Clean.FormalModel.Execution
-import SP1Clean.FormalModel.SupportedShard
 import SP1Clean.FormalModel.TraceGen.Events
 import SP1Clean.Model.Semantics.ProgramCommitment
-import SP1Clean.Soundness.ProviderBindings
+import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Machine.ConfiguredState
+import SP1Clean.Model.Semantics.GuestProgram
+import SP1Clean.Model.Semantics.Decode
+import SP1Clean.Model.Opcode
+import SP1Clean.Soundness.RowView
+import SP1Clean.Soundness.RowEffectDefs
+import SP1Clean.Soundness.TypedState
 import SP1Clean.FormalModel.Trace.Witness
 import SP1Clean.Model.Machine.EventExecution
 import SP1Clean.Model.Semantics.TransitionView
@@ -27,7 +32,7 @@ namespace SP1Clean.Audit.AnchorShard
 
 open Air.Flat Circuit
 open SP1Clean SP1Clean.TraceGenTests
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Execution SP1Clean.TraceGen
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.TraceGen
 open SP1Clean.Channels (stateChannel byteChannel programChannel memoryChannel exitChannel)
 open Sail LeanRV64D LeanRV64D.Functions
 
@@ -242,17 +247,7 @@ theorem anchorState_romLoaded : RomLoaded anchorProgram anchorState := by
   · exact anchorMem_65538
   · exact anchorMem_65539
 
-/-! ## Conjunct 2: the semantic boundary binding -/
-
-theorem supportedPcBits_anchor :
-    supportedPcBits (0 : ZMod SP1Prime) 1 0 = 65536#64 := by native_decide
-
-/-! ### Closing `SailCodeMemoryCompatible`: the self-jump step invariant
-
-`JAL x0, 0` jumps to its own address and commits no register write and no memory write, so every
-reachable Sail state keeps pc `0x10000`, the ROM bytes, and the platform configuration.  One
-application of the proved `advance_of_jal_x0` per step, plus determinism of the `EStateM`
-interpreter run, closes the boundary contract outright — no preservation assumption remains. -/
+/-! ## The JAL row view -/
 
 /-- A zeroed register-access block (gated off on the J-type row; never read by `advance`). -/
 def zeroAccess : Circuits.Types.RegisterAccessCols (ZMod SP1Prime) := ⟨#v[0, 0, 0, 0], ⟨0, 0⟩⟩
@@ -420,12 +415,6 @@ theorem anchor_notAboutToExecuteEcall :
   exact (by native_decide : (0x0000006F#32 : BitVec 32) ≠ ECALL_ENC)
     (Option.some.inj fetch)
 
-/-- The proof-free transition list is authenticated by the official Sail step. -/
-theorem activeExecution_valid :
-    activeExecution.Valid Machine.ExecutableSyscallHandler.haltOnly.relation anchorProgram := by
-  exact .cons ⟨.ordinary, activeTarget⟩
-    (.ordinary anchor_notAboutToExecuteEcall activeTarget_step) (.nil activeTarget)
-
 theorem activeExecution_allOrdinary : activeExecution.AllOrdinary := by
   intro transition member
   simp only [activeExecution, List.mem_singleton] at member
@@ -456,15 +445,6 @@ theorem activeExecution_configuredDecode :
     ConfiguredDecode activeView.word activeView.decoded := by
   intro state configured
   exact decode_jal_x0 state configured.init configured.priv configured.mseccfg_disabled
-
-/-- The active transition belongs to the exact supported 25-chip profile. -/
-theorem activeExecution_supported :
-    AllTransitionsSupported anchorProgram activeExecution := by
-  intro located member _
-  rw [activeExecution_locatedTransitions, List.mem_singleton] at member
-  subst located
-  exact ⟨rfl, activeTarget_effect.normal, anchorState_configured, activeView,
-    activeExecution_projected, activeExecution_configuredDecode⟩
 
 
 end SP1Clean.Audit.AnchorShard

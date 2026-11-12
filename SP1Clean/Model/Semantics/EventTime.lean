@@ -1,30 +1,13 @@
-import SP1Clean.Model.Machine.Shard
+import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Semantics.MicroTime
 
-/-! # The event-indexed trajectory and its timeline
+/-! # The transcript timeline
 
 The timed grounding engine reads a shard through two functions of a step index `n`: the machine
-state after `n` steps (`Semantics.chainState`, via `microValue`) and the bus clock at which step `n`
-begins (`Semantics.Timeline.start`). Both are currently **Sail-indexed**: `chainState` is
-`Machine.trajectory`, which iterates `try_step`, and the only timeline in use is
-`Timeline.ordinary`, which spaces every step eight ticks apart.
-
-That pairing is exactly right for a shard of ordinary instructions and cannot describe a syscall
-row. SP1's ECALL is never executed by Sail — `Machine.EventStep.syscall` deliberately does not claim
-a `SailStep`, because unmodified Sail would trap to an M-mode handler — so a syscall step is not an
-iteration of `try_step`; and its clock window is `CLK_INC + 256 = 264` ticks rather than eight.
-
-This file supplies the two generalizations, as **additions**: nothing here changes a definition the
-engine already uses.
-
-* `eventTrajectory` indexes the machine state by a transcript of `ExecutionEvent`s, executing each
-  through `Machine.executeEvent?` — `try_step` for an ordinary event, the model's handler for a
-  syscall. `eventTrajectory_allOrdinary` recovers `Machine.trajectory` exactly.
-* `eventTimeline` derives the clock from the transcript's own durations by prefix sum.
-  `eventTimeline_allOrdinary` recovers `Timeline.ordinary` exactly.
-
-Both bridges are the shape the existing `microValueT_ordinary` / `localStepFactT_ordinary` family
-already uses to keep a generalization free for its old consumers: the general definition is the one
-that is true, and the uniform case is a lemma rather than a separate development.
+state after `n` steps and the bus clock at which step `n` begins (`Semantics.Timeline.start`). The
+state comes from the carrier's replay of `ExecutionStep`. `eventTimeline` derives the clock from the
+transcript's own event durations by prefix sum: eight ticks for an ordinary instruction and
+`CLK_INC + 256 = 264` for a syscall. `eventTimeline_allOrdinary` recovers `Timeline.ordinary`.
 
 Past the end of a transcript the timeline keeps advancing at eight ticks per step. That is not a
 claim about what the machine does there — nothing does — but it is what makes `Timeline`'s `gap`
@@ -34,59 +17,6 @@ namespace SP1Clean.Semantics
 
 open SP1Clean.Machine
 open SP1Clean.Soundness.Target (GuestProgram)
-
-/-! ## The event-indexed trajectory -/
-
-/-- The machine state after `n` events of `events`, executed by `handler`. Past the end of the
-transcript there is no state: unlike `Machine.trajectory`, which is total because `try_step` is
-always defined, an event trajectory can only step where the transcript says what to do. -/
-noncomputable def eventTrajectory (handler : ExecutableSyscallHandler) (program : GuestProgram)
-    (events : List ExecutionEvent) (initial : SailState) : ℕ → Option SailState
-  | 0 => some initial
-  | n + 1 =>
-      match events[n]? with
-      | none => none
-      | some event =>
-          (eventTrajectory handler program events initial n).bind fun source =>
-            Machine.executeEvent? handler program source event
-
-@[simp] theorem eventTrajectory_zero (handler : ExecutableSyscallHandler) (program : GuestProgram)
-    (events : List ExecutionEvent) (initial : SailState) :
-    eventTrajectory handler program events initial 0 = some initial := rfl
-
-theorem eventTrajectory_succ (handler : ExecutableSyscallHandler) (program : GuestProgram)
-    (events : List ExecutionEvent) (initial : SailState) (n : ℕ) :
-    eventTrajectory handler program events initial (n + 1) =
-      match events[n]? with
-      | none => none
-      | some event =>
-          (eventTrajectory handler program events initial n).bind fun source =>
-            Machine.executeEvent? handler program source event := rfl
-
-/-- An ordinary event steps exactly as the official Sail entry point does. -/
-theorem executeEvent?_ordinary (handler : ExecutableSyscallHandler) (program : GuestProgram)
-    (source : SailState) :
-    Machine.executeEvent? handler program source .ordinary = Machine.stepOnce source := rfl
-
-/-- **The bridge.** On an all-ordinary transcript the event trajectory *is* the Sail trajectory, for
-every step the transcript covers. This is what keeps the generalization free: every existing
-consumer of `Machine.trajectory` continues to describe the same states. -/
-theorem eventTrajectory_allOrdinary (handler : ExecutableSyscallHandler) (program : GuestProgram)
-    (events : List ExecutionEvent) (initial : SailState)
-    (ordinary : ∀ event ∈ events, event = ExecutionEvent.ordinary) :
-    ∀ n, n ≤ events.length →
-      eventTrajectory handler program events initial n = Machine.trajectory initial n := by
-  intro n
-  induction n with
-  | zero => intro _; rfl
-  | succ n ih =>
-      intro hle
-      have hn : n < events.length := by omega
-      have hget : events[n]? = some ExecutionEvent.ordinary := by
-        rw [List.getElem?_eq_getElem hn]
-        exact congrArg some (ordinary _ (List.getElem_mem hn))
-      rw [eventTrajectory_succ, hget, ih (by omega)]
-      simp only [Machine.trajectory, executeEvent?_ordinary]
 
 /-! ## The transcript's own timeline -/
 

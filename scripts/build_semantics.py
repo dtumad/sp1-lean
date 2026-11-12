@@ -63,11 +63,6 @@ LAYERS = [
     ("SP1Clean/Proofs/Completeness/", "L3"),
     ("SP1Clean/Alignment/", "L3"),
     ("SP1Clean/FormalModel/Shard", "L3"),
-    ("SP1Clean/FormalModel/Execution.lean", "L3"),
-    ("SP1Clean/FormalModel/SupportedShard.lean", "L3"),
-    ("SP1Clean/FormalModel/CoreShard.lean", "L3"),
-    ("SP1Clean/FormalModel/Relations.lean", "L3"),
-    ("SP1Clean/FormalModel/Verifier.lean", "L3"),
     ("SP1Clean/FormalModel/Trace", "L3"),
     # L5 tests.
     ("SP1CleanTest/", "L5"),

@@ -50,16 +50,12 @@ import SP1Clean.Proofs.Completeness.Closure
 import SP1Clean.Proofs.Completeness.ClosureRealization
 import SP1Clean.Proofs.Completeness.ConsumerClosure
 import SP1Clean.Proofs.Completeness.EventBuckets
-import SP1Clean.Proofs.Completeness.ExecutionCompiler
-import SP1Clean.Proofs.Completeness.ExecutionInventory
 import SP1Clean.Proofs.Completeness.FieldClosure
 import SP1Clean.Proofs.Completeness.InstructionEvent
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
 import SP1Clean.Proofs.Completeness.MemoryHistory
-import SP1Clean.Proofs.Completeness.NativeBaseTrace
-import SP1Clean.Proofs.Completeness.NativeClosureCapacity
 import SP1Clean.Proofs.Completeness.ProviderInteractions
 import SP1Clean.Proofs.Completeness.ProviderTables
 import SP1Clean.Proofs.Completeness.Providers
@@ -224,7 +220,6 @@ import SP1Clean.Soundness.LocalCoreState
 import SP1Clean.Soundness.LocalCoreTouches
 import SP1Clean.Soundness.LocalCoreTrajectory
 import SP1Clean.Soundness.LocalCoreTransport
-import SP1Clean.Soundness.LocalExecution
 import SP1Clean.Soundness.MemoryFrontier
 import SP1Clean.Soundness.MixedRowTransport
 import SP1Clean.Soundness.NativeCoreBoundaries
@@ -238,7 +233,6 @@ import SP1Clean.Soundness.ProtectedLocalCoreProjection
 import SP1Clean.Soundness.ProtectedLocalCoreRom
 import SP1Clean.Soundness.ProtectedStoreFootprints
 import SP1Clean.Soundness.ProtectedStorePermissions
-import SP1Clean.Soundness.ProviderBindings
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.RefreshElimination
 import SP1Clean.Soundness.RefreshWiring

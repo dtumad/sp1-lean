@@ -1,5 +1,14 @@
 import SP1Clean.Soundness.TypedMemorySelectors
-import SP1Clean.Soundness.ProviderBindings
+import SP1Clean.Soundness.SP1Ensemble
+import SP1Clean.Soundness.TypedInteractions
+import SP1Clean.Soundness.TypedState
+import SP1Clean.Model.Semantics.Truth
+import SP1Clean.FormalModel.Contracts.PublicValues
+import SP1Clean.Model.Machine.Syscall
+import Mathlib.Data.Set.Basic
+import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Model.Machine.Execution
 import SP1Clean.Soundness.BumpDecode
 
 /-! # The per-`MemLoc` Memory-channel balance
@@ -95,113 +104,7 @@ theorem witness_verifierMemoryInteractions_eq_nil
 
 /-! ## The non-memory providers contribute nothing to the Memory channel -/
 
-/-- Every provider-table position except the three memory-touching tables (init at 49, finalize at
-50, and — W3 — the MemoryBump refresh table at 51) has no Memory-channel interactions.  Positional,
-mirroring `witness_nonProgramProviderTable_programInteractions_eq_nil`: the byte/range
-providers declare only the Byte channel, the program provider only the Program channel, and the
-StateBump table (52) only Byte and State. -/
-theorem witness_nonMemoryProviderTable_memoryInteractions_eq_nil
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) (i : ℕ)
-    (lower : instructionTableCount ≤ i) (upper : i < ensembleTableCount)
-    (witnessBound : i < witness.tables.length)
-    (notInit : i ≠ memoryInitProviderIndex) (notFinalize : i ≠ memoryFinalizeProviderIndex)
-    (notBump : i ≠ memoryBumpIndex) (notHalt : i ≠ haltIndex)
-    (notSyscall : i ≠ syscallInstrsIndex) :
-    typedTableInteractionsWith witness.tables[i] memoryChannel = [] := by
-  change 25 ≤ i at lower
-  change i < 55 at upper
-  change i ≠ 53 at notHalt
-  change i ≠ 54 at notSyscall
-  apply List.map_eq_nil_iff.mp
-  rw [typedTableInteractionsWith_raw]
-  apply Table.interactionsWith_nil_of_channel_not_mem
-  have ensembleBound : i < (sp1Ensemble (p := p)).tables.length := by
-    rw [witness.same_length]
-    exact witnessBound
-  have componentEq := witness.same_circuits i ensembleBound
-  have providerBound : i - 25 < (sp1ProviderTables (p := p)).length := by
-    simp only [sp1ProviderTables_length]
-    omega
-  have componentProviderEq : witness.tables[i].component =
-      (sp1ProviderTables (p := p))[i - 25] := by
-    rw [← componentEq]
-    simp only [sp1Ensemble_tables]
-    rw [List.getElem_append_right (by simpa only [sp1Tables_length] using lower)]
-    simp only [sp1Tables_length]
-  rw [componentProviderEq]
-  interval_cases i
-  all_goals first
-    | exact (notInit (by rfl)).elim
-    | exact (notFinalize (by rfl)).elim
-    | exact (notBump (by rfl)).elim
-    | exact (notHalt (by rfl)).elim
-    | exact (notSyscall (by rfl)).elim
-    | (change memoryChannel.toRaw ∉ [byteChannel.toRaw];
-       simp [Channels.memoryChannel_eq_byteChannel_false])
-    | (change memoryChannel.toRaw ∉ [programChannel.toRaw];
-       simp [Channels.memoryChannel_eq_programChannel_false])
-    | (change memoryChannel.toRaw ∉
-         [(byteChannel (p := p)).toRaw, (Channels.stateChannel (p := p)).toRaw];
-       simp [Channels.memoryChannel_eq_byteChannel_false,
-         Channels.memoryChannel_eq_stateChannel_false])
-
-/-- The whole provider suffix's Memory interactions are exactly the init-provider table's followed by
-the finalize-provider table's, followed by — W3 — the MemoryBump refresh table's.  Structural,
-from the ensemble table order and each component's declared channels; the three-table analogue of
-`witness_providerProgramInteractions_eq`. -/
-theorem witness_providerMemoryInteractions_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    (witness.tables.drop 25).flatMap (typedTableInteractionsWith · memoryChannel) =
-      typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel ++
-        (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel ++
-          (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel ++
-            (typedTableInteractionsWith (haltTable witness) memoryChannel ++
-              typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel))) := by
-  have tablesLength : witness.tables.length = 55 := by
-    rw [← witness.same_length]
-    simp [sp1Ensemble_tables, sp1Tables_length, sp1ProviderTables_length]
-  have interactionsAtOther (i : ℕ) (bound : i < witness.tables.length)
-      (h : 25 ≤ i ∧ i < 55 ∧ i ≠ 49 ∧ i ≠ 50 ∧ i ≠ 51 ∧ i ≠ 53 ∧ i ≠ 54) :
-      typedTableInteractionsWith witness.tables[i] memoryChannel = [] :=
-    witness_nonMemoryProviderTable_memoryInteractions_eq_nil witness i h.1 h.2.1 bound
-      h.2.2.1 h.2.2.2.1 h.2.2.2.2.1 h.2.2.2.2.2.1 h.2.2.2.2.2.2
-  repeat rw [List.drop_eq_getElem_cons (by omega)]
-  rw [List.drop_eq_nil_of_le (by omega)]
-  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
-  -- `simp` cannot use `interactionsAtOther` as a conditional rewrite (the bound proof inside the
-  -- `getElem` is not a premise it can discharge), so the twenty-five silent tables are named.
-  rw [interactionsAtOther 25 (by omega) (by decide),
-    interactionsAtOther 26 (by omega) (by decide), interactionsAtOther 27 (by omega) (by decide),
-    interactionsAtOther 28 (by omega) (by decide), interactionsAtOther 29 (by omega) (by decide),
-    interactionsAtOther 30 (by omega) (by decide), interactionsAtOther 31 (by omega) (by decide),
-    interactionsAtOther 32 (by omega) (by decide), interactionsAtOther 33 (by omega) (by decide),
-    interactionsAtOther 34 (by omega) (by decide), interactionsAtOther 35 (by omega) (by decide),
-    interactionsAtOther 36 (by omega) (by decide), interactionsAtOther 37 (by omega) (by decide),
-    interactionsAtOther 38 (by omega) (by decide), interactionsAtOther 39 (by omega) (by decide),
-    interactionsAtOther 40 (by omega) (by decide), interactionsAtOther 41 (by omega) (by decide),
-    interactionsAtOther 42 (by omega) (by decide), interactionsAtOther 43 (by omega) (by decide),
-    interactionsAtOther 44 (by omega) (by decide), interactionsAtOther 45 (by omega) (by decide),
-    interactionsAtOther 46 (by omega) (by decide), interactionsAtOther 47 (by omega) (by decide),
-    interactionsAtOther 48 (by omega) (by decide), interactionsAtOther 52 (by omega) (by decide)]
-  simp only [List.nil_append]
-  rfl
-
 /-! ## Exact Memory-channel decomposition of the whole ensemble witness -/
-
-/-- Exact typed Memory-channel decomposition: the decoded instruction rows' Memory interactions,
-followed by the init-, finalize-, and — W3 — MemoryBump tables'.  The boundary verifier drops
-out. -/
-theorem typedEnsembleMemoryInteractions_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    typedEnsembleInteractionsWith witness memoryChannel =
-      decodedWitnessInstructionInteractionsWith witness.data witness.tables memoryChannel ++
-        (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel ++
-          (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel ++
-            (typedTableInteractionsWith (memoryBumpTable witness) memoryChannel ++
-              (typedTableInteractionsWith (haltTable witness) memoryChannel ++
-                typedTableInteractionsWith (syscallInstrsTable witness) memoryChannel)))) := by
-  rw [typedEnsembleInteractionsWith_partition, witness_verifierMemoryInteractions_eq_nil,
-    witness_providerMemoryInteractions_eq, List.nil_append]
 
 /-- The decoded witness Memory interactions are the flattened per-row interaction lists — the
 definitional carrier of the per-row `producedMemoryMessages`/`consumedMemoryMessages`. -/
@@ -211,138 +114,7 @@ theorem decodedWitnessMemoryInteractions_eq_flatMap
       (decodedInstructionRows (p := p) witness.tables).flatMap
         fun decoded => decoded.interactionsWith witness.data memoryChannel := rfl
 
-/-- Produced Memory messages of the whole witness: every decoded row's produced messages, followed by
-the two boundary tables' produced messages.  The per-row terms are threaded verbatim through
-`producedMemoryMessages` — no per-chip closed form.  Mirror of `producedMessages_typedEnsembleState_eq`. -/
-theorem producedMessages_typedEnsembleMemory_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    producedMessages (typedEnsembleInteractionsWith witness memoryChannel) =
-      (decodedInstructionRows (p := p) witness.tables).flatMap
-          (fun decoded => decoded.producedMemoryMessages witness.data) ++
-        (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
-            memoryChannel) ++
-          (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-            memoryChannel) ++
-            (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-              memoryChannel) ++
-              (producedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel) ++
-                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-                  memoryChannel))))) := by
-  rw [typedEnsembleMemoryInteractions_eq, producedMessages_append, producedMessages_append,
-    producedMessages_append, producedMessages_append, producedMessages_append,
-    decodedWitnessMemoryInteractions_eq_flatMap, producedMessages_flatMap]
-  rfl
-
-/-- Consumed Memory messages of the whole witness: every decoded row's consumed messages, followed by
-the two boundary tables' consumed messages.  Mirror of `consumedMessages_typedEnsembleState_eq`. -/
-theorem consumedMessages_typedEnsembleMemory_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    consumedMessages (typedEnsembleInteractionsWith witness memoryChannel) =
-      (decodedInstructionRows (p := p) witness.tables).flatMap
-          (fun decoded => decoded.consumedMemoryMessages witness.data) ++
-        (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
-            memoryChannel) ++
-          (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-            memoryChannel) ++
-            (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-              memoryChannel) ++
-              (consumedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel) ++
-                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-                  memoryChannel))))) := by
-  rw [typedEnsembleMemoryInteractions_eq, consumedMessages_append, consumedMessages_append,
-    consumedMessages_append, consumedMessages_append, consumedMessages_append,
-    decodedWitnessMemoryInteractions_eq_flatMap, consumedMessages_flatMap]
-  rfl
-
 /-! ## The Memory-channel balance -/
-
-/-- **Clean Memory balance as an exact typed endpoint permutation.** Under Clean channel balance and
-binary Memory multiplicities, the produced Memory messages (every decoded row's read-backs/writes plus
-the two boundary tables' pushes) are a permutation of the consumed Memory messages (every decoded row's
-read-priors plus the two boundary tables' pulls).
-
-`memBinary` is the Memory analogue of the State `binary` premise; it is discharged below by
-`witness_memoryMultiplicityBinary` (physical constraints alone), so it is a threaded intermediate
-hypothesis here, not an open seam. -/
-theorem realDecodedMemory_perm
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (balanced : witness.BalancedChannels)
-    (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
-      IsBool interaction.mult) :
-    ((decodedInstructionRows (p := p) witness.tables).flatMap
-        (fun decoded => decoded.producedMemoryMessages witness.data) ++
-      (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) ++
-        (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-          memoryChannel) ++
-          (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-            memoryChannel) ++
-            (producedMessages (typedTableInteractionsWith (haltTable witness)
-              memoryChannel) ++
-              producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-                memoryChannel)))))).Perm
-    ((decodedInstructionRows (p := p) witness.tables).flatMap
-        (fun decoded => decoded.consumedMemoryMessages witness.data) ++
-      (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) ++
-        (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-          memoryChannel) ++
-          (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-            memoryChannel) ++
-            (consumedMessages (typedTableInteractionsWith (haltTable witness)
-              memoryChannel) ++
-              consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-                memoryChannel)))))) := by
-  classical
-  have channelBalanced := typedInteractions_balanced witness balanced memoryChannel
-    (by simp [sp1Ensemble_channels])
-  have messagePerm := producedMessages_perm_consumedMessages
-    (typedEnsembleInteractionsWith witness memoryChannel) channelBalanced memBinary
-  rwa [producedMessages_typedEnsembleMemory_eq, consumedMessages_typedEnsembleMemory_eq]
-    at messagePerm
-
-/-- **The raw per-`MemLoc` Memory balance** consumed by the timed grounding walk.  Restricting the
-whole-channel permutation to each location gives an exact multiset balance at that location: the
-location's produced messages (its boundary genesis push plus every row's read-backs/writes there)
-equal its consumed messages (its boundary final pull plus every row's read-priors there).
-
-This is the raw multiset form; the `optMS (live loc)` / `optMS (finM loc)` frontier-Option packaging
-(via `MemoryInitProviderUnique`), the provider purity that collapses the symmetric form, and the
-all-rows→real-rows reduction are the remaining B5/capstone steps. -/
-theorem realDecodedMemory_perlocBalance
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (balanced : witness.BalancedChannels)
-    (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
-      IsBool interaction.mult)
-    (loc : Semantics.MemLoc) :
-    (Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-      ((decodedInstructionRows (p := p) witness.tables).flatMap
-          (fun decoded => decoded.producedMemoryMessages witness.data) ++
-        (producedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
-            memoryChannel) ++
-          (producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-            memoryChannel) ++
-            (producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-              memoryChannel) ++
-              (producedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel) ++
-                producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-                  memoryChannel)))))) : Multiset (MemoryMsg (ZMod p))) =
-    Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-      ((decodedInstructionRows (p := p) witness.tables).flatMap
-          (fun decoded => decoded.consumedMemoryMessages witness.data) ++
-        (consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
-            memoryChannel) ++
-          (consumedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-            memoryChannel) ++
-            (consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-              memoryChannel) ++
-              (consumedMessages (typedTableInteractionsWith (haltTable witness)
-                memoryChannel) ++
-                consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-                  memoryChannel)))))) := by
-  classical
-  rw [Multiset.coe_eq_coe.mpr (realDecodedMemory_perm witness balanced memBinary)]
 
 /-! ## Provider purity: the boundary tables only push (init) / only pull (finalize)
 
@@ -435,38 +207,6 @@ theorem memoryInitProvider_isBool (env : Environment (ZMod p))
   rw [hmult.1]
   exact hbool
 
-/-- Table-level form of `memoryInitProvider_isBool`: every typed Memory interaction of the
-init-provider *table* is a boolean-gated push, its per-row circuit constraints coming from
-`witness.Constraints`. -/
-private theorem memoryInitProviderTable_isBool
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel) :
-    IsBool i.mult := by
-  rw [typedTableInteractionsWith] at hi
-  obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
-  rw [memoryInitProviderTable_component witness] at hi
-  have tableConstraints : (memoryInitProviderTable witness).Constraints :=
-    constraints (memoryInitProviderTable witness) (List.getElem_mem (memoryInitProviderIndex_lt_tablesLength witness))
-  have rowConstraints := tableConstraints row rowMem
-  rw [memoryInitProviderTable_component witness] at rowConstraints
-  exact memoryInitProvider_isBool _ rowConstraints i hi
-
-/-- **`initPure`.** The Memory-init boundary provider only pushes, so it contributes nothing to the
-Memory channel's consumed side: `consumedMessages` is empty. -/
-theorem initPure (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness) memoryChannel)
-      = [] := by
-  unfold consumedMessages
-  apply List.map_eq_nil_iff.mpr
-  apply List.filter_eq_nil_iff.mpr
-  intro i hi
-  rw [typedTableInteractionsWith] at hi
-  obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
-  rw [memoryInitProviderTable_component witness] at hi
-  have direction := (memoryInitProvider_typedShape _ i hi).2
-  simp [direction]
-
 omit [Fact (2 ^ 24 < p)] in
 /-- The finalize provider's only Memory interaction is its single explicit-multiplicity pull. -/
 theorem memoryFinalizeProvider_memoryInteractions
@@ -534,37 +274,6 @@ theorem memoryFinalizeProvider_isBool (env : Environment (ZMod p))
     Nat.zero_add] at hbool
   rw [hmult.1]
   exact hbool
-
-/-- Table-level form of `memoryFinalizeProvider_isBool` (finalize analogue of
-`memoryInitProviderTable_isBool`). -/
-private theorem memoryFinalizeProviderTable_isBool
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (i : TypedInteraction (memoryChannel (p := p)))
-    (hi : i ∈ typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel) :
-    IsBool i.mult := by
-  rw [typedTableInteractionsWith] at hi
-  obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
-  rw [memoryFinalizeProviderTable_component witness] at hi
-  have tableConstraints : (memoryFinalizeProviderTable witness).Constraints :=
-    constraints (memoryFinalizeProviderTable witness) (List.getElem_mem (memoryFinalizeProviderIndex_lt_tablesLength witness))
-  have rowConstraints := tableConstraints row rowMem
-  rw [memoryFinalizeProviderTable_component witness] at rowConstraints
-  exact memoryFinalizeProvider_isBool _ rowConstraints i hi
-
-/-- **`finPure`.** The Memory-finalize boundary provider only pulls, so it contributes nothing to the
-Memory channel's produced side: `producedMessages` is empty. -/
-theorem finPure (witness : EnsembleWitness (sp1Ensemble (p := p))) :
-    producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness) memoryChannel)
-      = [] := by
-  unfold producedMessages
-  apply List.map_eq_nil_iff.mpr
-  apply List.filter_eq_nil_iff.mpr
-  intro i hi
-  rw [typedTableInteractionsWith] at hi
-  obtain ⟨row, rowMem, hi⟩ := List.mem_flatMap.mp hi
-  rw [memoryFinalizeProviderTable_component witness] at hi
-  have direction := (memoryFinalizeProvider_typedShape _ i hi).2
-  simp [direction]
 
 /-! ## Witness-level structural Memory obligations -/
 
@@ -679,32 +388,6 @@ private theorem syscallInstrsTable_memory_isBool
   · exact pushCase _ rfl
   · exact pullCase _ rfl
   · exact pushCase _ rfl
-
-/-- Physical constraints alone give the boolean multiplicity bound for every Memory
-interaction in the supported ensemble.  Instruction rows use the registry-wide selector-gating
-theorem; the only provider participants use their own boolean multiplicity columns. -/
-theorem witness_memoryMultiplicityBinary
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) :
-    ∀ interaction ∈ typedEnsembleInteractionsWith witness memoryChannel,
-      IsBool interaction.mult := by
-  rw [typedEnsembleMemoryInteractions_eq]
-  intro interaction interactionMem
-  rcases List.mem_append.mp interactionMem with instructionMem | providerMem
-  · rw [decodedWitnessMemoryInteractions_eq_flatMap] at instructionMem
-    obtain ⟨decoded, decodedMem, rowInteractionMem⟩ := List.mem_flatMap.mp instructionMem
-    exact decoded.memoryInteractions_binary witness.data witness.tables decodedMem
-      (decodedInstructionRow_constraints witness constraints decoded decodedMem)
-      interaction rowInteractionMem
-  · rcases List.mem_append.mp providerMem with initMem | tailMem
-    · exact memoryInitProviderTable_isBool witness constraints interaction initMem
-    rcases List.mem_append.mp tailMem with finalizeMem | bumpMem
-    · exact memoryFinalizeProviderTable_isBool witness constraints interaction finalizeMem
-    rcases List.mem_append.mp bumpMem with bumpMem | tailMem
-    · exact memoryBumpTable_isBool witness constraints interaction bumpMem
-    rcases List.mem_append.mp tailMem with haltMem | syscallMem
-    · exact haltTable_memory_isBool witness constraints interaction haltMem
-    · exact syscallInstrsTable_memory_isBool witness constraints interaction syscallMem
 
 /-- A constrained padding instruction row has no active Memory message.  This is a direct
 consequence of selector booleanity and the fact that every retained Memory interaction is gated by

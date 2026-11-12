@@ -281,35 +281,6 @@ belong to which chain is determined by the addresses in the messages, so it is a
 trace rather than about any chip, and it is supplied rather than derived. That is a different kind
 of premise from State's, and the docstring on `memoryLedger_perm_handoff` says so. -/
 
-/-- **The Memory bus's ledger, decomposed.** The decoded instruction rows' accesses, then the three
-boundary tables' — memory-init, memory-finalize, and MemoryBump.
-
-The per-row terms stay folded. That is deliberate and it is what
-`TypedMemoryBalance.typedEnsembleMemoryInteractions_eq` does too: unlike State, whose emission shape
-is uniform across all twenty-five chips, Memory's is family-typed by design, so there is no single
-closed form to expand into. Nothing downstream needs one — a hand-off asks that accesses pair off,
-not what any particular row's look like. -/
-theorem memoryLedger_eq (trace : SupportedCoreTraceWitness p) :
-    trace.memoryLedger =
-      ((decodedInstructionRows (p := p) trace.witness.tables).flatMap fun decoded =>
-        (decoded.interactionsWith trace.witness.data (Channels.memoryChannel (p := p))).map
-          fun i => Interaction.toAccess i.raw) ++
-      (((typedTableInteractionsWith (memoryInitProviderTable trace.witness)
-            (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-        (((typedTableInteractionsWith (memoryFinalizeProviderTable trace.witness)
-              (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-          (((typedTableInteractionsWith (memoryBumpTable trace.witness)
-              (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-            (((typedTableInteractionsWith (haltTable trace.witness)
-              (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw) ++
-              ((typedTableInteractionsWith (syscallInstrsTable trace.witness)
-                (Channels.memoryChannel (p := p))).map fun i => Interaction.toAccess i.raw))))) := by
-  rw [memoryLedger_eq_channelLedger, ← typedEnsembleInteractionsWith_raw,
-    typedEnsembleMemoryInteractions_eq]
-  simp only [List.map_append, List.map_map, Function.comp_def,
-    decodedWitnessMemoryInteractions_eq_flatMap, List.map_flatMap]
-
-
 omit [Fact (2 ^ 24 < p)] in
 /-- **The Memory bus's ledger is its records' complete lives**, given the per-location chains.
 
