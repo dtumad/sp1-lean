@@ -1,4 +1,5 @@
-import SP1Clean.Soundness.LocalCoreGrounding
+import SP1Clean.Soundness.LocalCoreTransport
+import SP1Clean.Soundness.WalkTimeline
 import SP1Clean.Soundness.ProtectedLocalCore
 import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Soundness.HostHintQueueBoundary

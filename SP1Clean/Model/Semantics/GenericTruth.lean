@@ -41,19 +41,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- The machine state after `n` semantic steps, where the shard defines one. -/
 abbrev Trajectory := ℕ → Option SailState
 
-/-- The official-Sail trajectory: every step is one `try_step`. This is the instantiation that
-recovers everything the engine reads today. -/
-noncomputable def sailTrajectory (initial : SailState) : Trajectory := chainState initial
-
-@[simp] theorem sailTrajectory_apply (initial : SailState) (n : ℕ) :
-    sailTrajectory initial n = chainState initial n := rfl
-
-/-- A Sail chain and the Sail trajectory say the same thing, in both directions. This is what makes
-the parameterization free rather than a weakening. -/
-theorem sailTrajectory_eq_some_iff {initial state : SailState} {n : ℕ} :
-    sailTrajectory initial n = some state ↔ SailChain n initial state :=
-  ⟨sailChain_of_chainState, chainState_of_sailChain⟩
-
 /-! ## The predicates -/
 
 /-- The timeline reader over an arbitrary trajectory. Below the timeline's genesis the initial state
@@ -138,36 +125,6 @@ def GroundedG (program : GuestProgram) (traj : Trajectory) (s0 : SailState) (tl 
 Each predicate at `sailTrajectory initial` **is** the corresponding `…T` predicate. `microValueG` is
 definitionally `microValueT`, so the value-level bridges are `Iff.rfl`; only the state-level one has
 content, and its content is exactly determinism. -/
-
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
-@[simp] theorem microValueG_sail (initial : SailState) (tl : Timeline) (loc : MemLoc) (τ : ℕ) :
-    microValueG (sailTrajectory initial) initial tl loc τ = microValueT initial tl loc τ := rfl
-
-omit [Fact (2 ^ 17 < p)] in
-@[simp] theorem localValueAtG_sail {initial : SailState} {tl : Timeline} {loc : MemLoc} {t : ℕ}
-    {v : Word (ZMod p)} :
-    LocalValueAtG (sailTrajectory initial) initial tl loc t v ↔ LocalValueAtT initial tl loc t v :=
-  Iff.rfl
-
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
-theorem localStateTruthG_sail {program : GuestProgram} {initial : SailState} {tl : Timeline}
-    {m : StateMsg (ZMod p)} :
-    LocalStateTruthG program (sailTrajectory initial) tl m ↔ LocalStateTruthT program initial tl m := by
-  unfold LocalStateTruthG LocalStateTruthT
-  exact exists_congr fun n => exists_congr fun state => by
-    rw [sailTrajectory_eq_some_iff]
-
-omit [Fact (2 ^ 17 < p)] in
-theorem localMemTruthG_sail {initial : SailState} {tl : Timeline} {m : MemoryMsg (ZMod p)} :
-    LocalMemTruthG (sailTrajectory initial) initial tl m ↔ LocalMemTruthT initial tl m := Iff.rfl
-
-omit [Fact (2 ^ 17 < p)] in
-theorem localStepFactG_sail {program : GuestProgram} {initial : SailState} {tl : Timeline}
-    {r : RowFacts p} :
-    LocalStepFactG program (sailTrajectory initial) initial tl r ↔
-      LocalStepFactT program initial tl r := by
-  unfold LocalStepFactG LocalStepFactT
-  simp only [localStateTruthG_sail, localValueAtG_sail, localMemTruthG_sail]
 
 /-! The `FrameFactG` / `LiveOKG` / `GroundedG` bridges need their `…T` counterparts, which live in
 `Soundness/TimedGrounding.lean`; they are stated there, beside `walkG`. -/

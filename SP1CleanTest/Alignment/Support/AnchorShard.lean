@@ -8,9 +8,8 @@ import SP1Clean.Model.Opcode
 import SP1Clean.Soundness.RowView
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.TypedState
-import SP1Clean.FormalModel.Trace.Witness
+
 import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.TransitionView
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Model.SailDecode
 import SP1CleanTest.TraceGenTests.Conformance
@@ -349,18 +348,6 @@ theorem anchorInv_step {s next : SailState} (inv : AnchorInv s) (step : SailStep
     rw [heff.mem.1 rfl]
     exact hrom a w hf i
 
-theorem anchorInv_of_chain {n : ℕ} {a b : SailState}
-    (inva : AnchorInv a) (chain : Target.SailChain n a b) : AnchorInv b := by
-  induction chain with
-  | refl s => exact inva
-  | step h1 _ ih => exact ih (anchorInv_step inva h1)
-
-/-- ROM preservation along every reachable Sail step: reachable states satisfy the self-jump
-invariant, and each further step re-establishes it — in particular `RomLoaded` persists. -/
-theorem anchor_codeMemoryCompatible : SailCodeMemoryCompatible anchorProgram anchorState := by
-  intro n state next chain step _hromState
-  exact (anchorInv_step (anchorInv_of_chain anchorInv_base chain) step).2.1
-
 /-! ## The official-Sail self-jump step -/
 
 /-- The deterministic target of the proved official-Sail self-jump. -/
@@ -373,24 +360,6 @@ theorem activeTarget_step : SailStep anchorState activeTarget :=
 theorem activeTarget_effect :
     RowEffect anchorProgram jalView anchorState activeTarget :=
   (Classical.choose_spec anchorStep).2
-
-/-- The one-transition official-Sail execution used to audit the native compiler. -/
-noncomputable def activeExecution : Machine.EventExecutionTrace where
-  initialState := anchorState
-  transitions := [⟨.ordinary, activeTarget⟩]
-
-@[simp] theorem activeExecution_initialState : activeExecution.initialState = anchorState := rfl
-
-@[simp] theorem activeExecution_transitions :
-    activeExecution.transitions = [⟨.ordinary, activeTarget⟩] := rfl
-
-@[simp] theorem activeExecution_steps : activeExecution.steps = 1 := rfl
-
-@[simp] theorem activeExecution_finalState : activeExecution.finalState = activeTarget := rfl
-
-@[simp] theorem activeExecution_locatedTransitions :
-    activeExecution.locatedTransitions =
-      [⟨anchorState, ⟨.ordinary, activeTarget⟩⟩] := rfl
 
 /-- Fetching the committed entry point yields the self-jump encoding. -/
 theorem anchorProgram_fetchWord_selfJump :
@@ -415,36 +384,11 @@ theorem anchor_notAboutToExecuteEcall :
   exact (by native_decide : (0x0000006F#32 : BitVec 32) ≠ ECALL_ENC)
     (Option.some.inj fetch)
 
-theorem activeExecution_allOrdinary : activeExecution.AllOrdinary := by
-  intro transition member
-  simp only [activeExecution, List.mem_singleton] at member
-  subst transition
-  rfl
-
-/-- The exact proof-independent projection shared by semantic validity and trace compilation. -/
-noncomputable def activeView : SP1Clean.Semantics.SP1TransitionView where
-  pc := 65536#64
-  word := 0x0000006F#32
-  decoded := .JAL (0#21, .Regidx 0#5)
-  routeKey := ⟨.JAL, true⟩
-  chipId := .jal
-  accessPlan? := SP1Clean.Semantics.instructionAccessPlan?
-    (.JAL (0#21, .Regidx 0#5)) anchorState activeTarget
-
-theorem activeExecution_projected :
-    SP1Clean.Semantics.projectSP1Transition? anchorProgram
-      ⟨anchorState, ⟨.ordinary, activeTarget⟩⟩ = some activeView := by
-  unfold SP1Clean.Semantics.projectSP1Transition?
-  simp only [anchorState_pc, Option.bind_eq_bind, Option.bind_some,
-    anchorProgram_fetchWord_selfJump]
-  rw [SP1Clean.Semantics.decodeLocated?_eq_some_of anchorState_pc
-    anchorProgram_fetchWord_selfJump anchor_decode_selfJump]
-  rfl
-
-theorem activeExecution_configuredDecode :
-    ConfiguredDecode activeView.word activeView.decoded := by
+/-- The configured Sail decoder recognizes the committed word as `JAL x0, 0` in every configured
+state. -/
+theorem anchor_configuredDecode :
+    ConfiguredDecode 0x0000006F#32 (.JAL (0#21, .Regidx 0#5)) := by
   intro state configured
   exact decode_jal_x0 state configured.init configured.priv configured.mseccfg_disabled
-
 
 end SP1Clean.Audit.AnchorShard

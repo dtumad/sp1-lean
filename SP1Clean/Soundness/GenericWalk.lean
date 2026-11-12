@@ -36,27 +36,6 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-! ## The remaining Sail bridges -/
 
 omit [Fact (2 ^ 17 < p)] in
-theorem frameFactG_sail {program : GuestProgram} {initial : SailState} {tl : Timeline}
-    {r : RowFacts p} :
-    FrameFactG program (sailTrajectory initial) initial tl r ↔ FrameFactT program initial tl r := by
-  unfold FrameFactG FrameFactT
-  simp only [localStateTruthG_sail, localValueAtG_sail]
-
-omit [Fact (2 ^ 17 < p)] in
-theorem liveOKG_sail {initial : SailState} {tl : Timeline} {t : ℕ}
-    {live : MemLoc → Option (MemoryMsg (ZMod p))} :
-    LiveOKG (sailTrajectory initial) initial tl t live ↔ LiveOKT initial tl t live := by
-  unfold LiveOKG LiveOKT
-  simp only [localMemTruthG_sail, localValueAtG_sail]
-
-omit [Fact (2 ^ 17 < p)] in
-theorem groundedG_sail {program : GuestProgram} {initial : SailState} {tl : Timeline}
-    {r : RowFacts p} :
-    GroundedG program (sailTrajectory initial) initial tl r ↔ GroundedT program initial tl r := by
-  unfold GroundedG GroundedT
-  simp only [localStateTruthG_sail, localMemTruthG_sail, localValueAtG_sail]
-
-omit [Fact (2 ^ 17 < p)] in
 /-- `pull_clkBound_of_balance` over the trajectory. Its only use of the frontier is the
 `ClkBound` projection, which is trajectory-independent, so the generalization is a rename. -/
 lemma pull_clkBound_of_balanceG {traj : Trajectory} {initial : SailState} {tl : Timeline} {initialClock t : ℕ}
@@ -263,112 +242,6 @@ theorem localStateTruthG_congr {program : GuestProgram} {traj : Trajectory} {tl 
   refine ⟨n, state, htraj, by rw [ht]; exact htime, ?_, hrom, hcfg⟩
   rw [show pcBits m'.pc0 m'.pc1 m'.pc2 = pcBits m.pc0 m.pc1 m.pc2 from hpc]
   exact hpcEq
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Ordinary pull currency from the carrier's, trajectory-indexed.  Each matched pull is shifted
-back to the ordinary window start — which is `tl.start n` for the step index the pulled state truth
-names — and `isU64` travels along the value equality. -/
-theorem ordinaryPullCurrencyG_of_valueAligned
-    {program : GuestProgram} {traj : Trajectory} {initial : SailState} {tl : Timeline}
-    {r_new r_ord : RowFacts p} (h : ValueAligned r_new r_ord)
-    (hstateTruth : LocalStateTruthG program traj tl r_new.statePull)
-    (hcurr_new : ∀ mp ∈ r_new.memPulls, MemoryMsg.isU64 mp.1 ∧
-      MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG traj initial tl (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
-    ∀ mp ∈ r_ord.memPulls, MemoryMsg.isU64 mp.1 ∧
-      MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG traj initial tl (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
-  obtain ⟨n, state, htraj, htime, -, -, -⟩ := hstateTruth
-  intro mp hmp
-  obtain ⟨mp', hmp'_mem, hloc, hval, hlo, hhi⟩ := h.match_ mp hmp
-  obtain ⟨hu64, -, hval_new⟩ := hcurr_new mp' hmp'_mem
-  rw [hloc, hval] at hval_new
-  rw [htime] at hlo hhi
-  refine ⟨?_, h.pullClk mp hmp, ?_⟩
-  · unfold SP1Clean.Channels.MemoryMsg.isU64 at hu64 ⊢
-    rwa [hval] at hu64
-  · rw [h.ordTime mp hmp, ← h.pullTime, htime]
-    exact localValueAtG_shift_window (MemoryMsg.locOf mp.1) hlo hhi le_rfl
-      (Nat.le_add_right _ _) hval_new
-
-omit [Fact (2 ^ 17 < p)] in
-/-- `LocalStepFactG` transports from the ordinary carrier to a value-aligned one. -/
-theorem localStepFactG_valueAligned_of_ordinary
-    {program : GuestProgram} {traj : Trajectory} {initial : SailState} {tl : Timeline}
-    {r_new r_ord : RowFacts p} (h : ValueAligned r_new r_ord)
-    (step_ord : LocalStepFactG program traj initial tl r_ord) :
-    LocalStepFactG program traj initial tl r_new := by
-  intro hpull hcurr_new
-  have hpull_ord : LocalStateTruthG program traj tl r_ord.statePull :=
-    localStateTruthG_congr h.pullTime.symm h.pullPc.symm hpull
-  have hcurr_ord := ordinaryPullCurrencyG_of_valueAligned h hpull hcurr_new
-  obtain ⟨hpush_ord, hmem_ord⟩ := step_ord hpull_ord hcurr_ord
-  refine ⟨localStateTruthG_congr h.pushTime h.pushPc hpush_ord, ?_⟩
-  intro m hm
-  exact hmem_ord m (h.pushes.mem_iff.mp hm)
-
-omit [Fact (2 ^ 17 < p)] in
-/-- `FrameFactG` transports the same way. -/
-theorem frameFactG_valueAligned_of_ordinary
-    {program : GuestProgram} {traj : Trajectory} {initial : SailState} {tl : Timeline}
-    {r_new r_ord : RowFacts p} (h : ValueAligned r_new r_ord)
-    (frame_ord : FrameFactG program traj initial tl r_ord) :
-    FrameFactG program traj initial tl r_new := by
-  intro hpull hcurr_new loc v hpush hstart
-  have hpull_ord : LocalStateTruthG program traj tl r_ord.statePull :=
-    localStateTruthG_congr h.pullTime.symm h.pullPc.symm hpull
-  have hcurr_ord := ordinaryPullCurrencyG_of_valueAligned h hpull hcurr_new
-  have hpush_ord : ∀ m ∈ r_ord.memPushes, MemoryMsg.locOf m = loc → m.value = v :=
-    fun m hm => hpush m (h.pushes.mem_iff.mpr hm)
-  have hstart_ord : LocalValueAtG traj initial tl loc
-      (StateMsg.timeNat r_ord.statePull) v := by
-    rw [← h.pullTime]; exact hstart
-  have := frame_ord hpull_ord hcurr_ord loc v hpush_ord hstart_ord
-  rw [h.pushTime]
-  exact this
-
-omit [Fact (2 ^ 17 < p)] in
-/-- `LocalStepFactG` transports across a State re-spelling that preserves time and pc image.
-
-The `ValueAligned` route above cannot serve here: `ValueAligned` demands `ordTime`, that every pull
-sit at the row's window start, and a syscall row's three reads deliberately sit at `+0`, `+3` and
-`+2`.  A bare re-spelling asks for none of that, and it is all a canonicalized State edge needs. -/
-theorem localStepFactG_stateRespell {program : GuestProgram} {traj : Trajectory}
-    {initial : SailState} {tl : Timeline} {r : RowFacts p} {pull push : StateMsg (ZMod p)}
-    (hpullT : StateMsg.timeNat pull = StateMsg.timeNat r.statePull)
-    (hpullP : StateMsg.pcBits pull = StateMsg.pcBits r.statePull)
-    (hpushT : StateMsg.timeNat push = StateMsg.timeNat r.statePush)
-    (hpushP : StateMsg.pcBits push = StateMsg.pcBits r.statePush)
-    (h : LocalStepFactG program traj initial tl r) :
-    LocalStepFactG program traj initial tl (stateRespell r pull push) := by
-  intro hpull hcurr
-  rw [stateRespell_statePull] at hpull
-  rw [stateRespell_memPulls] at hcurr
-  obtain ⟨hpushTruth, hmem⟩ := h (localStateTruthG_congr hpullT.symm hpullP.symm hpull) hcurr
-  refine ⟨?_, ?_⟩
-  · rw [stateRespell_statePush]
-    exact localStateTruthG_congr hpushT hpushP hpushTruth
-  · rw [stateRespell_memPushes]
-    exact hmem
-
-omit [Fact (2 ^ 17 < p)] in
-/-- `FrameFactG` transports across a State re-spelling the same way — and needs one hypothesis
-fewer, because a frame claim reads the pushed message's *time* and never its pc. -/
-theorem frameFactG_stateRespell {program : GuestProgram} {traj : Trajectory}
-    {initial : SailState} {tl : Timeline} {r : RowFacts p} {pull push : StateMsg (ZMod p)}
-    (hpullT : StateMsg.timeNat pull = StateMsg.timeNat r.statePull)
-    (hpullP : StateMsg.pcBits pull = StateMsg.pcBits r.statePull)
-    (hpushT : StateMsg.timeNat push = StateMsg.timeNat r.statePush)
-    (h : FrameFactG program traj initial tl r) :
-    FrameFactG program traj initial tl (stateRespell r pull push) := by
-  intro hpull hcurr loc v hpush hstart
-  rw [stateRespell_statePull] at hpull
-  rw [stateRespell_memPulls] at hcurr
-  rw [stateRespell_memPushes] at hpush
-  rw [stateRespell_statePull, hpullT] at hstart
-  have result := h (localStateTruthG_congr hpullT.symm hpullP.symm hpull) hcurr loc v hpush hstart
-  rw [stateRespell_statePush, hpushT]
-  exact result
 
 /-! ## The walk
 
@@ -641,48 +514,6 @@ theorem walkG (program : GuestProgram) (traj : Trajectory) (initial : SailState)
     · rcases List.mem_cons.mp h with rfl | h
       · exact h_ground_r
       · exact hg_rest r' (List.mem_append_right _ h)
-
-omit [Fact (2 ^ 17 < p)] in
-/-- **The Sail instantiation recovers `walkT` exactly.** This is the refactor's acceptance test: it
-must hold with no change to `walkT`'s statement. -/
-theorem walkT_of_walkG (program : GuestProgram) (initial : SailState) (tl : Timeline)
-    (initialClock : ℕ) (fin : StateMsg (ZMod p))
-    (finM : MemLoc → Option (MemoryMsg (ZMod p))) :
-    ∀ (N : ℕ) (rows : List (RowFacts p)) (head : StateMsg (ZMod p))
-      (live : MemLoc → Option (MemoryMsg (ZMod p))),
-      rows.length = N →
-      (∀ r ∈ rows, LocalStepFactT program initial tl r) →
-      (∀ r ∈ rows, FrameFactT program initial tl r) →
-      (∀ r ∈ rows, RowOKCore initialClock r) →
-      (∀ r ∈ rows, ∀ n : ℕ, StateMsg.timeNat r.statePull = tl.start n →
-        StateMsg.timeNat r.statePush = tl.start (n + 1)) →
-      LocalStateTruthT program initial tl head →
-      LiveOKT initial tl (StateMsg.timeNat head) live →
-      (head ::ₘ (↑(rows.map (·.statePush)) : Multiset (StateMsg (ZMod p)))
-        = fin ::ₘ ↑(rows.map (·.statePull))) →
-      (∀ loc : MemLoc, optMS (live loc) + pushesAt rows loc
-        = optMS (finM loc) + pullsAt rows loc) →
-      (∀ r ∈ rows, GroundedT program initial tl r) ∧
-        LocalStateTruthT program initial tl fin ∧
-        ∀ (loc : MemLoc) (m : MemoryMsg (ZMod p)), finM loc = some m →
-          MemoryMsg.locOf m = loc ∧
-          LocalMemTruthT initial tl m ∧
-          LocalValueAtT initial tl loc (StateMsg.timeNat fin) m.value ∧
-          MemoryMsg.timeNat m ≤ StateMsg.timeNat fin := by
-  intro N rows head live hlen hstep hframe hrow htl hhead hlive hsbal hmbal
-  have := walkG program (sailTrajectory initial) initial tl initialClock fin finM N rows head live
-    hlen
-    (fun r hr => localStepFactG_sail.mpr (hstep r hr))
-    (fun r hr => frameFactG_sail.mpr (hframe r hr))
-    hrow htl
-    (localStateTruthG_sail.mpr hhead)
-    (liveOKG_sail.mpr hlive)
-    hsbal hmbal
-  obtain ⟨hg, hfin, hfinM⟩ := this
-  refine ⟨fun r hr => groundedG_sail.mp (hg r hr), localStateTruthG_sail.mp hfin, ?_⟩
-  intro loc m hm
-  obtain ⟨hkey, htruth, hval, htime⟩ := hfinM loc m hm
-  exact ⟨hkey, localMemTruthG_sail.mp htruth, localValueAtG_sail.mp hval, htime⟩
 
 end SP1Clean.Soundness.TimedGrounding
 

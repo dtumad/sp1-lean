@@ -92,7 +92,6 @@ theorem ordinary_accessPlan {decoded : instruction} {source target : SailState}
     (fun index => Option.isSome_iff_exists.mpr (Advance.initialized_gpr target nextConfigured.init index))
     (encoded.cells_present image incoming outgoing))
   exact ⟨plan, generated, instructionAccessPlan_wellFormed generated, instructionAccessPlan_length_le_three generated⟩
-
 /-- The canonical transition view and its access plan both succeed on complete native states. -/
 theorem ordinaryEncodedAt.project {program : GuestProgram} {located : LocatedTransition}
     (encoded : ordinaryEncodedAt program located.source)
@@ -122,5 +121,6 @@ theorem ExecutionStep.project_ordinary {policy : HostPolicy} {program : GuestPro
   have next := step.frame configured loaded (fun _ => permitted)
   exact encoded.project configured next.1 incoming (fun address inside =>
     step.memory_present configured loaded (fun _ => permitted) address (incoming address inside))
+
 
 end SP1Clean.Model.Core

@@ -102,15 +102,6 @@ theorem startsAt (step : ExecutionStep policy program source event target) :
       obtain ⟨_, _, _, _, _, _, _, rfl⟩ := HostState.step_observations success
       rfl
 
-/-- Projection uses the incoming host for this single step; whole paths thread the next host. -/
-theorem sailEvent (step : ExecutionStep policy program source event target) :
-    EventStep (source.host.handler policy) program source.sail event target.sail := by
-  cases step with
-  | ordinary _ notEcall normal => exact .ordinary notEcall normal.sailStep
-  | syscall success =>
-      have interpreted := HostState.step_sound success
-      exact .syscall interpreted.1 interpreted.2
-
 /-- A syscall label's PC names an ECALL in the actual incoming Sail memory as well as ROM. -/
 theorem syscall_instructionBytes {call : CoreSyscallEvent}
     (step : ExecutionStep policy program source (.syscall call) target) :
@@ -148,18 +139,6 @@ theorem halted_iff (step : ExecutionStep policy program source event target) (co
   cases event with
   | ordinary => simp
   | syscall call => by_cases halt : call.rawCode = 0 <;> simp [halt]
-
-/-- The HALT label is backed by the committed ECALL and actual Sail x5/x10 observations. -/
-theorem halt_source {call : CoreSyscallEvent}
-    (step : ExecutionStep policy program source (.syscall call) target) (zero : call.rawCode = 0) :
-    SP1Halted program call.arg1 source.sail := by
-  cases step with
-  | syscall success =>
-      obtain ⟨pc, execution, atPc, fetched, ran, _, _, rfl⟩ := HostState.step_observations success
-      have observed := (source.host.run_eq_some_iff policy (.ofSail source.sail) execution).mp ran
-      have code : source.sail.get_reg? 5#5 = some execution.kind.code := observed.2.1
-      change execution.kind.code = 0 at zero
-      exact ⟨pc, atPc, fetched, by simpa only [zero, HALT_SYSCALL] using code, observed.2.2.1⟩
 
 /-- With the same complete input, neither the next event nor its effects are witness choices. -/
 theorem deterministic {other : ExecutionState} {otherEvent : ExecutionEvent}

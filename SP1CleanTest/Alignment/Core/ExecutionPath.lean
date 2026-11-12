@@ -177,7 +177,7 @@ theorem ordinaryWritePermission (host : HostState) (running : host.exitCode = no
   obtain rfl := Option.some.inj replay
   refine ⟨65536, 0x6f, .JAL (0, .Regidx 0), Audit.AnchorShard.anchorState_pc,
     Audit.AnchorShard.anchorProgram_fetchWord_selfJump,
-    Audit.AnchorShard.activeExecution_configuredDecode, ?_⟩
+    Audit.AnchorShard.anchor_configuredDecode, ?_⟩
   rfl
 
 /-- Host-only composition needs no artificial ordinary-write obligation. -/
