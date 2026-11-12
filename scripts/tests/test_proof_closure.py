@@ -4,12 +4,13 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from proof_closure import group, summarize, validate
+from proof_closure import group, summarize, unreachable_in, validate
 
 
-def report(reachable, modules):
+def report(reachable, modules, unreachable=()):
     return {"version": 1, "roots": ["Root.theorem"], "modules": modules,
-            "reachable": [{"name": name, "module": module} for name, module in reachable]}
+            "reachable": [{"name": name, "module": module} for name, module in reachable],
+            "unreachable": [{"name": name, "module": module} for name, module in unreachable]}
 
 
 class ProofClosureTests(unittest.TestCase):
@@ -27,9 +28,16 @@ class ProofClosureTests(unittest.TestCase):
         for broken in ({"version": 2, "roots": ["r"], "modules": ["m"], "reachable": []},
                        {"version": 1, "roots": [], "modules": ["m"], "reachable": []},
                        {"version": 1, "roots": ["r"], "modules": [], "reachable": []},
+                       {"version": 1, "roots": ["r"], "modules": ["m"], "reachable": []},
                        {"version": 1, "roots": ["r"], "modules": ["m"]}):
             with self.assertRaises(ValueError):
                 validate(broken)
+
+    def test_unreachable_listing_hides_compiler_auxiliaries(self):
+        data = report([], ["SP1Clean.A"], [("A.dead", "SP1Clean.A"), ("A.dead.match_1", "SP1Clean.A"),
+                                           ("A.Shape.casesOn", "SP1Clean.A"), ("A.Shape.mk._flat_ctor", "SP1Clean.A"),
+                                           ("A.f._redArg._boxed", "SP1Clean.A"), ("B.other", "SP1Clean.B")])
+        self.assertEqual(unreachable_in(data, "SP1Clean.A"), ["A.dead"])
 
     def test_grouping_uses_the_first_two_components(self):
         self.assertEqual(group(["SP1Clean.Soundness.A", "SP1Clean.Soundness.B", "SP1Clean.Model.C"]),

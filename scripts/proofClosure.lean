@@ -4,7 +4,7 @@ import SP1Clean
 /-! # Proof closure of the headline results
 
 Reports which repository declarations the headline soundness theorem and the capstone targets
-depend on. Declaration types, definition bodies and theorem proofs are all followed; the compiled
+depend on, and which they do not. Declaration types, definition bodies and theorem proofs are all followed; the compiled
 contract audit (`capstoneContract.lean`) records only the statement surface and stops at proofs.
 External declarations are boundary nodes and are not traversed.
 
@@ -67,11 +67,17 @@ def report (env : Environment) (roots : Array Name) : Except String Json := do
       some (Json.mkObj [("name", toJson name.toString), ("module", toJson owner.toString)])
     else none
   let modules := env.header.moduleNames.filter localModule
+  let unreachable := env.const2ModIdx.fold (init := #[]) fun acc name index =>
+    let owner := env.header.moduleNames[index.toNat]!
+    if localModule owner && !seen.contains name then
+      acc.push (Json.mkObj [("name", toJson name.toString), ("module", toJson owner.toString)])
+    else acc
   return Json.mkObj [
     ("version", toJson (1 : Nat)),
     ("roots", toJson (roots.map Name.toString)),
     ("modules", toJson (modules.map Name.toString)),
-    ("reachable", Json.arr reachable.toArray)]
+    ("reachable", Json.arr reachable.toArray),
+    ("unreachable", Json.arr unreachable)]
 
 run_cmd do
   let env ← Lean.getEnv

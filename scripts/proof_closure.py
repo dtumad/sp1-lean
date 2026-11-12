@@ -11,6 +11,7 @@ claim through a test or be planned material for an open obligation.
 """
 
 import argparse
+import re
 from collections import defaultdict
 import json
 import os
@@ -23,12 +24,25 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 # Reached from `Shard.sail_trace` only through proof bodies (`path_of_replay`, `step_of_replay`).
 PROOF_ONLY_MODULE = "SP1Clean.Soundness.HostHintReadExecutionPath"
+# Compiler-generated auxiliaries are hidden from per-module listings; their owners are listed.
+AUXILIARY = re.compile(
+    r"\.(match_\d+|proof_\d+|eq_\d+|eq_def|_sunfold|_unfold|_cstage\d*|_spec_\d+|_unsafe_rec|"
+    r"brecOn|below|binductionOn|casesOn|recOn|rec|noConfusion|noConfusionType|ctorIdx|"
+    r"injEq|inj|sizeOf_spec|_sizeOf_\d+|_sizeOf_inst|ext_iff|_auxLemma\.\d+|_simp_\d+|"
+    r"_flat_ctor|_boxed|_redArg|_proof_\d+)$|\._@\.|\._redArg\.")
 
 
 def validate(data):
     if (data.get("version") != 1 or not data.get("roots") or not data.get("modules")
-            or not isinstance(data.get("reachable"), list)):
+            or not isinstance(data.get("reachable"), list)
+            or not isinstance(data.get("unreachable"), list)):
         raise ValueError("incomplete proof-closure report")
+
+
+def unreachable_in(data, module):
+    """Declarations of one module outside the closure, without compiler auxiliaries."""
+    return sorted(entry["name"] for entry in data.get("unreachable", [])
+                  if entry["module"] == module and not AUXILIARY.search(entry["name"]))
 
 
 def summarize(data, names=()):
@@ -66,6 +80,8 @@ def main() -> int:
                         help="override the default roots (repeatable)")
     parser.add_argument("--name", action="append", default=[],
                         help="report whether this declaration is reachable (repeatable)")
+    parser.add_argument("--module", action="append", default=[],
+                        help="list this module's declarations outside the closure (repeatable)")
     parser.add_argument("--json", type=Path, help="also write the raw report here")
     args = parser.parse_args()
     if not args.no_build:
@@ -101,6 +117,11 @@ def main() -> int:
         print(f"outside {prefix} ({len(members)}): {', '.join(sorted(members))}")
     for name, inside in summary["names"].items():
         print(f"{'inside ' if inside else 'outside'} {name}")
+    for module in args.module:
+        names = unreachable_in(data, module)
+        print(f"{module}: {len(names)} declarations outside the closure")
+        for name in names:
+            print(f"  {name}")
     return 0
 
 
