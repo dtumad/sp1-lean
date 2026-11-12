@@ -44,6 +44,7 @@ measure the affected downstream consumer, not just the edited file.
 |---|---|
 | Documentation/tooling | `python3 scripts/check_current_docs.py`; `python3 -m unittest discover -s scripts/tests` |
 | Source organization | Root-index and layering guards; strict full build and lint |
+| Retiring code | `python3 scripts/proof_closure.py --no-build` lists modules no headline proof depends on; it is a report, not a gate |
 | Public semantic targets | Compiled capstone contract review; explicit reviewed manifest update only for intended changes |
 | Pins, ToClean, witness/export APIs | Fresh witgen/ensemble generation, Rust differential and relevant backend checks |
 | Generated Sail | Regeneration identity, paired runtime compatibility, strict full build and trust scans |
