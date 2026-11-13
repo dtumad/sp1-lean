@@ -75,8 +75,6 @@ lemma stepOnce_of_sailStep {s s' : SailState} (h : SailStep s s') : stepOnce s =
   unfold SP1Clean.Machine.stepOnce
   rw [hrun]
 
-/-! ## The RAM-epoch view of `microValue` -/
-
 /-! ## The per-row records
 
 The schedule offsets (`writeOffset`/`readWindow`), `optMS`, the touch/chain structures
@@ -106,16 +104,6 @@ structure AlignsWith (r_align r_ord : RowFacts p) : Prop where
   match_ : ∀ mp ∈ r_ord.memPulls, ∃ mp' ∈ r_align.memPulls, mp'.1 = mp.1 ∧
     StateMsg.timeNat r_align.statePull ≤ mp'.2 ∧
     mp'.2 ≤ StateMsg.timeNat r_align.statePull + readWindow (MemoryMsg.locOf mp.1)
-
-/-! ## The value-level carrier exchange (W3)
-
-The refresh-eliminated walk carrier replaces a pulled record by its value-equal pre-refresh
-ancestor and re-limbs its state edge canonically, so message-identity transports (`AlignsWith`)
-no longer apply.  `ValueAligned` is the weakened relation that still does: the state edge carries
-the same ℕ time and 64-bit pc image, the pushes are the same records, and every ordinary pull is
-matched by a carrier pull with the same location and value inside the location's pre-effect read
-window.  The ordinary pulls' `ClkBound` is carried as an explicit field — derived once from the
-memory balance — because the carrier's rewritten records cannot return it. -/
 
 /-! ## State-edge re-spelling (W3)
 
@@ -235,12 +223,10 @@ lemma pullsAt_pop (l1 l2 : List (RowFacts p)) (r : RowFacts p) (loc : MemLoc) :
       = (↑(rowPullsAt r loc) : Multiset (MemoryMsg (ZMod p))) + pullsAt (l1 ++ l2) loc := by
   simp only [pullsAt]; exact listSum_map_pop _ l1 l2 r
 
-/-! ## The timeline-relative engine carriers
+/-! ## Engine carriers over a timeline
 
-Timeline generalizations of the walk's carriers and epoch-shift lemmas (`microValueT`,
-`Timeline`, and the `…T` truth predicates live in `Model/Semantics/`).  The ordinary
-instantiation recovers every uniform carrier through the `…_ordinary` bridges, so everything
-upstream of the walk keeps speaking the uniform vocabulary. -/
+The walk's row carriers and epoch-shift lemmas over a `Timeline`; the truth predicates they consume
+live in `Model/Semantics/GenericTruth`. -/
 
 /-- The duration-generic core of `RowOK`: the exact `+8` window width is relaxed to a
 lower-bound gap, so rows of any width `≥ 8` (ordinary `8`, syscall `264`) satisfy it.  Every
@@ -315,7 +301,5 @@ lemma pushTimeGe_core {c0 : ℕ} {r : RowFacts p} (hok : RowOKCore c0 r)
     StateMsg.timeNat r.statePull ≤ MemoryMsg.timeNat q := by
   obtain ⟨mp, -, hto⟩ := forall₂_exists_left hok.touches q hq
   exact hto.push_lo
-
-/-! ## The timed grounding walk -/
 
 end SP1Clean.Soundness.TimedGrounding

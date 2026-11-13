@@ -111,12 +111,12 @@ private theorem control_step (valid : image.Valid)
         context.register 11 = some (Word.toBitVec64 (HostCallLedger.call physical).arg2)) →
       ∃ execution, host.run ⟨{ readOnly := image.readOnly }, p⟩ context = some execution ∧
         execution.result = Word.toBitVec64 (HostCallLedger.call physical).result ∧ execution.effect.write = none)
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
@@ -139,7 +139,7 @@ private theorem control_step (valid : image.Valid)
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
     apply currency mp
     apply List.mem_append_left
@@ -214,10 +214,10 @@ theorem GroundingCarrier.syscall_engineFacts (valid : image.Valid)
     {row : SyscallInstrsChip.Inputs (ZMod p)}
     (member : ExecutionRow.syscall row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.syscall row)) ∧
-      FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.syscall row)) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints

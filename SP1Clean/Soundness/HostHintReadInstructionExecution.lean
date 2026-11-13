@@ -84,7 +84,7 @@ private theorem trajectory_ordinary (valid : image.Valid)
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
     (decoded : Target.decodedInROM (image.toGuestProgram valid) (programAccess (row.toChipRow witness.data).view).toRow)
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (row.ordinaryRowFacts witness.data).statePull)
     (n : ℕ) (time : StateMsg.timeNat (row.ordinaryRowFacts witness.data).statePull = carrier.timeline.start n) :
     carrier.trajectory valid (n + 1) = (carrier.trajectory valid n).bind Machine.stepOnce := by
@@ -118,17 +118,17 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) ∧
-      FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.instruction row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.instruction row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]
-  change LocalStepFactG _ _ _ _ (row.ordinaryRowFacts witness.data) ∧
-    FrameFactG _ _ _ _ (row.ordinaryRowFacts witness.data)
+  change LocalStepFact _ _ _ _ (row.ordinaryRowFacts witness.data) ∧
+    FrameFact _ _ _ _ (row.ordinaryRowFacts witness.data)
   have checked := instruction_inputs valid witness constraints balanced member
   have contracts := supportedChip_groundingContracts row.chip checked.1.registered
   have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
@@ -141,7 +141,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     (auxiliary_membership_silent (HostQueueCurrent.source_membership_silent image source)) checks permissions
     (HostHintQueueBoundary.projected_permission_membership_balancedChannel witness balanced) active.1 active.2
   rw [row.toChipRow_setData (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data witness.data] at permission active
-  apply contracts.engineFactsLocalG_of_rowEffect witness.data row rfl checked.1 active.2 _ checked.2
+  apply contracts.engineFactsLocal_of_rowEffect witness.data row rfl checked.1 active.2 _ checked.2
     (carrier.trajectory valid) source.sail.realize carrier.timeline
     (fun _ effect loaded => effect.romLoaded_of_writePermission valid permission loaded)
   · intro n time
@@ -170,11 +170,11 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (row.ordinaryRowFacts witness.data).statePull)
     (currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline
           (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     {n : ℕ} {current : ExecutionState}
     (present : carrier.pairedTrajectory valid n = some current)
@@ -212,18 +212,18 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
   rw [sameState] at pc rom configured
   change current.sail.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (row.ordinaryRowFacts witness.data).statePull) at pc
-  obtain ⟨next, _, effect⟩ := wiring.advance_atG (ChipKind.advancePayload_of_migrated migrated)
+  obtain ⟨next, _, effect⟩ := wiring.advance_at (ChipKind.advancePayload_of_migrated migrated)
     active.2 (checked.1.chipSpec inputs) checked.2 ready before time pc rom configured
     (fun mp hmp => ⟨(currency mp hmp).1, (currency mp hmp).2.2⟩)
   have atPc : current.sail.regs.get? LeanRV64D.Register.PC =
       some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) := by
     rw [program_pc_eq_statePull]
     exact pc
-  have operands := wiring.valueOperandsBound_of_pullCurrencyG
+  have operands := wiring.valueOperandsBound_of_pullCurrency
     (fun mp hmp => (currency mp hmp).2.2) before time
-  have sourceA := wiring.sourceAValueBound_of_pullCurrencyG
+  have sourceA := wiring.sourceAValueBound_of_pullCurrency
     (fun mp hmp => (currency mp hmp).2.2) before time
-  have pulls := wiring.memoryPullsBound_of_pullCurrencyG
+  have pulls := wiring.memoryPullsBound_of_pullCurrency
     (fun mp hmp => (currency mp hmp).2.2) before time
   have permitted := row.write_permittedAt checked.1.registered witness.data _ current.sail
     active.2 (checked.1.chipSpec inputs) (ready current.sail operands sourceA pulls)
@@ -243,11 +243,11 @@ theorem GroundingCarrier.instruction_step (valid : image.Valid)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (row.ordinaryRowFacts witness.data).statePull)
     (currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline
           (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     {n : ℕ} {current : ExecutionState}
     (present : carrier.pairedTrajectory valid n = some current)

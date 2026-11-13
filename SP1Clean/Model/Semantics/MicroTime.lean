@@ -19,10 +19,9 @@ definitions here remain an explicitly scoped compatibility layer until timed gro
 - `MemLoc` — the register-file/RAM split of the Memory bus's 3-limb address (registers are
   `addr0 < 32 ∧ addr1 = addr2 = 0`, the shape `MemoryMsg.Spec` names; RAM locations are SP1's
   canonical aligned 8-byte cells, not overlapping byte-addressed windows).
-- `chainState` — the trajectory as a function: `k` iterations of the official interpreter `try_step`
-  (`Option`-valued past a failing step), with the bridge to the relational `SailChain`.
-- `microValue` — the location's content at a micro-time `τ`: the pre- or post-state of window `k`'s
-  step according to the effect-time convention. -/
+
+Reading a location's content at a micro-time from a trajectory (`microValue`) lives in
+`Model/Semantics/GenericTruth`. -/
 
 namespace SP1Clean.Semantics
 

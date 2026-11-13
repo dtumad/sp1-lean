@@ -261,12 +261,12 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
       (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
@@ -318,7 +318,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
   obtain ⟨physical, active, sameCall, sameEvent⟩ := matched (none, env) handlerMember event member clock
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
     apply currency mp
     apply List.mem_append_left
@@ -400,12 +400,12 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
@@ -442,7 +442,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
   obtain ⟨physical, active, sameCall, sameEvent⟩ := matched (some empty, env) handler event member clock
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
     apply currency mp
     apply List.mem_append_left
@@ -509,8 +509,8 @@ private theorem register_push_truth (row : SyscallInstrsChip.Inputs (ZMod p))
     (result : next.get_reg? 5 = some (syscallEventOfRow row).result)
     (currency : ∀ mp ∈ (syscallRowFacts row).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
-    ∀ message ∈ (syscallRowFacts row).memPushes, LocalMemTruthG trajectory initial timeline message := by
+      LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+    ∀ message ∈ (syscallRowFacts row).memPushes, LocalMemTruth trajectory initial timeline message := by
   have bounds := spec.2.1 real
   change StateMsg.timeNat (SyscallInstrsChip.statePulledMessage row) = timeline.start n at time
   obtain ⟨timeA, boundA⟩ := syscallRow_memPush_time row bounds.1 bounds.2
@@ -529,15 +529,15 @@ private theorem register_push_truth (row : SyscallInstrsChip.Inputs (ZMod p))
   rcases member with rfl | rfl | rfl
   · refine ⟨(pulled real).2.2.2.2.2.2.2.2.2.2.2, boundA, ?_⟩
     have located := (syscallRow_locOf_reg row (i := 5) operand.symm row.op_a_memory row.op_a_value 4).2
-    change microValueG trajectory initial timeline _ _ = _
-    rw [located, timeA, time, microValueG_reg_post (n := n) le_rfl (by have := timeline.gap n; omega),
+    change microValue trajectory initial timeline _ _ = _
+    rw [located, timeA, time, microValue_reg_post (n := n) le_rfl (by have := timeline.gap n; omega),
       after, Option.bind_some]
     exact result
   · refine ⟨currB.1, boundB, ?_⟩
-    rw [LocalValueAtG, timeB]
+    rw [LocalValueAt, timeB]
     exact currB.2.2
   · refine ⟨currC.1, boundC, ?_⟩
-    rw [LocalValueAtG, timeC]
+    rw [LocalValueAt, timeC]
     exact currC.2.2
 
 omit [Fact (2 ^ 25 < p)] in
@@ -546,18 +546,18 @@ private theorem word_push_truth (row : HintReadCoverage.Row (p := p))
     (trajectory : Trajectory) (initial next : SailState) (timeline : Timeline) (n : ℕ)
     (after : trajectory (n + 1) = some next)
     (aligned : TouchOK (timeline.start n) (touch row).1 (touch row).2)
-    (current : LocalValueAtG trajectory initial timeline (MemoryMsg.locOf (touch row).1.1)
+    (current : LocalValueAt trajectory initial timeline (MemoryMsg.locOf (touch row).1.1)
       (touch row).1.2 (touch row).1.1.value)
     (written : locContent next (MemoryMsg.locOf (touch row).2) = some (Word.toBitVec64 (touch row).2.value)) :
-    LocalMemTruthG trajectory initial timeline (touch row).2 := by
+    LocalMemTruth trajectory initial timeline (touch row).2 := by
   refine ⟨facts.value, facts.pushLow, ?_⟩
   rcases aligned.push_kind with ⟨sameValue, sameTime⟩ | atWrite
-  · rw [LocalValueAtG, sameTime, sameValue, aligned.loc_eq]
+  · rw [LocalValueAt, sameTime, sameValue, aligned.loc_eq]
     exact current
   · obtain ⟨cell, located, _⟩ := word_cell row facts
     rw [located, writeOffset] at atWrite
-    change microValueG trajectory initial timeline _ _ = _
-    rw [located, atWrite, microValueG_ram_post (n := n) le_rfl (by have := timeline.gap n; omega),
+    change microValue trajectory initial timeline _ _ = _
+    rw [located, atWrite, microValue_ram_post (n := n) le_rfl (by have := timeline.gap n; omega),
       after, Option.bind_some]
     rwa [located] at written
 
@@ -576,11 +576,11 @@ private theorem hint_frame [Fact (2 ^ 17 < p)]
     ∀ loc value,
       (∀ message ∈ (syscallRowFacts row).memPushes ++ words.map (fun word => (touch word).2),
         MemoryMsg.locOf message = loc → message.value = value) →
-      LocalValueAtG trajectory initial timeline loc (timeline.start n) value →
-      LocalValueAtG trajectory initial timeline loc (timeline.start (n + 1)) value := by
+      LocalValueAt trajectory initial timeline loc (timeline.start n) value →
+      LocalValueAt trajectory initial timeline loc (timeline.start (n + 1)) value := by
   intro loc value pushes currency
-  have content := (localValueAtG_stepStart_iff before).mp currency
-  apply (localValueAtG_stepStart_iff after).mpr
+  have content := (localValueAt_stepStart_iff before).mp currency
+  apply (localValueAt_stepStart_iff after).mpr
   cases loc with
   | reg index =>
     by_cases isReturn : index = 5
@@ -610,7 +610,7 @@ private theorem syscall_state_push (row : SyscallInstrsChip.Inputs (ZMod p))
     (time : StateMsg.timeNat (syscallRowFacts row).statePush = timeline.start (n + 1))
     (pc : next.regs.get? LeanRV64D.Register.PC = some (syscallEventOfRow row).nextPc)
     (loaded : Target.RomLoaded program next) (configured : Target.SailConfigured next) :
-    LocalStateTruthG program trajectory timeline (syscallRowFacts row).statePush :=
+    LocalStateTruth program trajectory timeline (syscallRowFacts row).statePush :=
   ⟨n + 1, next, after, time, pc, loaded, configured⟩
 
 /-- Shared timed assembly for an authenticated physical syscall and its complete semantic effects.
@@ -626,12 +626,12 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
     (physical : Environment (ZMod p))
     (active : physical ∈ HostCallLedger.activeRows (HostLocalCore.hostCallTable (HostHintQueueBoundary.projected witness)) witness.data)
     (sameEvent : event = .syscall (HostCallLedger.input physical).instruction)
-    (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (effect : ∀ (_ : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
@@ -641,23 +641,23 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
       (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
         locContent next.sail (.ram cell) = locContent current.sail (.ram cell))) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
-    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   let facts := eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
     (wordTables (HostHintQueueBoundary.projected witness))) event
-  suffices advance : ∀ (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid)
+  suffices advance : ∀ (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid)
       carrier.timeline facts.statePull)
       (currency : ∀ mp ∈ facts.memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
-      (LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline facts.statePush ∧
-        ∀ message ∈ facts.memPushes, LocalMemTruthG (carrier.trajectory valid) source.sail.realize carrier.timeline message) ∧
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+      (LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline facts.statePush ∧
+        ∀ message ∈ facts.memPushes, LocalMemTruth (carrier.trajectory valid) source.sail.realize carrier.timeline message) ∧
       (∀ loc value, (∀ message ∈ facts.memPushes, MemoryMsg.locOf message = loc → message.value = value) →
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc (StateMsg.timeNat facts.statePull) value →
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc (StateMsg.timeNat facts.statePush) value) by
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline loc (StateMsg.timeNat facts.statePull) value →
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline loc (StateMsg.timeNat facts.statePush) value) by
     exact ⟨fun pull currency => (advance pull currency).1, fun pull currency => (advance pull currency).2⟩
   intro pull currency
   obtain ⟨n, current, next, atIndex, paired, pairedNext, step, written, unchanged⟩ :=
@@ -682,7 +682,7 @@ theorem GroundingCarrier.syscall_engineFacts_of_effects (valid : image.Valid)
   have byteBalance := (HostHintQueueBoundary.record_channels witness balanced).byte
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
     apply currency mp
     apply List.mem_append_left
@@ -749,12 +749,12 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
     (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow)
-    (effect : ∀ (_ : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (effect : ∀ (_ : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (_ : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value),
     ∃ n current next, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧ carrier.pairedTrajectory valid (n + 1) = some next ∧
       ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next ∧
@@ -764,10 +764,10 @@ private theorem GroundingCarrier.queue_engineFacts_of_effects (valid : image.Val
       (∀ cell : RamCell, (∀ row ∈ wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) event, MemoryMsg.locOf (touch row).2 ≠ .ram cell) →
         locContent next.sail (.ram cell) = locContent current.sail (.ram cell))) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
-    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
@@ -793,10 +793,10 @@ theorem GroundingCarrier.hintRead_engineFacts (valid : image.Valid)
     (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
       (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env)) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
-    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (none, env) ?_ clock
@@ -826,10 +826,10 @@ theorem GroundingCarrier.hintLength_engineFacts (valid : image.Valid)
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env)) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
-    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   apply carrier.queue_engineFacts_of_effects valid constraints balanced event member (some empty, env) handler clock
@@ -864,10 +864,10 @@ theorem GroundingCarrier.queue_engineFacts (valid : image.Valid)
     (queueMember : queueRow ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime queueRow) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
-    FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
       (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event) := by
   rcases queueRow with ⟨index, env⟩

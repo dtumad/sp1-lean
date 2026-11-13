@@ -70,7 +70,7 @@ theorem GroundingCarrier.instruction_step_at (valid : image.Valid)
   rw [(eventFacts_state_fetch _ _ _).1] at time
   have currency : ∀ mp ∈ (row.ordinaryRowFacts witness.data).memPulls,
       MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline
           (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp mem
     apply grounded.2 mp
@@ -172,7 +172,7 @@ private theorem final_replay (valid : image.Valid)
       (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
       (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
-    (truth : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (truth : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (finalBoundaryStateMessage witness.publicInput)) :
     ∃ target, carrier.pairedTrajectory valid carrier.events.length = some target ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
@@ -220,7 +220,7 @@ theorem GroundingCarrier.execution (valid : image.Valid)
   have before : carrier.trajectory valid carrier.events.length = some target.sail := by
     simp only [GroundingCarrier.trajectory, present, Option.map_some]
   rw [← carrier.finalClock, ← carrier.events_length] at value
-  exact (localValueAtG_stepStart_iff before).mp value
+  exact (localValueAt_stepStart_iff before).mp value
 
 /-- The same actual replay preserves the full Sail memory map outside the native address range. -/
 theorem GroundingCarrier.memory_outside (valid : image.Valid)

@@ -78,9 +78,9 @@ theorem GroundingCarrier.untouched_memory (valid : image.Valid)
     locContent target.sail loc = some value := by
   have grounded := carrier.ground valid constraints balanced
   have current := grounded.1
-  have start : LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc
+  have start : LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline loc
       (StateMsg.timeNat (initialBoundaryStateMessage witness.publicInput)) (Target.bitVecToWord (p := p) value) := by
-    rw [← carrier.timeline_start, localValueAtG_stepStart_iff (carrier.trajectory_zero valid),
+    rw [← carrier.timeline_start, localValueAt_stepStart_iff (carrier.trajectory_zero valid),
       Target.toBitVec64_bitVecToWord]
     exact content
   have preserved := carrier.frame_of_no_push current (fun event member => by
@@ -93,7 +93,7 @@ theorem GroundingCarrier.untouched_memory (valid : image.Valid)
     simp only [GroundingCarrier.trajectory, GroundingCarrier.pairedTrajectory,
       ExecutionCarrier.pairedTrajectory, executionTrajectory, List.take_length, replay, Option.map_some]
   rw [← carrier.finalClock, ← carrier.events_length,
-    localValueAtG_stepStart_iff atEnd, Target.toBitVec64_bitVecToWord] at preserved
+    localValueAt_stepStart_iff atEnd, Target.toBitVec64_bitVecToWord] at preserved
   exact preserved
 
 /-- Every register and every native RAM cell has its exact final value. Locations absent from
@@ -119,7 +119,7 @@ theorem GroundingCarrier.final_memory (valid : image.Valid)
         simp only [GroundingCarrier.trajectory, GroundingCarrier.pairedTrajectory,
           ExecutionCarrier.pairedTrajectory, executionTrajectory, List.take_length, replay, Option.map_some]
       rw [← carrier.finalClock, ← carrier.events_length] at value
-      exact (localValueAtG_stepStart_iff atEnd).mp value
+      exact (localValueAt_stepStart_iff atEnd).mp value
   | none =>
       have ordering := HostHintQueueBoundary.projected_orderingChannels witness
         (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced

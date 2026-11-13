@@ -150,13 +150,6 @@ trivial), so `try_step` is deterministic: the chain below is relational, but eac
 successor. `try_step` is the topmost upstream entry point — interrupt dispatch, fetch, decode, execute,
 PC commit — so nothing of the interpreter is bypassed. -/
 
-/-! ## The real Sail multi-step chain
-
-`SailM = EStateM …` over `SequentialState` (memory lives *inside* the state, the choice source is
-trivial), so `try_step` is deterministic: the chain below is relational, but each state has at most one
-successor. `try_step` is the topmost upstream entry point — interrupt dispatch, fetch, decode, execute,
-PC commit — so nothing of the interpreter is bypassed. -/
-
 /-- One real interpreter step: `try_step` runs to completion (no trap-out of the model). -/
 def SailStep (s s' : SailState) : Prop :=
   ∃ b : Bool, (runSail (try_step 0 false)) s = .ok b s'

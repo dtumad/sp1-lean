@@ -67,10 +67,10 @@ private theorem trajectory_halt (valid : image.Valid)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (haltRowFacts row).statePull)
     (currency : ∀ mp ∈ (haltRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     (n : ℕ) (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = carrier.timeline.start n) :
     carrier.trajectory valid (n + 1) = (carrier.trajectory valid n).map
       (fun state => { state with regs := state.regs.insert LeanRV64D.Register.PC Machine.haltPc }) := by
@@ -112,17 +112,17 @@ theorem GroundingCarrier.halt_engineFacts (valid : image.Valid)
     {row : HaltChip.Inputs (ZMod p)}
     (member : ExecutionRow.halt row ∈
       LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) :
-    LocalStepFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+    LocalStepFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.halt row)) ∧
-      FrameFactG (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
+      FrameFact (image.toGuestProgram valid) (carrier.trajectory valid) source.sail.realize carrier.timeline
         (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) (.halt row)) := by
   have noWords := source_wordsAt_nil_of_not_read witness constraints balanced (.halt row) member
     (fun _ impossible => by cases impossible)
   simp only [eventFacts, noWords, List.map_nil, List.append_nil]
-  change LocalStepFactG _ _ _ _ (haltRowFacts row) ∧ FrameFactG _ _ _ _ (haltRowFacts row)
-  exact halt_engineFactsG_of_currencyStep row (halt_facts valid witness constraints balanced member).1.2.2 _ _ _ _
+  change LocalStepFact _ _ _ _ (haltRowFacts row) ∧ FrameFact _ _ _ _ (haltRowFacts row)
+  exact halt_engineFacts_of_currencyStep row (halt_facts valid witness constraints balanced member).1.2.2 _ _ _ _
     (fun n time => ExecutionCarrier.originalTimeStep carrier member n time)
     (trajectory_halt valid carrier constraints balanced member)
 
@@ -135,15 +135,15 @@ theorem GroundingCarrier.ground (valid : image.Valid)
       (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
-      LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline (event.facts witness.data).statePull ∧
+      LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline (event.facts witness.data).statePull ∧
       ∀ pull ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
         MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
-          LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
-      LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+          LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
+      LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
         (finalBoundaryStateMessage witness.publicInput) ∧
       (∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = some message →
-        LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline loc
+        LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline loc
           (StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput)) message.value) := by
   apply carrier.ground_of_steps valid constraints balanced _ (carrier.trajectory_zero valid)
   intro event member

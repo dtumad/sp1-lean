@@ -104,17 +104,17 @@ private theorem currency_of_unchanged {trajectory : Trajectory} {initial source 
     (unchanged : locContent target loc = locContent source loc)
     (content : locContent source loc = some (Word.toBitVec64 value))
     (lo : timeline.start n ≤ time) (hi : time ≤ timeline.start (n + 1)) :
-    LocalValueAtG trajectory initial timeline loc time value := by
-  unfold LocalValueAtG
+    LocalValueAt trajectory initial timeline loc time value := by
+  unfold LocalValueAt
   cases loc with
   | reg idx =>
     by_cases pre : time < timeline.start n + 4
-    · rw [microValueG_reg_pre lo pre, before, Option.bind_some, content]
-    · rw [microValueG_reg_post (n := n) (by omega) (by omega), after, Option.bind_some, unchanged, content]
+    · rw [microValue_reg_pre lo pre, before, Option.bind_some, content]
+    · rw [microValue_reg_post (n := n) (by omega) (by omega), after, Option.bind_some, unchanged, content]
   | ram cell =>
     by_cases pre : time < timeline.start n + 1
-    · rw [microValueG_ram_pre lo pre, before, Option.bind_some, content]
-    · rw [microValueG_ram_post (n := n) (by omega) (by omega), after, Option.bind_some, unchanged, content]
+    · rw [microValue_ram_pre lo pre, before, Option.bind_some, content]
+    · rw [microValue_ram_post (n := n) (by omega) (by omega), after, Option.bind_some, unchanged, content]
 
 private theorem halt_push_time (row : HaltChip.Inputs (ZMod p))
     (clock : ((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
@@ -142,16 +142,16 @@ private theorem halt_pair_current {row : HaltChip.Inputs (ZMod p)}
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
     (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : ZMod p) (off : ℕ) (bound : off ≤ 4)
     (current : MemoryMsg.isU64 (HaltChip.memPulledMessage row block idx) ∧
-      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf (HaltChip.memPulledMessage row block idx))
+      LocalValueAt trajectory initial timeline (MemoryMsg.locOf (HaltChip.memPulledMessage row block idx))
         (StateMsg.timeNat (HaltChip.statePulledMessage row)) block.prev_value) :
-    LocalMemTruthG trajectory initial timeline (HaltChip.memPushedMessage row block idx off) := by
+    LocalMemTruth trajectory initial timeline (HaltChip.memPushedMessage row block idx off) := by
   have times := halt_push_time row clock block idx off bound
   have sameLoc : MemoryMsg.locOf (HaltChip.memPushedMessage row block idx off) =
       MemoryMsg.locOf (HaltChip.memPulledMessage row block idx) := rfl
   refine ⟨current.1, times.2, ?_⟩
   have currency := current.2
   rw [time] at currency
-  have content := (localValueAtG_stepStart_iff before).mp currency
+  have content := (localValueAt_stepStart_iff before).mp currency
   apply currency_of_unchanged before after (pcPark_content source _)
   · rwa [sameLoc]
   · rw [times.1, time]; omega
@@ -159,20 +159,20 @@ private theorem halt_pair_current {row : HaltChip.Inputs (ZMod p)}
 
 /-- Canonical HALT supplies both generic engine facts from its checked clock and its PC-only step.
 The three prior records' hygiene and values enter only through the engine's incoming currency. -/
-theorem halt_engineFactsG_of_currencyStep (row : HaltChip.Inputs (ZMod p))
+theorem halt_engineFacts_of_currencyStep (row : HaltChip.Inputs (ZMod p))
     (clock : ((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
       row.state.clk_16_24.val < 2 ^ 8)
     (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
     (timeStep : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
       StateMsg.timeNat (HaltChip.statePushedMessage row) = timeline.start (n + 1))
-    (step : LocalStateTruthG program trajectory timeline (haltRowFacts row).statePull →
+    (step : LocalStateTruth program trajectory timeline (haltRowFacts row).statePull →
       (∀ mp ∈ (haltRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
+        LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
       ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
       trajectory (n + 1) = (trajectory n).map
         (fun state => { state with regs := state.regs.insert Register.PC Machine.haltPc })) :
-    LocalStepFactG program trajectory initial timeline (haltRowFacts row) ∧
-      FrameFactG program trajectory initial timeline (haltRowFacts row) := by
+    LocalStepFact program trajectory initial timeline (haltRowFacts row) ∧
+      FrameFact program trajectory initial timeline (haltRowFacts row) := by
   constructor
   · intro stateTruth currency
     have next := step stateTruth currency
@@ -206,22 +206,8 @@ theorem halt_engineFactsG_of_currencyStep (row : HaltChip.Inputs (ZMod p))
     rw [before, Option.map_some] at after
     rw [show (haltRowFacts row).statePull = HaltChip.statePulledMessage row from rfl, time] at current
     rw [show (haltRowFacts row).statePush = HaltChip.statePushedMessage row from rfl, timeStep n time]
-    apply (localValueAtG_stepStart_iff after).mpr
+    apply (localValueAt_stepStart_iff after).mpr
     rw [pcPark_content]
-    exact (localValueAtG_stepStart_iff before).mp current
-
-/-- Compatibility form for trajectories whose HALT successor is known unconditionally. -/
-theorem halt_engineFactsG (row : HaltChip.Inputs (ZMod p))
-    (clock : ((row.state.clk_0_16 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13 ∧
-      row.state.clk_16_24.val < 2 ^ 8)
-    (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
-    (timeStep : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
-      StateMsg.timeNat (HaltChip.statePushedMessage row) = timeline.start (n + 1))
-    (step : ∀ n, StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n →
-      trajectory (n + 1) = (trajectory n).map
-        (fun state => { state with regs := state.regs.insert Register.PC Machine.haltPc })) :
-    LocalStepFactG program trajectory initial timeline (haltRowFacts row) ∧
-      FrameFactG program trajectory initial timeline (haltRowFacts row) :=
-  halt_engineFactsG_of_currencyStep row clock program trajectory initial timeline timeStep (fun _ _ => step)
+    exact (localValueAt_stepStart_iff before).mp current
 
 end SP1Clean.Soundness

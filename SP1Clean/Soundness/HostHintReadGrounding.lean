@@ -201,21 +201,21 @@ theorem GroundingCarrier.ground_of_steps (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (trajectory : Trajectory) (initial : trajectory 0 = some source.sail.realize)
     (steps : ∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
-      LocalStepFactG (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
+      LocalStepFact (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
           (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
             (wordTables (HostHintQueueBoundary.projected witness))) event) ∧
-      FrameFactG (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
+      FrameFact (image.toGuestProgram valid) trajectory source.sail.realize carrier.timeline
           (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
             (wordTables (HostHintQueueBoundary.projected witness))) event)) :
     (∀ event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)),
-      LocalStateTruthG (image.toGuestProgram valid) trajectory carrier.timeline (event.facts witness.data).statePull ∧
+      LocalStateTruth (image.toGuestProgram valid) trajectory carrier.timeline (event.facts witness.data).statePull ∧
       ∀ pull ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
           (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
         MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
-          LocalValueAtG trajectory source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
-      LocalStateTruthG (image.toGuestProgram valid) trajectory carrier.timeline (finalBoundaryStateMessage witness.publicInput) ∧
+          LocalValueAt trajectory source.sail.realize carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) ∧
+      LocalStateTruth (image.toGuestProgram valid) trajectory carrier.timeline (finalBoundaryStateMessage witness.publicInput) ∧
       (∀ loc message, LocalCore.memoryFinalFrontier (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) loc = some message →
-        LocalValueAtG trajectory source.sail.realize carrier.timeline loc
+        LocalValueAt trajectory source.sail.realize carrier.timeline loc
           (StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput)) message.value) := by
   have checked := HostLocalCore.localWitness_constraints _
     (HostHintQueueBoundary.projected_constraints witness constraints)

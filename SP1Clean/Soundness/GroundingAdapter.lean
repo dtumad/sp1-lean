@@ -192,12 +192,6 @@ theorem locContent_ram_congr {s s' : SailState}
     locContent s' (MemLoc.ram cell) = locContent s (MemLoc.ram cell) := by
   simp only [locContent, ramWord64?, frame]
 
-/-! ## The step fact -/
-
-/-! ## The frame fact -/
-
-/-! ## The dispatcher over the heterogeneous row -/
-
 /-! ## The R-type reader-shape wiring
 
 Everything below is the first reader-shape batch: the field → ℕ decoding of the intra-row effect

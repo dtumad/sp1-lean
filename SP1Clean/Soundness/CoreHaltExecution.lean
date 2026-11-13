@@ -23,13 +23,13 @@ private theorem halt_register_current {row : HaltChip.Inputs (ZMod p)}
     (before : trajectory n = some state)
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
     (block : Circuits.Types.RegisterAccessCols (ZMod p)) (idx : BitVec 5)
-    (current : LocalValueAtG trajectory initial timeline
+    (current : LocalValueAt trajectory initial timeline
       (MemoryMsg.locOf (HaltChip.memPulledMessage row block idx.toNat))
       (StateMsg.timeNat (HaltChip.statePulledMessage row)) block.prev_value) :
     state.get_reg? idx = some (Word.toBitVec64 block.prev_value) := by
   rw [time] at current
   have location := MemoryMsg.locOf_register (HaltChip.memPulledMessage row block idx.toNat) idx rfl rfl rfl
-  have content := (localValueAtG_stepStart_iff before).mp current
+  have content := (localValueAt_stepStart_iff before).mp current
   rwa [location] at content
 
 /-- The three pulled records are the actual current x5/x10/x11, with a bounded exit word. -/
@@ -38,7 +38,7 @@ theorem HaltChip.registers_of_currency (row : HaltChip.Inputs (ZMod p))
     (before : trajectory n = some state)
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
     (currency : ∀ mp ∈ (haltRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     state.get_reg? 5 = some (Word.toBitVec64 row.x5_memory.prev_value) ∧
       state.get_reg? 10 = some (Word.toBitVec64 row.x10_memory.prev_value) ∧
       state.get_reg? 11 = some (Word.toBitVec64 row.x11_memory.prev_value) ∧
@@ -73,7 +73,7 @@ theorem HaltChip.executionStep_of_currency (row : HaltChip.Inputs (ZMod p))
     (before : trajectory n = some source.sail)
     (time : StateMsg.timeNat (HaltChip.statePulledMessage row) = timeline.start n)
     (currency : ∀ mp ∈ (haltRowFacts row).memPulls, MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ExecutionStep policy program source (.syscall (haltEventOfRow row))
       ⟨{ source.sail with regs := source.sail.regs.insert Register.PC Machine.haltPc },
         { source.host with exitCode := some ((Word.toBitVec64 row.x10_memory.prev_value).setWidth 32) },

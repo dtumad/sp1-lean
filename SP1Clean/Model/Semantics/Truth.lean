@@ -28,13 +28,6 @@ open SP1Clean.Channels (StateMsg MemoryMsg ProgramMsg)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-! ## Timeline-relative truth
-
-The timeline generalizations of the local truth predicates: identical shapes with the uniform
-eight-tick step ↔ clock mapping replaced by an arbitrary `Timeline`.  The `_ordinary` bridges
-recover the uniform predicates definitionally, so the per-chip layers keep producing the uniform
-facts and only the timed grounding walk speaks the generalized vocabulary. -/
-
 /-! ## The per-row advance obligation -/
 
 /-- The chip-agnostic facts one real row contributes, in bus-message form: its state pull/push, its

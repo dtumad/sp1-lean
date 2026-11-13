@@ -348,21 +348,11 @@ theorem ChipGroundingContracts.rowAligned {chip : SupportedChip p}
 
 end Contracts
 
-/-! ## Registry assembly
-
-`Soundness/AIR.lean` proves the generic assembly theorem
-`supportedCore_orderedRows_dynamic_of_obligations`.  It chooses every bundle's aligned carrier,
-feeds the seven inputs of `TimedGrounding.walk`, transports the result back to the ordinary physical
-row, and invokes `DecodedInstructionRow.dynamicGrounded_of_contracts`.  The remaining rollout is
-therefore finite: provide this bundle for every registered chip and prove the two structural Memory
-selector facts collected by `SupportedCoreGroundingObligations`. -/
-
 /-! ## Arc-B memory-balance reconciliation (walk input ⑦)
 
-The `TimedGrounding.walk` per-location Memory balance is stated over the *aligned* carrier of the
-*ordered* real rows, while `memoryFrontierBalance` (`Soundness/MemoryFrontier.lean`) proves it over
-`memoryFrontierRows` — the *ordinary* carrier in `realDecodedInstructionRows` order.  These three
-lemmas bridge the gap: `pushesAt`/`pullsAt` are invariant under (a) a permutation of the row batch
+The walk's per-location Memory balance is stated over the *aligned* carrier of the *ordered* real
+rows; a ledger balance may instead be stated over the *ordinary* carrier in physical row order.
+These lemmas bridge the two: `pushesAt`/`pullsAt` are invariant under (a) a permutation of the row batch
 (the exhaustive `Perm`) and (b) the per-row `AlignsWith` push/pull permutations. -/
 
 omit [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)] in
