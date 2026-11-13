@@ -1,5 +1,16 @@
 import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Soundness.LocalExecution
+import SP1Clean.Soundness.ChipRegistry
+import Mathlib.Data.Set.Basic
+import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.FormalModel.Contracts.PublicValues
+import SP1Clean.Model.Machine.Syscall
+import SP1Clean.Model.Machine.Execution
+import SP1Clean.Model.Core.Profile
+import SP1Clean.Model.Semantics.TransitionView
+import SP1Clean.Model.Semantics.ProgramCommitment
+import SP1Clean.Model.Semantics.GenericTruth
+import SP1Clean.Soundness.Walk
 import SP1Clean.Soundness.TypedMemory
 
 /-! # The decoded-row circuit soundness boundary
@@ -358,65 +369,5 @@ theorem DecodedInstructionRow.chipSpec_of_openSoundnessInputs
     (openInputs : DecodedRowOpenSoundnessInputs decoded witness.data) :
     (decoded.toChipRow witness.data).chipSpec witness.data :=
   (decodedRowStaticInputs_of_witness witness constraints balanced decoded decodedMem).chipSpec openInputs
-
-/-- Assemble the semantic row consumed by local execution.  This theorem makes the dependency
-direction explicit: the timed layer never assumes `chipSpec`; it supplies the open circuit inputs,
-and the retained chip's own `GeneralFormalCircuit.weakSoundness` derives the spec. -/
-theorem DecodedInstructionRow.dynamicGrounded_of_inputs
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (decoded : DecodedInstructionRow p)
-    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
-    (program : Target.GuestProgram) (state : SailState)
-    (inputs : DecodedRowDynamicInputs decoded witness.data program state) :
-    DynamicGroundedRow witness.data program (decoded.toChipRow witness.data) state :=
-  { spec := decoded.chipSpec_of_openSoundnessInputs witness constraints balanced decodedMem
-      inputs.circuit
-    ready := inputs.ready
-    operands := inputs.operands }
-
-/-- Capstone-facing specialization: once the global engine grounds this row's exact typed Memory
-records, the remaining position facts feed the chip circuit and Sail bridge through one proved path. -/
-theorem DecodedInstructionRow.dynamicGrounded_of_grounded
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (decoded : DecodedInstructionRow p)
-    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
-    (program : Target.GuestProgram) (initial state : SailState) (initialClock : ℕ)
-    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment witness.data))
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts witness.data))
-    (ready : (decoded.toChipRow witness.data).kind.advanceReady
-      (decoded.toChipRow witness.data).inputs (decoded.toChipRow witness.data).cols program state)
-    (operands : Target.ValueOperandsBound (decoded.toChipRow witness.data).view state) :
-    DynamicGroundedRow witness.data program (decoded.toChipRow witness.data) state :=
-  decoded.dynamicGrounded_of_inputs witness constraints balanced decodedMem program state
-    (decoded.dynamicInputs_of_grounded witness.data program initial state initialClock assumptions
-      grounded ready operands)
-
-/-- Capstone form with register operands discharged from the chip's exact Memory pulls. The caller
-retains only the per-chip interaction-shape theorem, the ordered prefix, and the row's clock position. -/
-theorem DecodedInstructionRow.dynamicGrounded_of_timedInputs
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (decoded : DecodedInstructionRow p)
-    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
-    (program : Target.GuestProgram) (initial state : SailState)
-    (initialClock steps : ℕ)
-    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment witness.data))
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts witness.data))
-    (ready : (decoded.toChipRow witness.data).kind.advanceReady
-      (decoded.toChipRow witness.data).inputs (decoded.toChipRow witness.data).cols program state)
-    (pulls : decoded.RegisterOperandPulls witness.data)
-    (chain : Target.SailChain steps initial state)
-    (real : (decoded.toChipRow witness.data).is_real = 1)
-    (rowTime : Semantics.StateMsg.timeNat
-      (statePullMessage (decoded.toChipRow witness.data)) = initialClock + 8 * steps) :
-    DynamicGroundedRow witness.data program (decoded.toChipRow witness.data) state := by
-  apply decoded.dynamicGrounded_of_grounded witness constraints balanced decodedMem program initial
-    state initialClock assumptions grounded ready
-  exact decoded.valueOperandsBound_of_grounded witness.data program initial state initialClock steps
-    grounded chain real rowTime pulls
 
 end SP1Clean.Soundness

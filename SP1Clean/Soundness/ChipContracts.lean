@@ -33,9 +33,8 @@ time. Refresh lemmas combine local pushed-record bounds with explicit prior-reco
 assembly derives the latter from balance before eliminating refresh rows. Neither local witness
 generation nor a received Memory guarantee supplies this chronology.
 
-The legacy `sp1Ensemble` capstone still consumes witness-specialized contracts and ledger views.
-Those adapters can disappear when its consumers use the component-local interfaces shared by the
-native boot and local assemblies.
+Witness-specialized contracts and ledger views over `sp1Ensemble` remain for consumers that have
+not moved to the component-local interfaces shared by the native boot and local assemblies (#16).
 -/
 
 open LeanRV64D
@@ -393,45 +392,6 @@ theorem ChipGroundingContracts.engineFacts
         program decode (mkOpenInputs hcurr) state operands sourceA pulls)
     codeMemoryCompatible
 
-/-- **The dynamic-row consumer**: bundle + the walk's `Grounded` output + the row's positional
-facts assemble the `DynamicGroundedRow` demanded by `supportedCore_orderedRows_dynamic` — through
-the one proved circuit path (`dynamicGrounded_of_timedInputs`), with readiness, assumptions, and
-operand pulls all supplied by the bundle. -/
-theorem DecodedInstructionRow.dynamicGrounded_of_contracts
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (decoded : DecodedInstructionRow p)
-    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
-    (contracts : ChipGroundingContracts decoded.chip)
-    (program : GuestProgram) (initial state : SailState) (initialClock steps : ℕ)
-    (decode : Target.decodedInROM program
-      (programAccess (decoded.toChipRow witness.data).view).toRow)
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts witness.data))
-    (chain : Target.SailChain steps initial state)
-    (real : (decoded.toChipRow witness.data).is_real = 1)
-    (rowTime : Semantics.StateMsg.timeNat
-      (statePullMessage (decoded.toChipRow witness.data)) = initialClock + 8 * steps) :
-    DynamicGroundedRow witness.data program (decoded.toChipRow witness.data) state := by
-  have guard := contracts.routing witness constraints decoded rfl decodedMem real program decode
-  have memory := decoded.memoryChannelGuarantees_of_grounded witness.data program initial
-    initialClock grounded
-  have assumptions := contracts.assumptions witness constraints balanced decoded rfl decodedMem
-    real program decode memory
-  let openInputs : DecodedRowOpenSoundnessInputs decoded witness.data := ⟨assumptions, memory⟩
-  have wiring := contracts.wiring witness constraints balanced decoded rfl decodedMem real
-    program decode openInputs
-  have rowTime' : Semantics.StateMsg.timeNat
-      (decoded.ordinaryRowFacts witness.data).statePull = initialClock + 8 * steps := by
-    simpa only [ordinaryRowFacts_statePull] using rowTime
-  have operands := wiring.valueOperandsBound_of_grounded grounded chain rowTime'
-  have sourceA := wiring.sourceAValueBound_of_grounded grounded chain rowTime'
-  have pulls := wiring.memoryPullsBound_of_grounded grounded chain rowTime'
-  have ready := contracts.readiness witness constraints balanced decoded rfl decodedMem real guard
-    program decode openInputs state operands sourceA pulls
-  exact decoded.dynamicGrounded_of_grounded witness constraints balanced decodedMem program
-    initial state initialClock assumptions grounded ready operands
-
 end Contracts
 
 /-! ## Registry assembly
@@ -480,75 +440,6 @@ omit [Fact (Nat.Prime p)] [Fact (2 ^ 17 < p)] in
 theorem pullsAt_perm {rows rows' : List (RowFacts p)} (h : rows.Perm rows') (loc : MemLoc) :
     pullsAt rows loc = pullsAt rows' loc :=
   (h.map _).sum_eq
-
-omit [Fact (2 ^ 17 < p)] in
-/-- **Walk input ⑦ over the aligned ordered rows.**  Any row-indexed aligned carrier `g` (each `g d`
-aligning with `d`'s ordinary facts), taken over the exhaustive ordered rows, satisfies the same
-per-location Memory balance `memoryFrontierBalance` proves over `memoryFrontierRows` — transported
-across the `AlignsWith` per-row permutations (`rowPushesAt/PullsAt_coe_eq_of_alignsWith`) and the
-exhaustive batch `Perm` (`pushesAt/pullsAt_perm`). -/
-theorem memoryBalance_of_alignsWith [Fact (2 ^ 24 < p)]
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (balanced : witness.BalancedChannels)
-    (memBinary : ∀ interaction ∈ typedEnsembleInteractionsWith witness Channels.memoryChannel,
-      IsBool interaction.mult)
-    (initPure : consumedMessages (typedTableInteractionsWith (memoryInitProviderTable witness)
-      Channels.memoryChannel) = [])
-    (finPure : producedMessages (typedTableInteractionsWith (memoryFinalizeProviderTable witness)
-      Channels.memoryChannel) = [])
-    (initUnique : MemoryInitProviderUnique witness)
-    (finalizeUnique : MemoryFinalizeProviderUnique witness)
-    (paddingEmpty : ∀ decoded ∈ decodedInstructionRows (p := p) witness.tables,
-      (decoded.toChipRow witness.data).is_real ≠ 1 →
-        decoded.producedMemoryMessages witness.data = [] ∧
-          decoded.consumedMemoryMessages witness.data = [])
-    (orderedRows : List (DecodedInstructionRow p))
-    (exhaustive : orderedRows.Perm (realDecodedInstructionRows witness.data witness.tables))
-    (g : DecodedInstructionRow p → RowFacts p)
-    (aligns : ∀ d ∈ orderedRows, AlignsWith (g d) (d.ordinaryRowFacts witness.data))
-    (loc : MemLoc) :
-    optMS (memoryInitFrontier witness loc) + pushesAt (orderedRows.map g) loc +
-        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-            Channels.memoryChannel))) +
-        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (haltTable witness)
-            Channels.memoryChannel))) +
-        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-            Channels.memoryChannel))) =
-      optMS (memoryFinalizeFrontier witness loc) + pullsAt (orderedRows.map g) loc +
-        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (memoryBumpTable witness)
-            Channels.memoryChannel))) +
-        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (haltTable witness)
-            Channels.memoryChannel))) +
-        Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-            Channels.memoryChannel))) := by
-  have hordinary : memoryFrontierRows witness =
-      (realDecodedInstructionRows witness.data witness.tables).map
-        (fun d => d.ordinaryRowFacts witness.data) := rfl
-  have hpush : pushesAt (orderedRows.map g) loc = pushesAt (memoryFrontierRows witness) loc := by
-    have step1 : pushesAt (orderedRows.map g) loc =
-        pushesAt (orderedRows.map (fun d => d.ordinaryRowFacts witness.data)) loc := by
-      simp only [pushesAt, List.map_map]
-      refine congrArg List.sum (List.map_congr_left fun d hd => ?_)
-      exact rowPushesAt_coe_eq_of_alignsWith (aligns d hd) loc
-    rw [step1, hordinary]
-    exact pushesAt_perm (exhaustive.map _) loc
-  have hpull : pullsAt (orderedRows.map g) loc = pullsAt (memoryFrontierRows witness) loc := by
-    have step1 : pullsAt (orderedRows.map g) loc =
-        pullsAt (orderedRows.map (fun d => d.ordinaryRowFacts witness.data)) loc := by
-      simp only [pullsAt, List.map_map]
-      refine congrArg List.sum (List.map_congr_left fun d hd => ?_)
-      exact rowPullsAt_coe_eq_of_alignsWith (aligns d hd) loc
-    rw [step1, hordinary]
-    exact pullsAt_perm (exhaustive.map _) loc
-  rw [hpush, hpull]
-  exact memoryFrontierBalance witness balanced memBinary initPure finPure initUnique finalizeUnique
-    paddingEmpty loc
 
 /-! ## R-type family constructor -/
 
@@ -4856,49 +4747,6 @@ theorem RowWiring.memoryPullsBound_of_pullCurrency
   have current := curr mp hmp
   rw [wiring.readTime mp hmp, rowTime] at current
   exact (Semantics.localValueAt_stepStart_iff chain).mp current
-
-/-- **The weak dynamic-row consumer**: `DecodedInstructionRow.dynamicGrounded_of_contracts` with the
-walk's `Grounded` replaced by the transported weak currency facts.  The assembly is identical —
-open Memory guarantees from the structural pair, operands from the read-time currency — but routed
-through `dynamicGrounded_of_inputs`, which never sees a `Grounded` record. -/
-theorem DecodedInstructionRow.dynamicGrounded_of_weakCurrency
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (decoded : DecodedInstructionRow p)
-    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
-    (contracts : ChipGroundingContracts decoded.chip)
-    (program : GuestProgram) (initial state : SailState) (initialClock steps : ℕ)
-    (decode : Target.decodedInROM program
-      (programAccess (decoded.toChipRow witness.data).view).toRow)
-    (hcurr : ∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
-      (SP1Clean.Channels.MemoryMsg.isU64 mp.1 ∧ SP1Clean.Channels.MemoryMsg.ClkBound mp.1) ∧
-        LocalValueAt initial initialClock (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
-    (chain : Target.SailChain steps initial state)
-    (real : (decoded.toChipRow witness.data).is_real = 1)
-    (rowTime : Semantics.StateMsg.timeNat
-      (statePullMessage (decoded.toChipRow witness.data)) = initialClock + 8 * steps) :
-    DynamicGroundedRow witness.data program (decoded.toChipRow witness.data) state := by
-  have guard := contracts.routing witness constraints decoded rfl decodedMem real program decode
-  have memory := decoded.memoryChannelGuarantees_of_pullCurrency witness.data
-    (fun mp hmp => ⟨(hcurr mp hmp).1.1, (hcurr mp hmp).1.2⟩)
-  have assumptions := contracts.assumptions witness constraints balanced decoded rfl decodedMem
-    real program decode memory
-  let openInputs : DecodedRowOpenSoundnessInputs decoded witness.data := ⟨assumptions, memory⟩
-  have wiring := contracts.wiring witness constraints balanced decoded rfl decodedMem real
-    program decode openInputs
-  have rowTime' : Semantics.StateMsg.timeNat
-      (decoded.ordinaryRowFacts witness.data).statePull = initialClock + 8 * steps := by
-    simpa only [DecodedInstructionRow.ordinaryRowFacts_statePull] using rowTime
-  have curr' : ∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
-      LocalValueAt initial initialClock (MemoryMsg.locOf mp.1) mp.2 mp.1.value :=
-    fun mp hmp => (hcurr mp hmp).2
-  have operands := wiring.valueOperandsBound_of_pullCurrency curr' chain rowTime'
-  have sourceA := wiring.sourceAValueBound_of_pullCurrency curr' chain rowTime'
-  have pulls := wiring.memoryPullsBound_of_pullCurrency curr' chain rowTime'
-  have ready := contracts.readiness witness constraints balanced decoded rfl decodedMem real guard
-    program decode openInputs state operands sourceA pulls
-  exact decoded.dynamicGrounded_of_inputs witness constraints balanced decodedMem program state
-    { circuit := openInputs, ready, operands }
 
 end WeakConsumer
 

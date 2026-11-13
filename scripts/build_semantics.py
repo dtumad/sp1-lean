@@ -63,12 +63,6 @@ LAYERS = [
     ("SP1Clean/Proofs/Completeness/", "L3"),
     ("SP1Clean/Alignment/", "L3"),
     ("SP1Clean/FormalModel/Shard", "L3"),
-    ("SP1Clean/FormalModel/Execution.lean", "L3"),
-    ("SP1Clean/FormalModel/EventExecution.lean", "L3"),
-    ("SP1Clean/FormalModel/SupportedShard.lean", "L3"),
-    ("SP1Clean/FormalModel/CoreShard.lean", "L3"),
-    ("SP1Clean/FormalModel/Relations.lean", "L3"),
-    ("SP1Clean/FormalModel/Verifier.lean", "L3"),
     ("SP1Clean/FormalModel/Trace", "L3"),
     # L5 tests.
     ("SP1CleanTest/", "L5"),
@@ -84,10 +78,6 @@ LAYERS = [
 HEADLINES = [
     ("SP1Clean.FormalModel.Shard", "Shard.Executes/Admissible (capstone vocabulary)", "unfilled"),
     ("SP1Clean.Soundness.Shard.Machine", "Shard.realizes / statement_iff_of_realizes (capstone)", "unfilled"),
-    ("SP1Clean.Soundness.AIR", "supported_core_native_sound (retained 55-table)", "closed"),
-    ("SP1Clean.Soundness.BootHalt", "supported_core_boot_to_halt_single_shard", "closed"),
-    ("SP1Clean.Soundness.NativeCompleteness", "supported_core_native_complete (+ totality-conditional)", "closed/conditional"),
-    ("SP1Clean.Proofs.Completeness.NativeTraceCompiler", "nativeTrace / NativeShardTraceTotal", "closed/open"),
     ("SP1Clean.Soundness.HostHintReadFinalSnapshot", "HostHintReadCPU.source_execution_with_memory (frontier)", "closed, not capstone"),
     ("SP1Clean.Soundness.Shard.Trace", "Shard.sail_trace (exported-circuit Sail trace)", "closed, not capstone"),
 ]

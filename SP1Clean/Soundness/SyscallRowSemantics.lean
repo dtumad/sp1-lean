@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import SP1Clean.Model.Machine.Shard
+import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Semantics.MicroTime
 
 /-! # What a syscall row means
 
@@ -143,42 +144,6 @@ theorem syscallId_field_iff (r : SyscallInstrsChip.Inputs (ZMod p))
     simpa [ZMod.natCast_val, ZMod.cast_id] using this
   · intro h
     rw [h, ZMod.val_natCast_of_lt (by omega : code < p)]
-
-/-! ## The handler
-
-Thirteen arms, dispatching on the id when the table byte is zero. The division of labour matters:
-the handler supplies the **effect**, while `RowLaw` — which the row proves — says what the effect
-must be. So the handler writes `event.result` to `t0` without itself deciding what `result` is;
-`ResultLaw` is what pins it to `0` on ENTER_UNCONSTRAINED, to the oracle on HINT_LEN, and to the
-unchanged code everywhere else. -/
-
-/-- **The thirteen-arm handler.** HALT parks at `haltPc`; every other inline code advances one
-instruction and writes `t0`. A non-zero table byte routes to a precompile and is not ours. -/
-noncomputable def ExecutableSyscallHandler.full : ExecutableSyscallHandler where
-  run := fun _program event source =>
-    if event.tableByte ≠ 0 then none
-    else if event.syscallId = Machine.haltSyscallId then
-      some { source with regs := source.regs.insert Register.PC Machine.haltPc }
-    else if event.syscallId ∈ inlineSyscallIds then
-      some { source with
-        regs := (source.regs.insert Register.PC (event.pc + 4)).insert Register.x5 event.result }
-    else none
-
-/-- `full` extends `haltOnly`: on a canonical HALT the two produce the same state, so every proof
-that consumes the halt path keeps working when the binding is switched. -/
-theorem full_run_eq_haltOnly_of_canonicalHalt (program : GuestProgram) (event : CoreSyscallEvent)
-    (source : SailState) (h : event.IsCanonicalHalt) :
-    ExecutableSyscallHandler.full.run program event source =
-      ExecutableSyscallHandler.haltOnly.run program event source := by
-  have hraw : event.rawCode = 0 := by
-    simpa [CoreSyscallEvent.IsCanonicalHalt, CoreSyscallEvent.IsCanonicalCode] using h
-  have hnat : event.rawCode.toNat = 0 := by rw [hraw]; rfl
-  have htable : event.tableByte = 0 := by
-    rw [CoreSyscallEvent.tableByte, hnat]
-  have hid : event.syscallId = haltSyscallId := by
-    rw [CoreSyscallEvent.syscallId, hnat]; rfl
-  simp only [ExecutableSyscallHandler.full, ExecutableSyscallHandler.haltOnly, htable, hid,
-    ne_eq, not_true_eq_false, ite_false, ite_true, ite_eq_left hraw]
 
 /-- **The goodness obligation a mid-shard syscall row owes.** The halt row is excused from bounding
 its pushed pc because that pc is the literal `(1, 0, 0)`. A syscall row's push is a real `pc + 4`, so
@@ -561,74 +526,5 @@ thirteen — so the arms above are a total dispatch and no case is silently unha
 theorem inlineSyscallIds_exhaustive (event : CoreSyscallEvent) (hc : event.IsInlineCanonical) :
     event.syscallId ∈ inlineSyscallIds := by
   rw [CoreSyscallEvent.syscallId_of_inlineCanonical hc]; exact hc
-
-/-! ## The assembled transition -/
-
-/-! ### The handler's two reachable arms
-
-`full.run` has four branches, but a canonical row reaches only two: the table byte is zero and the
-id is inline, so the two `none` arms are unreachable. Naming the reachable pair keeps the assembled
-transition from re-deriving the dispatch each time. -/
-
-theorem full_run_halt (program : GuestProgram) (event : CoreSyscallEvent) (source : SailState)
-    (htable : event.tableByte = 0) (h0 : event.syscallId = Machine.haltSyscallId) :
-    ExecutableSyscallHandler.full.run program event source
-      = some { source with regs := source.regs.insert Register.PC Machine.haltPc } := by
-  simp [ExecutableSyscallHandler.full, htable, h0]
-
-theorem full_run_inline (program : GuestProgram) (event : CoreSyscallEvent) (source : SailState)
-    (htable : event.tableByte = 0) (h0 : event.syscallId ≠ Machine.haltSyscallId)
-    (hmem : event.syscallId ∈ inlineSyscallIds) :
-    ExecutableSyscallHandler.full.run program event source
-      = some { source with regs :=
-          (source.regs.insert Register.PC (event.pc + 4)).insert Register.x5 event.result } := by
-  simp [ExecutableSyscallHandler.full, htable, h0, hmem]
-
-/-- **A syscall row executes a syscall.** The row's constraints, the ensemble's operand and carry
-facts, and canonicity together give the full `SyscallTransition` against the thirteen-arm handler —
-which is exactly what a walked syscall row must supply to the grounding engine.
-
-Note where each conjunct comes from, because the division is the whole design: `RowLaw` is the
-*row's*, `MatchesStates`' source half is the *bus's* (it is what the pulls observed), its target half
-is the *handler's*, and the handler clause is the handler's own definition. Nothing is assumed twice
-and nothing is left to a frame rule. -/
-theorem syscallTransition_of_row (r : SyscallInstrsChip.Inputs (ZMod p)) (program : GuestProgram)
-    (source : SailState)
-    (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.SelectorsValid r)
-    (pulled : SyscallInstrsChip.PulledFacts r) (real : r.is_real = 1)
-    (canonical : (syscallEventOfRow r).IsInlineCanonical)
-    (ctx : SyscallRowContext r program source) :
-    ∃ target : SailState,
-      ExecutableSyscallHandler.full.run program (syscallEventOfRow r) source = some target ∧
-      Machine.SyscallTransition ExecutableSyscallHandler.full.relation program
-        (syscallEventOfRow r) source target := by
-  have hlaw := rowLaw_of_spec r program source spec sel pulled real ctx
-  have htable : (syscallEventOfRow r).tableByte = 0 :=
-    CoreSyscallEvent.tableByte_of_inlineCanonical canonical
-  obtain ⟨hpc, hx5, hx10, hx11⟩ :
-      source.regs.get? Register.PC = some (syscallEventOfRow r).pc ∧
-      source.get_reg? 5#5 = some (syscallEventOfRow r).rawCode ∧
-      source.get_reg? 10#5 = some (syscallEventOfRow r).arg1 ∧
-      source.get_reg? 11#5 = some (syscallEventOfRow r).arg2 :=
-    ⟨ctx.pcValue, ctx.operandValues.1, ctx.operandValues.2.1, ctx.operandValues.2.2⟩
-  by_cases h0 : (syscallEventOfRow r).syscallId = Machine.haltSyscallId
-  · -- HALT parks at `haltPc` and leaves `x5` alone; `ResultLaw` is what makes that agree with
-    -- `MatchesStates`, since on this arm the result *is* the unchanged code.
-    refine ⟨_, full_run_halt program _ source htable h0, hlaw, ⟨hpc, hx5, hx10, hx11, ?_, ?_⟩,
-      full_run_halt program _ source htable h0⟩
-    · rw [arm_halt r spec sel real h0]
-      simp
-    · rw [arm_default r spec sel pulled real (by rw [h0]; decide) (by rw [h0]; decide),
-        SailState.get_reg?_insert_PC]
-      exact hx5
-  · -- Every other inline arm advances the pc and writes `t0`, which is exactly what the two
-    -- inserts do; canonicity is what rules out the handler's `none` tail.
-    have hmem : (syscallEventOfRow r).syscallId ∈ inlineSyscallIds :=
-      inlineSyscallIds_exhaustive _ canonical
-    refine ⟨_, full_run_inline program _ source htable h0 hmem, hlaw,
-      ⟨hpc, hx5, hx10, hx11, ?_, ?_⟩, full_run_inline program _ source htable h0 hmem⟩
-    · rw [arm_pcAdvance_of_pcBound r spec sel real h0 (pulled real).2.1]
-      simp [Std.ExtDHashMap.get?_insert]
-    · simp [SailState.get_reg?]
 
 end SP1Clean.Soundness

@@ -8,8 +8,7 @@ import Clean.Utils.Tactics.CircuitProofStart
 /-! # Word equality gadget
 
 The typed and Clean-IR witnesses, circuit and bundled correctness proofs share this module.
-The pure contract is in `Semantics/Specs/IsEqualWord`. `AssertSpec` supports the
-transitional comparison with independently extracted Rust assertions.
+The pure contract is in `Semantics/Specs/IsEqualWord`.
 -/
 
 @[expose] public section
@@ -130,21 +129,6 @@ lemma fromElements_zero :
   exact (zc_cell i hi).symm
 
 end Flatten
-
-/-- Literal meaning of SP1's `IsEqualWordOperation` constraint list at `is_real = 1`: the
-`IsZeroWordOperation.AssertSpec` on the limb-wise difference `a - b`. -/
-def AssertSpec (a b : Word (ZMod p)) (cols : Circuits.Types.IsEqualWordOperation (ZMod p)) : Prop :=
-  IsZeroWordOperation.AssertSpec #v[a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]
-    cols.is_diff_zero
-
-/-- Soundness core: the `IsZeroWordOperation` zero-test on the limb-wise difference, plus
-`aᵢ - bᵢ = 0 ↔ aᵢ = bᵢ`, gives the equality indicator. -/
-theorem isEqualWord_of_assert {a b : Word (ZMod p)} {cols : Circuits.Types.IsEqualWordOperation (ZMod p)}
-    (h_raw : AssertSpec a b cols) :
-    cols.is_diff_zero.result =
-      if (a[0] = b[0] ∧ a[1] = b[1] ∧ a[2] = b[2] ∧ a[3] = b[3]) then 1 else 0 := by
-  simpa only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
-    List.getElem_cons_succ, sub_eq_zero] using IsZeroWordOperation.isZeroWord_of_assert h_raw
 
 /-- Compose the zero-test assertions and enforce the activity/result gates. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do

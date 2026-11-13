@@ -31,10 +31,9 @@ exceptions are migration work, not a requirement to preserve the current API or 
 | 6 | Instruction chips, local proofs and event-to-row builders |
 | 8 | Registration, machine grounding and soundness |
 | 9 | Physical table construction and completeness assembly |
-| 10 | Completeness capstones |
 
-Some directories straddle strata: chip `Bridge`/`Contracts` files depend on machine grounding,
-and the converse capstones depend on table construction. The map describes those dependencies
+Some directories straddle strata: chip `Bridge`/`Contracts` files depend on machine grounding.
+The map describes those dependencies
 explicitly. Directory cleanup should preserve the ordering while improving the names.
 
 ## Representation ownership

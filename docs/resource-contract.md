@@ -57,8 +57,8 @@ constant.
 | channelOccurrences | Complete occurrence count in each registered channel | Clean ledger capacity and exact footprint accounting |
 
 Numeric definitions do not close these rows. In particular the existing installed host inventory
-omits WRITE/VERIFY, full target authentication remains open, and the legacy compiler accepts
-ordinary executions only. These installation obligations belong to A4–A6. The resource work must
+omits WRITE/VERIFY, full target authentication remains open, and no mixed compiler exists
+yet. These installation obligations belong to A4–A6. The resource work must
 prove bounds for actual consumers and must not substitute a witness/readiness predicate for usage.
 
 ## Installed endpoint checks and remaining enforcement
@@ -152,8 +152,8 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 
 | Compatibility surface | Replacement / removal condition |
 |---|---|
-| `EventExecutionTrace`, `CoreShardSemanticWitness` | Retain for ordinary-shard consumers; migrate the mixed compiler to the complete path in A6. Delete after all retained consumers migrate. |
-| `InstructionPlanReady`, `NativeCompilerReady`, `NativeTraceReady` | Prove their applicable fields from semantics for retained APIs; no occurrence in the new domain. Remove wrappers once all relevant consumers use the derived results. The legacy `syscallFree` field cannot describe mixed execution. |
+| `EventExecutionTrace` | No production consumer remains outside its own module; it is removed with the rest of the event tier (#16). The mixed compiler is built on `ExecutionPath`. |
+| `InstructionPlanReady`, `NativeCompilerReady` | Local success predicates of the retained builders; no occurrence in the new domain. Derive them from admissibility in the mixed compiler (C9) and remove them. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
 
 `ExecutionMemory` proves presence and outside-domain framing along the existing Sail/host path,

@@ -2,7 +2,6 @@ import ToClean.Circuit.Guarded
 import ToClean.Gadgets.LookupProjection
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import ToClean.Circuit.InteractionRecovery
-import ToClean.Circuit.EmittedInteraction
 import SP1Clean.Model.Channels
 import Clean.Gadgets.Bits
 import Clean.Utils.Tactics

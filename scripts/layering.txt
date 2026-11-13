@@ -44,17 +44,13 @@
 
 # 8 — the machine: registry, ensemble, grounding, soundness capstone.
 #
-# The three per-chip files under Proofs/Chips/<X>/ are NOT all at the chip stratum. `Bridge.lean`
-# needs Soundness.ChipRow and the Sail advance layer; `Contracts.lean` needs Soundness.TypedMemory
-# (whose own closure reaches all 25 chips). Both already declare `namespace SP1Clean.Soundness`.
-# They are machine files that live in the chip directory — measured, not assumed.
+# Per-chip machine files live under Alignment/Chips/<X>/: `Bridge.lean` needs Soundness.ChipRow and
+# the Sail advance layer, and `Contracts.lean` needs Soundness.TypedMemory (whose own closure reaches
+# all 25 chips). The host-call `Bridge.lean` files and `BranchChip/Contracts.lean` that remain under
+# Proofs/Chips/ need neither and stay at the chip stratum.
 8   Soundness     SP1Clean/Soundness/
 8   Soundness     SP1Clean/Proofs/Sail/
 8   Soundness     SP1Clean/Alignment/
 
 # 9 — assembly: a trace record becomes built tables and an EnsembleWitness.
 9   Soundness     SP1Clean/Proofs/Completeness/
-
-# 10 — the converse capstone.
-10  Soundness     SP1Clean/Soundness/AIRCompleteness.lean
-10  Soundness     SP1Clean/Soundness/NativeCompleteness.lean

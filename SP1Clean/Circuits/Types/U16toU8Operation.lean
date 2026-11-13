@@ -5,8 +5,8 @@ public import ToClean.Circuit.StructEvalLemmas
 
 /-! # Native U16toU8Operation columns
 
-These circuit value types are owned by the native library. The transitional Rust
-extractor checks their field order and shapes before reusing them in its oracles.
+These circuit value types are owned by the native library. Their field names mirror SP1's
+Rust column structs.
 -/
 
 @[expose] public section
@@ -20,7 +20,8 @@ structure U16toU8Operation (F : Type) where
 deriving ProvableStruct
 provable_struct_eval_lemmas U16toU8Operation
 
--- Preserve Rust field spelling for independent layout checks while reverse extraction remains.
+-- Temporary: field names mirror SP1's Rust column structs; rename them to lowerCamelCase
+-- together with their consumers (#16).
 attribute [nolint defsWithUnderscore]
   U16toU8Operation.low_bytes
 

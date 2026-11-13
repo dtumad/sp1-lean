@@ -6,8 +6,8 @@ public import SP1Clean.Math.Word
 
 /-! # Native AddOperation columns
 
-These circuit value types are owned by the native library. The transitional Rust
-extractor checks their field order and shapes before reusing them in its oracles.
+These circuit value types are owned by the native library. Their field names mirror SP1's
+Rust column structs.
 -/
 
 @[expose] public section

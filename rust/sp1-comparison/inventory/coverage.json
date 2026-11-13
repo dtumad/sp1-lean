@@ -43,7 +43,7 @@
     },
     "bytes": {
       "lean": [
-        "SP1Clean/Proofs/Chips/ByteChip/Provider.lean"
+        "SP1Clean/Proofs/Chips/ByteChip/ByteChip.lean"
       ],
       "export": "component",
       "comparisonKind": "sp1-component",

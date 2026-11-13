@@ -55,14 +55,14 @@ check_absent() {
   fi
 }
 
-check_owner SupportedCoreStatement SP1Clean/FormalModel/Execution.lean
 check_owner ConfiguredDecode SP1Clean/Model/Semantics/GuestProgram.lean
 check_owner WithinOrdinaryRowLimit SP1Clean/Model/Core/Profile.lean
 check_owner SP1TransitionView SP1Clean/Model/Semantics/TransitionView.lean
-check_owner SupportedSP1Transition SP1Clean/FormalModel/SupportedShard.lean
 check_owner SyscallMsg SP1Clean/Model/BusMessages.lean
 
 check_absent SupportedOrdinaryShardStatement
+check_absent SupportedCoreStatement
+check_absent SupportedSP1Transition
 check_absent ConfiguredDecodeStable
 check_absent WithinCoreShardLimit
 check_absent WithinCoreNativeRowLimit
