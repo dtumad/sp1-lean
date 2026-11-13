@@ -155,8 +155,6 @@ theorem source_execution_with_memory (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
-      ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
-        source.realize events ∧
       events.Perm ((LocalCore.executionRows
         (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
@@ -208,9 +206,8 @@ theorem source_execution_with_memory (valid : image.Valid)
   rw [terminal] at host
   have nextPc := carrier.nextPC valid constraints balanced path.replay
   rw [pc] at nextPc
-  refine ⟨carrier.events, target, hints, path, ?_, ?_, clock, pc, ?_, ?_, ?_,
+  refine ⟨carrier.events, target, hints, path, ?_, clock, pc, ?_, ?_, ?_,
     nextPc, ?_, ?_, ?_, decoded, host, ?_, ?_⟩
-  · exact carrier.writesPermitted valid constraints balanced
   · exact carrier.exhaustive.map ExecutionRow.event
   · intro loc bound
     have observed := carrier.final_memory valid constraints balanced target path.replay loc bound

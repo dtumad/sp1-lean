@@ -36,9 +36,7 @@ example : SoundnessTarget ensemble limits commitments image source target header
       ∃ events, publicInput = header ∧
         ((∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events target.realize ∧
-          ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events) ∧ nativeProfile limits p image source target events) ∧
+            source.realize events target.realize) ∧ nativeProfile limits p image source target events) ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 example : CompilerTarget ensemble limits commitments image source target header =
@@ -46,9 +44,7 @@ example : CompilerTarget ensemble limits commitments image source target header 
       (fun publicInput events => publicInput = header ∧
         ((∃ valid : ExecutionSourceValid image source,
           ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events target.realize ∧
-          ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events) ∧ nativeProfile limits p image source target events) ∧
+            source.realize events target.realize) ∧ nativeProfile limits p image source target events) ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 example (sound : SoundnessTarget ensemble limits commitments image source target header)
@@ -83,8 +79,7 @@ example (valid : image.Valid) :
       ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed SP1Prime ∧
         ∃ (events : List ExecutionEvent) (target : ExecutionState),
           (sp1Machine SP1Prime image valid).Trace source.realize events target ∧
-          ExecutionPath.WritesPermitted (policy SP1Prime image) (image.toGuestProgram valid)
-            source.realize events ∧ commitments.Matches events ∧
+          commitments.Matches events ∧
           Endpoint source outgoing final bankFinal header events target := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.

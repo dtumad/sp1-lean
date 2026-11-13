@@ -1,4 +1,5 @@
-import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Model.Core.InstructionWrite
 import SP1Clean.Model.Core.NativeLayout
 
 /-! # Native instruction and timestamp representability

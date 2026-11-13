@@ -32,7 +32,7 @@ theorem admissibleExecution_identity_iff :
   · rintro ⟨execution, valid, _, _, incoming, _⟩
     exact ⟨execution.1, incoming⟩
   · rintro ⟨valid, occupancy⟩
-    refine ⟨⟨valid, .nil _, ExecutionPath.writesPermitted_nil⟩,
+    refine ⟨⟨valid, .nil _⟩,
       valid.1.1, ExecutionPath.encoded_nil, ResourceUsage.zero_fits limits, occupancy, occupancy, ?_, ?_⟩
     · exact valid.2.2.1
     · exact valid.2.2.2
@@ -42,7 +42,7 @@ theorem AdmissibleExecution.work
     (execution : AdmissibleExecution limits characteristic image source target events) :
     events.length ≤ limits.events ∧ target.clock - source.clock ≤ limits.ticks := by
   obtain ⟨valid, _, fits, _⟩ := execution.2
-  have path := execution.1.2.1
+  have path := execution.1.2
   have count := fits .events
   have ticks := fits .ticks
   rw [path.resources_events] at count
@@ -78,8 +78,8 @@ theorem AdmissibleExecution.append
   have bound := combined valid
   rw [← sameState] at secondEncoded bound
   refine ⟨firstPath.1.append secondPath.1 same, valid, ?_, ?_, incoming, outgoing, clocks, pc⟩
-  · exact (ExecutionPath.encoded_append_iff firstPath.1.2.1).mpr ⟨firstEncoded, secondEncoded⟩
-  · rw [firstPath.1.2.1.resources_append]
+  · exact (ExecutionPath.encoded_append_iff firstPath.1.2).mpr ⟨firstEncoded, secondEncoded⟩
+  · rw [firstPath.1.2.resources_append]
     exact bound
 
 end SP1Clean.FormalModel.Shard

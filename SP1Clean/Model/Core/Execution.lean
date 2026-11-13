@@ -1,6 +1,7 @@
 import SP1Clean.Model.Core.HostSail
 import SP1Clean.Model.Core.HostTerminal
 import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Core.InstructionWrite
 
 /-! # Stateful local execution of the native core
 
@@ -12,8 +13,9 @@ Ordinary steps retire normally in official Sail. ECALL steps use the concrete ho
 after checking the committed word against all four bytes in actual Sail memory, threading its
 returned state. Both arms require a running source; HALT is a real transition and
 there are no transitions out of a stopped state. Padding and provider/refresh rows are not
-semantic steps. Supported decoding, ROM-write exclusion, and shard resource limits belong to the
-native profile layered over this execution relation; no AIR correctness is asserted here.
+semantic steps. An ordinary step also requires the instruction's write footprint to be permitted,
+so a store into protected memory is not a step at all. Supported decoding and shard resource
+limits belong to the native profile layered over this relation; no AIR correctness is asserted here.
 -/
 
 namespace SP1Clean.Model.Core
@@ -33,6 +35,7 @@ inductive ExecutionStep (policy : HostPolicy) (program : GuestProgram) :
       source.host.exitCode = none →
       ¬ AboutToExecuteEcall program source.sail →
       SailRetiresNormally source.sail target →
+      InstructionWrite.PermittedAt policy.memory.readOnly program source.sail →
       ExecutionStep policy program source .ordinary
         ⟨target, source.host, source.clock + ordinarySchedule.duration⟩
   | syscall {source : ExecutionState} {host : HostState} {target : SailState}

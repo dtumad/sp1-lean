@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Shard
 import SP1Clean.Model.Core.Boot
 
-/-! # The native shard contract requires actual ordinary write permission
+/-! # Ordinary steps require actual write permission
 
 The source is valid, and SW would write exactly the instruction word already present in ROM.
 Every nonempty execution beginning with that ordinary event is rejected by the native contract,
@@ -69,10 +69,13 @@ theorem sameValueStoreSource : ExecutionSourceValid image source ∧
 theorem rejectsSameValueStore (characteristic : ℕ) (target : ExecutionSnapshot)
     (events : List Machine.ExecutionEvent) :
     ¬ FormalModel.Shard.Executes characteristic image source target (.ordinary :: events) := by
-  rintro ⟨_, _, permitted⟩
-  exact denied permitted.head
+  rintro ⟨_, path⟩
+  cases path with
+  | cons step _ =>
+    cases step with
+    | ordinary _ _ _ permitted => exact denied permitted
 
-/-- No choice of numeric ceilings can remove the contract's fixed write policy. -/
+/-- No choice of numeric ceilings can admit the forbidden write. -/
 theorem rejectsProfileBypass (limits : ResourceLimits) (characteristic : ℕ) (target : ExecutionSnapshot)
     (events : List Machine.ExecutionEvent) :
     ¬ FormalModel.Shard.AdmissibleExecution limits

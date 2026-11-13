@@ -1,5 +1,5 @@
 import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.InstructionWrite
 import SP1Clean.Model.Core.SailBookkeeping
 import SP1Clean.Model.Core.QueueReplay
 import SP1Clean.Model.SP1Field
@@ -158,34 +158,7 @@ theorem ordinaryContinues (host : HostState) (running : host.exitCode = none) (c
       ⟨Audit.AnchorShard.anchorState, host, clock⟩ .ordinary
       ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ :=
   .ordinary running Audit.AnchorShard.anchor_notAboutToExecuteEcall
-    Audit.AnchorShard.activeTarget_effect.normal
-
-/-- A genuinely retiring JAL remains admitted by the write policy, even if every byte is read-only. -/
-theorem ordinaryWritePermission (host : HostState) (running : host.exitCode = none) (clock : ℕ) :
-    ExecutionPath { policy with memory.readOnly := fun _ => true } Audit.AnchorShard.anchorProgram
-      ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary]
-      ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ ∧
-    ExecutionPath.WritesPermitted { policy with memory.readOnly := fun _ => true }
-      Audit.AnchorShard.anchorProgram ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary] := by
-  refine ⟨.cons (.ordinary running Audit.AnchorShard.anchor_notAboutToExecuteEcall
-    Audit.AnchorShard.activeTarget_effect.normal) (.nil _), ?_⟩
-  intro n current atEvent replay
-  have zero : n = 0 := by
-    obtain ⟨bound, _⟩ := List.getElem?_eq_some_iff.mp atEvent
-    simpa using bound
-  subst n
-  obtain rfl := Option.some.inj replay
-  refine ⟨65536, 0x6f, .JAL (0, .Regidx 0), Audit.AnchorShard.anchorState_pc,
-    Audit.AnchorShard.anchorProgram_fetchWord_selfJump,
-    Audit.AnchorShard.anchor_configuredDecode, ?_⟩
-  rfl
-
-/-- Host-only composition needs no artificial ordinary-write obligation. -/
-theorem hostWritePermission : ExecutionPath.WritesPermitted policy program source
-    [.syscall (enter.toEvent source.clock 65536), .syscall (halt.toEvent middle.clock 65540)] := by
-  rw [ExecutionPath.writesPermitted_cons_iff enter_step,
-    ExecutionPath.writesPermitted_cons_iff halt_step]
-  simp only [reduceCtorEq, false_implies, ExecutionPath.writesPermitted_nil, and_self]
+    Audit.AnchorShard.activeTarget_effect.normal (Audit.AnchorShard.anchor_permittedAt _)
 
 /-- A real normally-retiring Sail instruction is still forbidden after the host has halted. -/
 theorem rejectsRunnableAfterHalt :

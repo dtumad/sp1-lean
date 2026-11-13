@@ -91,8 +91,6 @@ theorem source_execution (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : DeclarationsOpen witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧
-      ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
-        source.realize events ∧
       target.clock = StateMsg.timeNat (finalBoundaryStateMessage witness.publicInput) ∧
       target.sail.regs.get? Register.PC =
         some (StateMsg.pcBits (finalBoundaryStateMessage witness.publicInput)) ∧
@@ -130,7 +128,7 @@ theorem source_execution (valid : image.Valid)
   have checked := checkFinal_of_declarationsOpen witness constraints balanced
   have baseConstraints := baseWitness_constraints witness constraints
   have baseBalanced := baseWitness_hostBalanced witness balanced
-  obtain ⟨events, target, hints, path, permitted, inventory, clock, pc, -, -, runtime, nextPC, retirement, platform,
+  obtain ⟨events, target, hints, path, inventory, clock, pc, -, -, runtime, nextPC, retirement, platform,
     preserved, decoded, host, exit, memory⟩ :=
     HostHintReadCPU.source_execution_with_memory valid (baseWitness witness) baseConstraints baseBalanced
   rw [finalRecords_eq_core] at checked
@@ -138,7 +136,7 @@ theorem source_execution (valid : image.Valid)
   rw [baseWitness_publicInput] at clock pc nextPC exit
   have declared := (HostCommitDeclarations.rows_declared valid (baseWitness witness) baseConstraints
     baseBalanced).of_perm inventory
-  refine ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC, retirement, platform,
+  refine ⟨events, target, hints, path, clock, pc, registers, ram, runtime, nextPC, retirement, platform,
     preserved, decoded, host, exit, declared.transfer fun interaction member => ?_⟩
   rw [baseWitness_interactions witness _ (by simp [CommitmentDeclaration.channel, FinalMemoryValue.channel,
     Channel.toRaw]) (by simp [CommitmentDeclaration.channel, FinalMemoryValue.channel, Channel.toRaw])] at member

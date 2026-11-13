@@ -226,6 +226,8 @@ theorem not_ecall : ¬ SP1Clean.Machine.AboutToExecuteEcall program source := by
 theorem execution_step (policy : HostPolicy) :
     ExecutionStep policy program ⟨source, {}, 1⟩ .ordinary ⟨target, {}, 9⟩ :=
   ExecutionStep.ordinary rfl not_ecall target_effect.normal
+    ⟨65536, 0x7e208ee3#32, .BTYPE (4092#13, .Regidx 2#5, .Regidx 1#5, .BEQ), source_pc,
+      program_fetch, fun state cfg => decode_branch state cfg, rfl⟩
 
 /-- One joined claim: official normal execution, canonical projection, exact compiler output,
 the event/physical-row target, and acceptance of the single real local circuit row. -/

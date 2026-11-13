@@ -21,7 +21,7 @@ theorem frame (execution : Executes characteristic image source target events) :
     SailConfigured target.sail.realize ∧ RomLoaded (image.toGuestProgram execution.1.1.1) target.sail.realize ∧
       ∀ address, image.readOnly address = true →
         target.sail.realize.mem.get? address = source.sail.realize.mem.get? address :=
-  execution.2.1.frame execution.1.1.1 execution.2.2 (fun _ selected => selected)
+  execution.2.frame execution.1.1.1 (fun _ selected => selected)
     execution.1.configured execution.1.romLoaded
 
 /-- All actual prefix states, including the final and held endpoint, inherit authenticated ROM. -/
@@ -32,7 +32,7 @@ theorem frame_prefix (execution : Executes characteristic image source target ev
     SailConfigured current.sail ∧ RomLoaded (image.toGuestProgram execution.1.1.1) current.sail ∧
       ∀ address, image.readOnly address = true →
         current.sail.mem.get? address = source.sail.realize.mem.get? address :=
-  execution.2.1.frame_prefix execution.1.1.1 execution.2.2 (fun _ selected => selected)
+  execution.2.frame_prefix execution.1.1.1 (fun _ selected => selected)
     execution.1.configured execution.1.romLoaded replay
 
 /-- Every actual prefix has all bytes needed to materialize native RAM cells. This is derived
@@ -43,7 +43,7 @@ theorem memory_present_prefix (execution : Executes characteristic image source 
       source.realize events cut = some current)
     (address : ℕ) (inside : address < NativeLayout.sailMemory.upper) :
     (current.sail.mem.get? address).isSome :=
-  execution.2.1.memory_present_prefix execution.1.1.1 execution.2.2 (fun _ selected => selected)
+  execution.2.memory_present_prefix execution.1.1.1 (fun _ selected => selected)
     execution.1.configured execution.1.romLoaded replay address inside
 
 /-- Each executed position fetches its committed instruction through official Sail. The prefix
@@ -55,7 +55,7 @@ theorem fetch_at (execution : Executes characteristic image source target events
         source.realize events cut = some current ∧
       current.sail.regs.get? Register.PC = some pc ∧ (image.toGuestProgram execution.1.1.1).fetchWord pc = some word ∧
       (runSail (fetch ())) current.sail = .ok (FetchResult.F_Base word) current.sail :=
-  execution.2.1.fetch_at execution.1.1.1 execution.2.2 (fun _ selected => selected)
+  execution.2.fetch_at execution.1.1.1 (fun _ selected => selected)
     execution.1.configured execution.1.romLoaded cut active
 
 end SP1Clean.FormalModel.Shard.Executes

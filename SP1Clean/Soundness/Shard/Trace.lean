@@ -100,7 +100,6 @@ def SailTrace (commitments : CommitmentStatement) (image : ProgramImage) (valid 
   ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed p ∧
     ∃ (events : List ExecutionEvent) (target : ExecutionState),
       (sp1Machine p image valid).Trace source.realize events target ∧
-      ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
       commitments.Matches events ∧
       Endpoint source outgoing final bankFinal header events target
 
@@ -112,7 +111,6 @@ theorem trace_of_witness (valid : image.Valid)
     ExecutionSourceValid image source ∧ witness.publicInput.SourceFor source ∧
       ∃ (events : List ExecutionEvent) (target : ExecutionState),
         (sp1Machine p image valid).Trace source.realize events target ∧
-        ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
         Endpoint source outgoing final bankFinal witness.publicInput events target ∧
         CommitmentEnsemble.Declared witness events := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels (HostFinalMemory.baseWitness witness)
@@ -122,10 +120,10 @@ theorem trace_of_witness (valid : image.Valid)
   have contract := LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte
   rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput,
     HostFinalMemory.baseWitness_publicInput] at contract
-  obtain ⟨events, target, hints, path, permitted, clock, pc, registers, ram, runtime, nextPC,
+  obtain ⟨events, target, hints, path, clock, pc, registers, ram, runtime, nextPC,
     ⟨increment, retired⟩, ⟨interrupts, eventIndex⟩, preserved, decoded, host, exit, declared⟩ :=
     HostFinalMemory.source_execution valid witness constraints balanced
-  exact ⟨contract.2.1, contract.2.2.1, events, target, trace_iff_executionPath.mpr path, permitted,
+  exact ⟨contract.2.1, contract.2.2.1, events, target, trace_iff_executionPath.mpr path,
     { clock, pc, nextPC, increment, retired, interrupts, eventIndex, preserved, runtime, registers, ram
       host := ⟨hints, decoded, host⟩
       exit }, declared⟩
@@ -150,7 +148,7 @@ theorem trace_of_committed_statement (valid : image.Valid) {commitments : Commit
   obtain ⟨fit, witness, rfl, rfl, constraints, rawBalance⟩ := accepted
   have balanced := EnsembleWitness.balancedChannels_of_balanced
     (witness.interactionsFit_of_heights fit) rawBalance
-  obtain ⟨sourceValid, sourceFor, events, target, trace, permitted, endpoint, declared⟩ :=
+  obtain ⟨sourceValid, sourceFor, events, target, trace, endpoint, declared⟩ :=
     trace_of_witness valid (CommitmentEnsemble.project witness)
       (CommitmentEnsemble.project_constraints witness lookupFree constraints)
       (fun channel member different =>
@@ -164,7 +162,7 @@ theorem trace_of_committed_statement (valid : image.Valid) {commitments : Commit
         silent constraints balanced)
   rw [CommitmentEnsemble.project_publicInput] at sourceFor endpoint
   exact ⟨sourceValid, sourceFor, (CommitmentEnsemble.statement_spec witness balanced).1, events, target,
-    trace, permitted, agrees, endpoint⟩
+    trace, agrees, endpoint⟩
 
 /-- **The exported native circuit proves a Sail trace.** Over SP1's field, raw acceptance of the
 complete-memory assembly with the commitment statement installed gives a trace of the SP1 Sail

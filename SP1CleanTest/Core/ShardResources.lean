@@ -55,9 +55,7 @@ private theorem measured :
 
 /-- Nonempty host execution inhabits the fixed native domain, with no compiler or witness premises. -/
 theorem paddedHint_admissible : AdmissibleExecution limits SP1Prime image source target [.syscall event] := by
-  refine ⟨⟨valid, .cons step (.nil _), ?_⟩, valid.1.1, ?_, ?_, ?_, ?_, by decide, by native_decide⟩
-  · rw [ExecutionPath.writesPermitted_cons_iff step]
-    simp only [reduceCtorEq, false_implies, ExecutionPath.writesPermitted_nil, and_self]
+  refine ⟨⟨valid, .cons step (.nil _)⟩, valid.1.1, ?_, ?_, ?_, ?_, by decide, by native_decide⟩
   · rw [ExecutionPath.encoded_cons_iff step]
     exact ⟨⟨by change 9 % 8 = 1; decide, by simp⟩, ExecutionPath.encoded_nil⟩
   · rw [measured]
@@ -150,9 +148,7 @@ theorem phaseTwo_executes : Executes SP1Prime image { source with clock := 2 } {
     simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, loaded,
       and_self, ↓reduceIte, ran]
     rfl
-  refine ⟨sourceValid, .cons phaseStep (.nil _), ?_⟩
-  rw [ExecutionPath.writesPermitted_cons_iff phaseStep]
-  simp only [reduceCtorEq, false_implies, ExecutionPath.writesPermitted_nil, and_self]
+  exact ⟨sourceValid, .cons phaseStep (.nil _)⟩
 
 /-- A genuine phase-two host path cannot inhabit the faithful native CPU-row domain. -/
 theorem phaseTwo_not_admissible :

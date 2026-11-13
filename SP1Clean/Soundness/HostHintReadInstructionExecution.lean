@@ -232,7 +232,7 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
   obtain ⟨_, _, fetched, _, _⟩ := checked.2
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member present atPc fetched
   exact ⟨⟨next, current.host, current.clock + Machine.ordinarySchedule.duration⟩,
-    .ordinary running notEcall effect.normal, effect, permitted⟩
+    .ordinary running notEcall effect.normal permitted, effect, permitted⟩
 
 /-- Projection to normal retirement keeps the original instruction-step interface. -/
 theorem GroundingCarrier.instruction_step (valid : image.Valid)

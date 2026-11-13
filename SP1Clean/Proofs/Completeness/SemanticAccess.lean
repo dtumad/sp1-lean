@@ -42,7 +42,7 @@ theorem admissibleExecution_compile_at {limits : ResourceLimits} {characteristic
     same ▸ length, ?_⟩
   intro bounded
   have phase := (execution.2.choose_spec.1 cut current .ordinary ordinary replay).1
-  have clock := execution.1.2.1.clock_at ordinary replay
+  have clock := execution.1.2.clock_at ordinary replay
   have final := execution.2.choose_spec.2.2.2.2.1
   have currentLt : current.clock + 1 < 2 ^ 48 := by
     change current.clock + 8 ≤ target.clock at clock
