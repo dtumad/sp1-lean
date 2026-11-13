@@ -10,7 +10,10 @@ External declarations are boundary nodes and are not traversed.
 
 This is a report for retiring code that no headline result uses. It is neither a gate nor a proof.
 A module outside the closure may still guard a distinct claim through a test, or be planned
-material for an open obligation; deleting it is a reviewed decision.
+material for an open obligation; deleting it is a reviewed decision. Proof terms do not record
+every lemma a tactic consulted: a definitional (`rfl`) simp lemma can rewrite by unfolding and leave
+no constant behind. Such a lemma may be reported unreachable although a live proof names it, so a
+deletion is only established by rebuilding its consumers.
 
 Run through `scripts/proof_closure.py`, which supplies `PROOF_CLOSURE_OUT` and optional
 `PROOF_CLOSURE_ROOTS` (comma-separated declaration names).

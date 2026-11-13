@@ -28,11 +28,6 @@ noncomputable def ProgramImage.executionBoot (image : ProgramImage) (input : Hos
     ExecutionState :=
   ⟨image.initialSailState, input.initialHost, 1⟩
 
-theorem ProgramImage.executionBoot_loaded (image : ProgramImage) (valid : image.Valid)
-    (input : HostInputs) :
-    IsInitialState (image.toGuestProgram valid) (image.executionBoot input).sail :=
-  image.initialSailState_loaded valid
-
 @[simp] theorem ProgramImage.executionBoot_running (image : ProgramImage) (input : HostInputs) :
     (image.executionBoot input).host.exitCode = none := rfl
 
@@ -51,20 +46,5 @@ theorem BootToHalt.of_segments {policy : HostPolicy} {image : ProgramImage} {val
     (halted : target.host.exitCode = some exit) :
     BootToHalt policy image valid input (m + n) target exit :=
   ⟨first.append last, halted⟩
-
-/-- A boot-to-HALT run always contains a real final ECALL observing the exit in the Sail registers. -/
-theorem BootToHalt.halt_witness {policy : HostPolicy} {image : ProgramImage} {valid : image.Valid}
-    {input : HostInputs} {steps : ℕ} {target : ExecutionState} {exit : BitVec 32}
-    (run : BootToHalt policy image valid input steps target exit) :
-    ∃ events before call, steps = events.length + 1 ∧
-      ExecutionPath policy (image.toGuestProgram valid) (image.executionBoot input) events before ∧
-      SP1Halted (image.toGuestProgram valid) call.arg1 before.sail ∧
-      ExecutionStep policy (image.toGuestProgram valid) before (.syscall call) target ∧
-      call.arg1.setWidth 32 = exit := by
-  obtain ⟨events, length, path⟩ := run.1
-  obtain ⟨leading, before, call, rfl, prefixPath, lastStep, zero, sameExit⟩ :=
-    path.ends_in_halt (image.executionBoot_running input) run.2
-  exact ⟨leading, before, call, by simpa using length.symm, prefixPath,
-    lastStep.halt_source zero, lastStep, sameExit⟩
 
 end SP1Clean.Model.Core

@@ -177,44 +177,6 @@ def locContent (s : SailState) : MemLoc → Option (BitVec 64)
 /-- Compatibility name for the canonical Lean-native machine step. -/
 noncomputable abbrev stepOnce := SP1Clean.Machine.stepOnce
 
-/-- Compatibility name for the canonical PolyFun machine trajectory. -/
-noncomputable abbrev chainState := SP1Clean.Machine.trajectory
-
-/-- The function ↔ relation bridge: a defined `chainState` is a `SailChain`. -/
-theorem sailChain_of_chainState {s0 s : SailState} :
-    ∀ {k : ℕ}, chainState s0 k = some s → SailChain k s0 s := by
-  intro k
-  induction k generalizing s with
-  | zero => intro h; cases h; exact .refl s0
-  | succ k ih =>
-    intro h; change (Machine.trajectory s0 k).bind Machine.stepOnce = some s at h
-    rcases hbind : Machine.trajectory s0 k with _ | s'
-    · rw [hbind] at h; cases h
-    · rw [hbind, Option.bind_some] at h; unfold Machine.stepOnce at h
-      rcases hrun : (runSail (try_step 0 false)) s' with b | e
-      · rw [hrun] at h; cases h; exact (ih hbind).snoc ⟨_, hrun⟩
-      · rw [hrun] at h; cases h
-
-/-- The front-step unfolding: `chainState` is defined by appending at the tail, but a chain peels at
-the head — one determined first step shifts the origin. -/
-theorem chainState_succ_front {s0 s1 : SailState} (h : stepOnce s0 = some s1) :
-    ∀ k, chainState s0 (k + 1) = chainState s1 k := by
-  intro k
-  induction k with
-  | zero => exact h
-  | succ k ih => exact congrArg (·.bind Machine.stepOnce) ih
-
-/-- Determinism, the other direction: a `SailChain` forces the `chainState` value. -/
-theorem chainState_of_sailChain {s0 s : SailState} :
-    ∀ {k : ℕ}, SailChain k s0 s → chainState s0 k = some s := by
-  intro k h
-  induction h with
-  | refl s => rfl
-  | @step n s s' _ hstep _ ih =>
-    obtain ⟨b, hrun⟩ := hstep
-    have hstep1 : Machine.stepOnce s = some s' := by unfold Machine.stepOnce; rw [hrun]
-    rw [chainState_succ_front hstep1 n]; exact ih
-
 /-! ## The location content at a micro-time
 
 The window arithmetic below is SP1's, not ours. The three constants name the two Rust sources
@@ -256,23 +218,6 @@ abbrev regBOffset : ℕ := 3
 /-- The intra-window offset at which the `op_c` register read observes (Rust
 `MemoryAccessPosition::C = 2`). -/
 abbrev regCOffset : ℕ := 2
-
-/-- **The intra-row effect convention, as a function.** `microValue s0 c0 loc τ`: the content of
-`loc` at micro-time `τ` on the trajectory from `s0` with genesis clock `c0`. Window
-`k = (τ − c0) / ordinaryClkInc`, offset `δ = (τ − c0) % ordinaryClkInc`; the window's step has
-taken effect at `loc` iff `τ` is at/after the location's effect offset (`ramEffectOffset` /
-`regEffectOffset`, the Rust `MemoryAccessPosition` values). Pre-genesis times read the initial
-state. -/
-noncomputable def microValue (s0 : SailState) (c0 : ℕ) (loc : MemLoc) (τ : ℕ) : Option (BitVec 64) :=
-  if τ < c0 then
-    locContent s0 loc
-  else
-    let k := (τ - c0) / ordinaryClkInc
-    let δ := (τ - c0) % ordinaryClkInc
-    let takePost : Bool := match loc with
-      | .reg _ => regEffectOffset ≤ δ
-      | .ram _ => ramEffectOffset ≤ δ
-    (chainState s0 (if takePost then k + 1 else k)).bind (locContent · loc)
 
 /-! ## Timelines — the row-dependent step clock
 
@@ -364,36 +309,5 @@ lemma stepOf_eq (tl : Timeline) {τ n : ℕ} (hlo : tl.start n ≤ τ) (hhi : τ
   refine stepOf_eq _ ?_ ?_ <;> simp only [ordinary_start] <;> omega
 
 end Timeline
-
-/-- **The timeline reader**: `microValue` generalized to row-dependent window widths.  Within step
-`n`'s window `[start n, start (n + 1))`, the step's effect is visible from the location's effect
-offset onward; pre-genesis times read the initial state.  `microValueT_ordinary` recovers the
-uniform reader. -/
-noncomputable def microValueT (s0 : SailState) (tl : Timeline) (loc : MemLoc) (τ : ℕ) :
-    Option (BitVec 64) :=
-  if τ < tl.start 0 then
-    locContent s0 loc
-  else
-    let k := tl.stepOf τ
-    let δ := τ - tl.start k
-    let takePost : Bool := match loc with
-      | .reg _ => regEffectOffset ≤ δ
-      | .ram _ => ramEffectOffset ≤ δ
-    (chainState s0 (if takePost then k + 1 else k)).bind (locContent · loc)
-
-/-- The uniform timeline recovers the eight-tick reader. -/
-lemma microValueT_ordinary (s0 : SailState) (c0 : ℕ) (loc : MemLoc) (τ : ℕ) :
-    microValueT s0 (Timeline.ordinary c0) loc τ = microValue s0 c0 loc τ := by
-  by_cases h : τ < c0
-  · unfold microValueT microValue
-    rw [ite_eq_left (show τ < (Timeline.ordinary c0).start 0 by
-        simp only [Timeline.ordinary_start]; omega), ite_eq_left h]
-  · unfold microValueT microValue
-    rw [ite_eq_right (show ¬ τ < (Timeline.ordinary c0).start 0 by
-        simp only [Timeline.ordinary_start]; omega), ite_eq_right h]
-    have hstep := Timeline.stepOf_ordinary c0 τ (by omega)
-    simp only [hstep, Timeline.ordinary_start]
-    have hδ : τ - (c0 + 8 * ((τ - c0) / 8)) = (τ - c0) % 8 := by omega
-    rw [hδ]
 
 end SP1Clean.Semantics

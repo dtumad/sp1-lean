@@ -115,46 +115,6 @@ can be dropped from the balance's conclusion rather than tracked. Note that
 `memoryFrontierBalance` keeps its syscall summand — it is the raw ledger form and correct there;
 what loses the term is this balance's conclusion. -/
 
-/-- The syscall table's produced Memory messages at a location are exactly its rows' walked pushes. -/
-theorem syscall_pushesAt_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (syscallRows : List (Array (ZMod p)))
-    (exhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
-    (loc : Semantics.MemLoc) :
-    TimedGrounding.pushesAt
-        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)) loc
-      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(producedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
-  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row))
-      = (syscallRows.map (syscallInstrsRow witness.data)).map syscallRowFacts from
-        by rw [List.map_map]; rfl,
-    syscallRows_pushesAt, syscallInstrs_producedMessages_eq witness constraints,
-    List.flatMap_map]
-  refine congrArg (Multiset.filter _) ?_
-  rw [Multiset.coe_eq_coe]
-  exact List.Perm.flatMap_right _ exhaustive
-
-/-- The consumed twin of `syscall_pushesAt_eq`. -/
-theorem syscall_pullsAt_eq
-    (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
-    (syscallRows : List (Array (ZMod p)))
-    (exhaustive : syscallRows.Perm (realSyscallInstrsRows witness))
-    (loc : Semantics.MemLoc) :
-    TimedGrounding.pullsAt
-        (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row)) loc
-      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(consumedMessages (typedTableInteractionsWith (syscallInstrsTable witness)
-            memoryChannel)) : Multiset (MemoryMsg (ZMod p))) := by
-  rw [show (syscallRows.map fun row => syscallRowFacts (syscallInstrsRow witness.data row))
-      = (syscallRows.map (syscallInstrsRow witness.data)).map syscallRowFacts from
-        by rw [List.map_map]; rfl,
-    syscallRows_pullsAt, syscallInstrs_consumedMessages_eq witness constraints,
-    List.flatMap_map]
-  refine congrArg (Multiset.filter _) ?_
-  rw [Multiset.coe_eq_coe]
-  exact List.Perm.flatMap_right _ exhaustive
-
 /-! ## The dynamic row consumer, at the event trajectory
 
 `DecodedInstructionRow.dynamicGrounded_of_weakCurrency` takes a `SailChain steps initial state` and

@@ -3,15 +3,13 @@ import SP1Clean.Model.SailWrap
 import SP1Clean.Model.Register
 import LeanRV64D.Step
 
-/-! # Guest programs + the Sail execution model — the semantic-execution substrate (`Model/Semantics/`)
+/-! # Guest programs and the official Sail step
 
-The "general trace arguments and guest programs" the auditor reads to know *what is being executed*: a
-`GuestProgram` (encoded instruction ROM + entry point + initial memory image), what it means for a Sail
-state to *load* it (`IsInitialState`), the real multi-step chain over the **official** LeanRV64D
-interpreter (`SailStep`/`SailChain` on `try_step`), and the halting condition (`SP1Halted`). These
-statements depend only on the Sail `SailState` model (`Model/`), so they live in the `Model/Semantics/`
-substrate. `LocalStateTruth`/`ProgTruth` are built atop them in `Model/Semantics/Truth.lean` as conclusions of
-the global grounding engine; they are deliberately not row-local channel guarantees.
+What is executed: a `GuestProgram` (encoded instruction ROM, entry point and initial memory image),
+what it means for a Sail state to hold its ROM (`RomLoaded`) and to be in SP1's machine-mode
+configuration (`SailConfigured`), and one step of the official LeanRV64D interpreter (`SailStep`,
+`SailRetiresNormally`). Complete executions are `Model.Core.ExecutionPath`; the checked image's boot
+state is `ProgramImage.initialSailState`.
 
 The trace **arguments** that consume them — `RefinesAt`, `RowEffect`, and the per-chip `ChipKind.advance`
 obligations — reference the Soundness-layer trace machinery (`Trace.RowView`), so they cannot move below
@@ -84,8 +82,8 @@ them monotone (`.1`/`.2` = `init`/`priv` still project positionally). The remain
 quiescent machine-mode facts the interrupt/fetch reductions need (`run_dispatchInterrupt_machine_none` /
 `run_fetch_eq_F_Base_of_isInitialized`), bundled here so `RefinesAt.cfg` carries them and
 `SailConfigured.toStraightLineReady` can assemble `StraightLineReady` (see `Proofs/Sail/Advance.lean`).
-Producers must establish all of it: the `IsInitialState` loader (initial state) and `RowEffect.cfg`
-(persistence across each chip's step). -/
+Producers must establish all of it: `ProgramImage.initialSailState_configured` (boot) and
+`RowEffect.cfg` (persistence across each chip's step). -/
 structure SailConfigured (s : SailState) : Prop where
   /-- Every register is initialized (present in the register map). -/
   init : s.isInitialized
@@ -145,15 +143,12 @@ theorem SailConfigured.toValidMemConfig {s : SailState} (cfg : SailConfigured s)
   h_pma_regions := cfg.pma_regions
   h_pmp_off := cfg.pmp_off
 
-/-- A Sail state that "loads" the guest program: a *relation*, not a constructed state, so everything
-the execution doesn't touch stays quantified. ELF ingestion (W6b) produces a `GuestProgram` and a
-concrete witness state. -/
-structure IsInitialState (prog : GuestProgram) (s : SailState) : Prop where
-  initialized : s.isInitialized
-  pc : s.regs.get? Register.PC = some prog.pc_start
-  romLoaded : RomLoaded prog s
-  imageLoaded : ∀ av ∈ prog.memImage, s.mem.get? av.1.toNat = some av.2
-  configured : SailConfigured s
+/-! ## The real Sail multi-step chain
+
+`SailM = EStateM …` over `SequentialState` (memory lives *inside* the state, the choice source is
+trivial), so `try_step` is deterministic: the chain below is relational, but each state has at most one
+successor. `try_step` is the topmost upstream entry point — interrupt dispatch, fetch, decode, execute,
+PC commit — so nothing of the interpreter is bypassed. -/
 
 /-! ## The real Sail multi-step chain
 
@@ -192,66 +187,6 @@ theorem SailRetiresNormally.sailStep {s s' : SailState}
   obtain ⟨_, _, _, _, _, _, _, step⟩ := normal
   exact ⟨false, step⟩
 
-/-- An `n`-step Sail execution chain. -/
-inductive SailChain : ℕ → SailState → SailState → Prop
-  | refl (s : SailState) : SailChain 0 s s
-  | step {n : ℕ} {s s' s'' : SailState} :
-      SailStep s s' → SailChain n s' s'' → SailChain (n + 1) s s''
-
-theorem SailChain.snoc : ∀ {n : ℕ} {a b : SailState}, SailChain n a b →
-    ∀ {c : SailState}, SailStep b c → SailChain (n + 1) a c := by
-  intro n a b h
-  induction h with
-  | refl s => exact fun hs => .step hs (.refl _)
-  | step h1 _ ih => exact fun hs => .step h1 (ih hs)
-
-/-- An `n`-step official-Sail chain in which every step retires normally, i.e. takes
-`run_hart_active`'s `Retire_Success` branch.  Strictly stronger than `SailChain`: the same real
-interpreter run, with the per-step trap, illegal-instruction, wait, and extension-failure exits
-excluded.  The grounding walk proves this form directly — each fired row's `RowEffect` carries
-`SailRetiresNormally` — so top-level conclusions can state trap-free execution rather than mere
-step completion. -/
-inductive SailRetireChain : ℕ → SailState → SailState → Prop
-  | refl (s : SailState) : SailRetireChain 0 s s
-  | step {n : ℕ} {s s' s'' : SailState} :
-      SailRetiresNormally s s' → SailRetireChain n s' s'' → SailRetireChain (n + 1) s s''
-
-/-- A normally-retiring chain is, in particular, a real Sail chain. -/
-theorem SailRetireChain.toSailChain : ∀ {n : ℕ} {a b : SailState},
-    SailRetireChain n a b → SailChain n a b := by
-  intro n a b h
-  induction h with
-  | refl s => exact .refl s
-  | step h1 _ ih => exact .step h1.sailStep ih
-
-theorem SailRetireChain.snoc : ∀ {n : ℕ} {a b : SailState}, SailRetireChain n a b →
-    ∀ {c : SailState}, SailRetiresNormally b c → SailRetireChain (n + 1) a c := by
-  intro n a b h
-  induction h with
-  | refl s => exact fun hs => .step hs (.refl _)
-  | step h1 _ ih => exact fun hs => .step h1 (ih hs)
-
-/-- Compatibility contract between SP1's immutable trusted-program fetch and the official Sail
-interpreter's unified instruction/data memory.
-
-In SP1, trusted instruction fetch reads `Program.instructions`, while ordinary loads and
-stores read and write the separate Memory state. The ELF loader initially places executable bytes
-in that Memory image too, but a later data store does not change the instruction selected by the
-Program table. Unmodified Sail instead fetches from the same mutable byte map used by data accesses.
-
-Consequently, a direct multi-step Sail refinement additionally needs the pinned program to preserve
-its instruction bytes along the execution under consideration. This is a program-correctness
-contract, not an AIR fact and not an unconditional field of `GuestProgram`. It is deliberately
-stated over reachable prefixes from the selected shard-local initial state, so callers may prove a
-normal inductive code/data-separation invariant rather than the unrealistically strong claim that
-every possible store address is outside ROM. -/
-def SailCodeMemoryCompatible (prog : GuestProgram) (initial : SailState) : Prop :=
-  ∀ {n : ℕ} {state next : SailState},
-    SailChain n initial state →
-      SailStep state next →
-        RomLoaded prog state →
-          RomLoaded prog next
-
 /-! ## Halting (SP1 execution-environment semantics, observed not simulated)
 
 SP1's `ECALL` is not RISC-V privileged `ECALL`: Sail's `execute_ECALL` traps to an M-mode handler,
@@ -262,17 +197,5 @@ exit code in `a0`. The walk still carries the halt row's transition to the commi
 
 /-- The RV64 `ECALL` encoding. -/
 def ECALL_ENC : BitVec 32 := 0x00000073#32
-
-/-- `SyscallCode::HALT` (read from `t0`/x5). -/
-def HALT_SYSCALL : BitVec 64 := 0
-
-/-- "About to execute the halting ECALL": the PC points at an `ECALL` encoding in the program ROM,
-`t0` holds `HALT`, and `a0` holds the exit code. -/
-def SP1Halted (prog : GuestProgram) (exit : BitVec 64) (s : SailState) : Prop :=
-  ∃ pc : BitVec 64,
-    s.regs.get? Register.PC = some pc ∧
-    prog.fetchWord pc = some ECALL_ENC ∧
-    s.get_reg? 5#5 = some HALT_SYSCALL ∧
-    s.get_reg? 10#5 = some exit
 
 end SP1Clean.Soundness.Target

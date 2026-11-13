@@ -31,11 +31,13 @@ def program : GuestProgram := image.toGuestProgram image_valid
 /-- Canonical Sail initialization, including the actual ROM bytes and zeroed registers. -/
 noncomputable def source : SailState := image.initialSailState
 
-/-- Configuration, initialization, entry PC and loaded memory follow from image validation. -/
-theorem source_loaded : IsInitialState program source := image.initialSailState_loaded image_valid
+/-- Image validation gives the boot state's configuration and loaded ROM. -/
+theorem source_configured : SailConfigured source := image.initialSailState_configured
+
+theorem source_romLoaded : RomLoaded program source := image.initialSailState_romLoaded image_valid
 
 /-- The actual source PC is the committed entry point. -/
-theorem source_pc : source.regs.get? Register.PC = some 65536#64 := source_loaded.pc
+theorem source_pc : source.regs.get? Register.PC = some 65536#64 := image.initialSailState_pc
 
 /-- Both compared registers, like every initial integer register, contain zero. -/
 theorem source_registers (index : BitVec 5) : source.get_reg? index = some 0#64 :=
@@ -80,7 +82,7 @@ theorem projected (target : SailState) :
     projectSP1Transition? program ⟨source, ⟨.ordinary, target⟩⟩ = some view := by
   unfold projectSP1Transition?
   simp only [source_pc, Option.bind_eq_bind, Option.bind_some, program_fetch]
-  rw [decodeLocated?_eq_some_of source_pc program_fetch (decode_branch source source_loaded.configured)]
+  rw [decodeLocated?_eq_some_of source_pc program_fetch (decode_branch source source_configured)]
   change some { view with accessPlan? := instructionAccessPlan? view.decoded source target } = some view
   rw [actual_access_plan]
   rfl
@@ -187,8 +189,8 @@ theorem official_step_exists :
     ∃ target, SailStep source target ∧ RowEffect program rowView source target := by
   refine Advance.advance_of_ctrl (p := SP1Prime)
     (.BTYPE (4092#13, .Regidx 2#5, .Regidx 1#5, .BEQ)) 69628#64 65536#64
-    0xe3#8 0x8e#8 0x20#8 0x7e#8 source_loaded.configured source_pc
-    (Advance.fetchReady_of_romLoaded program source _ _ source_loaded.romLoaded program_fetch source_pc)
+    0xe3#8 0x8e#8 0x20#8 0x7e#8 source_configured source_pc
+    (Advance.fetchReady_of_romLoaded program source _ _ source_romLoaded program_fetch source_pc)
     (fun state cfg => decode_branch state cfg) ?_ row_target rfl
   intro staged frame pc next initialized _
   exact Advance.execute_BTYPE_reaches 4092#13 1#5 2#5 .BEQ 65536#64 69628#64 0#64 0#64

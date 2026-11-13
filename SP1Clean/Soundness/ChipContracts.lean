@@ -346,52 +346,6 @@ theorem ChipGroundingContracts.rowAligned {chip : SupportedChip p}
     (decodedInstructionRow_constraints witness constraints decoded member)
     (decodedInstructionRow_byteGuarantees witness constraints balanced decoded member) program decode
 
-/-- **The engine-feed consumer**: any decoded row of a contracted chip produces both timed-engine
-records — the chip-generic successor of the retired Add-specific `addRow_engineFacts`.  `decode` remains the Program-grounding
-residual; the bundle derives the routing guard from it and the physical row constraints. -/
-theorem ChipGroundingContracts.engineFacts
-    {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
-    (witness : EnsembleWitness (sp1Ensemble (p := p)))
-    (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
-    (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
-    (decodedMem : decoded ∈ decodedInstructionRows (p := p) witness.tables)
-    (real : (decoded.toChipRow witness.data).is_real = 1)
-    (program : GuestProgram)
-    (decode : Target.decodedInROM program
-      (programAccess (decoded.toChipRow witness.data).view).toRow)
-    (initial : SailState) (initialClock : ℕ)
-    (codeMemoryCompatible : SailCodeMemoryCompatible program initial) :
-    LocalStepFact program initial initialClock (decoded.ordinaryRowFacts witness.data) ∧
-      FrameFact program initial initialClock (decoded.ordinaryRowFacts witness.data) := by
-  have guard := contracts.routing witness constraints decoded hchip decodedMem real program decode
-  have migrated : (decoded.toChipRow witness.data).kind.advance.isSome = true := by
-    show decoded.chip.kind.advance.isSome = true
-    rw [hchip]
-    exact contracts.migrated
-  -- Build the row's open Memory inputs from the ASSUMED pull currency (`isU64 ∧ ClkBound`), not from
-  -- the walk's own `Grounded` — the D0 circularity break.  The chip `Assumptions` are constraint-
-  -- derivable (the bundle's `assumptions` field), so `openInputs` is available inside the step/frame
-  -- currency antecedent without the grounded output.
-  have mkOpenInputs : (∀ mp ∈ (decoded.ordinaryRowFacts witness.data).memPulls,
-        SP1Clean.Channels.MemoryMsg.isU64 mp.1 ∧ SP1Clean.Channels.MemoryMsg.ClkBound mp.1 ∧
-        LocalValueAt initial initialClock (MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
-      DecodedRowOpenSoundnessInputs decoded witness.data := fun hcurr => by
-    let memory := decoded.memoryChannelGuarantees_of_pullCurrency witness.data
-      (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.1⟩)
-    exact
-      { assumptions := contracts.assumptions witness constraints balanced decoded hchip decodedMem
-          real program decode memory
-        memory }
-  refine engineFacts_of_kind migrated real decode initial initialClock
-    (fun hcurr => contracts.wiring witness constraints balanced decoded hchip decodedMem real
-      program decode (mkOpenInputs hcurr))
-    (fun hcurr => decoded.chipSpec_of_openSoundnessInputs witness constraints balanced decodedMem
-      (mkOpenInputs hcurr))
-    (fun hcurr state operands sourceA pulls =>
-      contracts.readiness witness constraints balanced decoded hchip decodedMem real guard
-        program decode (mkOpenInputs hcurr) state operands sourceA pulls)
-    codeMemoryCompatible
-
 end Contracts
 
 /-! ## Registry assembly
@@ -4693,60 +4647,6 @@ originals verbatim. -/
 section WeakConsumer
 
 variable [Fact (2 ^ 25 < p)]
-
-omit [Fact (2 ^ 25 < p)] in
-/-- `RowWiring.valueOperandsBound_of_grounded` with the walk's `Grounded` replaced by the read-time
-value currency a refresh-eliminated carrier transports back. -/
-theorem RowWiring.valueOperandsBound_of_pullCurrency
-    {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
-    (wiring : RowWiring view rf) {initial state : SailState} {initialClock steps : ℕ}
-    (curr : ∀ mp ∈ rf.memPulls,
-      LocalValueAt initial initialClock (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
-    (chain : Target.SailChain steps initial state)
-    (rowTime : StateMsg.timeNat rf.statePull = initialClock + 8 * steps) :
-    ValueOperandsBound view state := by
-  constructor
-  · intro index immediate indexEq
-    obtain ⟨mp, hmp, location, value⟩ := wiring.opB_pull index immediate indexEq
-    have current := curr mp hmp
-    rw [location, value, wiring.readTime mp hmp, rowTime] at current
-    exact (Semantics.localValueAt_stepStart_iff chain).mp current
-  · intro index immediate indexEq
-    obtain ⟨mp, hmp, location, value⟩ := wiring.opC_pull index immediate indexEq
-    have current := curr mp hmp
-    rw [location, value, wiring.readTime mp hmp, rowTime] at current
-    exact (Semantics.localValueAt_stepStart_iff chain).mp current
-
-omit [Fact (2 ^ 25 < p)] in
-/-- `RowWiring.sourceAValueBound_of_grounded`, from the same weak currency. -/
-theorem RowWiring.sourceAValueBound_of_pullCurrency
-    {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
-    (wiring : RowWiring view rf) {initial state : SailState} {initialClock steps : ℕ}
-    (curr : ∀ mp ∈ rf.memPulls,
-      LocalValueAt initial initialClock (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
-    (chain : Target.SailChain steps initial state)
-    (rowTime : StateMsg.timeNat rf.statePull = initialClock + 8 * steps) :
-    SourceAValueBound view state := by
-  intro index indexEq
-  obtain ⟨mp, hmp, location, value⟩ := wiring.opA_pull index indexEq
-  have current := curr mp hmp
-  rw [location, value, wiring.readTime mp hmp, rowTime] at current
-  exact (Semantics.localValueAt_stepStart_iff chain).mp current
-
-omit [Fact (2 ^ 25 < p)] in
-/-- `RowWiring.memoryPullsBound_of_grounded`, from the same weak currency. -/
-theorem RowWiring.memoryPullsBound_of_pullCurrency
-    {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
-    (wiring : RowWiring view rf) {initial state : SailState} {initialClock steps : ℕ}
-    (curr : ∀ mp ∈ rf.memPulls,
-      LocalValueAt initial initialClock (MemoryMsg.locOf mp.1) mp.2 mp.1.value)
-    (chain : Target.SailChain steps initial state)
-    (rowTime : StateMsg.timeNat rf.statePull = initialClock + 8 * steps) :
-    MemoryPullsBound rf state := by
-  intro mp hmp
-  have current := curr mp hmp
-  rw [wiring.readTime mp hmp, rowTime] at current
-  exact (Semantics.localValueAt_stepStart_iff chain).mp current
 
 end WeakConsumer
 

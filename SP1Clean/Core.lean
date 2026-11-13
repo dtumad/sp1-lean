@@ -101,7 +101,6 @@ import SP1Clean.FormalModel.ShardMachine
 import SP1Clean.FormalModel.ShardPreservation
 import SP1Clean.FormalModel.ShardAccess
 import SP1Clean.FormalModel.ShardResources
-import SP1Clean.FormalModel.Trace.Witness
 import SP1Clean.FormalModel.TraceGen.AluGenerator
 import SP1Clean.FormalModel.TraceGen.Arith
 import SP1Clean.FormalModel.TraceGen.Bump
@@ -226,7 +225,6 @@ import SP1Clean.Model.Semantics.DurationTime
 import SP1Clean.Model.Semantics.EventTime
 import SP1Clean.Model.Semantics.GenericTruth
 import SP1Clean.Model.Semantics.GuestProgram
-import SP1Clean.Model.Semantics.ImageContent
 import SP1Clean.Model.Semantics.InstructionPlan
 import SP1Clean.Model.Semantics.MicroTime
 import SP1Clean.Model.Semantics.ProgramCommitment

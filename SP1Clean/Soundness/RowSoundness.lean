@@ -7,7 +7,8 @@ import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.Execution
 import SP1Clean.Model.Core.Profile
-import SP1Clean.Model.Semantics.TransitionView
+import SP1Clean.Model.Semantics.InstructionPlan
+import SP1Clean.Model.Semantics.TransitionDecode
 import SP1Clean.Model.Semantics.ProgramCommitment
 import SP1Clean.Model.Semantics.GenericTruth
 import SP1Clean.Soundness.Walk
@@ -296,37 +297,6 @@ structure DecodedRowDynamicInputs (decoded : DecodedInstructionRow p)
   ready : (decoded.toChipRow data).kind.advanceReady
     (decoded.toChipRow data).inputs (decoded.toChipRow data).cols program state
   operands : Target.ValueOperandsBound (decoded.toChipRow data).view state
-
-/-- Timed grounding supplies the open Memory half of circuit soundness. The only remaining circuit
-premise is the chip's explicit semantic `Assumptions`, kept separate because it also contains decode,
-address-validity, and immediate facts that do not all come from Memory currency. -/
-theorem DecodedInstructionRow.openSoundnessInputs_of_grounded
-    (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
-    (program : Target.GuestProgram) (initial : SailState) (initialClock : ℕ)
-    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment data))
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts data)) :
-    DecodedRowOpenSoundnessInputs decoded data :=
-  { assumptions
-    memory := decoded.memoryChannelGuarantees_of_grounded data program initial initialClock grounded }
-
-/-- Package the exact position-dependent contract consumed by the physical-row soundness bridge.
-This keeps the three independent sources visible: timed grounding for Memory, static/decode facts for
-the chip assumptions and readiness bundle, and the live-state operand relation. -/
-theorem DecodedInstructionRow.dynamicInputs_of_grounded
-    (decoded : DecodedInstructionRow p) (data : ProverData (ZMod p))
-    (program : Target.GuestProgram) (initial state : SailState) (initialClock : ℕ)
-    (assumptions : decoded.chip.table.CircuitAssumptions (decoded.environment data))
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts data))
-    (ready : (decoded.toChipRow data).kind.advanceReady
-      (decoded.toChipRow data).inputs (decoded.toChipRow data).cols program state)
-    (operands : Target.ValueOperandsBound (decoded.toChipRow data).view state) :
-    DecodedRowDynamicInputs decoded data program state :=
-  { circuit := decoded.openSoundnessInputs_of_grounded data program initial initialClock assumptions
-      grounded
-    ready
-    operands }
 
 /-- The canonical physical-row-to-semantic-row bridge.  No operation-level faithfulness theorem is
 involved: this is precisely the `GeneralFormalCircuit` soundness field retained by `SupportedChip`. -/

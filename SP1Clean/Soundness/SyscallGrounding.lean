@@ -843,37 +843,6 @@ theorem syscallRowFacts_currency_split_values (r : SyscallInstrsChip.Inputs (ZMo
      rw [syscallRowFacts_memPulls]
      exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
 
-omit [Fact (2 ^ 17 < p)] in
-/-- **A batch of syscall rows' walked pushes, in flat form** — stated over *abstract* rows, which is
-the whole point: the same identity at the witness's concrete 65-column decode exceeds the depth
-budget, while here every argument is a variable. The witness-level absorption
-(`syscall_pushesAt_eq`) is this lemma plus one `List.map_map`. -/
-theorem syscallRows_pushesAt (rs : List (SyscallInstrsChip.Inputs (ZMod p)))
-    (loc : Semantics.MemLoc) :
-    TimedGrounding.pushesAt (rs.map syscallRowFacts) loc
-      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(rs.flatMap fun r =>
-            [SyscallInstrsChip.memPushedMessage r r.op_a 4 r.op_a_value,
-             SyscallInstrsChip.memPushedMessage r r.op_b 3 r.op_b_memory.prev_value,
-             SyscallInstrsChip.memPushedMessage r r.op_c 2 r.op_c_memory.prev_value])
-            : Multiset (Channels.MemoryMsg (ZMod p))) := by
-  rw [TimedGrounding.pushesAt_map_eq_filter_flatMap syscallRowFacts loc rs]
-  simp only [syscallRowFacts_memPushes]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- The pulled twin of `syscallRows_pushesAt`, over abstract rows for the same reason. -/
-theorem syscallRows_pullsAt (rs : List (SyscallInstrsChip.Inputs (ZMod p)))
-    (loc : Semantics.MemLoc) :
-    TimedGrounding.pullsAt (rs.map syscallRowFacts) loc
-      = Multiset.filter (fun m => Semantics.MemoryMsg.locOf m = loc)
-          (↑(rs.flatMap fun r =>
-            [SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a,
-             SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b,
-             SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c])
-            : Multiset (Channels.MemoryMsg (ZMod p))) := by
-  rw [TimedGrounding.pullsAt_map_eq_filter_flatMap syscallRowFacts loc rs]
-  simp only [syscallRowFacts_memPulls, List.map_cons, List.map_nil]
-
 /-- **The successor to `listAllInl`.** Today's projection is what
 `SyscallTableInactive.noActiveRows` exists to make available: with no syscall rows every trail entry
 is a `Sum.inl`, so the trail *is* a list of decoded instruction rows and the engine can walk it.

@@ -715,7 +715,6 @@ def nextFrontier (compiled : CompiledInstructionEvent) : AccessFrontier :=
   compiled.schedule.outgoing
 
 end CompiledInstructionEvent
-
 /-- Compile one decoded supported transition using the canonical refresh-aware access scheduler.
 
 At a 24-bit timestamp-window boundary `scheduleAccessPlan` inserts a register `MemoryBump` before
@@ -877,6 +876,7 @@ theorem compileInstructionEvent?_frontier_bounded_next {view : SP1TransitionView
     compileInstructionEvent?_components generated
   exact scheduleAccessPlan_outgoing_bounded_next accesses bounded
 
+
 private theorem cbaRegisters?_nonzero {decoded : instruction}
     {registers : BitVec 5 × BitVec 5 × BitVec 5} {key : InstructionRouteKey}
     (extracted : cbaRegisters? decoded = some registers)
@@ -920,7 +920,6 @@ private theorem rTypeEvent?_wellFormed {decoded : instruction}
           aTime, bTime, cTime⟩, rfl⟩
       · contradiction
     · contradiction
-
 /-- The five R-type adapter tables obtain their complete event validity from canonical projection
 and the running scheduler invariant. Operand bounds come from the bitvectors themselves; routing
 supplies the destination and opcode conditions. This includes all multiply/divide/remainder values,
@@ -996,5 +995,6 @@ theorem compileInstructionEvent?_branch_immediate
       rfl
     · contradiction
   · contradiction
+
 
 end SP1Clean.TraceGen
