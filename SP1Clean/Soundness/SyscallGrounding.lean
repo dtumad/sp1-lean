@@ -111,21 +111,16 @@ private theorem configFrame_pc_x5 (s : SailState) (v : RegisterType Register.PC)
   show ((s.regs.insert Register.PC v).insert Register.x5 w).get? R = s.regs.get? R
   rw [Std.ExtDHashMap.get?_insert, dite_eq_right hnex5, Std.ExtDHashMap.get?_insert, dite_eq_right hnePC]
 
-/-! ## The *ordinary* row's step fact, at the event trajectory
+/-! ## The ordinary row's step fact
 
-A syscall row is not the only row whose step fact has to move. On a shard that contains one, every
-*instruction* row's step fact must also be stated at `eventTrajectory` rather than at the Sail
-trajectory, because the two stop agreeing the moment a syscall event sits between them.
+An instruction row's step fact is stated over the shard's trajectory, so it holds on shards that
+also contain syscall rows. `RowWiring.advance_at` uses the row's currency only through
+`localValueAt_stepStart_iff`, to obtain the operand bounds the chip's `advance` needs; `advance`
+itself needs only the state. -/
 
-The port is small, and the reason is worth recording: `RowWiring.advance_at` consumes its
-`SailChain` argument *only* through `localValueAt_stepStart_iff`, to turn the row's currency into
-the operand bounds the chip's `advance` wants — and `advance` itself needs the state, not the chain.
-Replacing that one appeal with `localValueAtG_stepStart_iff` makes the whole derivation
-trajectory-agnostic. -/
-
-/-- `RowWiring.advance_at` over an arbitrary trajectory: the chain becomes `traj n = some state`,
-and the row's window start becomes `tl.start n`. -/
-theorem RowWiring.advance_atG {kind : ChipKind p}
+/-- The chip's `advance` at row `n` of a trajectory, with the row's window starting at
+`tl.start n`. -/
+theorem RowWiring.advance_at {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
     {data : ProverData (ZMod p)} {program : GuestProgram}
@@ -141,7 +136,7 @@ theorem RowWiring.advance_atG {kind : ChipKind p}
     (hpc : state.regs.get? Register.PC = some (StateMsg.pcBits rf.statePull))
     (hrom : RomLoaded program state) (hcfg : SailConfigured state)
     (curr : ∀ mp ∈ rf.memPulls, Channels.MemoryMsg.isU64 mp.1 ∧
-      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      Semantics.LocalValueAt traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ s', SailStep state s' ∧ RowEffect program (kind.view inp cols) state s' := by
   have operands : ValueOperandsBound (kind.view inp cols) state := by
     constructor
@@ -149,43 +144,36 @@ theorem RowWiring.advance_atG {kind : ChipKind p}
       obtain ⟨mp, hmp, hloc, hval⟩ := wiring.opB_pull index himm hidx
       have hc := (curr mp hmp).2
       rw [hloc, wiring.readTime mp hmp, htime, hval] at hc
-      exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+      exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp hc
     · intro index himm hidx
       obtain ⟨mp, hmp, hloc, hval⟩ := wiring.opC_pull index himm hidx
       have hc := (curr mp hmp).2
       rw [hloc, wiring.readTime mp hmp, htime, hval] at hc
-      exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+      exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp hc
   have sourceA : SourceAValueBound (kind.view inp cols) state := by
     intro index hidx
     obtain ⟨mp, hmp, hloc, hval⟩ := wiring.opA_pull index hidx
     have hc := (curr mp hmp).2
     rw [hloc, wiring.readTime mp hmp, htime, hval] at hc
-    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+    exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp hc
   have pulls : MemoryPullsBound rf state := by
     intro mp hmp
     have hc := (curr mp hmp).2
     rw [wiring.readTime mp hmp, htime] at hc
-    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+    exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp hc
   rw [wiring.statePull_eq, pcBits_statePullOfView] at hpc
   exact advance inp cols data program state real spec hcfg hrom hpc operands decode
     (ready state operands sourceA pulls)
 
 /-! ## Reading a step back out of the trajectory
 
-`LocalStepFactG` deliberately forgets *which* transition produced the trajectory's successor: the
-truth layer needs only that it has one.  An execution engine that **consumes** a trajectory needs the
-`EventStep` itself, and the trajectory remembers it — `eventTrajectory_succ` evaluates
-`executeEvent?` at the transcript's own event.
-
-Only the ordinary arm needs a lemma.  On the syscall arm the `EventStep` is its constructor applied
-to the row's own payload: `SyscallTransition`'s third component is `handler.run … = some target`,
-which is definitionally `ExecutableSyscallHandler.relation`, and the trajectory's successor is that
-same `run`. -/
+`LocalStepFact` records only that the trajectory has a successor. The lemmas below recover the
+ordinary chip's actual step when the trajectory's successor at a row is Sail's `stepOnce`. -/
 
 /-- An ordinary chip's semantic step on a trajectory whose successor at this row is Sail's
 `stepOnce`. The timeline supplies this row's eight-tick duration; other rows may have any duration.
 The proof uses the registered `advance` payload and the actual Memory pulls and pushes. -/
-theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
+theorem ordinaryStepFact_of_rowEffect {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
     {data : ProverData (ZMod p)} {program : GuestProgram}
@@ -203,12 +191,12 @@ theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
       tl.start (n + 1) = tl.start n + 8)
     (step : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
-    LocalStepFactG program trajectory initial
+    LocalStepFact program trajectory initial
       tl rf := by
   intro hpull hcurr
   obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
   have hstartSucc := timeStep n htime
-  obtain ⟨s', hstep, heff⟩ := wiring.advance_atG advance real spec decode ready htraj htime
+  obtain ⟨s', hstep, heff⟩ := wiring.advance_at advance real spec decode ready htraj htime
     hpc hrom hcfg (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.2⟩)
   -- The selected trajectory agrees with Sail at this row's position.
   have hsucc : trajectory (n + 1) = some s' := by
@@ -220,7 +208,7 @@ theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
     intro mp hmp
     have hc := (hcurr mp hmp).2.2
     rw [wiring.readTime mp hmp, htime] at hc
-    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+    exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp hc
   refine ⟨⟨n + 1, s', hsucc, hpushTime, ?_, codeMemoryCompatible htraj heff hrom,
     heff.cfg hcfg⟩, ?_⟩
   · rw [wiring.statePush_eq]
@@ -251,24 +239,24 @@ theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
       cases hlocmp : Semantics.MemoryMsg.locOf mp.1 with
       | reg i =>
         rw [hlocmp] at hc
-        exact TimedGrounding.localValueAtG_shift_reg (n := n)
+        exact TimedGrounding.localValueAt_shift_reg (n := n)
           (Or.inl ⟨le_rfl, by omega, by omega, by omega⟩) hc
       | ram a =>
         rw [hlocmp] at hc
         by_cases heq : Semantics.MemoryMsg.timeNat m = tl.start n
         · rw [heq]; exact hc
-        · unfold Semantics.LocalValueAtG at hc ⊢
-          rw [TimedGrounding.microValueG_ram_pre (n := n) le_rfl (by omega), htraj,
+        · unfold Semantics.LocalValueAt at hc ⊢
+          rw [TimedGrounding.microValue_ram_pre (n := n) le_rfl (by omega), htraj,
             Option.bind_some] at hc
-          rw [TimedGrounding.microValueG_ram_post (n := n) (by omega)
+          rw [TimedGrounding.microValue_ram_post (n := n) (by omega)
             (by rw [hstartSucc]; omega), hsucc, Option.bind_some]
           rw [locContent_ram_congr (heff.mem.1 (hramSafe a (hloc.trans hlocmp))) a]
           exact hc
     · -- the `op_a` write, at the `+ 4` effect slot
       refine ⟨hu64, wiring.push_clkBound m hm, ?_⟩
       rw [hlocw, hvalw, htw, htime]
-      show Semantics.microValueG _ _ _ (MemLoc.reg idx) (tl.start n + 4) = _
-      rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+      show Semantics.microValue _ _ _ (MemLoc.reg idx) (tl.start n + 4) = _
+      rw [TimedGrounding.microValue_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       have hregs := heff.regs
       rw [ite_eq_left hw] at hregs
@@ -283,31 +271,31 @@ theorem ordinaryStepFactG_of_rowEffect {kind : ChipKind p}
         exact (hcurr mp hmp).1
       refine ⟨hu, wiring.push_clkBound m hm, ?_⟩
       rw [hlocr, hval, htr, htime]
-      show Semantics.microValueG _ _ _ (MemLoc.reg idx) (tl.start n + 4) = _
-      rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+      show Semantics.microValue _ _ _ (MemLoc.reg idx) (tl.start n + 4) = _
+      rw [TimedGrounding.microValue_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       have hregs := heff.regs
       rw [ite_eq_right (by simp [hnw])] at hregs
       show locContent s' (MemLoc.reg idx) = some (Word.toBitVec64 mp.1.value)
       rw [show locContent s' (MemLoc.reg idx) = s'.get_reg? idx from rfl, hregs idx]
-      rwa [TimedGrounding.localValueAtG_stepStart_iff htraj] at hc
+      rwa [TimedGrounding.localValueAt_stepStart_iff htraj] at hc
     · -- the factored `rd = x0` destination push
       refine ⟨hu64, wiring.push_clkBound m hm, ?_⟩
       rw [hloc, htimeZero, htime]
-      show Semantics.microValueG _ _ _ (MemLoc.reg 0#5) (tl.start n + 4) = _
-      rw [TimedGrounding.microValueG_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+      show Semantics.microValue _ _ _ (MemLoc.reg 0#5) (tl.start n + 4) = _
+      rw [TimedGrounding.microValue_reg_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       simp [locContent, SailState.get_reg?, hzero]
     · -- a genuine RAM write at the `+ 1` effect slot
       refine ⟨hu64, wiring.push_clkBound m hm, ?_⟩
       rw [hloc, htimeRam, htime]
-      show Semantics.microValueG _ _ _ (MemLoc.ram cell) (tl.start n + 1) = _
-      rw [TimedGrounding.microValueG_ram_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
+      show Semantics.microValue _ _ _ (MemLoc.ram cell) (tl.start n + 1) = _
+      rw [TimedGrounding.microValue_ram_post (n := n) le_rfl (by rw [hstartSucc]; omega), hsucc,
         Option.bind_some]
       exact hpost heff hpulls
 
 /-- The original trajectory-wide ROM contract specializes to the selected row's effect. -/
-theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
+theorem ordinaryStepFact_of_advanceOnTrajectory {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
     {data : ProverData (ZMod p)} {program : GuestProgram}
@@ -325,14 +313,14 @@ theorem ordinaryStepFactG_of_advanceOnTrajectory {kind : ChipKind p}
       tl.start (n + 1) = tl.start n + 8)
     (step : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
-    LocalStepFactG program trajectory initial
+    LocalStepFact program trajectory initial
       tl rf := by
-  exact ordinaryStepFactG_of_rowEffect wiring advance real spec decode ready trajectory initial tl
+  exact ordinaryStepFact_of_rowEffect wiring advance real spec decode ready trajectory initial tl
     (fun present effect => codeMemoryCompatible present effect.normal.sailStep) timeStep step
 
 /-- The ordinary chip's register/RAM frame argument on an arbitrary mixed trajectory. Only
 this row's successor equation and eight-tick duration are needed. -/
-theorem ordinaryFrameFactG_of_advanceOnTrajectory {kind : ChipKind p}
+theorem ordinaryFrameFact_of_advanceOnTrajectory {kind : ChipKind p}
     {inp : kind.Inputs (ZMod p)} {cols : kind.Cols (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring (kind.view inp cols) rf) (advance : kind.AdvancePayload)
     {data : ProverData (ZMod p)} {program : GuestProgram}
@@ -347,28 +335,28 @@ theorem ordinaryFrameFactG_of_advanceOnTrajectory {kind : ChipKind p}
       tl.start (n + 1) = tl.start n + 8)
     (step : ∀ n, StateMsg.timeNat rf.statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
-    FrameFactG program trajectory initial
+    FrameFact program trajectory initial
       tl rf := by
   intro hpull hcurr loc v hpush hvalAt
   obtain ⟨n, state, htraj, htime, hpc, hrom, hcfg⟩ := hpull
   have hstartSucc := timeStep n htime
-  obtain ⟨s', hstep, heff⟩ := wiring.advance_atG advance real spec decode ready htraj htime
+  obtain ⟨s', hstep, heff⟩ := wiring.advance_at advance real spec decode ready htraj htime
     hpc hrom hcfg (fun mp hmp => ⟨(hcurr mp hmp).1, (hcurr mp hmp).2.2⟩)
   have hsucc : trajectory (n + 1) = some s' := by
     rw [step n htime, htraj, Option.bind_some]
     exact TimedGrounding.stepOnce_of_sailStep hstep
   rw [htime] at hvalAt
   have hcontent : locContent state loc = some (Word.toBitVec64 v) :=
-    (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hvalAt
+    (TimedGrounding.localValueAt_stepStart_iff htraj).mp hvalAt
   have hpulls : MemoryPullsBound rf state := by
     intro mp hmp
     have hc := (hcurr mp hmp).2.2
     rw [wiring.readTime mp hmp, htime] at hc
-    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp hc
+    exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp hc
   have hpushTime : StateMsg.timeNat rf.statePush = tl.start (n + 1) := by
     rw [hstartSucc, wiring.time8, htime]
   rw [hpushTime]
-  apply (TimedGrounding.localValueAtG_stepStart_iff hsucc).mpr
+  apply (TimedGrounding.localValueAt_stepStart_iff hsucc).mpr
   cases loc with
   | ram cell =>
     exact wiring.ram_frame heff hpulls cell v hpush hcontent
@@ -626,7 +614,7 @@ its proof consumes. -/
 
 omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
 /-- The transcript's timeline agrees with the walk's positions: a row at trail index `k` pulls at
-`tl.start k` and pushes at `tl.start (k+1)`. This is `walkG`'s timeline hypothesis, and the index is
+`tl.start k` and pushes at `tl.start (k+1)`. This is `walk`'s timeline hypothesis, and the index is
 unique because `Timeline.start` strictly increases. -/
 theorem timelineAgreement_of_durations (events : List ExecutionEvent) (initialClock : ℕ)
     (r : RowFacts p) (k : ℕ)
@@ -667,8 +655,7 @@ noncomputable def transcriptOf (_data : ProverData (ZMod p)) (rows : List (Walke
     | .syscall r => .syscall (syscallEventOfRow r)
 
 /-- **Each walked row's own window is the duration its event reports at the same index.** This is
-the identity that lets the walk's positions be read off the timeline and vice versa, and it is what
-`walkE` needs at every index. It holds arm for arm because `WalkedRow` and `ExecutionEvent` are the
+the identity that lets the walk's positions be read off the timeline and vice versa. It holds arm for arm because `WalkedRow` and `ExecutionEvent` are the
 same two-way split. -/
 theorem durationAt_transcriptOf (data : ProverData (ZMod p)) (rows : List (WalkedRow p)) (k : ℕ)
     (hk : k < rows.length) :
@@ -818,22 +805,22 @@ theorem SyscallRowContext.of_pieces (r : SyscallInstrsChip.Inputs (ZMod p))
    ⟨(syscallEventOfRow r).pc, pcValue, fetch⟩, ⟨vA, vB, vC⟩, pcValue⟩
 
 omit [Fact (2 ^ 17 < p)] in
-/-- The walk's *value* currency, split at the row's three named pulls — the `LocalValueAtG` twin of
+/-- The walk's *value* currency, split at the row's three named pulls — the `LocalValueAt` twin of
 `syscallRowFacts_currency_split`, over an abstract row for the same crossing reason. -/
 theorem syscallRowFacts_currency_split_values (r : SyscallInstrsChip.Inputs (ZMod p))
     {traj : Semantics.Trajectory} {initial : SailState} {tl : Semantics.Timeline}
     (hcurr : ∀ mp ∈ (syscallRowFacts r).memPulls,
-      Semantics.LocalValueAtG traj initial tl
+      Semantics.LocalValueAt traj initial tl
         (Semantics.MemoryMsg.locOf (mp : Channels.MemoryMsg (ZMod p) × ℕ).1) mp.2 mp.1.value) :
-    Semantics.LocalValueAtG traj initial tl
+    Semantics.LocalValueAt traj initial tl
         (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r r.op_a_memory r.op_a))
         (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r))
         r.op_a_memory.prev_value ∧
-      Semantics.LocalValueAtG traj initial tl
+      Semantics.LocalValueAt traj initial tl
         (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r r.op_b_memory r.op_b))
         (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 3)
         r.op_b_memory.prev_value ∧
-      Semantics.LocalValueAtG traj initial tl
+      Semantics.LocalValueAt traj initial tl
         (Semantics.MemoryMsg.locOf (SyscallInstrsChip.memPulledMessage r r.op_c_memory r.op_c))
         (StateMsg.timeNat (SyscallInstrsChip.statePulledMessage r) + 2)
         r.op_c_memory.prev_value :=
@@ -870,7 +857,7 @@ theorem listAllWalked {α β γ : Type*} (dec : β → SyscallInstrsChip.Inputs 
       · exact ⟨WalkedRow.syscall (dec b) :: rows,
           List.Forall₂.cons (Or.inr ⟨b, rfl, rfl⟩) hrows⟩
 
-/-- **`walkE`'s timeline hypothesis, from the walk order.** The walk needs each row's push to land
+/-- **The walk's timeline hypothesis, from the walk order.** The walk needs each row's push to land
 on the *next* timeline start; the row supplies its own window width, and `durationAt_transcriptOf`
 says the transcript reports exactly that width at the row's index. The two then agree by
 `timelineAgreement_of_durations`.

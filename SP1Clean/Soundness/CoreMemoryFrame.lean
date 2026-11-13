@@ -109,16 +109,16 @@ theorem ExecutionCarrier.frame_of_no_push
     (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
     {program : Target.GuestProgram} {trajectory : Trajectory} {initial : SailState}
     (current : ∀ event ∈ events,
-      LocalStateTruthG program trajectory carrier.timeline (facts event).statePull ∧
+      LocalStateTruth program trajectory carrier.timeline (facts event).statePull ∧
       ∀ pull ∈ (facts event).memPulls, MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
-        LocalValueAtG trajectory initial carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value)
-    (frames : ∀ event ∈ events, FrameFactG program trajectory initial carrier.timeline (facts event))
+        LocalValueAt trajectory initial carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value)
+    (frames : ∀ event ∈ events, FrameFact program trajectory initial carrier.timeline (facts event))
     (loc : MemLoc) (value : Word (ZMod p))
     (untouched : ∀ event ∈ events, ∀ message ∈ (facts event).memPushes, MemoryMsg.locOf message ≠ loc)
-    (start : LocalValueAtG trajectory initial carrier.timeline loc (StateMsg.timeNat incoming) value) :
-    LocalValueAtG trajectory initial carrier.timeline loc (StateMsg.timeNat outgoing) value := by
+    (start : LocalValueAt trajectory initial carrier.timeline loc (StateMsg.timeNat incoming) value) :
+    LocalValueAt trajectory initial carrier.timeline loc (StateMsg.timeNat outgoing) value := by
   apply preserve_along_walk (fun row : RowFacts p => (row.statePull, row.statePush))
-    (fun state => LocalValueAtG trajectory initial carrier.timeline loc (StateMsg.timeNat state) value)
+    (fun state => LocalValueAt trajectory initial carrier.timeline loc (StateMsg.timeNat state) value)
     carrier.stateWalk ?_ start
   intro row member before
   obtain ⟨original, originalMem, aligned⟩ := forall₂_exists_right carrier.aligned row member

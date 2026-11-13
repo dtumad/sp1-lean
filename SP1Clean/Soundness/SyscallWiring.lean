@@ -102,34 +102,17 @@ theorem syscallInstrsRow_pulledFacts
     (syscallInstrsTable_data witness)
     (constraints _ member) finished.1 finished.2 rowMem currency).2
 
-/-! ## Absorbing the syscall table's Memory summand
+/-! ## The dynamic row consumer
 
-`memoryBalance_of_alignsWith` carries the `SyscallInstrs` table's produced and consumed Memory
-messages as a *side term* on both sides, exactly as it carries the Halt table's. That is the right
-shape for a table whose rows are extracted after the walk. It is the wrong shape for a table whose
-rows are *walked*: the walk already accounts for a row's touches through `pushesAt`/`pullsAt`, so
-carrying them again would double-count.
+The row consumer reads currency only through `localValueAt_stepStart_iff`, so it is stated over
+the shard's trajectory. -/
 
-The two lemmas below are the absorption. They say the side term *is* the walked term, so the summand
-can be dropped from the balance's conclusion rather than tracked. Note that
-`memoryFrontierBalance` keeps its syscall summand — it is the raw ledger form and correct there;
-what loses the term is this balance's conclusion. -/
-
-/-! ## The dynamic row consumer, at the event trajectory
-
-`DecodedInstructionRow.dynamicGrounded_of_weakCurrency` takes a `SailChain steps initial state` and
-uses it in exactly three places, all of them `localValueAt_stepStart_iff` — the same single appeal
-that `RowWiring.advance_at` made. Replacing it with `localValueAtG_stepStart_iff` re-indexes the
-whole consumer off the trajectory, which is what lets the engine's conclusion stop being
-`SailChain`-shaped. `DynamicGroundedRow` itself never mentioned a chain; only the quantifier in
-front of it did. -/
-
-theorem RowWiring.valueOperandsBound_of_pullCurrencyG
+theorem RowWiring.valueOperandsBound_of_pullCurrency
     {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring view rf) {traj : Semantics.Trajectory} {initial state : SailState}
     {tl : Semantics.Timeline} {n : ℕ}
     (curr : ∀ mp ∈ rf.memPulls,
-      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+      Semantics.LocalValueAt traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     (htraj : traj n = some state)
     (rowTime : StateMsg.timeNat rf.statePull = tl.start n) :
     Target.ValueOperandsBound view state := by
@@ -138,19 +121,19 @@ theorem RowWiring.valueOperandsBound_of_pullCurrencyG
     obtain ⟨mp, hmp, location, value⟩ := wiring.opB_pull index immediate indexEq
     have current := curr mp hmp
     rw [location, value, wiring.readTime mp hmp, rowTime] at current
-    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+    exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp current
   · intro index immediate indexEq
     obtain ⟨mp, hmp, location, value⟩ := wiring.opC_pull index immediate indexEq
     have current := curr mp hmp
     rw [location, value, wiring.readTime mp hmp, rowTime] at current
-    exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+    exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp current
 
-theorem RowWiring.sourceAValueBound_of_pullCurrencyG
+theorem RowWiring.sourceAValueBound_of_pullCurrency
     {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring view rf) {traj : Semantics.Trajectory} {initial state : SailState}
     {tl : Semantics.Timeline} {n : ℕ}
     (curr : ∀ mp ∈ rf.memPulls,
-      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+      Semantics.LocalValueAt traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     (htraj : traj n = some state)
     (rowTime : StateMsg.timeNat rf.statePull = tl.start n) :
     Target.SourceAValueBound view state := by
@@ -158,26 +141,26 @@ theorem RowWiring.sourceAValueBound_of_pullCurrencyG
   obtain ⟨mp, hmp, location, value⟩ := wiring.opA_pull index indexEq
   have current := curr mp hmp
   rw [location, value, wiring.readTime mp hmp, rowTime] at current
-  exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+  exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp current
 
-theorem RowWiring.memoryPullsBound_of_pullCurrencyG
+theorem RowWiring.memoryPullsBound_of_pullCurrency
     {view : Trace.RowView (ZMod p)} {rf : Semantics.RowFacts p}
     (wiring : RowWiring view rf) {traj : Semantics.Trajectory} {initial state : SailState}
     {tl : Semantics.Timeline} {n : ℕ}
     (curr : ∀ mp ∈ rf.memPulls,
-      Semantics.LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
+      Semantics.LocalValueAt traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value)
     (htraj : traj n = some state)
     (rowTime : StateMsg.timeNat rf.statePull = tl.start n) :
     MemoryPullsBound rf state := by
   intro mp hmp
   have current := curr mp hmp
   rw [wiring.readTime mp hmp, rowTime] at current
-  exact (TimedGrounding.localValueAtG_stepStart_iff htraj).mp current
+  exact (TimedGrounding.localValueAt_stepStart_iff htraj).mp current
 
 /-- Component-local ordinary execution facts on any trajectory whose successor at this row is
 Sail's `stepOnce`. Wiring, chip semantics, and readiness are derived inside incoming Memory
 currency; the enclosing assembly supplies only physical evidence, decode, and timeline position. -/
-theorem ChipGroundingContracts.engineFactsLocalG_of_rowEffect
+theorem ChipGroundingContracts.engineFactsLocal_of_rowEffect
     {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
     (proverData : ProverData (ZMod p))
     (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
@@ -193,14 +176,14 @@ theorem ChipGroundingContracts.engineFactsLocalG_of_rowEffect
           Target.RomLoaded program st → Target.RomLoaded program nx)
     (timeStep : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       tl.start (n + 1) = tl.start n + 8)
-    (step : Semantics.LocalStateTruthG program trajectory tl
+    (step : Semantics.LocalStateTruth program trajectory tl
         (decoded.ordinaryRowFacts proverData).statePull →
       ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
-    Semantics.LocalStepFactG program
+    Semantics.LocalStepFact program
         trajectory initial
         tl (decoded.ordinaryRowFacts proverData) ∧
-      Semantics.FrameFactG program
+      Semantics.FrameFact program
         trajectory initial
         tl (decoded.ordinaryRowFacts proverData) := by
   have guard := contracts.routingLocal proverData decoded hchip staticInputs.constraints real program decode
@@ -212,7 +195,7 @@ theorem ChipGroundingContracts.engineFactsLocalG_of_rowEffect
   -- currency, never from the walk's own `Grounded` output.
   have mkOpenInputs : (∀ mp ∈ (decoded.ordinaryRowFacts proverData).memPulls,
         MemoryMsg.isU64 mp.1 ∧ MemoryMsg.ClkBound mp.1 ∧
-        Semantics.LocalValueAtG trajectory initial
+        Semantics.LocalValueAt trajectory initial
           tl
           (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) →
       DecodedRowOpenSoundnessInputs decoded proverData := fun hcurr => by
@@ -226,21 +209,21 @@ theorem ChipGroundingContracts.engineFactsLocalG_of_rowEffect
   refine ⟨?_, ?_⟩
   · intro hpull hcurr
     have inputs := mkOpenInputs hcurr
-    exact ordinaryStepFactG_of_rowEffect
+    exact ordinaryStepFact_of_rowEffect
       (contracts.wiringLocal proverData decoded hchip staticInputs real program decode inputs)
       advance real (staticInputs.chipSpec inputs) decode
       (contracts.readinessLocal proverData decoded hchip staticInputs real guard program decode inputs)
       trajectory initial tl codeMemoryCompatible timeStep (step hpull) hpull hcurr
   · intro hpull hcurr loc value pushes current
     have inputs := mkOpenInputs hcurr
-    exact ordinaryFrameFactG_of_advanceOnTrajectory
+    exact ordinaryFrameFact_of_advanceOnTrajectory
       (contracts.wiringLocal proverData decoded hchip staticInputs real program decode inputs)
       advance real (staticInputs.chipSpec inputs) decode
       (contracts.readinessLocal proverData decoded hchip staticInputs real guard program decode inputs)
       trajectory initial tl timeStep (step hpull) hpull hcurr loc value pushes current
 
 /-- Preserve the public trajectory-wide contract as a specialization of the row-effect interface. -/
-theorem ChipGroundingContracts.engineFactsLocalG_of_stateStep
+theorem ChipGroundingContracts.engineFactsLocal_of_stateStep
     {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
     (proverData : ProverData (ZMod p))
     (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
@@ -255,22 +238,22 @@ theorem ChipGroundingContracts.engineFactsLocalG_of_stateStep
         Target.SailStep st nx → Target.RomLoaded program st → Target.RomLoaded program nx)
     (timeStep : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       tl.start (n + 1) = tl.start n + 8)
-    (step : Semantics.LocalStateTruthG program trajectory tl
+    (step : Semantics.LocalStateTruth program trajectory tl
         (decoded.ordinaryRowFacts proverData).statePull →
       ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
-    Semantics.LocalStepFactG program
+    Semantics.LocalStepFact program
         trajectory initial
         tl (decoded.ordinaryRowFacts proverData) ∧
-      Semantics.FrameFactG program
+      Semantics.FrameFact program
         trajectory initial
         tl (decoded.ordinaryRowFacts proverData) := by
-  exact contracts.engineFactsLocalG_of_rowEffect proverData decoded hchip staticInputs real program decode
+  exact contracts.engineFactsLocal_of_rowEffect proverData decoded hchip staticInputs real program decode
     trajectory initial tl (fun present effect => codeMemoryCompatible present effect.normal.sailStep)
     timeStep step
 
 /-- The unguarded successor interface remains a specialization of incoming-state replay. -/
-theorem ChipGroundingContracts.engineFactsLocalG
+theorem ChipGroundingContracts.engineFactsLocal
     {chip : SupportedChip p} (contracts : ChipGroundingContracts chip)
     (proverData : ProverData (ZMod p))
     (decoded : DecodedInstructionRow p) (hchip : decoded.chip = chip)
@@ -287,20 +270,14 @@ theorem ChipGroundingContracts.engineFactsLocalG
       tl.start (n + 1) = tl.start n + 8)
     (step : ∀ n, StateMsg.timeNat (decoded.ordinaryRowFacts proverData).statePull = tl.start n →
       trajectory (n + 1) = (trajectory n).bind Machine.stepOnce) :
-    Semantics.LocalStepFactG program
+    Semantics.LocalStepFact program
         trajectory initial
         tl (decoded.ordinaryRowFacts proverData) ∧
-      Semantics.FrameFactG program
+      Semantics.FrameFact program
         trajectory initial
         tl (decoded.ordinaryRowFacts proverData) := by
-  exact contracts.engineFactsLocalG_of_stateStep proverData decoded hchip staticInputs real program decode
+  exact contracts.engineFactsLocal_of_stateStep proverData decoded hchip staticInputs real program decode
     trajectory initial tl codeMemoryCompatible timeStep (fun _ => step)
-
-/-! ## The row's semantic context, from the walk
-
-`SyscallRowContext` names the four things a syscall row's meaning needs that the row itself does not
-carry. `syscallInstrsRow_operands` supplied the first from the Program bus. The three below come
-from the walk — the pulled state's pc and the three register reads. -/
 
 /-! ## The canonicity premise, at the native witness
 

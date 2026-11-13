@@ -85,10 +85,6 @@ lemma pairwise_distinct_filter_length_le_one {α : Type*} {γ : Type*} [Decidabl
 
 end Generic
 
-/-! ## The per-`MemLoc` genesis and final frontiers -/
-
-/-! ## The frontier ↔ filtered-multiset bridges -/
-
 /-! ## The active-row carrier and its per-key push/pull bridges -/
 
 /-- The walk's ordinary `RowFacts` carrier: the active decoded rows' ordinary records. -/
@@ -192,9 +188,5 @@ lemma pullsAt_memoryFrontierRows (witness : EnsembleWitness (sp1Ensemble (p := p
   frontierRows_agg_eq witness rowPullsAt DecodedInstructionRow.consumedMemoryMessages
     (fun decoded loc => rowPullsAt_ordinaryRowFacts_coe decoded witness.data loc)
     (fun decoded decodedMem hne => (paddingEmpty decoded decodedMem hne).2) loc
-
-/-! ## The frontier balance -/
-
-/-! ## The genesis `LiveOK` invariant -/
 
 end SP1Clean.Soundness
