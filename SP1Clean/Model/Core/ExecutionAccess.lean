@@ -113,14 +113,13 @@ theorem ordinaryEncodedAt.project {program : GuestProgram} {located : LocatedTra
 theorem ExecutionStep.project_ordinary {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} (step : ExecutionStep policy program source .ordinary target)
     (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail)
-    (permitted : InstructionWrite.PermittedAt policy.memory.readOnly program source.sail)
     (encoded : ordinaryEncodedAt program source.sail)
     (incoming : ∀ address < NativeLayout.sailMemory.upper, (source.sail.mem.get? address).isSome) :
     ∃ view plan, projectSP1Transition? program ⟨source.sail, ⟨.ordinary, target.sail⟩⟩ = some view ∧
       view.accessPlan? = some plan ∧ plan.WellFormed ∧ plan.length ≤ 3 := by
-  have next := step.frame configured loaded (fun _ => permitted)
+  have next := step.frame configured loaded
   exact encoded.project configured next.1 incoming (fun address inside =>
-    step.memory_present configured loaded (fun _ => permitted) address (incoming address inside))
+    step.memory_present configured loaded address (incoming address inside))
 
 
 end SP1Clean.Model.Core

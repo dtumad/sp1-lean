@@ -101,8 +101,6 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels) :
     ∃ events actual, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events actual ∧
-      ExecutionPath.WritesPermitted ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
-        source.realize events ∧
       actual.clock = target.clock ∧
       (executionResources ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events) .ticks ≤ limits.ticks ∧
@@ -113,12 +111,12 @@ theorem source_execution {limits : ResourceLimits} {image : ProgramImage}
       (∀ index, actual.sail.get_reg? index = some (target.sail.memorySnapshot.read (.reg index))) ∧
       actual.sail.mem = target.sail.memorySnapshot.memory.toSailMemory (2 ^ 48) := by
   have spec := resource_spec witness balanced
-  obtain ⟨events, actual, -, path, permitted, clock, pc, registers, ram, -⟩ :=
+  obtain ⟨events, actual, -, path, clock, pc, registers, ram, -⟩ :=
     HostFinalMemory.source_execution valid (baseWitness witness)
       (baseWitness_constraints witness constraints) (.of_balancedChannels (baseWitness_balanced witness balanced))
   rw [baseWitness_publicInput] at clock pc
   obtain ⟨endpoint, ticks, count⟩ := spec.path_work path clock
-  exact ⟨events, actual, path, permitted, endpoint, ticks, count, spec, pc, registers, ram⟩
+  exact ⟨events, actual, path, endpoint, ticks, count, spec, pc, registers, ram⟩
 
 omit [Fact p.Prime] [Fact (2 ^ 25 < p)] in
 /-- The native tick ceiling implies its event ceiling without treating host calls as eight ticks. -/

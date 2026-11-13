@@ -1,11 +1,11 @@
-import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.ExecutionReplay
 import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.Semantics.SailInstructionFrame
 
 /-! # Configuration and instruction memory throughout native execution
 
-The existing path threads the complete Sail, host and clock state. Its ordinary-write policy
-and the host interpreter's checked writes preserve protected bytes at every cut. A policy that
+The existing path threads the complete Sail, host and clock state. Each ordinary step's write
+permission and the host interpreter's checked writes preserve protected bytes at every cut. A policy that
 protects the committed image therefore preserves ROM and platform configuration throughout.
 
 Every executed position has a committed word which official Sail fetch returns unchanged.
@@ -70,12 +70,11 @@ theorem ExecutionStep.syscall_sail_frame {policy : HostPolicy} {program : GuestP
 theorem ExecutionStep.frame {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {event : ExecutionEvent}
     (step : ExecutionStep policy program source event target)
-    (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail)
-    (permitted : event = .ordinary → InstructionWrite.PermittedAt policy.memory.readOnly program source.sail) :
+    (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail) :
     SailConfigured target.sail ∧ ∀ address, policy.memory.readOnly address = true →
       target.sail.mem.get? address = source.sail.mem.get? address := by
   cases step with
-  | ordinary _ _ normal => exact Advance.ordinary_normal_frame configured loaded (permitted rfl) normal
+  | ordinary _ _ normal permitted => exact Advance.ordinary_normal_frame configured loaded permitted normal
   | syscall success =>
     have frame := (ExecutionStep.syscall success).syscall_sail_frame
     exact ⟨frame.2.2.1 configured, frame.2.2.2⟩
@@ -84,16 +83,15 @@ theorem ExecutionStep.frame {policy : HostPolicy} {program : GuestProgram}
 theorem ExecutionStep.fetch_eq {policy : HostPolicy} {program : GuestProgram}
     {source target : ExecutionState} {event : ExecutionEvent}
     (step : ExecutionStep policy program source event target)
-    (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail)
-    (permitted : event = .ordinary → InstructionWrite.PermittedAt policy.memory.readOnly program source.sail) :
+    (configured : SailConfigured source.sail) (loaded : RomLoaded program source.sail) :
     ∃ pc word, source.sail.regs.get? Register.PC = some pc ∧ program.fetchWord pc = some word ∧
       (runSail (fetch ())) source.sail = .ok (FetchResult.F_Base word) source.sail := by
   suffices ∃ pc word, source.sail.regs.get? Register.PC = some pc ∧ program.fetchWord pc = some word by
     obtain ⟨pc, word, atPc, fetched⟩ := this
     exact ⟨pc, word, atPc, fetched, Advance.fetch_eq_of_romLoaded configured loaded atPc fetched⟩
   cases step with
-  | ordinary =>
-    obtain ⟨pc, word, _, atPc, fetched, _⟩ := permitted rfl
+  | ordinary _ _ _ permitted =>
+    obtain ⟨pc, word, _, atPc, fetched, _⟩ := permitted
     exact ⟨pc, word, atPc, fetched⟩
   | syscall success =>
     obtain ⟨pc, _, atPc, fetched, _⟩ := HostState.step_observations success
@@ -106,7 +104,6 @@ variable {image : ProgramImage} (valid : image.Valid) {policy : HostPolicy}
 /-- Mixed paths preserve configuration, ROM and every protected byte. The coverage premise only
 relates the policy's protected region to the image; the native shard policy satisfies it directly. -/
 theorem frame (path : ExecutionPath policy (image.toGuestProgram valid) source events target)
-    (permitted : WritesPermitted policy (image.toGuestProgram valid) source events)
     (protectsRom : ∀ address, image.readOnly address = true → policy.memory.readOnly address = true)
     (configured : SailConfigured source.sail) (loaded : RomLoaded (image.toGuestProgram valid) source.sail) :
     SailConfigured target.sail ∧ RomLoaded (image.toGuestProgram valid) target.sail ∧
@@ -115,17 +112,15 @@ theorem frame (path : ExecutionPath policy (image.toGuestProgram valid) source e
   induction path with
   | nil => exact ⟨configured, loaded, fun _ _ => rfl⟩
   | cons step _ ih =>
-    have permission := (writesPermitted_cons_iff step).mp permitted
-    have next := step.frame configured loaded permission.1
+    have next := step.frame configured loaded
     have rom := image.romLoaded_of_readOnly valid
       (fun address selected => next.2 address (protectsRom address selected)) loaded
-    obtain ⟨cfg, loaded, preserved⟩ := ih permission.2 next.1 rom
+    obtain ⟨cfg, loaded, preserved⟩ := ih next.1 rom
     exact ⟨cfg, loaded, fun address selected =>
       (preserved address selected).trans (next.2 address selected)⟩
 
 /-- Every replayed prefix, including endpoint extension, inherits the same independent invariant. -/
 theorem frame_prefix (path : ExecutionPath policy (image.toGuestProgram valid) source events target)
-    (permitted : WritesPermitted policy (image.toGuestProgram valid) source events)
     (protectsRom : ∀ address, image.readOnly address = true → policy.memory.readOnly address = true)
     (configured : SailConfigured source.sail) (loaded : RomLoaded (image.toGuestProgram valid) source.sail)
     {cut : ℕ} {current : ExecutionState}
@@ -133,34 +128,32 @@ theorem frame_prefix (path : ExecutionPath policy (image.toGuestProgram valid) s
     SailConfigured current.sail ∧ RomLoaded (image.toGuestProgram valid) current.sail ∧
       ∀ address, policy.memory.readOnly address = true →
         current.sail.mem.get? address = source.sail.mem.get? address := by
-  obtain ⟨middle, left, _, allowed, _⟩ := permitted.split path cut
+  obtain ⟨middle, left, _⟩ := path.split cut
   have same : middle = current := Option.some.inj (left.replay.symm.trans replay)
   subst current
-  exact left.frame valid allowed protectsRom configured loaded
+  exact left.frame valid protectsRom configured loaded
 
 /-- Every executed position has an actual prefix state and a matching official/committed fetch.
 The strict bound deliberately excludes unused final boundaries and empty identities. -/
 theorem fetch_at (path : ExecutionPath policy (image.toGuestProgram valid) source events target)
-    (permitted : WritesPermitted policy (image.toGuestProgram valid) source events)
     (protectsRom : ∀ address, image.readOnly address = true → policy.memory.readOnly address = true)
     (configured : SailConfigured source.sail) (loaded : RomLoaded (image.toGuestProgram valid) source.sail)
     (cut : ℕ) (active : cut < events.length) :
     ∃ current pc word, executionTrajectory policy (image.toGuestProgram valid) source events cut = some current ∧
       current.sail.regs.get? Register.PC = some pc ∧ (image.toGuestProgram valid).fetchWord pc = some word ∧
       (runSail (fetch ())) current.sail = .ok (FetchResult.F_Base word) current.sail := by
-  obtain ⟨middle, left, right, allowed, remaining⟩ := permitted.split path cut
-  have preserved := left.frame valid allowed protectsRom configured loaded
+  obtain ⟨middle, left, right⟩ := path.split cut
+  have preserved := left.frame valid protectsRom configured loaded
   cases suffix : events.drop cut with
   | nil =>
     have length := congrArg List.length suffix
     simp only [List.length_drop, List.length_nil] at length
     omega
   | cons event rest =>
-    rw [suffix] at right remaining
+    rw [suffix] at right
     cases right with
     | cons step _ =>
       obtain ⟨pc, word, fetched⟩ := step.fetch_eq preserved.1 preserved.2.1
-        ((writesPermitted_cons_iff step).mp remaining).1
       exact ⟨middle, pc, word, left.replay, fetched⟩
 
 end ExecutionPath

@@ -1,6 +1,7 @@
 import SP1Clean.FormalModel.TraceGen.Events
 import SP1Clean.Model.Semantics.ProgramCommitment
 import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Core.InstructionWrite
 import SP1Clean.Model.Machine.ConfiguredState
 import SP1Clean.Model.Semantics.GuestProgram
 import SP1Clean.Model.Semantics.Decode
@@ -390,5 +391,11 @@ theorem anchor_configuredDecode :
     ConfiguredDecode 0x0000006F#32 (.JAL (0#21, .Regidx 0#5)) := by
   intro state configured
   exact decode_jal_x0 state configured.init configured.priv configured.mseccfg_disabled
+
+/-- The self-jump writes only `x0`, so it is permitted under every read-only memory policy. -/
+theorem anchor_permittedAt (readOnly : ℕ → Bool) :
+    SP1Clean.Model.Core.InstructionWrite.PermittedAt readOnly anchorProgram anchorState :=
+  ⟨65536, 0x6f, .JAL (0, .Regidx 0), anchorState_pc, anchorProgram_fetchWord_selfJump,
+    anchor_configuredDecode, rfl⟩
 
 end SP1Clean.Audit.AnchorShard

@@ -37,17 +37,15 @@ theorem trace_iff_executionPath {source target : ExecutionState} {events : List 
     obtain ⟨orbit, endpoint, labels⟩ := path.exists_prefix
     exact ⟨_, orbit, labels, endpoint⟩
 
-/-- `Executes` is source validity, a machine trace, and the fixed ordinary-write policy. -/
+/-- `Executes` is source validity together with a machine trace. -/
 theorem executes_iff {source target : ExecutionSnapshot} {events : List ExecutionEvent} :
     Executes characteristic image source target events ↔
       ExecutionSourceValid image source ∧
-        (sp1Machine characteristic image valid).Trace source.realize events target.realize ∧
-        ExecutionPath.WritesPermitted (policy characteristic image) (image.toGuestProgram valid)
-          source.realize events := by
+        (sp1Machine characteristic image valid).Trace source.realize events target.realize := by
   constructor
-  · rintro ⟨sourceValid, path, permitted⟩
-    exact ⟨sourceValid, trace_iff_executionPath.mpr path, permitted⟩
-  · rintro ⟨sourceValid, trace, permitted⟩
-    exact ⟨sourceValid, trace_iff_executionPath.mp trace, permitted⟩
+  · rintro ⟨sourceValid, path⟩
+    exact ⟨sourceValid, trace_iff_executionPath.mpr path⟩
+  · rintro ⟨sourceValid, trace⟩
+    exact ⟨sourceValid, trace_iff_executionPath.mp trace⟩
 
 end SP1Clean.FormalModel.Shard

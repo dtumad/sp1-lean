@@ -6,7 +6,7 @@ import SP1Clean.Soundness.Shard.Contract
 
 `SoundnessTarget` and `CompilerTarget` are exactly the two fields of `Air.Flat.Realizes` at the SP1
 machine, with the fixed complete endpoints as the boundary and the header identity, source
-validity, fixed ordinary-write policy, and resource profile as admissibility.
+validity, resource profile and commitment statement as admissibility.
 `statement_iff_of_realizes` re-derives the intended single statement from `Realizes.statement_iff`;
 nothing is proved twice and no second
 carrier is introduced: the machine is PolyFun's `Labeled` bundle of the existing `executionSystem`.
@@ -25,13 +25,12 @@ def boundary (source target : ExecutionSnapshot) :
     PublicIO (ZMod p) → ExecutionState × ExecutionState :=
   fun _ => (source.realize, target.realize)
 
-/-- The header identity, source validity, ordinary-write permission, and resource profile. -/
-noncomputable def admissible (limits : ResourceLimits) (commitments : CommitmentStatement) (image : ProgramImage) (valid : image.Valid)
+/-- The header identity, source validity, resource profile and commitment statement. -/
+noncomputable def admissible (limits : ResourceLimits) (commitments : CommitmentStatement) (image : ProgramImage)
     (source target : ExecutionSnapshot) (header : PublicIO (ZMod p)) :
     PublicIO (ZMod p) → List ExecutionEvent → Prop :=
   fun publicInput events =>
     publicInput = header ∧ ExecutionSourceValid image source ∧
-      ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid) source.realize events ∧
       nativeProfile limits p image source target events ∧
       commitments.WellFormed p ∧ commitments.Matches events
 
@@ -41,7 +40,7 @@ theorem interpretation_iff {limits : ResourceLimits} {commitments : CommitmentSt
     {events : List ExecutionEvent} :
     Interpretation limits commitments image source target header publicInput events ↔
       Air.Flat.Interpretation (sp1Machine p image valid) (boundary source target)
-        (admissible limits commitments image valid source target header) publicInput events := by
+        (admissible limits commitments image source target header) publicInput events := by
   simp only [Interpretation, StatementExecution, AdmissibleExecution, Air.Flat.Interpretation, boundary, admissible,
     executes_iff (valid := valid)]
   tauto
@@ -52,7 +51,7 @@ def realizes {ensemble : Ensemble (ZMod p) PublicIO} {limits : ResourceLimits} {
     (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
     Air.Flat.Realizes (sp1Machine p image valid) ensemble Balance.logUp (boundary source target)
-      (admissible limits commitments image valid source target header) where
+      (admissible limits commitments image source target header) where
   sound publicInput heights _ accepted :=
     let ⟨events, interpretation⟩ := sound publicInput heights trivial accepted
     ⟨events, (interpretation_iff valid).mp interpretation⟩

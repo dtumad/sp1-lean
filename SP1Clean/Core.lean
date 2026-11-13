@@ -141,7 +141,6 @@ import SP1Clean.Model.Core.ExecutionPath
 import SP1Clean.Model.Core.ExecutionReplay
 import SP1Clean.Model.Core.ExecutionResources
 import SP1Clean.Model.Core.ExecutionSnapshot
-import SP1Clean.Model.Core.ExecutionWritePolicy
 import SP1Clean.Model.Core.HintQueue
 import SP1Clean.Model.Core.HintQueueEvent
 import SP1Clean.Model.Core.HintQueueRecords
