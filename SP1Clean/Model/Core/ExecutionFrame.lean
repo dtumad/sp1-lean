@@ -156,5 +156,23 @@ theorem fetch_at (path : ExecutionPath policy (image.toGuestProgram valid) sourc
       obtain ⟨pc, word, fetched⟩ := step.fetch_eq preserved.1 preserved.2.1
       exact ⟨middle, pc, word, left.replay, fetched⟩
 
+/-- Every host call executes an ECALL whose four bytes are in the actual incoming Sail memory.
+The host step reads only the committed program; ROM preservation supplies the bytes, so also
+requiring them in the step would admit exactly the same paths from a loaded source. -/
+theorem syscall_instructionBytes
+    (path : ExecutionPath policy (image.toGuestProgram valid) source events target)
+    (protectsRom : ∀ address, image.readOnly address = true → policy.memory.readOnly address = true)
+    (configured : SailConfigured source.sail) (loaded : RomLoaded (image.toGuestProgram valid) source.sail)
+    {cut : ℕ} {call : CoreSyscallEvent} (selected : events[cut]? = some (.syscall call)) :
+    ∃ current, executionTrajectory policy (image.toGuestProgram valid) source events cut = some current ∧
+      InstructionBytes.check current.sail.mem.get? call.pc ECALL_ENC = true := by
+  obtain ⟨middle, left, right⟩ := path.split cut
+  obtain ⟨active, label⟩ := List.getElem?_eq_some_iff.mp selected
+  rw [List.drop_eq_getElem_cons active, label] at right
+  cases right with
+  | cons step _ =>
+    exact ⟨middle, left.replay,
+      step.syscall_instructionBytes (left.frame valid protectsRom configured loaded).2.1⟩
+
 end ExecutionPath
 end SP1Clean.Model.Core

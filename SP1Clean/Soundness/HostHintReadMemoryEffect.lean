@@ -283,11 +283,11 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
   change StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n at time
   have before : carrier.trajectory valid n = some current.sail := by
     simp only [GroundingCarrier.trajectory, paired, Option.map_some]
-  obtain ⟨m, state, present, atTime, atPc, rom, _⟩ := pull
+  obtain ⟨m, state, present, atTime, atPc, _⟩ := pull
   have sameIndex : m = n := start_injective carrier.timeline (atTime.symm.trans time)
   subst m
   have sail : current.sail = state := Option.some.inj (before.symm.trans present)
-  rw [← sail] at atPc rom
+  rw [← sail] at atPc
   have covered : n ≤ carrier.events.length := by
     have bound := (List.getElem?_eq_some_iff.mp atIndex).1
     simpa only [ExecutionCarrier.events, List.length_map] using Nat.le_of_lt bound
@@ -361,9 +361,7 @@ theorem GroundingCarrier.hintRead_step (valid : image.Valid)
     have stepped : current.host.step ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         current.clock current.sail = some (execution.effect.state, next.sail,
           syscallEventOfRow (HostCallLedger.input physical).instruction) := by
-      have loaded := InstructionBytes.check_of_romLoaded rom fetched
-      simp only [HostState.step, atPc, Bind.bind, Option.bind_some, sourcePc, fetched, loaded,
-        and_self, ↓reduceIte, ran]
+      simp only [HostState.step, atPc, Bind.bind, Option.bind_some, sourcePc, fetched, ↓reduceIte, ran]
       simp only [next, execution, sourcePc, label]
     rw [sameEvent]
     exact ExecutionStep.syscall stepped
@@ -419,11 +417,11 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
   change StateMsg.timeNat (event.facts witness.data).statePull = carrier.timeline.start n at time
   have before : carrier.trajectory valid n = some current.sail := by
     simp only [GroundingCarrier.trajectory, paired, Option.map_some]
-  obtain ⟨m, state, present, atTime, atPc, rom, _⟩ := pull
+  obtain ⟨m, state, present, atTime, atPc, _⟩ := pull
   have sameIndex : m = n := start_injective carrier.timeline (atTime.symm.trans time)
   subst m
   have sail : current.sail = state := Option.some.inj (before.symm.trans present)
-  rw [← sail] at atPc rom
+  rw [← sail] at atPc
   have covered : n ≤ carrier.events.length := by
     have bound := (List.getElem?_eq_some_iff.mp atIndex).1
     simpa only [ExecutionCarrier.events, List.length_map] using Nat.le_of_lt bound
@@ -485,9 +483,7 @@ theorem GroundingCarrier.hintLength_step (valid : image.Valid)
     have stepped : current.host.step ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         current.clock current.sail = some (execution.effect.state, next.sail,
           syscallEventOfRow (HostCallLedger.input physical).instruction) := by
-      have loaded := InstructionBytes.check_of_romLoaded rom fetched
-      simp only [HostState.step, atPc, Bind.bind, Option.bind_some, sourcePc, fetched, loaded,
-        and_self, ↓reduceIte, ran]
+      simp only [HostState.step, atPc, Bind.bind, Option.bind_some, sourcePc, fetched, ↓reduceIte, ran]
       simp only [next, execution, sourcePc, label]
     rw [sameEvent]
     exact ExecutionStep.syscall stepped

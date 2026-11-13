@@ -123,10 +123,10 @@ private theorem control_step (valid : image.Valid)
       (∀ cell : RamCell, locContent next.sail (.ram cell) = locContent current.sail (.ram cell)) ∧
       wordsAt witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event = [] := by
-  obtain ⟨n, state, present, time, atPc, rom, _⟩ := pull
+  obtain ⟨n, state, present, time, atPc, _⟩ := pull
   change (carrier.pairedTrajectory valid n).map ExecutionState.sail = some state at present
   obtain ⟨current, paired, sail⟩ := Option.map_eq_some_iff.mp present
-  rw [← sail] at atPc rom
+  rw [← sail] at atPc
   change current.sail.regs.get? LeanRV64D.Register.PC =
     some (StateMsg.pcBits (event.facts witness.data).statePull) at atPc
   have atIndex := ExecutionCarrier.ordered_at carrier member time
@@ -186,7 +186,7 @@ private theorem control_step (valid : image.Valid)
   have step : ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid) current event.event next := by
     have stepped := HostState.step_of_run atPc (show (image.toGuestProgram valid).fetchWord
       (StateMsg.pcBits (event.facts witness.data).statePull) = some Target.ECALL_ENC by rwa [sourcePc])
-      (InstructionBytes.check_of_romLoaded rom (by rwa [sourcePc])) ran current.clock
+      ran current.clock
     rw [sourcePc, label] at stepped
     rw [sameEvent]
     apply ExecutionStep.syscall

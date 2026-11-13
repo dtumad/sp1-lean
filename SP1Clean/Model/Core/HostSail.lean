@@ -129,26 +129,16 @@ def HostExecution.toEvent (execution : HostExecution) (clock : ℕ) (pc : BitVec
   arg2 := execution.arg2
   result := execution.result
 
-/-- One committed ECALL whose bytes are present in the actual source memory, with explicit host
-state and a result computed from the source observations. -/
+/-- One committed ECALL, with explicit host state and a result computed from the source
+observations. The committed program is the only fetch source; that the same word is in the actual
+Sail memory is a consequence of ROM preservation (`ExecutionStep.syscall_instructionBytes`). -/
 def HostState.step (host : HostState) (policy : HostPolicy) (program : GuestProgram)
     (clock : ℕ) (source : SailState) : Option (HostState × SailState × Machine.CoreSyscallEvent) := do
   let pc ← source.regs.get? Register.PC
-  if program.fetchWord pc = some ECALL_ENC ∧
-      InstructionBytes.check source.mem.get? pc ECALL_ENC = true then do
+  if program.fetchWord pc = some ECALL_ENC then do
     let execution ← host.run policy (.ofSail source)
     some (execution.effect.state, execution.apply source pc, execution.toEvent clock pc)
   else none
-
-/-- Successful host dispatch authenticates all four ECALL bytes in the actual Sail memory. -/
-theorem HostState.step_instructionBytes {host nextHost : HostState} {policy : HostPolicy}
-    {program : GuestProgram} {clock : ℕ} {source target : SailState} {event : Machine.CoreSyscallEvent}
-    (success : host.step policy program clock source = some (nextHost, target, event))
-    {pc : BitVec 64} (atPc : source.regs.get? Register.PC = some pc) :
-    InstructionBytes.check source.mem.get? pc ECALL_ENC = true := by
-  simp only [step, atPc, bind, Option.bind_some] at success
-  split_ifs at success with fetched
-  · exact fetched.2
 
 /-- The returned event satisfies all instruction-row laws, including the computed HINT_LEN arm. -/
 theorem HostExecution.rowLaw {host : HostState} {execution : HostExecution}
@@ -225,7 +215,7 @@ theorem HostState.step_sound {host nextHost : HostState} {policy : HostPolicy}
   · simp only [Option.bind_eq_some_iff, Option.some.injEq, Prod.mk.injEq] at parsed
     obtain ⟨execution, run, rfl, rfl, rfl⟩ := parsed
     have binding := (host.run_eq_some_iff policy (.ofSail source) execution).mp run
-    exact ⟨⟨pc, atPc, fetched.1⟩, execution.rowLaw binding.2.2.2.2.1 clock pc,
+    exact ⟨⟨pc, atPc, fetched⟩, execution.rowLaw binding.2.2.2.2.1 clock pc,
       execution.matchesStates run atPc clock, ⟨execution.effect.state, success⟩⟩
 
 end SP1Clean.Model.Core

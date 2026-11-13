@@ -37,10 +37,8 @@ by
   apply ExecutionSnapshot.hostStep?_sound rfl
   have atPc : source.sail.registers.get? .PC = some 65536 := by native_decide
   have fetched : (image.toGuestProgram valid.1.1).fetchWord 65536 = some ECALL_ENC := by native_decide
-  have loaded : InstructionBytes.check source.sail.readContext.byte 65536 ECALL_ENC = true := by native_decide
   have ran : source.host.run (policy SP1Prime image) source.sail.readContext = some execution := by native_decide
-  simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, loaded,
-    and_self, ↓reduceIte, ran]
+  simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, ↓reduceIte, ran]
   rfl
 
 private theorem measured :
@@ -143,10 +141,8 @@ theorem phaseTwo_executes : Executes SP1Prime image { source with clock := 2 } {
     apply ExecutionSnapshot.hostStep?_sound rfl
     have atPc : source.sail.registers.get? .PC = some 65536 := by native_decide
     have fetched : (image.toGuestProgram valid.1.1).fetchWord 65536 = some ECALL_ENC := by native_decide
-    have loaded : InstructionBytes.check source.sail.readContext.byte 65536 ECALL_ENC = true := by native_decide
     have ran : source.host.run (policy SP1Prime image) source.sail.readContext = some execution := by native_decide
-    simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, loaded,
-      and_self, ↓reduceIte, ran]
+    simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, ↓reduceIte, ran]
     rfl
   exact ⟨sourceValid, .cons phaseStep (.nil _)⟩
 

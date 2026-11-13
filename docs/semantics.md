@@ -24,10 +24,10 @@ includes register-map presence, sparse RAM, simulator runtime, nextPC/retirement
 host queues, outputs, commitment banks, requests/replies and optional exit.
 
 Ordinary steps execute the official Sail interpreter. Host calls use one evolving concrete
-host/clock, with the exact ECALL word checked in both committed code and Sail memory.
+host/clock at a committed ECALL word. Committed code is the one fetch source of both arms; ROM
+preservation proves that the executed word is also in Sail memory.
 ENTER, HALT, COMMIT, COMMIT_DEFERRED, HINT_LEN, HINT_READ, WRITE and VERIFY belong to the
-semantic domain. The older fixed-handler ordinary/HALT view has an adapter for that fragment;
-it is not equivalent to arbitrary mixed host execution.
+semantic domain.
 
 Semantic events, elapsed ticks and physical AIR rows are different quantities. Ordinary
 instructions cost eight ticks and host scheduling uses the explicit 264-tick window.
