@@ -50793,7 +50793,7 @@
       "typeFingerprint": "1789520444"
     },
     {
-      "bodyFingerprint": "3081614788",
+      "bodyFingerprint": "766147573",
       "local": true,
       "module": "SP1Clean.Model.Core.HostSail",
       "name": "SP1Clean.Model.Core.HostState.step",
@@ -50819,13 +50819,6 @@
       "module": "SP1Clean.Model.Core.HostExecution",
       "name": "SP1Clean.Model.Core.HostState.writeOutput.match_1",
       "typeFingerprint": "778687755"
-    },
-    {
-      "bodyFingerprint": "551586987",
-      "local": true,
-      "module": "SP1Clean.Model.Core.InstructionBytes",
-      "name": "SP1Clean.Model.Core.InstructionBytes.check",
-      "typeFingerprint": "756137116"
     },
     {
       "bodyFingerprint": "877097884",
