@@ -173,7 +173,6 @@ import SP1Clean.Model.Core.MemorySupport
 import SP1Clean.Model.Core.MemoryTable
 import SP1Clean.Model.Core.MemoryWord
 import SP1Clean.Model.Core.NativeLayout
-import SP1Clean.Model.Core.Profile
 import SP1Clean.Model.Core.ProgramImage
 import SP1Clean.Model.Core.ProgramTable
 import SP1Clean.Model.Core.QueueReplay

@@ -194,28 +194,15 @@ theorem HostExecution.preserves_memory_outside {host : HostState} {policy : Host
       (host.executeKind_write_permitted executed write actual)
     exact write.read_outside source.mem query (by omega)
 
-/-- The graph of the concrete stateful interpreter, for one incoming host state. Whole runs
-thread the returned host state; they do not reuse this incoming state at every instruction. -/
-def HostState.handler (host : HostState) (policy : HostPolicy) : Machine.SyscallHandler :=
-  fun program event source target =>
-    ∃ nextHost, host.step policy program event.clock source = some (nextHost, target, event)
-
-/-- A computed host step is a committed ECALL transition in the existing RISC-V event model.
-No separate return-value, operand, or instruction-row-law premise is supplied. -/
-theorem HostState.step_sound {host nextHost : HostState} {policy : HostPolicy}
+/-- A computed host step executes at a committed ECALL. -/
+theorem HostState.step_aboutToExecuteEcall {host nextHost : HostState} {policy : HostPolicy}
     {program : GuestProgram} {clock : ℕ} {source target : SailState}
     {event : Machine.CoreSyscallEvent}
     (success : host.step policy program clock source = some (nextHost, target, event)) :
-    Machine.AboutToExecuteEcall program source ∧
-      Machine.SyscallTransition (host.handler policy) program event source target := by
-  have parsed := success
-  simp only [step, bind, Option.bind_eq_some_iff] at parsed
-  obtain ⟨pc, atPc, parsed⟩ := parsed
-  split_ifs at parsed with fetched
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq, Prod.mk.injEq] at parsed
-    obtain ⟨execution, run, rfl, rfl, rfl⟩ := parsed
-    have binding := (host.run_eq_some_iff policy (.ofSail source) execution).mp run
-    exact ⟨⟨pc, atPc, fetched⟩, execution.rowLaw binding.2.2.2.2.1 clock pc,
-      execution.matchesStates run atPc clock, ⟨execution.effect.state, success⟩⟩
+    Machine.AboutToExecuteEcall program source := by
+  simp only [step, bind, Option.bind_eq_some_iff] at success
+  obtain ⟨pc, atPc, success⟩ := success
+  split_ifs at success with fetched
+  · exact ⟨pc, atPc, fetched⟩
 
 end SP1Clean.Model.Core

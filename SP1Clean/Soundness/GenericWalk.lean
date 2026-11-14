@@ -508,9 +508,7 @@ variable {p : ℕ}
 /-! ## Telescoping a State walk
 
 Pure `Walk.IsWalk` arithmetic over an arbitrary row type — no grounding content, no instruction
-class, no fixed divisor. These sat in `GroundingInternal` while the only walk was over decoded
-instruction rows; they live here now because the syscall side needs them at `WalkedRow` and sits
-below that file. -/
+class, no fixed divisor. -/
 
 /-- A State-message walk with a row-dependent positive-width schedule has the expected endpoint
 clock count.  No instruction class, fixed divisor, or concrete edge map is baked into this

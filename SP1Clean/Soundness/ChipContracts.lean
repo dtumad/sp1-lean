@@ -4756,8 +4756,7 @@ theorem syscallInstrs_consumedMessages_eq
     List.flatMap_map, List.map_cons, List.map_nil, Function.comp_def] using projection.2
 
 omit [Fact (2 ^ 17 < p)] in
-/-- On a shard with no active syscall row the `SyscallInstrs` table produces no Memory message —
-the fact that let `SyscallTableInactive`'s two Memory-silence fields be deleted. -/
+/-- On a shard with no active syscall row the `SyscallInstrs` table produces no Memory message. -/
 theorem syscallInstrs_producedMessages_nil_of_inactive
     (witness : EnsembleWitness (sp1Ensemble (p := p))) (constraints : witness.Constraints)
     (inactive : realSyscallInstrsRows witness = []) :

@@ -209,8 +209,8 @@ with SP1; separate tests cover the native model's sparse, unordered addresses. T
 its scheduler rechecks the complete payload. A scalable sparse index remains an upstream optimization.
 
 The reviewed upgrade target is [SP1 v6.10.0](https://github.com/succinctlabs/sp1/releases/tag/v6.10.0).
-The native row budget and canonical syscall-code restriction live in `Model/Core/Profile`,
-independently of extraction. Cargo and the reviewed coverage record must agree with the release
+The native resource profile (`FormalModel.Shard.nativeProfile` over numeric `ResourceLimits`) and
+the full-word syscall-code decoding (`SyscallKind.decode?`) are independent of extraction. Cargo and the reviewed coverage record must agree with the release
 revision in provenance.json. This is the only supported SP1 pin; old generated evidence is
 historical rather than a second dependency.
 Review loader byte preservation, host output behavior, instruction execution, verifier behavior

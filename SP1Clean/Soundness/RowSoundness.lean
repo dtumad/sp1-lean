@@ -6,7 +6,6 @@ import SP1Clean.Model.Semantics.MicroTime
 import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.Model.Machine.Syscall
 import SP1Clean.Model.Machine.Execution
-import SP1Clean.Model.Core.Profile
 import SP1Clean.Model.Semantics.InstructionPlan
 import SP1Clean.Model.Semantics.TransitionDecode
 import SP1Clean.Model.Semantics.ProgramCommitment

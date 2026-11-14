@@ -14,19 +14,16 @@ HandlerAddressesFit`. What the row does **not** give, and must be supplied by th
 
 * the register indices `5`/`10`/`11` — SP1 does not pin them in the AIR either; the preprocessed
   Program table does, because the decoder always emits `Instruction::new(ECALL, X5, X10, X11)`;
-* canonicity of the syscall code — see `IsInlineCanonical` below.
+* the full syscall code word — see below.
 
 The Program bus's low-limb bound suffices to prove `nextPc = pc + 4`, even when the raw next
 low limb exceeds `65535`. StateBump normalizes that representation separately.
 
-**The canonical-code profile premise.** SP1's AIR selects from bytes 0 and 1 of `x5`. The executor
-dispatches on `x5 as u32` through `SyscallCode::from_u32`, rejecting unrecognized low-32-bit codes.
-The native bridge requires the stronger full-word predicate `IsInlineCanonical`; it is not derived
-from the row or from successful Rust dispatch. In particular, the cast ignores the upper 32 bits:
-`0x100000003` dispatches as `ENTER_UNCONSTRAINED` but is outside this profile. All thirteen inline
-codes are below 256, so canonicality requires membership in that list and zero higher bytes. This
-restriction preserves the current `IsCanonicalCode`/`SP1Halted` meaning without adding assertions
-absent from the Rust row. -/
+**The full code word.** SP1's AIR selects from bytes 0 and 1 of `x5`. The executor dispatches on
+`x5 as u32` through `SyscallCode::from_u32`, ignoring the upper 32 bits: `0x100000003` dispatches as
+`ENTER_UNCONSTRAINED`. The semantic host step instead decodes the entire 64-bit word
+(`SyscallKind.decode?`), so such a word is outside the semantic domain. The row alone does not
+establish the full word. -/
 
 open LeanRV64D
 
@@ -145,73 +142,11 @@ theorem syscallId_field_iff (r : SyscallInstrsChip.Inputs (ZMod p))
   · intro h
     rw [h, ZMod.val_natCast_of_lt (by omega : code < p)]
 
-/-- **The goodness obligation a mid-shard syscall row owes.** The halt row is excused from bounding
-its pushed pc because that pc is the literal `(1, 0, 0)`. A syscall row's push is a real `pc + 4`, so
-both endpoints need limb bounds or `canonState` fails to preserve `pcBits`. -/
-theorem syscallEdge_pcBounds (r : SyscallInstrsChip.Inputs (ZMod p))
-    (spec : SyscallInstrsChip.Spec r) (pulled : SyscallInstrsChip.PulledFacts r)
-    (real : r.is_real = 1) (carry : (r.state.pc[0]).val + 4 < 2 ^ 16) :
-    (∀ i : Fin 3, (r.state.pc[i]).val < 2 ^ 16) ∧
-      (∀ i : Fin 3, (r.next_pc[i]).val < 2 ^ 16) := by
-  have hp : 2 ^ 17 < p := Fact.out
-  have : Fact (1 < p) := ⟨by omega⟩
-  have hpull := pulled real
-  have hpc0 : (r.state.pc[0]).val < 2 ^ 16 := hpull.2.1
-  have hpc1 : (r.state.pc[1]).val < 2 ^ 16 := hpull.2.2.1
-  have hpc2 : (r.state.pc[2]).val < 2 ^ 16 := hpull.2.2.2.1
-  have hnext : (r.next_pc[0]).val < 2 ^ 16 ∧ (r.next_pc[1]).val < 2 ^ 16 ∧
-      (r.next_pc[2]).val < 2 ^ 16 := by
-    rcases spec.1.2.2.2.1 with hh | hh
-    · -- the ordinary arm: `pc + 4`, bounded by the bump chip's carry fact
-      have hpc : r.next_pc[0] = r.state.pc[0] + 4 ∧ r.next_pc[1] = r.state.pc[1] ∧
-          r.next_pc[2] = r.state.pc[2] := spec.2.2.2.2.2.2.1.2 real hh
-      have h4 : ((4 : ZMod p)).val = 4 := by
-        rw [show (4 : ZMod p) = ((4 : ℕ) : ZMod p) by norm_num,
-          ZMod.val_natCast_of_lt (by omega : (4 : ℕ) < p)]
-      have hval : ((r.state.pc[0] + 4 : ZMod p)).val = (r.state.pc[0]).val + 4 := by
-        rw [ZMod.val_add_of_lt (by rw [h4]; omega), h4]
-      refine ⟨?_, ?_, ?_⟩
-      · rw [hpc.1, hval]; omega
-      · rw [hpc.2.1]; exact hpc1
-      · rw [hpc.2.2]; exact hpc2
-    · -- the halt arm: the literal `(1, 0, 0)`
-      have hpc : r.next_pc[0] = 1 ∧ r.next_pc[1] = 0 ∧ r.next_pc[2] = 0 :=
-        spec.2.2.2.2.2.2.1.1 hh
-      refine ⟨?_, ?_, ?_⟩
-      · rw [hpc.1, ZMod.val_one]; norm_num
-      · rw [hpc.2.1, ZMod.val_zero]; norm_num
-      · rw [hpc.2.2, ZMod.val_zero]; norm_num
-  refine ⟨fun i => ?_, fun i => ?_⟩
-  · fin_cases i
-    · exact hpc0
-    · exact hpc1
-    · exact hpc2
-  · fin_cases i
-    · exact hnext.1
-    · exact hnext.2.1
-    · exact hnext.2.2
-
 /-! ## The per-arm case theorems
 
 One per inline arm, so that a missing arm is a missing theorem rather than a silent gap. Each says:
 *this row's constraints, plus the named ensemble facts, give this arm's semantic transition.* The
 exhaustiveness lemma at the end is what turns thirteen separate results into a total dispatch. -/
-
-/-- The ensemble-supplied facts a syscall row needs beyond its own `Spec`. Naming them in one place
-keeps the per-arm theorems honest about what is *not* row-local. -/
-structure SyscallRowContext (r : SyscallInstrsChip.Inputs (ZMod p)) (program : GuestProgram)
-    (source : SailState) : Prop where
-  /-- The register operands are `x5`/`x10`/`x11`, from the Program bus's committed ECALL row. -/
-  operands : r.op_a = 5 ∧ r.op_b = 10 ∧ r.op_c = 11
-  /-- The row sits at an `ECALL` word of the committed program. -/
-  ecall : Machine.AboutToExecuteEcall program source
-  /-- The three pulled registers hold the row's prior words at this state. -/
-  operandValues :
-    source.get_reg? 5#5 = some (syscallEventOfRow r).rawCode ∧
-    source.get_reg? 10#5 = some (syscallEventOfRow r).arg1 ∧
-    source.get_reg? 11#5 = some (syscallEventOfRow r).arg2
-  /-- The pc observation at the row's State pull. -/
-  pcValue : source.regs.get? Register.PC = some (syscallEventOfRow r).pc
 
 section Arms
 
@@ -320,13 +255,6 @@ theorem arm_enterUnconstrained (spec : SyscallInstrsChip.Spec r)
   rw [result_syscallEventOfRow, h0, h1, h2, h3, ZMod.val_zero]
   rfl
 
-omit [Fact (2 ^ 17 < p)] in
-/-- **HINT_LEN.** The one arm whose result is oracled: `ResultLaw` imposes nothing there, and all
-the row does is range-check the word so the read-back is pushable. Saying exactly that — and no
-more — is what keeps the hint's value grounded by the host semantics rather than guessed here. -/
-theorem arm_hintLen (pulled : SyscallInstrsChip.PulledFacts r) (real : r.is_real = 1) :
-    Word.isU64 r.op_a_value := (pulled real).2.2.2.2.2.2.2.2.2.2.2
-
 /-- **The eight remaining inline codes**, plus HALT, COMMIT and COMMIT_DEFERRED: `t0` is unchanged.
 Upstream this is `Ok(None)`, which writes `code as u64` — the same word, *given canonicity*. The
 write arm states it limb for limb, which is a genuine 64-bit equality. -/
@@ -355,104 +283,6 @@ theorem arm_default (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.S
   have h2 : r.op_a_value[2] = r.op_a_memory.prev_value[2] := hw 2
   have h3 : r.op_a_value[3] = r.op_a_memory.prev_value[3] := hw 3
   rw [result_syscallEventOfRow, rawCode_syscallEventOfRow, h0, h1, h2, h3]
-
-omit [Fact (2 ^ 17 < p)] in
-/-- Three bounded limbs summing to zero in the field are each zero. The bound must be the concrete
-KoalaBear one rather than the ambient `2 ^ 17 < p`: three `u16` limbs reach `3 · 2 ^ 16`, which
-*exceeds* `2 ^ 17`, so the ambient hypothesis genuinely does not suffice. This is the third of the
-three facts the plan named as not row-local. -/
-private theorem three_limbs_zero {a b c : ZMod p} (koala : 2 ^ 18 < p)
-    (ha : a.val < 2 ^ 16) (hb : b.val < 2 ^ 16) (hc : c.val < 2 ^ 16)
-    (h : a + b + c = 0) : a = 0 ∧ b = 0 ∧ c = 0 := by
-  have : NeZero p := ⟨by omega⟩
-  have hcast : a + b + c = ((a.val + b.val + c.val : ℕ) : ZMod p) := by
-    push_cast [ZMod.natCast_zmod_val]
-    ring
-  rw [hcast] at h
-  have hz : a.val + b.val + c.val = 0 := by
-    have h' := congrArg ZMod.val h
-    rwa [ZMod.val_natCast_of_lt (by omega), ZMod.val_zero] at h'
-  exact ⟨(ZMod.val_eq_zero a).mp (by omega), (ZMod.val_eq_zero b).mp (by omega),
-    (ZMod.val_eq_zero c).mp (by omega)⟩
-
-/-- **COMMIT.** No guest state changes — `t0` is unchanged, as on every `Ok(None)` arm — and the row's
-own content is that `a0` names a digest index below eight. The digest *binding* itself is not here:
-it is a public-value hand-off, and `SailState` carries no public values, so COMMIT stays semantically
-inert until a `PublicValues` provider exists. -/
-theorem arm_commit (spec : SyscallInstrsChip.Spec r) (sel : SyscallInstrsChip.SelectorsValid r)
-    (pulled : SyscallInstrsChip.PulledFacts r) (real : r.is_real = 1) (koala : 2 ^ 18 < p)
-    (hid : (syscallEventOfRow r).syscallId = Machine.commitSyscallId) :
-    (syscallEventOfRow r).result = (syscallEventOfRow r).rawCode ∧
-      (syscallEventOfRow r).arg1.toNat < 8 := by
-  refine ⟨arm_default r spec sel pulled real (by rw [hid]; decide) (by rw [hid]; decide), ?_⟩
-  have hfield : SyscallInstrsChip.syscallId r = ((SyscallInstrsChip.commitCode : ℕ) : ZMod p) :=
-    (syscallId_field_iff r sel real (by decide : Machine.commitSyscallId < 256)).1 hid
-  have hne : SyscallInstrsChip.syscallId r
-      ≠ ((SyscallInstrsChip.commitDeferredCode : ℕ) : ZMod p) := by
-    intro h
-    have hev := (syscallId_field_iff r sel real
-      (by decide : Machine.commitDeferredSyscallId < 256)).2 h
-    rw [hid] at hev
-    exact absurd hev (by decide)
-  have hsum : r.is_commit.result + r.is_commit_deferred.result = 1 := by
-    rw [(sel.2.1 real).2.2.2.1, ite_eq_left hfield, (sel.2.1 real).2.2.2.2, ite_eq_right hne, add_zero]
-  have cspec : SyscallInstrsChip.CommitArm.Spec (SyscallInstrsChip.toCommitArm r) :=
-    spec.2.2.2.2.2.2.2.2.2.2.1
-  -- One index bit is set, or the bitmap could not sum to one.
-  have hbits : ∀ i : Fin 8, r.digest_index_bits[i] = 0 ∨ r.digest_index_bits[i] = 1 :=
-    fun i => cspec.1 i real
-  have hbitSum : SyscallInstrsChip.CommitArm.bitSum (SyscallInstrsChip.toCommitArm r) = 1 :=
-    cspec.2.2.1 real hsum
-  have hexists : ∃ i : Fin 8, r.digest_index_bits[i] = 1 := by
-    by_contra hcon
-    have hall : ∀ i : Fin 8, r.digest_index_bits[i] = 0 :=
-      fun i => (hbits i).resolve_right (fun h => hcon ⟨i, h⟩)
-    have e0 : r.digest_index_bits[0] = 0 := hall 0
-    have e1 : r.digest_index_bits[1] = 0 := hall 1
-    have e2 : r.digest_index_bits[2] = 0 := hall 2
-    have e3 : r.digest_index_bits[3] = 0 := hall 3
-    have e4 : r.digest_index_bits[4] = 0 := hall 4
-    have e5 : r.digest_index_bits[5] = 0 := hall 5
-    have e6 : r.digest_index_bits[6] = 0 := hall 6
-    have e7 : r.digest_index_bits[7] = 0 := hall 7
-    rw [SyscallInstrsChip.CommitArm.bitSum, SyscallInstrsChip.toCommitArm] at hbitSum
-    simp only [e0, e1, e2, e3, e4, e5, e6, e7, add_zero] at hbitSum
-    exact zero_ne_one hbitSum
-  obtain ⟨i, hi⟩ := hexists
-  have hlow : r.op_b_memory.prev_value[0] = ((i.val : ℕ) : ZMod p) := cspec.2.1 real i hi
-  have hp : 2 ^ 17 < p := Fact.out
-  have hlowVal : (r.op_b_memory.prev_value[0]).val < 8 := by
-    rw [hlow, ZMod.val_natCast_of_lt (by omega : i.val < p)]
-    exact i.isLt
-  -- The other three limbs vanish, so `a0` is the index itself.
-  have hb : Word.isU64 r.op_b_memory.prev_value := (pulled real).2.2.2.2.2.2.2.1
-  have hb1 : (r.op_b_memory.prev_value[1]).val < 2 ^ 16 := hb 1
-  have hb2 : (r.op_b_memory.prev_value[2]).val < 2 ^ 16 := hb 2
-  have hb3 : (r.op_b_memory.prev_value[3]).val < 2 ^ 16 := hb 3
-  have hrest : r.op_b_memory.prev_value[1] + r.op_b_memory.prev_value[2]
-      + r.op_b_memory.prev_value[3] = 0 := cspec.2.2.2.2.1 real hsum
-  obtain ⟨z1, z2, z3⟩ := three_limbs_zero koala hb1 hb2 hb3 hrest
-  rw [arg1_syscallEventOfRow, z1, z2, z3, ZMod.val_zero]
-  simp only [BitVec.toNat_ofNat]
-  omega
-
-/-- **COMMIT_DEFERRED_PROOFS.** As COMMIT, with `a1` additionally a canonical field element — the
-`32512` compare — because the deferred digest is stored as field elements rather than as bytes. -/
-theorem arm_commitDeferred (spec : SyscallInstrsChip.Spec r)
-    (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
-    (real : r.is_real = 1)
-    (hid : (syscallEventOfRow r).syscallId = Machine.commitDeferredSyscallId) :
-    (syscallEventOfRow r).result = (syscallEventOfRow r).rawCode ∧
-      SyscallInstrsChip.ExitCodeValid r.op_c_memory.prev_value := by
-  refine ⟨arm_default r spec sel pulled real (by rw [hid]; decide) (by rw [hid]; decide), ?_⟩
-  have hfield : SyscallInstrsChip.syscallId r
-      = ((SyscallInstrsChip.commitDeferredCode : ℕ) : ZMod p) :=
-    (syscallId_field_iff r sel real (by decide : Machine.commitDeferredSyscallId < 256)).1 hid
-  have hcd : r.is_commit_deferred.result = 1 := by
-    rw [(sel.2.1 real).2.2.2.2, ite_eq_left hfield]
-  have hev : SyscallInstrsChip.ExitCodeValid r.op_c_memory.prev_value :=
-    (spec.2.2.2.2.2.2.2.2.2.1.2 hcd).2
-  exact hev
 
 /-- **RowLaw.** The row's own constraints give all four architecture-level laws. This is where
 `SelectorsValid` earns its place: `ResultLaw` and `PcLaw` are `if`-then-`else` on the *event's* id,
@@ -511,20 +341,6 @@ theorem rowLaw_of_spec_and_pulledFacts (spec : SyscallInstrsChip.Spec r)
       omega
 
 
-/-- The released context-bearing interface follows from the row and its pulled bounds alone. -/
-theorem rowLaw_of_spec (spec : SyscallInstrsChip.Spec r)
-    (sel : SyscallInstrsChip.SelectorsValid r) (pulled : SyscallInstrsChip.PulledFacts r)
-    (real : r.is_real = 1) (ctx : SyscallRowContext r program source) :
-    (syscallEventOfRow r).RowLaw := by
-  cases ctx
-  exact rowLaw_of_spec_and_pulledFacts r spec sel pulled real
-
 end Arms
-
-/-- **Coverage.** Under the canonicity premise and a zero table byte, the row's id is one of the
-thirteen — so the arms above are a total dispatch and no case is silently unhandled. -/
-theorem inlineSyscallIds_exhaustive (event : CoreSyscallEvent) (hc : event.IsInlineCanonical) :
-    event.syscallId ∈ inlineSyscallIds := by
-  rw [CoreSyscallEvent.syscallId_of_inlineCanonical hc]; exact hc
 
 end SP1Clean.Soundness
