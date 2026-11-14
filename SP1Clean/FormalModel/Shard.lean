@@ -29,22 +29,19 @@ open Model.Core Machine
 def policy (characteristic : ℕ) (image : ProgramImage) : HostPolicy :=
   ⟨{ readOnly := image.readOnly }, characteristic⟩
 
-/-- One local execution from a checked source, including literal equality with the complete
-outgoing realization. -/
+/-- One local execution of the image's committed program from a checked source, including
+literal equality with the complete outgoing realization. -/
 def Executes (characteristic : ℕ) (image : ProgramImage)
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
-  ∃ valid : ExecutionSourceValid image source,
-    ExecutionPath (policy characteristic image) (image.toGuestProgram valid.1.1)
-      source.realize events target.realize
+  ExecutionSourceValid image source ∧
+    ExecutionPath (policy characteristic image) image.program source.realize events target.realize
 
-/-- Fixed native resource domain over the existing complete replay. The image proof selects the
-same committed program as `Executes`; it supplies no row or compiler evidence. -/
+/-- Fixed native resource domain over the existing complete replay of the same committed
+program as `Executes`. It supplies no row or compiler evidence. -/
 noncomputable def nativeProfile (limits : ResourceLimits) (characteristic : ℕ) (image : ProgramImage)
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
-  ∃ valid : image.Valid,
-    ExecutionPath.Encoded (policy characteristic image) (image.toGuestProgram valid) source.realize events ∧
-    (executionResources (policy characteristic image) (image.toGuestProgram valid)
-      source.realize events).Fits limits ∧
+  ExecutionPath.Encoded (policy characteristic image) image.program source.realize events ∧
+    (executionResources (policy characteristic image) image.program source.realize events).Fits limits ∧
     source.realize.resources.Fits limits ∧ target.realize.resources.Fits limits ∧
     target.clock < NativeLayout.clocks.upper ∧ target.pc.toNat < NativeLayout.guestMemory.upper
 

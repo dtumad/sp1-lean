@@ -27,8 +27,6 @@ open Lean
 def defaultRoots : Array Name := #[
   ``SP1Clean.Soundness.Shard.sail_trace,
   ``SP1Clean.Soundness.Shard.statement_iff,
-  ``SP1Clean.Soundness.Shard.statement_iff_of_realizes,
-  ``SP1Clean.Soundness.Shard.realizes,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,
   ``SP1Clean.FormalModel.Shard.sp1Machine,
   ``Air.Flat.Realizes]

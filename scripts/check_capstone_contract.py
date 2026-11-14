@@ -41,7 +41,7 @@ def main() -> int:
     if not args.no_build:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
-             "SP1Clean.Soundness.Shard.Machine", "SP1Clean.Soundness.Shard.Trace"],
+             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Soundness.Shard.Trace"],
             cwd=ROOT, check=True,
         )
     with tempfile.TemporaryDirectory(prefix="sp1-capstone-contract-") as temporary:

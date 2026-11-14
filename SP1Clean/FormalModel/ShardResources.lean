@@ -16,8 +16,8 @@ variable {limits larger : ResourceLimits} {characteristic : ℕ} {image : Progra
 /-- Increasing numeric ceilings preserves the fixed semantic profile. -/
 theorem nativeProfile_mono (profile : nativeProfile limits characteristic image source target events)
     (more : limits.LE larger) : nativeProfile larger characteristic image source target events := by
-  obtain ⟨valid, encoded, usage, incoming, outgoing, clocks, pc⟩ := profile
-  exact ⟨valid, encoded, usage.mono more, incoming.mono more, outgoing.mono more, clocks, pc⟩
+  obtain ⟨encoded, usage, incoming, outgoing, clocks, pc⟩ := profile
+  exact ⟨encoded, usage.mono more, incoming.mono more, outgoing.mono more, clocks, pc⟩
 
 theorem AdmissibleExecution.mono
     (execution : AdmissibleExecution limits characteristic image source target events)
@@ -29,11 +29,11 @@ theorem admissibleExecution_identity_iff :
     AdmissibleExecution limits characteristic image source source [] ↔
       ExecutionSourceValid image source ∧ source.realize.resources.Fits limits := by
   constructor
-  · rintro ⟨execution, valid, _, _, incoming, _⟩
+  · rintro ⟨execution, _, _, incoming, _⟩
     exact ⟨execution.1, incoming⟩
   · rintro ⟨valid, occupancy⟩
     refine ⟨⟨valid, .nil _⟩,
-      valid.1.1, ExecutionPath.encoded_nil, ResourceUsage.zero_fits limits, occupancy, occupancy, ?_, ?_⟩
+      ExecutionPath.encoded_nil, ResourceUsage.zero_fits limits, occupancy, occupancy, ?_, ?_⟩
     · exact valid.2.2.1
     · exact valid.2.2.2
 
@@ -41,7 +41,7 @@ theorem admissibleExecution_identity_iff :
 theorem AdmissibleExecution.work
     (execution : AdmissibleExecution limits characteristic image source target events) :
     events.length ≤ limits.events ∧ target.clock - source.clock ≤ limits.ticks := by
-  obtain ⟨valid, _, fits, _⟩ := execution.2
+  obtain ⟨_, fits, _⟩ := execution.2
   have path := execution.1.2
   have count := fits .events
   have ticks := fits .ticks
@@ -56,7 +56,7 @@ theorem AdmissibleExecution.work
 theorem AdmissibleExecution.boundaryBounds
     (execution : AdmissibleExecution limits characteristic image source target events) :
     ResourceBoundary.Bounds limits source target := by
-  obtain ⟨_, _, _, incoming, outgoing, clocks, pc⟩ := execution.2
+  obtain ⟨_, _, incoming, outgoing, clocks, pc⟩ := execution.2
   rw [source.resources_realize] at incoming
   rw [target.resources_realize] at outgoing
   exact ⟨incoming, outgoing, by have := execution.1.clock; omega,
@@ -67,19 +67,16 @@ theorem AdmissibleExecution.append
     (firstPath : AdmissibleExecution limits characteristic image source left first)
     (secondPath : AdmissibleExecution limits characteristic image right target second)
     (same : left.equivalent right = true)
-    (combined : ∀ valid : image.Valid,
-      ((executionResources (policy characteristic image) (image.toGuestProgram valid) source.realize first).combine
-        (executionResources (policy characteristic image) (image.toGuestProgram valid) right.realize second)).Fits
-          limits) :
+    (combined : ((executionResources (policy characteristic image) image.program source.realize first).combine
+      (executionResources (policy characteristic image) image.program right.realize second)).Fits limits) :
     AdmissibleExecution limits characteristic image source target (first ++ second) := by
-  obtain ⟨valid, firstEncoded, _, incoming, _⟩ := firstPath.2
-  obtain ⟨_, secondEncoded, _, _, outgoing, clocks, pc⟩ := secondPath.2
+  obtain ⟨firstEncoded, _, incoming, _⟩ := firstPath.2
+  obtain ⟨secondEncoded, _, _, outgoing, clocks, pc⟩ := secondPath.2
   have sameState := (ExecutionSnapshot.equivalent_iff _ _).mp same
-  have bound := combined valid
-  rw [← sameState] at secondEncoded bound
-  refine ⟨firstPath.1.append secondPath.1 same, valid, ?_, ?_, incoming, outgoing, clocks, pc⟩
+  rw [← sameState] at secondEncoded combined
+  refine ⟨firstPath.1.append secondPath.1 same, ?_, ?_, incoming, outgoing, clocks, pc⟩
   · exact (ExecutionPath.encoded_append_iff firstPath.1.2).mpr ⟨firstEncoded, secondEncoded⟩
   · rw [firstPath.1.2.resources_append]
-    exact bound
+    exact combined
 
 end SP1Clean.FormalModel.Shard

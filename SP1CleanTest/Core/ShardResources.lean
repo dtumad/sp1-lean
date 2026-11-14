@@ -31,18 +31,18 @@ private def target : ExecutionSnapshot :=
 private def event : CoreSyscallEvent := execution.toEvent source.clock 65536
 private def limits : ResourceLimits := ⟨1, 264, 0, 16, 0, 1, 8, 0, 0, 200, 4096, 65536⟩
 
-private theorem step : ExecutionStep (policy SP1Prime image) (image.toGuestProgram valid.1.1)
+private theorem step : ExecutionStep (policy SP1Prime image) image.program
     source.realize (.syscall event) target.realize :=
 by
   apply ExecutionSnapshot.hostStep?_sound rfl
   have atPc : source.sail.registers.get? .PC = some 65536 := by native_decide
-  have fetched : (image.toGuestProgram valid.1.1).fetchWord 65536 = some ECALL_ENC := by native_decide
+  have fetched : image.program.fetchWord 65536 = some ECALL_ENC := by native_decide
   have ran : source.host.run (policy SP1Prime image) source.sail.readContext = some execution := by native_decide
   simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, ↓reduceIte, ran]
   rfl
 
 private theorem measured :
-    executionResources (policy SP1Prime image) (image.toGuestProgram valid.1.1)
+    executionResources (policy SP1Prime image) image.program
       source.realize [.syscall event] =
         (source.resources.combine
           (source.host.eventResources (policy SP1Prime image) source.sail.readContext (.syscall event))).combine
@@ -53,7 +53,7 @@ private theorem measured :
 
 /-- Nonempty host execution inhabits the fixed native domain, with no compiler or witness premises. -/
 theorem paddedHint_admissible : AdmissibleExecution limits SP1Prime image source target [.syscall event] := by
-  refine ⟨⟨valid, .cons step (.nil _)⟩, valid.1.1, ?_, ?_, ?_, ?_, by decide, by native_decide⟩
+  refine ⟨⟨valid, .cons step (.nil _)⟩, ?_, ?_, ?_, ?_, by decide, by native_decide⟩
   · rw [ExecutionPath.encoded_cons_iff step]
     exact ⟨⟨by change 9 % 8 = 1; decide, by simp⟩, ExecutionPath.encoded_nil⟩
   · rw [measured]
@@ -76,7 +76,7 @@ theorem rejectsTickOverflow :
 /-- The mandatory padding consumes the byte budget even when the hint length is word aligned. -/
 theorem rejectsPaddingOverflow :
     ¬ AdmissibleExecution { limits with writeBytes := 15 } SP1Prime image source target [.syscall event] := by
-  rintro ⟨_, _, _, fits, _⟩
+  rintro ⟨_, _, fits, _⟩
   rw [measured] at fits
   have bound := fits .writeBytes
   have cost : (source.resources.combine
@@ -136,11 +136,11 @@ theorem phaseTwo_executes : Executes SP1Prime image { source with clock := 2 } {
     [.syscall (execution.toEvent 2 65536)] := by
   have sourceValid : ExecutionSourceValid image { source with clock := 2 } :=
     (checkExecutionSource_iff _ _).mp (by native_decide)
-  have phaseStep : ExecutionStep (policy SP1Prime image) (image.toGuestProgram sourceValid.1.1)
+  have phaseStep : ExecutionStep (policy SP1Prime image) image.program
       { source with clock := 2 }.realize (.syscall (execution.toEvent 2 65536)) { target with clock := 266 }.realize := by
     apply ExecutionSnapshot.hostStep?_sound rfl
     have atPc : source.sail.registers.get? .PC = some 65536 := by native_decide
-    have fetched : (image.toGuestProgram valid.1.1).fetchWord 65536 = some ECALL_ENC := by native_decide
+    have fetched : image.program.fetchWord 65536 = some ECALL_ENC := by native_decide
     have ran : source.host.run (policy SP1Prime image) source.sail.readContext = some execution := by native_decide
     simp only [ExecutionSnapshot.hostStep?, atPc, bind, Option.bind_some, fetched, ↓reduceIte, ran]
     rfl
@@ -151,7 +151,7 @@ theorem phaseTwo_not_admissible :
     ¬ AdmissibleExecution limits SP1Prime image { source with clock := 2 } { target with clock := 266 }
       [.syscall (execution.toEvent 2 65536)] := by
   intro admitted
-  have phase := (admitted.2.choose_spec.1 0 { source with clock := 2 }.realize _ rfl rfl).1
+  have phase := (admitted.2.1 0 { source with clock := 2 }.realize _ rfl rfl).1
   exact (by decide : ¬ (2 : ℕ) % 8 = 1) phase
 
 end SP1CleanTest.Core.ShardResources

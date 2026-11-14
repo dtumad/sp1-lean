@@ -13,7 +13,7 @@ endpoint. The exported circuit installs the verifier-owned commitment statement 
 `sail_trace` turns raw acceptance of a public header into a trace of the PolyFun machine
 `sp1Machine` from the complete incoming state. Each ordinary step of that machine is an official
 Sail `try_step` that takes `Retire_Success` (`SailRetiresNormally`); each host step runs SP1's
-concrete host interpreter on an ECALL committed in both the program and Sail memory.
+concrete host interpreter on an ECALL of the committed program.
 
 The statement has no caller-supplied grounding, provider validity, syscall inactivity or
 readiness premise. `Endpoint` collects what the header and verifier endpoints fix about the
@@ -94,12 +94,12 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemoryS
 endpoint, the commitment statement is well formed, and the SP1 Sail machine has a trace from the
 source whose ordinary writes respect ROM protection, whose declarations agree with the statement,
 and whose final state has the header's endpoint and the outgoing registers and RAM. -/
-def SailTrace (commitments : CommitmentStatement) (image : ProgramImage) (valid : image.Valid)
+def SailTrace (commitments : CommitmentStatement) (image : ProgramImage)
     (source : ExecutionSnapshot) (outgoing : MemorySnapshot) (final : HostHintQueue.State (ZMod p))
     (bankFinal : HostState) (header : SP1PublicIO (ZMod p)) : Prop :=
   ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed p ∧
     ∃ (events : List ExecutionEvent) (target : ExecutionState),
-      (sp1Machine p image valid).Trace source.realize events target ∧
+      (sp1Machine p image).Trace source.realize events target ∧
       commitments.Matches events ∧
       Endpoint source outgoing final bankFinal header events target
 
@@ -110,7 +110,7 @@ theorem trace_of_witness (valid : image.Valid)
     (constraints : witness.Constraints) (balanced : HostFinalMemory.DeclarationsOpen witness) :
     ExecutionSourceValid image source ∧ witness.publicInput.SourceFor source ∧
       ∃ (events : List ExecutionEvent) (target : ExecutionState),
-        (sp1Machine p image valid).Trace source.realize events target ∧
+        (sp1Machine p image).Trace source.realize events target ∧
         Endpoint source outgoing final bankFinal witness.publicInput events target ∧
         CommitmentEnsemble.Declared witness events := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels (HostFinalMemory.baseWitness witness)
@@ -123,7 +123,7 @@ theorem trace_of_witness (valid : image.Valid)
   obtain ⟨events, target, hints, path, clock, pc, registers, ram, runtime, nextPC,
     ⟨increment, retired⟩, ⟨interrupts, eventIndex⟩, preserved, decoded, host, exit, declared⟩ :=
     HostFinalMemory.source_execution valid witness constraints balanced
-  exact ⟨contract.2.1, contract.2.2.1, events, target, trace_iff_executionPath.mpr path,
+  exact ⟨contract.2.1, contract.2.2.1, events, target, trace_iff_executionPath.mpr (by rwa [image.program_eq valid]),
     { clock, pc, nextPC, increment, retired, interrupts, eventIndex, preserved, runtime, registers, ram
       host := ⟨hints, decoded, host⟩
       exit }, declared⟩
@@ -143,7 +143,7 @@ theorem trace_of_committed_statement (valid : image.Valid) {commitments : Commit
     (accepted : (CommitmentEnsemble.install commitments
       (installed image source outgoing final bankFinal) fresh
       (declarations_registered image source outgoing final bankFinal)).Statement .logUp header heights) :
-    SailTrace commitments image valid source outgoing final bankFinal header := by
+    SailTrace commitments image source outgoing final bankFinal header := by
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
   obtain ⟨fit, witness, rfl, rfl, constraints, rawBalance⟩ := accepted
   have balanced := EnsembleWitness.balancedChannels_of_balanced
@@ -179,7 +179,7 @@ theorem sail_trace {image : ProgramImage} {source : ExecutionSnapshot} {outgoing
     (accepted : (CommitmentEnsemble.install commitments
       (installed image source outgoing final bankFinal) fresh
       (declarations_registered image source outgoing final bankFinal)).Statement .logUp header heights) :
-    SailTrace commitments image valid source outgoing final bankFinal header :=
+    SailTrace commitments image source outgoing final bankFinal header :=
   trace_of_committed_statement valid (fun component member => HostFinalMemory.installed_lookups component member)
     accepted
 
