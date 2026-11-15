@@ -821,55 +821,6 @@ theorem semantic_populate {b c a : Word (ZMod p)} (hb : b.isU64) (hc : c.isU64)
     (productSpec_populate hb hc is_mul is_mulh is_mulhu is_mulhsu is_mulw 1
       hmul hmh hmhu hmhsu hmw hsum) rfl
 
--- The default metadata tactic times out at the standard budget on Lean 4.33.1;
--- keep this factored proof instead of expanding the full circuit in the bundle default.
-private theorem main_requirementsChannelsLawful (input_var : Var Inputs (ZMod p)) (i₀ : ℕ) :
-    ((main input_var).operations i₀).RequirementsChannelsLawful
-      (elaborated (p := p)).channelsWithGuarantees [] := by
-  have h_byte : (byteChannel (p := p)).toRaw ∈
-      (elaborated (p := p)).channelsWithGuarantees := by
-    simp only [circuit_norm]
-  dsimp only [Operations.RequirementsChannelsLawful]
-  refine ⟨?_, ?_, ?_⟩
-  · simp only [main, Circuit.operations, Circuit.bind_def, assertion, assertZero, Channel.pullIf,
-      HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength]
-    simp only [Operations.subcircuitChannelsWithRequirements_append,
-      Operations.subcircuitChannelsWithRequirements_subcircuit,
-      Operations.subcircuitChannelsWithRequirements_assert,
-      Operations.subcircuitChannelsWithRequirements_interact,
-      Operations.subcircuitChannelsWithRequirements_nil,
-      FormalAssertion.toSubcircuit_channelsWithRequirements,
-      U16toU8OperationSafe.channelsWithRequirements_eq,
-      U16MSBOperation.channelsWithRequirements_eq,
-      Gadgets.Equality.channelsWithRequirements_eq, List.append_nil,
-      List.nil_subset]
-  · intro channel h_channel
-    simp only [main, Circuit.operations, Circuit.bind_def, assertion, assertZero, Channel.pullIf,
-      HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength] at h_channel
-    simp only [Operations.shallowChannels_append, Operations.shallowChannels_subcircuit,
-      Operations.shallowChannels_assert, Operations.shallowChannels_interact,
-      Operations.shallowChannels_nil, List.nil_append] at h_channel
-    simp only [ChannelInteraction.toRaw_channel, List.mem_append, List.mem_singleton,
-      List.not_mem_nil, or_false, or_self] at h_channel
-    subst channel
-    exact Or.inl h_byte
-  · intro env h_constraints
-    simp only [main, Circuit.operations, Circuit.bind_def, assertion, assertZero, Channel.pullIf,
-      HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength] at h_constraints ⊢
-    simp only [ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
-      Operations.forAllNoOffset, and_true, eval_sub,
-      Expression.eval] at h_constraints
-    have h_bool : Expression.eval env input_var.is_real = 0 ∨
-        Expression.eval env input_var.is_real = 1 :=
-      bool_of_mul_pred (by simpa only [sub_eq_add_neg] using h_constraints.1)
-    have h_pull (msg : ByteRow (Expression (ZMod p))) :
-        (byteChannel.pulledIf input_var.is_real msg).toRaw.Requirements env := by
-      exact h_bool
-    simp only [Operations.InChannelsOrRequirements, Operations.forAllNoOffset_append,
-      Operations.forAllNoOffset, List.not_mem_nil, false_or, true_and, and_true]
-    and_intros
-    all_goals exact h_pull _
-
 /-- Internal multiply semantics as a Clean `FormalAssertion`: `is_real`-gated constraints
 over populated product/carry columns, without fresh witnesses. -/
 def circuit : FormalAssertion (ZMod p) Inputs :=

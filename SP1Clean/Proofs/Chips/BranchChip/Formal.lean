@@ -16,68 +16,6 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-private theorem main_requirementsChannelsLawful
-    (input_var : Var Inputs (ZMod p)) (i₀ : ℕ) :
-    ((main input_var).operations i₀).RequirementsChannelsLawful
-      (elaborated (p := p)).channelsWithGuarantees
-      [(memoryChannel (p := p)).toRaw] := by
-  have h_byte : (byteChannel (p := p)).toRaw ∈
-      (elaborated (p := p)).channelsWithGuarantees := by
-    simp only [circuit_norm]
-  dsimp only [Operations.RequirementsChannelsLawful]
-  refine ⟨?_, ?_, ?_⟩
-  · simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-      witnessVectorIR, witnessField, Witnessable.witness, witnessIR,
-      subcircuitWithAssertion, assertion, assertZero, Channel.pullIf,
-      HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength]
-    simp only [Operations.subcircuitChannelsWithRequirements_append,
-      Operations.subcircuitChannelsWithRequirements_witness,
-      Operations.subcircuitChannelsWithRequirements_subcircuit,
-      Operations.subcircuitChannelsWithRequirements_assert,
-      Operations.subcircuitChannelsWithRequirements_interact,
-      Operations.subcircuitChannelsWithRequirements_nil,
-      GeneralFormalCircuit.toSubcircuit_channelsWithRequirements,
-      FormalAssertion.toSubcircuit_channelsWithRequirements,
-      Readers.CPUState.channelsWithRequirements_eq, LtOperationSigned.circuit,
-      Readers.ITypeReaderImmutable.circuit, Gadgets.Equality.channelsWithRequirements_eq,
-      List.nil_append, List.append_nil]
-    simp only [List.subset_def, List.mem_cons, List.not_mem_nil, or_false]
-    tauto
-  · intro channel h_channel
-    simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def, witnessVectorIR, witnessField, Witnessable.witness, witnessIR, subcircuitWithAssertion, assertion, assertZero,
-      Channel.pullIf, HasAssertEq.assert_eq, Expression.assertEquals,
-      Operations.localLength] at h_channel
-    simp only [Operations.shallowChannels_append, Operations.shallowChannels_witness,
-      Operations.shallowChannels_subcircuit, Operations.shallowChannels_assert,
-      Operations.shallowChannels_interact, Operations.shallowChannels_nil,
-      List.nil_append] at h_channel
-    simp only [ChannelInteraction.toRaw_channel, List.mem_append,
-      List.mem_singleton, List.not_mem_nil, or_false, or_self] at h_channel
-    subst channel
-    exact Or.inl h_byte
-  · intro env h_constraints
-    simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def, witnessVectorIR, witnessField, Witnessable.witness, witnessIR, subcircuitWithAssertion, assertion, assertZero,
-      Channel.pullIf, HasAssertEq.assert_eq, Expression.assertEquals,
-      Operations.localLength] at h_constraints
-    simp only [ConstraintsHold.Shallow, Operations.forAllNoOffset_append,
-      Operations.forAllNoOffset, true_and, and_true, eval_sub, Expression.eval] at h_constraints
-    have h_bool : Expression.eval env input_var.is_real = 0 ∨
-        Expression.eval env input_var.is_real = 1 :=
-      bool_of_mul_pred h_constraints.1
-    rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def, witnessVectorIR, witnessField, Witnessable.witness, witnessIR, subcircuitWithAssertion, assertion, assertZero,
-      Channel.pullIf, HasAssertEq.assert_eq, Expression.assertEquals,
-      Operations.localLength] at h_interaction
-    simp only [Operations.shallowInteractions_append, Operations.shallowInteractions_witness,
-      Operations.shallowInteractions_subcircuit, Operations.shallowInteractions_assert,
-      Operations.shallowInteractions_interact, Operations.shallowInteractions_nil,
-      List.nil_append] at h_interaction
-    simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl <;>
-      right <;>
-      exact h_bool
-
 /-- The Program-fetch opcode selected by the six input discriminants. -/
 def exposedOpcode (input : Var Inputs (ZMod p)) : Expression (ZMod p) :=
   input.isBeq * 40 + input.isBne * 41 + input.isBlt * 42 +
