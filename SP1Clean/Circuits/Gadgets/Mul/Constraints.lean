@@ -109,9 +109,9 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero ((input.is_mulh + input.is_mulhu + input.is_mulhsu)
     * (cols.product[14] + cols.product[15] * (256 : ZMod p) - input.a[3]))
 
--- Hand-written fields: on Clean `main` at Lean v4.33.1, `elaborate_circuit` (and the `rfl` default
--- of `localLength_eq`) time out normalising this sixteen-constraint `main`, while the structural
--- simp closes each obligation in well under a second.
+-- Hand-written fields: on the pinned Lean 4.35 / Clean pair, `elaborate_circuit` (and the `rfl`
+-- default of `localLength_eq`) exceed the default heartbeat budget normalising this
+-- sixteen-constraint `main`, while the structural simp closes each obligation in well under a second.
 instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
   localLength _ := 0
   output _ _ := ()
