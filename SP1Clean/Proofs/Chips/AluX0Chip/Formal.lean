@@ -3,6 +3,7 @@ import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.AluX0Chip.Defs
 import Clean.Air.Circuit
+import Clean.Gadgets.Boolean
 
 /-! # `SP1Clean.AluX0Chip` — contract: `Assumptions` / soundness / completeness / `circuit`
 
@@ -233,10 +234,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     soundness := soundness, completeness := completeness,
     channelsWithRequirements :=
       [stateChannel.toRaw, memoryChannel.toRaw],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel, stateChannel, memoryChannel, programChannel,
-        Readers.CPUState.circuit, Readers.ALUTypeReaderImmutable.circuit]; grind,
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, Readers.CPUState.circuit,
+        Readers.ALUTypeReaderImmutable.circuit,
+        ← IsBool.iff_mul_sub_one, IsBool]
+      tauto,
     -- W11 (A2): expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair (pc+4, clk+8)
     -- as chip-owned interactions (the Clean `VmTables` re-base that motivated the shape was investigated
     -- and deferred — roadmap W11); descends to the composed `CPUState` subcircuit's lone pull+push.

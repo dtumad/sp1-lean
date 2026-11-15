@@ -13,6 +13,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Bits
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # `AddressOperation` as a Clean-native witnessed `GeneralFormalCircuit`
 
@@ -391,12 +392,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Circuits.Types.AddressOperati
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel]
-      refine ⟨List.nil_subset _, ?_⟩
-      intro env hgate
-      exact bool_of_mul_pred hgate }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

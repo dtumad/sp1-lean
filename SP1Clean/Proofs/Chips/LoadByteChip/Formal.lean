@@ -4,6 +4,7 @@ import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.LoadByteChip.Defs
 import Clean.Air.Circuit
+import Clean.Gadgets.Boolean
 
 /-! # `SP1Clean.LoadByteChip` — `Assumptions` / soundness / completeness / `circuit`
 
@@ -400,11 +401,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     channelsWithRequirements :=
       [stateChannel.toRaw, memoryChannel.toRaw],
     soundness := soundness, completeness := completeness,
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel, stateChannel, memoryChannel, programChannel,
-        AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit,
-        Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit]; grind,
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, AddressOperation.circuit, Readers.CPUState.circuit,
+        Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit,
+        ← IsBool.iff_mul_sub_one, IsBool]
+      tauto,
     -- A2: expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair (pc+4, clk+8); the
     -- enabled flag is the **derived** selector sum `is_lb + is_lbu` (SP1's `is_real`).
     exposedChannels := fun input offset =>

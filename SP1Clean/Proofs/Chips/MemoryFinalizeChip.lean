@@ -5,6 +5,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Utils.Tactics
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # The in-circuit Memory-boundary finalizer (pull side of SP1's memory init/finalize chips)
 
@@ -102,9 +103,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     circuit_proof_start [Inputs.toMessage]
     refine ⟨?_, fun _ => ⟨h_assumptions.1, h_assumptions.2.1⟩⟩
     rcases h_assumptions.2.2 with h | h <;> simp [h]
-  requirementsChannelsLawful := fun input_var i₀ => by
-    preserve_tactic_target
-    simp only [circuit_norm, main, memoryChannel]; grind
+  requirementsChannelsLawful := by
+    simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+    tauto
 
 /-- Final records are selected by their full 48-bit address, with the complete record
 checked before routing. The authenticated assembly additionally enforces its final inventory. -/

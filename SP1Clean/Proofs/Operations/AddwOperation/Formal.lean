@@ -1,6 +1,7 @@
 import SP1Clean.Native.Operations.AddwOperation.RawSpec
 import SP1Clean.Native.Operations.AddwOperation.Populate
 import SP1Clean.Native.Operations.AddwOperation.Defs
+import Clean.Gadgets.Boolean
 
 /-! # `AddwOperation` — the `FormalAssertion` (Spec / soundness / completeness / contract)
 
@@ -170,9 +171,9 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel]; grind }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

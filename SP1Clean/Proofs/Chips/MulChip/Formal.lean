@@ -434,7 +434,6 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
           simp (disch := omega) only [circuit_norm, h_agrees.get_eq],
     -- `programChannel` dropped (W11 flip — now pulled via `RTypeReader`, a guarantee not a requirement).
     channelsWithRequirements := [stateChannel.toRaw, memoryChannel.toRaw],
-    requirementsChannelsLawful := requirementsChannelsLawful_main,
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,

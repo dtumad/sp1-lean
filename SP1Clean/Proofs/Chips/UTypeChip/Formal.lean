@@ -360,43 +360,6 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      dsimp only [Operations.RequirementsChannelsLawful]
-      refine ⟨?_, ?_, ?_⟩
-      · simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-          witnessVector, witnessVectorIR, subcircuitWithAssertion, assertion, assertZero,
-          HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength]
-        simp only [Operations.subcircuitChannelsWithRequirements_append,
-          Operations.subcircuitChannelsWithRequirements_witness,
-          Operations.subcircuitChannelsWithRequirements_subcircuit,
-          Operations.subcircuitChannelsWithRequirements_assert,
-          Operations.subcircuitChannelsWithRequirements_nil,
-          GeneralFormalCircuit.toSubcircuit_channelsWithRequirements,
-          FormalAssertion.toSubcircuit_channelsWithRequirements,
-          Readers.CPUState.channelsWithRequirements_eq,
-          AddOperation.circuit, Readers.JTypeReader.circuit, Readers.RegisterWrite.circuit,
-          Gadgets.Equality.channelsWithRequirements_eq, List.nil_append, List.append_nil]
-        simp only [List.subset_def, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]
-        tauto
-      · intro channel h_channel
-        simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-          witnessVector, witnessVectorIR, subcircuitWithAssertion, assertion, assertZero,
-          HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength,
-          Operations.shallowChannels_append, Operations.shallowChannels_witness,
-          Operations.shallowChannels_subcircuit, Operations.shallowChannels_assert,
-          Operations.shallowChannels_nil, List.nil_append] at h_channel
-        simp only [List.not_mem_nil] at h_channel
-      · intro env _h_constraints
-        rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-        intro interaction h_interaction
-        simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-          witnessVector, witnessVectorIR, subcircuitWithAssertion, assertion, assertZero,
-          HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength,
-          Operations.shallowInteractions_append, Operations.shallowInteractions_witness,
-          Operations.shallowInteractions_subcircuit, Operations.shallowInteractions_assert,
-          Operations.shallowInteractions_nil, List.nil_append] at h_interaction
-        simp only [List.not_mem_nil] at h_interaction,
     exposedChannels := fun input offset =>
       expose stateChannel (exposedStateInteractions input) ++
       expose memoryChannel (exposedMemoryInteractions input offset) ++

@@ -2,6 +2,7 @@ import SP1Clean.Native.Witgen.StateDemand
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Proofs.Chips.BranchChip.Core
+import Clean.Gadgets.Boolean
 
 /-! # `SP1Clean.BranchChip` — circuit packaging and audited channel exposure
 
@@ -282,7 +283,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     ProverSpec := fun _ _ _ => True,
     soundness := soundness,
     completeness := completeness,
-    requirementsChannelsLawful := main_requirementsChannelsLawful,
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto,
     exposedChannels := stateExposure,
     exposedChannels_eq := main_exposedChannelsLawful }
 

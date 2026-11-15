@@ -767,7 +767,6 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     -- chip owes no program requirement and `programChannel` moves to `channelsWithGuarantees` (`Defs`).
     channelsWithRequirements :=
       [stateChannel.toRaw, memoryChannel.toRaw],
-    requirementsChannelsLawful := requirementsChannelsLawful,
     -- The exact State pull/push pair already emitted by the composed CPUState reader.  This public
     -- interface lets the typed whole-machine grounding proof consume DivRem uniformly with the other
     -- 24 supported instruction tables.

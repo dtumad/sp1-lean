@@ -189,12 +189,6 @@ def sp1StateVerifier : GeneralFormalCircuit (ZMod p) SP1PublicIO unit where
   soundness := sp1StateVerifier_soundness
   completeness := sp1StateVerifier_completeness
   channelsWithRequirements := []
-  requirementsChannelsLawful := fun pi offset => by
-    preserve_tactic_target
-    simp only [circuit_norm, sp1StateVerifierMain, Channels.stateChannel, Channels.byteChannel,
-      Channels.exitChannel]
-    intro channel h
-    tauto
   exposedChannels := fun pi _ =>
     expose Channels.stateChannel
       [ Channels.stateChannel.pulled ⟨pi.final_clk_high, pi.final_clk_low, pi.final_pc0, pi.final_pc1, pi.final_pc2⟩,

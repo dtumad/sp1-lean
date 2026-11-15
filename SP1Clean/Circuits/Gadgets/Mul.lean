@@ -6,6 +6,7 @@ public import SP1Clean.Circuits.Gadgets.Mul.Constraints
 public import SP1Clean.Circuits.Gadgets.Mul.Witness
 public import SP1Clean.Model.ByteTable
 import Clean.Utils.Tactics.CircuitProofStart
+import Clean.Gadgets.Boolean
 
 /-! # Bundled multiplication gadget
 
@@ -880,7 +881,9 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := by exact main_requirementsChannelsLawful }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 /-- Since Lean 4.32, class projections through `ProvableType`-derived instances no longer whnf-reduce

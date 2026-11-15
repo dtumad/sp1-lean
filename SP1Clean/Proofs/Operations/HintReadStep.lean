@@ -105,20 +105,5 @@ def circuit (last : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
     exact ⟨h_assumptions.1, sub_eq_zero.mpr h_assumptions.2.1,
       part_checks last ⟨⟨input_word_pointer, input_word_index, input_word_value, input_word_isLast⟩,
         input_address, input_nextIndex, input_nextAddress⟩ h_assumptions⟩
-  requirementsChannelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    refine ⟨?_, ?_, ?_⟩
-    · simp only [main, circuit_norm, HostHintQueue.wordChannel,
-        WordRangeCheck.circuit, AddrAddOperation.circuit]
-    · simp only [main, circuit_norm, HostHintQueue.wordChannel,
-        WordRangeCheck.circuit, AddrAddOperation.circuit]
-    · intro env _
-      rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-      intro interaction member
-      apply Or.inl
-      have selected := List.mem_map_of_mem (f := fun item : AbstractInteraction (ZMod p) => item.channel) member
-      rw [← Operations.shallowChannels_eq_interactions_map] at selected
-      simpa only [main, circuit_norm] using selected
 
 end SP1Clean.HintReadStep

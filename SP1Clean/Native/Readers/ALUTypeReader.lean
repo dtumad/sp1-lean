@@ -10,6 +10,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # Native `ALUTypeReader` reader — the ALU register-adapter (immediate-capable op_c) as a `GeneralFormalCircuit`
 
@@ -376,31 +377,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     ProverAssumptions := ProverAssumptionsD, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      dsimp only [Operations.RequirementsChannelsLawful]
-      refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_, ?_⟩
-      · intro channel h_channel
-        simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_channel
-        rcases h_channel with rfl | rfl | rfl | rfl | rfl | rfl
-        · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-        all_goals exact Or.inr List.mem_cons_self
-      · intro env h_constraints
-        rw [constraintsHold_shallow_iff_forall_mem] at h_constraints
-        have h_trusted : Expression.eval env input_var.is_trusted = 0 ∨
-            Expression.eval env input_var.is_trusted = 1 :=
-          bool_of_mul_pred (by
-            simpa only [circuit_norm] using h_constraints.1
-              (input_var.is_trusted * (input_var.is_trusted - 1))
-              (by simp only [circuit_norm, main, RegisterAccessCols.circuit,
-                    Operations.shallowConstraints, List.mem_cons]))
-        rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-        intro interaction h_interaction
-        simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
-        rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl
-        · right
-          exact h_trusted
-        all_goals exact Or.inl List.mem_cons_self }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, RegisterAccessCols.circuit,
+        ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 /-- Public channel metadata, without unfolding the bundled proof fields. -/
 @[circuit_norm ↓] theorem circuit_channelsWithGuarantees :

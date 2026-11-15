@@ -35,10 +35,6 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   channelsWithRequirements := [HostCallChip.channel.toRaw, HostExitBoundary.channel.toRaw]
   soundness := soundness
   completeness := completeness
-  requirementsChannelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    simp [main, circuit_norm, BoundedWord.circuit, HostCallChip.channel, HostExitBoundary.channel]
 
 def populate (call : HostCallChip.Message (ZMod p)) : Inputs (ZMod p) :=
   ⟨call, LtOperationUnsigned.populate call.arg1 (BoundedWord.limit (bound p))⟩

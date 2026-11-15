@@ -79,19 +79,6 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   soundness
   completeness
   channelsWithRequirements := [memoryChannel.toRaw, channel.toRaw]
-  requirementsChannelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    rw [operations_eq]
-    refine ⟨?_, ?_, ?_⟩
-    · simp only [circuit_norm]
-    · simp only [circuit_norm]
-    · intro env _
-      rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-      intro interaction member
-      simp only [Operations.shallowInteractions, List.mem_singleton] at member
-      subst interaction
-      exact Or.inl (by simp only [circuit_norm])
 
 /-- Host instructions use the same unit-demand State routing as ordinary instructions. -/
 def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
