@@ -19,9 +19,9 @@ def main (input : Var SyscallInstrsChip.Inputs (ZMod p)) : Circuit (ZMod p) Unit
   let _ ← SyscallInstrsChip.circuit input
   assertion SyscallCodeGuard.circuit ⟨input.op_a_memory.prev_value, input.is_real⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) SyscallInstrsChip.Inputs unit main where
-  localLength _ := 6
-  output _ _ := ()
-  channelsWithGuarantees := SyscallInstrsChip.circuit.channelsWithGuarantees
+instance elaborated : ElaboratedCircuit (ZMod p) SyscallInstrsChip.Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := SyscallInstrsChip.elaborated.channelsWithGuarantees
+  }
 
 end SP1Clean.CoreSyscallChip

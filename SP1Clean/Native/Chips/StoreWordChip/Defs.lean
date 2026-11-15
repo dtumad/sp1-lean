@@ -112,15 +112,12 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   assertZero (input.is_real * (input.is_real - 1))
   return ⟨input.state, input.adapter, addr_op, input.memory_access, input.offset_bit, input.store_value, input.is_real⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  channelsLawful := by simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReaderImmutable.circuit, Readers.MemoryAccess.circuit]
-  localLength _ := 3 + 1
-  output input i0 :=
-    ⟨input.state, input.adapter,
-      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
-      input.memory_access, input.offset_bit, input.store_value, input.is_real⟩
-  -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReaderImmutable`'s program **pull** (W11 flip).
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- Program joins through `ITypeReaderImmutable`'s fetch pull.
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- Folded completed-row layout used by the whole-chip Rust AIR codec. -/
 @[circuit_norm] lemma directOutput_eq

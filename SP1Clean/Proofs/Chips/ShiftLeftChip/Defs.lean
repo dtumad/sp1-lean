@@ -1138,59 +1138,24 @@ theorem core_mem_subcircuits (input : Var Inputs (ZMod p)) (offset : ℕ) :
     coreInput, Nat.add_zero] using
     core_mem_postWitness input ((witnessPrefix input).output offset) (offset + 31)
 
-@[implicit_reducible] private def derivedElaborated :
-    ElaboratedCircuit (ZMod p) Inputs Columns main := by
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
   elaborate_circuit_with {
     channelsWithGuarantees :=
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   }
-
-/-- Clean owns the output layout and every structural proof.  This thin public record forwards them
-while keeping the declared channel order visible at the chip boundary. -/
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  output := derivedElaborated.output
-  output_eq := derivedElaborated.output_eq
-  localLength := derivedElaborated.localLength
-  localLength_eq := derivedElaborated.localLength_eq
-  subcircuitsConsistent := derivedElaborated.subcircuitsConsistent
-  channelsWithGuarantees :=
-    [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := derivedElaborated.channelsLawful
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
     ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
       = [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 set_option linter.unusedSectionVars false in
--- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
--- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
--- post-order lemma can see it; a pre-order lemma fires on the public form first.
+-- `↓` (pre-order): fires on the public projection before `simp` reduces the derived instance.
 @[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 31 := rfl
-
-set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
-    (derivedElaborated (p := p)).localLength x = 31 := rfl
 
 /-- The completed ShiftLeft row, exposed without unfolding the folded witness circuit. -/
 @[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
-      (⟨input.state, input.adapter,
-        varFromOffset (Vector · 4) offset,
-        varFromOffset (Vector · 6) (offset + 4),
-        var { index := offset + 10 }, var { index := offset + 11 },
-        var { index := offset + 12 },
-        varFromOffset (Vector · 4) (offset + 13),
-        varFromOffset (Vector · 4) (offset + 17),
-        varFromOffset (Vector · 4) (offset + 21),
-        varFromOffset (Vector · 4) (offset + 25),
-        ⟨var { index := offset + 29 }⟩,
-        input.isSll, input.isSllw,
-        var { index := offset + 30 }⟩ : Var Columns (ZMod p)) := rfl
-
-set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (derivedElaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         varFromOffset (Vector · 4) offset,
         varFromOffset (Vector · 6) (offset + 4),

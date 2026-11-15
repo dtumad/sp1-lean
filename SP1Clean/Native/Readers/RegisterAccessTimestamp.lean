@@ -65,27 +65,14 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨3, 0, (input.clk_target - cols.prev_low - 1 - cols.diff_low_limb) *
       (65536 : ZMod p)⁻¹, 0⟩ : ByteRow (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- The two timestamp byte checks are gated receives (mult `-is_real`). They derive `ByteRowSpec`
-  -- on real rows. Their off-gate obligations are discharged from the inline boolean assertion, so
-  -- this elaborated circuit advertises the guarantee channel only; the formal assertion below has
-  -- an empty requirements list.
-  channelsWithGuarantees := [byteChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    change Operations.ChannelsLawful
-      ([.assert _, .interact _, .interact _] : Operations (ZMod p)) [byteChannel.toRaw]
-    refine ⟨by simp only [circuit_norm], ?_, by simp only [circuit_norm]⟩
-    · intro env
-      rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-      intro interaction h_interaction
-      simp only [circuit_norm] at h_interaction
-      rcases h_interaction with rfl | rfl <;>
-        exact Or.inl (List.mem_singleton_self byteChannel.toRaw)
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- The two timestamp byte checks are gated receives (mult `-is_real`). They derive `ByteRowSpec`
+    -- on real rows. Their off-gate obligations are discharged from the inline boolean assertion, so
+    -- this elaborated circuit advertises the guarantee channel only; the formal assertion below has
+    -- an empty requirements list.
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
 
 -- Expose the declared channel list + `localLength` as `@[circuit_norm]` rfl-lemmas so the composing
 -- `RegisterAccessCols` reader's `channelsLawful` / `circuit_proof_start` is discharged automatically.

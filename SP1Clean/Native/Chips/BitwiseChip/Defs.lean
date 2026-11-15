@@ -64,21 +64,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
 
 -- Measured (W3/r2/b2): this instance clears 40000 heartbeats, so the former 1M ceiling was ~25x
 -- over its floor and the plain default carries >=5x headroom.
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  output input offset :=
-    ⟨input.state, input.adapter,
-      varFromOffset BitwiseU16Operation.Columns offset,
-      input.isXor, input.isOr, input.isAnd⟩
-  channelsLawful := by
-    preserve_tactic_target
-    simp only [Inputs.is_real, circuit_norm, main, BitwiseU16Operation.circuit,
-      Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
-  -- Four low bytes per operand and eight result bytes; readers witness no cells.
-  localLength _ := 16
-  -- `programChannel` joins the structural `RowSpec` propagated from `ALUTypeReader`'s program **pull** (W11 flip);
-  -- `memoryChannel` joins from `ALUTypeReader`'s memory read **pulls** (W11 memory flip). The `RegisterWrite`
-  -- op_a write push owes a memory requirement (declared in `circuit.channelsWithRequirements`), not a guarantee.
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- `ALUTypeReader`'s Program fetch and Memory read pulls carry guarantees; the `RegisterWrite`
+    -- op_a push owes a Memory requirement (`circuit.channelsWithRequirements`).
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- The completed Bitwise row, exposed as a folded value for chip-boundary proofs. -/
 @[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :

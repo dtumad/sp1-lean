@@ -66,27 +66,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨input.clk_high, input.clk_low + 3, cols.op_b, 0, 0,
       cols.op_b_memory.prev_value⟩ : MemoryMsg (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- `byteChannel` (composed `RegisterAccessCols` checks) + `programChannel` (W11 program flip — now
-  -- **pulled**) + `memoryChannel` (W11 memory flip — the read-prior `pullIf`s derive `MemoryMsg.isU64`,
-  -- so it joins `channelsWithGuarantees`; its read-back `pushIf`s keep it in `channelsWithRequirements`).
-  channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    dsimp only [Operations.ChannelsLawful]
-    refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_,
-      by simp only [circuit_norm, main, RegisterAccessCols.circuit]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl | rfl
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    all_goals exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- Byte checks come from the composed `RegisterAccessCols`. The Program fetch and Memory
+    -- read-prior pulls carry guarantees (`ProgramMsg.RowSpec`, `MemoryMsg.isU64`); the Memory
+    -- read-back pushes owe requirements (`channelsWithRequirements`).
+    channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

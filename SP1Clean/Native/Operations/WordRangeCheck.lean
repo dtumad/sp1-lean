@@ -44,11 +44,8 @@ def main (w : Var Word (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion (Gadgets.ToBits.rangeCheck 16 two_pow_sixteen_lt) w[2]
   assertion (Gadgets.ToBits.rangeCheck 16 two_pow_sixteen_lt) w[3]
 
-instance elaborated : ElaboratedCircuit (ZMod p) Word unit main where
-  -- 4 limbs × 16 bit-decomposition witnesses each.
-  localLength _ := 64
-  output _ _ := ()
-  channelsWithGuarantees := []
+instance elaborated : ElaboratedCircuit (ZMod p) Word unit main := by
+  elaborate_circuit
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

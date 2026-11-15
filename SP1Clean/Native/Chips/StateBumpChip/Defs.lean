@@ -79,13 +79,10 @@ def main (r : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   byteChannel.pullIf r.is_real
     (⟨6, r.next_pc2, Expression.const ((16 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    simp only [circuit_norm, main, pulledMsg, pushedMsg]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

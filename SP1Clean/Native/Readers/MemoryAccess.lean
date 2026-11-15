@@ -112,31 +112,12 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨input.clk_high, input.clk_low + 1, input.addr0, input.addr1, input.addr2,
       input.new_value⟩ : MemoryMsg (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- `byteChannel` (the two timestamp range pulls) + `memoryChannel` (W11 memory flip — the prior `pullIf`
-  -- derives `MemoryMsg.isU64`, so it joins `channelsWithGuarantees`; its `new_value` `pushIf` keeps it in
-  -- `channelsWithRequirements`).
-  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    change Operations.ChannelsLawful
-      ([.assert _, .subcircuit _, .subcircuit _, .subcircuit _, .interact _, .interact _,
-        .interact _, .interact _] : Operations (ZMod p))
-        [byteChannel.toRaw, memoryChannel.toRaw]
-    refine ⟨by simp only [circuit_norm], ?_, by simp only [circuit_norm]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- The two timestamp range pulls and the prior-value pull (`MemoryMsg.isU64`) carry guarantees;
+    -- the `new_value` push keeps Memory in `channelsWithRequirements`.
+    channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

@@ -71,17 +71,12 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   (input.is_real - 1) * input.adapter.op_a_0 === 0
   return ⟨input.state, input.adapter, input.opcode, input.is_real⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  -- Nothing is witnessed: the state/adapter/opcode/is_real are threaded inputs, the readers are
-  -- `FormalAssertion`s (localLength 0), and the LTU pull + gates witness nothing.
-  localLength _ := 0
-  output input _ := ⟨input.state, input.adapter, input.opcode, input.is_real⟩
-  -- `programChannel` joins the structural `RowSpec` propagated from `ALUTypeReaderImmutable`'s program
-  -- **pull** (W11 flip): the reader pulls the instruction fetch as a guarantee, which propagates here.
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    simp only [circuit_norm, main, Readers.CPUState.circuit]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- `ALUTypeReaderImmutable`'s Program fetch pull carries the instruction `RowSpec` guarantee.
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- The completed AluX0 row is exactly its threaded input; the chip has no local witness cells. -/
 @[circuit_norm] theorem directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :

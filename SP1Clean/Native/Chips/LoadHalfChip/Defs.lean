@@ -141,20 +141,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   return ⟨input.state, input.adapter, addr_op, input.memory_access, input.offset_bit,
     input.selected_half, ⟨input.msb⟩, input.is_lh, input.is_lhu⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  channelsLawful := by simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
-  -- only the `AddressOperation` subcircuit witnesses (its 4 cells); the other blocks/gates witness nothing.
-  localLength _ := 3 + 1
-  localLength_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
-  output input i0 :=
-    ⟨input.state, input.adapter,
-      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
-      input.memory_access, input.offset_bit, input.selected_half, ⟨input.msb⟩,
-      input.is_lh, input.is_lhu⟩
-  output_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit, U16MSBOperation.circuit]
-  -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReader`'s program **pull** (W11 flip);
-  -- `memoryChannel` joins from `MemoryAccess`'s read pulls + `RegisterWrite`'s op_a write push (W11 memory flip).
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- Program joins through `ITypeReader`'s fetch pull; Memory through `MemoryAccess` and
+    -- `RegisterWrite`.
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- Folded completed-row layout used by the whole-chip Rust AIR codec. -/
 @[circuit_norm] lemma directOutput_eq

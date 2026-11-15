@@ -91,10 +91,10 @@ theorem main_memory_interactions (input : Var MemoryMsg (ZMod p)) (offset : ℕ)
   simp only [Operations.interactionsWith] at empty
   simp only [circuit_norm, GeneralFormalCircuit.toSubcircuit_interactions, empty, List.nil_append]
 
-instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main where
-  localLength _ := 5
-  output input _ := input
-  channelsWithGuarantees := [memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) MemoryMsg MemoryMsg main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [memoryChannel.toRaw]
+  }
 
 def circuit : GeneralFormalCircuit (ZMod p) MemoryMsg MemoryMsg where
   name := "sp1.native.memory.final.registers"

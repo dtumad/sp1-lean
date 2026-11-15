@@ -65,10 +65,10 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertZero (input.multiplicity * (input.multiplicity - 1))
   memoryChannel.pullIf input.multiplicity input.toMessage
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := [memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
