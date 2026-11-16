@@ -138,7 +138,7 @@ private theorem registers_of_currency (row : SyscallInstrsChip.Inputs (ZMod p))
     (atState : trajectory n = some current)
     (atTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage row) = timeline.start n)
     (currency : ∀ mp ∈ (syscallRowFacts row).memPulls,
-      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     current.get_reg? 5 = some (Word.toBitVec64 row.op_a_memory.prev_value) ∧
       current.get_reg? 10 = some (Word.toBitVec64 row.op_b_memory.prev_value) ∧
       current.get_reg? 11 = some (Word.toBitVec64 row.op_c_memory.prev_value) := by
@@ -149,9 +149,9 @@ private theorem registers_of_currency (row : SyscallInstrsChip.Inputs (ZMod p))
   rw [locA, atTime] at a
   rw [locB, atTime] at b
   rw [locC, atTime] at c
-  exact ⟨(TimedGrounding.localValueAtG_stepStart_iff atState).mp a,
-    TimedGrounding.localValueAtG_regRead_of_traj (k := 3) atState (by decide) b,
-    TimedGrounding.localValueAtG_regRead_of_traj (k := 2) atState (by decide) c⟩
+  exact ⟨(TimedGrounding.localValueAt_stepStart_iff atState).mp a,
+    TimedGrounding.localValueAt_regRead_of_traj (k := 3) atState (by decide) b,
+    TimedGrounding.localValueAt_regRead_of_traj (k := 2) atState (by decide) c⟩
 
 /-- The grounding engine's incoming currency supplies the actual full host-call observations.
 No caller selects register indices or separately authenticates the instruction fetch. -/
@@ -164,7 +164,7 @@ theorem hostCall_registers (valid : image.Valid)
     (atState : trajectory n = some current)
     (atTime : StateMsg.timeNat (SyscallInstrsChip.statePulledMessage (HostCallLedger.input env).instruction) = timeline.start n)
     (currency : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input env).instruction).memPulls,
-      LocalValueAtG trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt trajectory initial timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     (HostReadContext.ofSail current).register 5 = some (Word.toBitVec64 (HostCallLedger.call env).code) ∧
       (HostReadContext.ofSail current).register 10 = some (Word.toBitVec64 (HostCallLedger.call env).arg1) ∧
       (HostReadContext.ofSail current).register 11 = some (Word.toBitVec64 (HostCallLedger.call env).arg2) := by

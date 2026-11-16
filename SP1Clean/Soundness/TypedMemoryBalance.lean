@@ -11,46 +11,15 @@ import SP1Clean.Model.Semantics.MicroTime
 import SP1Clean.Model.Machine.Execution
 import SP1Clean.Soundness.BumpDecode
 
-/-! # The per-`MemLoc` Memory-channel balance
+/-! # Memory-channel structure of the supported ensemble
 
-The Memory analogue of the State-axis balance chain in `TypedState`.  Where the State boundary is one
-public verifier pair and the state-silent provider prefix contribute nothing, the Memory channel is
-the mirror image: the boundary **verifier** contributes nothing, and the provider suffix contributes
-through the two dedicated memory-boundary tables — the init provider (a per-address genesis *push*,
-index 49) and the finalize provider (a per-address final *pull*, index 50) — plus MemoryBump at 51.
-The byte/range/program providers do not declare the Memory channel and so emit nothing on it.
-
-Unlike State/Program, the decoded instruction rows' Memory interactions are **not** reduced to a fixed
-closed form here.  A decoded row's produced/consumed memory messages are, by definition,
-`producedMessages`/`consumedMessages` of its actual retained Clean interactions
-(`DecodedInstructionRow.producedMemoryMessages`/`consumedMemoryMessages`), so the ensemble
-decomposition threads them through verbatim — no per-chip `MemoryEmissionShape` sweep is needed.
-
-The chain mirrors, lemma for lemma:
-
-* `witness_verifierMemoryInteractions_eq_nil` ← `stateVerifier_stateInteractions` (here the
-  verifier is nil, not the boundary pair);
-* `witness_nonMemoryProviderTable_memoryInteractions_eq_nil` /
-  `witness_providerMemoryInteractions_eq` ← `witness_providerStateInteractions_eq_nil` (here the
-  providers are *non*-nil: `init ++ finalize`), themselves the two-table generalisation of the
-  Program-provider pattern `witness_providerProgramInteractions_eq`;
-* `producedMessages_typedEnsembleMemory_eq` / `consumedMessages_typedEnsembleMemory_eq` ←
-  `producedMessages_typedEnsembleState_eq` / `consumedMessages_typedEnsembleState_eq`;
-* `realDecodedMemory_perm` ← `realDecodedStateMessages_perm`.
-
-The final `realDecodedMemory_perlocBalance` is the raw per-location multiset balance the timed
-grounding walk (`TimedGrounding.walk`) consumes.  The two seams once flagged here are now **both
-closed**:
-
-1. **Binary multiplicities** — the intermediate lemmas still take a `memBinary` premise, but it is
-   discharged in this same file by `witness_memoryMultiplicityBinary` (§"Witness-level structural
-   Memory obligations"): the providers' boolean witnessed `m` (`m*(m-1) = 0`) plus the registry-wide
-   selector-gating theorem for the instruction rows.
-2. **Symmetric (both-providers-both-sides) form** — the collapse to the asymmetric frontier form
-   (provider purity + `MemoryInitProviderUnique`/`MemoryFinalizeProviderUnique` uniqueness, the
-   `optMS (live)`/`optMS (finM)` frontier-Option packaging) landed in `Soundness/MemoryFrontier.lean`
-   (`memoryFrontierBalance`).
--/
+Structural facts about the Memory channel of `sp1Ensemble`. The boundary verifier contributes
+nothing. A decoded instruction row's Memory messages are, by definition, those of its actual
+retained Clean interactions (`DecodedInstructionRow.producedMemoryMessages` /
+`consumedMemoryMessages`), so the ensemble decomposition threads them through without a per-chip
+shape sweep. The init and finalize provider tables only push and only pull, one boolean-gated
+interaction per row, and a constrained padding row has no active Memory message. The byte, range
+and program providers do not declare the Memory channel. -/
 
 namespace SP1Clean.Soundness
 
@@ -102,8 +71,6 @@ theorem witness_verifierMemoryInteractions_eq_nil
     Verifier.Program.circuitOperations, Verifier.Program.operations, Verifier.ofInteractions_values]
   simp [Operations.interactionValuesWith, sp1StateVerifierMain, circuit_norm]
 
-/-! ## The non-memory providers contribute nothing to the Memory channel -/
-
 /-! ## Exact Memory-channel decomposition of the whole ensemble witness -/
 
 /-- The decoded witness Memory interactions are the flattened per-row interaction lists — the
@@ -114,11 +81,9 @@ theorem decodedWitnessMemoryInteractions_eq_flatMap
       (decodedInstructionRows (p := p) witness.tables).flatMap
         fun decoded => decoded.interactionsWith witness.data memoryChannel := rfl
 
-/-! ## The Memory-channel balance -/
-
 /-! ## Provider purity: the boundary tables only push (init) / only pull (finalize)
 
-The two premises `initPure`/`finPure` of `MemoryFrontier.memoryFrontierBalance`.  Each boundary
+Each boundary
 provider emits exactly **one** explicit, boolean-gated Memory interaction per row — the init provider a
 `memoryChannel.pushIf m` (`MemoryProviderChip`), the finalize provider a `memoryChannel.pullIf m`
 (`MemoryFinalizeChip`) — with `m` forced into `{0, 1}` by the inline `assertZero (m * (m - 1))` gate.

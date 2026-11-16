@@ -43,7 +43,7 @@ theorem initialStateTruth_of_checks {image : ProgramImage} {source : ExecutionSn
     (sourceChecks : witness.BalancedChannel (sourceChannel image source))
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) (start : timeline.start 0 = source.clock) :
-    LocalStateTruthG (image.toGuestProgram valid) trajectory timeline
+    LocalStateTruth (image.toGuestProgram valid) trajectory timeline
       (initialBoundaryStateMessage witness.publicInput) := by
   have checked := ((source_balanced_iff witness).mp sourceChecks).1
   have encoding := source_state_encoding_of_checks witness sourceChecks
@@ -60,7 +60,7 @@ theorem initialStateTruth {image : ProgramImage} {source : ExecutionSnapshot} (v
     (balanced : witness.BalancedChannels)
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) (start : timeline.start 0 = source.clock) :
-    LocalStateTruthG (image.toGuestProgram valid) trajectory timeline
+    LocalStateTruth (image.toGuestProgram valid) trajectory timeline
       (initialBoundaryStateMessage witness.publicInput) :=
   initialStateTruth_of_checks valid witness
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _))) trajectory timeline initial start
@@ -118,17 +118,17 @@ theorem memoryInitialFrontier_liveOK_of_channels {image : ProgramImage} {source 
       witness.BalancedChannel channel)
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) :
-    LiveOKG trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) := by
+    LiveOK trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) := by
   intro loc message present
   obtain ⟨same, authentic, content⟩ :=
     memoryInitialFrontier_content_of_channels witness constraints sourceChecks bytes membership present
-  have atStart : LocalValueAtG trajectory source.sail.realize timeline loc (timeline.start 0) message.value :=
-    (localValueAtG_stepStart_iff initial).mpr content
+  have atStart : LocalValueAt trajectory source.sail.realize timeline loc (timeline.start 0) message.value :=
+    (localValueAt_stepStart_iff initial).mpr content
   refine ⟨same, ⟨authentic.1, authentic.2.1, ?_⟩, atStart, ?_⟩
   · rw [same, authentic.2.2.1]
     by_cases zero : timeline.start 0 = 0
     · simpa only [zero] using atStart
-    · simpa only [LocalValueAtG, microValueG, ite_eq_left (Nat.pos_of_ne_zero zero)] using content
+    · simpa only [LocalValueAt, microValue, ite_eq_left (Nat.pos_of_ne_zero zero)] using content
   · rw [authentic.2.2.1]
     exact Nat.zero_le _
 
@@ -138,7 +138,7 @@ theorem memoryInitialFrontier_liveOK {image : ProgramImage} {source : ExecutionS
     (constraints : witness.Constraints) (balanced : witness.BalancedChannels)
     (trajectory : Trajectory) (timeline : Timeline)
     (initial : trajectory 0 = some source.sail.realize) :
-    LiveOKG trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) :=
+    LiveOK trajectory source.sail.realize timeline (timeline.start 0) (memoryInitialFrontier witness) :=
   memoryInitialFrontier_liveOK_of_channels witness constraints
     (balanced _ (List.mem_append_right _ (List.mem_singleton_self _)))
     (fun table member => ((finishedChannel_guarantees image source witness constraints balanced).2 table member).1)

@@ -7,8 +7,8 @@ import SP1Clean.Model.Semantics.ProgramCommitment
 
 The native core owns its initial state. It fixes the entry PC and platform configuration, zeros
 the integer registers, and realizes the ROM-overlaid sparse image with zero defaults throughout
-the supported address space. `initialSailState_loaded` proves this construction satisfies the
-official Sail loader relation for every checked image, without a caller-supplied boot witness.
+the supported address space. `initialSailState_configured`, `initialSailState_pc` and `initialSailState_romLoaded` hold for
+every checked image, without a caller-supplied boot witness.
 
 The full Sail memory is a semantic realization, not an executable loader used by the compiler.
 The compiler and host operations consume `initialMemory`, the sparse executable representation;
@@ -50,37 +50,23 @@ theorem initialSailState_registersZero (input : ProgramImage) :
   have zero := registersZero_configuredState input.entry index
   simpa only [SailState.get_reg?, initialSailState_regs] using zero
 
-/-- Input validation suffices to construct an actual loaded, configured Sail state. -/
-theorem initialSailState_loaded (input : ProgramImage) (valid : input.Valid) :
-    IsInitialState (input.toGuestProgram valid) input.initialSailState where
-  initialized := by
-    intro reg
-    change reg ∈ input.initialSailState.regs
-    rw [initialSailState_regs]
-    exact cfgState_init input.entry reg
-  pc := by
-    change input.initialSailState.regs.get? LeanRV64D.Register.PC = some input.entry
-    rw [initialSailState_regs]
-    exact cfgState_pc input.entry
-  configured := input.initialSailState_configured
-  romLoaded := by
-    intro address word fetched index
-    obtain ⟨row, found, wordEq⟩ := Option.map_eq_some_iff.mp fetched
-    have member : row ∈ input.rom := List.mem_of_find?_eq_some found
-    have atPC : row.1 = address := by simpa using List.find?_some found
-    have inWindow : 2 ^ 16 ≤ row.1.toNat ∧ row.1.toNat + 4 ≤ 2 ^ 48 :=
-      (valid.2.1 row member).2.1
-    rw [← atPC, ← wordEq, input.initialSailState_memory _ (by have := index.isLt; omega),
-      input.initialMemory_rom valid row member index]
-  imageLoaded := by
-    intro byte member
-    rw [input.initialSailState_memory _ (valid.2.2.2.2.1 byte member).2,
-      input.initialMemory_image valid byte member]
+/-- The boot state starts at the image's entry point. -/
+theorem initialSailState_pc (input : ProgramImage) :
+    input.initialSailState.regs.get? LeanRV64D.Register.PC = some input.entry := by
+  rw [initialSailState_regs]
+  exact cfgState_pc input.entry
 
-/-- The checked-image domain is non-vacuous at the loader boundary for every accepted input. -/
-theorem hasInitialState (input : ProgramImage) (valid : input.Valid) :
-    (input.toGuestProgram valid).HasInitialState :=
-  ⟨input.initialSailState, input.initialSailState_loaded valid⟩
+/-- Every checked ROM word is loaded into the boot state's Sail memory. -/
+theorem initialSailState_romLoaded (input : ProgramImage) (valid : input.Valid) :
+    RomLoaded (input.toGuestProgram valid) input.initialSailState := by
+  intro address word fetched index
+  obtain ⟨row, found, wordEq⟩ := Option.map_eq_some_iff.mp fetched
+  have member : row ∈ input.rom := List.mem_of_find?_eq_some found
+  have atPC : row.1 = address := by simpa using List.find?_some found
+  have inWindow : 2 ^ 16 ≤ row.1.toNat ∧ row.1.toNat + 4 ≤ 2 ^ 48 :=
+    (valid.2.1 row member).2.1
+  rw [← atPC, ← wordEq, input.initialSailState_memory _ (by have := index.isLt; omega),
+    input.initialMemory_rom valid row member index]
 
 /-- The existing canonical commitment encoder is total on checked finite images. -/
 theorem toGuestProgram_encodable (input : ProgramImage) (valid : input.Valid) :

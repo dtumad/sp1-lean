@@ -77,7 +77,7 @@ LAYERS = [
 # ---- headline declarations (module, label, status) ----------------------------------------------
 HEADLINES = [
     ("SP1Clean.FormalModel.Shard", "Shard.Executes/Admissible (capstone vocabulary)", "unfilled"),
-    ("SP1Clean.Soundness.Shard.Machine", "Shard.realizes / statement_iff_of_realizes (capstone)", "unfilled"),
+    ("SP1Clean.Soundness.Shard.Contract", "Shard.SoundnessTarget / CompilerTarget / statement_iff (capstone)", "unfilled"),
     ("SP1Clean.Soundness.HostHintReadFinalSnapshot", "HostHintReadCPU.source_execution_with_memory (frontier)", "closed, not capstone"),
     ("SP1Clean.Soundness.Shard.Trace", "Shard.sail_trace (exported-circuit Sail trace)", "closed, not capstone"),
 ]

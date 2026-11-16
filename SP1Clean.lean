@@ -206,9 +206,7 @@ import SP1Clean.Soundness.LocalCoreLookups
 import SP1Clean.Soundness.LocalCoreEventUniqueness
 import SP1Clean.Soundness.LocalCoreExit
 import SP1Clean.Soundness.LocalCoreFinalBoundary
-import SP1Clean.Soundness.LocalCoreGrounding
 import SP1Clean.Soundness.LocalCoreHaltExecution
-import SP1Clean.Soundness.LocalCoreInstructionExecution
 import SP1Clean.Soundness.LocalCoreMemory
 import SP1Clean.Soundness.LocalCoreMemoryOrder
 import SP1Clean.Soundness.LocalCoreOrder
@@ -218,7 +216,6 @@ import SP1Clean.Soundness.LocalCoreRows
 import SP1Clean.Soundness.LocalCoreSourceGrounding
 import SP1Clean.Soundness.LocalCoreState
 import SP1Clean.Soundness.LocalCoreTouches
-import SP1Clean.Soundness.LocalCoreTrajectory
 import SP1Clean.Soundness.LocalCoreTransport
 import SP1Clean.Soundness.MemoryFrontier
 import SP1Clean.Soundness.MixedRowTransport
@@ -245,7 +242,6 @@ import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.Shard.Contract
-import SP1Clean.Soundness.Shard.Machine
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.StateCanon

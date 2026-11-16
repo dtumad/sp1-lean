@@ -1,3 +1,4 @@
+import PolyFun.PFunctor.Dynamical.Run
 import SP1Clean.Model.Core.Execution
 
 /-! # Finite native execution segments and their composition

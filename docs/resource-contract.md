@@ -152,7 +152,6 @@ actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by
 
 | Compatibility surface | Replacement / removal condition |
 |---|---|
-| `EventExecutionTrace` | No production consumer remains outside its own module; it is removed with the rest of the event tier (#16). The mixed compiler is built on `ExecutionPath`. |
 | `InstructionPlanReady`, `NativeCompilerReady` | Local success predicates of the retained builders; no occurrence in the new domain. Derive them from admissibility in the mixed compiler (C9) and remove them. |
 | Explicit numeric range checks in older chip/Sail lemmas | Retain encoding-specific statements, derive their range facts from `NativeLayout`; factor more generally only with a migrated consumer. |
 

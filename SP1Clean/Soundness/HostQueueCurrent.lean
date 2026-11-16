@@ -249,7 +249,7 @@ private theorem registers_of_prefix (valid : image.Valid)
     (replayed : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize (prior.map ExecutionRow.event) = some current)
     (currency : ∀ mp ∈ (event.facts witness.data).memPulls,
-      LocalValueAtG (fun n => (executionTrajectory ⟨{ readOnly := image.readOnly }, p⟩
+      LocalValueAt (fun n => (executionTrajectory ⟨{ readOnly := image.readOnly }, p⟩
         (image.toGuestProgram valid) source.realize (cpu.map ExecutionRow.event) n).map ExecutionState.sail)
         source.sail.realize (eventTimeline (cpu.map ExecutionRow.event) source.clock)
         (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
@@ -296,7 +296,7 @@ theorem run_of_source_prefix {final : HostHintQueue.State (ZMod p)} {bankFinal :
       source.realize (prior.map ExecutionRow.event) = some current)
     (running : current.host.exitCode = none)
     (currency : ∀ mp ∈ (event.facts witness.data).memPulls,
-      LocalValueAtG (fun n => (executionTrajectory ⟨{ readOnly := image.readOnly }, p⟩
+      LocalValueAt (fun n => (executionTrajectory ⟨{ readOnly := image.readOnly }, p⟩
         (image.toGuestProgram valid) source.realize (cpu.map ExecutionRow.event) n).map ExecutionState.sail)
         source.sail.realize (eventTimeline (cpu.map ExecutionRow.event) source.clock)
         (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :

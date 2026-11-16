@@ -60,17 +60,6 @@ def ProgramEmissionShape (chip : SupportedChip p) : Prop :=
       chip.table.operations.interactionValuesWith programChannel.toRaw env =
         [programChannel.pulledIfValue row.is_real (programMessageOfView row.view)]
 
-/-! ## Reader-local fetch interfaces
-
-The per-reader Program payloads (`rTypeProgramMessage`, `aluTypeProgramMessage`,
-`aluTypeImmutableProgramMessage`, `iTypeProgramMessage`, `iTypeImmutableProgramMessage`,
-`jTypeProgramMessage`) and their exact/compositional interaction lemmas
-(`<reader>_programInteractions` / `<reader>_programInteractions_subcircuit`) live next to each
-reader's `circuit` in `Native/Readers/*.lean`, still inside this `SP1Clean.Soundness` namespace.
-The channel-generic subcircuit helper is
-`InteractionRecovery.interactionsWith_generalSubcircuit_of_main_exact`
-(`Model/InteractionRecovery.lean`). -/
-
 /-! ## Compositional interaction projection
 
 Large chips should not have to normalize their entire monadic circuit merely to identify one bus

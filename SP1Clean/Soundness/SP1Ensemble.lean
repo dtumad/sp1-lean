@@ -49,15 +49,6 @@ open Sail LeanRV64D LeanRV64D.Functions
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 
-/-! ## The public input: the committed initial/final machine state
-
-`SP1PublicIO` carries the two State-bus endpoints — the verifier-committed initial `(clk, pc)` and final
-`(clk, pc)`. The layout mirrors `Channels.StateMsg` (arity 5: `clk_high, clk_low, pc0, pc1, pc2`) at each
-end. `clk_low` is the pre-folded low clock (`clk_0_16 + clk_16_24 * 65536`). The structure itself lives
-on the formal-model audit surface in `FormalModel/Contracts/PublicValues.lean`; the typed boundary
-messages the capstone consumes are `initialBoundaryStateMessage`/`finalBoundaryStateMessage`
-(`Soundness/TypedState.lean`). -/
-
 /-! ## The boundary verifier
 
 `sp1StateVerifier` is the genesis/finalization circuit: a true `pull` of the public **final** state

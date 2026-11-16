@@ -88,6 +88,17 @@ def toGuestProgram (input : ProgramImage) (valid : input.Valid) : GuestProgram w
     intro row member
     exact (valid.2.1 row member).2.2
 
+/-- The committed program of any image. An invalid image commits no instruction, so nothing
+fetches from it and no execution step exists; contracts need no validity proof to name it. -/
+def program (input : ProgramImage) : GuestProgram :=
+  if valid : input.Valid then input.toGuestProgram valid else
+    { rom := [], pc_start := input.entry, memImage := [], rom_nodup := .nil,
+      rom_aligned := by simp, rom_in_window := by simp, rom_full_width := by simp }
+
+theorem program_eq (input : ProgramImage) (valid : input.Valid) :
+    input.program = input.toGuestProgram valid := by
+  simp only [program, valid, ↓reduceDIte]
+
 /-- Every listed ROM entry is the semantic fetch result at its address. Uniqueness comes
 from finite-image validation, rather than a separate program-provider premise. -/
 theorem fetchWord_of_mem (input : ProgramImage) (valid : input.Valid)

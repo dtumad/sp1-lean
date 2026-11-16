@@ -1,6 +1,7 @@
 import SP1Clean.Model.Core.HostSail
 import SP1Clean.Model.Core.HostTerminal
 import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Model.Core.InstructionWrite
 
 /-! # Stateful local execution of the native core
 
@@ -8,12 +9,13 @@ A boundary contains the entire Sail and host states, together with the execution
 particular, equal PCs and clocks do not identify a boundary: RAM, registers, pending hints and
 replies, accumulated outputs, commitment banks, and terminal status must agree as well.
 
-Ordinary steps retire normally in official Sail. ECALL steps use the concrete host interpreter,
-after checking the committed word against all four bytes in actual Sail memory, threading its
-returned state. Both arms require a running source; HALT is a real transition and
+Ordinary steps retire normally in official Sail. ECALL steps use the concrete host interpreter at
+a committed ECALL word, threading its returned state. The committed program is the one fetch source
+of both arms; that its word is also in actual Sail memory follows from ROM preservation. Both arms require a running source; HALT is a real transition and
 there are no transitions out of a stopped state. Padding and provider/refresh rows are not
-semantic steps. Supported decoding, ROM-write exclusion, and shard resource limits belong to the
-native profile layered over this execution relation; no AIR correctness is asserted here.
+semantic steps. An ordinary step also requires the instruction's write footprint to be permitted,
+so a store into protected memory is not a step at all. Supported decoding and shard resource
+limits belong to the native profile layered over this relation; no AIR correctness is asserted here.
 -/
 
 namespace SP1Clean.Model.Core
@@ -33,6 +35,7 @@ inductive ExecutionStep (policy : HostPolicy) (program : GuestProgram) :
       source.host.exitCode = none →
       ¬ AboutToExecuteEcall program source.sail →
       SailRetiresNormally source.sail target →
+      InstructionWrite.PermittedAt policy.memory.readOnly program source.sail →
       ExecutionStep policy program source .ordinary
         ⟨target, source.host, source.clock + ordinarySchedule.duration⟩
   | syscall {source : ExecutionState} {host : HostState} {target : SailState}
@@ -55,18 +58,17 @@ theorem HostState.step_observations {host nextHost : HostState} {policy : HostPo
   split_ifs at success with fetched
   · simp only [Option.bind_eq_some_iff, Option.some.injEq, Prod.mk.injEq] at success
     obtain ⟨execution, ran, hostEq, targetEq, eventEq⟩ := success
-    exact ⟨pc, execution, atPc, fetched.1, ran, hostEq.symm, targetEq.symm, eventEq.symm⟩
+    exact ⟨pc, execution, atPc, fetched, ran, hostEq.symm, targetEq.symm, eventEq.symm⟩
 
 /-- Construct a host step from observations and the concrete dispatcher result. -/
 theorem HostState.step_of_run {host : HostState} {policy : HostPolicy} {program : GuestProgram}
     {source : SailState} {pc : BitVec 64} {execution : HostExecution}
     (atPc : source.regs.get? LeanRV64D.Register.PC = some pc)
     (fetched : program.fetchWord pc = some ECALL_ENC)
-    (loaded : InstructionBytes.check source.mem.get? pc ECALL_ENC = true)
     (ran : host.run policy (.ofSail source) = some execution) (clock : ℕ) :
     host.step policy program clock source =
       some (execution.effect.state, execution.apply source pc, execution.toEvent clock pc) := by
-  simp only [HostState.step, atPc, bind, Option.bind_some, fetched, loaded, and_self, ↓reduceIte, ran]
+  simp only [HostState.step, atPc, bind, Option.bind_some, fetched, ↓reduceIte, ran]
 
 namespace ExecutionStep
 
@@ -102,23 +104,16 @@ theorem startsAt (step : ExecutionStep policy program source event target) :
       obtain ⟨_, _, _, _, _, _, _, rfl⟩ := HostState.step_observations success
       rfl
 
-/-- Projection uses the incoming host for this single step; whole paths thread the next host. -/
-theorem sailEvent (step : ExecutionStep policy program source event target) :
-    EventStep (source.host.handler policy) program source.sail event target.sail := by
-  cases step with
-  | ordinary _ notEcall normal => exact .ordinary notEcall normal.sailStep
-  | syscall success =>
-      have interpreted := HostState.step_sound success
-      exact .syscall interpreted.1 interpreted.2
-
-/-- A syscall label's PC names an ECALL in the actual incoming Sail memory as well as ROM. -/
+/-- From loaded ROM, a syscall label's PC names an ECALL in the actual incoming Sail memory as
+well as in the committed program. -/
 theorem syscall_instructionBytes {call : CoreSyscallEvent}
-    (step : ExecutionStep policy program source (.syscall call) target) :
+    (step : ExecutionStep policy program source (.syscall call) target)
+    (loaded : RomLoaded program source.sail) :
     InstructionBytes.check source.sail.mem.get? call.pc ECALL_ENC = true := by
   cases step with
   | syscall success =>
-      obtain ⟨pc, execution, atPc, _, _, _, _, rfl⟩ := HostState.step_observations success
-      exact HostState.step_instructionBytes success atPc
+      obtain ⟨pc, execution, _, fetched, _, _, _, rfl⟩ := HostState.step_observations success
+      exact InstructionBytes.check_of_romLoaded loaded fetched
 
 /-- A halted boundary has no outgoing semantic step, including an ordinary instruction. -/
 theorem not_of_halted (halted : source.host.exitCode ≠ none) :
@@ -148,18 +143,6 @@ theorem halted_iff (step : ExecutionStep policy program source event target) (co
   cases event with
   | ordinary => simp
   | syscall call => by_cases halt : call.rawCode = 0 <;> simp [halt]
-
-/-- The HALT label is backed by the committed ECALL and actual Sail x5/x10 observations. -/
-theorem halt_source {call : CoreSyscallEvent}
-    (step : ExecutionStep policy program source (.syscall call) target) (zero : call.rawCode = 0) :
-    SP1Halted program call.arg1 source.sail := by
-  cases step with
-  | syscall success =>
-      obtain ⟨pc, execution, atPc, fetched, ran, _, _, rfl⟩ := HostState.step_observations success
-      have observed := (source.host.run_eq_some_iff policy (.ofSail source.sail) execution).mp ran
-      have code : source.sail.get_reg? 5#5 = some execution.kind.code := observed.2.1
-      change execution.kind.code = 0 at zero
-      exact ⟨pc, atPc, fetched, by simpa only [zero, HALT_SYSCALL] using code, observed.2.2.1⟩
 
 /-- With the same complete input, neither the next event nor its effects are witness choices. -/
 theorem deterministic {other : ExecutionState} {otherEvent : ExecutionEvent}

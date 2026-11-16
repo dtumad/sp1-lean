@@ -353,32 +353,4 @@ lemma exists_rewrittenTouchLists (hsnd : ∀ a b, R a b → b.2 = a.2) :
 
 end Realization
 
-omit [Fact p.Prime] [Fact (2 ^ 17 < p)] in
-/-- **Generic `RowOK` for the aligned constructor.**  From the per-touch `TouchOK`, the `+8` clock
-step, the mod-8 window alignment, per-key push-time strict monotonicity, the per-push `ClkBound`, and
-the currency-free **conditional** `slot` fact (`hslot`: given the pulled record's `ClkBound`, the
-`prev_clk < access_clk` order — the 1f break; the walk discharges the antecedent from the balance). -/
-theorem rowOK_alignedOf (initialClock : ℕ) (r_ord : RowFacts p) (touches : List (Touch p))
-    (htime8 : StateMsg.timeNat r_ord.statePush = StateMsg.timeNat r_ord.statePull + 8)
-    (halign8 : StateMsg.timeNat r_ord.statePull % 8 = initialClock % 8)
-    (htouch : ∀ tc ∈ touches, TouchOK (StateMsg.timeNat r_ord.statePull) tc.1 tc.2)
-    (hchain : ∀ loc : MemLoc, List.IsChain
-      (fun a b : Touch p => MemoryMsg.timeNat a.2 < MemoryMsg.timeNat b.2)
-      (touches.filter (fun pq => MemoryMsg.locOf pq.2 = loc)))
-    (hpushClk : ∀ tc ∈ touches, SP1Clean.Channels.MemoryMsg.ClkBound tc.2)
-    (hslot : ∀ tc ∈ touches, SP1Clean.Channels.MemoryMsg.ClkBound (tc : Touch p).1.1 →
-      MemoryMsg.timeNat (tc : Touch p).1.1 < MemoryMsg.timeNat tc.2) :
-    RowOK initialClock (alignedOf r_ord touches) where
-  time8 := htime8
-  align8 := halign8
-  touches := forall₂_touchOK_map touches htouch
-  chain_mono := by simpa only [rowTouchesAt_alignedOf] using hchain
-  pushClkBound := by
-    intro m hm; obtain ⟨tc, htc, rfl⟩ := List.mem_map.mp hm; exact hpushClk tc htc
-  slotOfClkBound := by
-    intro pq hpq hclk
-    simp only [alignedOf] at hpq
-    rw [zip_map_fst_snd touches] at hpq
-    exact hslot pq hpq hclk
-
 end SP1Clean.Soundness.TimedGrounding

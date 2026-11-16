@@ -122,33 +122,27 @@ private theorem mixed (word : BitVec 32) (left right : BitVec 64) (decoded : ins
     intro state cfg registers pc nextPc
     exact executeFrame state cfg ((registers 2).trans (middle_left word left right))
       ((registers 3).trans (middle_right word left right)) pc nextPc)
-  have ordinary : ExecutionStep (FormalModel.Shard.policy SP1Prime (image word))
-      ((image word).toGuestProgram valid.1.1) (middle word left right).realize .ordinary
-      ⟨next, (middle word left right).host, 289⟩ := by
-    apply ExecutionStep.ordinary rfl ?_ normal
-    rintro ⟨pc, current, ecall⟩
-    have same := Option.some.inj (atPc.symm.trans current)
-    rw [← same, fetched] at ecall
-    exact notEcall (Option.some.inj ecall)
-  have path := ExecutionPath.cons first (.cons ordinary (.nil _))
   have permission : InstructionWrite.PermittedAt (image word).readOnly
       ((image word).toGuestProgram valid.1.1) (middle word left right).sail.realize :=
     ⟨65540, word, decoded, atPc, fetched, decode,
       check_of_registers (middle word left right).sail.skeleton (middle word left right).sail.realize
         rfl _ _ allowed⟩
-  have permitted : ExecutionPath.WritesPermitted (FormalModel.Shard.policy SP1Prime (image word))
-      ((image word).toGuestProgram valid.1.1) (source word left right).realize tape := by
-    apply (ExecutionPath.writesPermitted_cons_iff first).mpr
-    refine ⟨(fun impossible => nomatch impossible), ?_⟩
-    exact (ExecutionPath.writesPermitted_cons_iff ordinary).mpr
-      ⟨fun _ => permission, ExecutionPath.writesPermitted_nil⟩
+  have ordinary : ExecutionStep (FormalModel.Shard.policy SP1Prime (image word))
+      ((image word).toGuestProgram valid.1.1) (middle word left right).realize .ordinary
+      ⟨next, (middle word left right).host, 289⟩ := by
+    refine ExecutionStep.ordinary rfl ?_ normal permission
+    rintro ⟨pc, current, ecall⟩
+    have same := Option.some.inj (atPc.symm.trans current)
+    rw [← same, fetched] at ecall
+    exact notEcall (Option.some.inj ecall)
+  have path := ExecutionPath.cons first (.cons ordinary (.nil _))
   refine ⟨valid, _, path, ?_, ?_⟩
   · intro cut
     obtain ⟨current, replay, _, _⟩ := path.replay_split cut
-    have frame := path.frame_prefix valid.1.1 permitted (fun _ selected => selected)
+    have frame := path.frame_prefix valid.1.1 (fun _ selected => selected)
       valid.configured valid.romLoaded replay
     exact ⟨current, replay, frame.1, frame.2.1⟩
-  · exact path.fetch_at valid.1.1 permitted (fun _ selected => selected) valid.configured valid.romLoaded
+  · exact path.fetch_at valid.1.1 (fun _ selected => selected) valid.configured valid.romLoaded
 
 /-- Padded host RAM writes preserve the following JALR word; its odd base is masked by Sail. -/
 theorem hintThenJalr : Preserved 0x000100e7 65553 0 := by
@@ -202,9 +196,7 @@ theorem hintShardPreservesRom :
     (event := hint.toEvent 17 65536) rfl (by native_decide)
   have execution : FormalModel.Shard.Executes SP1Prime (image 0x000100e7)
       (source 0x000100e7 65553 0) (middle 0x000100e7 65553 0) [.syscall (hint.toEvent 17 65536)] := by
-    refine ⟨jalr_source_valid, .cons step (.nil _), ?_⟩
-    exact (ExecutionPath.writesPermitted_cons_iff step).mpr
-      ⟨(fun impossible => nomatch impossible), ExecutionPath.writesPermitted_nil⟩
+    exact ⟨jalr_source_valid, .cons step (.nil _)⟩
   exact ⟨execution, execution.frame.1, execution.frame.2.1⟩
 
 /-- HINT_READ cannot write its last padding byte when that byte is protected, even if already zero. -/
@@ -221,15 +213,13 @@ theorem rejectsCorruptedPrefix (target : ExecutionState)
     (path : ExecutionPath (FormalModel.Shard.policy SP1Prime (image 0x000100e7))
       ((image 0x000100e7).toGuestProgram jalr_source_valid.1.1)
       (source 0x000100e7 65553 0).realize tape target)
-    (permitted : ExecutionPath.WritesPermitted (FormalModel.Shard.policy SP1Prime (image 0x000100e7))
-      ((image 0x000100e7).toGuestProgram jalr_source_valid.1.1) (source 0x000100e7 65553 0).realize tape)
     (cut : ℕ) (offset : Fin 4) :
     executionTrajectory (FormalModel.Shard.policy SP1Prime (image 0x000100e7))
       ((image 0x000100e7).toGuestProgram jalr_source_valid.1.1) (source 0x000100e7 65553 0).realize tape cut ≠
         some { (middle 0x000100e7 65553 0).realize with
           sail.mem := (middle 0x000100e7 65553 0).sail.realize.mem.insert (65540 + offset) 255 } := by
   intro corrupted
-  have rom := (path.frame_prefix jalr_source_valid.1.1 permitted (fun _ selected => selected)
+  have rom := (path.frame_prefix jalr_source_valid.1.1 (fun _ selected => selected)
     jalr_source_valid.configured jalr_source_valid.romLoaded corrupted).2.1
   have byte := rom 65540 0x000100e7 rfl offset
   change ((middle 0x000100e7 65553 0).sail.realize.mem.insert (65540 + offset) 255).get? (65540 + offset) = _ at byte

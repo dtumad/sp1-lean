@@ -1,5 +1,5 @@
 import Lean
-import SP1Clean.Soundness.Shard.Machine
+import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Soundness.Shard.Trace
 
 /-! # Compiled native capstone contract audit
@@ -33,23 +33,24 @@ example (heights : List ℕ) : ensemble.Statement Balance.logUp header heights �
 
 example : SoundnessTarget ensemble limits commitments image source target header =
     (∀ publicInput heights, True → ensemble.Statement Balance.logUp publicInput heights →
-      ∃ events, publicInput = header ∧
-        ((∃ valid : ExecutionSourceValid image source,
-          ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events target.realize ∧
-          ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events) ∧ nativeProfile limits p image source target events) ∧
+      ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
+        publicInput = header ∧ ExecutionSourceValid image source ∧
+        nativeProfile limits p image source target events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 example : CompilerTarget ensemble limits commitments image source target header =
     EnsembleCompiler ensemble Balance.logUp (List ExecutionEvent)
-      (fun publicInput events => publicInput = header ∧
-        ((∃ valid : ExecutionSourceValid image source,
-          ExecutionPath (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events target.realize ∧
-          ExecutionPath.WritesPermitted (policy p image) (image.toGuestProgram valid.1.1)
-            source.realize events) ∧ nativeProfile limits p image source target events) ∧
+      (fun publicInput events => (sp1Machine p image).Trace source.realize events target.realize ∧
+        publicInput = header ∧ ExecutionSourceValid image source ∧
+        nativeProfile limits p image source target events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
+
+-- Together the targets are exactly a realization of the SP1 machine.
+example (sound : SoundnessTarget ensemble limits commitments image source target header)
+    (compiler : CompilerTarget ensemble limits commitments image source target header) :
+    Realizes (sp1Machine p image) ensemble Balance.logUp (boundary source target)
+      (admissible limits commitments image source target header) :=
+  ⟨sound, compiler⟩
 
 example (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
@@ -75,16 +76,15 @@ example (valid : image.Valid)
     (heights : List ℕ)
     (accepted : (CommitmentEnsemble.install commitments
       (installed image source outgoing final bankFinal) fresh registered).Statement .logUp header heights) :
-    SailTrace commitments image valid source outgoing final bankFinal header :=
+    SailTrace commitments image source outgoing final bankFinal header :=
   sail_trace valid accepted
 
-example (valid : image.Valid) :
-    SailTrace commitments image valid source outgoing final bankFinal header ↔
+example :
+    SailTrace commitments image source outgoing final bankFinal header ↔
       ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed SP1Prime ∧
         ∃ (events : List ExecutionEvent) (target : ExecutionState),
-          (sp1Machine SP1Prime image valid).Trace source.realize events target ∧
-          ExecutionPath.WritesPermitted (policy SP1Prime image) (image.toGuestProgram valid)
-            source.realize events ∧ commitments.Matches events ∧
+          (sp1Machine SP1Prime image).Trace source.realize events target ∧
+          commitments.Matches events ∧
           Endpoint source outgoing final bankFinal header events target := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.

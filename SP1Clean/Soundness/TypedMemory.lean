@@ -364,43 +364,6 @@ theorem registerOperandPulls_of_shape (decoded : DecodedInstructionRow p)
   · intro index real immediate indexEq
     exact shape.opC data decoded.physical program state ready constraints real index immediate indexEq
 
-/-- Timed grounding plus the chip's exact operand-pull interface identifies the row's committed
-source values with the live Sail registers at this execution position. -/
-theorem valueOperandsBound_of_grounded (decoded : DecodedInstructionRow p)
-    (data : ProverData (ZMod p)) (program : Target.GuestProgram)
-    (initial state : SailState) (initialClock steps : ℕ)
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts data))
-    (chain : Target.SailChain steps initial state)
-    (real : (decoded.toChipRow data).is_real = 1)
-    (rowTime : Semantics.StateMsg.timeNat
-      (statePullMessage (decoded.toChipRow data)) = initialClock + 8 * steps)
-    (pulls : decoded.RegisterOperandPulls data) :
-    Target.ValueOperandsBound (decoded.toChipRow data).view state := by
-  constructor
-  · intro index immediate indexEq
-    obtain ⟨message, messageMem, location, value⟩ := pulls.opB index real immediate indexEq
-    have pairMem :
-        (message, Semantics.StateMsg.timeNat (statePullMessage (decoded.toChipRow data))) ∈
-          (decoded.ordinaryRowFacts data).memPulls := by
-      rw [ordinaryRowFacts_memPulls]
-      exact List.mem_map.mpr ⟨message, messageMem, rfl⟩
-    have current := (grounded.2 _ pairMem).2
-    rw [location, value, rowTime] at current
-    have live := (Semantics.localValueAt_stepStart_iff chain).mp current
-    exact live
-  · intro index immediate indexEq
-    obtain ⟨message, messageMem, location, value⟩ := pulls.opC index real immediate indexEq
-    have pairMem :
-        (message, Semantics.StateMsg.timeNat (statePullMessage (decoded.toChipRow data))) ∈
-          (decoded.ordinaryRowFacts data).memPulls := by
-      rw [ordinaryRowFacts_memPulls]
-      exact List.mem_map.mpr ⟨message, messageMem, rfl⟩
-    have current := (grounded.2 _ pairMem).2
-    rw [location, value, rowTime] at current
-    have live := (Semantics.localValueAt_stepStart_iff chain).mp current
-    exact live
-
 /-- The row's Memory guarantees consumed by its original Clean circuit, from the **structural** pull
 currency alone — each pulled record is `isU64 ∧ ClkBound`.  This is the pre-walk (conditional) form: it
 needs neither the semantic `LocalValueAt` binding nor a circuit Spec, so it discharges the monolithic
@@ -425,22 +388,6 @@ theorem memoryChannelGuarantees_of_pullCurrency (decoded : DecodedInstructionRow
     rw [ordinaryRowFacts_memPulls]
     exact List.mem_map.mpr ⟨message, messageMem, rfl⟩
   exact pullCurrency _ pairMem
-
-/-- Timed semantic grounding of the row's exact active prior records supplies the Memory guarantees
-consumed by its original Clean circuit — a thin specialization of
-`memoryChannelGuarantees_of_pullCurrency`, since `Grounded` carries each pull's `LocalMemTruth` whose
-`isU64 ∧ ClkBound` conjuncts are exactly the structural currency.  This is the key direction needed by
-chip `weakSoundness`: grounding does not assume a circuit Spec and does not replace the circuit's
-interaction list. -/
-theorem memoryChannelGuarantees_of_grounded (decoded : DecodedInstructionRow p)
-    (data : ProverData (ZMod p)) (program : Target.GuestProgram)
-    (initial : SailState) (initialClock : ℕ)
-    (grounded : TimedGrounding.Grounded program initial initialClock
-      (decoded.ordinaryRowFacts data)) :
-    decoded.chip.table.operations.ChannelGuarantees memoryChannel.toRaw
-      (decoded.environment data) :=
-  memoryChannelGuarantees_of_pullCurrency decoded data
-    (fun mp hmp => ⟨((grounded.2 mp hmp).1).1, ((grounded.2 mp hmp).1).2.1⟩)
 
 end DecodedInstructionRow
 

@@ -1,5 +1,5 @@
 import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.ExecutionWritePolicy
+import SP1Clean.Model.Core.InstructionWrite
 import SP1Clean.Model.Core.SailBookkeeping
 import SP1Clean.Model.Core.QueueReplay
 import SP1Clean.Model.SP1Field
@@ -58,30 +58,11 @@ private theorem halt_run : middle.host.run policy (.ofSail middle.sail) = some h
 
 private theorem enter_step : ExecutionStep policy program source
     (.syscall (enter.toEvent source.clock 65536)) middle := by
-  exact .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) enter_run _)
+  exact .syscall (HostState.step_of_run (by native_decide) (by native_decide) enter_run _)
 
 private theorem halt_step : ExecutionStep policy program middle
     (.syscall (halt.toEvent middle.clock 65540)) target := by
-  exact .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) halt_run _)
-
-/-- Actual Sail memory is partial: every ECALL byte must be present, including its zero bytes.
-The committed program and a valid host request cannot replace any missing instruction byte. -/
-theorem rejectsMissingCodeBytes :
-    ((List.range 4).map fun offset =>
-      (source.host.step policy program source.clock
-        { source.sail with mem := source.sail.mem.erase (65536 + offset) }).isNone) =
-        [true, true, true, true] := by
-  native_decide
-
-/-- A cut preserves the code-memory obligation: corrupting a later ECALL rejects replay even
-though that word is still present in the committed program and the HALT registers are valid. -/
-theorem rejectsCorruptedContinuation :
-    ((List.range 4).map fun offset =>
-      (replayHost? policy program
-        { middle with sail.mem := (middle.sail.mem.insert (65540 + offset)
-          (if offset = 0 then 0 else 1)) }
-        (halt.toEvent middle.clock 65540)).isNone) = [true, true, true, true] := by
-  native_decide
+  exact .syscall (HostState.step_of_run (by native_decide) (by native_decide) halt_run _)
 
 /-- A continuing shard need not start at boot or end at HALT. -/
 theorem continuingShard : ExecutionSegment policy program source 1 middle :=
@@ -158,34 +139,7 @@ theorem ordinaryContinues (host : HostState) (running : host.exitCode = none) (c
       ⟨Audit.AnchorShard.anchorState, host, clock⟩ .ordinary
       ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ :=
   .ordinary running Audit.AnchorShard.anchor_notAboutToExecuteEcall
-    Audit.AnchorShard.activeTarget_effect.normal
-
-/-- A genuinely retiring JAL remains admitted by the write policy, even if every byte is read-only. -/
-theorem ordinaryWritePermission (host : HostState) (running : host.exitCode = none) (clock : ℕ) :
-    ExecutionPath { policy with memory.readOnly := fun _ => true } Audit.AnchorShard.anchorProgram
-      ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary]
-      ⟨Audit.AnchorShard.activeTarget, host, clock + 8⟩ ∧
-    ExecutionPath.WritesPermitted { policy with memory.readOnly := fun _ => true }
-      Audit.AnchorShard.anchorProgram ⟨Audit.AnchorShard.anchorState, host, clock⟩ [.ordinary] := by
-  refine ⟨.cons (.ordinary running Audit.AnchorShard.anchor_notAboutToExecuteEcall
-    Audit.AnchorShard.activeTarget_effect.normal) (.nil _), ?_⟩
-  intro n current atEvent replay
-  have zero : n = 0 := by
-    obtain ⟨bound, _⟩ := List.getElem?_eq_some_iff.mp atEvent
-    simpa using bound
-  subst n
-  obtain rfl := Option.some.inj replay
-  refine ⟨65536, 0x6f, .JAL (0, .Regidx 0), Audit.AnchorShard.anchorState_pc,
-    Audit.AnchorShard.anchorProgram_fetchWord_selfJump,
-    Audit.AnchorShard.activeExecution_configuredDecode, ?_⟩
-  rfl
-
-/-- Host-only composition needs no artificial ordinary-write obligation. -/
-theorem hostWritePermission : ExecutionPath.WritesPermitted policy program source
-    [.syscall (enter.toEvent source.clock 65536), .syscall (halt.toEvent middle.clock 65540)] := by
-  rw [ExecutionPath.writesPermitted_cons_iff enter_step,
-    ExecutionPath.writesPermitted_cons_iff halt_step]
-  simp only [reduceCtorEq, false_implies, ExecutionPath.writesPermitted_nil, and_self]
+    Audit.AnchorShard.activeTarget_effect.normal (Audit.AnchorShard.anchor_permittedAt _)
 
 /-- A real normally-retiring Sail instruction is still forbidden after the host has halted. -/
 theorem rejectsRunnableAfterHalt :
@@ -314,10 +268,10 @@ theorem hostBookkeeping :
   constructor
   · have first : ExecutionStep policy program hostBookkeepingSource
         (.syscall (enter.toEvent source.clock 65536)) hostBookkeepingMiddle :=
-      .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) (by native_decide) _)
+      .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) _)
     have last : ExecutionStep policy program hostBookkeepingMiddle
         (.syscall (halt.toEvent middle.clock 65540)) hostBookkeepingTarget :=
-      .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) (by native_decide) _)
+      .syscall (HostState.step_of_run (by native_decide) (by native_decide) (by native_decide) _)
     exact .cons first (.cons last (.nil _))
   · native_decide
 

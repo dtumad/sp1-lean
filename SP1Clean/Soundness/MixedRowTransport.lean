@@ -52,11 +52,11 @@ micro-times. The old record's low-clock bound is supplied independently of its v
 theorem WindowAligned.pullCurrency {program : Target.GuestProgram} {traj : Trajectory}
     {initial : SailState} {timeline : Timeline} {newer original : RowFacts p}
     (aligned : WindowAligned newer original)
-    (state : LocalStateTruthG program traj timeline newer.statePull)
+    (state : LocalStateTruth program traj timeline newer.statePull)
     (currency : ∀ pull ∈ newer.memPulls, MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
-      LocalValueAtG traj initial timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) :
+      LocalValueAt traj initial timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value) :
     ∀ pull ∈ original.memPulls, MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
-      LocalValueAtG traj initial timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value := by
+      LocalValueAt traj initial timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value := by
   obtain ⟨n, _, _, time, _⟩ := state
   intro pull member
   obtain ⟨matched, matchedMem, loc, value, lo, hi⟩ := aligned.match_ pull member
@@ -66,7 +66,7 @@ theorem WindowAligned.pullCurrency {program : Target.GuestProgram} {traj : Traje
   rw [time] at lo hi
   rw [← aligned.pullTime, time] at window
   refine ⟨?_, aligned.pullClk pull member,
-    localValueAtG_shift_window _ lo hi window.1 window.2 current⟩
+    localValueAt_shift_window _ lo hi window.1 window.2 current⟩
   unfold MemoryMsg.isU64 at word ⊢
   rwa [value] at word
 
@@ -75,13 +75,13 @@ omit [Fact (2 ^ 17 < p)] in
 theorem WindowAligned.stepFact {program : Target.GuestProgram} {traj : Trajectory}
     {initial : SailState} {timeline : Timeline} {newer original : RowFacts p}
     (aligned : WindowAligned newer original)
-    (step : LocalStepFactG program traj initial timeline original) :
-    LocalStepFactG program traj initial timeline newer := by
+    (step : LocalStepFact program traj initial timeline original) :
+    LocalStepFact program traj initial timeline newer := by
   intro state currency
   obtain ⟨next, pushes⟩ := step
-    (localStateTruthG_congr aligned.pullTime.symm aligned.pullPc.symm state)
+    (localStateTruth_congr aligned.pullTime.symm aligned.pullPc.symm state)
     (aligned.pullCurrency state currency)
-  exact ⟨localStateTruthG_congr aligned.pushTime aligned.pushPc next,
+  exact ⟨localStateTruth_congr aligned.pushTime aligned.pushPc next,
     fun message member => pushes message (aligned.pushes.mem_iff.mp member)⟩
 
 omit [Fact (2 ^ 17 < p)] in
@@ -89,12 +89,12 @@ omit [Fact (2 ^ 17 < p)] in
 theorem WindowAligned.frameFact {program : Target.GuestProgram} {traj : Trajectory}
     {initial : SailState} {timeline : Timeline} {newer original : RowFacts p}
     (aligned : WindowAligned newer original)
-    (frame : FrameFactG program traj initial timeline original) :
-    FrameFactG program traj initial timeline newer := by
+    (frame : FrameFact program traj initial timeline original) :
+    FrameFact program traj initial timeline newer := by
   intro state currency loc value pushes current
   rw [aligned.pullTime] at current
   have preserved := frame
-    (localStateTruthG_congr aligned.pullTime.symm aligned.pullPc.symm state)
+    (localStateTruth_congr aligned.pullTime.symm aligned.pullPc.symm state)
     (aligned.pullCurrency state currency) loc value
     (fun message member => pushes message (aligned.pushes.mem_iff.mpr member)) current
   rw [aligned.pushTime]

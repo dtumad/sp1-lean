@@ -178,10 +178,10 @@ theorem ExecutionCarrier.engineFacts
     (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
     (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState) (timeline : Timeline)
     (steps : ∀ event ∈ events,
-      LocalStepFactG program trajectory initial timeline (facts event) ∧
-      FrameFactG program trajectory initial timeline (facts event)) :
-    ∀ row ∈ carrier.rows, LocalStepFactG program trajectory initial timeline row ∧
-      FrameFactG program trajectory initial timeline row := by
+      LocalStepFact program trajectory initial timeline (facts event) ∧
+      FrameFact program trajectory initial timeline (facts event)) :
+    ∀ row ∈ carrier.rows, LocalStepFact program trajectory initial timeline row ∧
+      FrameFact program trajectory initial timeline row := by
   intro row member
   obtain ⟨original, originalMem, aligned⟩ := forall₂_exists_right carrier.aligned row member
   obtain ⟨event, eventMem, rfl⟩ := List.mem_map.mp originalMem
@@ -193,15 +193,15 @@ actual read times. This does not assert truth at the original prior record's his
 theorem ExecutionCarrier.originalCurrency
     (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
     {program : Target.GuestProgram} {trajectory : Trajectory} {initial : SailState}
-    (grounded : ∀ row ∈ carrier.rows, GroundedG program trajectory initial carrier.timeline row) :
-    ∀ event ∈ events, LocalStateTruthG program trajectory carrier.timeline (facts event).statePull ∧
+    (grounded : ∀ row ∈ carrier.rows, Grounded program trajectory initial carrier.timeline row) :
+    ∀ event ∈ events, LocalStateTruth program trajectory carrier.timeline (facts event).statePull ∧
       ∀ pull ∈ (facts event).memPulls, MemoryMsg.isU64 pull.1 ∧ MemoryMsg.ClkBound pull.1 ∧
-        LocalValueAtG trajectory initial carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value := by
+        LocalValueAt trajectory initial carrier.timeline (MemoryMsg.locOf pull.1) pull.2 pull.1.value := by
   intro event member
   have originalMem := List.mem_map_of_mem (f := facts) (carrier.exhaustive.mem_iff.mpr member)
   obtain ⟨row, rowMem, aligned⟩ := forall₂_exists_right carrier.aligned.flip _ originalMem
   have current := grounded row rowMem
-  exact ⟨localStateTruthG_congr aligned.pullTime.symm aligned.pullPc.symm current.1,
+  exact ⟨localStateTruth_congr aligned.pullTime.symm aligned.pullPc.symm current.1,
     aligned.pullCurrency current.1 (fun pull member =>
       ⟨(current.2 pull member).1.1, (current.2 pull member).1.2.1, (current.2 pull member).2⟩)⟩
 
@@ -210,17 +210,17 @@ The final value assertion concerns the original physical frontier at the outgoin
 theorem ExecutionCarrier.ground
     (carrier : ExecutionCarrier facts events incoming outgoing initialFrontier physicalFinal)
     (program : Target.GuestProgram) (trajectory : Trajectory) (initial : SailState)
-    (initialState : LocalStateTruthG program trajectory carrier.timeline incoming)
-    (initialMemory : LiveOKG trajectory initial carrier.timeline (StateMsg.timeNat incoming) initialFrontier)
+    (initialState : LocalStateTruth program trajectory carrier.timeline incoming)
+    (initialMemory : LiveOK trajectory initial carrier.timeline (StateMsg.timeNat incoming) initialFrontier)
     (steps : ∀ event ∈ events,
-      LocalStepFactG program trajectory initial carrier.timeline (facts event) ∧
-      FrameFactG program trajectory initial carrier.timeline (facts event)) :
-    (∀ row ∈ carrier.rows, GroundedG program trajectory initial carrier.timeline row) ∧
-      LocalStateTruthG program trajectory carrier.timeline outgoing ∧
+      LocalStepFact program trajectory initial carrier.timeline (facts event) ∧
+      FrameFact program trajectory initial carrier.timeline (facts event)) :
+    (∀ row ∈ carrier.rows, Grounded program trajectory initial carrier.timeline row) ∧
+      LocalStateTruth program trajectory carrier.timeline outgoing ∧
       (∀ loc message, physicalFinal loc = some message →
-        LocalValueAtG trajectory initial carrier.timeline loc (StateMsg.timeNat outgoing) message.value) := by
+        LocalValueAt trajectory initial carrier.timeline loc (StateMsg.timeNat outgoing) message.value) := by
   have semantic := carrier.engineFacts program trajectory initial carrier.timeline steps
-  have grounded := walkG program trajectory initial carrier.timeline (StateMsg.timeNat incoming)
+  have grounded := walk program trajectory initial carrier.timeline (StateMsg.timeNat incoming)
     outgoing carrier.final carrier.rows.length carrier.rows incoming initialFrontier rfl
     (fun row member => (semantic row member).1) (fun row member => (semantic row member).2)
     carrier.rowOK carrier.timeStep initialState initialMemory carrier.stateBalance carrier.memoryBalance

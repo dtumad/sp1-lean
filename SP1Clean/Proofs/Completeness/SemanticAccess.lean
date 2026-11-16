@@ -20,10 +20,10 @@ theorem admissibleExecution_compile_at {limits : ResourceLimits} {characteristic
     (execution : AdmissibleExecution limits characteristic image source target events)
     {cut : ℕ} (ordinary : events[cut]? = some .ordinary) (frontier : AccessFrontier) :
     ∃ current next view result,
-      executionTrajectory (policy characteristic image) (image.toGuestProgram execution.1.1.1.1)
+      executionTrajectory (policy characteristic image) image.program
         source.realize events cut = some current ∧
-      ExecutionStep (policy characteristic image) (image.toGuestProgram execution.1.1.1.1) current .ordinary next ∧
-      projectSP1Transition? (image.toGuestProgram execution.1.1.1.1)
+      ExecutionStep (policy characteristic image) image.program current .ordinary next ∧
+      projectSP1Transition? image.program
         ⟨current.sail, ⟨.ordinary, next.sail⟩⟩ = some view ∧
       compileInstructionEvent? view frontier current.clock = some result ∧
       result.plan.WellFormed ∧ result.plan.length ≤ 3 ∧
@@ -41,9 +41,9 @@ theorem admissibleExecution_compile_at {limits : ResourceLimits} {characteristic
   refine ⟨current, next, view, result, replay, step, projected, generated, resultWellFormed,
     same ▸ length, ?_⟩
   intro bounded
-  have phase := (execution.2.choose_spec.1 cut current .ordinary ordinary replay).1
-  have clock := execution.1.2.1.clock_at ordinary replay
-  have final := execution.2.choose_spec.2.2.2.2.1
+  have phase := (execution.2.1 cut current .ordinary ordinary replay).1
+  have clock := execution.1.2.clock_at ordinary replay
+  have final := execution.2.2.2.2.2.1
   have currentLt : current.clock + 1 < 2 ^ 48 := by
     change current.clock + 8 ≤ target.clock at clock
     change target.clock < 2 ^ 48 at final
@@ -62,11 +62,11 @@ theorem admissibleExecution_compile_at_rtype_valid
     (execution : AdmissibleExecution limits characteristic image source target events)
     {cut : ℕ} (ordinary : events[cut]? = some .ordinary) (frontier : AccessFrontier) :
     ∃ current next view result,
-      executionTrajectory (policy characteristic image) (image.toGuestProgram execution.1.1.1.1)
+      executionTrajectory (policy characteristic image) image.program
         source.realize events cut = some current ∧
-      ExecutionStep (policy characteristic image) (image.toGuestProgram execution.1.1.1.1)
+      ExecutionStep (policy characteristic image) image.program
         current .ordinary next ∧
-      projectSP1Transition? (image.toGuestProgram execution.1.1.1.1)
+      projectSP1Transition? image.program
         ⟨current.sail, ⟨.ordinary, next.sail⟩⟩ = some view ∧
       compileInstructionEvent? view frontier current.clock = some result ∧
       (frontier.BoundedAt current.clock →
@@ -76,7 +76,7 @@ theorem admissibleExecution_compile_at_rtype_valid
     admissibleExecution_compile_at execution ordinary frontier
   refine ⟨current, next, view, result, replay, step, projected, generated, ?_⟩
   intro bounded family
-  have phase := (execution.2.choose_spec.1 cut current .ordinary ordinary replay).1
+  have phase := (execution.2.1 cut current .ordinary ordinary replay).1
   exact compileInstructionEvent?_rtype_valid projected generated family phase bounded
 
 end SP1Clean.TraceGen

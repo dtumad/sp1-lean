@@ -122,7 +122,7 @@ theorem syscallRow_sourceValues (row : SyscallInstrsChip.Inputs (ZMod p))
     (pc : source.regs.get? Register.PC = some (StateMsg.pcBits (syscallRowFacts row).statePull))
     (time : StateMsg.timeNat (syscallRowFacts row).statePull = tl.start n)
     (currency : ∀ mp ∈ (syscallRowFacts row).memPulls,
-      LocalValueAtG traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     AboutToExecuteEcall program source ∧
       source.regs.get? Register.PC = some (syscallEventOfRow row).pc ∧
       source.get_reg? 5#5 = some (syscallEventOfRow row).rawCode ∧
@@ -141,8 +141,8 @@ theorem syscallRow_sourceValues (row : SyscallInstrsChip.Inputs (ZMod p))
   rw [locB, time] at curB
   rw [locC, time] at curC
   exact ⟨⟨(syscallEventOfRow row).pc, pc, fetch⟩, pc,
-    (TimedGrounding.localValueAtG_stepStart_iff atSource).mp curA,
-    TimedGrounding.localValueAtG_regRead_of_traj (k := 3) atSource (by norm_num) curB,
-    TimedGrounding.localValueAtG_regRead_of_traj (k := 2) atSource (by norm_num) curC⟩
+    (TimedGrounding.localValueAt_stepStart_iff atSource).mp curA,
+    TimedGrounding.localValueAt_regRead_of_traj (k := 3) atSource (by norm_num) curB,
+    TimedGrounding.localValueAt_regRead_of_traj (k := 2) atSource (by norm_num) curC⟩
 
 end SP1Clean.Soundness

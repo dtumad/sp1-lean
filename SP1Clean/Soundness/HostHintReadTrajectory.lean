@@ -127,7 +127,7 @@ private theorem prefix_of_state (valid : image.Valid)
       (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
     {event : ExecutionRow p}
     (member : event ∈ LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull) :
     ∃ n current, carrier.ordered[n]? = some event ∧
       carrier.ordered = carrier.ordered.take n ++ event :: carrier.ordered.drop (n + 1) ∧
@@ -159,7 +159,7 @@ theorem GroundingCarrier.hintLength_result (valid : image.Valid)
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull) :
     ∃ n current, carrier.ordered[n]? = some event ∧ carrier.pairedTrajectory valid n = some current ∧
       Word.toBitVec64 (valueFromOffset HostHintLengthChip.Inputs 0 env).call.result = current.host.io.hintLength := by
@@ -196,11 +196,11 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
     (handler : (some empty, env) ∈ TransitionView.readIndexedRows HostQueueOrder.indices
       (queueTables (HostHintQueueBoundary.projected witness)))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (some empty, env))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current, carrier.ordered[n]? = some event ∧ carrier.pairedTrajectory valid n = some current ∧
       current.host.run ⟨{ readOnly := image.readOnly }, p⟩ (.ofSail current.sail) =
         some (HostHintLengthChip.execution (valueFromOffset HostHintLengthChip.Inputs 0 env) current.host) := by
@@ -230,7 +230,7 @@ theorem GroundingCarrier.hintLength_run (valid : image.Valid)
       (HostCallLedger.input physical).instruction) = carrier.timeline.start n := by
     simpa only [eventFacts, sameEvent, ExecutionRow.facts, syscallRowFacts_statePull] using time
   have original : ∀ mp ∈ (syscallRowFacts (HostCallLedger.input physical).instruction).memPulls,
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value := by
     intro mp present
     apply currency mp
     apply List.mem_append_left
@@ -280,11 +280,11 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
     (handler : env ∈ (handlerTable (HostHintQueueBoundary.projected witness)).table.map
       (Environment.fromArray · witness.data))
     (clock : StateMsg.timeNat (event.edge witness.data).1 = HostQueueCPUOrder.eventTime (none, env))
-    (pull : LocalStateTruthG (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
+    (pull : LocalStateTruth (image.toGuestProgram valid) (carrier.trajectory valid) carrier.timeline
       (event.facts witness.data).statePull)
     (currency : ∀ mp ∈ (eventFacts witness.data (TransitionView.readIndexedActiveRows HintReadCoverage.variants HintReadCoverage.view
         (wordTables (HostHintQueueBoundary.projected witness))) event).memPulls,
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
     ∃ n current store bytes remaining, carrier.ordered[n]? = some event ∧
       carrier.pairedTrajectory valid n = some current ∧
       HintQueue.Extends store (HintQueue.ofList source.host.io.hints).1 ∧
@@ -312,7 +312,7 @@ theorem GroundingCarrier.hintRead_run (valid : image.Valid)
   rw [sameEvent] at pc
   have running := replayEvents?_running_of_fetch (source_running carrier constraints balanced member) replayed pc fetch
   have original : ∀ mp ∈ (event.facts witness.data).memPulls,
-      LocalValueAtG (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value :=
+      LocalValueAt (carrier.trajectory valid) source.sail.realize carrier.timeline (MemoryMsg.locOf mp.1) mp.2 mp.1.value :=
     fun mp present => currency mp (List.mem_append_left _ present)
   rw [carrier.timeline_events constraints balanced] at original
   obtain ⟨store, bytes, remaining, extension, hints, next, executed, writes⟩ :=

@@ -73,8 +73,7 @@ theorem HostExecution.applySnapshot_realize (execution : HostExecution) (source 
 def ExecutionSnapshot.hostStep? (source : ExecutionSnapshot) (policy : HostPolicy)
     (program : GuestProgram) : Option (ExecutionSnapshot × CoreSyscallEvent) := do
   let pc ← source.sail.registers.get? Register.PC
-  if program.fetchWord pc = some ECALL_ENC ∧
-      InstructionBytes.check source.sail.readContext.byte pc ECALL_ENC = true then do
+  if program.fetchWord pc = some ECALL_ENC then do
     let execution ← source.host.run policy source.sail.readContext
     some (⟨execution.applySnapshot source.sail pc, execution.effect.state,
       source.clock + syscallSchedule.duration⟩, execution.toEvent source.clock pc)
@@ -91,9 +90,7 @@ theorem ExecutionSnapshot.hostStep?_realize (source : ExecutionSnapshot) (policy
     (source.host.step policy program source.clock source.sail.realize).map
       (fun (host, sail, event) => (⟨sail, host, source.clock + syscallSchedule.duration⟩, event))
   have pcEq : source.sail.realize.regs.get? Register.PC = source.sail.registers.get? Register.PC := rfl
-  have byteEq : source.sail.readContext.byte = source.sail.realize.mem.get? :=
-    congrArg HostReadContext.byte source.sail.readContext_eq
-  simp only [hostStep?, HostState.step, pcEq, byteEq]
+  simp only [hostStep?, HostState.step, pcEq]
   rw [source.sail.readContext_eq]
   cases pc : source.sail.registers.get? Register.PC with
   | none => simp only [bind, Option.bind_none, Option.map_none]
