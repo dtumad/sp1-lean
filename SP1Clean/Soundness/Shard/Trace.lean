@@ -137,8 +137,7 @@ name. -/
 theorem trace_of_committed_statement (valid : image.Valid) {commitments : CommitmentStatement}
     {fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
       (installed image source outgoing final bankFinal).tables.map (·.circuit.name)}
-    (lookupFree : ∀ component ∈ (installed image source outgoing final bankFinal).tables,
-      component.operations.lookups = [])
+    (lookupFree : LookupFree (installed image source outgoing final bankFinal).tables)
     {header : SP1PublicIO (ZMod p)} {heights : List ℕ}
     (accepted : (CommitmentEnsemble.install commitments
       (installed image source outgoing final bankFinal) fresh
@@ -180,7 +179,6 @@ theorem sail_trace {image : ProgramImage} {source : ExecutionSnapshot} {outgoing
       (installed image source outgoing final bankFinal) fresh
       (declarations_registered image source outgoing final bankFinal)).Statement .logUp header heights) :
     SailTrace commitments image source outgoing final bankFinal header :=
-  trace_of_committed_statement valid (fun component member => HostFinalMemory.installed_lookups component member)
-    accepted
+  trace_of_committed_statement valid HostFinalMemory.installed_lookupFree accepted
 
 end SP1Clean.Soundness.Shard

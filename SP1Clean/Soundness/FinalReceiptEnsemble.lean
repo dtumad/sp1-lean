@@ -1,6 +1,7 @@
 import SP1Clean.Native.Operations.FinalMemoryReceipt
 import ToClean.Air.ComponentReplacement
 import ToClean.Air.Footprint
+import ToClean.Air.LookupFree
 import ToClean.Circuit.InteractionRecovery
 
 /-! # Publishing the physical final inventory
@@ -52,6 +53,14 @@ variable {ens : Ensemble (ZMod p) PublicIO} {ram : Bool}
   {receiptRegistered : (FinalMemoryValue.channel ram).toRaw ∈ ens.channels}
   {provider : GeneralFormalCircuit (ZMod p) (ProvablePair Input field) MemoryMsg}
   {source : TableSlot ens.tables { circuit := provider, generation, Assumptions := provider.Assumptions }}
+
+/-- The receipt adds one interaction and no lookup, so publishing it preserves lookup freedom. -/
+theorem install_lookupFree (free : LookupFree ens.tables) :
+    LookupFree (install ens ram provider source receiptRegistered).tables := by
+  refine free.set ?_ _
+  change ((FinalMemoryReceipt.circuit ram provider).instantiate.operations 0).lookups = []
+  rw [FinalMemoryReceipt.lookups]
+  exact free _ (source.component_eq ▸ List.getElem_mem source.index.isLt)
 
 /-- The receipt-bearing component occupies exactly the original slot. -/
 def slot : TableSlot (install ens ram provider source receiptRegistered).tables

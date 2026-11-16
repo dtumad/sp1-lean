@@ -373,7 +373,7 @@ theorem localWitness_constraints (constraints : witness.Constraints) : (localWit
     rw [core_component image source auxiliary ⟨58, by decide⟩, ite_eq_left rfl] at checked
     exact HostCallProjection.constraints_prefix row witness.data (localWitness witness).data checked
   · rw [projectionWidth_eq (names := names) (channelNames := channelNames) (registered := registered) (channels := channels) index wrapper, ← rowWidth, Array.extract_size]
-    exact LocalCore.component_constraints_setData image source _ (List.getElem_mem _)
+    exact (LocalCore.tables_lookupFree image source).constraintsHold_setData (List.getElem_mem _)
       ((component_projection image source auxiliary ⟨index.val, bound⟩).1 _ checked)
 
 private theorem base_channel_registered (channel : RawChannel (ZMod p))

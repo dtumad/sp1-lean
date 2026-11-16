@@ -1,14 +1,12 @@
 import SP1Clean.Soundness.SP1Ensemble
-import ToClean.Air.TableBuild
+import ToClean.Air.LookupFree
 
-/-! # Constraint transport for the native instruction/provider inventory
+/-! # Lookup freedom of the core instruction/provider inventory
 
-The native instruction and provider components have no legacy lookups. Their physical
-constraints therefore survive a change from witness-generation data to the data derived
-from the committed tables.
-
-This says nothing about data-dependent channel guarantees, semantic commitment bindings or
-arbitrary ensembles with dynamic lookups; those require their own agreement proofs.
+The native instruction and provider components use polynomial constraints and channel
+interactions only, so their physical constraints survive a change from witness-generation data
+to the data derived from the committed tables (`LookupFree.constraintsHold_setData`). Channel
+guarantees and semantic commitment bindings are separate obligations.
 -/
 
 namespace SP1Clean.Soundness
@@ -50,23 +48,9 @@ theorem providerTableFor_lookups_empty (id : ProviderTableId) :
   | halt => exact HaltChip.lookups_empty
   | syscallInstrs => exact SyscallInstrsChip.lookups_empty
 
-/-- Every native provider constraint depends on its physical cells alone. -/
-theorem providerTableFor_constraints_setData (id : ProviderTableId)
-    {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
-    (checked : (providerTableFor id).operations.ConstraintsHold (Environment.fromArray row data)) :
-    (providerTableFor id).operations.ConstraintsHold (Environment.fromArray row data') :=
-  (providerTableFor id).constraintsHold_setData (providerTableFor_lookups_empty id) checked
-
-/-- Generated rows of this inventory may be checked at the ensemble's canonical data. -/
-theorem sp1Table_constraints_setData (component : Component (ZMod p))
-    (member : component ∈ (sp1Ensemble (p := p)).tables)
-    {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
-    (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
-    component.operations.ConstraintsHold (Environment.fromArray row data') := by
-  rw [sp1Ensemble_tables] at member
-  rcases List.mem_append.mp member with instruction | provider
-  · exact component.constraintsHold_setData (sp1Tables_lookups_empty component instruction) checked
-  · obtain ⟨id, _, rfl⟩ := List.mem_map.mp provider
-    exact providerTableFor_constraints_setData id checked
+/-- The core inventory: every instruction chip and every native provider is lookup-free. -/
+theorem sp1Ensemble_lookupFree : LookupFree (sp1Ensemble (p := p)).tables :=
+  LookupFree.append sp1Tables_lookups_empty
+    (LookupFree.map fun id _ => providerTableFor_lookups_empty id)
 
 end SP1Clean.Soundness

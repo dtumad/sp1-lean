@@ -75,7 +75,7 @@ theorem boundaryWitness_constraints
   have registered := EnsembleWitness.component_mem_tables_of_mem member
   rw [boundaryWitness_tables, withDerivedData] at member
   obtain ⟨⟨original, originalMember⟩, _, rfl⟩ := List.mem_map.mp member
-  exact FinalMemoryChecks.component_constraints_setData original.component registered
+  exact FinalMemoryChecks.tables_lookupFree.constraintsHold_setData registered
     (checked original (boundaryTables_subset witness originalMember) row rowMember)
 
 /-- Byte predicates depend on the retained messages, not the selected canonical data map. -/

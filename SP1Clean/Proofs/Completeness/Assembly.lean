@@ -575,7 +575,7 @@ theorem witness_constraints (wf : trace.WellFormed) : trace.witness.Constraints 
     EnsembleWitness.component_mem_tables_of_mem (witness := trace.witness) member
   rw [witness_tables, Air.Flat.withDerivedData] at member
   obtain ⟨⟨built, builtMem⟩, _, rfl⟩ := List.mem_map.mp member
-  apply sp1Table_constraints_setData built.component componentMem (data := built.data)
+  apply sp1Ensemble_lookupFree.constraintsHold_setData componentMem (data := built.data)
   rw [tables] at builtMem
   rcases List.mem_append.mp builtMem with instructionMem | providerMem
   · exact trace.instructionTables_constraints wf built instructionMem row rowMem

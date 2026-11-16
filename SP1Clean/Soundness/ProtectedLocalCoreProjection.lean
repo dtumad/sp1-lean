@@ -141,7 +141,8 @@ theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnaps
       rw [LocalCore.tables_length]; exact bound)).operations.ConstraintsHold
       (Environment.fromArray row witness.data) := by
     simpa only [Operations.ConstraintsHold, projection.1, projection.2.1] using checked
-  exact LocalCore.component_constraints_setData image source _ (List.getElem_mem _) original
+  exact (LocalCore.tables_lookupFree image source).constraintsHold_setData (List.getElem_mem _)
+    original
 
 private theorem provider_suffix_silent {image : ProgramImage} {source : ExecutionSnapshot}
     (witness : EnsembleWitness (ensemble (p := p) image source))
