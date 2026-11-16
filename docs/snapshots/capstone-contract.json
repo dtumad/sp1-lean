@@ -78478,13 +78478,6 @@
       "typeFingerprint": "3371105399"
     },
     {
-      "bodyFingerprint": "3885861155",
-      "local": true,
-      "module": "SP1Clean.Model.SP1Field",
-      "name": "SP1Clean.SP1Prime",
-      "typeFingerprint": "421340980"
-    },
-    {
       "bodyFingerprint": "2746873852",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.PublicValues",
@@ -83242,7 +83235,7 @@
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.sail_trace",
-      "typeFingerprint": "41942692"
+      "typeFingerprint": "1633071570"
     },
     {
       "bodyFingerprint": null,
@@ -93890,20 +93883,6 @@
       "module": "SP1Clean.Native.Operations.WritePermission",
       "name": "SP1Clean.WritePermissionProvider.membership_height_lt_uint64",
       "typeFingerprint": "732619803"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Model.SP1Field",
-      "name": "SP1Clean.instFactPow25LtSP1Prime",
-      "typeFingerprint": "1853504208"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Model.SP1Field",
-      "name": "SP1Clean.instFactSP1Prime",
-      "typeFingerprint": "1435015742"
     },
     {
       "bodyFingerprint": null,
