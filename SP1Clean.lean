@@ -239,6 +239,7 @@ import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.Shard.Contract
+import SP1Clean.Soundness.Shard.TargetEndpoint
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.StateCanon

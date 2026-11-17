@@ -102,6 +102,21 @@ private def nextPcReverse (initial finalPc : Option (BitVec 64)) : List Executio
   simp only [nextPcAfter, List.reverse_append, List.reverse_cons, List.reverse_nil,
     List.nil_append, List.singleton_append, nextPcReverse]
 
+/-- Without an ordinary event, the tape leaves nextPC at its initial value, whatever the endpoint
+PC. -/
+theorem nextPcAfter_of_countP_ordinary_eq_zero {events : List ExecutionEvent}
+    (initial finalPc : Option (BitVec 64)) (noOrdinary : events.countP ExecutionEvent.isOrdinary = 0) :
+    nextPcAfter events initial finalPc = initial := by
+  induction events using List.reverseRecOn generalizing finalPc with
+  | nil => exact nextPcAfter_nil initial finalPc
+  | append_singleton events event ih =>
+    rw [List.countP_append] at noOrdinary
+    cases event with
+    | ordinary => simp [ExecutionEvent.isOrdinary] at noOrdinary
+    | syscall call =>
+      rw [nextPcAfter_syscall]
+      exact ih _ (by simpa [ExecutionEvent.isOrdinary] using noOrdinary)
+
 /-- Local nextPC effects and the existing host-call PC authentication determine the whole tape's
 bookkeeping. This does not require a separate physical trace or expose instruction splitting. -/
 theorem replayEvents?_nextPC {policy : HostPolicy} {program : Soundness.Target.GuestProgram}
