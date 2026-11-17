@@ -148,30 +148,26 @@ theorem Balanced.of_balancedChannels
     (balanced : witness.BalancedChannels) : Balanced witness :=
   fun channel member _ => balanced channel member
 
+/-- The hidden channels' names. -/
+private def hiddenNames : List String :=
+  ["SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange",
+    "sp1.native.commitment_declaration"]
+
 omit [Fact (2 ^ 25 < p)] in
-/-- No fresh verifier channel of the installed checkers is hidden: their stems differ from every
-hidden name at the fifth character. -/
-private theorem fresh_visible (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
-    (long : 4 < stem.toList.length) (differs : stem.toList[4]? ≠ some 'i')
-    (declaration : stem.toList[4]? ≠ some 'n') :
-    VerifierChannel.channel stem ens ∉ hiddenChannels (p := p) := by
-  intro member
-  have prefixed (other : String) (same : (VerifierChannel.channel stem ens : RawChannel (ZMod p)).name = other) :
-      stem.toList[4]? = other.toList[4]? := by
-    have heads := congrArg (fun name : String => name.toList[4]?) same
-    dsimp only [VerifierChannel.channel, Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append, List.getElem?_append_left long] at heads
-    exact heads
+private theorem hidden_name {hidden : RawChannel (ZMod p)} (member : hidden ∈ hiddenChannels (p := p)) :
+    hidden.name ∈ hiddenNames := by
   simp only [hiddenChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with same | same | same | same
-  · exact differs ((prefixed _ (congrArg RawChannel.name same)).trans (by
-      simp [FinalMemoryValue.channel, Channel.toRaw]))
-  · exact differs ((prefixed _ (congrArg RawChannel.name same)).trans (by
-      simp [FinalMemoryValue.channel, Channel.toRaw]))
-  · exact differs ((prefixed _ (congrArg RawChannel.name same)).trans (by
-      simp [FinalMemoryChange.channel, Channel.toRaw]))
-  · exact declaration ((prefixed _ (congrArg RawChannel.name same)).trans (by
-      simp [CommitmentDeclaration.channel, Channel.toRaw]))
+  rcases member with rfl | rfl | rfl | rfl <;>
+    simp [hiddenNames, FinalMemoryValue.channel, FinalMemoryChange.channel,
+      CommitmentDeclaration.channel, Channel.toRaw]
+
+omit [Fact (2 ^ 25 < p)] in
+/-- No fresh verifier channel of the installed checkers is hidden: no hidden name starts with a
+checker's stem. -/
+private theorem fresh_visible (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
+    (unprefixed : ∀ name ∈ hiddenNames, ¬ stem.toList <+: name.toList) :
+    VerifierChannel.channel stem ens ∉ hiddenChannels (p := p) := fun member =>
+  VerifierChannel.channel_ne_of_not_prefix stem ens (unprefixed _ (hidden_name member)) rfl
 
 theorem projected_constraints
     (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
@@ -198,10 +194,8 @@ theorem boundary_checks
   have checked := ((boundary source final bankFinal).check_balanced_iff (underlying witness)).mp
     (HaltPadding.balancedChannel witness _ (balanced _ (by simp [ensemble, HaltPadding.install,
       Ensemble.replaceComponent, ClosedVerifier.install])
-      (fresh_visible _ _
-        (by rw [show (boundary source final bankFinal).name = "host-boundary" from rfl]; decide)
-        (by rw [show (boundary source final bankFinal).name = "host-boundary" from rfl]; decide)
-        (by rw [show (boundary source final bankFinal).name = "host-boundary" from rfl]; decide))))
+      (fresh_visible _ _ (by
+        rw [show (boundary source final bankFinal).name = "host-boundary" from rfl]; decide))))
   simpa only [underlying_data] using checked
 
 theorem source_binding
@@ -370,13 +364,9 @@ private theorem boundary_checker_silent (base : Ensemble (ZMod p) SP1PublicIO) :
     (LocalSourceBoundary.checker image source).channel base ∉
       (boundary source final bankFinal).circuit.channels := by
   apply boundary_silent
-  all_goals
-    intro same
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [PublicVerifier.channel, VerifierChannel.channel, Verifier.zeroChannel,
-      Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    simp [LocalSourceBoundary.checker, stateChannel, HostCommitChip.stateChannel, HostExitBoundary.channel] at heads
+  all_goals exact VerifierChannel.channel_ne_of_not_prefix "sp1.local.source" _ (by
+    simp only [stateChannel, HostCommitChip.stateChannel, HostExitBoundary.channel, Channel.toRaw]
+    decide)
 
 /-- Source authentication and CPU chronology survive removal of the host-only endpoints. -/
 theorem projected_orderingChannels
@@ -390,10 +380,8 @@ theorem projected_orderingChannels
   · apply projected_balancedChannel witness balanced
     · exact List.mem_append_right _ (List.mem_singleton_self _)
     · exact boundary_checker_silent _
-    · exact fresh_visible _ _
-        (by rw [show (LocalSourceBoundary.checker image source).name = "sp1.local.source" from rfl]; decide)
-        (by rw [show (LocalSourceBoundary.checker image source).name = "sp1.local.source" from rfl]; decide)
-        (by rw [show (LocalSourceBoundary.checker image source).name = "sp1.local.source" from rfl]; decide)
+    · exact fresh_visible _ _ (by
+        rw [show (LocalSourceBoundary.checker image source).name = "sp1.local.source" from rfl]; decide)
   · exact projected_core_balancedChannel witness balanced _
       (by simp [LocalCore.baseEnsemble, sp1Ensemble_channels])
 

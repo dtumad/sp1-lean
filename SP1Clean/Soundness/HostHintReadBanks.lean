@@ -195,24 +195,9 @@ private theorem auxiliary_interactions (deferred : Bool)
 
 private theorem bank_fresh (deferred : Bool) :
     (HostCommitChip.stateChannel deferred).toRaw ∉
-      (LocalCore.ensemble (p := p) image source).channels := by
-  intro used
-  change (HostCommitChip.stateChannel deferred).toRaw ∈
-    (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at used
-  rcases List.mem_append.mp used with used | used
-  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    cases deferred <;>
-      simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-        SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HostCommitChip.stateChannel,
-        Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
-        Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
-        StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
-  · have same := (List.mem_singleton.mp used).symm
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    cases deferred <;> simp [LocalSourceBoundary.checker, HostCommitChip.stateChannel] at heads
+      (LocalCore.baseEnsemble (p := p) image source).channels :=
+  LocalCore.not_mem_baseEnsemble_channels (by
+    cases deferred <;> simp [LocalCore.baseChannelNames, HostCommitChip.stateChannel, Channel.toRaw])
 
 private theorem wrapper_bank_silent (deferred : Bool) :
     (HostCommitChip.stateChannel deferred).toRaw ∉ (HostCallLedger.producer (p := p)).circuit.channels := by

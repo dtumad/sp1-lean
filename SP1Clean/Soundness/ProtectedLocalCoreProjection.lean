@@ -192,21 +192,12 @@ theorem old_channel_ne_permission {image : ProgramImage} {source : ExecutionSnap
     channel ≠ WritePermissionProvider.channel.toRaw := by
   change channel ∈ (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at member
   rcases List.mem_append.mp member with member | member
-  · intro same
-    have names := List.mem_map_of_mem (f := RawChannel.name) member
-    rw [same] at names
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-      WritePermissionProvider.channel, stateChannel, memoryChannel, byteChannel, programChannel,
-      exitChannel, syscallChannel, publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership,
-      MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at names
+  · rintro rfl
+    exact LocalCore.not_mem_baseEnsemble_channels
+      (by simp [LocalCore.baseChannelNames, WritePermissionProvider.channel, Channel.toRaw]) member
   · obtain rfl := List.mem_singleton.mp member
-    intro same
-    have names := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList.head?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at names
-    rw [String.toList_append] at names
-    simp [LocalSourceBoundary.checker, WritePermissionProvider.channel] at names
+    exact VerifierChannel.channel_ne_of_not_prefix "sp1.local.source" _ (by
+      simp only [WritePermissionProvider.channel, Channel.toRaw]; decide)
 
 /-- The interval-membership channel is fresh for every registered local-core channel. -/
 theorem old_channel_ne_membership {image : ProgramImage} {source : ExecutionSnapshot}
@@ -214,22 +205,14 @@ theorem old_channel_ne_membership {image : ProgramImage} {source : ExecutionSnap
     channel ≠ image.writePermissionTable.channel.toRaw := by
   change channel ∈ (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at member
   rcases List.mem_append.mp member with member | member
-  · intro same
-    have names := List.mem_map_of_mem (f := RawChannel.name) member
-    rw [same] at names
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-      stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-      publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership,
-      MemorySnapshot.registerTable, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw] at names
+  · rintro rfl
+    exact LocalCore.not_mem_baseEnsemble_channels (by
+      simp [LocalCore.baseChannelNames, StaticTable.channel, ProgramImage.writePermissionTable,
+        StaticTable.ofRows, Channel.toRaw]) member
   · obtain rfl := List.mem_singleton.mp member
-    intro same
-    have names := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList.take 5) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at names
-    rw [String.toList_append] at names
-    simp [LocalSourceBoundary.checker, StaticTable.channel, ProgramImage.writePermissionTable,
-      StaticTable.ofRows] at names
+    exact VerifierChannel.channel_ne_of_not_prefix "sp1.local.source" _ (by
+      simp only [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
+      decide)
 
 /-- The protected ensemble supplies all balance premises of the original local grounding. -/
 theorem localWitness_balanced {image : ProgramImage} {source : ExecutionSnapshot}

@@ -67,23 +67,9 @@ theorem extraTables_components
   rw [HostLocalHandoff.resourceTables_components witness]
   simp only [wordResources, List.cons_append, List.nil_append, List.drop_succ_cons, List.drop_zero]
 
-private theorem queue_fresh : stateChannel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels := by
-  intro used
-  change stateChannel.toRaw ∈ (LocalCore.baseEnsemble image source).channels ++
-    [LocalCore.sourceChannel image source] at used
-  rcases List.mem_append.mp used with used | used
-  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, stateChannel,
-      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
-      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
-      StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
-  · have same := (List.mem_singleton.mp used).symm
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    simp [LocalSourceBoundary.checker, stateChannel] at heads
+private theorem queue_fresh : stateChannel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels :=
+  LocalCore.not_mem_baseEnsemble_channels (by
+    simp [LocalCore.baseChannelNames, stateChannel, Channel.toRaw])
 
 private theorem wrapper_queue_silent : stateChannel.toRaw ∉ (HostCallLedger.producer (p := p)).circuit.channels := by
   intro used

@@ -185,6 +185,27 @@ def baseEnsemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble 
     simp only [sp1Ensemble_channels, List.mem_cons, List.not_mem_nil, or_false]
     aesop
 
+/-- The base assembly's channel names. None depends on the image or the source. -/
+def baseChannelNames : List String :=
+  ["SP1NativeMemoryInitOrder", "SP1NativeMemoryFinalOrder", "sp1.native.source_registers",
+    "sp1.native.initial_memory", "SP1State", "SP1Byte", "SP1Program", "SP1Memory", "SP1Exit",
+    "SP1Syscall", "SP1PublicValues"]
+
+theorem baseEnsemble_channel_names (image : ProgramImage) (source : ExecutionSnapshot) :
+    (baseEnsemble (p := p) image source).channels.map RawChannel.name = baseChannelNames := by
+  simp only [baseEnsemble, MemorySnapshot.registerTable, StaticTable.ofRows, StaticTable.channel,
+    InitialMemoryLookup.membership, OrderedBoundary.channel, Channel.toRaw_name,
+    SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, sp1Ensemble_channels,
+    List.map_cons, List.map_nil]
+  rfl
+
+/-- A channel whose name is not one of the base names is not a base channel. Host extensions
+register their protocols on such names. -/
+theorem not_mem_baseEnsemble_channels {image : ProgramImage} {source : ExecutionSnapshot}
+    {channel : RawChannel (ZMod p)} (fresh : channel.name ∉ baseChannelNames) :
+    channel ∉ (baseEnsemble image source).channels := fun used =>
+  fresh (baseEnsemble_channel_names (p := p) image source ▸ List.mem_map_of_mem used)
+
 /-- Install all eight source checks with the generic public-assertion adapter. -/
 def ensemble (image : ProgramImage) (source : ExecutionSnapshot) : Ensemble (ZMod p) SP1PublicIO :=
   (LocalSourceBoundary.checker image source).install (baseEnsemble image source)
