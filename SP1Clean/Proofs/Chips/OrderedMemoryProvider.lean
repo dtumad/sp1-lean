@@ -3,8 +3,8 @@ import ToClean.Circuit.Guarded
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.Native.Operations.OrderedBoundary
 import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Core.MemoryTable
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Semantics.Memory.MemoryTable
 
 /-! # Canonical memory records with checked ordering
 

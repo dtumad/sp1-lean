@@ -1,4 +1,4 @@
-import SP1Clean.Model.InstructionChipId
+import SP1Clean.Semantics.ISA.InstructionChipId
 import SP1Clean.FormalModel.TraceGen.Events
 
 /-! # Semantic events indexed by the native instruction registry

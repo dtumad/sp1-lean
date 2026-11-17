@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
-import SP1Clean.Model.Machine.ConfiguredState
+import SP1Clean.Semantics.Execution.ConfiguredState
 
 /-! # Canonical memory access and refresh regressions
 

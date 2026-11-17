@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HaltGrounding
 import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.HostHalt
+import SP1Clean.Semantics.Host.HostHalt
 
 /-! # HALT from grounded observations
 

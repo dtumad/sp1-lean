@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.TraceGen.Events
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-!
 # The trace layer's clock literals are the machine model's constants
@@ -11,7 +11,7 @@ is that the layer spells its clock arithmetic as bare literals — `clk % 8 = 1`
 `prevTsB < clk + 3`, `prevTsC < clk + 2`, and the RAM access at `clk + 1`.
 
 Those are SP1's `CLK_INC` and `MemoryAccessPosition` values, and on the semantics side the same
-numbers are named (`Model/Semantics/MicroTime.lean`) and carried structurally by
+numbers are named (`Semantics/Transition/MicroTime.lean`) and carried structurally by
 `Machine.ordinarySchedule`. Until this module they agreed only by inspection. Every equation here is
 `rfl` — that is the point: the constants really are the same, and a change to either side now breaks
 a named theorem instead of silently desynchronising a comment from a literal.
@@ -28,8 +28,8 @@ open SP1Clean.Machine (ordinarySchedule)
 
 /-! ## The window width -/
 
-/-- The schedule's window width **is** `CLK_INC`. `Model/Machine/Schedule.lean` carries the number
-structurally (as a `StepSchedule` field) and `Model/Semantics/MicroTime.lean` names it; the timed
+/-- The schedule's window width **is** `CLK_INC`. `Semantics/Execution/Schedule.lean` carries the number
+structurally (as a `StepSchedule` field) and `Semantics/Transition/MicroTime.lean` names it; the timed
 grounding engine consumes the former and `microValue` the latter. -/
 theorem ordinarySchedule_duration_eq : ordinarySchedule.duration = ordinaryClkInc := rfl
 

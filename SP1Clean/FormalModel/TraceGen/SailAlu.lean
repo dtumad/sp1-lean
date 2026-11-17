@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.TraceGen.AluGenerator
-import SP1Clean.Model.Semantics.GuestProgram
+import SP1Clean.Semantics.Sail.GuestProgram
 
 /-!
 # Reading ALU steps off a Sail execution
@@ -22,7 +22,7 @@ That leaves exactly two real hypotheses, and both are stated rather than absorbe
 * the decoder never routes an `x0` destination here — those rows belong to the `AluX0` chip, so this
   is a routing condition, not a restriction on what the machine can do.
 
-**What this module does not do** is decode. `decode` is a parameter. `Model/SailDecode.lean`'s
+**What this module does not do** is decode. `decode` is a parameter. `Semantics/Sail/SailDecode.lean`'s
 witnesses are each for one hard-coded 32-bit word, so any *instantiation* of this walk currently
 carries whatever program restriction those witnesses impose; keeping the decoder abstract here means
 that restriction lands in the caller's statement, where it can be read, instead of being baked into

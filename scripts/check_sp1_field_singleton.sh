@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Gate the single-source-of-truth invariant for SP1's concrete KoalaBear characteristic.
-# Production and test/export code must import Model/SP1Field.lean; a local alias or repeated
+# Production and test/export code must import Math/SP1Field.lean; a local alias or repeated
 # decimal literal would recreate two notions of the field and let their facts drift apart.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-owner="SP1Clean/Model/SP1Field.lean"
+owner="SP1Clean/Math/SP1Field.lean"
 pattern='(^|[[:space:]])(abbrev|def)[[:space:]]+SP1Prime|2130706433'
 if command -v rg >/dev/null 2>&1; then
   hits="$(rg -l "$pattern" SP1Clean SP1CleanTest scripts -g '*.lean' || true)"

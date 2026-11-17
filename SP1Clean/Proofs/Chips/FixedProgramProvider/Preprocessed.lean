@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.ProgramTable
-import SP1Clean.Model.Channels
+import SP1Clean.Semantics.Execution.ProgramTable
+import SP1Clean.Circuits.Channels.Channels
 import ToClean.Air.FixedPrefix
 import ToClean.Air.MessageIndex
 import ToClean.Air.FixedRows

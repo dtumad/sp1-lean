@@ -1,7 +1,7 @@
-import SP1Clean.Model.MemoryClock
-import SP1Clean.Model.Core.ExecutionEncoding
+import SP1Clean.Semantics.Memory.MemoryClock
+import SP1Clean.Semantics.Execution.ExecutionEncoding
 import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # Extracting natural-number time from CPUState clocks
 

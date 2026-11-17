@@ -1,7 +1,7 @@
 module
 
 public import SP1Clean.Math.Word
-public import SP1Clean.Model.BusMessages
+public import SP1Clean.Circuits.Channels.BusMessages
 public import SP1Clean.Circuits.Types.CPUState
 public import SP1Clean.Circuits.Types.RTypeReader
 public import SP1Clean.Circuits.Types.ALUTypeReader

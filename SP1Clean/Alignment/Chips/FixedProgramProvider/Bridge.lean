@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
-import SP1Clean.Model.Semantics.Truth
+import SP1Clean.Semantics.Transition.Truth
 import SP1Clean.Proofs.Sail.InstructionDecode
 import ToClean.Air.ChannelClosure
 

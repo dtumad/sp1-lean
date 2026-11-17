@@ -1,5 +1,5 @@
 import Clean.Backends.Plonky3.Print
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Shared component-local export fixtures
 

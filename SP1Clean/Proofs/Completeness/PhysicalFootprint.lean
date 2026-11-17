@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Completeness.Assembly
 import ToClean.Air.Footprint
-import SP1Clean.Model.Core.ResourceLimits
+import SP1Clean.Semantics.Resources.ResourceLimits
 
 /-! # Exact construction costs of the retained native compiler
 

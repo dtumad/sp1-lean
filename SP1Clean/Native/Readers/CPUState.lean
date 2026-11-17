@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
+import SP1Clean.Circuits.Channels.Channels
+import SP1Clean.Circuits.Channels.ByteTable
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Circuits.Types.CPUState
 import Clean.Circuit.Basic

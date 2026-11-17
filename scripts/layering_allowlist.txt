@@ -20,13 +20,13 @@ import SP1Clean/Proofs/Chips/BranchChip/Core.lean SP1Clean/Proofs/Chips/BranchCh
 # 2. Namespace exceptions where the PATH is right and the namespace is a deliberate naming choice,
 #    not a placement signal. These legacy namespace choices identify their first consumers;
 #    complete API migration may rename them. The declarations are consumed by the
-#    soundness layer and named for it, while structurally belonging to the substrate — and Model/ is
-#    measurably clean, with zero imports into any higher pillar.
+#    soundness layer and named for it, while structurally belonging to the semantic substrate, which
+#    has no imports from any higher pillar.
 #
-namespace SP1Clean/Model/Opcode.lean
-namespace SP1Clean/Model/Machine/Boot.lean
+namespace SP1Clean/Semantics/ISA/Opcode.lean
+namespace SP1Clean/Semantics/Execution/GuestBoot.lean
 # Shared configured-state construction retains the existing Target vocabulary after its hoist.
-namespace SP1Clean/Model/Machine/ConfiguredState.lean
-namespace SP1Clean/Model/Semantics/Decode.lean
-namespace SP1Clean/Model/Semantics/GuestProgram.lean
+namespace SP1Clean/Semantics/Execution/ConfiguredState.lean
+namespace SP1Clean/Semantics/ISA/Decode.lean
+namespace SP1Clean/Semantics/Sail/GuestProgram.lean
 namespace SP1Clean/FormalModel/Trace/Witness.lean

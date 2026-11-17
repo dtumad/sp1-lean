@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
-import SP1Clean.Model.Machine.ConfiguredState
-import SP1Clean.Model.Semantics.SailControlExecute
+import SP1Clean.Semantics.Execution.ConfiguredState
+import SP1Clean.Semantics.Sail.SailControlExecute
 
 /-! # Control-flow compiler boundary counterexamples
 

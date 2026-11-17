@@ -1,5 +1,5 @@
 import SP1Clean.Native.Operations.InitialMemoryLookup
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Initial-memory AIR regressions

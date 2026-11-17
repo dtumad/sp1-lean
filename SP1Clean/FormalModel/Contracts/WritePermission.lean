@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.WritePermission
+import SP1Clean.Semantics.Memory.WritePermission
 import Clean.Circuit.Channel
 
 /-! # Byte-level write permission contract

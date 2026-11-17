@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.InstructionFetch
+import SP1Clean.Semantics.Execution.InstructionFetch
 import SP1Clean.FormalModel.ShardPreservation
 
 /-! # Authenticated ordinary fetch and boundaries without a successor instruction

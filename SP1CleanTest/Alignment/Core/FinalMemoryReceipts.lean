@@ -3,7 +3,7 @@ import SP1CleanTest.Core.StaticMembership
 import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Native.Operations.FinalRegisterValue
 import SP1Clean.Native.Operations.FinalRamValue
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Physical finalizer receipt installation
 

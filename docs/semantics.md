@@ -16,9 +16,9 @@ This is a target, not an instantiated theorem. Its checked definitions are
 
 ## State and execution
 
-[Core execution](../SP1Clean/Model/Core/Execution.lean) relates complete Sail state, concrete
-host state and clock. [ExecutionPath](../SP1Clean/Model/Core/ExecutionPath.lean) composes those
-steps; finite [snapshots](../SP1Clean/Model/Core/ExecutionSnapshot.lean) describe their boundaries.
+[Core execution](../SP1Clean/Semantics/Execution/Execution.lean) relates complete Sail state, concrete
+host state and clock. [ExecutionPath](../SP1Clean/Semantics/Execution/ExecutionPath.lean) composes those
+steps; finite [snapshots](../SP1Clean/Semantics/Execution/ExecutionSnapshot.lean) describe their boundaries.
 Memory snapshots are projections, not an alternative execution model. Complete comparison
 includes register-map presence, sparse RAM, simulator runtime, nextPC/retirement bookkeeping,
 host queues, outputs, commitment banks, requests/replies and optional exit.

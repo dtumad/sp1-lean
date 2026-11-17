@@ -1,4 +1,4 @@
-import SP1Clean.Model.SailWrap
+import SP1Clean.Semantics.Sail.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.DivRemChip.Formal
 import SP1Clean.Soundness.ChipRow
@@ -14,7 +14,7 @@ four Sail families (`execute_DIV`/`execute_REM`/`execute_DIVW`/`execute_REMW`) e
 remainder (`rem`/`remu`), and the four low-32 sign-extended word variants (`divw`/`divuw`/`remw`/`remuw`).
 
 This bridge uses the **RV64 provider library's** connection lemmas directly:
-`SailRV64.execute_{DIV,DIVW,REM,REMW}_eq` (`Model/SailPure.lean`) chained with
+`SailRV64.execute_{DIV,DIVW,REM,REMW}_eq` (`Semantics/Sail/SailPure.lean`) chained with
 `RV64.{div_eq,divu_eq,divw_eq,divuw_eq,rem_eq,remu_eq,remw_eq,remuw_eq}`
 (`Proofs/Sail/RV64Bridge.lean`). Each `correct_*_native` is pure monad plumbing — the BitVec
 algebra lives in those dep lemmas.

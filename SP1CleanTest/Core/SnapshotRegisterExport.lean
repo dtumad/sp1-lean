@@ -1,7 +1,7 @@
 import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
 import SP1Clean.Native.Operations.FinalRegisterValue
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import ToClean.Air.EnsembleCheck
 
 /-! # Built-in export of source and target register authentication

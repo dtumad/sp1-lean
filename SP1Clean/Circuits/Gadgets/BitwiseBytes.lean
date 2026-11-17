@@ -1,8 +1,8 @@
 module
 
 public import SP1Clean.Semantics.Specs.BitwiseBytes
-public import SP1Clean.Model.ByteTable
-public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Channels.ByteTable
+public import SP1Clean.Circuits.Channels.Channels
 public import Clean.Circuit.Subcircuit
 import SP1Clean.Math.Gate
 import Clean.Utils.Tactics.CircuitProofStart

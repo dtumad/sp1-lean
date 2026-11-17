@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Core.ProgramImage
-import SP1Clean.Model.Semantics.Decode
+import SP1Clean.Semantics.Execution.ProgramImage
+import SP1Clean.Semantics.ISA.Decode
 
 /-! # Public boot boundary of the image-authenticated native core
 

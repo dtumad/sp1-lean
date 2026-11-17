@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.ShardResources
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1Clean.Native.Operations.ResourceBoundary
 
 /-! # A nonempty bounded complete-state shard

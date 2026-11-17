@@ -173,7 +173,7 @@ def main() -> None:
         fail(f"invalid release coverage: {error}")
     expected_ids = [chip_id for chip_id, _, _ in CHIPS]
 
-    identity_source = (ROOT / "SP1Clean/Model/InstructionChipId.lean").read_text()
+    identity_source = (ROOT / "SP1Clean/Semantics/ISA/InstructionChipId.lean").read_text()
     enum_match = re.search(
         r"inductive InstructionChipId where\n(?P<body>.*?)\nderiving", identity_source, re.S
     )

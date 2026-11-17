@@ -13,7 +13,7 @@ This anchor's scope is the one-ADD row's own constraints and interactions. The j
 of `SupportedCoreNativeRelation` is witnessed separately (`Audit/JointNonVacuity.lean`, the empty
 shard), and the per-family `decodedInROM` satisfiability — whose concrete `LeanRV64D.ext_decode`
 witness was retired during the Sail-v5 migration and restored 2026-08 at full family coverage — by
-the 18 examples in `Soundness/Decode.lean` on top of `Model/SailDecode.lean`'s decode battery. The
+the 18 examples in `Soundness/Decode.lean` on top of `Semantics/Sail/SailDecode.lean`'s decode battery. The
 exact interaction list below makes the provider/boundary content of a real row visible.
 -/
 

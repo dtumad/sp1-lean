@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HintQueueRecords
+import SP1Clean.Semantics.Host.HintQueueRecords
 import SP1Clean.FormalModel.Contracts.HostCall
 import SP1Clean.FormalModel.Contracts.ClockOrder
 

@@ -1,8 +1,8 @@
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.SailBookkeeping
-import SP1Clean.Model.Core.QueueReplay
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Execution.ExecutionReplay
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.Execution.SailBookkeeping
+import SP1Clean.Semantics.Host.QueueReplay
+import SP1Clean.Math.SP1Field
 import SP1CleanTest.Alignment.Support.AnchorShard
 
 /-! # Native local-path and terminal-boundary regressions

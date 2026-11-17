@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.HostSail
-import SP1Clean.Model.Core.HostReplay
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Host.HostSail
+import SP1Clean.Semantics.Host.HostReplay
+import SP1Clean.Math.SP1Field
 
 /-! # Stateful native host execution regressions
 

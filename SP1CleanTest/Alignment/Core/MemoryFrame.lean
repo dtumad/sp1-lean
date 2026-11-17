@@ -1,5 +1,5 @@
-import SP1Clean.Model.Semantics.SailInstructionFrame
-import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.Semantics.Sail.SailInstructionFrame
+import SP1Clean.Semantics.Execution.SourceExecution
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Proofs.Sail.InstructionDecode
 

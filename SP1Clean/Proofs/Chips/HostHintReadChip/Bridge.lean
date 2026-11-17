@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
 import SP1Clean.Proofs.Operations.HintReadSpanNode
-import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # HINT_READ reaches the concrete host interpreter
 

@@ -1,4 +1,4 @@
-import SP1Clean.Model.FinalMemoryChange
+import SP1Clean.Circuits.Channels.FinalMemoryChange
 import ToClean.Air.VerifierExtension
 
 /-! # Verifier-owned demand for every changed Memory location

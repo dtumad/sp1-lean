@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.HostQueue
-import SP1Clean.Model.Core.BankReplay
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Host.HostQueue
+import SP1Clean.Semantics.Host.BankReplay
+import SP1Clean.Math.SP1Field
 
 /-! # Stateful queue compilation regressions
 

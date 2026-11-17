@@ -13,7 +13,7 @@ five/six bits of `rs2`, and division by zero / signed overflow follow the ISA's 
 
 **Operand order is `rs2` then `rs1`**, matching the Sail model's `execute_* rs2 rs1 rd` argument
 order so that a bridge lemma reads `SailRV64.op rs2 rs1 = RV64.op rs2 rs1` without swapping. The
-Sail-side counterparts live in `Model/SailPure.lean`; the equalities between the two are proved
+Sail-side counterparts live in `Semantics/Sail/SailPure.lean`; the equalities between the two are proved
 in `Proofs/Sail/RV64Bridge.lean`.
 
 This module replaces the former `riscv-lean` dependency, whose only role here was to supply

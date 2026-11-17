@@ -53,7 +53,7 @@ Provenance of the numbers quoted below (paths relative to the sibling `sp1` chec
 pinned semantic revision): `crates/core/executor/src/lib.rs` — `pub const CLK_INC: u32 = 8`; and
 `crates/core/executor/src/events/memory.rs` — `enum MemoryAccessPosition { UntrustedInstruction =
 0, Memory = 1, C = 2, B = 3, A = 4 }`, the intra-window offsets at which the row's register
-accesses are timestamped. `Model/Semantics/MicroTime.lean` names the same two constants for the
+accesses are timestamped. `Semantics/Transition/MicroTime.lean` names the same two constants for the
 grounding engine (`ordinaryClkInc`, `regEffectOffset`); this layer keeps the offsets as literals
 so that it does not have to import the Sail-dependent semantics substrate. -/
 

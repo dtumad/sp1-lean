@@ -1,4 +1,4 @@
-import SP1Clean.Model.Semantics.DurationTime
+import SP1Clean.Semantics.Transition.DurationTime
 import SP1Clean.Soundness.GenericWalk
 
 /-! # The timeline determined by a State walk

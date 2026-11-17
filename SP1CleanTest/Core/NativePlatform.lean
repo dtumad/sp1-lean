@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Semantics.SailFetch
+import SP1Clean.Semantics.Execution.SourceExecution
+import SP1Clean.Semantics.Sail.SailFetch
 
 /-! # The native platform fixes four-byte instruction alignment
 

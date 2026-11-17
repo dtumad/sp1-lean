@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HostHintReadExecutionPath
 import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Model.Core.SailBookkeeping
+import SP1Clean.Semantics.Execution.SailBookkeeping
 
 /-! # Complete retirement bookkeeping along the installed local execution
 

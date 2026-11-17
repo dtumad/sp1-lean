@@ -1,6 +1,6 @@
 import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import ToClean.Air.FiniteLookup
 import SP1CleanTest.Core.StaticMembership
 import Clean.Circuit.WitnessExport

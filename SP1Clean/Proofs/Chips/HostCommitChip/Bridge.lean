@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostCommitChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # Native commitment rows implement mutable host slots
 

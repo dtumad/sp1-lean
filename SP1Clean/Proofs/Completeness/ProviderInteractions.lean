@@ -1,15 +1,15 @@
-import SP1Clean.Model.CleanLedger
+import SP1Clean.Machine.Ledger.CleanLedger
 import SP1Clean.Proofs.Completeness.Ledger
 
 /-! # What one built provider row actually emits
 
-`Model/InteractionBus.lean`'s closure proves that appending "one recounted access per demanded key"
+`Machine/Ledger/InteractionBus.lean`'s closure proves that appending "one recounted access per demanded key"
 to a consumer skeleton zeroes every selected key. To turn that into a statement about the trace's
 *actual* provider tables, each provider needs a closed form: **a built row emits exactly one access,
 and here it is**.
 
 That is the hypothesis shape of `tableCleanAccesses_build_map_singleton`
-(`Model/CleanLedger.lean`), which is why these are stated as
+(`Machine/Ledger/CleanLedger.lean`), which is why these are stated as
 
 ```
 component.operations.interactions.map (AbstractInteraction.toAccess env) = [access]

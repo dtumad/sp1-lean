@@ -18,7 +18,7 @@ Current scope, kept explicit rather than hidden behind a full-machine name:
   `LookupAccessList`/`BalanceBridge` detour) — `genesis + pushes = final + pulls` per bus/key, where
   the per-key genesis/final records are `Option`s (`optMS` — lists of length ≤ 1). The
   field→ℤ→multiset translation from the real channel data is a separate seam
-  (`Model/BalanceBridge.lean` is the existing adapter).
+  (`Machine/Ledger/BalanceBridge.lean` is the existing adapter).
 - **The full memory axis, straight-line, single row type**: the keys are `Semantics.MemLoc`
   (registers *and* RAM word addresses). The frontier is **partial** — `live : MemLoc → Option _` —
   because a total invariant over 2^64 RAM cells is not populatable; balance itself forces a `some`
@@ -226,7 +226,7 @@ lemma pullsAt_pop (l1 l2 : List (RowFacts p)) (r : RowFacts p) (loc : MemLoc) :
 /-! ## Engine carriers over a timeline
 
 The walk's row carriers and epoch-shift lemmas over a `Timeline`; the truth predicates they consume
-live in `Model/Semantics/GenericTruth`. -/
+live in `Semantics/Transition/GenericTruth`. -/
 
 /-- The duration-generic core of `RowOK`: the exact `+8` window width is relaxed to a
 lower-bound gap, so rows of any width `≥ 8` (ordinary `8`, syscall `264`) satisfy it.  Every

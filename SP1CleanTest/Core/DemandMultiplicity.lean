@@ -1,6 +1,6 @@
 import Clean.Air.WitnessGeneration
 import Clean.Utils.Tactics
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Repeated demand with and without counted rows
 

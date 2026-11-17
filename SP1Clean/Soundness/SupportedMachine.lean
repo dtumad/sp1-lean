@@ -1,4 +1,4 @@
-import SP1Clean.Model.InstructionRouting
+import SP1Clean.Semantics.ISA.InstructionRouting
 import SP1Clean.Alignment.Chips.AddChip.Bridge
 import SP1Clean.Alignment.Chips.AddiChip.Bridge
 import SP1Clean.Alignment.Chips.AddwChip.Bridge

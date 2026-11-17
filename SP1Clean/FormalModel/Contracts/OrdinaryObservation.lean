@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.ClockOrder
-import SP1Clean.Model.BusMessages
+import SP1Clean.Circuits.Channels.BusMessages
 import SP1Clean.Math.Word
 
 /-! # Ordered observations of ordinary instruction retirement

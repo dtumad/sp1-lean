@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.ResourceLimits
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.Core.MemorySpan
+import SP1Clean.Semantics.Resources.ResourceLimits
+import SP1Clean.Semantics.Host.HostExecution
+import SP1Clean.Semantics.Memory.MemorySpan
 
 /-! # Range consumers at boundary and cell-cover edges
 

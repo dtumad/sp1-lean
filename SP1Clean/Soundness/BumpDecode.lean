@@ -534,7 +534,7 @@ theorem memoryBumpTable_typedMemory (witness : EnsembleWitness (sp1Ensemble (p :
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- Every interaction routed to the State channel meets the channel's local guarantee: the State
-bus's `Guarantees` is literally `fun _ _ => True` (`Model/Channels.lean`), independent of the
+bus's `Guarantees` is literally `fun _ _ => True` (`Circuits/Channels/Channels.lean`), independent of the
 interaction's multiplicity or payload.  Stated through an auxiliary channel-generalized fact so the
 arity-dependent message vector transports along the channel equality. -/
 theorem stateChannel_interaction_guarantees [Fact p.Prime] (env : Environment (ZMod p))
@@ -549,7 +549,7 @@ theorem stateChannel_interaction_guarantees [Fact p.Prime] (env : Environment (Z
 
 omit [Fact p.Prime] [Fact (2 ^ 24 < p)] in
 /-- The Exit channel's local guarantee is likewise literally `True` — the exit binding is a pure
-multiset hand-off (`Model/Channels.lean`). -/
+multiset hand-off (`Circuits/Channels/Channels.lean`). -/
 theorem exitChannel_interaction_guarantees [Fact p.Prime] (env : Environment (ZMod p))
     {i : AbstractInteraction (ZMod p)} (hchannel : i.channel = exitChannel.toRaw) :
     i.Guarantees env := by

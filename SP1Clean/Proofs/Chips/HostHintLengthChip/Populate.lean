@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Model.Core.HostQueue
+import SP1Clean.Semantics.Host.HostQueue
 import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Operations.ClockOrderPopulate

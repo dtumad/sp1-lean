@@ -8,7 +8,7 @@
 # Bracket (512, 600], the narrowest in the tree; set to 800 rather than 600 because 17% over a measured
 # failing value is not a margin. Scoped, not file-level: a file-level bump silently covers declarations
 # that never needed it.
-maxRecDepth    SP1Clean/Model/Machine/ConfiguredState.lean                  800   1
+maxRecDepth    SP1Clean/Semantics/Execution/ConfiguredState.lean                  800   1
 
 
 # ---- backward.isDefEq.respectTransparency: 1 site --------------------------------------------------
@@ -18,4 +18,4 @@ maxRecDepth    SP1Clean/Model/Machine/ConfiguredState.lean                  800 
 # unfolding `Multiset.Nodup`, so the derive fails for every enum; Mathlib's own
 # `MathlibTest/DeriveFintype.lean` disables the check around each derive exactly like this. Scoped to
 # the one `deriving instance Fintype for Register`; goes with the upstream handler fix.
-backward.isDefEq.respectTransparency  SP1Clean/Model/Machine/ConfiguredState.lean  false  1
+backward.isDefEq.respectTransparency  SP1Clean/Semantics/Execution/ConfiguredState.lean  false  1

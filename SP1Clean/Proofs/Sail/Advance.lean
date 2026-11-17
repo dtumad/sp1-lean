@@ -1,12 +1,12 @@
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Model.Semantics.SailArithmeticExecute
+import SP1Clean.Semantics.Sail.SailControlExecute
+import SP1Clean.Semantics.Sail.SailArithmeticExecute
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Semantics.ISA.RV64
-import SP1Clean.Model.SailPure
+import SP1Clean.Semantics.Sail.SailPure
 
 /-! # Phase 4 — the uniform per-chip `advance` (Sail-step obligation)
 
-The generic composition wiring the Phase-3 `try_step` reduction ladder (`Model/Semantics/SailStepReduction.lean`)
+The generic composition wiring the Phase-3 `try_step` reduction ladder (`Semantics/Sail/SailStepReduction.lean`)
 into each chip's Sail-step obligation (`ChipKind.advance`, `Soundness/ChipRow.lean`):
 `RefinesAt → OperandsBound → ∃ s', SailStep s s' ∧ RowEffect prog row s s'`.
 
@@ -105,7 +105,7 @@ rd-write clause.
 The two `▸` casts are cancelled **explicitly** (`eqRec_eq_cast` → `cast_eq_iff_heq` →
 `cast_heq`) rather than by `grind`: `grind` has to whnf through `reg_idx_must_64`'s 31-arm
 `match` on `Register`, and that single call was the sole owner of this file's former file-scope
-heartbeat ceiling — the same dependent-cast hazard `Model/SailWrap.lean` documents at its
+heartbeat ceiling — the same dependent-cast hazard `Semantics/Sail/SailWrap.lean` documents at its
 `acLt` fix. -/
 theorem get_reg?_writeBack (s : SailState) (rd : BitVec 5) (rd_ne : rd ≠ 0#5) (v : BitVec 64) :
     SailState.get_reg? ({s with regs := s.regs.insert (reg_idx_to_Register rd) (bitVecToRegidxVal rd v)}) rd

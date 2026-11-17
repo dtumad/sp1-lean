@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.CoreRowTransport
 import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Semantics.Execution.ExecutionReplay
 
 /-! # Stateful replay shared by complete execution carriers
 

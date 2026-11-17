@@ -2,14 +2,14 @@ import SP1CleanTest.Alignment.Support.BoundaryFixture
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.Core.HostSnapshot
+import SP1Clean.Semantics.Host.HostSnapshot
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1Clean.Proofs.Completeness.InstructionEvent
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.FormalModel.TraceGen.Inputs
-import SP1Clean.Model.Semantics.SailArithmeticExecute
+import SP1Clean.Semantics.Sail.SailArithmeticExecute
 
 /-! # Shared host-program fixture construction
 

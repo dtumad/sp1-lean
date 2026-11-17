@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Model.Core.MemorySnapshot
+import SP1Clean.Semantics.Memory.MemorySnapshot
 
 /-! # Authenticated source records for arbitrary local snapshots
 

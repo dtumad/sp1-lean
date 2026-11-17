@@ -1,10 +1,10 @@
-import SP1Clean.Model.Core.ExecutionFrame
+import SP1Clean.Semantics.Execution.ExecutionFrame
 
 /-! # Architectural preservation by concrete host execution
 
 The native host interpreter writes PC/x5 and its explicit byte effect. All other integer registers
 and the Sail configuration survive, and the checked memory policy protects every program byte.
-These compatibility statements consume the circuit-independent proofs in `Model/Core/ExecutionFrame`,
+These compatibility statements consume the circuit-independent proofs in `Semantics/Execution/ExecutionFrame`,
 which also prove preservation for whole mixed paths.
 -/
 

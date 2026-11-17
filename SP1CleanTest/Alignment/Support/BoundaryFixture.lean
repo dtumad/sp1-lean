@@ -1,5 +1,5 @@
 import SP1CleanTest.Alignment.Support.InstalledAssembly
-import SP1Clean.Model.Semantics.AccessSchedule
+import SP1Clean.Semantics.Transition.AccessSchedule
 
 /-! # Shared finite memory-boundary inputs
 

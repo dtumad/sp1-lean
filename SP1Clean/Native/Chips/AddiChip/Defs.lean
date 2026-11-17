@@ -8,7 +8,7 @@ import SP1Clean.Native.Readers.ITypeReader
 -- sites, so it stays put and I-type consumers import it here.
 import SP1Clean.Native.Readers.RTypeReader
 import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import ToClean.Circuit.WitnessCombinator
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit

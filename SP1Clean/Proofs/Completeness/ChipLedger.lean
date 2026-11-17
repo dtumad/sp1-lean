@@ -1,4 +1,4 @@
-import SP1Clean.Model.CleanLedger
+import SP1Clean.Machine.Ledger.CleanLedger
 import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Soundness.TypedState
 import SP1Clean.Soundness.TypedMemoryBalance

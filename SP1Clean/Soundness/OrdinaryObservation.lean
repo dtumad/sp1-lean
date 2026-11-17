@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Operations.OrdinaryObservation
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.OrdinaryStateReceipt
-import SP1Clean.Model.Core.SailBookkeeping
+import SP1Clean.Semantics.Execution.SailBookkeeping
 import ToClean.Air.TransitionView
 
 /-! # Exhaustive ordinary observation histories

@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
-import SP1Clean.Model.Core.MemoryWord
-import SP1Clean.Model.Core.Boot
+import SP1Clean.Semantics.Memory.MemoryWord
+import SP1Clean.Semantics.Execution.Boot
 
 /-! # The native initial-memory word-read contract
 

@@ -1,8 +1,8 @@
 import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.SP1Field
-import SP1Clean.Model.Semantics.SailControlExecute
+import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Semantics.Host.HostSnapshot
+import SP1Clean.Math.SP1Field
+import SP1Clean.Semantics.Sail.SailControlExecute
 import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # ROM and fetch on mixed semantic paths

@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Shard
-import SP1Clean.Model.Core.ExecutionFrame
-import SP1Clean.Model.Core.ExecutionMemory
+import SP1Clean.Semantics.Execution.ExecutionFrame
+import SP1Clean.Semantics.Execution.ExecutionMemory
 
 /-! # ROM preservation and official fetch for the shard's semantic domain
 

@@ -17,7 +17,7 @@ earlier than the *next* row's first access. That is what discharges the three ti
 straight off the machine state.
 
 The intra-row order is SP1's and is load-bearing: `op_c` is read at `+2`, `op_b` at `+3`, `op_a`
-written at `+4` (`Model/Semantics/MicroTime.lean`, the Rust `MemoryAccessPosition` values, linked to
+written at `+4` (`Semantics/Transition/MicroTime.lean`, the Rust `MemoryAccessPosition` values, linked to
 these literals by `ClockBridge.lean`). Applying them in that order is what makes a row like
 `add x1, x1, x1` come out right: the `op_b` read's *previous* access is this same row's `op_c` read,
 not whatever preceded the row.

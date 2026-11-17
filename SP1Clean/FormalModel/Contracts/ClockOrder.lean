@@ -1,4 +1,4 @@
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Transition.MicroTime
 import Clean.Utils.Tactics.ProvableStructDeriving
 
 /-! # Strict order between two native event clocks

@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Model.Core.NativeLayout
+import SP1Clean.Semantics.Memory.NativeLayout
 
 /-! # RAM-specific finalization
 

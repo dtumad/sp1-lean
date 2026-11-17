@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Immutable hint-word coordination
 

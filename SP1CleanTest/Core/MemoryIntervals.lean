@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.MemoryIntervals
-import SP1Clean.Model.Core.SailMemory
+import SP1Clean.Semantics.Memory.MemoryIntervals
+import SP1Clean.Semantics.Memory.SailMemory
 
 /-! # Sparse memory lookup and Sail-map regressions -/
 

@@ -2,7 +2,7 @@ module
 
 public import SP1Clean.Semantics.Specs.LtUnsigned
 public import SP1Clean.Circuits.Gadgets.U16Compare
-public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Channels.Channels
 public import Clean.Gadgets.Equality
 import SP1Clean.Math.Gate
 import Clean.Utils.Tactics.CircuitProofStart

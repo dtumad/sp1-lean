@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Host.HostSnapshot
+import SP1Clean.Math.SP1Field
 
 /-! # Complete finite-boundary and host-execution regressions
 

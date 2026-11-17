@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostCommitBank
-import SP1Clean.Model.Core.QueueReplay
+import SP1Clean.Semantics.Host.QueueReplay
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 

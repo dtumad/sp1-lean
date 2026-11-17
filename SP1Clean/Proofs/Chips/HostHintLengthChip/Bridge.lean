@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Model.Core.HostQueue
+import SP1Clean.Semantics.Host.HostQueue
 
 /-! # Current-queue HINT_LEN semantics
 

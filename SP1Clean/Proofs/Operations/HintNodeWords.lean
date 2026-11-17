@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Allocated word contents share the checked fresh node identity
 

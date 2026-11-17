@@ -1,4 +1,4 @@
-import SP1Clean.Model.Semantics.AccessSchedule
+import SP1Clean.Semantics.Transition.AccessSchedule
 import SP1Clean.Proofs.Completeness.Providers
 
 /-!

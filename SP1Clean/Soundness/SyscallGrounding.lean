@@ -30,7 +30,7 @@ that turns "the walk reports *some* trajectory index" into "the walk reports *th
 is what keeps the engine's list position and the transcript's timeline position one number rather
 than two that must be reconciled later.
 
-It belongs beside `Timeline.start_lt_of_lt` in `Model/Semantics/MicroTime.lean`; it lives here to
+It belongs beside `Timeline.start_lt_of_lt` in `Semantics/Transition/MicroTime.lean`; it lives here to
 avoid a rebuild of everything below that file, and is public because the mixed-row instantiation
 consumes it. -/
 theorem start_injective (tl : Semantics.Timeline) : Function.Injective tl.start := by

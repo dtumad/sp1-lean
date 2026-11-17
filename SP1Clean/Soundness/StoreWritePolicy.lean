@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.InstructionWrite
+import SP1Clean.Semantics.Memory.InstructionWrite
 import SP1Clean.Soundness.RomWriteProtection
 import SP1Clean.Alignment.Chips.StoreByteChip.Bridge
 import SP1Clean.Alignment.Chips.StoreHalfChip.Bridge

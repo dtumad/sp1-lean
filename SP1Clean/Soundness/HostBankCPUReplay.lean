@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HostQueueCPUReplay
 import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Model.Core.BankReplay
+import SP1Clean.Semantics.Host.BankReplay
 
 /-! # Commitment histories agree with the ordered CPU tape
 

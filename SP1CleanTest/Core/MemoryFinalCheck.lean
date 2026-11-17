@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.MemoryFinalCheck
+import SP1Clean.Semantics.Memory.MemoryFinalCheck
 
 /-! # Complete finite Memory endpoint checks
 

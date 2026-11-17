@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HostHintReadFinalMemory
-import SP1Clean.Model.Core.MemoryFinalCheck
+import SP1Clean.Semantics.Memory.MemoryFinalCheck
 
 /-! # Finite outgoing-memory checks against the installed CPU replay
 

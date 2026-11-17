@@ -1,4 +1,4 @@
-import SP1Clean.Model.CleanLedger
+import SP1Clean.Machine.Ledger.CleanLedger
 import SP1Clean.Proofs.Completeness.Assembly
 import SP1Clean.Proofs.Completeness.ProviderTables
 

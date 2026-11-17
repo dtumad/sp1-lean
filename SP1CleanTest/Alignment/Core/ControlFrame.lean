@@ -1,6 +1,6 @@
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Model.Semantics.SailControlFrame
-import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.Semantics.Sail.SailControlExecute
+import SP1Clean.Semantics.Sail.SailControlFrame
+import SP1Clean.Semantics.Execution.SourceExecution
 import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Normally retiring control flow without circuit rows

@@ -1,4 +1,4 @@
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Transition.MicroTime
 import SP1Clean.FormalModel.Contracts.SystemChips
 
 /-! # State-message canonicalization (W3 D2, external report Finding 2)

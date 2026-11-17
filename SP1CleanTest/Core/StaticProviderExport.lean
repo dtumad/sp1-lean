@@ -1,5 +1,5 @@
 import SP1CleanTest.Core.ComponentExport
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import ToClean.Air.StaticProvider
 import ToClean.Air.EnsembleCheck
 import ToClean.Circuit.StaticTable

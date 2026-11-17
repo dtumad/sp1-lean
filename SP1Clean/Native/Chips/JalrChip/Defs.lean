@@ -6,8 +6,8 @@ import SP1Clean.Native.Readers.ITypeReader
 -- that happens to live in the R-type reader's namespace (cf. `AddiChip/Defs.lean`).
 import SP1Clean.Native.Readers.RTypeReader
 import SP1Clean.Native.Readers.RegisterWrite
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
+import SP1Clean.Circuits.Channels.Channels
+import SP1Clean.Circuits.Channels.ByteTable
 import ToClean.Circuit.WitnessCombinator
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit

@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HintReadCoverage
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Exact physical word writes from authenticated hint coverage
 

@@ -8,10 +8,10 @@ and a chip should be understandable with its local correctness proofs.
 
 | Area | Current source | Responsibility |
 |---|---|---|
-| Semantics | `SP1Clean/Semantics/`, `SP1Clean/Math/`, `SP1Clean/Model/` | Pure contracts, arithmetic, official Sail adapters, complete execution, snapshots, host effects and resources |
+| Semantics | `SP1Clean/Semantics/`, `SP1Clean/Math/` | Pure contracts, arithmetic, official Sail adapters (`Sail/`), decoding (`ISA/`), complete execution and snapshots (`Execution/`, `Memory/`), host effects (`Host/`), resources and transition views |
 | Contracts | `SP1Clean/FormalModel/` | Semantic Specs and checked relation/capstone targets |
-| Circuits | `SP1Clean/Circuits/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
-| Machine | `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Registration, assembly, grounding, Sail bridges and physical compiler |
+| Circuits | `SP1Clean/Circuits/`, `SP1Clean/Native/`, `SP1Clean/Proofs/Chips/`, `SP1Clean/Proofs/Operations/` | Channel declarations (`Circuits/Channels/`), native columns/readers/gadgets/chips, witnesses and local soundness/completeness |
+| Machine | `SP1Clean/Machine/`, `SP1Clean/Soundness/`, `SP1Clean/Proofs/Completeness/`, `SP1Clean/Alignment/` | Trace-level ledger (`Machine/Ledger/`), table identities, registration, assembly, grounding, Sail bridges and physical compiler |
 | Export and comparison | `SP1CleanTest/Core/`, `SP1CleanTest/Alignment/Support/`, `rust/sp1-comparison/` | Built-in Clean export fixtures and independent released-SP1 comparisons |
 | Upstream additions | `ToClean/`, `ToMathlib/` | Reusable missing APIs in upstream namespaces, independent of SP1 |
 | Tests | `SP1CleanTest/` | Executable examples, non-vacuity, adversarial witnesses and native computation |
@@ -197,7 +197,7 @@ the abstraction.
 
 Native readers and operations own their shared column types under `Circuits/Types`. These modules
 and the word foundation use Lean module mode. The import gate keeps pure contracts and native columns below circuit implementations.
-Commitment semantics live in `Model/Core/CommitmentStatement`. SP1 agreement is checked
+Commitment semantics live in `Semantics/Execution/CommitmentStatement`. SP1 agreement is checked
 independently in Rust.
 
 ## Upstream and generated boundaries

@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1CleanTest.Core.StaticMembership
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Physical commitment-bank boundary regressions

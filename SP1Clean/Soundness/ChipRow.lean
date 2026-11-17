@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.RowView
-import SP1Clean.Model.SailWrap
+import SP1Clean.Semantics.Sail.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Soundness.RowEffectDefs
 

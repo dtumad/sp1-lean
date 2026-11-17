@@ -4,7 +4,7 @@ public import ToClean.Gadgets.Equality
 
 public import SP1Clean.Circuits.Gadgets.Mul.Constraints
 public import SP1Clean.Circuits.Gadgets.Mul.Witness
-public import SP1Clean.Model.ByteTable
+public import SP1Clean.Circuits.Channels.ByteTable
 import Clean.Utils.Tactics.CircuitProofStart
 import Clean.Gadgets.Boolean
 

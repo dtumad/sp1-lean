@@ -1,5 +1,5 @@
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.HostExit
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Circuits.Channels.HostExit
 import ToClean.Air.VerifierExtension
 
 /-! # Optional terminal status at a local host boundary

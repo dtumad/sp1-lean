@@ -1,7 +1,7 @@
-import SP1Clean.Model.Core.MemorySnapshot
+import SP1Clean.Semantics.Memory.MemorySnapshot
 import SP1Clean.FormalModel.Contracts.InitialMemoryRead
 import SP1Clean.FormalModel.Contracts.FinalRam
-import SP1Clean.Model.FinalMemoryValue
+import SP1Clean.Circuits.Channels.FinalMemoryValue
 
 /-! # Complete outgoing RAM values
 

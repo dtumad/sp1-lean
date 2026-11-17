@@ -1,6 +1,6 @@
 import ToClean.Air.EnsembleCheck
 import ToClean.Air.TableBuild
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import ToClean.Air.PublicVerifier
 import Clean.Utils.Tactics
 

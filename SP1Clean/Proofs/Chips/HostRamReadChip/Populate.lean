@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Model.Core.MemorySpan
+import SP1Clean.Semantics.Memory.MemorySpan
 
 /-! # Constructing host RAM reads
 

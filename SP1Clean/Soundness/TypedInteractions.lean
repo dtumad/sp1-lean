@@ -1,5 +1,5 @@
-import SP1Clean.Model.Channels
-import SP1Clean.Model.InteractionProjection
+import SP1Clean.Circuits.Channels.Channels
+import SP1Clean.Machine.Ledger.InteractionProjection
 import Clean.Air.FlatEnsemble
 import ToClean.Air.TableBuild
 

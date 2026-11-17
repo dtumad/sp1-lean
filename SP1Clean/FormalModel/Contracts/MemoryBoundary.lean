@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.Boot
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Execution.Boot
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # Native memory-boundary records
 

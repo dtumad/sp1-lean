@@ -40,13 +40,13 @@ quantifiers at these boundaries:
 | Surface | Review question |
 |---|---|
 | [Shard.Executes](../SP1Clean/FormalModel/Shard.lean) | Complete source/target equality, real Sail/host execution, permissions and independently defined resource limits? |
-| [Commitment statement](../SP1Clean/Model/Core/CommitmentStatement.lean) | Every actual declaration agrees with one immutable digest; raw host overwrites remain operational and flags imply no coverage? |
+| [Commitment statement](../SP1Clean/Semantics/Execution/CommitmentStatement.lean) | Every actual declaration agrees with one immutable digest; raw host overwrites remain operational and flags imply no coverage? |
 | [Native Sail trace](../SP1Clean/Soundness/Shard/Trace.lean) | Raw committed acceptance yields the complete machine trace, with full RAM/register endpoints, clock and host obligations; no additional readiness premise? |
 | [Shard targets](../SP1Clean/Soundness/Shard/Contract.lean) | Raw acceptance on the AIR side, total data-only construction on the semantic side, no hidden readiness premises? |
 | [Chip contracts](../SP1Clean/FormalModel/Contracts/Chips.lean) | Semantic arithmetic and architectural effects rather than copied constraint equations? |
 | [Reader contracts](../SP1Clean/FormalModel/Contracts/Readers.lean) | Live operand/address/clock observations, explicit assumptions and channel requirements? |
-| [Complete execution](../SP1Clean/Model/Core/Execution.lean) | One evolving complete Sail/host/clock state? |
-| [Memory snapshots](../SP1Clean/Model/Core/MemorySnapshot.lean) | Untouched locations, absent keys and full boundary changes covered? |
+| [Complete execution](../SP1Clean/Semantics/Execution/Execution.lean) | One evolving complete Sail/host/clock state? |
+| [Memory snapshots](../SP1Clean/Semantics/Memory/MemorySnapshot.lean) | Untouched locations, absent keys and full boundary changes covered? |
 | [Rust coverage](../rust/sp1-comparison/inventory/coverage.json) | Released component agreement, native semantics and deliberately different public/host contracts distinguished? |
 | [Realizes](../ToClean/Air/Realizes.lean) | The intended public language rather than a vacuous profile? |
 

@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.SyscallInstrsChip.Formal
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Execution.EventExecution
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # What a syscall row means
 

@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
-import SP1Clean.Model.Core.ExecutionResources
+import SP1Clean.Semantics.Resources.ExecutionResources
 
 /-! # Resource checks on fixed complete boundaries
 

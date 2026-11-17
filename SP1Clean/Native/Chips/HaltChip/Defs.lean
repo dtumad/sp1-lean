@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.SystemChips
 import SP1Clean.Native.Readers.CPUState
 import SP1Clean.Native.Readers.RegisterAccessCols
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -78,7 +78,7 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   -- `ConstraintsHold.Shallow`, discharging every off-gate pull `Requirements`.
   assertZero (input.is_real * (input.is_real - 1))
   -- `CPUState` pulls `(clk, pc)` and pushes `(clk + 264, pc = 1)` — the halt transition: SP1's
-  -- syscall row duration and `HALT_PC = 1` (`Model/Machine/Syscall.lean`'s `haltPc`).
+  -- syscall row duration and `HALT_PC = 1` (`Semantics/Execution/Syscall.lean`'s `haltPc`).
   let _ ← Readers.CPUState.circuit ⟨input.state, #v[1, 0, 0], 264, input.is_real⟩
   -- Per-register timestamp byte checks (the standard access-clock offsets `+4/+3/+2`).
   assertion Readers.RegisterAccessCols.circuit ⟨input.x5_memory, input.is_real, clkLow input + 4⟩

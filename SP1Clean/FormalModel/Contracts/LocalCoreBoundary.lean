@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Execution.SourceExecution
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # Public encoding of a complete local source
 

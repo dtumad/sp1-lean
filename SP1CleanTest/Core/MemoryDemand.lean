@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.MemoryFinalizeChip
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Air.WitnessGeneration
 
 /-! Final-memory routing uses addresses, so simultaneous host RAM writes remain distinct. -/

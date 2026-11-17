@@ -1,5 +1,5 @@
-import SP1Clean.Model.Semantics.SailArithmeticFrame
-import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.Semantics.Sail.SailArithmeticFrame
+import SP1Clean.Semantics.Execution.SourceExecution
 import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Arithmetic retirement without a circuit witness

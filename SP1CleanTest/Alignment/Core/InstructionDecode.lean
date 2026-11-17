@@ -1,5 +1,5 @@
 import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Executable decoder regressions
 

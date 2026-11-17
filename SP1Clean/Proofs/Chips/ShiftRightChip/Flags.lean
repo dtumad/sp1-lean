@@ -1,4 +1,4 @@
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 
 /-! # `SP1Clean.ShiftRightChip` — binary-flag selectors & byte-channel padding (shared field lemmas)
 

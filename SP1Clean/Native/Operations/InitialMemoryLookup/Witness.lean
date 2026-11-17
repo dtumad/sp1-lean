@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.MemoryTable
+import SP1Clean.Semantics.Memory.MemoryTable
 import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 /-! # Exportable witnesses for address-based memory reads

@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.SailDecode
+import SP1Clean.Semantics.ISA.InstructionDecode
+import SP1Clean.Semantics.Sail.SailDecode
 
 /-! # Symbolic reduction of the pinned Sail instruction decoder
 

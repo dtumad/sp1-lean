@@ -2,8 +2,8 @@ module
 
 public import SP1Clean.Semantics.Specs.U16toU8Safe
 public import SP1Clean.Math.Bitwise
-public import SP1Clean.Model.Channels
-public import SP1Clean.Model.ByteTable
+public import SP1Clean.Circuits.Channels.Channels
+public import SP1Clean.Circuits.Channels.ByteTable
 public import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.CircuitProofStart
 import Clean.Gadgets.Boolean

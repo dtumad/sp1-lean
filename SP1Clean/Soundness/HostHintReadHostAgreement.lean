@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HostHintReadBankAgreement
-import SP1Clean.Model.Core.HostReplay
+import SP1Clean.Semantics.Host.HostReplay
 
 /-! # Complete host reconstruction on the installed local execution
 

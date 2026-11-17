@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Native.Readers.RegisterAccessCols
 import SP1Clean.Circuits.Types.RTypeReader

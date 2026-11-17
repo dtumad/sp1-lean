@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.Core.ProgramImage
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.ISA.InstructionDecode
+import SP1Clean.Semantics.Execution.ProgramImage
 
 /-! # Ordinary write-policy regressions
 

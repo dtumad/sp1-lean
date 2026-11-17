@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.ChipRegistry
-import SP1Clean.Model.Opcode
+import SP1Clean.Semantics.ISA.Opcode
 
 /-! # `Coverage` — the one auditable instruction → chip → Sail table
 
@@ -11,7 +11,7 @@ and which Sail op does it reach?" It mirrors SP1's two-part structure:
   `(opcode, rd == x0)` exactly as SP1 routes (ALU ops with `rd == x0` → `AluX0`; loads with
   `rd == x0` → `LoadX0`; otherwise by width).
 
-**Decidable auditing.** `Model/InstructionRouting.lean` selects a neutral `InstructionChipId`; only
+**Decidable auditing.** `Semantics/ISA/InstructionRouting.lean` selects a neutral `InstructionChipId`; only
 then does this layer realize that ID as a circuit-bearing descriptor. Each `ChipKind` carries function
 fields (no `DecidableEq`), so the audit guards route through the chip's `name : String` (added in
 `ChipRow.lean`): `routeName` is the `String` projection of `routeOf`, over which the covered/uncovered

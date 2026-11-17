@@ -1,6 +1,6 @@
 import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1Clean.Math.Address
 import ToClean.Air.FiniteLookup
 

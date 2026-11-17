@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Native.Operations.HintQueueWordSource
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Math.SP1Field
 import ToClean.Air.Authentication
 
 /-! # Immutable hint-record source contracts

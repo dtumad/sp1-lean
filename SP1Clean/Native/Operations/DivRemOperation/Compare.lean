@@ -5,7 +5,7 @@ import SP1Clean.Circuits.Gadgets.U16MSB
 import SP1Clean.Circuits.Gadgets.LtUnsigned
 import SP1Clean.Semantics.Specs.DivRem
 import SP1Clean.Circuits.Gadgets.DivRem.CompareContract
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel

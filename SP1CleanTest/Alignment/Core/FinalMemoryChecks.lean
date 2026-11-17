@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1CleanTest.Core.StaticMembership
 
 /-! # Complete outgoing Memory assembly regression

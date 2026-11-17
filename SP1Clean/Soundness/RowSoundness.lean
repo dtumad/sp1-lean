@@ -1,15 +1,15 @@
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.ChipRegistry
 import Mathlib.Data.Set.Basic
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Execution.EventExecution
+import SP1Clean.Semantics.Transition.MicroTime
 import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Machine.Syscall
-import SP1Clean.Model.Machine.Execution
-import SP1Clean.Model.Semantics.InstructionPlan
-import SP1Clean.Model.Semantics.TransitionDecode
-import SP1Clean.Model.Semantics.ProgramCommitment
-import SP1Clean.Model.Semantics.GenericTruth
+import SP1Clean.Semantics.Execution.Syscall
+import SP1Clean.Semantics.Execution.SailStep
+import SP1Clean.Semantics.Transition.InstructionPlan
+import SP1Clean.Semantics.Transition.TransitionDecode
+import SP1Clean.Semantics.Execution.ProgramCommitment
+import SP1Clean.Semantics.Transition.GenericTruth
 import SP1Clean.Soundness.Walk
 import SP1Clean.Soundness.TypedMemory
 

@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.ResourceUsage
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.Model.Core.MemorySupport
+import SP1Clean.Semantics.Resources.ResourceUsage
+import SP1Clean.Semantics.Execution.ExecutionEncoding
+import SP1Clean.Semantics.Memory.MemorySupport
 
 /-! # Resource edges independent of witness construction -/
 

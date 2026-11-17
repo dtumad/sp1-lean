@@ -1,4 +1,4 @@
-import SP1Clean.Model.BusMessages
+import SP1Clean.Circuits.Channels.BusMessages
 import SP1Clean.Circuits.Types.BitwiseChip
 import SP1Clean.Circuits.Types.LtChip
 import SP1Clean.Proofs.Chips.DivRemChip.Defs

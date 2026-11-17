@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.CommitmentStatement
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Execution.CommitmentStatement
+import SP1Clean.Semantics.Host.HostExecution
+import SP1Clean.Math.SP1Field
 
 /-! # Declaration consistency is distinct from execution and coverage
 

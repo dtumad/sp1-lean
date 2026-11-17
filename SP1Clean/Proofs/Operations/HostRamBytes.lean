@@ -1,5 +1,5 @@
 import SP1Clean.Native.Operations.HostRamBytes
-import SP1Clean.Model.Core.HostReadWords
+import SP1Clean.Semantics.Host.HostReadWords
 import ToClean.Circuit.InteractionRecovery
 
 /-! # Canonical bytes from a bounded host read

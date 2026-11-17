@@ -3,7 +3,7 @@ import SP1Clean.Circuits.Types.ALUTypeReader
 import SP1Clean.Circuits.Types.JTypeReader
 import SP1Clean.Circuits.Types.ITypeReader
 import SP1Clean.Circuits.Types.CPUState
-import SP1Clean.Model.ProgramChip
+import SP1Clean.Machine.Ledger.ProgramChip
 
 /-! # Row-view adapter infrastructure (the chip-agnostic trace row)
 

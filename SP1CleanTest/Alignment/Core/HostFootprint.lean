@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HostFootprint
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Host byte-slice and aligned-word footprint regressions
 

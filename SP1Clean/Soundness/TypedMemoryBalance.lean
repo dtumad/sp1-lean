@@ -2,13 +2,13 @@ import SP1Clean.Soundness.TypedMemorySelectors
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.TypedInteractions
 import SP1Clean.Soundness.TypedState
-import SP1Clean.Model.Semantics.Truth
+import SP1Clean.Semantics.Transition.Truth
 import SP1Clean.FormalModel.Contracts.PublicValues
-import SP1Clean.Model.Machine.Syscall
+import SP1Clean.Semantics.Execution.Syscall
 import Mathlib.Data.Set.Basic
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.MicroTime
-import SP1Clean.Model.Machine.Execution
+import SP1Clean.Semantics.Execution.EventExecution
+import SP1Clean.Semantics.Transition.MicroTime
+import SP1Clean.Semantics.Execution.SailStep
 import SP1Clean.Soundness.BumpDecode
 
 /-! # Memory-channel structure of the supported ensemble

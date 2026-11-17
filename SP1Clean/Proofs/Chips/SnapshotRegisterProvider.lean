@@ -2,8 +2,8 @@ import ToClean.Circuit.Guarded
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.StaticProvider
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.Channels
+import SP1Clean.Semantics.Execution.RegisterSnapshotTable
+import SP1Clean.Circuits.Channels.Channels
 import ToClean.Circuit.InteractionRecovery
 import Clean.Utils.Tactics
 

@@ -1,4 +1,4 @@
-import SP1Clean.Model.Semantics.Truth
+import SP1Clean.Semantics.Transition.Truth
 
 /-! # Intra-row same-key touch chains — the SP-6 port
 

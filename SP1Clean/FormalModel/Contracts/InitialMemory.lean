@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.Memory
+import SP1Clean.Semantics.Memory.Memory
 import SP1Clean.Math.Word
 
 /-! # Initial-memory byte-read contract

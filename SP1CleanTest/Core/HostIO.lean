@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HostIO
+import SP1Clean.Semantics.Host.HostIO
 
 /-! # Executable regressions for the native host I/O contract
 

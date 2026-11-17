@@ -6,7 +6,7 @@ import SP1Clean.Native.Operations.FinalRegisterCheck
 import SP1Clean.Native.Operations.FinalRamCheck
 import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 import SP1CleanTest.Core.StaticMembership
 

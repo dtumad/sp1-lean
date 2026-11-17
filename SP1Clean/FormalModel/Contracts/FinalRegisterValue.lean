@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.FinalMemoryValue
+import SP1Clean.Semantics.Execution.RegisterSnapshotTable
+import SP1Clean.Circuits.Channels.FinalMemoryValue
 
 /-! # Complete outgoing register values
 

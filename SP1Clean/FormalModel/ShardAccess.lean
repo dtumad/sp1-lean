@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.Model.Core.ExecutionAccess
+import SP1Clean.Semantics.Execution.ExecutionAccess
 
 /-! # Access projection at every admissible ordinary occurrence
 

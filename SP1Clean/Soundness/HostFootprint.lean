@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.HostFootprint
-import SP1Clean.Model.Core.HostSail
+import SP1Clean.Semantics.Host.HostFootprint
+import SP1Clean.Semantics.Host.HostSail
 import SP1Clean.Math.ByteWord
 import SP1Clean.Soundness.Grounding.MemoryCell
 import SP1Clean.Proofs.Operations.HostRamBytes

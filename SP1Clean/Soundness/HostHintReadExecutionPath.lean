@@ -1,9 +1,9 @@
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.HostHalt
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.MicroTime
-import SP1Clean.Model.Semantics.EventTime
+import SP1Clean.Semantics.Execution.ExecutionReplay
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.Host.HostHalt
+import SP1Clean.Semantics.Execution.EventExecution
+import SP1Clean.Semantics.Transition.MicroTime
+import SP1Clean.Semantics.Transition.EventTime
 import SP1Clean.Soundness.HostHintReadExecution
 
 /-! # Local execution soundness for the installed instruction, control, and hint AIR

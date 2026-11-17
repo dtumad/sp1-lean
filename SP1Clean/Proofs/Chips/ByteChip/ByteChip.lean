@@ -1,7 +1,7 @@
 import Clean.Air.WitnessGeneration.Generation
 import ToClean.Gadgets.LookupProjection
 import ToClean.Gadgets.BitwiseByte
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import SP1Clean.Math.Bitwise
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -18,7 +18,7 @@ SP1's `ByteChip` (`crates/core/machine/src/bytes/air.rs`) is a **preprocessed** 
 `byte_table() = [AND, OR, XOR, U8Range, LTU, MSB]` (indices `0..5`). On the Byte bus those receives are
 *pushes* of valid byte-table rows, balanced against the consumers' pulls. Clean has no "trusted
 preprocessed table" primitive for channels, so a finished-`byteChannel` **provider must re-prove each
-pushed row valid in-circuit** (the `ByteRowSpec` membership predicate, `Model/ByteTable.lean`).
+pushed row valid in-circuit** (the `ByteRowSpec` membership predicate, `Circuits/Channels/ByteTable.lean`).
 
 This module is the in-circuit provider's push side. For each opcode we build a Clean
 `GeneralFormalCircuit` whose `main`:
@@ -28,7 +28,7 @@ This module is the in-circuit provider's push side. For each opcode we build a C
 
 and whose soundness discharges the push's `Requirements` (`ByteRowSpec` of the pushed row, since
 `byteChannel` is a typed/`Normal` channel whose push owes its `Guarantees`) via the matching
-`Model/ByteTable.lean` lemma. Faithful row forms (matching SP1's `bytes/air.rs`, opcodes per
+`Circuits/Channels/ByteTable.lean` lemma. Faithful row forms (matching SP1's `bytes/air.rs`, opcodes per
 `events/byte.rs`):
 - `U8Range(3)` → `⟨3, 0, b, c⟩` (`byteRowSpec_u8range_pair`),
 - `AND(0)/OR(1)/XOR(2)` → `⟨op, r, b, c⟩` (`byteRowSpec_byteOp`),

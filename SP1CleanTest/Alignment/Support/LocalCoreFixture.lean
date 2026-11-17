@@ -1,6 +1,6 @@
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Model.Core.SyscallEncoding
+import SP1Clean.Semantics.ISA.SyscallEncoding
 import ToClean.Air.FiniteLookup
 import SP1CleanTest.Core.StaticMembership
 

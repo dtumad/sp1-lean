@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.ResourceBoundary
-import SP1Clean.Model.Core.SailFinalCheck
+import SP1Clean.Semantics.Execution.SailFinalCheck
 
 /-! # Supplied Sail target: invariant fields and actual public endpoints
 

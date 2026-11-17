@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.Boot
+import SP1Clean.Semantics.Execution.Boot
 
 /-! # Finite program-image validation regressions -/
 
