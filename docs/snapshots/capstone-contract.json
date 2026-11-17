@@ -82526,14 +82526,14 @@
     {
       "bodyFingerprint": "1907089114",
       "local": true,
-      "module": "SP1Clean.Soundness.NativeCoreEnsemble",
+      "module": "SP1Clean.Soundness.CoreTables",
       "name": "SP1Clean.Soundness.NativeCore.afterInitialTables",
       "typeFingerprint": "1944506205"
     },
     {
       "bodyFingerprint": null,
       "local": true,
-      "module": "SP1Clean.Soundness.NativeCoreEnsemble",
+      "module": "SP1Clean.Soundness.CoreTables",
       "name": "SP1Clean.Soundness.NativeCore.instFactLtNatHPowOfNat_sP1Clean",
       "typeFingerprint": "3333800070"
     },
