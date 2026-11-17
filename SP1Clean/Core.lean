@@ -48,6 +48,7 @@ import SP1Clean.FormalModel.Contracts.ChipAssumptions
 import SP1Clean.FormalModel.Contracts.Chips
 import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.FormalModel.Contracts.OrdinaryObservation
+import SP1Clean.FormalModel.Contracts.OrdinaryObservationBoundary
 import SP1Clean.FormalModel.Contracts.CoreSyscall
 import SP1Clean.Semantics.Specs.Chips.Mul
 import SP1Clean.Semantics.Specs.Mul
@@ -341,6 +342,7 @@ import SP1Clean.Native.Operations.ResourceBoundary
 import SP1Clean.Native.Operations.SailBoundary
 import SP1Clean.Native.Operations.InstructionReceipt
 import SP1Clean.Native.Operations.OrdinaryObservation
+import SP1Clean.Native.Operations.OrdinaryObservationBoundary
 import SP1Clean.Proofs.Operations.OrdinaryObservation
 import SP1Clean.Native.Operations.ShiftLeftOperation.Core
 import SP1Clean.Native.Operations.ShiftRightOperation.Core
