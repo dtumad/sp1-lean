@@ -5,6 +5,7 @@ import SP1Clean.Native.Chips.JalChip.Defs
 import ToClean.Circuit.InteractionRecovery
 import SP1Clean.Math.EvalVec
 import Clean.Air.Circuit
+import Clean.Gadgets.Boolean
 
 /-! # `SP1Clean.JalChip` — contract: `Assumptions` / soundness / completeness / `circuit` -/
 
@@ -346,69 +347,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Columns :=
     Assumptions := Assumptions, Spec := Spec,
     ProverAssumptions := ProverAssumptions, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      have h_byte : (byteChannel (p := p)).toRaw ∈
-          (elaborated (p := p)).channelsWithGuarantees := by
-        simp only [circuit_norm]
-      dsimp only [Operations.RequirementsChannelsLawful]
-      refine ⟨?_, ?_, ?_⟩
-      · simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-          witnessVectorIR, subcircuitWithAssertion, assertion, assertZero, Channel.pullIf,
-          HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength]
-        simp only [Operations.subcircuitChannelsWithRequirements_append,
-          Operations.subcircuitChannelsWithRequirements_witness,
-          Operations.subcircuitChannelsWithRequirements_subcircuit,
-          Operations.subcircuitChannelsWithRequirements_assert,
-          Operations.subcircuitChannelsWithRequirements_interact,
-          Operations.subcircuitChannelsWithRequirements_nil,
-          GeneralFormalCircuit.toSubcircuit_channelsWithRequirements,
-          FormalAssertion.toSubcircuit_channelsWithRequirements,
-          Readers.CPUState.channelsWithRequirements_eq,
-          AddOperation.circuit, Readers.JTypeReader.circuit, Readers.RegisterWrite.circuit,
-          Gadgets.Equality.channelsWithRequirements_eq, List.nil_append, List.append_nil]
-        simp only [List.subset_def, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]
-        tauto
-      · intro channel h_channel
-        simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-          witnessVectorIR, subcircuitWithAssertion, assertion, assertZero, Channel.pullIf,
-          HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength,
-          Operations.shallowChannels_append, Operations.shallowChannels_witness,
-          Operations.shallowChannels_subcircuit, Operations.shallowChannels_assert,
-          Operations.shallowChannels_interact, Operations.shallowChannels_nil,
-          List.nil_append] at h_channel
-        simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_channel
-        subst channel
-        exact Or.inl h_byte
-      · intro env h_constraints
-        have hshallow := h_constraints
-        simp only [main, Circuit.operations, Circuit.bind_def,
-          Circuit.pure_def, witnessVectorIR,
-          subcircuitWithAssertion, assertion, assertZero,
-          Channel.pullIf, HasAssertEq.assert_eq,
-          Expression.assertEquals, Operations.localLength,
-          ConstraintsHold.Shallow,
-          Operations.forAllNoOffset_append,
-          Operations.forAllNoOffset, true_and, and_true,
-          eval_sub, Expression.eval] at hshallow
-        have h_gate : Expression.eval env input_var.is_real *
-            (Expression.eval env input_var.is_real - 1) = 0 :=
-          hshallow.2
-        have h_bool : Expression.eval env input_var.is_real = 0 ∨
-            Expression.eval env input_var.is_real = 1 := bool_of_mul_pred h_gate
-        rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-        intro interaction h_interaction
-        simp only [main, Circuit.operations, Circuit.bind_def, Circuit.pure_def,
-          witnessVectorIR, subcircuitWithAssertion, assertion, assertZero, Channel.pullIf,
-          HasAssertEq.assert_eq, Expression.assertEquals, Operations.localLength,
-          Operations.shallowInteractions_append, Operations.shallowInteractions_witness,
-          Operations.shallowInteractions_subcircuit, Operations.shallowInteractions_assert,
-          Operations.shallowInteractions_interact, Operations.shallowInteractions_nil,
-          List.nil_append] at h_interaction
-        simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at h_interaction
-        subst interaction
-        right
-        exact h_bool,
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, AddOperation.circuit, Readers.JTypeReader.circuit,
+        Readers.RegisterWrite.circuit,
+        ← IsBool.iff_mul_sub_one, IsBool]
+      tauto,
     -- W11: expose the State-bus `[pulledIf is_real cur, pushedIf is_real next]` pair as chip-owned
     -- interactions (the Clean `VmTables` re-base that motivated the shape was investigated and deferred
     -- — roadmap W11). Unlike straight-line ALU chips, `next_pc` is the **witnessed** jump target

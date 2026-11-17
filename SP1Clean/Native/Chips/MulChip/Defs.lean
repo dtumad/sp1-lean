@@ -97,35 +97,18 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
      input.adapter.op_a, a, input.is_real⟩
   return ⟨input.state, input.adapter, a, cols, is_mul, is_mulh, is_mulhu, is_mulhsu, is_mulw⟩
 
--- Measured (W3/r2/b2): this derivation clears 40000 heartbeats, so the former 4M ceiling was ~100x
--- over its floor and the plain default carries >=5x headroom. Elaboration-bound, not LCNF-bound.
-@[implicit_reducible] private def derivedElaborated :
-    ElaboratedCircuit (ZMod p) Inputs Columns main := by
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
   elaborate_circuit_with {
     channelsWithGuarantees :=
       [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
   }
-
-/-- Clean derives the output layout and all structural proofs from `main`; this public record forwards
-that compact result while keeping the declared channel order visible at the chip boundary. -/
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  output := derivedElaborated.output
-  output_eq := derivedElaborated.output_eq
-  localLength := derivedElaborated.localLength
-  localLength_eq := derivedElaborated.localLength_eq
-  subcircuitsConsistent := derivedElaborated.subcircuitsConsistent
-  channelsWithGuarantees :=
-    [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := derivedElaborated.channelsLawful
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
     ((elaborated (p := p)).channelsWithGuarantees : List (RawChannel (ZMod p)))
       = [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw] := rfl
 set_option linter.unusedSectionVars false in
--- `↓` (pre-order): the instance forwards `derivedElaborated`'s fields, and since Lean 4.33 `simp`
--- reduces `elaborated.output`/`.localLength` to the private forwarded projection before any
--- post-order lemma can see it; a pre-order lemma fires on the public form first.
+-- `↓` (pre-order): fires on the public projection before `simp` reduces the derived instance.
 @[circuit_norm ↓] lemma localLength_eq (x : Var Inputs (ZMod p)) :
     (elaborated (p := p)).localLength x = 49 := rfl
 
@@ -133,20 +116,6 @@ set_option linter.unusedSectionVars false in
 Selectors remain in the input; grounding uses this folded normalization boundary. -/
 @[circuit_norm ↓] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
     (elaborated (p := p)).output input offset =
-      (⟨input.state, input.adapter,
-        Vector.mapRange 4 fun i => var { index := offset + 45 + i },
-        varFromOffset Circuits.Types.MulOperation offset,
-        input.isMul, input.isMulh, input.isMulhu, input.isMulhsu, input.isMulw⟩ : Var Columns (ZMod p)) := rfl
-
--- The same facts on the forwarded private derivation, for a goal in which `simp` has already
--- reduced the public instance's projection.
-set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma derivedLocalLength_eq (x : Var Inputs (ZMod p)) :
-    (derivedElaborated (p := p)).localLength x = 49 := rfl
-
-set_option linter.unusedSectionVars false in
-@[circuit_norm] lemma derivedOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    (derivedElaborated (p := p)).output input offset =
       (⟨input.state, input.adapter,
         Vector.mapRange 4 fun i => var { index := offset + 45 + i },
         varFromOffset Circuits.Types.MulOperation offset,

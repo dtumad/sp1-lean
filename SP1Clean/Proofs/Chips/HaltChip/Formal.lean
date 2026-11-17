@@ -4,6 +4,7 @@ import ToClean.Air.HintIndex
 import SP1Clean.Native.Chips.HaltChip.Defs
 import Clean.Utils.Tactics
 import Clean.Circuit.WitnessIRSugar
+import Clean.Gadgets.Boolean
 
 /-! # Halt table: soundness, completeness, and the bundled circuit
 
@@ -193,41 +194,11 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
           Channels.exitChannel_eq_programChannel_false,
           decide_false, decide_true, Bool.false_eq_true,
           List.nil_append, exposedMemoryInteractions]
-  requirementsChannelsLawful := fun input_var i₀ => by
-    preserve_tactic_target
-    dsimp only [Operations.RequirementsChannelsLawful]
-    refine ⟨by simp only [circuit_norm, main, Readers.CPUState.circuit,
-        Readers.RegisterAccessCols.circuit], ?_, ?_⟩
-    · intro channel h_channel
-      simp only [circuit_norm, main, Readers.CPUState.circuit,
-        Readers.RegisterAccessCols.circuit] at h_channel
-      -- one Program entry, six Memory entries, two Exit entries
-      rcases h_channel with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-        first
-          | exact Or.inr List.mem_cons_self
-          | exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-              List.mem_cons_self))
-          | exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-              (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))))
-    · intro env h_constraints
-      have h_bool : Expression.eval env input_var.is_real = 0 ∨
-          Expression.eval env input_var.is_real = 1 := by
-        apply bool_of_mul_pred
-        simpa only [circuit_norm] using h_constraints.1
-      rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-      intro interaction h_interaction
-      simp only [circuit_norm, main, Readers.CPUState.circuit,
-        Readers.RegisterAccessCols.circuit] at h_interaction
-      -- The Program pull's off-gate requirement is vacuous via the inline binary gate; every
-      -- Memory interaction's channel is in `channelsWithRequirements`; the two Exit pushes'
-      -- requirements are `True` (`exitChannel.Guarantees := True`).
-      rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-      · right
-        exact h_bool
-      all_goals first
-        | exact Or.inl List.mem_cons_self
-        | (right
-           simp [circuit_norm, exitChannel])
+  requirementsChannelsLawful := by
+    simp only [circuit_norm, seval, main, Readers.CPUState.circuit,
+      Readers.RegisterAccessCols.circuit,
+      ← IsBool.iff_mul_sub_one, IsBool]
+    tauto
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

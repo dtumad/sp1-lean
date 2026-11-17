@@ -31,10 +31,10 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
 @[local circuit_norm] private theorem timestamp_guarantees :
     (RegisterAccessCols.circuit (p := p)).channelsWithGuarantees = [byteChannel.toRaw] := rfl
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  }
 
 theorem soundness : GeneralFormalCircuit.Soundness (Output := unit) (ZMod p) main
     (fun input _ => Assumptions input) (fun input _ _ => Spec input) := by

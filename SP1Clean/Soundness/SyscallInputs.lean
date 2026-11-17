@@ -112,37 +112,4 @@ theorem syscallInstrsRow_contract_of_component
     (syscallInstrsRow_programRowSpec_of_component table data component sameData program member real) a b c
     (syscallInstrsRow_opAValue_isU64_of_component table data component sameData byte member real) real
 
-/-- The committed ECALL and the three incoming register values identify the semantic source.
-No assumption about the next PC's limb representation or the host's effects is needed. -/
-theorem syscallRow_sourceValues (row : SyscallInstrsChip.Inputs (ZMod p))
-    (program : Target.GuestProgram)
-    (committed : Target.committedInROM program (Semantics.rowOfMsg (SyscallInstrsChip.programMessage row)))
-    {traj : Trajectory} {initial source : SailState} {tl : Timeline} {n : ℕ}
-    (atSource : traj n = some source)
-    (pc : source.regs.get? Register.PC = some (StateMsg.pcBits (syscallRowFacts row).statePull))
-    (time : StateMsg.timeNat (syscallRowFacts row).statePull = tl.start n)
-    (currency : ∀ mp ∈ (syscallRowFacts row).memPulls,
-      LocalValueAt traj initial tl (Semantics.MemoryMsg.locOf mp.1) mp.2 mp.1.value) :
-    AboutToExecuteEcall program source ∧
-      source.regs.get? Register.PC = some (syscallEventOfRow row).pc ∧
-      source.get_reg? 5#5 = some (syscallEventOfRow row).rawCode ∧
-      source.get_reg? 10#5 = some (syscallEventOfRow row).arg1 ∧
-      source.get_reg? 11#5 = some (syscallEventOfRow row).arg2 := by
-  obtain ⟨fetch, shape⟩ := committed.ecall_of_opcode rfl
-  have opA : row.op_a = 5 := congrArg (fun r : ProgramChip.ProgramRow (ZMod p) => r.op_a) shape
-  have opB : row.op_b = 10 := congrArg (fun r : ProgramChip.ProgramRow (ZMod p) => r.op_b[0]) shape
-  have opC : row.op_c = 11 := congrArg (fun r : ProgramChip.ProgramRow (ZMod p) => r.op_c[0]) shape
-  have locA := (syscallRow_locOf_reg row (i := 5#5) opA.symm row.op_a_memory row.op_a_value 4).1
-  have locB := (syscallRow_locOf_reg row (i := 10#5) opB.symm row.op_b_memory row.op_b_memory.prev_value 3).1
-  have locC := (syscallRow_locOf_reg row (i := 11#5) opC.symm row.op_c_memory row.op_c_memory.prev_value 2).1
-  obtain ⟨curA, curB, curC⟩ := syscallRowFacts_currency_split_values row currency
-  change StateMsg.timeNat (SyscallInstrsChip.statePulledMessage row) = tl.start n at time
-  rw [locA, time] at curA
-  rw [locB, time] at curB
-  rw [locC, time] at curC
-  exact ⟨⟨(syscallEventOfRow row).pc, pc, fetch⟩, pc,
-    (TimedGrounding.localValueAt_stepStart_iff atSource).mp curA,
-    TimedGrounding.localValueAt_regRead_of_traj (k := 3) atSource (by norm_num) curB,
-    TimedGrounding.localValueAt_regRead_of_traj (k := 2) atSource (by norm_num) curC⟩
-
 end SP1Clean.Soundness

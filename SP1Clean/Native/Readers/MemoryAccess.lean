@@ -7,6 +7,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # Native `MemoryAccess` primitive — one true-address memory read/write as a Clean `GeneralFormalCircuit`
 
@@ -112,31 +113,12 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨input.clk_high, input.clk_low + 1, input.addr0, input.addr1, input.addr2,
       input.new_value⟩ : MemoryMsg (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- `byteChannel` (the two timestamp range pulls) + `memoryChannel` (W11 memory flip — the prior `pullIf`
-  -- derives `MemoryMsg.isU64`, so it joins `channelsWithGuarantees`; its `new_value` `pushIf` keeps it in
-  -- `channelsWithRequirements`).
-  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    change Operations.ChannelsLawful
-      ([.assert _, .subcircuit _, .subcircuit _, .subcircuit _, .interact _, .interact _,
-        .interact _, .interact _] : Operations (ZMod p))
-        [byteChannel.toRaw, memoryChannel.toRaw]
-    refine ⟨by simp only [circuit_norm], ?_, by simp only [circuit_norm]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- The two timestamp range pulls and the prior-value pull (`MemoryMsg.isU64`) carry guarantees;
+    -- the `new_value` push keeps Memory in `channelsWithRequirements`.
+    channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
@@ -246,36 +228,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     ProverAssumptions := ProverAssumptionsD, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      change Operations.RequirementsChannelsLawful
-        ([.assert _, .subcircuit _, .subcircuit _, .subcircuit _, .interact _, .interact _,
-          .interact _, .interact _] : Operations (ZMod p))
-          [byteChannel.toRaw, memoryChannel.toRaw] [memoryChannel.toRaw]
-      dsimp only [Operations.RequirementsChannelsLawful]
-      refine ⟨by simp only [circuit_norm], ?_, ?_⟩
-      · intro channel h_channel
-        -- `circuit_norm`'s `or_self` collapses the trailing duplicate: a 3- not 4-way split.
-        simp only [circuit_norm] at h_channel
-        rcases h_channel with rfl | rfl | rfl
-        · exact Or.inl List.mem_cons_self
-        · exact Or.inl List.mem_cons_self
-        · exact Or.inr List.mem_cons_self
-      · intro env h_constraints
-        have h_bool : Expression.eval env input_var.is_real = 0 ∨
-            Expression.eval env input_var.is_real = 1 := by
-          apply bool_of_mul_pred
-          simpa only [circuit_norm] using h_constraints.1
-        rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-        intro interaction h_interaction
-        simp only [circuit_norm] at h_interaction
-        -- The two byte pulls and the memory read-prior pull are `is_real`-gated, so their
-        -- requirement is off-gate vacuous; only the memory **push** (unnegated multiplicity
-        -- `is_real`) has to be delegated to `channelsWithRequirements`.
-        rcases h_interaction with rfl | rfl | rfl | rfl <;>
-          first
-            | (right; simpa only [circuit_norm, byteChannel, memoryChannel] using h_bool)
-            | exact Or.inl List.mem_cons_self }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

@@ -6,6 +6,7 @@ public import SP1Clean.Model.Channels
 public import SP1Clean.Model.ByteTable
 public import Clean.Circuit.Subcircuit
 import Clean.Utils.Tactics.CircuitProofStart
+import Clean.Gadgets.Boolean
 
 /-! # Safe byte-decomposition gadget
 
@@ -73,10 +74,10 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨3, 0, cols.low_bytes[3], (u16_values[3] - cols.low_bytes[3]) * (256 : ZMod p)⁻¹⟩ : ByteRow (Expression (ZMod p)))
   assertZero (is_real * (is_real - 1))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := [byteChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
@@ -148,9 +149,9 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel]; grind }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithRequirements_eq :

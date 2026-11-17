@@ -151,19 +151,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
     input.selected_limb, input.selected_limb_low_byte, input.selected_byte, input.msb,
     input.is_lb, input.is_lbu⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  channelsLawful := by simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit]
-  localLength _ := 3 + 1
-  localLength_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit]
-  output input i0 :=
-    ⟨input.state, input.adapter,
-      ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩,
-      input.memory_access, input.offset_bit, input.selected_limb, input.selected_limb_low_byte,
-      input.selected_byte, input.msb, input.is_lb, input.is_lbu⟩
-  output_eq := by intro input n; simp only [circuit_norm, main, AddressOperation.circuit, Readers.CPUState.circuit, Readers.ITypeReader.circuit, Readers.MemoryAccess.circuit, Readers.RegisterWrite.circuit]
-  -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReader`'s program **pull** (W11 flip);
-  -- `memoryChannel` joins from `MemoryAccess`'s read pulls + `RegisterWrite`'s op_a write push (W11 memory flip).
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- Program joins through `ITypeReader`'s fetch pull; Memory through `MemoryAccess` and
+    -- `RegisterWrite`.
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- Folded completed-row layout used by the whole-chip Rust AIR codec. -/
 @[circuit_norm] lemma directOutput_eq

@@ -56,7 +56,6 @@ check_absent() {
 }
 
 check_owner ConfiguredDecode SP1Clean/Model/Semantics/GuestProgram.lean
-check_owner WithinOrdinaryRowLimit SP1Clean/Model/Core/Profile.lean
 check_owner SP1TransitionView SP1Clean/Model/Semantics/TransitionView.lean
 check_owner SyscallMsg SP1Clean/Model/BusMessages.lean
 

@@ -3,6 +3,7 @@ import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 import SP1Clean.Native.Chips.MemoryBumpChip.Defs
 import Clean.Utils.Tactics
+import Clean.Gadgets.Boolean
 
 /-! # MemoryBump: soundness, completeness, and the bundled circuit (W3, report Finding 2)
 
@@ -125,34 +126,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
   soundness := soundness
   completeness := completeness
   channelsWithRequirements := [memoryChannel.toRaw]
-  requirementsChannelsLawful := fun input_var i₀ => by
-    preserve_tactic_target
-    change Operations.RequirementsChannelsLawful
-      ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-        .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
-        [byteChannel.toRaw, memoryChannel.toRaw] [memoryChannel.toRaw]
-    dsimp only [Operations.RequirementsChannelsLawful]
-    refine ⟨by simp only [circuit_norm], ?_, ?_⟩
-    · intro channel h_channel
-      simp only [circuit_norm] at h_channel
-      rcases h_channel with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-        first
-          | exact Or.inl List.mem_cons_self
-          | exact Or.inr List.mem_cons_self
-    · intro env h_constraints
-      have h_bool : Expression.eval env input_var.is_real = 0 ∨
-          Expression.eval env input_var.is_real = 1 := by
-        apply bool_of_mul_pred
-        simpa only [circuit_norm] using h_constraints.1
-      rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-      intro interaction h_interaction
-      simp only [circuit_norm] at h_interaction
-      -- The byte pulls and the record pull are `is_real`-gated (off-gate vacuous); only the
-      -- refreshed **push** (unnegated multiplicity) is delegated to `channelsWithRequirements`.
-      rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-        first
-          | (right; simpa only [circuit_norm, byteChannel, memoryChannel] using h_bool)
-          | exact Or.inl List.mem_cons_self
+  requirementsChannelsLawful := by
+    simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+    tauto
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

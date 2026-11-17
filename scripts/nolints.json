@@ -1280,8 +1280,6 @@
  ["docBlame", "SP1Clean.Machine.ScheduledAccess.offset"],
  ["docBlame", "SP1Clean.Machine.StepSchedule.accesses"],
  ["docBlame", "SP1Clean.Machine.StepSchedule.duration"],
- ["docBlame", "SP1Clean.Machine.commitDeferredSyscallId"],
- ["docBlame", "SP1Clean.Machine.commitSyscallId"],
  ["docBlame", "SP1Clean.Machine.enterUnconstrainedSyscallId"],
  ["docBlame", "SP1Clean.Machine.hintLenSyscallId"],
  ["docBlame", "SP1Clean.MemoryBoundary.FinalAtSpec"],

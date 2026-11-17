@@ -60,13 +60,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   assertion RegisterAccessTimestamp.circuit
     ⟨input.cols.access_timestamp, input.is_real, input.clk_target⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- the composed timestamp sub-assertion's two checks are gated receives (mult `-is_real`): their
-  -- `byteChannel` *guarantee* propagates up here (the *requirement* is discharged inside the sub — W11
-  -- Phase 0c — so `byteChannel` is dropped from `channelsWithRequirements` below).
-  channelsWithGuarantees := [byteChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- The composed timestamp checks are gated receives (multiplicity `-is_real`): their byte
+    -- guarantee propagates here and their requirement is discharged inside the subcircuit, so
+    -- `channelsWithRequirements` below omits `byteChannel`.
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
 
 -- Expose the declared channel list + `localLength` as `@[circuit_norm]` rfl-lemmas so the composing
 -- `RTypeReader`'s `channelsLawful` / `circuit_proof_start` is discharged automatically.

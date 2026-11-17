@@ -63,13 +63,14 @@ section NativeTraceContract
 
 open SP1Clean.Soundness SP1Clean.Channels SP1Clean.Semantics
 
+variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-  {final : HostHintQueue.State (ZMod SP1Prime)} {bankFinal : HostState}
-  {commitments : CommitmentStatement} {header : SP1PublicIO (ZMod SP1Prime)}
+  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+  {commitments : CommitmentStatement} {header : SP1PublicIO (ZMod p)}
 
 -- Pin the headline theorem's application surface independently of its proof.
 example (valid : image.Valid)
-    (fresh : (CommitmentDeclaration.source (p := SP1Prime) commitments).circuit.name ∉
+    (fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
       (installed image source outgoing final bankFinal).tables.map (·.circuit.name))
     (registered : CommitmentDeclaration.channel.toRaw ∈
       (installed image source outgoing final bankFinal).channels)
@@ -81,9 +82,9 @@ example (valid : image.Valid)
 
 example :
     SailTrace commitments image source outgoing final bankFinal header ↔
-      ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed SP1Prime ∧
+      ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed p ∧
         ∃ (events : List ExecutionEvent) (target : ExecutionState),
-          (sp1Machine SP1Prime image).Trace source.realize events target ∧
+          (sp1Machine p image).Trace source.realize events target ∧
           commitments.Matches events ∧
           Endpoint source outgoing final bankFinal header events target := Iff.rfl
 

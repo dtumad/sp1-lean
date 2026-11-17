@@ -27,9 +27,5 @@ def circuit : GeneralFormalCircuit (ZMod p) SyscallInstrsChip.Inputs unit where
   completeness := by
     circuit_proof_start [Spec, SyscallInstrsChip.circuit, SyscallCodeGuard.circuit]
     exact h_assumptions
-  requirementsChannelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    simp [main, circuit_norm, SyscallInstrsChip.circuit, SyscallCodeGuard.circuit]
 
 end SP1Clean.CoreSyscallChip

@@ -36,10 +36,10 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
       input.cols.bitwise_operation, input.opcode, input.is_real⟩ :
       Var SP1Clean.BitwiseOperation.Inputs (ZMod p))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := [byteChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

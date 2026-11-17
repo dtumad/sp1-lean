@@ -76,35 +76,10 @@ def main (r : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   memoryChannel.pullIf r.is_real (pulledMsg r)
   memoryChannel.pushIf r.is_real (pushedMsg r)
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
-  -- The `change`-to-op-list shape (the `Readers.MemoryAccess` pattern): the nested
-  -- `MemoryAccessCols` carrier makes a `main`-unfolding `simp` prohibitively expensive, so state the
-  -- op list directly and split the interaction membership by hand.
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    change Operations.ChannelsLawful
-      ([.assert _, .interact _, .interact _, .interact _, .interact _, .assert _, .assert _,
-        .assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
-        [byteChannel.toRaw, memoryChannel.toRaw]
-    refine ⟨by simp only [circuit_norm], ?_, by simp only [circuit_norm]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

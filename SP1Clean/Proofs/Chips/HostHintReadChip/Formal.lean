@@ -70,22 +70,5 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit where
     exact ⟨valid.1, valid.2.1, valid.2.2.1, valid.2.2.2.1, valid.2.2.2.2.1,
       valid.2.2.2.2.2.1, valid.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.1, span,
       valid.2.2.2.2.2.2.2.2.2.1, valid.2.2.2.2.2.2.2.2.2.2⟩
-  requirementsChannelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    refine ⟨?_, ?_, ?_⟩
-    · simp only [main, circuit_norm, ClockOrder.circuit, HintReadSpan.circuit,
-        HintReadStep.circuit, Gadgets.Equality.circuit]
-    · simp only [main, circuit_norm, ClockOrder.circuit, HintReadSpan.circuit,
-        HintReadStep.circuit, Gadgets.Equality.circuit]
-      tauto
-    · intro env _
-      rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-      intro interaction member
-      apply Or.inl
-      have selected := List.mem_map_of_mem (f := fun item : AbstractInteraction (ZMod p) => item.channel) member
-      rw [← Operations.shallowChannels_eq_interactions_map] at selected
-      simp only [main, circuit_norm] at selected ⊢
-      tauto
 
 end SP1Clean.HostHintReadChip

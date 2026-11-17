@@ -44,6 +44,7 @@ public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
 public import ToClean.Circuit.StaticTable
 public import ToClean.Air.TableBuild
+public import ToClean.Air.LookupFree
 public import ToClean.Air.TableEvaluation
 public import ToClean.Air.UnitBalance
 public import ToClean.Air.TransitionView

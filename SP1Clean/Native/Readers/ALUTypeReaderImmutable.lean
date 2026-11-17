@@ -10,6 +10,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # Native `ALUTypeReaderImmutable` reader — the ALU register-adapter with op_a a **read**
 
@@ -86,31 +87,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨input.clk_high, input.clk_low + 2, cols.op_c[0], 0, 0,
       cols.op_c_memory.prev_value⟩ : MemoryMsg (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  -- the `localLength_eq` default (`by intros; rfl`) whnf-unfolds all of `main` (~15s on this main);
-  -- the simp route proves the same goal ~100× cheaper (see compile-profile findings 2026-06-10).
-  localLength_eq := by intros; simp +arith [circuit_norm, main, RegisterAccessCols.circuit]
-  output _ _ := ()
-  -- `byteChannel` (from the composed `RegisterAccessCols`) propagates its guarantee. `programChannel` is now
-  -- **pulled** (W11 program flip), and `memoryChannel` too (W11 memory flip — the read-prior `pullIf`s derive
-  -- `MemoryMsg.isU64`), so both join `channelsWithGuarantees`; memory's read-back `pushIf`s keep it in
-  -- `channelsWithRequirements`.
-  channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    dsimp only [Operations.ChannelsLawful]
-    refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_,
-      by simp only [circuit_norm, main, RegisterAccessCols.circuit]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    all_goals exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- Byte checks come from the composed `RegisterAccessCols`. The Program fetch and Memory
+    -- read-prior pulls carry guarantees (`ProgramMsg.RowSpec`, `MemoryMsg.isU64`); the Memory
+    -- read-back pushes owe requirements (`channelsWithRequirements`).
+    channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
@@ -257,31 +240,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     ProverAssumptions := ProverAssumptionsD, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      dsimp only [Operations.RequirementsChannelsLawful]
-      refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_, ?_⟩
-      · intro channel h_channel
-        simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_channel
-        rcases h_channel with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-        · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-        all_goals exact Or.inr List.mem_cons_self
-      · intro env h_constraints
-        rw [constraintsHold_shallow_iff_forall_mem] at h_constraints
-        have h_trusted : Expression.eval env input_var.is_trusted = 0 ∨
-            Expression.eval env input_var.is_trusted = 1 :=
-          bool_of_mul_pred (by
-            simpa only [circuit_norm] using h_constraints.1
-              (input_var.is_trusted * (input_var.is_trusted - 1))
-              (by simp only [circuit_norm, main, RegisterAccessCols.circuit,
-                    Operations.shallowConstraints, List.mem_cons]))
-        rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-        intro interaction h_interaction
-        simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
-        rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-        · right
-          exact h_trusted
-        all_goals exact Or.inl List.mem_cons_self }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, RegisterAccessCols.circuit,
+        ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 /-- Public channel metadata, without unfolding the bundled proof fields. -/
 @[circuit_norm ↓] theorem circuit_channelsWithGuarantees :

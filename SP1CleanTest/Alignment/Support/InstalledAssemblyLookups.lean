@@ -16,7 +16,7 @@ theorem component_lookups (context : Context) (component : Component Fp)
     (member : component ∈ (assembly context).tables) : component.operations.lookups = [] := by
   rw [tables_eq] at member
   rcases List.mem_append.mp member with original | added
-  · exact HostFinalMemory.installed_lookups component original
+  · exact HostFinalMemory.installed_lookupFree component original
   · obtain rfl := List.mem_singleton.mp added
     simp [CommitmentDeclaration.source, StaticTable.payloadComponent, StaticTable.payloadProvider,
       Component.lookups_eq, Component.rowOperations, circuit_norm]

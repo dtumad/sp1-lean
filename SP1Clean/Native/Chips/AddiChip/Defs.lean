@@ -68,19 +68,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   assertZero (input.is_real * (input.is_real - 1))
   return ⟨input.is_real, input.state, input.adapter, ⟨value⟩⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  output input offset :=
-    ⟨input.is_real, input.state, input.adapter,
-      ⟨Vector.mapRange 4 fun i => var { index := offset + i }⟩⟩
-  channelsLawful := by
-    preserve_tactic_target
-    simp only [circuit_norm, main, AddOperation.circuit, Readers.CPUState.circuit,
-      Readers.ITypeReader.circuit, Readers.RegisterWrite.circuit]
-  localLength _ := 4
-  -- `programChannel` joins the structural `RowSpec` propagated from `ITypeReader`'s program **pull** (W11 flip);
-  -- `memoryChannel` joins from `ITypeReader`'s memory read **pulls** (W11 memory flip). The `RegisterWrite`
-  -- op_a write push owes a memory requirement (declared in `circuit.channelsWithRequirements`), not a guarantee.
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- `ITypeReader`'s Program fetch and Memory read pulls carry guarantees; the `RegisterWrite`
+    -- op_a push owes a Memory requirement (`circuit.channelsWithRequirements`).
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- The explicit completed row, used by chip-boundary proofs without unfolding the composed `main`. -/
 @[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :

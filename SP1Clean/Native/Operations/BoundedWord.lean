@@ -81,14 +81,6 @@ def circuit (bound : ℕ) (fits : bound < 2 ^ 64) : GeneralFormalCircuit (ZMod p
   ProverAssumptions input _ _ := ProverAssumptions bound input
   soundness := soundness bound fits
   completeness := completeness bound fits
-  requirementsChannelsLawful := by
-    preserve_tactic_target
-    intro input offset
-    refine ⟨?_, ?_, ?_⟩
-    · simp only [main, circuit_norm]
-    · simp only [main, circuit_norm]
-    · intro env _
-      simp only [main, circuit_norm]
 
 omit [Fact (2 ^ 17 < p)] in
 theorem populate_assumptions (bound : ℕ) (value : Word (ZMod p))

@@ -19,8 +19,9 @@ The statement has no caller-supplied grounding, provider validity, syscall inact
 readiness premise. `Endpoint` collects what the header and verifier endpoints fix about the
 actual final state of that trace, including all integer registers and the entire RAM map. The
 statement is well formed and every actual COMMIT/COMMIT_DEFERRED declaration agrees with it, as
-`StatementExecution` requires. `trace_of_committed_statement` states this over any field with a
-static lookup-freedom premise, which `sail_trace` discharges over SP1's field. Complete
+`StatementExecution` requires. The theorem holds over every prime field with `2 ^ 25 < p`, SP1's
+among them: every installed table is lookup-free, so forgetting the statement provider keeps
+each row's constraints although canonical prover data changes at its name. Complete
 outgoing-snapshot equality, WRITE/VERIFY installation and resource limits remain obligations of
 `SoundnessTarget` (#12).
 -/
@@ -128,17 +129,19 @@ theorem trace_of_witness (valid : image.Valid)
       host := ⟨hints, decoded, host⟩
       exit }, declared⟩
 
-/-- **Native soundness as a Sail trace, with the commitment statement.** Raw acceptance of the
-complete-memory assembly with the verifier-owned commitment statement installed above it. Its
-fixed provider authenticates every declaration request, so each actual COMMIT/COMMIT_DEFERRED
-call agrees with the statement. `lookupFree` is a static fact about the installed circuits, never
-about a witness: it lets the provider be forgotten although canonical prover data changes at its
-name. -/
-theorem trace_of_committed_statement (valid : image.Valid) {commitments : CommitmentStatement}
+/-- **The exported native circuit proves a Sail trace.** Over any prime field with `2 ^ 25 < p`,
+SP1's among them, raw acceptance of the complete-memory assembly with the verifier-owned
+commitment statement installed above it gives a trace of the SP1 Sail machine from the valid
+source snapshot, ending at the header's endpoint with the outgoing registers and RAM. The
+statement's fixed provider authenticates every declaration request, so each actual
+COMMIT/COMMIT_DEFERRED call agrees with the well-formed statement. There is no premise beyond the
+checked program image. -/
+theorem sail_trace {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
+    {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+    (valid : image.Valid)
+    {commitments : CommitmentStatement}
     {fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
       (installed image source outgoing final bankFinal).tables.map (·.circuit.name)}
-    (lookupFree : ∀ component ∈ (installed image source outgoing final bankFinal).tables,
-      component.operations.lookups = [])
     {header : SP1PublicIO (ZMod p)} {heights : List ℕ}
     (accepted : (CommitmentEnsemble.install commitments
       (installed image source outgoing final bankFinal) fresh
@@ -150,7 +153,8 @@ theorem trace_of_committed_statement (valid : image.Valid) {commitments : Commit
     (witness.interactionsFit_of_heights fit) rawBalance
   obtain ⟨sourceValid, sourceFor, events, target, trace, endpoint, declared⟩ :=
     trace_of_witness valid (CommitmentEnsemble.project witness)
-      (CommitmentEnsemble.project_constraints witness lookupFree constraints)
+      (CommitmentEnsemble.project_constraints witness HostFinalMemory.installed_lookupFree
+        constraints)
       (fun channel member different =>
         CommitmentEnsemble.project_balancedChannel witness balanced channel member different)
   have silent := HostFinalMemory.verifier_declarations_silent (image := image) (source := source)
@@ -163,24 +167,5 @@ theorem trace_of_committed_statement (valid : image.Valid) {commitments : Commit
   rw [CommitmentEnsemble.project_publicInput] at sourceFor endpoint
   exact ⟨sourceValid, sourceFor, (CommitmentEnsemble.statement_spec witness balanced).1, events, target,
     trace, agrees, endpoint⟩
-
-/-- **The exported native circuit proves a Sail trace.** Over SP1's field, raw acceptance of the
-complete-memory assembly with the commitment statement installed gives a trace of the SP1 Sail
-machine from the valid source snapshot, ending at the header's endpoint with the outgoing
-registers and RAM, whose declarations agree with the well-formed statement. There is no premise
-beyond the checked program image. -/
-theorem sail_trace {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-    {final : HostHintQueue.State (ZMod SP1Prime)} {bankFinal : HostState}
-    (valid : image.Valid)
-    {commitments : CommitmentStatement}
-    {fresh : (CommitmentDeclaration.source (p := SP1Prime) commitments).circuit.name ∉
-      (installed image source outgoing final bankFinal).tables.map (·.circuit.name)}
-    {header : SP1PublicIO (ZMod SP1Prime)} {heights : List ℕ}
-    (accepted : (CommitmentEnsemble.install commitments
-      (installed image source outgoing final bankFinal) fresh
-      (declarations_registered image source outgoing final bankFinal)).Statement .logUp header heights) :
-    SailTrace commitments image source outgoing final bankFinal header :=
-  trace_of_committed_statement valid (fun component member => HostFinalMemory.installed_lookups component member)
-    accepted
 
 end SP1Clean.Soundness.Shard

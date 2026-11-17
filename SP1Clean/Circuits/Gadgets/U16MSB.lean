@@ -4,6 +4,7 @@ public import SP1Clean.Semantics.Specs.U16MSB
 public import SP1Clean.Model.Channels
 public import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.CircuitProofStart
+import Clean.Gadgets.Boolean
 
 /-! # Native 16-bit high-bit gadget
 
@@ -189,9 +190,9 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel]; grind }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 @[circuit_norm] lemma channelsWithRequirements_eq :
     (circuit (p := p)).channelsWithRequirements = [] := rfl

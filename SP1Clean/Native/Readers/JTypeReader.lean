@@ -9,6 +9,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # Native `JTypeReader` reader — the J-type register-adapter per-row checks as a Clean `GeneralFormalCircuit`
 
@@ -79,29 +80,14 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
     (⟨input.clk_high, cols.op_a_memory.access_timestamp.prev_low, cols.op_a, 0, 0,
       cols.op_a_memory.prev_value⟩ : MemoryMsg (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- `byteChannel` (composed `RegisterAccessCols` checks) + `programChannel` (W11 program flip — now
-  -- **pulled**) + `memoryChannel` (W11 memory flip — the op_a read-prior `pullIf` derives `MemoryMsg.isU64`,
-  -- so it joins `channelsWithGuarantees`). This reader has **no** memory push (the op_a write is
-  -- factored into `Readers/RegisterWrite`); `memoryChannel` stays declared in the bundle's
-  -- `channelsWithRequirements` below.
-  channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    dsimp only [Operations.ChannelsLawful]
-    refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_,
-      by simp only [circuit_norm, main, RegisterAccessCols.circuit]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
-    rcases h_interaction with rfl | rfl
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    · exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- Byte checks come from the composed `RegisterAccessCols`; the Program fetch and the op_a
+    -- read-prior pull carry guarantees. The op_a write lives in `RegisterWrite`, so this reader has
+    -- no Memory push; `memoryChannel` is still declared in the bundle's `channelsWithRequirements`
+    -- below.
+    channelsWithGuarantees := [byteChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :
@@ -200,31 +186,10 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs unit :=
     ProverAssumptions := ProverAssumptionsD, ProverSpec := fun _ _ _ => True,
     soundness := soundness, completeness := completeness,
     channelsWithRequirements := [memoryChannel.toRaw],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      dsimp only [Operations.RequirementsChannelsLawful]
-      refine ⟨by simp only [circuit_norm, main, RegisterAccessCols.circuit], ?_, ?_⟩
-      · intro channel h_channel
-        simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_channel
-        rcases h_channel with rfl | rfl
-        · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-        · exact Or.inr List.mem_cons_self
-      · intro env h_constraints
-        rw [constraintsHold_shallow_iff_forall_mem] at h_constraints
-        have h_trusted : Expression.eval env input_var.is_trusted = 0 ∨
-            Expression.eval env input_var.is_trusted = 1 :=
-          bool_of_mul_pred (by
-            simpa only [circuit_norm] using h_constraints.1
-              (input_var.is_trusted * (input_var.is_trusted - 1))
-              (by simp only [circuit_norm, main, RegisterAccessCols.circuit,
-                    Operations.shallowConstraints, List.mem_cons]))
-        rw [Operations.inChannelsOrRequirements_iff_forall_mem]
-        intro interaction h_interaction
-        simp only [circuit_norm, main, RegisterAccessCols.circuit] at h_interaction
-        rcases h_interaction with rfl | rfl
-        · right
-          exact h_trusted
-        · exact Or.inl List.mem_cons_self }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, RegisterAccessCols.circuit,
+        ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

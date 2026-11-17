@@ -357,10 +357,7 @@ def circuit : FormalAssertion (ZMod p) Inputs :=
     Spec := Spec,
     soundness := soundness,
     completeness := completeness,
-    channelsWithRequirements := [],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, U16CompareOperation.circuit] }
+    channelsWithRequirements := [] }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_channelsWithRequirements :

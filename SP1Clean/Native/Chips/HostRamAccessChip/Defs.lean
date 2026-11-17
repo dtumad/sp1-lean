@@ -60,9 +60,9 @@ set_option linter.unusedSectionVars false in
     (Readers.MemoryAccess.circuit (p := p)).channelsWithGuarantees =
       [byteChannel.toRaw, memoryChannel.toRaw] := rfl
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 201
-  output _ _ := ()
-  channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees := [byteChannel.toRaw, memoryChannel.toRaw]
+  }
 
 end SP1Clean.HostRamAccessChip

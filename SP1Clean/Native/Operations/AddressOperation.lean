@@ -13,6 +13,7 @@ import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
 import Clean.Gadgets.Bits
 import Clean.Utils.Tactics.ProvableStructDeriving
+import Clean.Gadgets.Boolean
 
 /-! # `AddressOperation` as a Clean-native witnessed `GeneralFormalCircuit`
 
@@ -210,13 +211,11 @@ def main (input : Var Inputs (ZMod p)) :
        Expression.const ((13 : ℕ) : ZMod p), 0⟩ : ByteRow (Expression (ZMod p)))
   return ⟨⟨value⟩, inv⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Circuits.Types.AddressOperation main where
-  -- 3 address limbs + 1 inverse witness; the offset range check is now a byte-bus `Range` receive
-  -- (witnesses nothing), and AddrAddOperation (FormalAssertion) adds no cells.
-  localLength _ := 3 + 1
-  output _ i0 := ⟨⟨varFromOffset (fields 3) i0⟩, var ⟨i0 + 3⟩⟩
-  -- byte-bus channels propagated from the AddrAddOperation assertion.
-  channelsWithGuarantees := [byteChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Circuits.Types.AddressOperation main := by
+  elaborate_circuit_with {
+    -- byte-bus channels propagated from the AddrAddOperation assertion.
+    channelsWithGuarantees := [byteChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma localLength_eq (x : Var Inputs (ZMod p)) :
@@ -393,12 +392,9 @@ def circuit : GeneralFormalCircuit (ZMod p) Inputs Circuits.Types.AddressOperati
     soundness := soundness,
     completeness := completeness,
     channelsWithRequirements := [],
-    requirementsChannelsLawful := fun input_var i₀ => by
-      preserve_tactic_target
-      simp only [circuit_norm, main, byteChannel]
-      refine ⟨List.nil_subset _, ?_⟩
-      intro env hgate
-      exact bool_of_mul_pred hgate }
+    requirementsChannelsLawful := by
+      simp only [circuit_norm, seval, main, ← IsBool.iff_mul_sub_one, IsBool]
+      tauto }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma circuit_localLength (x : Var Inputs (ZMod p)) :

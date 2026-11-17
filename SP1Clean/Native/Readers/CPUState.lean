@@ -107,30 +107,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   stateChannel.pullIf input.is_real (currentMsg input)
   stateChannel.pushIf input.is_real (nextMsg input)
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- Channel metadata records which buses this reader touches, independently of how strong their
-  -- predicates are.  The State guarantee is now `True`, but the State pull is still a genuine
-  -- guarantee-bearing interaction and must remain visible to composing circuits.
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    change Operations.ChannelsLawful
-      ([.assert _, .interact _, .interact _, .interact _, .interact _] : Operations (ZMod p))
-        [byteChannel.toRaw, stateChannel.toRaw]
-    refine ⟨by simp only [circuit_norm], ?_, by simp only [circuit_norm]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl List.mem_cons_self
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
-    · exact Or.inl (List.mem_cons_of_mem _ List.mem_cons_self)
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- Channel metadata records which buses this reader touches, independently of predicate
+    -- strength: the State guarantee is `True`, but the State pull still bears a guarantee and stays
+    -- visible to composing circuits.
+    channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw]
+  }
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

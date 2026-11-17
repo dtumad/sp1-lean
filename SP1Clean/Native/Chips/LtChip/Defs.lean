@@ -45,17 +45,11 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   input.adapter.op_a_0 === 0
   return ⟨input.state, input.adapter, is_slt, is_sltu, lt_cols⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  output input offset :=
-    ⟨input.state, input.adapter, input.isSlt, input.isSltu,
-      varFromOffset Circuits.Types.LtOperationSigned offset⟩
-  output_eq := by intro input offset; simp only [main, circuit_norm]
-  channelsLawful := by
-    preserve_tactic_target
-    simp only [Inputs.is_real, circuit_norm, main, LtOperationSigned.circuit,
-      Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
-  localLength _ := 10
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- The completed row, exposed as a folded value for chip-boundary proofs. -/
 @[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :

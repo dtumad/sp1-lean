@@ -4,7 +4,7 @@ import SP1Clean.Proofs.Operations.CommitmentStatement
 import SP1Clean.Model.Core.BankReplay
 import ToClean.Air.Authentication
 import ToClean.Air.EnsembleProjection
-import ToClean.Air.TableBuild
+import ToClean.Air.LookupFree
 
 /-! # Installing the immutable commitment statement
 
@@ -123,8 +123,8 @@ variable {statement : CommitmentStatement} {base : Ensemble (ZMod p) SP1PublicIO
 
 /-- Lookup-free original components keep their constraints across the changed canonical data. -/
 theorem project_constraints (witness : EnsembleWitness (install statement base fresh declarations))
-    (lookupFree : ∀ component ∈ base.tables, component.operations.lookups = [])
-    (checked : witness.Constraints) : (project witness).Constraints := by
+    (lookupFree : LookupFree base.tables) (checked : witness.Constraints) :
+    (project witness).Constraints := by
   apply EnsembleWitness.projectPrefix_constraints_of _ _ _ _ ?_
     (((CommitmentBoundary.checker statement).project_constraints witness).mp checked)
   intro index row width valid
@@ -132,7 +132,7 @@ theorem project_constraints (witness : EnsembleWitness (install statement base f
       base.tables[index.val] := List.getElem_append_left index.isLt
   rw [same] at valid width
   rw [← width, Array.extract_size]
-  exact Component.constraintsHold_setData _ (lookupFree _ (List.getElem_mem _)) valid
+  exact lookupFree.constraintsHold_setData (List.getElem_mem _) valid
 
 /-- Every original channel except the declarations keeps its complete ledger and balance. -/
 theorem project_balancedChannel (witness : EnsembleWitness (install statement base fresh declarations))

@@ -113,38 +113,16 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   exitChannel.pushIf input.is_real (exitMsg input)
   exitChannel.pushIf (1 - input.is_real) exitPaddingMsg
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  -- Pulled buses (guarantees assumed): byte (via the composed readers), the structural State pull,
-  -- the Program fetch, and the three memory read-priors. The Memory read-backs and the Exit push
-  -- owe requirements (declared on `circuit.channelsWithRequirements` in `Formal`); Exit joins the
-  -- list here so its interaction stays visible to composing ensembles.
-  channelsWithGuarantees :=
-    [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
-     exitChannel.toRaw]
-  channelsLawful := by
-    preserve_tactic_target
-    dsimp only [ElaboratedCircuit.ChannelsLawful]
-    intro input offset
-    dsimp only [Operations.ChannelsLawful]
-    refine ⟨by simp only [circuit_norm, main, Readers.CPUState.circuit,
-        Readers.RegisterAccessCols.circuit], ?_,
-      by simp only [circuit_norm, main, Readers.CPUState.circuit,
-        Readers.RegisterAccessCols.circuit]⟩
-    intro env
-    rw [Operations.inChannelsOrGuarantees_iff_forall_mem]
-    intro interaction h_interaction
-    simp only [circuit_norm, main, Readers.CPUState.circuit,
-      Readers.RegisterAccessCols.circuit] at h_interaction
-    rcases h_interaction with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    -- program (slot 2), the six memory interactions (slot 3), the two exit pushes (slot 4)
-    · exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
-    all_goals first
-      | exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-          (List.mem_cons_of_mem _ List.mem_cons_self)))
-      | exact Or.inl (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-          (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))))
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit_with {
+    -- Pulled buses (guarantees assumed): byte (via the composed readers), the structural State
+    -- pull, the Program fetch, and the three memory read-priors. The Memory read-backs and the Exit
+    -- push owe requirements (declared on `circuit.channelsWithRequirements` in `Formal`); Exit
+    -- joins the list here so its interaction stays visible to composing ensembles.
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw,
+       exitChannel.toRaw]
+  }
 
 -- Expose the declared channel list + `localLength` as `@[circuit_norm]` rfl-lemmas so composing
 -- ensembles' `channelsLawful` / `circuit_proof_start` are discharged automatically.

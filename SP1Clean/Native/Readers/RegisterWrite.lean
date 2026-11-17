@@ -43,10 +43,8 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) Unit := do
   memoryChannel.pushIf input.is_real
     (⟨input.clk_high, input.clk_low, input.op_a, 0, 0, input.value⟩ : MemoryMsg (Expression (ZMod p)))
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 0
-  output _ _ := ()
-  channelsWithGuarantees := []
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit
 
 set_option linter.unusedSectionVars false in
 @[circuit_norm] lemma channelsWithGuarantees_eq :

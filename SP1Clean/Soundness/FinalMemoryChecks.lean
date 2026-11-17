@@ -4,6 +4,7 @@ import SP1Clean.Native.Operations.FinalRegisterCheck
 import SP1Clean.Native.Operations.FinalRamCheck
 import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import ToClean.Air.TableSlot
+import ToClean.Air.LookupFree
 import ToClean.Circuit.SubcircuitProjection
 
 /-! # Physical assembly of complete target Memory checks
@@ -159,30 +160,34 @@ variable {names : (((FinalMemoryEnsemble.inventory (p := p)).views.map Transitio
 variable {channelNames : ((registry (p := p) target channels).map (·.name)).Nodup}
 variable {registered : ∀ component ∈ auxiliary, component.circuit.channels ⊆ registry target channels}
 
-/-- The boundary's lookups use the fixed target snapshot; retaining its rows preserves
-constraints even when selecting these seven tables changes canonical prover data. -/
-theorem component_constraints_setData (component : Component (ZMod p))
-    (member : component ∈ (ensemble source target [] [] (empty_unique_names target)).tables)
-    {row : Array (ZMod p)} {data data' : ProverData (ZMod p)}
-    (checked : component.operations.ConstraintsHold (Environment.fromArray row data)) :
-    component.operations.ConstraintsHold (Environment.fromArray row data') := by
-  apply component.constraintsHold_setData ?_ checked
-  rw [tables_eq] at member
-  simp only [List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+/-- The target validators and fixed membership providers are lookup-free: the providers' fixed
+columns hold the target snapshot. -/
+theorem checkTables_lookupFree (target : MemorySnapshot) :
+    LookupFree (checkTables (p := p) target) := by
+  simp only [checkTables, LookupFree.cons_iff, LookupFree.nil, and_true]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simp only [Component.lookups_eq, Component.rowOperations, FinalRegisterCheck.circuit,
+      Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  · simp only [Component.lookups_eq, Component.rowOperations, FinalRamCheck.circuit,
+      Guarded.circuit]
+    exact Guarded.main_lookups _ _ _ _
+  all_goals simp [StaticTable.component, StaticTable.provider, Component.lookups_eq,
+    Component.rowOperations, circuit_norm]
+
+/-- The boundary inventory is lookup-free; retaining its rows preserves constraints even when
+selecting these seven tables changes canonical prover data. -/
+theorem tables_lookupFree :
+    LookupFree (ensemble (p := p) source target [] [] (empty_unique_names target)).tables := by
+  rw [tables_eq, List.append_nil]
+  refine LookupFree.cons ?_ (LookupFree.cons ?_ (LookupFree.cons
+    (FinalMemoryEnsemble.view_lookups .terminal) (checkTables_lookupFree target)))
   · change ((FinalMemoryReceipt.circuit _ _).instantiate.operations 0).lookups = []
     rw [FinalMemoryReceipt.lookups]
     exact FinalMemoryEnsemble.view_lookups .registers
   · change ((FinalMemoryReceipt.circuit _ _).instantiate.operations 0).lookups = []
     rw [FinalMemoryReceipt.lookups]
     exact FinalMemoryEnsemble.view_lookups .ram
-  · exact FinalMemoryEnsemble.view_lookups .terminal
-  · simp only [Component.lookups_eq, Component.rowOperations, FinalRegisterCheck.circuit, Guarded.circuit]
-    exact Guarded.main_lookups _ _ _ _
-  · simp only [Component.lookups_eq, Component.rowOperations, FinalRamCheck.circuit, Guarded.circuit]
-    exact Guarded.main_lookups _ _ _ _
-  all_goals simp [StaticTable.component, StaticTable.provider, Component.lookups_eq,
-    Component.rowOperations, circuit_norm]
 
 /-- Receipt-bearing register finalizer at its preserved position. -/
 def registerFinalSlot : TableSlot (ensemble source target auxiliary channels names channelNames registered).tables

@@ -58,10 +58,8 @@ omit [Fact (2 ^ 17 < p)] in
     ((main input).operations offset).lookups = [] := by
   simp [main, circuit_norm, Gadgets.Equality.circuit, Gadgets.Equality.main]
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main where
-  localLength _ := 6
-  output _ _ := ()
-  channelsWithGuarantees := []
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs unit main := by
+  elaborate_circuit
 
 theorem soundness : FormalAssertion.Soundness (ZMod p) main (fun _ => True) Spec := by
   circuit_proof_start [Spec]

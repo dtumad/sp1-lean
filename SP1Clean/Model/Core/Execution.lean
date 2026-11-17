@@ -158,10 +158,10 @@ theorem deterministic {other : ExecutionState} {otherEvent : ExecutionEvent}
           rw [first] at second
           cases second
           exact ⟨rfl, rfl⟩
-      | syscall success => exact (notEcall (HostState.step_sound success).1).elim
+      | syscall success => exact (notEcall (HostState.step_aboutToExecuteEcall success)).elim
   | syscall success =>
       cases right with
-      | ordinary _ notEcall _ => exact (notEcall (HostState.step_sound success).1).elim
+      | ordinary _ notEcall _ => exact (notEcall (HostState.step_aboutToExecuteEcall success)).elim
       | syscall otherSuccess =>
           rw [success] at otherSuccess
           cases otherSuccess

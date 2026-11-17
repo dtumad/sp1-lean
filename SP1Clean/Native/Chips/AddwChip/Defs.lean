@@ -62,21 +62,13 @@ def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p))
   assertZero (input.is_real * (input.is_real - 1))
   return ⟨input.is_real, input.state, input.adapter, ⟨value, ⟨msb[0]⟩⟩⟩
 
-instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main where
-  output input offset :=
-    ⟨input.is_real, input.state, input.adapter,
-      ⟨Vector.mapRange 2 fun i => var { index := offset + i },
-        ⟨var { index := offset + 2 }⟩⟩⟩
-  channelsLawful := by
-    preserve_tactic_target
-    simp only [circuit_norm, main, AddwOperation.circuit,
-      Readers.CPUState.circuit, Readers.RegisterWrite.circuit]
-  -- 2 result limbs + 1 sign bit; readers are `assertion`s (`localLength 0`).
-  localLength _ := 3
-  -- `programChannel` joins the structural `RowSpec` propagated from `ALUTypeReader`'s program **pull** (W11 flip);
-  -- `memoryChannel` joins from `ALUTypeReader`'s memory read **pulls** (W11 memory flip). The `RegisterWrite`
-  -- op_a write push owes a memory requirement (declared in `circuit.channelsWithRequirements`), not a guarantee.
-  channelsWithGuarantees := [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+instance elaborated : ElaboratedCircuit (ZMod p) Inputs Columns main := by
+  elaborate_circuit_with {
+    -- `ALUTypeReader`'s Program fetch and Memory read pulls carry guarantees; the `RegisterWrite`
+    -- op_a push owes a Memory requirement (`circuit.channelsWithRequirements`).
+    channelsWithGuarantees :=
+      [byteChannel.toRaw, stateChannel.toRaw, programChannel.toRaw, memoryChannel.toRaw]
+  }
 
 /-- The explicit completed Addw row, kept folded for chip-boundary proofs. -/
 @[circuit_norm] lemma directOutput_eq (input : Var Inputs (ZMod p)) (offset : ℕ) :

@@ -459,12 +459,10 @@ private theorem dispatchArmLookups (input : Var SyscallInstrsChip.DispatchArm.In
     (n : ℕ) :
     Operations.lookups ((SyscallInstrsChip.DispatchArm.circuit.main input).operations n) = [] := rfl
 
-/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
-theorem lookups_empty :
-    ((SyscallInstrsChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
-  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
-    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
-    Operations.toNested_toFlat]
+/-- The row circuit contains no Clean lookup operations at any input and offset; cross-table
+checks use channels. -/
+@[circuit_norm] theorem main_lookups (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main input).operations offset).lookups = [] := by
   simp only [SyscallInstrsChip.main, Circuit.operations, Circuit.bind_def, assertZero,
     subcircuitWithAssertion, assertion, Channel.pullIf, Channel.pushIf,
     Operations.lookups_append, Operations.lookups_assert, Operations.lookups_interact,
@@ -480,6 +478,13 @@ theorem lookups_empty :
     SP1Clean.U16toU8OperationSafe.circuit_localLength,
     u16toU8SafeLookups, isZeroLookups, cpuStateLookups, registerAccessColsLookups, pcArmLookups, commitArmLookups, writeArmLookups, fieldBoundArmLookups, dispatchArmLookups,
     Operations.localLength, Nat.add_zero, List.append_nil]
+
+/-- The row contains no Clean lookup operations; cross-table checks use channels. -/
+theorem lookups_empty :
+    ((SyscallInstrsChip.circuit (p := p)).instantiate.operations 0).lookups = [] := by
+  simp only [circuit_norm, witnessAny, GeneralFormalCircuit.toSubcircuit,
+    GeneralFormalCircuit.toWithHint, GeneralFormalCircuit.WithHint.toSubcircuit,
+    Operations.toNested_toFlat, main_lookups]
 
 /-- State demand uses the same relative-clock hint layout as ordinary instructions. -/
 def generation : Air.Flat.WitnessGeneration.Generation (ZMod p) Inputs :=
