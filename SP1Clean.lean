@@ -198,7 +198,6 @@ import SP1Clean.Soundness.HostQueueHistory
 import SP1Clean.Soundness.HostQueueOrder
 import SP1Clean.Soundness.HostRamTouches
 import SP1Clean.Soundness.HostTerminalLedger
-import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.LocalCoreBoundaries
 import SP1Clean.Soundness.LocalCoreChannels
 import SP1Clean.Soundness.LocalCoreDecode

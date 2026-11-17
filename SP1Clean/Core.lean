@@ -84,7 +84,6 @@ import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.FormalModel.Contracts.OrderedBoundary
-import SP1Clean.FormalModel.Contracts.OrderedInitialProvider
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.FormalModel.Contracts.PublicValues
 import SP1Clean.FormalModel.Contracts.Readers
@@ -458,8 +457,6 @@ import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
 import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
 import SP1Clean.Proofs.Chips.HostRamReadChip.Ledger
 import SP1Clean.Proofs.Chips.HostRamReadChip.Populate
-import SP1Clean.Proofs.Chips.InitialRamProvider
-import SP1Clean.Proofs.Chips.InitialRegisterProvider
 import SP1Clean.Proofs.Chips.JalChip.Complete
 import SP1Clean.Proofs.Chips.JalChip.Formal
 import SP1Clean.Proofs.Chips.JalrChip.Complete
@@ -488,7 +485,6 @@ import SP1Clean.Proofs.Chips.MulChip.Complete
 import SP1Clean.Proofs.Chips.MulChip.Formal
 import SP1Clean.Proofs.Chips.MulChip.Structural
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
-import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1Clean.Proofs.Chips.OrderedMemoryProvider
 import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1Clean.Proofs.Chips.ProgramProviderChip

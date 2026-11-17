@@ -396,7 +396,7 @@ theorem membership_guarantees_of_balance (image : ProgramImage) (source : Execut
         rcases known with rfl | rfl
         all_goals simp [StaticTable.channel, InitialMemoryLookup.membership,
           MemorySnapshot.registerTable, StaticTable.ofRows, stateChannel, memoryChannel,
-          OrderedBoundary.channel, OrderedInitialProvider.channelName,
+          OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
           OrderedFinalProvider.channelName, Channel.toRaw]
       · intro fixed interaction emitted _
         exact (FixedProgramProvider.Preprocessed.table_spec_and_requirements image table fixed

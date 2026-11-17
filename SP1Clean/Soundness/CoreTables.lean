@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.EnsembleChannels
-import SP1Clean.Soundness.InitialMemoryEnsemble
+import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
 import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
 import ToClean.Air.VerifierChannel
@@ -45,7 +45,7 @@ theorem afterInitialTables_eq (image : ProgramImage) :
 private theorem final_requirements (component : Component (ZMod p))
     (member : component ∈ FinalMemoryEnsemble.inventory.views.map (·.component)) :
     component.circuit.channelsWithRequirements ⊆
-      [memoryChannel.toRaw, (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
+      [memoryChannel.toRaw, (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
         (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw] := by
   simp only [OrderedMemoryEnsemble.Inventory.views, FinalMemoryEnsemble.inventory, List.map_cons,
     List.map_nil, List.mem_cons, List.not_mem_nil, or_false] at member
@@ -61,7 +61,7 @@ theorem afterInitialTables_finished_requirements (image : ProgramImage)
     (component : Component (ZMod p)) (member : component ∈ afterInitialTables (p := p) image)
     (channel : RawChannel (ZMod p))
     (outside : channel ∉ [stateChannel.toRaw, memoryChannel.toRaw,
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw,
+      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw,
       (OrderedBoundary.channel OrderedFinalProvider.channelName).toRaw])
     (env : Environment (ZMod p)) (constraints : component.operations.ConstraintsHold env)
     (romRequirements : component = FixedProgramProvider.Preprocessed.component image →
@@ -89,21 +89,21 @@ theorem afterInitialTables_finished_requirements (image : ProgramImage)
     exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_right _ providerMem)
 
 private theorem initialChannel_not_old :
-    (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName).toRaw ∉
+    (OrderedBoundary.channel (p := p) SnapshotMemoryEnsemble.channelName).toRaw ∉
       (sp1Ensemble (p := p)).channels := by
   intro member
   have names := List.mem_map_of_mem (f := RawChannel.name) member
-  simp [sp1Ensemble_channels, OrderedBoundary.channel, OrderedInitialProvider.channelName,
+  simp [sp1Ensemble_channels, OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
     stateChannel, memoryChannel, programChannel, byteChannel, exitChannel,
     syscallChannel, publicValuesChannel, Channel.toRaw_name] at names
 
 /-- The private initialization channel is owned only by its three inventory tables and verifier. -/
 theorem afterInitialTables_silent (image : ProgramImage) :
     ∀ component ∈ afterInitialTables (p := p) image,
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ component.circuit.channels := by
+      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉ component.circuit.channels := by
   intro component member
   have old (member : component ∈ (sp1Ensemble (p := p)).tables) :
-      (OrderedBoundary.channel OrderedInitialProvider.channelName).toRaw ∉ component.circuit.channels :=
+      (OrderedBoundary.channel SnapshotMemoryEnsemble.channelName).toRaw ∉ component.circuit.channels :=
     fun used => initialChannel_not_old (sp1Ensemble_tables_channels_subset component member used)
   simp only [afterInitialTables, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with ((member | rfl) | member) | member
@@ -112,12 +112,12 @@ theorem afterInitialTables_silent (image : ProgramImage) :
     rcases member with rfl | rfl | rfl <;>
       intro used <;>
       have support := FinalMemoryEnsemble.view_channels_subset _ used <;>
-      simp [OrderedBoundary.channel, OrderedInitialProvider.channelName,
+      simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName,
         OrderedFinalProvider.channelName, memoryChannel, byteChannel, Channel.toRaw] at support
-  · change (OrderedBoundary.channel (p := p) OrderedInitialProvider.channelName).toRaw ∉
+  · change (OrderedBoundary.channel (p := p) SnapshotMemoryEnsemble.channelName).toRaw ∉
       (FixedProgramProvider.Preprocessed.circuit (p := p) image).channels
     rw [FixedProgramProvider.Preprocessed.circuit_channels]
-    simp [OrderedBoundary.channel, OrderedInitialProvider.channelName, programChannel, Channel.toRaw]
+    simp [OrderedBoundary.channel, SnapshotMemoryEnsemble.channelName, programChannel, Channel.toRaw]
   · exact old (by rw [sp1Ensemble_tables]; exact List.mem_append_left _ member)
   · have providerMem : component ∈ sp1ProviderTables (p := p) := by
       rcases member with member | member
