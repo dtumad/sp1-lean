@@ -45,13 +45,6 @@ theorem write_authorized_of_permissions (image : ProgramImage)
   have same : Address.toNat write.addr + index.val = address := by dsimp only [index]; omega
   rwa [same] at permitted
 
-theorem write_readOnly_false_of_permissions (image : ProgramImage)
-    (write : Trace.MemWrite (ZMod p)) (widthBound : write.width ≤ 2 ^ 16)
-    (permissions : ∀ index : Fin write.width,
-      WritePermissionProvider.Permitted image (Address.offset write.addr (index.val : ZMod p)))
-    (address : ℕ) (covered : write.covers address) : image.readOnly address = false := by
-  exact (write_authorized_of_permissions image write widthBound permissions address covered).2
-
 /-- An authorized row frames the complete Sail map outside native RAM, including absent keys. -/
 theorem RowEffect.memory_outside_of_writeAuthorization {image : ProgramImage} (valid : image.Valid)
     {row : Trace.RowView (ZMod p)} {state next : SailState}
