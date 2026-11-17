@@ -13,7 +13,7 @@ disables the entire row for padding without dropping any physical interaction.
 
 namespace SP1Clean.FinalRegisterCheck
 
-open Circuit Model.Core Channels Semantics
+open Circuit Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

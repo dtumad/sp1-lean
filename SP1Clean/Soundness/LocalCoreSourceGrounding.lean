@@ -13,7 +13,7 @@ in an earlier shard. The mixed execution walk and complete outgoing boundary rem
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

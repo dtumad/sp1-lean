@@ -15,7 +15,7 @@ ROM preservation and active SyscallInstrs effects remain explicit obligations.
 namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow haltEventOfRow)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -11,7 +11,7 @@ projection internally, retaining all host RAM effects in the extended Memory led
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat Channels Model.Core NativeCore
+open Circuit Air.Flat Channels Semantics NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

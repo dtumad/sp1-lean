@@ -7,7 +7,7 @@ in the evolving host. Writing the zero syscall result back to an already-zero x5
 preserve the literal Sail register map, not merely its integer-register observations.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D LeanRV64D
 
@@ -59,4 +59,4 @@ theorem ExecutionStep.halt {policy : HostPolicy} {program : GuestProgram}
   rw [source.host.haltExecution_apply source.sail pc exit arg2 code] at step
   exact .syscall step
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

@@ -12,7 +12,7 @@ from its additional ledger; active host effects and complete execution reconstru
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 
-open Circuit Air.Flat SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

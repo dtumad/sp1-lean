@@ -21,7 +21,7 @@ This finite constructor does not replace the complete Sail execution relation or
 
 namespace SP1CleanTest.Alignment.HostProgram
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1Clean.Semantics SP1Clean.TraceGen LeanRV64D
 open SP1CleanTest.Alignment.InstalledAssembly
 

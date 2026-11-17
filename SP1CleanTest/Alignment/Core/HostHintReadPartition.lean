@@ -26,7 +26,7 @@ the other channels and complete mixed execution are not claimed satisfied by the
 
 namespace SP1CleanTest.Core.HostHintReadPartition
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue Soundness HostChecks
+open Circuit Air.Flat SP1Clean Semantics HintQueue Soundness HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

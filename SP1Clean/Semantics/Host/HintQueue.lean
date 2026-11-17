@@ -9,7 +9,7 @@ No hash or trusted content oracle identifies bytes. Field encodings, resource bo
 authentication of the node inventory remain separate from this executable representation.
 -/
 
-namespace SP1Clean.Model.Core.HintQueue
+namespace SP1Clean.Semantics.HintQueue
 
 structure Node where
   bytes : Bytes
@@ -256,4 +256,4 @@ theorem pop?_of_represents {store : Store} {head : ℕ} {bytes : Bytes} {rest : 
 
 theorem pop?_empty (store : Store) : pop? store 0 = none := rfl
 
-end SP1Clean.Model.Core.HintQueue
+end SP1Clean.Semantics.HintQueue

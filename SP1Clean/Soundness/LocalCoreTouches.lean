@@ -14,7 +14,7 @@ and eliminates the actual refresh rows.
 namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow AlignedFacts syscall_operands_of_committed halt_aligned syscall_aligned ordinary_aligned align_rows)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

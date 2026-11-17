@@ -13,7 +13,7 @@ Successful replay is a premise, not a consequence of this module. The resulting 
 intended for each already-replayed prefix of the mixed grounding induction.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open Machine Soundness.Target
 
@@ -113,4 +113,4 @@ theorem replayEvents?_queue {policy : HostPolicy} {program : GuestProgram}
         Option.toList_some, List.nil_append, List.cons_append]
     rw [split, HintQueue.replay?_append, first, Option.bind_some, remaining]
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

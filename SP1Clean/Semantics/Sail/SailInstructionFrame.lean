@@ -17,15 +17,15 @@ open LeanRV64D SP1Clean.Soundness.Target
 The outgoing PC need not fetch unless a subsequent step executes. -/
 theorem ordinary_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
-    (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
+    (permission : Semantics.InstructionWrite.PermittedAt readOnly program source)
     (normal : SailRetiresNormally source target) :
     SailConfigured target ∧
       (∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address) ∧
       ∀ address, (source.mem.get? address).isSome → (target.mem.get? address).isSome := by
   obtain ⟨pc, word, decoded, atPc, fetched, decode, checked⟩ := permission
-  have permitted : Model.Core.InstructionWrite.PermittedAt readOnly program source :=
+  have permitted : Semantics.InstructionWrite.PermittedAt readOnly program source :=
     ⟨pc, word, decoded, atPc, fetched, decode, checked⟩
-  have supported := (Model.Core.InstructionWrite.check_supported readOnly source.get_reg? decoded checked).2
+  have supported := (Semantics.InstructionWrite.check_supported readOnly source.get_reg? decoded checked).2
   have liftFrame : SailConfigured target ∧ target.mem = source.mem →
       SailConfigured target ∧ (∀ address, readOnly address = true →
         target.mem.get? address = source.mem.get? address) ∧
@@ -55,7 +55,7 @@ theorem ordinary_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestP
 The outgoing PC need not fetch unless a subsequent step executes. -/
 theorem ordinary_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
-    (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
+    (permission : Semantics.InstructionWrite.PermittedAt readOnly program source)
     (normal : SailRetiresNormally source target) :
     SailConfigured target ∧
       ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by

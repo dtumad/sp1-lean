@@ -10,7 +10,7 @@ without an auxiliary balance, provider, or semantic boundary premise.
 
 namespace SP1Clean.Soundness.HostHintReadBanks
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostHintReadHandoff HostCommitBank
+open Circuit Air.Flat Semantics HostHintReadLocal HostHintReadHandoff HostCommitBank
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

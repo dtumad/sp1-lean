@@ -12,7 +12,7 @@ integration obligations. This producer installation alone is not an end-to-end c
 
 namespace SP1Clean.Soundness.HostOrdinaryReceipts
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance receiptClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩

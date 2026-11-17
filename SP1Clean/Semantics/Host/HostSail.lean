@@ -9,7 +9,7 @@ updates x5, PC, and exactly the returned memory-write interval. The adapter prod
 observations and return value from execution; it does not accept a claimed syscall result.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D LeanRV64D SP1Clean.Soundness.Target
 
@@ -205,4 +205,4 @@ theorem HostState.step_aboutToExecuteEcall {host nextHost : HostState} {policy :
   split_ifs at success with fetched
   · exact ⟨pc, atPc, fetched⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

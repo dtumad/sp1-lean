@@ -20,7 +20,7 @@ variable {p : ℕ} [Fact p.Prime]
 
 def Spec (input : Inputs (ZMod p)) : Prop :=
   (input.is_real = 0 ∨ input.is_real = 1) ∧
-    (input.is_real = 1 → input.code.isU64 ∧ Model.Core.SyscallKind.Supported input.code.toBitVec64)
+    (input.is_real = 1 → input.code.isU64 ∧ Semantics.SyscallKind.Supported input.code.toBitVec64)
 
 end SP1Clean.SyscallCodeGuard
 

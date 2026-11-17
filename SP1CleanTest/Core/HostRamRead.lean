@@ -11,7 +11,7 @@ remain unique. Authenticating the span through an installed host-call table rema
 
 namespace SP1CleanTest.Core.HostRamRead
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target HostChecks
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

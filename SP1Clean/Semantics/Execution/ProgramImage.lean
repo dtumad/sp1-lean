@@ -10,7 +10,7 @@ This checks the finite image contract, not instruction support or ELF/digest aut
 Instruction decoding remains a separate check before an image can instantiate the native ensemble.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Soundness.Target
 
@@ -220,4 +220,4 @@ theorem readOnly_iff (input : ProgramImage) (address : ℕ) :
 
 end ProgramImage
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

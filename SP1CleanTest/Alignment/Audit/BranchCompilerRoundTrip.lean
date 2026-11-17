@@ -16,7 +16,7 @@ no provider construction, channel balance, or complete shard relation is claimed
 
 namespace SP1Clean.Audit.BranchCompilerRoundTrip
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Soundness.Target
 open SP1Clean.TraceGen LeanRV64D LeanRV64D.Functions
 
 /-- A single full-width BEQ word at the native guest-memory lower bound. -/

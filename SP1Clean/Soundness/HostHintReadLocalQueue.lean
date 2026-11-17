@@ -12,7 +12,7 @@ registration alone has no queue endpoints and admits no active queue-handler row
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Model.Core HostHintQueue HostHintReadHandoff
+open Circuit Air.Flat Semantics HostHintQueue HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

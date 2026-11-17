@@ -19,7 +19,7 @@ this module does not claim an execution theorem for the assembly.
 
 namespace SP1Clean.Soundness.NativeCore
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 open SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]

@@ -9,7 +9,7 @@ it does not assume that the mutable final bank contains every statement word.
 
 namespace SP1Clean.CommitmentDeclaration
 
-open Model.Core
+open Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

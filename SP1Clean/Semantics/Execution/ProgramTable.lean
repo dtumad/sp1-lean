@@ -14,7 +14,7 @@ Membership here certifies agreement with `InstructionDecode.decode`; the separat
 This table is not yet wired into the released machine theorem.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Soundness.Target SP1Clean.ProgramChip SP1Clean.Channels
 
@@ -228,4 +228,4 @@ theorem programRows_length (image : ProgramImage) (valid : image.Decodable) :
     exact congrArg (· + 1) (ih (fun entry member => all entry (by simp [member])))
 
 end ProgramImage
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

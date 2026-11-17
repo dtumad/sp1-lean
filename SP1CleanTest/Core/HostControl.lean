@@ -16,7 +16,7 @@ nonempty host state, unrestricted unused arguments, canonical exits, and stopped
 
 namespace SP1CleanTest.Core.HostControl
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core HostChecks
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

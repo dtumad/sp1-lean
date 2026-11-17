@@ -11,7 +11,7 @@ endpoints. No provider-specification or source-memory-truth premise is accepted 
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

@@ -15,7 +15,7 @@ belong to the enclosing machine.
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryReceipts
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 
 private abbrev Fp := ZMod SP1Prime
 

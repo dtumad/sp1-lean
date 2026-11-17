@@ -31,7 +31,7 @@ slot within that shard therefore need a separate restriction or refinement
 argument; successful native execution alone does not imply that exact public-value binding.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Observations supplied by the executing machine, not by the syscall event's claimed result. -/
 structure HostReadContext where
@@ -169,4 +169,4 @@ def HostState.run (host : HostState) (policy : HostPolicy) (context : HostReadCo
     let effect ← host.executeKind policy context kind arg1 arg2
     some ⟨kind, arg1, arg2, host.result kind, effect⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

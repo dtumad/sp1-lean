@@ -13,7 +13,7 @@ execution-order premise is used to establish this equation.
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 open TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]

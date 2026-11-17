@@ -21,7 +21,7 @@ authenticated through its fixed prefix and the complete Program channel balance.
 
 namespace SP1Clean.FixedProgramProvider.Preprocessed
 
-open Circuit Air.Flat Air.Flat.WitnessGeneration SP1Clean.Model.Core SP1Clean.Channels
+open Circuit Air.Flat Air.Flat.WitnessGeneration SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

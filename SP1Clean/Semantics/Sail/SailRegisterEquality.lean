@@ -9,7 +9,7 @@ The resulting finite-map comparison includes platform registers, nextPC, retirem
 and absent keys; it does not identify states merely because their integer registers agree.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D
 
@@ -99,4 +99,4 @@ theorem equivalent_iff (left right : Map) : equivalent left right = true ↔ lef
 
 end SailRegisterFile
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

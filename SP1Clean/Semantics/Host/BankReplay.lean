@@ -8,7 +8,7 @@ and VERIFY, preserves it. Successful replay therefore determines the bank by the
 argument pairs. Bounds are established by successful execution, not assumed of a candidate tape.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open Machine Soundness.Target
 
@@ -107,4 +107,4 @@ theorem replayEvents?_bank {policy : HostPolicy} {program : GuestProgram}
         cases found : bankEvent? deferred event <;> simp [found]
       rw [split, List.foldl_append, replayStep?_bank step deferred, ih suffix]
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

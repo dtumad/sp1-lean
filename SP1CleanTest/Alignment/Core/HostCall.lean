@@ -17,7 +17,7 @@ remain whole-ensemble obligations outside these local satisfiability tests.
 
 namespace SP1CleanTest.Core.HostCall
 
-open Circuit Air.Flat SP1Clean SP1Clean.HostCallChip SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.HostCallChip SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 

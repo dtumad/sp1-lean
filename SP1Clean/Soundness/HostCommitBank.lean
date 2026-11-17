@@ -13,7 +13,7 @@ proved terminal no-op. Local contracts follow from constraints and Byte guarante
 
 namespace SP1Clean.Soundness.HostCommitBank
 
-open Circuit Air.Flat HostCommitChip Model.Core RankedGrounding
+open Circuit Air.Flat HostCommitChip Semantics RankedGrounding
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

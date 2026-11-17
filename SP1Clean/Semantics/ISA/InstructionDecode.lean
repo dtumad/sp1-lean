@@ -11,7 +11,7 @@ stateful Sail decoder in every configured state. Enabled hint-extension aliases 
 their distinct Sail constructors need separate semantic bridges before they can join this profile.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D
 
@@ -181,4 +181,4 @@ def AgreesWithSail : Prop :=
   ∀ word i, decode word = some i → SP1Clean.Soundness.Target.ConfiguredDecode word i
 
 end InstructionDecode
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

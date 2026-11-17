@@ -18,7 +18,7 @@ semantic-boundary assumption.
 namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow RowMemoryPermutation rowAggregates_of_permutation rowTouches refresh_free_of_balance)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 open TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]

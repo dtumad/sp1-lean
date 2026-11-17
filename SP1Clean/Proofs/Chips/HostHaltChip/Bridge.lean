@@ -11,7 +11,7 @@ whole-machine responsibilities.
 
 namespace SP1Clean.HostHaltChip
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

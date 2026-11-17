@@ -9,7 +9,7 @@ program and every decoded instruction, and rules out a nonzero x0. It never enum
 space or requires an execution witness. Full Sail/host endpoint representation is separate.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Program validity, supported decoding, architectural x0, and complete ROM-byte agreement. -/
 def SourceValid (image : ProgramImage) (snapshot : MemorySnapshot) : Prop :=
@@ -50,4 +50,4 @@ theorem SourceValid.romLoaded {image : ProgramImage} {snapshot : MemorySnapshot}
   exact (realizes.2 _ (by have := index.isLt; omega)).trans
     (congrArg some (valid.2.2.2 entry member index))
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

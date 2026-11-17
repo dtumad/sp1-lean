@@ -11,7 +11,7 @@ the internal nonfinal/final split. Word bindings and per-call table balance rema
 
 namespace SP1Clean.Soundness.HintReadWrites
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HintReadCoverage
+open Circuit Air.Flat Semantics Semantics.HintQueue HintReadCoverage
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

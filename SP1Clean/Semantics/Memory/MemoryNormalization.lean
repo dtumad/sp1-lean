@@ -9,7 +9,7 @@ history. Normalization preserves every read below the supplied limit and enumera
 already finite nonzero support; it never traverses the architectural address space.
 -/
 
-namespace SP1Clean.Model.Core.ByteMemory
+namespace SP1Clean.Semantics.ByteMemory
 
 /-- Increasing live addresses paired with their final byte values, each appearing once. -/
 def canonicalBelow (memory : ByteMemory) (limit : ℕ) : ByteMemory :=
@@ -56,4 +56,4 @@ theorem canonicalBelow_congr {left right : ByteMemory} {limit : ℕ}
     ((Finset.mem_sort (· ≤ ·)).mp present)).1
   rw [(agreesBelow_iff left right limit).mp same address bounded]
 
-end SP1Clean.Model.Core.ByteMemory
+end SP1Clean.Semantics.ByteMemory

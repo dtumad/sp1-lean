@@ -11,7 +11,7 @@ bytes; they do not claim the queue inventory is already authenticated by the mix
 
 namespace SP1CleanTest.Core.HostQueue
 
-open SP1Clean SP1Clean.Model.Core
+open SP1Clean SP1Clean.Semantics
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 

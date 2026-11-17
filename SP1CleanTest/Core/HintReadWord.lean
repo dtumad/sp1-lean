@@ -10,7 +10,7 @@ This exercises the word subsystem, not instruction/queue authorization or mixed-
 
 namespace SP1CleanTest.Core.HintReadWord
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks HintReadFixtures
+open Circuit Air.Flat SP1Clean Semantics HintQueue HostChecks HintReadFixtures
 
 /-- Empty, partial, and aligned hints balance every physical word and padding transfer. -/
 theorem completeWrites : (List.range 18).all (fun length =>

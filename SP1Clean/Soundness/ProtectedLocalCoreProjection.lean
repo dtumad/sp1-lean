@@ -13,7 +13,7 @@ additional validity or balance premises.
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

@@ -10,7 +10,7 @@ from the new one. The state and instruction ledgers still need assembly into the
 
 namespace SP1Clean.HostCommitChip
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

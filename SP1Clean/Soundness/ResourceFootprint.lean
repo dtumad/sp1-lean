@@ -10,7 +10,7 @@ full mixed construction demand remain A4/A5/A6 obligations; they are not capston
 -/
 
 namespace SP1Clean.Soundness.ResourceEnsemble
-open Circuit Air.Flat Model.Core Machine
+open Circuit Air.Flat Semantics Machine
 
 variable {p : ℕ} [Fact p.Prime]
 

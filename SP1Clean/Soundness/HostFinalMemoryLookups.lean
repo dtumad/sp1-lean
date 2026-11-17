@@ -13,7 +13,7 @@ the HALT padding replacement and the two receipt installations.
 
 namespace SP1Clean.Soundness.HostFinalMemory
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

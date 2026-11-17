@@ -10,7 +10,7 @@ host state, and no guest-memory write. Neither premise is a channel payload guar
 
 namespace SP1Clean.HostHintLengthChip
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

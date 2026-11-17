@@ -14,7 +14,7 @@ The nonzero local snapshot is independent of SP1's boot-only register initializa
 
 namespace SP1CleanTest.Core.SnapshotRegisterExport
 
-open Air.Flat Circuit SP1Clean SP1Clean.Model.Core
+open Air.Flat Circuit SP1Clean SP1Clean.Semantics
 
 abbrev Fp := ZMod SP1Prime
 abbrev Requests := ProvableVector RegisterSnapshotRow 2

@@ -76,10 +76,10 @@ def reference : Lean.Json := Lean.Json.mkObj [("rows", Lean.toJson (
     fun code : ℕ => Lean.Json.mkObj [("code", Lean.toJson code),
       ("accepted", Lean.toJson (Semantics.ReleasePolicy.acceptsExit (BitVec.ofNat 32 code)))]))]
 
-private def hintExecution (hints : List Model.Core.Bytes) (kind : Model.Core.SyscallKind)
-    (arg1 arg2 : ℕ) : Except String Model.Core.HostExecution :=
-  let host : Model.Core.HostState := { io := { hints } }
-  let context : Model.Core.HostReadContext := {
+private def hintExecution (hints : List Semantics.Bytes) (kind : Semantics.SyscallKind)
+    (arg1 arg2 : ℕ) : Except String Semantics.HostExecution :=
+  let host : Semantics.HostState := { io := { hints } }
+  let context : Semantics.HostReadContext := {
     register := fun index =>
       if index = 5 then some kind.code
       else if index = 10 then some (BitVec.ofNat 64 arg1)
@@ -96,9 +96,9 @@ def hintReference : Except String Lean.Json := do
   let initial := rowReference "host_hint_length_empty" (HostHintLengthChip.circuit true)
     (HostHintLengthChip.populate #[] 0 1 265 empty)
   let cases ← [0, 1, 7, 8, 9, 16, 17, 65535, 65536].mapM fun length => do
-    let bytes : Model.Core.Bytes := (List.range length).map fun index => BitVec.ofNat 8 (19 * index + 3)
+    let bytes : Semantics.Bytes := (List.range length).map fun index => BitVec.ofNat 8 (19 * index + 3)
     let hints := [bytes, [BitVec.ofNat 8 99]]
-    let store := Model.Core.HintQueue.ofList hints
+    let store := Semantics.HintQueue.ofList hints
     let address := if length % 2 = 0 then 131072 else 131064
     let observe ← hintExecution hints .hintLength (2 ^ 64 - 1) 17
     let read ← hintExecution hints .hintRead address length

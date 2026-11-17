@@ -10,7 +10,7 @@ dispatch this call. Unconstrained execution is deliberately outside this native 
 
 namespace SP1Clean.HostEnterChip
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

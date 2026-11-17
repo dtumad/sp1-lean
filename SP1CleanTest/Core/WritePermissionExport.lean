@@ -14,7 +14,7 @@ The policy is native ROM exclusion, not SP1's runtime mprotect state machine.
 
 namespace SP1CleanTest.Core.WritePermissionExport
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics
 open ComponentExport (Fp)
 
 /-- Three byte addresses, with every native address limb retained. -/

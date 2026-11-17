@@ -18,7 +18,7 @@ verifier's supplied endpoint. Complete supplied-snapshot equality remains open.
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGrounding
 open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

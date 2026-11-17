@@ -10,7 +10,7 @@ choices of intermediate states. Failed tapes have a total observation, but are e
 `ExecutionPath`; all composition and event-cost conclusions below use that existing relation.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 open Machine Soundness.Target
 
 /-- Every real event consumes at least one ordinary eight-tick window. -/
@@ -208,4 +208,4 @@ theorem ExecutionPath.resources_split {policy : HostPolicy} {program : GuestProg
   rw [combined] at fits
   exact ⟨middle, left, right, fits.left, fits.right⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

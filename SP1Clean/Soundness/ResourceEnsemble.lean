@@ -15,7 +15,7 @@ remain A5. This intermediate assembly does not instantiate the full Shard soundn
 -/
 
 namespace SP1Clean.Soundness.ResourceEnsemble
-open Circuit Air.Flat Model.Core Machine Semantics
+open Circuit Air.Flat Semantics Machine
 
 variable {p : ℕ} [Fact p.Prime]
 

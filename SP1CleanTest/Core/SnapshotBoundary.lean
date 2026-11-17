@@ -13,7 +13,7 @@ nonzero Byte messages, and both fixed membership ledgers. These are provider reg
 
 namespace SP1CleanTest.Core.SnapshotBoundary
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 

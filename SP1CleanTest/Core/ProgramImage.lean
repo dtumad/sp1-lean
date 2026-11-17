@@ -4,7 +4,7 @@ import SP1Clean.Semantics.Execution.Boot
 
 namespace SP1CleanTest.Core.ProgramImage
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 private def image : ProgramImage :=
   ⟨[(65536, 0x00000073)], 65536, [(65536, 0x73), (65540, 42)]⟩

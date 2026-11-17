@@ -9,7 +9,7 @@ Its clock is preserved by the full-record handoff and is grounded by the enclosi
 
 namespace SP1Clean.FinalRegisterValue
 
-open Model.Core Channels Semantics
+open Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

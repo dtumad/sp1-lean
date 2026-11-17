@@ -9,7 +9,7 @@ silence is a static interface of the installed components, never a witness premi
 
 namespace SP1Clean.Soundness.FinalMemoryChecks
 
-open Circuit Air.Flat Channels Model.Core Semantics
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
   {source target : MemorySnapshot} {auxiliary : List (Component (ZMod p))}

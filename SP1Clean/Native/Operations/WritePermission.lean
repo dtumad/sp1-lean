@@ -15,7 +15,7 @@ cells come from Clean's exportable zero-test and bit-decomposition witness progr
 
 namespace SP1Clean.WritePermissionProvider
 
-open Circuit SP1Clean.Model.Core
+open Circuit SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

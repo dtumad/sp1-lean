@@ -8,7 +8,7 @@ The lookup binds the index and all four value limbs together. Its 32 rows are co
 supplied snapshot, independently of prover data or the instruction trace.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Soundness.Target
 
@@ -61,4 +61,4 @@ theorem registerTable_sound (snapshot : MemorySnapshot) (row : RegisterSnapshotR
 
 end MemorySnapshot
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

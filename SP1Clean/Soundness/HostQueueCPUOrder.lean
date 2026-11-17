@@ -12,7 +12,7 @@ assume successful host replay. WRITE/hook queue edges are outside the present ha
 
 namespace SP1Clean.Soundness.HostQueueCPUOrder
 
-open Circuit Air.Flat Model.Core HostHintQueue HostQueueOrder HostHintReadLocal NativeCore Semantics
+open Circuit Air.Flat Semantics HostHintQueue HostQueueOrder HostHintReadLocal NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

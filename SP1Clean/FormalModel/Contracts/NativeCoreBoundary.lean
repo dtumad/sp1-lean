@@ -11,7 +11,7 @@ These are constraints of the native verifier, not a caller-supplied loader or co
 
 namespace SP1Clean.SP1PublicIO
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime]
 

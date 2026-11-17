@@ -8,7 +8,7 @@ import LeanRV64D.Step
 What is executed: a `GuestProgram` (encoded instruction ROM, entry point and initial memory image),
 what it means for a Sail state to hold its ROM (`RomLoaded`) and to be in SP1's machine-mode
 configuration (`SailConfigured`), and one step of the official LeanRV64D interpreter (`SailStep`,
-`SailRetiresNormally`). Complete executions are `Model.Core.ExecutionPath`; the checked image's boot
+`SailRetiresNormally`). Complete executions are `Semantics.ExecutionPath`; the checked image's boot
 state is `ProgramImage.initialSailState`.
 
 The trace **arguments** that consume them — `RefinesAt`, `RowEffect`, and the per-chip `ChipKind.advance`

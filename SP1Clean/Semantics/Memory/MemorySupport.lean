@@ -7,7 +7,7 @@ Only live nonzero bytes in the represented address domain contribute. Duplicate 
 shadowed values, explicit zeros and out-of-domain history do not increase the count.
 -/
 
-namespace SP1Clean.Model.Core.ByteMemory
+namespace SP1Clean.Semantics.ByteMemory
 
 /-- The finite nonzero support of the represented memory, independent of update history. -/
 def supportBelow (memory : ByteMemory) (limit : ℕ) : Finset ℕ :=
@@ -51,4 +51,4 @@ theorem supportBelow_congr {left right : ByteMemory} {limit : ℕ}
   · rw [(agreesBelow_iff _ _ _).mp same address bounded]
   · simp only [bounded, false_and]
 
-end SP1Clean.Model.Core.ByteMemory
+end SP1Clean.Semantics.ByteMemory

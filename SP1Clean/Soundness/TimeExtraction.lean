@@ -44,7 +44,7 @@ including for syscall rows, rather than a premise introduced by the compiler's s
 theorem clkNat_phase_of_cpuState_bounds (clkHigh clk0 clk1 : ZMod p)
     (clk0Bound : ((clk0 - 1) * (8 : ZMod p)⁻¹).val < 2 ^ 13)
     (clk1Bound : clk1.val < 2 ^ 8) :
-    Model.Core.activeClockPhase (clkNat clkHigh (clk0 + clk1 * 65536)) := by
+    Semantics.activeClockPhase (clkNat clkHigh (clk0 + clk1 * 65536)) := by
   have hp := Fact.out (p := 2 ^ 25 < p)
   let scaled := (clk0 - 1) * (8 : ZMod p)⁻¹
   have scaledBound : scaled.val < 2 ^ 13 := clk0Bound
@@ -60,13 +60,13 @@ theorem clkNat_phase_of_cpuState_bounds (clkHigh clk0 clk1 : ZMod p)
     rw [ZMod.val_mul_of_lt (by rw [val_65536_zmod_p]; omega), val_65536_zmod_p]
   have lowVal : (clk0 + clk1 * 65536).val = clk0.val + clk1.val * 65536 := by
     rw [ZMod.val_add_of_lt (by rw [clk0Val, highLimbVal]; omega), highLimbVal]
-  simp only [Model.Core.activeClockPhase, clkNat, lowVal, clk0Val]
+  simp only [Semantics.activeClockPhase, clkNat, lowVal, clk0Val]
   omega
 
 /-- An active reader contract supplies exactly the clock phase used by the semantic profile. -/
 theorem cpuState_clock_phase (input : Readers.CPUState.Inputs (ZMod p))
     (spec : Readers.CPUState.Spec input) (active : input.is_real = 1) :
-    Model.Core.activeClockPhase
+    Semantics.activeClockPhase
       (clkNat input.cols.clk_high (input.cols.clk_0_16 + input.cols.clk_16_24 * 65536)) :=
   clkNat_phase_of_cpuState_bounds _ _ _ (spec active).1 (spec active).2
 

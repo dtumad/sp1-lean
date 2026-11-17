@@ -10,7 +10,7 @@ Later allocations require their own providers.
 
 namespace SP1Clean.HostHintQueue
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Model.Core.HintQueue
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

@@ -12,7 +12,7 @@ record, proving strict order for installed word writes. Predecessor value curren
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Channels Model.Core Semantics HostHintReadHandoff
+open Circuit Air.Flat Channels Semantics HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

@@ -9,7 +9,7 @@ empty terminal segment remains an identity. The enclosing local verifier separat
 clock endpoints for stopped sources; strict State progress then excludes active AIR rows.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D LeanRV64D.Functions SP1Clean.Soundness.Target
 
@@ -97,4 +97,4 @@ theorem ExecutionSourceValid.romLoaded {image : ProgramImage} {source : Executio
     RomLoaded (image.toGuestProgram valid.1.1) source.sail.realize :=
   valid.1.romLoaded valid.memory
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

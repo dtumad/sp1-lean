@@ -10,7 +10,7 @@ These endpoints still need a balance-derived consumer walk to authenticate actua
 
 namespace SP1Clean.HintReadSpan
 
-open Model.Core
+open Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

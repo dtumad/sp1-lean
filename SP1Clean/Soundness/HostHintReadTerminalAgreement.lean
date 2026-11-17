@@ -12,7 +12,7 @@ by the verifier, including running identities, stopped identities, and HALT with
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Model.Core NativeCore HostHintReadLocal
+open Circuit Air.Flat Semantics NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

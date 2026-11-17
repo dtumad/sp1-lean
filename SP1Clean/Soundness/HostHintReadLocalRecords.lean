@@ -15,7 +15,7 @@ bindings to the current frontier using current-head truth and the actual cursor 
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintReadHandoff HostHintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintReadHandoff HostHintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -9,7 +9,7 @@ casts x5 to u32, whereas this profile requires the complete 64-bit register to b
 Membership says which call is allowed, not that its host effects have been verified.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Calls admitted by the native guest-runtime profile. -/
 inductive SyscallKind
@@ -62,4 +62,4 @@ theorem decode?_isSome_iff (word : BitVec 64) : (decode? word).isSome = true ↔
   exact exists_congr (fun kind => decode?_eq_some_iff word kind)
 
 end SyscallKind
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

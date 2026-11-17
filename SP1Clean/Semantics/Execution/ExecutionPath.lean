@@ -13,7 +13,7 @@ does not introduce padding steps or assert AIR validity. Inactive rows and admin
 ledger work must be related to this path by the enclosing AIR proof.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D PFunctor
 
@@ -263,4 +263,4 @@ theorem ExecutionSegment.iff_reachableIn {policy : HostPolicy} {program : GuestP
   · rintro ⟨orbit, rfl⟩
     exact ⟨_, executionPrefix_events_length orbit, executionPath_of_prefix orbit⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

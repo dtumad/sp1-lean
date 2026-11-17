@@ -12,7 +12,7 @@ bound independently of prior RAM values and timestamps.
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Model.Core HostHintReadHandoff
+open Circuit Air.Flat Semantics HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

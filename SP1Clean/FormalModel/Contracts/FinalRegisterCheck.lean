@@ -5,7 +5,7 @@ import SP1Clean.FormalModel.Contracts.FinalRegisterValue
 
 namespace SP1Clean.FinalRegisterCheck
 
-open Circuit Model.Core Channels
+open Circuit Semantics Channels
 
 /-- Register checks need only the full record and its Boolean coverage selector. -/
 abbrev Inputs := FinalMemoryChange.Inputs

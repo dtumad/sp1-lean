@@ -11,7 +11,7 @@ for the prior record at each cell.
 
 namespace SP1Clean.HostRamReadChip
 
-open Circuit Channels Model.Core
+open Circuit Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

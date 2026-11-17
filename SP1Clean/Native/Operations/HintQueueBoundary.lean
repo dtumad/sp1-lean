@@ -11,7 +11,7 @@ with an outgoing snapshot. That semantic binding requires the ordered allocation
 
 namespace SP1Clean.HostHintQueueBoundary
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintQueue
 
 variable {p : ℕ} [Fact p.Prime]
 

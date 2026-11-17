@@ -15,7 +15,7 @@ zero therefore precedes x0, and the increment cannot wrap for canonical 48-bit l
 
 namespace SP1Clean.OrderedMemoryProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
+open Circuit SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 variable {Payload : TypeMap} [ProvableType Payload]

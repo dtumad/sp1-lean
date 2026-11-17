@@ -14,7 +14,7 @@ invalid widths and missing base registers. It does not check fetch, alignment, a
 normal retirement or resources. `ExecutionWritePolicy` lifts it to occurrences in the existing path.
 -/
 
-namespace SP1Clean.Model.Core.InstructionWrite
+namespace SP1Clean.Semantics.InstructionWrite
 
 open LeanRV64D SP1Clean.Semantics SP1Clean.Soundness.Target
 
@@ -116,4 +116,4 @@ theorem PermittedAt.check {readOnly : ℕ → Bool} {program : GuestProgram} {so
   cases same
   exact allowed
 
-end SP1Clean.Model.Core.InstructionWrite
+end SP1Clean.Semantics.InstructionWrite

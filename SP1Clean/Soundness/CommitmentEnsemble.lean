@@ -23,7 +23,7 @@ declared execution agrees with the immutable statement (`Declared.agrees`).
 
 namespace SP1Clean.Soundness.CommitmentEnsemble
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

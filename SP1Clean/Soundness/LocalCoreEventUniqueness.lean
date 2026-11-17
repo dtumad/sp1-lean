@@ -9,7 +9,7 @@ from this inventory by the physical decoder, not by an additional execution prem
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat Channels Semantics Model.Core NativeCore
+open Circuit Air.Flat Channels Semantics NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

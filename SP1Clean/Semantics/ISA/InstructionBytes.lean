@@ -7,7 +7,7 @@ snapshots and Sail memory use the same check; an absent byte is not a zero byte.
 agreement, not a replacement for Sail fetch/decode or a proof of whole-path ROM preservation.
 -/
 
-namespace SP1Clean.Model.Core.InstructionBytes
+namespace SP1Clean.Semantics.InstructionBytes
 
 /-- All four instruction bytes are present and agree with the committed word. -/
 def check (read : ℕ → Option (BitVec 8)) (pc : BitVec 64) (word : BitVec 32) : Bool :=
@@ -28,4 +28,4 @@ theorem check_of_romLoaded {program : SP1Clean.Soundness.Target.GuestProgram}
     check state.mem.get? pc word = true :=
   (check_iff _ _ _).mpr (loaded pc word fetched)
 
-end SP1Clean.Model.Core.InstructionBytes
+end SP1Clean.Semantics.InstructionBytes

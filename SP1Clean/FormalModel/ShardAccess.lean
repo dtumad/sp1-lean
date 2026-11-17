@@ -9,7 +9,7 @@ uses the same transition view and access plan consumed by the deterministic comp
 -/
 
 namespace SP1Clean.FormalModel.Shard
-open Model.Core Machine Semantics
+open Semantics Machine
 
 /-- Native admissibility preserves the exact complete byte domain at every actual cut. -/
 theorem AdmissibleExecution.memory_domain_prefix {limits : ResourceLimits} {characteristic : ℕ}

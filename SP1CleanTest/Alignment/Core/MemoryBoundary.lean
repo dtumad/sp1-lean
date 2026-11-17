@@ -14,7 +14,7 @@ ordering interactions are retained for the separate whole-ensemble balance argum
 
 namespace SP1CleanTest.Core.MemoryBoundary
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 

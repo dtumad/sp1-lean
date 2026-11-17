@@ -9,7 +9,7 @@ contract on their control link and Memory record, allowing one uniqueness theore
 
 namespace SP1Clean.OrderedInitialProvider
 
-open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open SP1Clean.Semantics SP1Clean.Channels
 
 abbrev Inputs := OrderedMemoryProvider.RowInput
 

@@ -11,7 +11,7 @@ from source hints and permits no witness-selected content. Positions beyond the 
 omitted, never wrapped; completeness states the needed position bound explicitly.
 -/
 
-namespace SP1Clean.Model.Core.HintQueue
+namespace SP1Clean.Semantics.HintQueue
 
 open SP1Clean.Soundness.Target
 
@@ -260,4 +260,4 @@ theorem sourceWordTable_complete (hints : List Bytes) (fits : hints.length < 2 ^
       (WordRecord.encode (node.val + 1) (ofList hints).1[node.val].bytes index) :=
   (sourceWordTable_spec hints _).mpr ⟨fits, node, ⟨index, lt_min position bound⟩, rfl⟩
 
-end SP1Clean.Model.Core.HintQueue
+end SP1Clean.Semantics.HintQueue

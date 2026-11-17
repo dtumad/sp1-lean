@@ -10,7 +10,7 @@ event compiler or exported witness generator. Those use the sparse representatio
 The bound stays symbolic in all proofs, including the eventual 48-bit native specialization.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 namespace ByteMemory
 
@@ -79,4 +79,4 @@ theorem configured_with_memory {state : SailState} (configured : SailConfigured 
   rcases configured with ⟨a, b, c, d, e, f, g, h, i, j, k, l, m, n⟩
   exact ⟨a, b, c, d, e, f, g, h, i, j, k, l, m, n⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

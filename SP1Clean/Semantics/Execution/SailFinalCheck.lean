@@ -9,7 +9,7 @@ the complete Memory check. PC/clock, nextPC, retirement, interrupt refresh and e
 native bindings; this check alone does not assert complete outgoing state equality.
 -/
 
-namespace SP1Clean.Model.Core.SailSnapshot
+namespace SP1Clean.Semantics.SailSnapshot
 
 open LeanRV64D
 
@@ -107,4 +107,4 @@ theorem realize_eq_of_observations {source target : SailSnapshot} {actual : Sail
       runtime.1.trans frame.2.2.1, runtime.2.trans frame.2.2.2⟩
   exact (realize_capture actual target.memory memory.symm).symm.trans snapshots
 
-end SP1Clean.Model.Core.SailSnapshot
+end SP1Clean.Semantics.SailSnapshot

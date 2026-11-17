@@ -12,7 +12,7 @@ The enclosing AIR must derive the check from its fixed lookups and complete fina
 the check is not an additional semantic conjunct in the AIR statement.
 -/
 
-namespace SP1Clean.Model.Core.MemorySnapshot
+namespace SP1Clean.Semantics.MemorySnapshot
 
 open Semantics
 
@@ -220,4 +220,4 @@ theorem checkFinal_iff_reads (source target : MemorySnapshot) (records : List (M
       exact absent (same ▸ List.mem_map_of_mem (f := Prod.fst) member)
     simpa only [empty, List.head?_nil, Option.map_none, Option.getD_none] using reads loc bound
 
-end SP1Clean.Model.Core.MemorySnapshot
+end SP1Clean.Semantics.MemorySnapshot

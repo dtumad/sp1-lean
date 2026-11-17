@@ -13,7 +13,7 @@ The increment cannot wrap: canonical memory addresses fit in 48 bits.
 
 namespace SP1Clean.OrderedInitialProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
+open Circuit SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 variable {Payload : TypeMap} [ProvableType Payload]

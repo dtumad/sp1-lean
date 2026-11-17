@@ -11,7 +11,7 @@ The active clock phase comes from the native CPUState circuit's thirteen-bit ran
 Unused endpoints, including stopped identities, have no active-window or fetch obligation.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 open Machine Soundness.Target LeanRV64D Semantics
 
 /-- A decoded native memory instruction uses a width-aligned span wholly inside guest memory. -/
@@ -105,4 +105,4 @@ theorem Encoded.split (encoded : Encoded policy program source events)
   exact ⟨middle, left, right, both⟩
 
 end ExecutionPath
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

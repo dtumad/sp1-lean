@@ -13,7 +13,7 @@ an execution from the source snapshot. Mixed execution grounding authenticates t
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryChecks
 
-open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 private abbrev Row := ℕ × List Fp

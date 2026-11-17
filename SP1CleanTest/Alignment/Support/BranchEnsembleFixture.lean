@@ -14,7 +14,7 @@ Boundary records and preprocessing rows are derived from its actual physical int
 namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.TraceGen SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Soundness SP1Clean.TraceGen
 
 /-- The native SP1 field. -/
 abbrev Fp := ZMod SP1Prime

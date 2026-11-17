@@ -11,7 +11,7 @@ The order retains every occurrence, including arbitrarily interleaved syscall ro
 namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow activeSystemRows_member syscall_halt_binary halt_advancing syscall_advancing)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

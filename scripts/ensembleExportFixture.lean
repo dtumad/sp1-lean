@@ -218,7 +218,7 @@ private def installedFabricatedReference : IO Json := do
   return Json.mkObj [("cases", toJson [sample]), ("inventory", installedInventory context)]
 
 
-private def programReference (image : SP1Clean.Model.Core.ProgramImage) {n : ℕ}
+private def programReference (image : SP1Clean.Semantics.ProgramImage) {n : ℕ}
     (requests : SP1CleanTest.Core.ProgramExport.Requests n (ZMod SP1Clean.SP1Prime)) : IO Json := do
   match SP1CleanTest.Core.ProgramExport.generate image requests with
   | .error message => throw (IO.userError message)
@@ -234,7 +234,7 @@ private def componentMetrics (component : Air.Flat.Component (ZMod SP1Clean.SP1P
     ("constraints", toJson constraints.length),
     ("degreeBound", toJson ((constraints.map expressionDegree).foldl max 0))]
 
-private def permissionReference (rom : SP1Clean.Model.Core.ProgramImage) (empty : Bool) : IO Json := do
+private def permissionReference (rom : SP1Clean.Semantics.ProgramImage) (empty : Bool) : IO Json := do
   let cases ← SP1CleanTest.Core.WritePermissionExport.cases.mapM fun (name, requests, expected) => do
     let expected := if empty then requests.toList.all (fun address =>
       address.toList.all (fun limb => limb.val < 65536)) else expected
@@ -281,8 +281,8 @@ private def hintReference {Row : TypeMap} [ProvableType Row]
 
 private def hintReferences : IO Json := do
   let hints := SP1CleanTest.Core.HintSourceExport.hints
-  let nodes := SP1Clean.Model.Core.HintQueue.sourceRows (p := SP1Clean.SP1Prime) hints
-  let words := SP1Clean.Model.Core.HintQueue.sourceWordRows (p := SP1Clean.SP1Prime) hints
+  let nodes := SP1Clean.Semantics.HintQueue.sourceRows (p := SP1Clean.SP1Prime) hints
+  let words := SP1Clean.Semantics.HintQueue.sourceWordRows (p := SP1Clean.SP1Prime) hints
   let nodeCases := hintCases nodes
   let wordCases := hintCases words
   return Json.mkObj [

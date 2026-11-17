@@ -15,7 +15,7 @@ so a same-value write cannot disappear from the permission obligation.
 
 namespace SP1Clean.Soundness.Target
 
-open Model.Core Semantics LeanRV64D
+open Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -68,7 +68,7 @@ end SP1Clean.Soundness.Target
 
 namespace SP1Clean.StoreByteChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -95,7 +95,7 @@ end SP1Clean.StoreByteChip
 
 namespace SP1Clean.StoreHalfChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -122,7 +122,7 @@ end SP1Clean.StoreHalfChip
 
 namespace SP1Clean.StoreWordChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
@@ -149,7 +149,7 @@ end SP1Clean.StoreWordChip
 
 namespace SP1Clean.StoreDoubleChip
 
-open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Model.Core LeanRV64D
+open SP1Clean.Soundness SP1Clean.Soundness.Target SP1Clean.Semantics LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

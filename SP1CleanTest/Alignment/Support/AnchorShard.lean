@@ -394,7 +394,7 @@ theorem anchor_configuredDecode :
 
 /-- The self-jump writes only `x0`, so it is permitted under every read-only memory policy. -/
 theorem anchor_permittedAt (readOnly : ℕ → Bool) :
-    SP1Clean.Model.Core.InstructionWrite.PermittedAt readOnly anchorProgram anchorState :=
+    SP1Clean.Semantics.InstructionWrite.PermittedAt readOnly anchorProgram anchorState :=
   ⟨65536, 0x6f, .JAL (0, .Regidx 0), anchorState_pc, anchorProgram_fetchWord_selfJump,
     anchor_configuredDecode, rfl⟩
 

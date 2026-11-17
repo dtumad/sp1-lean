@@ -8,7 +8,7 @@ This is a projection of the existing host interpreter, not a second host executi
 `HostState.hintEvent_sound` derives its replay from every successful interpreter call.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 namespace HintQueue
 
@@ -65,4 +65,4 @@ theorem HostState.hintEvent_sound {host : HostState} {policy : HostPolicy}
       simp only [hintEvent, ite_eq_right length, ite_eq_right read, HintQueue.Event.apply?, hints,
         List.length_append, Nat.add_sub_cancel_right, List.take_left]
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

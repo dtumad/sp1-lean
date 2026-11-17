@@ -10,7 +10,7 @@ return. These are semantic compilation proofs; the mixed AIR must still authenti
 head transitions, and observations with its own ledgers.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 namespace HintQueue
 
@@ -149,4 +149,4 @@ theorem HostState.hintLength?_of_run {host : HostState} {policy : HostPolicy}
   rw [result, kind]
   exact HintQueue.hintLength?_of_represents represents
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

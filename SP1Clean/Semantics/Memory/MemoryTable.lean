@@ -10,7 +10,7 @@ exclusive endpoint `2^48` is representable without field or address truncation. 
 predicate is literal membership in these encoded rows; its semantic consequences are proved here.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Soundness.Target
 
@@ -89,4 +89,4 @@ theorem ByteMemory.fixedTable_read (memory : ByteMemory) (limit : ℕ) (limitBou
   have semantic := memory.intervals_sound limit interval intervalMem query inside
   exact ⟨semantic.1, by rw [semantic.2]; exact valueEq⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

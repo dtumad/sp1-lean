@@ -14,7 +14,7 @@ records into the instruction grounding argument remains separate from its invent
 
 namespace SP1Clean.Soundness.InitialMemoryEnsemble
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Channels
 
 variable {PublicIO : TypeMap} [ProvableType PublicIO]
 

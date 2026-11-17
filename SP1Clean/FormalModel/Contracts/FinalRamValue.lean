@@ -12,7 +12,7 @@ facts. This operation neither consumes the Memory bus nor invents a second final
 
 namespace SP1Clean.FinalRamValue
 
-open Model.Core Channels Semantics
+open Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

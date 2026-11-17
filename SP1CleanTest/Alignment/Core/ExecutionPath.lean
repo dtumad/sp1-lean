@@ -14,7 +14,7 @@ same two-step execution. These test the semantic interface, not an AIR witness.
 
 namespace SP1CleanTest.Core.ExecutionPath
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.Soundness.Target
+open SP1Clean SP1Clean.Semantics SP1Clean.Machine SP1Clean.Soundness.Target
   LeanRV64D LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
@@ -38,13 +38,13 @@ private def source : ExecutionState where
   host := { io := ⟨[[7, 8]], [9]⟩ }
   clock := 17
 
-private def enter : SP1Clean.Model.Core.HostExecution :=
+private def enter : SP1Clean.Semantics.HostExecution :=
   ⟨.enterUnconstrained, 70000, 0, 0, ⟨source.host, none⟩⟩
 
 private def middle : ExecutionState :=
   ⟨enter.apply source.sail 65536, enter.effect.state, source.clock + 264⟩
 
-private def halt : SP1Clean.Model.Core.HostExecution :=
+private def halt : SP1Clean.Semantics.HostExecution :=
   ⟨.halt, 70000, 0, 0, ⟨{ middle.host with exitCode := some 70000 }, none⟩⟩
 
 private def target : ExecutionState :=

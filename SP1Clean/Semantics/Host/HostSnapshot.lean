@@ -8,7 +8,7 @@ actual host result. The commuting theorem covers the complete padded write and e
 including bookkeeping; the native memory-policy window is explicit.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D SP1Clean.Soundness.Target SP1Clean.Machine
 
@@ -140,4 +140,4 @@ theorem ExecutionSnapshot.hostStep?_complete {source : ExecutionSnapshot} {polic
   change actualEvent = event at eventEq
   exact ⟨target, by simpa only [eventEq] using ran, stateEq⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

@@ -9,7 +9,7 @@ shared data. They do not claim that an arbitrary range is realized by the pinned
 -/
 
 namespace SP1CleanTest.Core.ResourceLayout
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 private def window : AddressRange := ⟨24, 56⟩
 private def policy : HostMemoryPolicy := ⟨fun address => address == 55, window⟩

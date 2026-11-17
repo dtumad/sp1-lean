@@ -9,7 +9,7 @@ certificate. The hint-extension aliases excluded by the parser have distinct Sai
 
 namespace SP1Clean.SailDecode
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 /-- The executable decoder agrees with official Sail throughout its accepted domain. -/
 theorem instructionDecode_agrees : InstructionDecode.AgreesWithSail := by

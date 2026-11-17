@@ -11,7 +11,7 @@ one search expression. Evaluation is related to the existing semantic interval s
 
 namespace SP1Clean.InitialMemoryLookup
 
-open Circuit Witgen Model.Core Soundness.Target
+open Circuit Witgen Semantics Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

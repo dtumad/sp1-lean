@@ -15,7 +15,7 @@ a complete outgoing Sail/host snapshot certificate.
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 open LeanRV64D (Register)
 
 private theorem realizes_of_observations (snapshot : MemorySnapshot) (state : SailState)

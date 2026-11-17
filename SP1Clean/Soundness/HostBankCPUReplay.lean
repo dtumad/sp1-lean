@@ -12,7 +12,7 @@ fold is a projection of the existing full host interpreter.
 
 namespace SP1Clean.Soundness.HostBankCPUReplay
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueCallProjection NativeCore Semantics
+open Circuit Air.Flat Semantics HostHintReadLocal HostQueueCallProjection NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

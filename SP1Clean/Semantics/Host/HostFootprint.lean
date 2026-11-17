@@ -13,7 +13,7 @@ timestamps, or a balance proof. Its minimal empty-byte cover deliberately makes 
 Rust's untraced read inventory (an unaligned zero-length WRITE can still read an aligned word).
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 structure HostFootprint where
   registers : List (BitVec 5)
@@ -197,4 +197,4 @@ theorem HostState.run_congr_of_footprint {host : HostState} {policy : HostPolicy
   · rw [← registerAgree 11 (by simp [HostExecution.readRegisters])]
     exact binding.2.2.2.1
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

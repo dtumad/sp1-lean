@@ -12,7 +12,7 @@ ledger split preserves padding and the original characteristic count bound.
 
 namespace SP1Clean.Soundness.HostLocalCore
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

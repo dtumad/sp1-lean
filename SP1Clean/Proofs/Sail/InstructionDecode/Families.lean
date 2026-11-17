@@ -10,7 +10,7 @@ and machine-theorem callers do not need to dispatch on them.
 namespace SP1Clean.SailDecode.Symbolic
 
 open LeanRV64D LeanRV64D.Functions Sail SP1Clean.Soundness.Target
-open SP1Clean.Model.Core.InstructionDecode
+open SP1Clean.Semantics.InstructionDecode
 
 theorem decode_ADD (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
     (hints : reservedHint word = false)
@@ -270,7 +270,7 @@ theorem decode_DIV (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -289,7 +289,7 @@ theorem decode_DIVU (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -308,7 +308,7 @@ theorem decode_REM (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -327,7 +327,7 @@ theorem decode_REMU (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -359,7 +359,7 @@ theorem decode_DIVW (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -378,7 +378,7 @@ theorem decode_DIVUW (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -397,7 +397,7 @@ theorem decode_REMW (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -416,7 +416,7 @@ theorem decode_REMUW (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hUnsigned : bits word 12 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -707,13 +707,13 @@ theorem decode_LB (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 0#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -731,13 +731,13 @@ theorem decode_LH (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 1#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -755,13 +755,13 @@ theorem decode_LW (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 2#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -779,13 +779,13 @@ theorem decode_LD (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 3#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -803,13 +803,13 @@ theorem decode_LBU (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 0#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -827,13 +827,13 @@ theorem decode_LHU (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 1#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -851,13 +851,13 @@ theorem decode_LWU (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 2#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 1#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -875,13 +875,13 @@ theorem decode_SB (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 0#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -899,13 +899,13 @@ theorem decode_SH (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 1#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -923,13 +923,13 @@ theorem decode_SW (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 2#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints
@@ -947,13 +947,13 @@ theorem decode_SD (word : BitVec 32) (s : SailState) (cfg : SailConfigured s)
   have hWidth : bits word 12 2 = 3#2 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have hSign : bits word 14 1 = 0#1 := by
     apply BitVec.eq_of_toNat_eq
     have hf := congrArg BitVec.toNat h1
-    simp only [SP1Clean.Model.Core.InstructionDecode.bits, BitVec.toNat_ofNat,
+    simp only [SP1Clean.Semantics.InstructionDecode.bits, BitVec.toNat_ofNat,
       Nat.shiftRight_eq_div_pow] at hf ⊢
     omega
   have noHint := hints

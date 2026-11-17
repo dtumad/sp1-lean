@@ -8,7 +8,7 @@ preserve these fields. The observation fold below only records retirement bookke
 not execute instructions or define another machine state.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D LeanRV64D.Functions Machine
 
@@ -135,4 +135,4 @@ theorem replayEvents?_nextPC {policy : HostPolicy} {program : Soundness.Target.G
       apply effect n current next label (by rwa [List.getElem?_append_left bound]) _ step
       simpa only [List.take_append_of_le_length (Nat.le_of_lt bound)] using replay
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

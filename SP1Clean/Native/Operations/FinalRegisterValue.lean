@@ -12,7 +12,7 @@ register provider. The separate provider retains all 32 rows, including unused r
 
 namespace SP1Clean.FinalRegisterValue
 
-open Circuit Model.Core Channels Semantics
+open Circuit Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

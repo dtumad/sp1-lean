@@ -8,7 +8,7 @@ When an instruction executes at that boundary, its committed word is exactly the
 fetch result. No existence of a next instruction is imposed on empty or final boundaries.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D LeanRV64D.Functions SP1Clean.Advance
 
@@ -19,4 +19,4 @@ theorem ExecutionSourceValid.fetch_eq {image : ProgramImage} {source : Execution
     (runSail (fetch ())) source.sail.realize = .ok (FetchResult.F_Base word) source.sail.realize :=
   fetch_eq_of_romLoaded valid.configured valid.romLoaded valid.pc fetched
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

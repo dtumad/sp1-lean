@@ -10,7 +10,7 @@ requests with fixed-table providers. Instruction rows need no local permission p
 
 namespace SP1Clean.WritePermissionProvider
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 structure Inputs (F : Type) where
   address : fields 3 F

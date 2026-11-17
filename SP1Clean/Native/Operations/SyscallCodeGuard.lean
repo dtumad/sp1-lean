@@ -13,7 +13,7 @@ there is no fixed provider or channel assumption at this boundary.
 
 namespace SP1Clean.SyscallCodeGuard
 
-open Circuit Model.Core
+open Circuit Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

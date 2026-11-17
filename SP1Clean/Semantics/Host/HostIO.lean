@@ -15,7 +15,7 @@ The AIR and Sail adapters must separately establish that these byte operations a
 the executed syscall. These definitions alone do not discharge that grounding obligation.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Byte strings exchanged with the guest. -/
 abbrev Bytes := List (BitVec 8)
@@ -155,4 +155,4 @@ theorem HostIO.applyHook_eq_some_iff (host nextHost : HostIO) (request : HookReq
         simp [applyHook, eq_comm, and_comm]
       · simp [applyHook, h]
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

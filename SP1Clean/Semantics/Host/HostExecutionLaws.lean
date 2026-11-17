@@ -8,7 +8,7 @@ read interface. Byte reads are characterized pointwise, including empty interval
 protection concerns the complete returned write, so HINT_READ padding is included.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Every byte in the result is observed at its corresponding guest address. -/
 def HostReadContext.ObservesBytes (context : HostReadContext) (address : ℕ) (bytes : Bytes) : Prop :=
@@ -120,4 +120,4 @@ theorem HostState.executeKind_write_permitted {host : HostState} {policy : HostP
         cases executed
         contradiction
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

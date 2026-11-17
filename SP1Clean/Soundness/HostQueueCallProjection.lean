@@ -13,7 +13,7 @@ the semantic queue actions, including the natural read length rather than its mo
 
 namespace SP1Clean.Soundness.HostQueueCallProjection
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueOrder HostQueueCPUOrder Semantics
+open Circuit Air.Flat Semantics HostHintReadLocal HostQueueOrder HostQueueCPUOrder
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -14,7 +14,7 @@ This semantic Sail replay is noncomputable, like the existing machine replay; it
 exportable row compiler. Its prefix trajectory supplies the paired state for mixed grounding.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D
 
@@ -317,4 +317,4 @@ theorem ExecutionPath.clock_at {policy : HostPolicy} {program : GuestProgram}
       simpa only [executionTrajectory, List.take_succ_cons, replayEvents?, step.replay,
         Option.bind_some] using replay
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

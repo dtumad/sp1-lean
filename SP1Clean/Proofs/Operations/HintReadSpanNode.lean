@@ -10,7 +10,7 @@ The future handler must derive these bindings from the source/allocation and que
 
 namespace SP1Clean.HintReadSpan
 
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime]
 

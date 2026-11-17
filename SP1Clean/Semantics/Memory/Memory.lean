@@ -8,7 +8,7 @@ architectural address width. The execution profile supplies the address-window a
 the memory operations themselves have no silent wraparound.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Finite byte memory with zero defaults and newest-write precedence. -/
 structure ByteMemory where
@@ -121,4 +121,4 @@ theorem read_writeBytes_of_readOnly (memory : ByteMemory) (readOnly : ℕ → Bo
 
 end ByteMemory
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

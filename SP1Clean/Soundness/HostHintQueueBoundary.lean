@@ -17,7 +17,7 @@ Complete outgoing snapshot agreement and dynamic allocation history remain separ
 
 namespace SP1Clean.Soundness.HostHintQueueBoundary
 
-open Circuit Air.Flat Model.Core HostHintQueue HostHintReadLocal HostHintReadHandoff
+open Circuit Air.Flat Semantics HostHintQueue HostHintReadLocal HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

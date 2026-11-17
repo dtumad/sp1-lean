@@ -17,7 +17,7 @@ are represented by an empty table; the separate fixed provider retains all 32 re
 
 namespace SP1Clean.SnapshotRegisterProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open Circuit SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

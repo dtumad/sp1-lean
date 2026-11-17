@@ -8,7 +8,7 @@ is explicit here and must be derived from a physical receiver inventory before u
 soundness; it is not a restriction on the intended eight-call capstone.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open Machine Soundness.Target
 
@@ -128,4 +128,4 @@ theorem ExecutionPath.exit_receipts {policy : HostPolicy} {program : GuestProgra
               simpa only [hostExitAfter, halt, ↓reduceIte, step.running] using step.host_exit
             simpa only [List.filterMap_cons, hostExitAfter, halt, running, ↓reduceIte] using ih
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

@@ -14,7 +14,7 @@ Complete host execution, source-record authentication, and outgoing Memory curre
 
 namespace SP1Clean.Soundness.HostLocalCore
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

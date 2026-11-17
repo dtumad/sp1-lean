@@ -19,7 +19,7 @@ Exit-bus binding, WRITE/VERIFY handlers, and constructive completeness remain se
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGrounding
 open LeanRV64D (Register)
 
 private theorem path_of_replay {policy : HostPolicy} {program : Target.GuestProgram}

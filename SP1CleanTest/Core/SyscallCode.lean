@@ -11,7 +11,7 @@ These local checks make no claim about host effects or whole-ensemble balance.
 
 namespace SP1CleanTest.Core.SyscallCode
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 

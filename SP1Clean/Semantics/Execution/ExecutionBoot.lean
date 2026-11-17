@@ -10,7 +10,7 @@ changing the transition relation. These are semantic composition theorems; authe
 boundaries of separate AIR witnesses remains an obligation of the native capstone.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Machine SP1Clean.Soundness.Target
 
@@ -47,4 +47,4 @@ theorem BootToHalt.of_segments {policy : HostPolicy} {image : ProgramImage} {val
     BootToHalt policy image valid input (m + n) target exit :=
   ⟨first.append last, halted⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

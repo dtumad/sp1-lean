@@ -12,7 +12,7 @@ namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow typedTableInteractions_nil byteProvider_channel_silent
   flatMap_split flatMap_filter_inactive pushesAt_flatMap pullsAt_flatMap verifier_state_interactions_of_values)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

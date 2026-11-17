@@ -14,7 +14,7 @@ These fixture checks do not assert whole-machine balance or authentic boot-memor
 
 namespace SP1CleanTest.Core.HostChecks
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 /-- Active interactions retained for fixture balance and endpoint checks. -/

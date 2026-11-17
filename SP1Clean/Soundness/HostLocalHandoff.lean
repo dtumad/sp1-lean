@@ -12,7 +12,7 @@ No independent witness projection, ledger equation, or handler inventory is a ca
 
 namespace SP1Clean.Soundness.HostLocalHandoff
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

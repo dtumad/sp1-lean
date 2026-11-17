@@ -7,7 +7,7 @@ contains bytes below the guest window too; guest access permission and memory-ma
 different notions. Changing this instance requires new Sail/encoding agreement, not only new data.
 -/
 
-namespace SP1Clean.Model.Core.NativeLayout
+namespace SP1Clean.Semantics.NativeLayout
 
 /-- Pinned SP1 guest RAM/ROM window, also used by the configured Sail PMA. -/
 abbrev guestMemory : AddressRange := ⟨2 ^ 16, 2 ^ 48⟩
@@ -26,4 +26,4 @@ theorem guestMemory_valid : guestMemory.Valid := by decide
 theorem sailMemory_valid : sailMemory.Valid := by decide
 theorem clocks_valid : clocks.Valid := by decide
 
-end SP1Clean.Model.Core.NativeLayout
+end SP1Clean.Semantics.NativeLayout

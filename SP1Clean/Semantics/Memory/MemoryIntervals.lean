@@ -11,7 +11,7 @@ memory enumeration is required.
 Empty intervals are harmless: they contain no address and need no special padding semantics.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- A constant byte value on a half-open address interval. -/
 structure MemoryInterval where
@@ -279,4 +279,4 @@ theorem intervalAt?_isSome_iff (memory : ByteMemory) (limit query : ℕ) :
 
 end ByteMemory
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

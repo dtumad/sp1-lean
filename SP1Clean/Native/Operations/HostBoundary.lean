@@ -12,7 +12,7 @@ through a separate check channel. It allocates no physical rows or private witne
 
 namespace SP1Clean.HostBoundary
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

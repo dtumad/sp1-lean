@@ -20,7 +20,7 @@ remain available to the enclosing machine; this fixture does not claim a complet
 
 namespace SP1CleanTest.Core.FinalMemoryValue
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 

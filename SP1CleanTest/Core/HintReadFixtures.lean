@@ -15,7 +15,7 @@ The handler battery replaces the fixture cursor endpoints with the real handler'
 
 namespace SP1CleanTest.Core.HintReadFixtures
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
+open Circuit Air.Flat SP1Clean Semantics HintQueue HostChecks
 
 /-- Field used by the native SP1 circuits. -/
 abbrev Fp := ZMod SP1Prime

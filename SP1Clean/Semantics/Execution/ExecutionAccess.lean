@@ -9,7 +9,7 @@ memory and independent preservation supply RAM-cell availability; the semantic e
 supplies the address domain. No successful compiler call is assumed.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 open Machine Soundness.Target Semantics LeanRV64D
 
 /-- Reading eight present bytes always materializes the existing Memory-bus word projection. -/
@@ -122,4 +122,4 @@ theorem ExecutionStep.project_ordinary {policy : HostPolicy} {program : GuestPro
     step.memory_present configured loaded address (incoming address inside))
 
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

@@ -10,7 +10,7 @@ Transport to timed grounding and complete endpoint authentication remain ensembl
 
 namespace SP1Clean.MemoryBoundary
 
-open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

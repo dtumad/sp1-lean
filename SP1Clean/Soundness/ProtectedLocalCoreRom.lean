@@ -10,7 +10,7 @@ and table positions remain inside this transport, leaving one uniform semantic f
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 
-open Circuit Air.Flat SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

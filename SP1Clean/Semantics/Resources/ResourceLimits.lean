@@ -8,7 +8,7 @@ physical expansion fits: the capacity proof must include providers, refreshes an
 There is no predicate-valued field and no compiler or witness in this interface.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Independent inclusive semantic and physical ceilings for one native shard. -/
 structure ResourceLimits where
@@ -74,4 +74,4 @@ theorem LE.trans {first middle last : ResourceLimits}
   omega
 
 end ResourceLimits
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

@@ -8,7 +8,7 @@ The four-limb representation preserves the complete register, including zero upp
 Membership in the encoded semantic inventory is independent of prover data or a lookup mechanism.
 -/
 
-namespace SP1Clean.Model.Core.SyscallKind
+namespace SP1Clean.Semantics.SyscallKind
 
 open SP1Clean.Soundness.Target
 
@@ -28,4 +28,4 @@ theorem mem_encoded_iff (word : Word (ZMod p)) :
     refine ⟨kind, mem_all kind, Word.eq_of_toBitVec64_eq (isU64_bitVecToWord _) bound ?_⟩
     exact (toBitVec64_bitVecToWord _).trans equal
 
-end SP1Clean.Model.Core.SyscallKind
+end SP1Clean.Semantics.SyscallKind

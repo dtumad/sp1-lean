@@ -14,7 +14,7 @@ The same built-in scheduler also handles a sparse, unordered ROM with colliding 
 
 namespace SP1CleanTest.Core.ProgramExport
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Channels
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Channels
 open ComponentExport (Fp)
 
 /-- Individual public fetch requests, retaining repeats. -/

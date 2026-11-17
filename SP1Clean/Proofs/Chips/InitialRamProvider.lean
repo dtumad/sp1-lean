@@ -9,7 +9,7 @@ is specialized here, using the proved realization of the native image's initial 
 
 namespace SP1Clean.InitialRamProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Channels
+open Circuit SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

@@ -8,7 +8,7 @@ spans also admit an empty request at the upper endpoint, matching the host read 
 Natural arithmetic checks the entire span before any narrowing to an architectural word.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Natural-number bounds for bytes and finite byte spans. -/
 structure AddressRange where
@@ -65,4 +65,4 @@ theorem ContainsSpan.mono {small large : AddressRange} {address length : ℕ}
     large.ContainsSpan address length := ⟨Nat.le_trans lower inside.1, Nat.le_trans inside.2 upper⟩
 
 end AddressRange
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

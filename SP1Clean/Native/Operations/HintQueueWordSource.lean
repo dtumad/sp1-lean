@@ -11,7 +11,7 @@ Allocation providers and complete consumer coverage remain separate obligations.
 
 namespace SP1Clean.HostHintQueue
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

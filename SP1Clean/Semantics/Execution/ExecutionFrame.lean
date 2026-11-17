@@ -13,7 +13,7 @@ Empty, final and beyond-final boundaries retain ROM without acquiring a next-fet
 No circuit row, compiler readiness or separately supplied intermediate invariant is used.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 open Machine Soundness.Target LeanRV64D LeanRV64D.Functions
 
 /-- Every byte of a fetched image word belongs to the image's protected region. -/
@@ -175,4 +175,4 @@ theorem syscall_instructionBytes
       step.syscall_instructionBytes (left.frame valid protectsRom configured loaded).2.1⟩
 
 end ExecutionPath
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

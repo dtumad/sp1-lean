@@ -10,7 +10,7 @@ an eight-byte RAM cell with writable data. No property of unrelated interpreter 
 
 namespace SP1Clean.Soundness.Target
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

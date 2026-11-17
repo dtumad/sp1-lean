@@ -8,7 +8,7 @@ actual HALT rather than an unrelated host effect. The whole-machine no-resumptio
 guards ordinary Sail steps; stopping only the host dispatcher would not suffice.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 theorem HostState.writeOutput_exit {host next : HostState} {descriptor : BitVec 64}
     {bytes : Bytes} (success : host.writeOutput descriptor bytes = some next) :
@@ -49,4 +49,4 @@ theorem HostState.run_exit {host : HostState} {policy : HostPolicy} {context : H
   have observed := (host.run_eq_some_iff policy context execution).mp success
   rw [HostState.executeKind_exit observed.2.2.2.2.2, observed.1]
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

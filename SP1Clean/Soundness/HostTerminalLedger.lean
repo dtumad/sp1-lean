@@ -11,7 +11,7 @@ Disabled endpoint pulls remain in the original interaction-count bound.
 
 namespace SP1Clean.Soundness.HostTerminalLedger
 
-open Circuit Air.Flat Channels Model.Core HostHintReadLocal HostQueueCallProjection
+open Circuit Air.Flat Channels Semantics HostHintReadLocal HostQueueCallProjection
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

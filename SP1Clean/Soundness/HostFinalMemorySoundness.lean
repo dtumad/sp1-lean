@@ -11,7 +11,7 @@ inventory is a premise. Full mixed Sail/host endpoint reconstruction remains a l
 
 namespace SP1Clean.Soundness.HostFinalMemory
 
-open Circuit Air.Flat Channels Model.Core Semantics
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalSoundnessLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩

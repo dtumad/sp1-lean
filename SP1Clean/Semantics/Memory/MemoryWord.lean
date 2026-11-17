@@ -8,7 +8,7 @@ import SP1Clean.Semantics.Transition.MicroTime
 `ramWord64?` interpretation whenever all eight bytes lie in the realized address window.
 -/
 
-namespace SP1Clean.Model.Core.ByteMemory
+namespace SP1Clean.Semantics.ByteMemory
 
 open SP1Clean.Soundness.Target
 
@@ -38,4 +38,4 @@ theorem ramWord64?_of_bytes (memory : ByteMemory) (state : SailState) (address :
     byte 5 (by decide), byte 6 (by decide), byte 7 (by decide), Nat.add_zero]
   rfl
 
-end SP1Clean.Model.Core.ByteMemory
+end SP1Clean.Semantics.ByteMemory

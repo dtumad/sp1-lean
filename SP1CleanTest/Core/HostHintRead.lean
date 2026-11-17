@@ -16,7 +16,7 @@ remain external. These tests do not assert installation in the mixed shard ensem
 
 namespace SP1CleanTest.Core.HostHintRead
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
+open Circuit Air.Flat SP1Clean Semantics HintQueue HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

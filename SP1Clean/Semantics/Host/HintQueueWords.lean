@@ -8,7 +8,7 @@ The complete length and these words determine every byte, without a content hash
 positions are local to the immutable node and remain meaningful after any queue update.
 -/
 
-namespace SP1Clean.Model.Core.HintQueue
+namespace SP1Clean.Semantics.HintQueue
 
 /-- Even an empty or word-aligned hint has a final padding word. -/
 def wordCount (bytes : Bytes) : ℕ := bytes.length / 8 + 1
@@ -122,4 +122,4 @@ theorem wordWrites_readback (memory : ByteMemory) (address : ℕ) (bytes : Bytes
   obtain ⟨index, bound, rfl⟩ := List.mem_map.mp member
   exact readWord_writeHint memory address bytes (List.mem_range.mp bound)
 
-end SP1Clean.Model.Core.HintQueue
+end SP1Clean.Semantics.HintQueue

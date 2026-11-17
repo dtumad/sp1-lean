@@ -13,7 +13,7 @@ namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow canonicalRow rewrittenRows rewritten_core
   rewriteRows_forall₂ rewritten_memory syscall_readsInWindow_of_committed)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

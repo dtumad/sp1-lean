@@ -11,7 +11,7 @@ not a byte-authentication theorem.
 
 namespace SP1Clean.HintNodeAllocate
 
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

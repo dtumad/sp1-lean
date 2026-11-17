@@ -12,7 +12,7 @@ binding and complete RAM execution follow from the enclosing source, cursor, and
 
 namespace SP1Clean.HostHintReadChip
 
-open Circuit Model.Core Soundness.Target
+open Circuit Semantics Soundness.Target
 
 structure Inputs (F : Type) where
   call : HostCallChip.Message F

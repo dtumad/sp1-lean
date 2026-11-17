@@ -5,7 +5,7 @@ import SP1Clean.Semantics.Execution.Syscall
 Labels of the steps of `ExecutionPath`: an ordinary official-Sail instruction, or a host syscall
 carrying its observed `CoreSyscallEvent`. Each label selects its interaction-clock window (eight
 ticks for an instruction, `CLK_INC + 256 = 264` for a syscall). The step relation itself is
-`Model.Core.ExecutionStep`. A `LocatedTransition` pairs a label and its target with the source
+`Semantics.ExecutionStep`. A `LocatedTransition` pairs a label and its target with the source
 state; the instruction-event compiler consumes these proof-free records. -/
 
 open LeanRV64D

@@ -14,7 +14,7 @@ host-effect accounting remain separate integration work.
 
 namespace SP1Clean.SP1PublicIO
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime]
 
@@ -61,7 +61,7 @@ end SP1Clean.SP1PublicIO
 
 namespace SP1Clean.LocalSourceBoundary
 
-open Model.Core
+open Semantics
 
 /-- The complete source is valid and bound to the incoming public token; a stopped source
 cannot advance the public clock. Public limb bounds are supplied by the State verifier. -/

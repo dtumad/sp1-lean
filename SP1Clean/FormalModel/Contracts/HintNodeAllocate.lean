@@ -10,7 +10,7 @@ queue operation; the host handler must separately authenticate the allocated byt
 
 namespace SP1Clean.HintNodeAllocate
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 structure Inputs (F : Type) where
   previous : HostHintQueue.State F

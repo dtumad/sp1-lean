@@ -12,7 +12,7 @@ terminal receipt's supplied optional status to this same execution.
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

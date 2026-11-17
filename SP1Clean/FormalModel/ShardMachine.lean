@@ -13,7 +13,7 @@ An invalid image commits no instruction, so its machine has no step.
 
 namespace SP1Clean.FormalModel.Shard
 
-open Model.Core Machine PFunctor PFunctor.DynSystem
+open Semantics Machine PFunctor PFunctor.DynSystem
 
 /-- The full-state SP1 step relation of an image's committed program as a labeled machine. -/
 def sp1Machine (characteristic : ℕ) (image : ProgramImage) :

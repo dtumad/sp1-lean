@@ -13,7 +13,7 @@ strict event-clock order remain resource conditions of the enclosing compiler.
 
 namespace SP1Clean.HostHintReadChip
 
-open Model.Core Model.Core.HintQueue Soundness.Target
+open Semantics Semantics.HintQueue Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

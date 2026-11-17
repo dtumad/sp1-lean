@@ -15,7 +15,7 @@ alone. Neither current queue heads nor RAM predecessor currency is assumed here.
 
 namespace SP1Clean.Soundness.HostHintRecordSources
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

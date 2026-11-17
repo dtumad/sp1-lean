@@ -10,7 +10,7 @@ nextPC and retirement, and full host-field reconstruction, are separate remainin
 
 namespace SP1Clean.SailBoundary
 
-open Model.Core Soundness.Target
+open Semantics Soundness.Target
 
 /-- Check invariant Sail fields and endpoint ranges before conversion to the AIR field. -/
 def checkStatic (source target : ExecutionSnapshot) : Bool :=

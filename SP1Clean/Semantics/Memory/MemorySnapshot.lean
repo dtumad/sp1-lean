@@ -10,7 +10,7 @@ PC, platform registers, Sail bookkeeping, host state, and clock are deliberately
 Those still belong to `ExecutionState` and must agree at a composed execution boundary.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Semantics SP1Clean.Soundness.Target
 
@@ -115,4 +115,4 @@ theorem ProgramImage.memorySnapshot_realizes (image : ProgramImage) :
   simpa only [MemorySnapshot.read, memorySnapshot, Vector.getElem_replicate] using
     image.initialSailState_registersZero index
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

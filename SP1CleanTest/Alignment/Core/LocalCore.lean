@@ -28,7 +28,7 @@ This is AIR conformance, not an execution theorem.
 
 namespace SP1CleanTest.Core.LocalCore
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Soundness.Target
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 private abbrev Row := ℕ × List Fp

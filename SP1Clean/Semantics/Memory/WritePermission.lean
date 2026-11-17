@@ -11,7 +11,7 @@ Inclusive endpoints fit three limbs even at the last native byte. The concrete f
 contains these endpoints, so its interpretation cannot be chosen by a witness producer.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 namespace ProgramImage
 
@@ -165,4 +165,4 @@ theorem ProgramImage.writePermissionTable_sound (image : ProgramImage)
   rw [Address.toNat_ofNat _ (by omega)] at lower upper
   exact sound address ⟨lower, by omega⟩
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

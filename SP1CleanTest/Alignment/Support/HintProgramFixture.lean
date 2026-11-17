@@ -9,7 +9,7 @@ share this program and its production constructors; the final HINT_LEN observes 
 
 namespace SP1CleanTest.Alignment.HintProgram
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1CleanTest.Alignment.InstalledAssembly HostProgram
 
 private def bytes (length : ℕ) : Bytes :=

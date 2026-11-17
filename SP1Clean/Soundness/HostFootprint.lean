@@ -15,7 +15,7 @@ host AIR tables, not a construction of those tables or their balanced ledger.
 
 namespace SP1Clean.Soundness
 
-open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 /-- The exact register/RAM keys consumed by a host access ledger. -/
 def hostLocations (footprint : HostFootprint) : List MemLoc :=

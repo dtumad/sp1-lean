@@ -9,7 +9,7 @@ segments adds work and takes maxima; it does not reset the host's incoming queue
 Physical table heights and occurrence counts are measured separately from semantic usage.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 /-- Semantic quantities bounded by the numeric native policy. -/
 inductive ResourceKind where
@@ -154,4 +154,4 @@ theorem HostExecution.writeByteCount_eq {execution : HostExecution} {write : Hos
     (emitted : execution.effect.write = some write) : execution.writeByteCount = write.bytes.length := by
   simp [writeByteCount, writeSpans, emitted]
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

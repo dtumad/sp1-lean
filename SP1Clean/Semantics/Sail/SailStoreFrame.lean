@@ -108,15 +108,15 @@ private theorem store_width_bounds (width : word_width) (valid : storeWidthOK wi
 /-- Actual store execution retains the complete write frame, including byte presence. -/
 theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs2 rs1 : BitVec 5) (width : word_width)
-    (permission : Model.Core.InstructionWrite.check readOnly source.get_reg?
+    (permission : Semantics.InstructionWrite.check readOnly source.get_reg?
       (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true)
     (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ ProtectedMemoryFrame readOnly source target := by
-  have valid := (Model.Core.InstructionWrite.check_supported readOnly source.get_reg? _ permission).1
+  have valid := (Semantics.InstructionWrite.check_supported readOnly source.get_reg? _ permission).1
   change storeWidthOK width = true at valid
   obtain ⟨positive, small⟩ := store_width_bounds width valid
-  obtain ⟨base, observed, allowed⟩ := (Model.Core.InstructionWrite.check_store_iff
+  obtain ⟨base, observed, allowed⟩ := (Semantics.InstructionWrite.check_store_iff
     readOnly source.get_reg? imm (.Regidx rs2) (.Regidx rs1) width valid).mp permission
   obtain ⟨data, dataRead⟩ := initialized_gpr source cfg.init rs2
   simp only [execute, execute_STORE, PreSail.sail_assert] at ran
@@ -139,7 +139,7 @@ theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState
 /-- A permitted decoded store preserves configuration and every protected byte. -/
 theorem store_execute_frame (readOnly : ℕ → Bool) (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs2 rs1 : BitVec 5) (width : word_width)
-    (permission : Model.Core.InstructionWrite.check readOnly source.get_reg?
+    (permission : Semantics.InstructionWrite.check readOnly source.get_reg?
       (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true)
     (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))) source = .ok result target) :
@@ -155,7 +155,7 @@ theorem store_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestProg
     (configured : SailConfigured source) (loaded : RomLoaded program source)
     (atPc : source.regs.get? Register.PC = some pc) (fetched : program.fetchWord pc = some word)
     (decode : ConfiguredDecode word (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))
-    (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
+    (permission : Semantics.InstructionWrite.PermittedAt readOnly program source)
     (normal : SailRetiresNormally source target) :
     SailConfigured target ∧
       (∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address) ∧
@@ -165,7 +165,7 @@ theorem store_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestProg
     (fun memory => (∀ address, readOnly address = true → memory.get? address = source.mem.get? address) ∧
       ∀ address, (source.mem.get? address).isSome → (memory.get? address).isSome) ?_ normal
   intro state cfg observed sameMemory result next ran
-  have permitted : Model.Core.InstructionWrite.check readOnly state.get_reg?
+  have permitted : Semantics.InstructionWrite.check readOnly state.get_reg?
       (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true := by
     rw [funext observed]
     exact checked
@@ -182,7 +182,7 @@ theorem store_normal_frame {readOnly : ℕ → Bool} {program : GuestProgram} {s
     (configured : SailConfigured source) (loaded : RomLoaded program source)
     (atPc : source.regs.get? Register.PC = some pc) (fetched : program.fetchWord pc = some word)
     (decode : ConfiguredDecode word (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))
-    (permission : Model.Core.InstructionWrite.PermittedAt readOnly program source)
+    (permission : Semantics.InstructionWrite.PermittedAt readOnly program source)
     (normal : SailRetiresNormally source target) :
     SailConfigured target ∧
       ∀ address, readOnly address = true → target.mem.get? address = source.mem.get? address := by

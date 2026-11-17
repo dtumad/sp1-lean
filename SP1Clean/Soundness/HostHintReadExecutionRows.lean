@@ -13,7 +13,7 @@ a restriction on the eventual eight-call capstone. Future WRITE installation mus
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

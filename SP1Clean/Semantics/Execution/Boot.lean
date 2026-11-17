@@ -15,7 +15,7 @@ The compiler and host operations consume `initialMemory`, the sparse executable 
 `initialSailState_memory` is their bridge to the official Sail memory map.
 -/
 
-namespace SP1Clean.Model.Core.ProgramImage
+namespace SP1Clean.Semantics.ProgramImage
 
 open Sail LeanRV64D SP1Clean.Soundness.Target
 
@@ -83,4 +83,4 @@ theorem dataOf_statementFor {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
   SP1Clean.Commit.dataOf_statementFor _ (input.toGuestProgram_wellFormed valid)
     (input.toGuestProgram_encodable valid)
 
-end SP1Clean.Model.Core.ProgramImage
+end SP1Clean.Semantics.ProgramImage

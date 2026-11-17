@@ -10,7 +10,7 @@ word was declared; coverage is a separate program property. This contract uses s
 and contains no circuit rows, witness readiness or compiler conditions.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open Machine
 
@@ -99,4 +99,4 @@ theorem matches_split {statement : CommitmentStatement} {events : List Execution
     matches_sublist agreement (List.drop_sublist cut events)⟩
 
 end CommitmentStatement
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

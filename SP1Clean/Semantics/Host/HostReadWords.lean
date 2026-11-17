@@ -9,7 +9,7 @@ satisfied by an absent optional read. Buffer consumers use this interface after 
 has authenticated their cells, without depending on the Sail memory implementation.
 -/
 
-namespace SP1Clean.Model.Core.HostReadContext
+namespace SP1Clean.Semantics.HostReadContext
 
 def ObservesWord (context : HostReadContext) (address : ℕ) (word : BitVec 64) : Prop :=
   ∀ index : Fin 8,
@@ -58,4 +58,4 @@ theorem readGuest_of_cells (context : HostReadContext) (policy : HostMemoryPolic
     ⟨lower, upper⟩)]
   exact readBytes_of_cells context words address length observed
 
-end SP1Clean.Model.Core.HostReadContext
+end SP1Clean.Semantics.HostReadContext

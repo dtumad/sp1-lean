@@ -12,7 +12,7 @@ and the public Exit bus remains separate; no restriction is added to the all-eig
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Model.Core HostHintReadLocal NativeCore Semantics
+open Circuit Air.Flat Semantics HostHintReadLocal NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

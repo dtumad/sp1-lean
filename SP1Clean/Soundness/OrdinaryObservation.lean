@@ -184,10 +184,10 @@ An empty ordinary history leaves the supplied incoming increment flag untouched.
 theorem retirement_fold (enabled : Bool) (initial final : State (ZMod p))
     (path : List (Inputs (ZMod p))) (flag : Option Bool)
     (valid : ∀ input ∈ path, Spec enabled input) (walk : Walk.IsWalk edge initial final path) :
-    path.foldl (fun values _ => Model.Core.retirementTick values true)
+    path.foldl (fun values _ => Semantics.retirementTick values true)
       (enabled, flag, some (Word.toBitVec64 initial.counter)) =
         (enabled, if path.length = 0 then flag else some enabled, some (Word.toBitVec64 final.counter)) := by
-  rw [Model.Core.retirementTick_fold (fun _ : Inputs (ZMod p) => true)]
+  rw [Semantics.retirementTick_fold (fun _ : Inputs (ZMod p) => true)]
   simp only [List.countP_true, Option.map_some]
   rw [counter_of_walk enabled initial final path valid walk]
 

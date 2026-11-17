@@ -9,7 +9,7 @@ word consumers. All scheduling and padding use Clean's built-in machinery.
 -/
 
 namespace SP1CleanTest.Alignment.HintReadAssembly
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1CleanTest.Alignment.InstalledAssembly
 
 private abbrev image := SP1CleanTest.Core.HintReadFixtures.image

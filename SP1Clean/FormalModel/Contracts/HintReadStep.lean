@@ -10,7 +10,7 @@ authenticity and complete row coverage are derived from the enclosing ledgers.
 namespace SP1Clean.HintReadStep
 
 structure Inputs (F : Type) where
-  word : Model.Core.HintQueue.WordRecord F
+  word : Semantics.HintQueue.WordRecord F
   address : fields 3 F
   nextIndex : fields 3 F
   nextAddress : fields 3 F

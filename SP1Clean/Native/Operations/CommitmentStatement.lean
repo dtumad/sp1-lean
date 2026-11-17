@@ -9,7 +9,7 @@ rows, including unused slots, and prevents changing a word or flag to match a co
 
 namespace SP1Clean.CommitmentDeclaration
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

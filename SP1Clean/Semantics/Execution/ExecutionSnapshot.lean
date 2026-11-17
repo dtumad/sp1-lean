@@ -16,7 +16,7 @@ snapshots and prove its final state realizes the outgoing one; this module does 
 binding into an ensemble relation or claim certified AIR composition.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open LeanRV64D SP1Clean.Soundness.Target
 
@@ -177,4 +177,4 @@ theorem ProgramImage.executionBootSnapshot_realize (image : ProgramImage) (input
     (image.executionBootSnapshot input).realize = image.executionBoot input :=
   ExecutionSnapshot.realize_capture _ _ rfl
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

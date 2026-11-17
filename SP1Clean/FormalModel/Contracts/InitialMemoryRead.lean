@@ -10,7 +10,7 @@ The complete eight-byte footprint is bounded; byte-row witnesses belong to the c
 
 namespace SP1Clean.InitialMemoryRead
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

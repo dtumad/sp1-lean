@@ -15,7 +15,7 @@ Each present row has multiplicity one; global boundary ordering supplies uniquen
 
 namespace SP1Clean.InitialRegisterProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open Circuit SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

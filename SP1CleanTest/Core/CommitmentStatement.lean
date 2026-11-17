@@ -10,7 +10,7 @@ partial coverage, flags and conflicting writes that the operational host still e
 
 namespace SP1CleanTest.Core.CommitmentStatement
 
-open SP1Clean.Model.Core SP1Clean.Machine
+open SP1Clean.Semantics SP1Clean.Machine
 
 private def statement : CommitmentStatement :=
   ⟨Vector.replicate 8 7, Vector.replicate 8 9, true, true⟩

@@ -10,7 +10,7 @@ so overlapping host buffers do not introduce simultaneous duplicate accesses. Th
 semantic footprint, not the exact Rust executor's untraced physical read inventory.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 structure MemorySpan where
   address : ℕ
@@ -86,4 +86,4 @@ theorem nodup_unionCells (spans : List MemorySpan) : (unionCells spans).Nodup :=
 
 end MemorySpan
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

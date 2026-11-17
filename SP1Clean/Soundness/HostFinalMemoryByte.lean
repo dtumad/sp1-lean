@@ -9,7 +9,7 @@ the installed resource circuits; no witness validity, target agreement or ground
 
 namespace SP1Clean.Soundness.HostFinalMemory
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalByteLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩

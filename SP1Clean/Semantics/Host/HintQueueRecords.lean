@@ -13,7 +13,7 @@ the complete source hint list, independently of witness data, and fails closed o
 node inventories. New allocations require a separate authenticated provider.
 -/
 
-namespace SP1Clean.Model.Core.HintQueue
+namespace SP1Clean.Semantics.HintQueue
 
 open SP1Clean.Soundness.Target
 
@@ -114,4 +114,4 @@ theorem sourceTable_complete (hints : List Bytes) (fits : hints.length < 2 ^ 48)
     (sourceTable (p := p) hints).Spec (NodeRecord.encode (index.val + 1) (ofList hints).1[index.val]) :=
   (sourceTable_spec hints _).mpr ⟨fits, index, rfl⟩
 
-end SP1Clean.Model.Core.HintQueue
+end SP1Clean.Semantics.HintQueue

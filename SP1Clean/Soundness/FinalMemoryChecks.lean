@@ -21,7 +21,7 @@ verifier below is only a physical proof view: no full balance is asserted for th
 
 namespace SP1Clean.Soundness.FinalMemoryChecks
 
-open Circuit Air.Flat Channels Model.Core Semantics
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

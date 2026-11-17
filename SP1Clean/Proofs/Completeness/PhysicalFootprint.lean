@@ -12,7 +12,7 @@ acceptance condition. The mixed A4/A5/A6 construction must supply its own full i
 -/
 
 namespace SP1Clean.Soundness.SupportedCoreTraceWitness
-open Air.Flat TraceGen Model.Core
+open Air.Flat TraceGen Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable (trace : SupportedCoreTraceWitness p)

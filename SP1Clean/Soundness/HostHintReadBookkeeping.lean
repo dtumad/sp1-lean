@@ -12,7 +12,7 @@ the endpoint execution theorem. Binding these observations to a supplied target 
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core NativeCore HostHintReadLocal
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 open LeanRV64D (Register)
 
 private def retirementObservation (state : SailState) : Bool × Option Bool × Option (BitVec 64) :=

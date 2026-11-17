@@ -10,12 +10,12 @@ namespace SP1Clean.HintReadStep
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-def populate (last : Bool) (word : Model.Core.HintQueue.WordRecord (ZMod p))
+def populate (last : Bool) (word : Semantics.HintQueue.WordRecord (ZMod p))
     (address : fields 3 (ZMod p)) : Inputs (ZMod p) :=
   ⟨word, address, Address.ofNat (Address.toNat word.index + 1),
     if last then address else Address.ofNat (Address.toNat address + 8)⟩
 
-theorem populate_spec (last : Bool) (word : Model.Core.HintQueue.WordRecord (ZMod p))
+theorem populate_spec (last : Bool) (word : Semantics.HintQueue.WordRecord (ZMod p))
     (address : fields 3 (ZMod p)) (valid : word.Valid)
     (marker : word.isLast = if last then 1 else 0) (bounded : Address.Bounded address)
     (indexFits : Address.toNat word.index + 1 < 2 ^ 48)

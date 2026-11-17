@@ -15,7 +15,7 @@ endpoints are explicit test fixtures; global endpoint authentication remains an 
 
 namespace SP1CleanTest.Core.HostCommit
 
-open Circuit Air.Flat SP1Clean SP1Clean.HostCommitChip SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.HostCommitChip SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 open HostChecks

@@ -9,7 +9,7 @@ and concrete host writes never delete a byte. These facts establish memory avail
 cut without using an AIR witness or the final-memory grounding conclusion.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 open Machine Soundness.Target
 
 /-- Native memory encodings cannot write outside the represented Sail memory domain. -/
@@ -163,4 +163,4 @@ theorem ExecutionPath.memory_domain_prefix {image : ProgramImage} (valid : image
     contradiction
   · exact path.memory_present_prefix valid protectsRom configured loaded replay address
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

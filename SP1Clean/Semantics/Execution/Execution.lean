@@ -18,7 +18,7 @@ so a store into protected memory is not a step at all. Supported decoding and sh
 limits belong to the native profile layered over this relation; no AIR correctness is asserted here.
 -/
 
-namespace SP1Clean.Model.Core
+namespace SP1Clean.Semantics
 
 open SP1Clean.Machine SP1Clean.Soundness.Target LeanRV64D
 
@@ -169,4 +169,4 @@ theorem deterministic {other : ExecutionState} {otherEvent : ExecutionEvent}
 
 end ExecutionStep
 
-end SP1Clean.Model.Core
+end SP1Clean.Semantics

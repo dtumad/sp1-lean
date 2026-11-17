@@ -11,7 +11,7 @@ authorization for arbitrary witness bytes or a replacement for the host's byte-s
 
 namespace SP1Clean.HintNodeAllocate
 
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

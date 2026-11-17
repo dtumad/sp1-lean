@@ -7,7 +7,7 @@ is too weak. It suffices to compare reads at the union of both histories' keys: 
 address has value zero on both sides. The check is finite even for the 48-bit native window.
 -/
 
-namespace SP1Clean.Model.Core.ByteMemory
+namespace SP1Clean.Semantics.ByteMemory
 
 /-- Compare a selected set of addresses using the union of both finite supports. -/
 def agreesOn (left right : ByteMemory) (selected : ℕ → Bool) : Bool :=
@@ -43,4 +43,4 @@ theorem agreesBelow_iff (left right : ByteMemory) (limit : ℕ) :
       ∀ address < limit, left.read address = right.read address := by
   simp only [agreesBelow, agreesOn_iff, decide_eq_true_eq]
 
-end SP1Clean.Model.Core.ByteMemory
+end SP1Clean.Semantics.ByteMemory

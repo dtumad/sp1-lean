@@ -12,7 +12,7 @@ immutable statement follows once a provider authenticates the requests (`Declare
 
 namespace SP1Clean.Soundness.HostCommitDeclarations
 
-open Circuit Air.Flat Model.Core Semantics NativeCore HostCommitBank
+open Circuit Air.Flat Semantics NativeCore HostCommitBank
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}
