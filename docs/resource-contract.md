@@ -39,9 +39,8 @@ for the remaining finite inventories. The preset does not assert that all ceilin
 simultaneously; construction must establish its complete expansion fits. It is not a theorem about
 the current mixed AIR's accepted language. In particular, `p-1` is a field-count ceiling, not a
 proof that all pointer/length encodings fit for an arbitrarily large characteristic. Fixed
-bit-width bounds and combined persistent-allocation bounds remain separate checks. The native
-execution profile's row budget (`Model.Core.Profile.maxShardCycles`) uses the same named tick
-constant.
+bit-width bounds and combined persistent-allocation bounds remain separate checks. The tick
+ceiling is the named constant `NativeLayout.maxShardTicks`.
 
 | Quantity | Measurement | Enforcement / construction owner |
 |---|---|---|

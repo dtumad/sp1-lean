@@ -1,7 +1,9 @@
-import SP1Clean.Semantics.Host.HostSail
-import SP1Clean.Semantics.Host.HostTerminal
-import SP1Clean.Semantics.Execution.EventExecution
-import SP1Clean.Semantics.Memory.InstructionWrite
+module
+
+public import SP1Clean.Semantics.Host.HostSail
+public import SP1Clean.Semantics.Host.HostTerminal
+public import SP1Clean.Semantics.Execution.EventExecution
+public import SP1Clean.Semantics.Memory.InstructionWrite
 
 /-! # Stateful local execution of the native core
 
@@ -17,6 +19,8 @@ semantic steps. An ordinary step also requires the instruction's write footprint
 so a store into protected memory is not a step at all. Supported decoding and shard resource
 limits belong to the native profile layered over this relation; no AIR correctness is asserted here.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

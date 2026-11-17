@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Sail.Register
-import ToMathlib.DeriveDecidableEq
+module
+
+public import SP1Clean.Semantics.Sail.Register
+public import ToMathlib.DeriveDecidableEq
 
 /-! # Exact executable comparison of the complete Sail register file
 
@@ -8,6 +10,8 @@ structural equality for the decoded instructions retained by waiting harts.
 The resulting finite-map comparison includes platform registers, nextPC, retirement bookkeeping,
 and absent keys; it does not identify states merely because their integer registers agree.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 
@@ -92,7 +96,7 @@ private instance valueLawfulBEq (reg : Register) : LawfulBEq (RegisterType reg) 
   cases reg <;> infer_instance
 
 /-- Compare every stored register using Std's extensional finite-map comparison. -/
-def equivalent (left right : Map) : Bool := left == right
+@[no_expose] def equivalent (left right : Map) : Bool := left == right
 
 theorem equivalent_iff (left right : Map) : equivalent left right = true ↔ left = right := by
   exact beq_iff_eq

@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Host.HostExecutionLaws
-import SP1Clean.Semantics.ISA.InstructionBytes
-import SP1Clean.Semantics.Execution.Syscall
+module
+
+public import SP1Clean.Semantics.Host.HostExecutionLaws
+public import SP1Clean.Semantics.ISA.InstructionBytes
+public import SP1Clean.Semantics.Execution.Syscall
 
 /-! # Applying the native host interpreter to official Sail states
 
@@ -8,6 +10,8 @@ The read context uses the source state's actual registers and memory. Applying a
 updates x5, PC, and exactly the returned memory-write interval. The adapter produces the event's
 observations and return value from execution; it does not accept a claimed syscall result.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Sail.SailWrap
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Semantics.Sail.SailWrap
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Sequential byte memory in the generated Sail model
 
@@ -7,6 +9,8 @@ The upstream ArchSem interpreter owns byte reads and writes. The generated RISC-
 convert between words and little-endian byte vectors. These lemmas connect that composition to
 SP1's byte memory at its supported widths, retaining the generated access classification.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailMem
 open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions

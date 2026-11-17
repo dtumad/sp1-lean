@@ -1,11 +1,15 @@
-import SP1Clean.Semantics.Sail.SailWrap
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Semantics.Sail.SailWrap
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Sail platform reads and per-step bookkeeping
 
 State-preserving platform queries and the exact interrupt-register update performed by the
 upstream step function. The proofs observe ArchSem's sequential interpreter directly.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.TryStepReduction
 open Sail Sail.ArchSem LeanRV64D LeanRV64D.Functions

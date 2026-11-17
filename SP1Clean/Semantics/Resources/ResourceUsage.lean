@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Resources.ResourceLimits
-import SP1Clean.Semantics.Host.HostFootprint
-import SP1Clean.Semantics.Host.HintQueueEvent
+module
+
+public import SP1Clean.Semantics.Resources.ResourceLimits
+public import SP1Clean.Semantics.Host.HostFootprint
+public import SP1Clean.Semantics.Host.HintQueueEvent
 
 /-! # Semantic resource arithmetic
 
@@ -8,6 +10,8 @@ The first five quantities accumulate work. The others record peak live occupancy
 segments adds work and takes maxima; it does not reset the host's incoming queue or output.
 Physical table heights and occurrence counts are measured separately from semantic usage.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

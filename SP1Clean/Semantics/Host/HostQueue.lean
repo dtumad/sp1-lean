@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Host.HintQueue
-import SP1Clean.Semantics.Host.HostExecutionLaws
+module
+
+public import SP1Clean.Semantics.Host.HintQueue
+public import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # Queue updates derived from complete host execution
 
@@ -9,6 +11,8 @@ entire persistent suffix. It does not assume a static source queue or accept a c
 return. These are semantic compilation proofs; the mixed AIR must still authenticate allocations,
 head transitions, and observations with its own ledgers.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

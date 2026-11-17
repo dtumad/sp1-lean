@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.ExecutionSnapshot
-import SP1Clean.Semantics.Execution.SourceSnapshot
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionSnapshot
+public import SP1Clean.Semantics.Execution.SourceSnapshot
 
 /-! # Checking a complete local source state
 
@@ -8,6 +10,8 @@ and endpoint ranges are checked before grounding. The check permits a stopped ho
 empty terminal segment remains an identity. The enclosing local verifier separately requires equal
 clock endpoints for stopped sources; strict State progress then excludes active AIR rows.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 
@@ -44,7 +48,7 @@ private instance (state : SailState) : Decidable (SailConfigured state) :=
   else isFalse (fun configured => init configured.init)
 
 /-- The finite carrier suffices for every platform check; the memory map is never materialized. -/
-def SailSnapshot.checkConfigured (snapshot : SailSnapshot) : Bool :=
+@[no_expose] def SailSnapshot.checkConfigured (snapshot : SailSnapshot) : Bool :=
   decide (SailConfigured snapshot.skeleton)
 
 theorem SailSnapshot.checkConfigured_iff (snapshot : SailSnapshot) :

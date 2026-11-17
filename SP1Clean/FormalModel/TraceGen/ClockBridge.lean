@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Events
 import SP1Clean.Semantics.Transition.MicroTime
+import SP1Clean.Semantics.Execution.Schedule
 
 /-!
 # The trace layer's clock literals are the machine model's constants

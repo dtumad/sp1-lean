@@ -1,13 +1,17 @@
-import SP1Clean.Semantics.Sail.SailWrap
-import SP1Clean.Semantics.Sail.SailMemory
-import SP1Clean.Semantics.Sail.GuestProgram
-import SP1Clean.Semantics.Sail.SailPlatform
+module
+
+public import SP1Clean.Semantics.Sail.SailWrap
+public import SP1Clean.Semantics.Sail.SailMemory
+public import SP1Clean.Semantics.Sail.GuestProgram
+public import SP1Clean.Semantics.Sail.SailPlatform
 
 /-! # Official Sail fetch, dispatch and retirement reduction
 
 Reduce the generated step through ArchSem's interpreter. Interrupt refresh, fetched-instruction
 metadata, execution redirection and retirement bookkeeping remain part of the observed step.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 namespace SP1Clean.TryStepReduction

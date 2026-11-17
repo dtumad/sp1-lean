@@ -1,12 +1,16 @@
-import SP1Clean.Semantics.Memory.MemorySnapshot
-import SP1Clean.Semantics.ISA.Decode
-import ToClean.Circuit.StaticTable
+module
+
+public import SP1Clean.Semantics.Memory.MemorySnapshot
+public import SP1Clean.Semantics.ISA.Decode
+public import ToClean.Circuit.StaticTable
 
 /-! # Fixed register rows from a finite source snapshot
 
 The lookup binds the index and all four value limbs together. Its 32 rows are computed from the
 supplied snapshot, independently of prover data or the instruction trace.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

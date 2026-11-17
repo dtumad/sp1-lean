@@ -1,7 +1,9 @@
-import SP1Clean.Semantics.Sail.SailMemory
-import SP1Clean.Semantics.Sail.SailWrap
-import SP1Clean.Semantics.Sail.Register
-import LeanRV64D.Step
+module
+
+public import SP1Clean.Semantics.Sail.SailMemory
+public import SP1Clean.Semantics.Sail.SailWrap
+public import SP1Clean.Semantics.Sail.Register
+public import LeanRV64D.Step
 
 /-! # Guest programs and the official Sail step
 
@@ -15,6 +17,8 @@ The trace **arguments** that consume them — `RefinesAt`, `RowEffect`, and the 
 obligations — reference the Soundness-layer trace machinery (`Trace.RowView`), so they cannot move below
 `Soundness` and live in `Soundness/RowEffectDefs.lean`. (Namespace is kept `SP1Clean.Soundness.Target`
 so those consumers resolve these unchanged after importing this file.) -/
+
+@[expose] public section
 
 open LeanRV64D
 namespace SP1Clean.Soundness.Target

@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Host.HostIO
-import SP1Clean.Semantics.ISA.SyscallCode
+module
+
+public import SP1Clean.Semantics.Host.HostIO
+public import SP1Clean.Semantics.ISA.SyscallCode
 
 /-! # Stateful execution of the native eight-call host profile
 
@@ -30,6 +32,8 @@ commit in a shard against one fixed public-values vector
 slot within that shard therefore need a separate restriction or refinement
 argument; successful native execution alone does not imply that exact public-value binding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

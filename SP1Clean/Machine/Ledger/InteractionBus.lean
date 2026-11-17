@@ -1,9 +1,11 @@
-import Mathlib.Data.List.Perm.Basic
-import Mathlib.Algebra.BigOperators.Group.List.Basic
-import Mathlib.Algebra.Order.BigOperators.Group.List
-import Mathlib.Algebra.Order.Group.Int
-import Mathlib.Data.List.Dedup
-import Mathlib.Tactic.Ring
+module
+
+public import Mathlib.Data.List.Perm.Basic
+public import Mathlib.Algebra.BigOperators.Group.List.Basic
+public import Mathlib.Algebra.Order.BigOperators.Group.List
+public import Mathlib.Algebra.Order.Group.Int
+public import Mathlib.Data.List.Dedup
+public import Mathlib.Tactic.Ring
 
 /-! # Multiplicity-weighted interaction bus (the trace-level lookup-bus core)
 
@@ -19,6 +21,8 @@ Because the per-key sum is a `List.filter`+`List.map`+`List.sum`, every property
 permutation-invariant by construction — there is no order dependence (unlike the memory bus's
 "last write wins"). That is what makes this core directly provable. The connection from balance and
 ordered handoffs to execution semantics lives in the typed ranked-grounding layer. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.ExecutionPath
-import SP1Clean.Semantics.Execution.SailStep
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionPath
+public import SP1Clean.Semantics.Execution.SailStep
 
 /-! # Replaying mixed event tapes with evolving host state
 
@@ -13,6 +15,8 @@ The converse still requires normal-retirement evidence for ordinary instructions
 This semantic Sail replay is noncomputable, like the existing machine replay; it is not the
 exportable row compiler. Its prefix trajectory supplies the paired state for mixed grounding.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

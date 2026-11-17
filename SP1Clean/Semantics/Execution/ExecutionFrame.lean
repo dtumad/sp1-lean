@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Execution.ExecutionReplay
-import SP1Clean.Semantics.Execution.ProgramImage
-import SP1Clean.Semantics.Sail.SailInstructionFrame
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionReplay
+public import SP1Clean.Semantics.Execution.ProgramImage
+public import SP1Clean.Semantics.Sail.SailInstructionFrame
 
 /-! # Configuration and instruction memory throughout native execution
 
@@ -12,6 +14,8 @@ Every executed position has a committed word which official Sail fetch returns u
 Empty, final and beyond-final boundaries retain ROM without acquiring a next-fetch obligation.
 No circuit row, compiler readiness or separately supplied intermediate invariant is used.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 open Machine Soundness.Target LeanRV64D LeanRV64D.Functions

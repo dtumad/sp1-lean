@@ -1,7 +1,9 @@
-import SP1Clean.Semantics.ISA.InstructionDecode
-import SP1Clean.Semantics.Execution.ProgramImage
-import SP1Clean.Circuits.Channels.BusMessages
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Semantics.ISA.InstructionDecode
+public import SP1Clean.Semantics.Execution.ProgramImage
+public import SP1Clean.Circuits.Channels.BusMessages
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Fixed Program rows computed from the finite image
 
@@ -13,6 +15,8 @@ Membership here certifies agreement with `InstructionDecode.decode`; the separat
 `Proofs/Sail/InstructionDecode.lean` identifies its results with Sail's configured decoder.
 This table is not yet wired into the released machine theorem.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Transition.InstructionPlan
-import SP1Clean.Semantics.Transition.TransitionDecode
+module
+
+public import SP1Clean.Semantics.Transition.InstructionPlan
+public import SP1Clean.Semantics.Transition.TransitionDecode
 
 /-!
 # Canonical SP1 transition projection
@@ -16,6 +18,8 @@ a compiler-domain question, not part of ordinary Sail support. Unsupported decod
 constructors and unsupported routes fail closed in the outer projection; missing register/RAM
 values fail closed in the one inner access projection.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 

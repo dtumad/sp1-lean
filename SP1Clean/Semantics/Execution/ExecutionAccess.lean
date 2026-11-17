@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Execution.ExecutionMemory
-import SP1Clean.Semantics.Execution.ExecutionEncoding
-import SP1Clean.Semantics.Transition.TransitionView
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionMemory
+public import SP1Clean.Semantics.Execution.ExecutionEncoding
+public import SP1Clean.Semantics.Transition.TransitionView
 
 /-! # Total access projection from complete native semantics
 
@@ -8,6 +10,8 @@ The existing decoder, route and access-plan extractor are reused literally. Comp
 memory and independent preservation supply RAM-cell availability; the semantic encoding predicate
 supplies the address domain. No successful compiler call is assumed.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 open Machine Soundness.Target Semantics LeanRV64D

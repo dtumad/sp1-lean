@@ -1,17 +1,14 @@
-import SP1Clean.Semantics.Execution.Schedule
-import SP1Clean.Semantics.Execution.GuestBoot
-import PolyFun.PFunctor.Dynamical.Basic
-import PolyFun.PFunctor.Dynamical.Run
+module
 
-/-! # The Lean-native SP1 execution machine
+public import SP1Clean.Semantics.Execution.GuestBoot
 
-The official Sail `try_step` function remains the instruction semantics.  This file packages its
-deterministic trajectory as a small PolyFun dynamical system: the exposed observation is the current
-`Option SailState`, and the sole direction is `PUnit`.  Failure is represented by `none`, which then
-stutters, making the transition total without treating an interpreter error as a successful halt.
+/-! # One official Sail step
 
-PolyFun is used only for this semantic transition/run interface.  Circuit construction and Clean's
-interaction machinery remain independent of it. -/
+The official Sail `try_step` function is the instruction semantics. `stepOnce` totalizes one step
+with `Option`: an interpreter error is `none`, never a successful halt. The complete execution step
+and its replay (`Semantics/Execution/ExecutionReplay`) use it for ordinary instructions. -/
+
+@[expose] public section
 
 open LeanRV64D
 

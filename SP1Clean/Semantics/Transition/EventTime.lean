@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.EventExecution
-import SP1Clean.Semantics.Transition.MicroTime
+module
+
+public import SP1Clean.Semantics.Execution.EventExecution
+public import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # The transcript timeline
 
@@ -12,6 +14,8 @@ transcript's own event durations by prefix sum: eight ticks for an ordinary inst
 Past the end of a transcript the timeline keeps advancing at eight ticks per step. That is not a
 claim about what the machine does there — nothing does — but it is what makes `Timeline`'s `gap`
 field provable for every `n`, so a finite transcript still yields a total timeline. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Host.HintQueue
-import SP1Clean.Semantics.Memory.MemoryWord
+module
+
+public import SP1Clean.Semantics.Host.HintQueue
+public import SP1Clean.Semantics.Memory.MemoryWord
 
 /-! # Complete immutable hint contents at RAM-word granularity
 
@@ -7,6 +9,8 @@ Each node has exactly the words HINT_READ writes, including its mandatory final 
 The complete length and these words determine every byte, without a content hash. The word
 positions are local to the immutable node and remain meaningful after any queue update.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics.HintQueue
 

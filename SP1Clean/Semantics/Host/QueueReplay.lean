@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.ExecutionReplay
-import SP1Clean.Semantics.Host.HintQueueEvent
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionReplay
+public import SP1Clean.Semantics.Host.HintQueueEvent
 
 /-! # Queue observations in successful whole-state replay
 
@@ -12,6 +14,8 @@ queue projection for all eight host calls.
 Successful replay is a premise, not a consequence of this module. The resulting invariant is
 intended for each already-replayed prefix of the mixed grounding induction.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,4 +1,6 @@
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Math.Word
 
 /-! # Natural order from a bounded SP1 register timestamp gap
 
@@ -6,6 +8,8 @@ The previous low clock and the two gap limbs are bounded. Their sum fits below t
 characteristic, so the field subtraction represents a strict natural-number increase. This
 arithmetic boundary is shared by register readers and whole-machine time extraction.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.MemoryClock
 

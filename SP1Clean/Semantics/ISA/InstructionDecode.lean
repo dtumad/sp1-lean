@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.ISA.Decode
+module
+
+public import SP1Clean.Semantics.ISA.Decode
 
 /-! # Executable RV64IM instruction decoding
 
@@ -10,6 +12,8 @@ result uses the existing Sail instruction vocabulary and guarded Program-row pro
 stateful Sail decoder in every configured state. Enabled hint-extension aliases are rejected:
 their distinct Sail constructors need separate semantic bridges before they can join this profile.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

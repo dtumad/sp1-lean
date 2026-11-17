@@ -1,5 +1,7 @@
-import LeanRV64D.Defs
-import Sail.ArchSemSequential
+module
+
+public import LeanRV64D.Defs
+public import Sail.ArchSemSequential
 
 /-! # Sequential execution of the generated Sail model
 
@@ -7,6 +9,8 @@ SP1 uses the upstream ArchSem sequential state and interpreter. `runSail` specia
 interpreter to the generated RISC-V architecture; the effect handlers and deterministic finite
 choice policy remain owned by lean-sail.
 -/
+
+@[expose] public section
 
 /-- The complete upstream sequential state for the generated RISC-V register family. -/
 abbrev SailState := Sail.ArchSem.SequentialState LeanRV64D.RegisterType

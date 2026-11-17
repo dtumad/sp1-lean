@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Execution.ExecutionFrame
-import SP1Clean.Semantics.Execution.ExecutionSnapshot
-import SP1Clean.Semantics.Execution.ExecutionEncoding
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionFrame
+public import SP1Clean.Semantics.Execution.ExecutionSnapshot
+public import SP1Clean.Semantics.Execution.ExecutionEncoding
 
 /-! # Memory presence throughout the independent execution path
 
@@ -8,6 +10,8 @@ The complete snapshot materializes every byte below the native Sail limit. Actua
 and concrete host writes never delete a byte. These facts establish memory availability at every
 cut without using an AIR witness or the final-memory grounding conclusion.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 open Machine Soundness.Target

@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.ISA.SyscallCode
-import SP1Clean.Semantics.Execution.EventExecution
+module
+
+public import SP1Clean.Semantics.ISA.SyscallCode
+public import SP1Clean.Semantics.Execution.EventExecution
 
 /-! # Immutable commitments in an execution statement
 
@@ -9,6 +11,8 @@ Repeated identical declarations are permitted. Neither a flag nor agreement impl
 word was declared; coverage is a separate program property. This contract uses semantic events
 and contains no circuit rows, witness readiness or compiler conditions.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

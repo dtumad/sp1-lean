@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Memory.MemoryFinalCheck
-import SP1Clean.Semantics.ISA.Decode
-import SP1Clean.Circuits.Channels.Channels
+module
+
+public import SP1Clean.Semantics.Memory.MemoryFinalCheck
+public import SP1Clean.Semantics.ISA.Decode
+public import SP1Clean.Circuits.Channels.Channels
 
 /-! # Tagged locations for complete outgoing Memory coverage
 
@@ -9,6 +11,8 @@ registers with the same numeric address. This accounting key carries that distin
 It asserts no historical truth: the enclosing ledger must tie each selected key to a validated
 final record. Decoding is a left inverse on all semantic locations, including low RAM.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FinalMemoryChange
 

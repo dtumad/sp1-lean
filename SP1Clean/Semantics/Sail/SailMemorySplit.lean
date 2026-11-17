@@ -1,10 +1,14 @@
-import SP1Clean.Semantics.Sail.SailMemoryRead
+module
+
+public import SP1Clean.Semantics.Sail.SailMemoryRead
 
 /-! # Geometry of Sail's physical memory splits
 
 The successful split's own assertion supplies exact byte coverage. The PMA check supplies the
 non-wrapping physical window; neither is an extra premise of the instruction preservation law.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailMem
 open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions

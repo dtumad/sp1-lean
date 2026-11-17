@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Memory.Memory
-import SP1Clean.Semantics.Memory.NativeLayout
+module
+
+public import SP1Clean.Semantics.Memory.Memory
+public import SP1Clean.Semantics.Memory.NativeLayout
 
 /-! # Executable guest-visible hint and output semantics
 
@@ -14,6 +16,8 @@ this module checks request identity and queue effects, not the hook's cryptograp
 The AIR and Sail adapters must separately establish that these byte operations are the effects of
 the executed syscall. These definitions alone do not discharge that grounding obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,7 +1,9 @@
-import SP1Clean.Semantics.Sail.SailArithmeticFrame
-import SP1Clean.Semantics.Sail.SailControlFrame
-import SP1Clean.Semantics.Sail.SailLoadFrame
-import SP1Clean.Semantics.Sail.SailStoreFrame
+module
+
+public import SP1Clean.Semantics.Sail.SailArithmeticFrame
+public import SP1Clean.Semantics.Sail.SailControlFrame
+public import SP1Clean.Semantics.Sail.SailLoadFrame
+public import SP1Clean.Semantics.Sail.SailStoreFrame
 
 /-! # Supported ordinary instructions preserve the platform and protected memory
 
@@ -9,6 +11,8 @@ This is the circuit-independent one-step frame for the existing decoded write po
 the authoritative instruction routing projection to dispatch to arithmetic, control, load and
 store proofs, without defining another supported-instruction profile.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open LeanRV64D SP1Clean.Soundness.Target

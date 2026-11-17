@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Transition.AccessPlan
-import SP1Clean.Semantics.ISA.Decode
+module
+
+public import SP1Clean.Semantics.Transition.AccessPlan
+public import SP1Clean.Semantics.ISA.Decode
 
 /-!
 # Semantic instruction access-plan extraction
@@ -20,6 +22,8 @@ No clock, timestamp, opcode copy, chip row, event record, or execution relation 
 Facts connecting the target values to an official Sail step belong to the later compiler proof; the
 transparent `InstructionPlanReady` predicate exposes exactly when this pure extractor succeeds.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 
@@ -221,7 +225,7 @@ The result contains at most three roles for the current supported profile: `C,B,
 ALU operations, `B,A` for immediate/control-source operations, `A` for J/U operations, and
 `RAM,B,A` for loads/stores.  An `x0` destination and the A slot of branch/store are immutable
 read-backs rather than architectural writes. -/
-def instructionAccessPlan? (decoded : instruction) (source target : SailState) :
+@[no_expose] def instructionAccessPlan? (decoded : instruction) (source target : SailState) :
     Option InstructionAccessPlan :=
   (certifiedInstructionPlan? decoded source target).map CertifiedInstructionPlan.plan
 

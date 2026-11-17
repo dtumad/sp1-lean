@@ -1,5 +1,7 @@
-import SP1Clean.Math.Word
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Math.Word
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Uniqueness of bounded word encodings
 
@@ -7,6 +9,8 @@ Four bounded base-65536 limbs are determined by their unsigned value. These lemm
 tables and witness constructors move between field rows and semantic words without duplicating
 limb arithmetic in chip proofs.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Word
 

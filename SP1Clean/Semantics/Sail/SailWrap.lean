@@ -1,12 +1,17 @@
-import Mathlib.Tactic.FinCases
-import Aesop
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Lift
-import Mathlib.Data.ZMod.Basic
-import LeanRV64D.Step
-import ToMathlib.General
-import SP1Clean.Semantics.Sail.Register
+module
+
+public import Mathlib.Tactic.FinCases
+public import Aesop
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Lift
+public import Mathlib.Data.ZMod.Basic
+public import LeanRV64D.Step
+public import ToMathlib.General
+public import SP1Clean.Semantics.Sail.Register
+
+@[expose] public section
+
 set_option linter.unusedSimpArgs false
 
 /-! # Register execution lemmas for the Sail model
@@ -43,19 +48,8 @@ attribute [local grind =]
   runSail_pure
   runSail_throw
 
-grind_pattern Std.ExtDHashMap.get?_insert_self => (m.insert k v).get? k
-grind_pattern BitVec.ofNat_eq_ofNat => (@OfNat.ofNat.{0} (BitVec n) i (@BitVec.instOfNat n i))
-
-/-- A second insert at the same key overwrites the first: collapses the staged `nextPC ← pc+4` write
-that a control-flow `jump_to`/`set_next_pc` immediately overwrites with the committed target. -/
-@[simp] lemma ExtDHashMap_insert_insert_self {α : Type} {β : α → Type}
-    [BEq α] [Hashable α] [LawfulBEq α] [LawfulHashable α]
-    (m : Std.ExtDHashMap α β) (k : α) (a b : β k) :
-    (m.insert k a).insert k b = m.insert k b := by
-  apply Std.ExtDHashMap.ext_get?
-  intro k'
-  rw [Std.ExtDHashMap.get?_insert, Std.ExtDHashMap.get?_insert, Std.ExtDHashMap.get?_insert]
-  split <;> rfl
+local grind_pattern Std.ExtDHashMap.get?_insert_self => (m.insert k v).get? k
+local grind_pattern BitVec.ofNat_eq_ofNat => (@OfNat.ofNat.{0} (BitVec n) i (@BitVec.instOfNat n i))
 
 set_option linter.style.longLine false
 

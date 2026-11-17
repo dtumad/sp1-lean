@@ -2140,7 +2140,6 @@
  ["docBlame", "SP1Clean.WritePermissionProvider.Spec"],
  ["docBlame", "SP1Clean.WritePermissionProvider.channel"],
  ["simpComm", "Std.ExtDHashMap.insert_insert_comm"],
- ["simpNF", "ExtDHashMap_insert_insert_self"],
  ["simpNF", "SP1Clean.DivRemChip.val_16_zmod_p"],
  ["simpNF", "Sail.run_readReg_insert_of_ne"],
  ["simpNF", "Sail.run_readReg_insert_self"],

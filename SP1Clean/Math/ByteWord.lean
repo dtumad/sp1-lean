@@ -1,10 +1,14 @@
-import SP1Clean.Math.Word
+module
+
+public import SP1Clean.Math.Word
 
 /-! # Little-endian bytes and field words
 
 The memory bus uses four 16-bit limbs while Sail memory stores eight-bit bytes. These lemmas
 identify their two encodings without depending on a memory model or an instruction chip.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Word
 

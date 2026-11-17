@@ -1,10 +1,14 @@
-import SP1Clean.Semantics.Sail.SailMemorySplit
+module
+
+public import SP1Clean.Semantics.Sail.SailMemorySplit
 
 /-! # Protected-byte frames for actual Sail writes
 
 The frame preserves the complete register map and every selected byte, including absence. It is
 proved for Sail's byte writes and composed through its actual bounded physical-access loop.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.SailMem
 open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions

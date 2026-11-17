@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.SailStep
-import SP1Clean.Circuits.Channels.BusMessages
+module
+
+public import SP1Clean.Semantics.Execution.SailStep
+public import SP1Clean.Circuits.Channels.BusMessages
 
 /-! # Ordinary-window micro-time
 
@@ -22,6 +24,8 @@ definitions here remain an explicitly scoped compatibility layer until timed gro
 
 Reading a location's content at a micro-time from a trajectory (`microValue`) lives in
 `Semantics/Transition/GenericTruth`. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 
@@ -170,11 +174,6 @@ def ramWord64? (s : SailState) (a : BitVec 64) : Option (BitVec 64) := do
 def locContent (s : SailState) : MemLoc → Option (BitVec 64)
   | .reg i => s.get_reg? i
   | .ram cell => ramWord64? s cell.baseAddr
-
-/-! ## The trajectory as a function -/
-
-/-- Compatibility name for the canonical Lean-native machine step. -/
-noncomputable abbrev stepOnce := SP1Clean.Machine.stepOnce
 
 /-! ## The location content at a micro-time
 

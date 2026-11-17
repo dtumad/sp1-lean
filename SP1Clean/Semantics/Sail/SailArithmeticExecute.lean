@@ -1,11 +1,15 @@
-import SP1Clean.Semantics.Sail.SailRetirement
-import SP1Clean.Semantics.Sail.SailPure
+module
+
+public import SP1Clean.Semantics.Sail.SailRetirement
+public import SP1Clean.Semantics.Sail.SailPure
 
 /-! # Official Sail arithmetic execute stages
 
 These circuit-independent reductions describe the actual register update of each arithmetic
 family, including x0. The instruction bridges and semantic frame laws share these declarations.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 namespace SP1Clean.Advance

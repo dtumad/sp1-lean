@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.SourceExecution
-import SP1Clean.Semantics.Sail.SailFetch
+module
+
+public import SP1Clean.Semantics.Execution.SourceExecution
+public import SP1Clean.Semantics.Sail.SailFetch
 
 /-! # Official fetch at a checked finite execution boundary
 
@@ -7,6 +9,8 @@ Source validity authenticates the complete Sail configuration and all committed 
 When an instruction executes at that boundary, its committed word is exactly the actual Sail
 fetch result. No existence of a next instruction is imposed on empty or final boundaries.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

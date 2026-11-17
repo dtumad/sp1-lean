@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Memory.MemoryNormalization
+module
+
+public import SP1Clean.Semantics.Memory.MemoryNormalization
 
 /-! # Finite interval tables for sparse initial memory
 
@@ -10,6 +12,8 @@ memory enumeration is required.
 
 Empty intervals are harmless: they contain no address and need no special padding semantics.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 
@@ -205,7 +209,7 @@ private theorem rawIntervals_complete (memory : ByteMemory) (limit query : ℕ) 
       exact ⟨next, List.mem_flatMap.mpr ⟨interval, member, nextMem⟩, nextContains⟩
 
 /-- Fixed intervals depend on live memory, not its update history. -/
-def intervals (memory : ByteMemory) (limit : ℕ) : List MemoryInterval :=
+@[no_expose] def intervals (memory : ByteMemory) (limit : ℕ) : List MemoryInterval :=
   (memory.canonicalBelow limit).rawIntervals limit
 
 /-- Every bounded address belongs to exactly one interval, including zero-filled gaps. -/

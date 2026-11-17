@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.Schedule
-import SP1Clean.Semantics.Sail.GuestProgram
+module
+
+public import SP1Clean.Semantics.Execution.Schedule
+public import SP1Clean.Semantics.Sail.GuestProgram
 
 /-! # Raw SP1 syscall events
 
@@ -11,6 +13,8 @@ an enumerated syscall type.
 
 An event contains the instruction-row observations. Effects that the instruction AIR does not
 determine (hint data, host I/O, commitments) belong to the concrete host interpreter. -/
+
+@[expose] public section
 
 open LeanRV64D
 

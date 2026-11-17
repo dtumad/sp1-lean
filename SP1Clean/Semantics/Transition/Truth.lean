@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Execution.ProgramCommitment
-import SP1Clean.Semantics.Transition.MicroTime
-import SP1Clean.Semantics.ISA.Decode
+module
+
+public import SP1Clean.Semantics.Execution.ProgramCommitment
+public import SP1Clean.Semantics.Transition.MicroTime
+public import SP1Clean.Semantics.ISA.Decode
 
 /-! # Execution truth — conclusions of global grounding
 
@@ -18,6 +20,8 @@ There are two intentionally distinct execution scopes:
 
 `RowFacts`/`LocalStepFact` form the chip-agnostic per-row advance obligation: from the pulled state's
 truth and engine-supplied current operand truths, the pushed state and written values are true. -/
+
+@[expose] public section
 
 open LeanRV64D
 namespace SP1Clean.Semantics

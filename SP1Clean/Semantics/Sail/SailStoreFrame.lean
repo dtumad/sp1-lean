@@ -1,11 +1,15 @@
-import SP1Clean.Semantics.Sail.SailMemoryWrite
-import SP1Clean.Semantics.Memory.InstructionWrite
+module
+
+public import SP1Clean.Semantics.Sail.SailMemoryWrite
+public import SP1Clean.Semantics.Memory.InstructionWrite
 
 /-! # Independent store preservation
 
 Ordinary stores use the exact decoded byte permissions at their incoming registers. The proof
 follows actual virtual/physical checks and split writes through normal Sail retirement.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions

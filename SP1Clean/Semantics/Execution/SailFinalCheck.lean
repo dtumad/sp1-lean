@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Execution.ExecutionSnapshot
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionSnapshot
 
 /-! # Finite checks of invariant Sail fields at the outgoing boundary
 
@@ -8,6 +10,8 @@ key presence, and checks the supplied target is initialized. Mutable GPR values 
 the complete Memory check. PC/clock, nextPC, retirement, interrupt refresh and event-marker observations have separate
 native bindings; this check alone does not assert complete outgoing state equality.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics.SailSnapshot
 
@@ -26,7 +30,7 @@ private instance (snapshot : SailSnapshot) : Decidable snapshot.skeleton.isIniti
   inferInstanceAs (Decidable (∀ reg : Register, reg ∈ snapshot.registers))
 
 /-- Check target presence and every invariant register/runtime field without evaluating Sail. -/
-def checkFrame (source target : SailSnapshot) : Bool :=
+@[no_expose] def checkFrame (source target : SailSnapshot) : Bool :=
   decide target.skeleton.isInitialized &&
     SailRegisterFile.equivalent source.frameRegisters target.frameRegisters &&
     decide (source.cycleCount = target.cycleCount) && decide (source.output = target.output)

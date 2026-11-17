@@ -1,5 +1,7 @@
-import PolyFun.PFunctor.Dynamical.Run
-import SP1Clean.Semantics.Execution.Execution
+module
+
+public import PolyFun.PFunctor.Dynamical.Run
+public import SP1Clean.Semantics.Execution.Execution
 
 /-! # Finite native execution segments and their composition
 
@@ -12,6 +14,8 @@ The labels are proof-free data. PolyFun's finite `Prefix` is an equivalent theor
 does not introduce padding steps or assert AIR validity. Inactive rows and administrative
 ledger work must be related to this path by the enclosing AIR proof.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

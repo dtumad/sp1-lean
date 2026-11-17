@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Transition.Truth
+module
+
+public import SP1Clean.Semantics.Transition.Truth
 
 /-! # Shard-local truth over a trajectory
 
@@ -14,6 +16,8 @@ Two conventions are load-bearing:
   condition.
 * The initial state is a separate parameter from the trajectory. Reads before the timeline's
   genesis go to that state directly and do not consult the trajectory. -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

@@ -1,5 +1,7 @@
-import Mathlib.Tactic.Use
-import Mathlib.Tactic.Ring
+module
+
+public import Mathlib.Tactic.Use
+public import Mathlib.Tactic.Ring
 
 /-! # SP1 step schedules
 
@@ -10,6 +12,8 @@ schedule prevents the semantic machine from baking in `/ 8`, `% 8`, or fixed reg
 
 This module is intentionally independent of circuits and Sail.  Decoding an instruction into a
 schedule belongs to the machine/AIR bridge; the generic clock arithmetic lives here. -/
+
+@[expose] public section
 
 namespace SP1Clean.Machine
 

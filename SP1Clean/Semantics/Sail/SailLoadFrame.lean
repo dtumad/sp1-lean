@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Sail.SailMemoryRead
+module
+
+public import SP1Clean.Semantics.Sail.SailMemoryRead
 
 /-! # Independent load preservation
 
@@ -6,6 +8,8 @@ The actual Sail load path preserves configuration and memory. Physical split acc
 are included; normal retirement, rather than an alignment or address-readiness premise, selects
 the successful instruction result.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions

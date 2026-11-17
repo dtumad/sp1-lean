@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Execution.Syscall
+module
+
+public import SP1Clean.Semantics.Execution.Syscall
 
 /-! # Execution event labels
 
@@ -7,6 +9,8 @@ carrying its observed `CoreSyscallEvent`. Each label selects its interaction-clo
 ticks for an instruction, `CLK_INC + 256 = 264` for a syscall). The step relation itself is
 `Semantics.ExecutionStep`. A `LocatedTransition` pairs a label and its target with the source
 state; the instruction-event compiler consumes these proof-free records. -/
+
+@[expose] public section
 
 open LeanRV64D
 

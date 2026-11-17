@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Execution.ExecutionReplay
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionReplay
 
 /-! # Retirement observations of the existing Sail state
 
@@ -7,6 +9,8 @@ counter. Its enable bit reads the official machine-mode filter and inhibit field
 preserve these fields. The observation fold below only records retirement bookkeeping; it does
 not execute instructions or define another machine state.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 
@@ -80,11 +84,12 @@ private def nextPcReverse (initial finalPc : Option (BitVec 64)) : List Executio
   | .syscall call :: rest => nextPcReverse initial (some call.pc) rest
 
 /-- Final nextPC from semantic labels and endpoint PCs, without instruction-row data. -/
-def nextPcAfter (events : List ExecutionEvent) (initial finalPc : Option (BitVec 64)) : Option (BitVec 64) :=
+@[no_expose] def nextPcAfter (events : List ExecutionEvent) (initial finalPc : Option (BitVec 64)) : Option (BitVec 64) :=
   nextPcReverse initial finalPc events.reverse
 
 @[simp] theorem nextPcAfter_nil (initial finalPc : Option (BitVec 64)) :
-    nextPcAfter [] initial finalPc = initial := rfl
+    nextPcAfter [] initial finalPc = initial := by
+  simp only [nextPcAfter, List.reverse_nil, nextPcReverse]
 
 @[simp] theorem nextPcAfter_ordinary (events : List ExecutionEvent) (initial finalPc : Option (BitVec 64)) :
     nextPcAfter (events ++ [.ordinary]) initial finalPc = finalPc := by

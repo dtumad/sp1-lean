@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Execution.ExecutionReplay
-import SP1Clean.Semantics.Memory.InstructionWrite
-import SP1Clean.Semantics.Memory.NativeLayout
+module
+
+public import SP1Clean.Semantics.Execution.ExecutionReplay
+public import SP1Clean.Semantics.Memory.InstructionWrite
+public import SP1Clean.Semantics.Memory.NativeLayout
 
 /-! # Native instruction and timestamp representability
 
@@ -10,6 +12,8 @@ The active clock phase comes from the native CPUState circuit's thirteen-bit ran
 `(clk_0_16 - 1) / 8`, used by ordinary and host rows alike. It implies the local access window.
 Unused endpoints, including stopped identities, have no active-window or fetch obligation.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 open Machine Soundness.Target LeanRV64D Semantics

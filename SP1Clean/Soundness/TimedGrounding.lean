@@ -69,10 +69,10 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-! ## The register-epoch view of `microValue` -/
 
 /-- One real Sail step determines `stepOnce`. -/
-lemma stepOnce_of_sailStep {s s' : SailState} (h : SailStep s s') : stepOnce s = some s' := by
+lemma stepOnce_of_sailStep {s s' : SailState} (h : SailStep s s') :
+    Machine.stepOnce s = some s' := by
   obtain ⟨b, hrun⟩ := h
-  change SP1Clean.Machine.stepOnce s = some s'
-  unfold SP1Clean.Machine.stepOnce
+  unfold Machine.stepOnce
   rw [hrun]
 
 /-! ## The per-row records

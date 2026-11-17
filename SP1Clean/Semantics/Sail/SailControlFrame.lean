@@ -1,4 +1,6 @@
-import SP1Clean.Semantics.Sail.SailExecuteFrame
+module
+
+public import SP1Clean.Semantics.Sail.SailExecuteFrame
 
 /-! # Circuit-independent control-flow preservation
 
@@ -6,6 +8,8 @@ JAL, JALR and all six branch conditions preserve the configured platform and ful
 The proof recovers the actual execute stage of a normal retirement; jump alignment and successful
 execution are not additional premises. Trap outcomes cannot masquerade as normal retirement.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Advance
 open SP1Clean Sail Sail.ArchSem LeanRV64D LeanRV64D LeanRV64D.Functions

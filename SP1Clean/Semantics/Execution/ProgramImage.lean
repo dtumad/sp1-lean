@@ -1,6 +1,8 @@
-import SP1Clean.Semantics.Execution.GuestBoot
-import SP1Clean.Semantics.Memory.Memory
-import SP1Clean.Semantics.Memory.NativeLayout
+module
+
+public import SP1Clean.Semantics.Execution.GuestBoot
+public import SP1Clean.Semantics.Memory.Memory
+public import SP1Clean.Semantics.Memory.NativeLayout
 
 /-! # Checked finite program images
 
@@ -9,6 +11,8 @@ checker constructs the existing `GuestProgram` and proves its loader-facing well
 This checks the finite image contract, not instruction support or ELF/digest authentication.
 Instruction decoding remains a separate check before an image can instantiate the native ensemble.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.Semantics
 

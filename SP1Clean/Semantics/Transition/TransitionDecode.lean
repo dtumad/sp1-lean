@@ -1,5 +1,7 @@
-import SP1Clean.Semantics.Execution.EventExecution
-import SP1Clean.Semantics.ISA.Decode
+module
+
+public import SP1Clean.Semantics.Execution.EventExecution
+public import SP1Clean.Semantics.ISA.Decode
 
 /-!
 # Proof-independent decode of a located transition
@@ -13,6 +15,8 @@ The projection stores no decoded shadow beside the execution.  A compiler recomp
 semantic relation proves that this computation returns the instruction already justified by the
 official transition evidence.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 open SP1Clean.Soundness.Target

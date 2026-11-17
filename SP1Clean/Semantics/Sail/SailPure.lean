@@ -1,4 +1,7 @@
-import SP1Clean.Semantics.Sail.SailWrap
+module
+
+public import SP1Clean.Semantics.Sail.SailWrap
+
 /-!
 # Monad-free Sail "M"-extension semantics
 
@@ -15,6 +18,8 @@ family takes its mode flag last and `rem`/`remw` take it first.
 
 This module replaces the former `riscv-lean` dependency's `SailPure`/`Skeleton`/`SailToRV64` role.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 

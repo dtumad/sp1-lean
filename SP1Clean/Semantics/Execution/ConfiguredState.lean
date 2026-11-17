@@ -1,7 +1,9 @@
-import SP1Clean.Semantics.Execution.SailStep
-import ToMathlib.ExtDHashMapOfFintype
-import Mathlib.Tactic.DeriveFintype
-import Mathlib.Tactic.IntervalCases
+module
+
+public import SP1Clean.Semantics.Execution.SailStep
+public import ToMathlib.ExtDHashMapOfFintype
+public import Mathlib.Tactic.DeriveFintype
+public import Mathlib.Tactic.IntervalCases
 
 /-! # Canonical SP1 register initialization
 
@@ -10,6 +12,8 @@ select the configured SP1 machine mode and memory region. This construction is s
 checked program loader and the concrete execution witnesses. It was previously local to the
 non-vacuity examples; keeping it in the Model layer lets the execution model own its boot state.
 -/
+
+@[expose] public section
 
 open LeanRV64D
 namespace SP1Clean.Soundness.Target
