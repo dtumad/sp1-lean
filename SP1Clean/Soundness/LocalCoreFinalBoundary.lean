@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.LocalCoreBoundaries
-import SP1Clean.Soundness.NativeCoreFinalBoundary
+import SP1Clean.Soundness.CoreTables
 
 /-! # Structural finalization from the local-shard AIR
 

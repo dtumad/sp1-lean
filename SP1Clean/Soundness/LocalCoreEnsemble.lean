@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.NativeCoreEnsemble
+import SP1Clean.Soundness.CoreTables
 import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Native.Operations.LocalSourceBoundary
 

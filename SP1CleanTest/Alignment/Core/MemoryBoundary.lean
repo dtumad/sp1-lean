@@ -2,7 +2,6 @@ import SP1Clean.Proofs.Chips.OrderedInitialProvider
 import SP1CleanTest.Core.InitialMemoryLookup
 import SP1Clean.Soundness.InitialMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Soundness.NativeCoreBoundaries
 import SP1Clean.Soundness.LocalCoreBoundaries
 
 /-! # Initial/final records and ordered-key AIR regressions
@@ -296,11 +295,6 @@ private def bootPublic : SP1PublicIO Fp where
   commitSyscall := 0
   commitDeferredSyscall := 0
 
-private def nativeVerifierLedger (pi : SP1PublicIO Fp) :=
-  let env := Environment.fromInput pi (.empty Fp)
-  (Soundness.NativeCore.ensemble image).verifierOperations.interactions.map
-    (AbstractInteraction.eval env)
-
 private def checkedVerifierRow (ledger : List (Interaction Fp)) (checkName name : String) :
     Bool × List (List Fp × Fp) :=
   let bytes := ledger.all fun interaction =>
@@ -310,54 +304,6 @@ private def checkedVerifierRow (ledger : List (Interaction Fp)) (checkName name 
     ((checks.filter (fun other => other.msg == interaction.msg)).map (·.signedMult)).sum == 0
   (bytes && checked, (ledger.filter (fun interaction => interaction.channel.name == name)).map
     (fun interaction => (interaction.msg.toList, interaction.signedMult)))
-
-private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
-    Bool × List (List Fp × Fp) :=
-  checkedVerifierRow (nativeVerifierLedger pi)
-    (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name name
-
-/-- The installed verifier retains all 19 source occurrences and all ten boot-check occurrences,
-including zero-valued checks. It adds no committed table. -/
-theorem nativeVerifierInventory :
-    (Soundness.NativeCore.ensemble (p := SP1Prime) image).tables.length = 60 ∧
-    (nativeVerifierLedger bootPublic).length = 29 ∧
-    ((nativeVerifierLedger bootPublic).filter fun interaction =>
-      interaction.channel.name == (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name).length = 10 := by
-  native_decide
-
-/-- info: exportable ✓ (0 witness cells) -/
-#guard_msgs in
-#assert_exportable (Soundness.NativeCore.verifier (p := SP1Prime) image)
-
-/-- The installed public verifier emits both fixed control boundaries while enforcing the boot
-fields through its assertion channel and retaining the original Byte requirements. -/
-theorem nativeVerifierEndpoints :
-    nativeVerifierRow bootPublic OrderedInitialProvider.channelName = verifierRow ∧
-    nativeVerifierRow bootPublic OrderedFinalProvider.channelName = finalVerifierRow := by
-  native_decide
-
-/-- Wrong boot PC/time and a field-wrapping alternative clock encoding are rejected by the
-installed public verifier and its Byte requirements. A matching folded clock alone is insufficient. -/
-theorem rejectsForgedBoot :
-    [nativeVerifierRow { bootPublic with init_clk_0_16 := 0 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_clk_24_32 := 1 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_pc0 := 4 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_pc1 := 0 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_clk_0_16 := 65537, init_clk_16_24 := -1 }
-       OrderedInitialProvider.channelName].map Prod.fst = [false, false, false, false, false] := by
-  native_decide
-
-/-- Both private inventories close using the one composed verifier. Omitting either terminal
-or duplicating an initial record fails its actual control ledger. -/
-theorem nativeBoundaryInventories :
-    let initial := nativeVerifierRow bootPublic OrderedInitialProvider.channelName
-    let final := nativeVerifierRow bootPublic OrderedFinalProvider.channelName
-    [controlValid [initial, initRegisterRow 0 0, terminalRow 1],
-     controlValid [final, finalRegisterRow 0 0, finalTerminalRow 1],
-     controlValid [initial, initRegisterRow 0 0],
-     controlValid [final, finalRegisterRow 0 0],
-     controlValid [initial, initRegisterRow 0 0, initRegisterRow 0 0, terminalRow 1]] =
-      [true, true, false, false, false] := by native_decide
 
 private def source : ExecutionSnapshot where
   sail := { registers := (configuredState 65536).regs, memory := image.initialMemory }

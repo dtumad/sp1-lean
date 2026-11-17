@@ -82,6 +82,7 @@ import SP1Clean.Soundness.CoreMemoryFrame
 import SP1Clean.Soundness.CoreProgramBalance
 import SP1Clean.Soundness.CoreRowBalance
 import SP1Clean.Soundness.CoreRowTransport
+import SP1Clean.Soundness.CoreTables
 import SP1Clean.Soundness.CoreTableProjection
 import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Soundness.Coverage
@@ -219,9 +220,6 @@ import SP1Clean.Soundness.LocalCoreTouches
 import SP1Clean.Soundness.LocalCoreTransport
 import SP1Clean.Soundness.MemoryFrontier
 import SP1Clean.Soundness.MixedRowTransport
-import SP1Clean.Soundness.NativeCoreBoundaries
-import SP1Clean.Soundness.NativeCoreEnsemble
-import SP1Clean.Soundness.NativeCoreFinalBoundary
 import SP1Clean.Soundness.OrderedBoundaryEnsemble
 import SP1Clean.Soundness.OrderedMemoryEnsemble
 import SP1Clean.Soundness.ProtectedLocalCore

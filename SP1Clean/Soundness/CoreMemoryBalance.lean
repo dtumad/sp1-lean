@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.NativeCoreFinalBoundary
+import SP1Clean.Soundness.CoreTables
 import SP1Clean.Soundness.MemoryFrontier
 
 /-! # Shared Memory balance rules for the native core

@@ -82,7 +82,6 @@ import SP1Clean.FormalModel.Contracts.InitialMemory
 import SP1Clean.FormalModel.Contracts.InitialMemoryRead
 import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.FormalModel.Contracts.NativeCoreBoundary
 import SP1Clean.FormalModel.Contracts.Operations
 import SP1Clean.FormalModel.Contracts.OrderedBoundary
 import SP1Clean.FormalModel.Contracts.OrderedInitialProvider

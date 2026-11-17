@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.LocalCoreEnsemble
-import SP1Clean.Soundness.NativeCoreBoundaries
+import SP1Clean.Soundness.CoreTables
 
 /-! # Source-boundary facts from the actual local-shard AIR
 
