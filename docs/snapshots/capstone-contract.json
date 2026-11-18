@@ -82223,11 +82223,25 @@
       "typeFingerprint": "629693916"
     },
     {
-      "bodyFingerprint": "2659953140",
+      "bodyFingerprint": "4006063698",
       "local": true,
       "module": "SP1Clean.Soundness.HostFinalMemoryExecution",
       "name": "SP1Clean.Soundness.HostFinalMemory.Installed",
-      "typeFingerprint": "4038262569"
+      "typeFingerprint": "1008667461"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostFinalMemoryExecution",
+      "name": "SP1Clean.Soundness.HostFinalMemory.Installed._proof_1",
+      "typeFingerprint": "4059565771"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Soundness.HostFinalMemoryExecution",
+      "name": "SP1Clean.Soundness.HostFinalMemory.Installed._proof_2",
+      "typeFingerprint": "3852623285"
     },
     {
       "bodyFingerprint": null,
@@ -82319,20 +82333,6 @@
       "module": "SP1Clean.Soundness.HostFinalMemoryRegistry",
       "name": "SP1Clean.Soundness.HostFinalMemory.sourceChannels",
       "typeFingerprint": "1407728221"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Soundness.HostFinalMemoryRegistry",
-      "name": "SP1Clean.Soundness.HostFinalMemory.source_registration",
-      "typeFingerprint": "1875138109"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Soundness.HostFinalMemoryRegistry",
-      "name": "SP1Clean.Soundness.HostFinalMemory.source_unique_names",
-      "typeFingerprint": "1289790256"
     },
     {
       "bodyFingerprint": "1033151492",
@@ -83277,21 +83277,21 @@
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.Endpoint",
-      "typeFingerprint": "3238794194"
+      "typeFingerprint": "359331101"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.Endpoint.mk",
-      "typeFingerprint": "2613607162"
+      "typeFingerprint": "1404712657"
     },
     {
-      "bodyFingerprint": "31212444",
+      "bodyFingerprint": "3862021129",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.SailTrace",
-      "typeFingerprint": "2059092924"
+      "typeFingerprint": "1316590261"
     },
     {
       "bodyFingerprint": "1233819726",
@@ -83315,18 +83315,18 @@
       "typeFingerprint": "2974036891"
     },
     {
-      "bodyFingerprint": "2124698136",
+      "bodyFingerprint": "3165121083",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.installed",
-      "typeFingerprint": "4038262569"
+      "typeFingerprint": "1008667461"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.sail_trace",
-      "typeFingerprint": "3593369023"
+      "typeFingerprint": "3677953106"
     },
     {
       "bodyFingerprint": null,
@@ -96808,7 +96808,7 @@
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "_private.SP1Clean.Soundness.Shard.Trace.0.SP1Clean.Soundness.Shard.declarations_registered",
-      "typeFingerprint": "2187836081"
+      "typeFingerprint": "3000977525"
     },
     {
       "bodyFingerprint": "2958662038",
