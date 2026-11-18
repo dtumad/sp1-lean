@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Sail.SailRetirement
+import SP1Clean.Semantics.Sail.SailExecuteDispatch
 
 /-! # Official Sail control-flow execute stages
 
@@ -34,7 +35,7 @@ theorem execute_JAL_reaches (imm : BitVec 21) (rd_idx : BitVec 5) (pc : BitVec 6
     rw [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at hnpc; exact hnpc
   have hget_pc : t.regs.get Register.PC (hs _) = pc := by
     rw [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at hpc; exact hpc
-  simp only [execute, execute_JAL, get_next_pc]
+  simp only [SailExecute.dispatch_JAL, execute_JAL, get_next_pc]
   rw [run_readReg_bind_of_isInitialized t Register.nextPC hs, hget_npc]
   rw [run_readReg_bind_of_isInitialized t Register.PC hs, hget_pc]
   rw [run_bind_of_run' t _ (jump_to (pc + sign_extend (m := 64) imm))
@@ -63,7 +64,7 @@ theorem execute_JALR_reaches (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5) (pc r
     rw [Std.ExtDHashMap.get?_eq_some_get (hs _), Option.some_inj] at hnpc; exact hnpc
   have hupd : (runSail (update_elp_state (.Regidx rs1_idx))) t = .ok () t :=
     update_elp_state_of_isInitialized _ t hs hconfig
-  simp only [execute, execute_JALR, get_next_pc_eq]
+  simp only [SailExecute.dispatch_JALR, execute_JALR, get_next_pc_eq]
   rw [run_bind_of_run' t _ _ () hupd]
   rw [run_readReg_bind_of_isInitialized t Register.nextPC hs, hget_npc]
   rw [run_bind_of_run t _ rs1_val (by rw [run_rX_bits, h_rs1])]
@@ -112,7 +113,7 @@ theorem execute_BTYPE_reaches (imm : BitVec 13) (rs1_idx rs2_idx : BitVec 5) (op
       rw [← hnpc_t]; apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_umod]; simpa using h_align
     have hjump := jump_to_of_mod4_eq_zero (pc + sign_extend (m := 64) imm) t htgt4
     cases op <;> simp only [btypeTaken, beq_iff_eq, bne_iff_ne] at hc <;>
-      simp [execute, execute_BTYPE, run_rX_bits, h_rs1, h_rs2,
+      simp [SailExecute.dispatch_BTYPE, execute_BTYPE, run_rX_bits, h_rs1, h_rs2,
         Sail.run_readReg_bind_of_isInitialized _ _ hs, hpc_get, RETIRE_SUCCESS, hjump, hnpc_t, hc]
   · simp only [Bool.not_eq_true] at hc
     have hnt := h_not_taken hc
@@ -123,6 +124,6 @@ theorem execute_BTYPE_reaches (imm : BitVec 13) (rs1_idx rs2_idx : BitVec 5) (op
       · rename_i hk; simp only [beq_iff_eq] at hk; subst hk; rw [hgtnpc]; rfl
       · rfl
     cases op <;> simp only [btypeTaken, beq_eq_false_iff_ne, bne_eq_false_iff_eq] at hc <;>
-      simp [execute, execute_BTYPE, run_rX_bits, h_rs1, h_rs2, RETIRE_SUCCESS, hc, hidem]
+      simp [SailExecute.dispatch_BTYPE, execute_BTYPE, run_rX_bits, h_rs1, h_rs2, RETIRE_SUCCESS, hc, hidem]
 
 end SP1Clean.Advance

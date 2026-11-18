@@ -86,7 +86,6 @@ import SP1Clean.Soundness.CoreTables
 import SP1Clean.Soundness.CoreTableProjection
 import SP1Clean.Soundness.CoreTouches
 import SP1Clean.Soundness.Coverage
-import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.EnsembleChannels
 import SP1Clean.Soundness.EnsembleLookups
 import SP1Clean.Soundness.Examples.Counter

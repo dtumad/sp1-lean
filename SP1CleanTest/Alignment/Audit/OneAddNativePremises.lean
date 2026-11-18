@@ -1,5 +1,5 @@
 import Clean.Air.Balance
-import SP1Clean.Soundness.Decode
+import SP1CleanTest.Alignment.Support.ProgramDecodeExamples
 import SP1CleanTest.Core.NonVacuityReal
 
 /-! # Independent-audit regression: one committed-window ADD row
@@ -11,9 +11,8 @@ and freezes the complete evaluated interaction list across all four buses.
 
 This anchor's scope is the one-ADD row's own constraints and interactions. The joint satisfiability
 of `SupportedCoreNativeRelation` is witnessed separately (`Audit/JointNonVacuity.lean`, the empty
-shard), and the per-family `decodedInROM` satisfiability — whose concrete `LeanRV64D.ext_decode`
-witness was retired during the Sail-v5 migration and restored 2026-08 at full family coverage — by
-the 18 examples in `Soundness/Decode.lean` on top of `Semantics/Sail/SailDecode.lean`'s decode battery. The
+shard), and the per-family `decodedInROM` satisfiability by the 18 examples in
+`Support/ProgramDecodeExamples.lean`. The
 exact interaction list below makes the provider/boundary content of a real row visible.
 -/
 
@@ -83,7 +82,7 @@ decoder on `0x003100B3`, rather than an SP1 opcode/operand projection mismatch. 
 theorem program_projection :
     Soundness.Target.instrToProgramRow' (p := SP1Prime) #v[0, 1, 0]
         (.RTYPE (.Regidx 3#5, .Regidx 2#5, .Regidx 1#5, .ADD)) =
-      some (Soundness.Target.addRow (p := SP1Prime)) := by
+      some (SP1CleanTest.ProgramDecode.addRow (p := SP1Prime)) := by
   rfl
 
 end SP1Clean.Audit.OneAddNativePremises

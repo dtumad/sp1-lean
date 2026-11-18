@@ -3,6 +3,7 @@ import SP1Clean.Semantics.Sail.SailArithmeticExecute
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Semantics.ISA.RV64
 import SP1Clean.Semantics.Sail.SailPure
+import SP1Clean.Semantics.Sail.SailExecuteDispatch
 
 /-! # Phase 4 — the uniform per-chip `advance` (Sail-step obligation)
 
@@ -1418,7 +1419,7 @@ theorem execute_LOAD_reaches_width1 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
   have hread := run_vmem_read_of_width_1' rs1_idx reg_val (BitVec.signExtend 64 imm)
     data₀ t hs h_rs1 h_align' hconfig h_in_range hmem₀
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
+  simp only [SailExecute.dispatch_LOAD, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   simp only [Int.toNat_one, Nat.reduceLeDiff, decide_true, ite_true]
   rw [run_bind_of_run t (FreeM.pure ()) () rfl]
   rw [run_bind_of_run t _ _ hread]
@@ -1676,7 +1677,7 @@ theorem execute_STORE_reaches (imm : BitVec 12) (rs1_idx rs2_idx : BitVec 5)
           { t with mem := t.mem.insert (rs1_val + sign_extend (m := 64) imm).toNat (Sail.BitVec.extractLsb rs2_val 7 0) } := by
   have hwrite := run_vmem_write_of_width_1 rs1_idx rs1_val (sign_extend (m := 64) imm)
     (Sail.BitVec.extractLsb rs2_val 7 0) t hs h_rs1 h_aligned hconfig h_in_range
-  simp only [execute]
+  simp only [SailExecute.dispatch_STORE]
   simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, h_rs2, hwrite,
     RETIRE_SUCCESS]
 
@@ -1699,7 +1700,7 @@ theorem execute_STORE_reaches_width2 (imm : BitVec 12) (rs1_idx rs2_idx : BitVec
               (BitVec.ofNat 8 ((Sail.BitVec.extractLsb rs2_val 15 0).toNat >>> 8))) } := by
   have hwrite := run_vmem_write_of_width_2 rs1_idx rs1_val (sign_extend (m := 64) imm)
     (Sail.BitVec.extractLsb rs2_val 15 0) t hs h_rs1 h_aligned hconfig h_in_range
-  simp only [execute]
+  simp only [SailExecute.dispatch_STORE]
   simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, h_rs2, hwrite,
     RETIRE_SUCCESS]
 
@@ -1725,7 +1726,7 @@ theorem execute_STORE_reaches_width4 (imm : BitVec 12) (rs1_idx rs2_idx : BitVec
               (BitVec.ofNat 8 ((Sail.BitVec.extractLsb rs2_val 31 0).toNat >>> 24))) } := by
   have hwrite := run_vmem_write_of_width_4 rs1_idx rs1_val (sign_extend (m := 64) imm)
     (Sail.BitVec.extractLsb rs2_val 31 0) t hs h_rs1 h_aligned hconfig h_in_range
-  simp only [execute]
+  simp only [SailExecute.dispatch_STORE]
   simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, h_rs2, hwrite,
     RETIRE_SUCCESS]
 
@@ -1762,7 +1763,7 @@ theorem execute_STORE_reaches_width8 (imm : BitVec 12) (rs1_idx rs2_idx : BitVec
     rs2_val t hs h_rs1 h_aligned hconfig h_in_range
   have hext : Sail.BitVec.extractLsb rs2_val 63 0 = rs2_val := by
     simp [Sail.BitVec.extractLsb, BitVec.extractLsb, BitVec.extractLsb']
-  simp only [execute]
+  simp only [SailExecute.dispatch_STORE]
   simp [execute_STORE, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert, show (FreeM.pure () : SailM Unit) = pure () from rfl, h_rs2, hext, hwrite,
     RETIRE_SUCCESS]
 
@@ -1957,7 +1958,7 @@ theorem execute_LOAD_reaches_width2 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
   have hread := run_vmem_read_of_width_2' rs1_idx reg_val (BitVec.signExtend 64 imm)
     data₀ data₁ t hs h_rs1 h_align' hconfig h_in_range hmem₀ hmem₁
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
+  simp only [SailExecute.dispatch_LOAD, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   rw [show Int.toNat 2 = 2 from rfl]
   simp only [Nat.reduceLeDiff, decide_true, ite_true]
   rw [run_bind_of_run t (FreeM.pure ()) () rfl]
@@ -2058,7 +2059,7 @@ theorem execute_LOAD_reaches_width4 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
   have hread := run_vmem_read_of_width_4' rs1_idx reg_val (BitVec.signExtend 64 imm)
     data₀ data₁ data₂ data₃ t hs h_rs1 h_align' hconfig h_in_range hmem₀ hmem₁ hmem₂ hmem₃
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
+  simp only [SailExecute.dispatch_LOAD, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   rw [show Int.toNat 4 = 4 from rfl]
   simp only [Nat.reduceLeDiff, decide_true, ite_true]
   rw [run_bind_of_run t (FreeM.pure ()) () rfl]
@@ -2100,7 +2101,7 @@ theorem execute_LOAD_reaches_width8 (imm : BitVec 12) (rs1_idx rd_idx : BitVec 5
     data₀ data₁ data₂ data₃ data₄ data₅ data₆ data₇ t hs h_rs1 h_align' hconfig h_in_range
     hmem₀ hmem₁ hmem₂ hmem₃ hmem₄ hmem₅ hmem₆ hmem₇
   simp only at hread
-  simp only [execute, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
+  simp only [SailExecute.dispatch_LOAD, execute_LOAD, hse, LeanRV64D.Functions.xlen_bytes, PreSail.sail_assert]
   rw [show Int.toNat 8 = 8 from rfl]
   simp only [Nat.reduceLeDiff, decide_true, ite_true]
   rw [run_bind_of_run t (FreeM.pure ()) () rfl]

@@ -216,9 +216,9 @@ The generated model supports C/Zca, so this follows from the checked CSR, not a 
 theorem currentlyEnabled_zca_eq_false (source : SailState) (cfg : SailConfigured source) :
     (runSail (currentlyEnabled .Ext_Zca)) source = .ok false source := by
   have supportsC : hartSupports .Ext_C = true := by
-    simp [hartSupports, LeanRV64D.Functions.xlen, LeanRV64D.not]
-  simp only [currentlyEnabled,
-    show hartSupports .Ext_Zca = true by simp [hartSupports], supportsC, andM, toBool, pure_bind, bind_assoc]
+    simp [hartSupports.eq_def, LeanRV64D.Functions.xlen, LeanRV64D.not]
+  simp only [currentlyEnabled.eq_def,
+    show hartSupports .Ext_Zca = true by simp [hartSupports.eq_def], supportsC, andM, toBool, pure_bind, bind_assoc]
   rw [run_bind_of_run source _ _ (Sail.run_readReg_of_isInitialized source Register.misa cfg.init)]
   simp [cfg.misa_c_disabled, LeanRV64D.not]
 

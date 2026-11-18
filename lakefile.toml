@@ -216,6 +216,13 @@ name = "backendGadgets"
 root = "scripts.backendGadgets"
 allowNonModules = true
 
+# Compiled whole-assembly regression checks (`SP1CleanTest/Alignment/Core/LocalCore.lean`). As
+# `native_decide` theorems Lean's interpreter spent 173 of that module's 180 s evaluating them.
+[[lean_exe]]
+name = "sp1Checks"
+root = "scripts.sp1Checks"
+allowNonModules = true
+
 # Compile the complete export driver once; both deterministic generations call this
 # executable instead of evaluating large witness instances in Lean's interpreter.
 [[lean_exe]]

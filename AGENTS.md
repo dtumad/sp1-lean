@@ -81,6 +81,8 @@ lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib
 lake test
 lake lint
 scripts/run_audit.sh
+python3 scripts/check_examples.py
+lake exe sp1Checks
 ```
 
 The default target is the core; the full target includes alignment/machine proofs. New modules

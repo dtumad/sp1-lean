@@ -50,7 +50,7 @@ theorem RunPres.currentlyEnabled_Zicsr (s : SailState) :
 /-- `currentlyEnabled Ext_S` is state-preserving (reads `misa`, recurses to the `pure` `Zicsr`). -/
 theorem RunPres.currentlyEnabled_S (s : SailState) (hs : s.isInitialized) :
     RunPres (currentlyEnabled extension.Ext_S) s := by
-  simp only [currentlyEnabled, hartSupports, andM, toBool, pure_bind]
+  simp only [currentlyEnabled.eq_def, hartSupports.eq_def, andM, toBool, pure_bind]
   apply RunPres.bind (RunPres.readReg s Register.misa hs)
   intro value
   split <;> exact RunPres.pure _ s
@@ -58,7 +58,7 @@ theorem RunPres.currentlyEnabled_S (s : SailState) (hs : s.isInitialized) :
 
 /-- Every interrupt class is supported by this platform, so its mask is the identity. -/
 theorem supported_interrupts_mask_sp1 (bits : BitVec 64) : supported_interrupts_mask bits = (pure bits : SailM _) := by
-  simp only [supported_interrupts_mask, currentlyEnabled, hartSupports, andM, toBool, pure_bind]
+  simp only [supported_interrupts_mask, currentlyEnabled.eq_def, hartSupports.eq_def, andM, toBool, pure_bind]
   change pure ((BitVec.allOnes 64) &&& bits) = pure bits
   rw [BitVec.allOnes_and]
 
@@ -69,7 +69,7 @@ def hypervisorEnabled (misa : BitVec 64) : Bool :=
 /-- The data-only ISA query agrees with the upstream interpreter. -/
 theorem run_hypervisorEnabled (s : SailState) (hs : s.isInitialized) :
     runSail (currentlyEnabled .Ext_H) s = .ok (hypervisorEnabled (s.regs.get Register.misa (hs _))) s := by
-  simp only [currentlyEnabled, hartSupports, andM, orM, toBool, pure_bind, bind_assoc,
+  simp only [currentlyEnabled.eq_def, hartSupports.eq_def, andM, orM, toBool, pure_bind, bind_assoc,
     Sail.run_readReg_bind_of_isInitialized s _ hs]
   unfold hypervisorEnabled
   cases h : (_get_Misa_H (s.regs.get Register.misa (hs _)) == 1#1) <;>
@@ -160,31 +160,31 @@ theorem run_update_mip (s : SailState) (hs : s.isInitialized) :
   · exact finishMip s hs _ _
   · obtain ⟨henv, hh⟩ := readHenvcfg s hs
     simp only [bind_assoc, Sail.run_readReg_bind_of_isInitialized s _ hs,
-      currentlyEnabled, hartSupports, andM, toBool, pure_bind]
+      currentlyEnabled.eq_def, hartSupports.eq_def, andM, toBool, pure_bind]
     rw [run_bind_of_run s _ henv hh]
     simp only [Bool.and_false, pure_bind, Bool.false_eq_true, ite_false, BitVec.or_zero]
     exact finishMip s hs _ _
 
 theorem match_memory_trigger_before_sp1 (priv : Privilege) (payload : MemoryTriggerPayload) :
     match_memory_trigger_before priv payload = (pure none : SailM _) := by
-  simp [match_memory_trigger_before, currentlyEnabled, hartSupports, LeanRV64D.not]
+  simp [match_memory_trigger_before, currentlyEnabled.eq_def, hartSupports.eq_def, LeanRV64D.not]
 
 theorem match_memory_trigger_after_sp1 (priv : Privilege) (payload : MemoryTriggerPayload) :
     match_memory_trigger_after priv payload = (pure () : SailM Unit) := by
-  simp [match_memory_trigger_after, currentlyEnabled, hartSupports, LeanRV64D.not]
+  simp [match_memory_trigger_after, currentlyEnabled.eq_def, hartSupports.eq_def, LeanRV64D.not]
 
 /-- Unsupported trigger retirement does not inspect trigger bookkeeping. -/
 theorem update_triggers_sp1 : update_triggers () = (pure () : SailM Unit) := by
-  simp [update_triggers, currentlyEnabled, hartSupports, LeanRV64D.not]
+  simp [update_triggers, currentlyEnabled.eq_def, hartSupports.eq_def, LeanRV64D.not]
 
 /-- Unsupported instruction-count triggers cannot alter retirement. -/
 theorem match_icount_triggers_sp1 (priv : Privilege) (reentrant : Bool) :
     match_icount_triggers priv reentrant = (pure () : SailM Unit) := by
-  simp [match_icount_triggers, currentlyEnabled, hartSupports, LeanRV64D.not]
+  simp [match_icount_triggers, currentlyEnabled.eq_def, hartSupports.eq_def, LeanRV64D.not]
 
 /-- Unsupported pending triggers cannot intercept an instruction. -/
 theorem pending_trigger_sp1 (priv : Privilege) :
     find_highest_priority_pending_trigger priv = (pure none : SailM _) := by
-  simp [find_highest_priority_pending_trigger, currentlyEnabled, hartSupports, LeanRV64D.not]
+  simp [find_highest_priority_pending_trigger, currentlyEnabled.eq_def, hartSupports.eq_def, LeanRV64D.not]
 
 end SP1Clean.TryStepReduction

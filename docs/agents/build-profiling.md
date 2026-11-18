@@ -123,9 +123,13 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   bare prefix fallback exists any more.
 - The `path:` list is part of an entry's version hash: editing it invalidates every entry, so it
   ships with a `SP1_CACHE_VERSION` bump and one cold transition.
-- A PR's entries live on `refs/pull/N/merge` and are invisible to `main`, so every merge used to
-  redo the PR's build. After all full checks pass, the build runner passes the completed core,
-  alignment and test build to `main` as an artifact. Lake still checks the merged tree's content hashes.
+- A PR's entries live on `refs/pull/N/merge` and are invisible to `main` and to other PRs, so
+  every merge used to redo the PR's build, and every stacked PR (base = another PR's branch)
+  restored `main`'s entry, which may predate the whole stack: #188–#193 each rebuilt about 1,290
+  jobs (87–145 min). After all full checks pass, the build runner uploads the completed build as
+  `lake-full-build-<head sha>`. `scripts/ci/handoff_restore.py` restores it for the merge to
+  `main` (`HEAD^2`, then deleted) and for stacked children (`HEAD^1`, kept), waiting while the
+  parent's run is still going. Lake still checks the restored tree's content hashes.
 - Mathlib's downloaded cache includes generated C but omits native objects. A separate cache,
   keyed by toolchain and dependency pins, retains those objects and their traces for the
   backend exporter. Only full runs save it; downloaded oleans are not duplicated there.
@@ -139,6 +143,9 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   also defaults to all cores. 16 threads on 4 vCPU cost a third of the CPU-seconds; 3 jobs × 2
   threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
 - GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
+- Separate `lake build` calls per target left one job running at every boundary (233 s on a PR
+  run, 736 s on the clean build); the runner builds every Lean target and the exporter in one
+  invocation so native objects compile during elaboration.
 - The `build` runner performs core and full builds on every PR, then full-tree `lake lint`,
   backend checks and both compiled trust scopes. Setup and cache restore/save happen once,
   and full lint covers the core. Fresh export generations use the compiled driver on separate

@@ -2,6 +2,7 @@ module
 
 public import SP1Clean.Semantics.Sail.SailMemoryWrite
 public import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.Sail.SailExecuteDispatch
 
 /-! # Independent store preservation
 
@@ -123,7 +124,7 @@ theorem store_execute_memory_frame (readOnly : ℕ → Bool) (source : SailState
   obtain ⟨base, observed, allowed⟩ := (Semantics.InstructionWrite.check_store_iff
     readOnly source.get_reg? imm (.Regidx rs2) (.Regidx rs1) width valid).mp permission
   obtain ⟨data, dataRead⟩ := initialized_gpr source cfg.init rs2
-  simp only [execute, execute_STORE, PreSail.sail_assert] at ran
+  simp only [SailExecute.dispatch_STORE, execute_STORE, PreSail.sail_assert] at ran
   split at ran
   · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran
     rw [run_bind_of_run source _ data (by rw [run_rX_bits, dataRead])] at ran
