@@ -73,7 +73,8 @@ TOP="${TOP:-50}"
 pkg_flags="$(python3 "$ROOT/scripts/lean_flags.py" --shell)" || exit 1
 test_flags="$(python3 "$ROOT/scripts/lean_flags.py" --lib SP1CleanTest --shell)" || exit 1
 model_flags="$(python3 "$ROOT/scripts/lean_flags.py" --lib LeanRV64D --shell)" || exit 1
-PACKAGE_FLAGS=($pkg_flags); TEST_FLAGS=($test_flags); MODEL_FLAGS=($model_flags)
+rvfi_flags="$(python3 "$ROOT/scripts/lean_flags.py" --lib LeanRV64DRvfi --shell)" || exit 1
+PACKAGE_FLAGS=($pkg_flags); TEST_FLAGS=($test_flags); MODEL_FLAGS=($model_flags); RVFI_FLAGS=($rvfi_flags)
 
 mkdir -p "$OUTDIR"
 : > "$OUTDIR/summary.tsv"
@@ -112,7 +113,11 @@ LISTFILE="$(mktemp)"
 trap 'rm -f "$LISTFILE" "$LISTFILE.f"' EXIT
 for tree in $TREES; do
   if [ "$tree" = LeanRV64D ]; then
-    find .lake/generated/sail/LeanRV64D -name '*.lean'
+    # Only modules the build produces: the generator also emits files nothing imports.
+    find .lake/generated/sail/LeanRV64D -name '*.lean' | while IFS= read -r g; do
+      rel="${g#.lake/generated/sail/}"
+      [ -f ".lake/build/lib/lean/${rel%.lean}.olean" ] && echo "$g"
+    done
   elif [ -d "$tree" ]; then
     find "$tree" -name '*.lean'
   fi
@@ -145,6 +150,8 @@ while IFS= read -r f; do
   # A library's own options replace the package's (Lake: the library wins on a key).
   case "$f" in
     SP1CleanTest/*) flags=("${TEST_FLAGS[@]}") ;;
+    # Lake's last matching library owns a module: `LeanRV64DRvfi` owns this one (lakefile.toml).
+    .lake/generated/sail/LeanRV64D/RvfiDii.lean) flags=("${RVFI_FLAGS[@]}") ;;
     .lake/generated/sail/LeanRV64D/*|.lake/generated/sail/LeanRV64D.lean) flags=("${MODEL_FLAGS[@]}") ;;
     *) flags=("${PACKAGE_FLAGS[@]}") ;;
   esac
