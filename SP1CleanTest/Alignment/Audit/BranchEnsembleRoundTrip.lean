@@ -69,7 +69,7 @@ theorem branch_is_real :
 /-- Semantic and circuit evidence refer to the same decoded, compiled, normally retiring branch. -/
 theorem joined (policy : HostPolicy) :
     source.realize = ⟨BranchCompilerRoundTrip.source, {}, 1⟩ ∧
-    target.Realizes BranchCompilerRoundTrip.target ∧
+    target.sail.memorySnapshot.Realizes BranchCompilerRoundTrip.target ∧
     (runSail (try_step 0 false)) BranchCompilerRoundTrip.source =
       .ok false BranchCompilerRoundTrip.target ∧
     ExecutionStep policy BranchCompilerRoundTrip.program source.realize .ordinary
@@ -94,7 +94,8 @@ def results : List (String × Bool × Bool) :=
       check target header (consumerSeeds.eraseP fun seed => seed.table == 90)),
     ("duplicate-authentication-row", false, check target header (consumerSeeds ++ validatorSeeds.take 1)),
     ("changed-untouched-register", false,
-      check { target with registers := target.registers.set 31 1 } header consumerSeeds),
+      check { target with sail.registers := target.sail.registers.insert LeanRV64D.Register.x31 (1 : BitVec 64) }
+        header consumerSeeds),
     ("empty-identity", true, check target identityHeader (emptyConsumers (context target))),
     ("malformed-seed-index", false, check target header (consumerSeeds ++ [Seed.ofCells 999 []])),
     ("malformed-seed-length", false,

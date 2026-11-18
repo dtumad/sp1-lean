@@ -22,9 +22,9 @@ def originalChannels (context : Context) : List (RawChannel Fp) :=
     HostRamAccessChip.channel.toRaw, (FinalMemoryValue.channel false).toRaw,
     FinalMemoryChange.channel.toRaw, (FinalMemoryValue.channel true).toRaw,
     context.source.sail.memorySnapshot.registerTable.channel.toRaw,
-    (FinalRegisterValue.membership context.target).channel.toRaw,
+    (FinalRegisterValue.membership context.target.sail.memorySnapshot).channel.toRaw,
     (InitialMemoryLookup.membership context.source.sail.memory (2 ^ 48) "sp1.native.initial_memory").channel.toRaw,
-    (InitialMemoryLookup.membership context.target.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw,
+    (InitialMemoryLookup.membership context.target.sail.memorySnapshot.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw,
     (context.image.writePermissionTable (p := SP1Prime)).channel.toRaw,
     CommitmentDeclaration.channel.toRaw]
 

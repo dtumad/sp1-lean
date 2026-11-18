@@ -6,7 +6,7 @@ import SP1Clean.Soundness.Shard.Trace
 The complete production assembly used for export comparisons is an instance of `Shard.sail_trace`,
 with no remaining premise. Raw acceptance of a public header yields a trace of the PolyFun SP1
 machine from the complete source snapshot, ending with the header's PC and clock and the context's
-outgoing registers and RAM, whose commitment declarations agree with the context's statement.
+target's registers and RAM, whose commitment declarations agree with the context's statement.
 -/
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
@@ -17,7 +17,7 @@ open Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 theorem trace_of_statement (context : Context) (valid : context.image.Valid) {header : SP1PublicIO Fp}
     (heights : List ℕ) (accepted : (assembly context).Statement .logUp header heights) :
     Shard.SailTrace context.commitments context.image context.source context.target context.finalHints
-      context.finalHost header :=
+      header :=
   Shard.sail_trace valid accepted
 
 end SP1CleanTest.Alignment.InstalledAssembly

@@ -172,9 +172,9 @@ def ecall (construction : Construction) (policy : HostPolicy) (program : Target.
 def finish (image : ProgramImage) (incoming : ExecutionSnapshot) (commitments : CommitmentStatement)
     (final : Construction) : Except String (Context × List Seed × SP1PublicIO Fp) := do
   let context : Context := {
-    image, source := incoming, target := final.current.sail.memorySnapshot
+    image, source := incoming, target := final.current
     finalHints := HostHintQueue.State.encode final.queueClock final.queueHead final.store.size
-    finalHost := final.current.host, commitments }
+    commitments }
   let padding := if final.current.host.exitCode.isSome then [] else
     (emptyConsumers context).filter (fun seed => seed.table == 57)
   let consumers := final.consumers ++ (← memorySeeds context final.frontier final.touched) ++ padding ++

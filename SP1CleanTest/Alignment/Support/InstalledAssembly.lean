@@ -25,22 +25,22 @@ structure Context where
   image : ProgramImage
   /-- Complete finite incoming Sail, host and clock snapshot. -/
   source : ExecutionSnapshot
-  /-- Complete outgoing register and RAM snapshot. -/
-  target : MemorySnapshot
+  /-- Complete outgoing Sail, host and clock snapshot: it supplies the outgoing registers and RAM,
+  the final banks and the optional exit status. -/
+  target : ExecutionSnapshot
   /-- Outgoing authenticated hint-queue cursor. -/
   finalHints : HostHintQueue.State Fp
-  /-- Host endpoint supplying the outgoing banks and optional exit status. -/
-  finalHost : HostState
   /-- Immutable proof statement, independent of partially populated mutable banks. -/
   commitments : CommitmentStatement
 
 /-- All installed components, source resources and target checks in their canonical order. -/
 def withoutCommitments (context : Context) : Ensemble Fp SP1PublicIO :=
-  HostFinalMemory.ensemble context.image context.source context.target
-    context.finalHints context.finalHost HostCallReceivers.available
-    (HostHintReadLocal.sourceResources context.source.host.io.hints) (HostFinalMemory.sourceChannels context.target)
-    (HostFinalMemory.source_unique_names context.image context.source context.target)
-    (HostFinalMemory.source_registration context.image context.source context.target)
+  HostFinalMemory.ensemble context.image context.source context.target.sail.memorySnapshot
+    context.finalHints context.target.host HostCallReceivers.available
+    (HostHintReadLocal.sourceResources context.source.host.io.hints)
+    (HostFinalMemory.sourceChannels context.target.sail.memorySnapshot)
+    (HostFinalMemory.source_unique_names context.image context.source context.target.sail.memorySnapshot)
+    (HostFinalMemory.source_registration context.image context.source context.target.sail.memorySnapshot)
 
 /-- The declaration provider has a fresh name in the complete host inventory. -/
 theorem declaration_fresh (context : Context) :
@@ -124,11 +124,11 @@ def memoryRecord (address clock : ℕ) (value : BitVec 64) : Channels.MemoryMsg 
 def registerSeeds (context : Context) (registers : List (ℕ × ℕ)) : List Seed :=
   (registers.foldl (fun (acc : ℕ × List Seed) (address, clock) =>
     let index := BitVec.ofNat 5 address
-    let record := memoryRecord address clock (context.target.read (.reg index))
+    let record := memoryRecord address clock (context.target.sail.memorySnapshot.read (.reg index))
     let initial := OrderedSnapshotProvider.populate
       (SnapshotRegisterProvider.populate context.source.sail.memorySnapshot index) acc.1 address
     let final := OrderedMemoryProvider.populate record acc.1 address
-    let selected : Fp := if Semantics.MemLoc.reg index ∈ context.source.sail.memorySnapshot.changes context.target then 1 else 0
+    let selected : Fp := if Semantics.MemLoc.reg index ∈ context.source.sail.memorySnapshot.changes context.target.sail.memorySnapshot then 1 else 0
     (address + 1, acc.2 ++ [⟨0, (toElements initial).toList⟩, ⟨3, (toElements final).toList⟩,
       ⟨90, (toElements (M := FinalRegisterCheck.RowInput)
         ((⟨record, selected⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList⟩])) (0, [])).2

@@ -9,12 +9,12 @@ open SP1CleanTest.Alignment.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Semantics
 
 /-- Check actual physical rows and every registered channel, including their capacity bound. -/
-def checkPhysical (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
+def checkPhysical (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) : Bool :=
   (description (context target)).checkWitness (witness target input seeds bounded)
 
 /-- The Boolean checker proves the raw predicates on the original full host assembly. -/
-theorem checkPhysical_iff (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
+theorem checkPhysical_iff (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
     checkPhysical target input seeds bounded = true ↔
       (assembly (context target)).interactionsFit .logUp (witness target input seeds bounded).heights ∧
@@ -22,7 +22,7 @@ theorem checkPhysical_iff (target : MemorySnapshot) (input : SP1PublicIO Fp) (se
   EnsembleCheck.checkWitness_iff _ _
 
 /-- Reject malformed seeds before construction, then check the original complete physical witness. -/
-def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) : Bool :=
+def check (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) : Bool :=
   match seeds? target input consumers with
   | none => false
   | some seeds => if bounded : seeds.length ≤ UInt64.size then

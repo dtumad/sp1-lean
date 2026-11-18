@@ -66,7 +66,7 @@ private theorem pc_present {source target : ExecutionSnapshot} {header : SP1Publ
 Sail bookkeeping and host hint suffix agree with the trace. -/
 theorem Endpoint.realize_eq {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
     {header : SP1PublicIO (ZMod p)} {events : List ExecutionEvent} {actual : ExecutionState}
-    (endpoint : Endpoint source target.sail.memorySnapshot final target.host header events actual)
+    (endpoint : Endpoint source target final header events actual)
     (boundary : SailBoundary.Spec source target header) (dynamic : DynamicMatch source target events)
     (host : HostMatch source target final) : actual = target.realize := by
   have : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩

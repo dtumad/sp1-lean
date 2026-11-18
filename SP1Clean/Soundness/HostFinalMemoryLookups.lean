@@ -122,8 +122,8 @@ theorem ensemble_lookupFree {image : ProgramImage} {source : ExecutionSnapshot}
 
 /-- Every installed component is lookup-free, including currently unused physical slots. -/
 theorem installed_lookupFree {image : ProgramImage} {source : ExecutionSnapshot}
-    {outgoing : MemorySnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} :
-    LookupFree (Installed image source outgoing final bankFinal).tables :=
+    {target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} :
+    LookupFree (Installed image source target final).tables :=
   ensemble_lookupFree (registered_lookupFree source.host.io.hints)
 
 end SP1Clean.Soundness.HostFinalMemory

@@ -13,13 +13,13 @@ namespace SP1CleanTest.Alignment.StoppedAssembly
 open SP1Clean SP1Clean.Semantics SP1CleanTest.Alignment.InstalledAssembly
 
 private def base : Context :=
-  SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
+  SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.source
 
 /-- An already stopped host with exit code zero, retaining its empty queue and zero banks. -/
 def zero : Context :=
   { base with
     source := { base.source with host.exitCode := some 0 }
-    finalHost := { base.finalHost with exitCode := some 0 } }
+    target := { base.target with host.exitCode := some 0 } }
 
 /-- A wide stopped code and two nonzero banks prevent zero-valued endpoints hiding drift. -/
 def wide : Context :=
@@ -29,7 +29,7 @@ def wide : Context :=
     deferred := Vector.ofFn fun index : Fin 8 => BitVec.ofNat 32 (33 + index.val) }
   { base with
     source := { base.source with host }
-    finalHost := host
+    target := { base.target with host }
     commitments := ⟨host.committed, host.deferred, false, false⟩ }
 
 /-- No instruction retires, so every public clock/PC limb retains its incoming value. -/
@@ -42,12 +42,12 @@ def wideHeader : SP1PublicIO Fp :=
     deferredProofsDigest := CommitmentBoundary.deferred wide.commitments }
 
 /-- Changing a stopped code without execution violates the optional terminal boundary. -/
-def changedCode : Context := { wide with finalHost.exitCode := some 0 }
+def changedCode : Context := { wide with target.host.exitCode := some 0 }
 
 /-- Removing the optional exit from a stopped host also violates the terminal boundary. -/
-def restarted : Context := { wide with finalHost.exitCode := none }
+def restarted : Context := { wide with target.host.exitCode := none }
 
 /-- Advertising HALT-zero from a running source requires a real host-exit receipt. -/
-def fabricatedHalt : Context := { base with finalHost.exitCode := some 0 }
+def fabricatedHalt : Context := { base with target.host.exitCode := some 0 }
 
 end SP1CleanTest.Alignment.StoppedAssembly
