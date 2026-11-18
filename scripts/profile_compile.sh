@@ -172,7 +172,7 @@ while IFS= read -r f; do
   cfile="$OUTDIR/c/${module}.c"
   /usr/bin/time "${TIME_FLAGS[@]}" sh -c \
     'log="$1"; lean="$2"; shift 2; exec "$lean" -Dprofiler=true -Dprofiler.threshold=50 "$@" > "$log" 2>&1' \
-    _ "$log" "$LEAN_BIN" "${flags[@]}" "$f" -c "$cfile" 2> "$timefile"
+    _ "$log" "$LEAN_BIN" "${flags[@]}" -c "$cfile" "$f" 2> "$timefile"
   rc=$?
   if [ "$rc" -eq 0 ] && ! python3 "$ROOT/scripts/profile_aggregate.py" --check-log "$log"; then
     rc=1

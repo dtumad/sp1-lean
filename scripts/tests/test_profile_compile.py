@@ -99,6 +99,9 @@ raise SystemExit("profiling must not signal unrelated processes")
                          {"compile//SP1Clean.Example", "compile//ToMathlib.Example"})
         self.assertTrue(all(r["exit"] == 0 for r in records))
         self.assertTrue((self.out / "profile.json").is_file())
+        resources = [line.split("\t") for line in (self.out / "resources.tsv").read_text().splitlines()]
+        self.assertEqual({row[0] for row in resources}, {"SP1Clean.Example", "ToMathlib.Example"})
+        self.assertTrue(all(len(row) == 4 for row in resources))
 
     def test_failed_warmup_or_environment_never_starts_measurement(self):
         for failure in ("FAIL_BUILD", "FAIL_ENV"):
