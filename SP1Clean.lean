@@ -143,6 +143,7 @@ import SP1Clean.Soundness.HostCommitEnsemble
 import SP1Clean.Soundness.CommitmentEnsemble
 import SP1Clean.Soundness.HostCommitHistory
 import SP1Clean.Soundness.OrdinaryObservation
+import SP1Clean.Soundness.OrdinaryObservationResources
 import SP1Clean.Proofs.Completeness.OrdinaryObservation
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint

@@ -77,6 +77,7 @@ theorem completeness (enabled : Bool) :
 
 /-- A complete local observation contract with explicit receipt and state-link requirements. -/
 def circuit (enabled : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
+  name := "sp1.native.ordinary_observation"
   main := main enabled
   computableWitnesses := by computable_witnesses [Inputs.clock, increment]
   elaborated := elaborated enabled
@@ -85,6 +86,20 @@ def circuit (enabled : Bool) : GeneralFormalCircuit (ZMod p) Inputs unit where
   soundness := soundness enabled
   completeness := completeness enabled
   channelsWithRequirements := [InstructionReceipt.channel.toRaw, stateChannel.toRaw]
+
+/-- The consumer uses only the Byte channel, the receipt protocol and its observation links. -/
+theorem circuit_channels_subset (enabled : Bool) :
+    (circuit (p := p) enabled).channels ⊆
+      [Channels.byteChannel.toRaw, InstructionReceipt.channel.toRaw, stateChannel.toRaw] := by
+  intro channel member
+  have channels : (circuit (p := p) enabled).channels =
+      [Channels.byteChannel.toRaw, Channels.byteChannel.toRaw, Channels.byteChannel.toRaw,
+        Channels.byteChannel.toRaw, InstructionReceipt.channel.toRaw, stateChannel.toRaw,
+        InstructionReceipt.channel.toRaw, stateChannel.toRaw] := by
+    cases enabled <;> rfl
+  rw [channels] at member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member ⊢
+  tauto
 
 /-- Data-only construction uses the existing addition population algorithm. -/
 def populate (enabled : Bool) (previous : State (ZMod p)) (receipt : StateMsg (ZMod p)) : Inputs (ZMod p) :=
