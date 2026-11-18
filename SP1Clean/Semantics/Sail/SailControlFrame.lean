@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Sail.SailExecuteFrame
+import SP1Clean.Semantics.Sail.SailExecuteDispatch
 
 /-! # Circuit-independent control-flow preservation
 
@@ -67,7 +68,7 @@ theorem jal_execute_frame (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 21) (rd : BitVec 5) (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.JAL (imm, .Regidx rd)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
-  simp only [execute, execute_JAL, get_next_pc] at ran
+  simp only [SailExecute.dispatch_JAL, execute_JAL, get_next_pc] at ran
   rw [run_readReg_bind_of_isInitialized source Register.nextPC cfg.init,
     run_readReg_bind_of_isInitialized source Register.PC cfg.init] at ran
   exact jump_and_link_frame source cfg _ _ rd result target ran
@@ -78,7 +79,7 @@ theorem jalr_execute_frame (source : SailState) (cfg : SailConfigured source)
     (ran : (runSail (execute (.JALR (imm, .Regidx rs1, .Regidx rd)))) source = .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
   obtain ⟨value, read⟩ := initialized_gpr source cfg.init rs1
-  simp only [execute, execute_JALR, get_next_pc] at ran
+  simp only [SailExecute.dispatch_JALR, execute_JALR, get_next_pc] at ran
   rw [run_bind_of_run source _ () (SailMem.update_elp_state_of_isInitialized _ source cfg.init cfg.toValidMemConfig),
     run_readReg_bind_of_isInitialized source Register.nextPC cfg.init,
     run_bind_of_run source _ value (by rw [run_rX_bits, read])] at ran
@@ -95,7 +96,7 @@ theorem branch_execute_frame (source : SailState) (cfg : SailConfigured source)
   have leftRun : (runSail (rX_bits (.Regidx rs1))) source = .ok left source := by rw [run_rX_bits, leftRead]
   have rightRun : (runSail (rX_bits (.Regidx rs2))) source = .ok right source := by rw [run_rX_bits, rightRead]
   cases op <;>
-    simp only [execute, execute_BTYPE, bind_assoc,
+    simp only [SailExecute.dispatch_BTYPE, execute_BTYPE, bind_assoc,
       run_bind_of_run source _ left leftRun, run_bind_of_run source _ right rightRun, pure_bind] at ran
   all_goals
     split at ran

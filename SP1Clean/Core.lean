@@ -229,6 +229,7 @@ import SP1Clean.Semantics.Sail.SailArithmeticExecute
 import SP1Clean.Semantics.Sail.SailArithmeticFrame
 import SP1Clean.Semantics.Sail.SailControlExecute
 import SP1Clean.Semantics.Sail.SailControlFrame
+import SP1Clean.Semantics.Sail.SailExecuteDispatch
 import SP1Clean.Semantics.Sail.SailExecuteFrame
 import SP1Clean.Semantics.Sail.SailFetch
 import SP1Clean.Semantics.Sail.SailInstructionFrame
