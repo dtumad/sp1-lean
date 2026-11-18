@@ -144,7 +144,7 @@ lemma update_elp_state_of_isInitialized (rs1 : regidx) (s : SailState)
     have h2 := congrArg BitVec.toNat hs'.h_mseccfg_disabled
     simp only [BitVec.toNat_ofNat] at h2 ⊢
     omega
-  simp only [andM,  toBool, update_elp_state, currentlyEnabled, get_xLPE, hartSupports, _get_Seccfg_MLPE,
+  simp only [andM,  toBool, update_elp_state, currentlyEnabled.eq_def, get_xLPE, hartSupports.eq_def, _get_Seccfg_MLPE,
     bool_bit_backwards,  pure_bind, bind_assoc,
     Sail.run_readReg_bind_of_isInitialized s _ hs, hs'.h_cur_privilege, hmlpe]
   rfl
@@ -1313,7 +1313,7 @@ lemma run_fetch_eq_F_Base_of_isInitialized
     Std.ExtDHashMap.get?_eq_some_get (hs _), h_pc,
     andM, orM, toBool, ha0, ha1, bne_self_eq_false, h_aligned,
     ite_true,
-    currentlyEnabled, hartSupports, h_not_rvc, hfb]
+    currentlyEnabled.eq_def, hartSupports.eq_def, h_not_rvc, hfb]
 
 /-- Four-byte `mem_read` under kernel config. -/
 lemma run_mem_read_four_bytes_of_isInitialized

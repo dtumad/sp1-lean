@@ -50,7 +50,7 @@ it never whnf-reduces; this equation lets the walk continue. Stated applied to `
 whnf'd goal exposes. -/
 theorem cePause_apply :
     currentlyEnabled extension.Ext_Zihintpause = (pure true : SailM Bool) := by
-  simp [currentlyEnabled, hartSupports]
+  simp [currentlyEnabled.eq_def, hartSupports.eq_def]
 
 /-- The Zicfilp/forward-CFI cluster head: under machine mode with `mseccfg.MLPE = 0` (bit 10, the
 `SailConfigured.mseccfg_disabled` residue), `currentlyEnabled Ext_Zicfilp` resolves to `false` —
@@ -71,7 +71,7 @@ theorem ceZicfilp_bind_apply {α : Type} (s : SailState) (hs : s.isInitialized)
     simp only [BitVec.toNat_ofNat] at h2 ⊢
     omega
   show (runSail ((currentlyEnabled extension.Ext_Zicfilp >>= k) : SailM α)) s = (runSail (k false)) s
-  simp only [andM, orM, toBool, currentlyEnabled, get_xLPE, hartSupports, _get_Seccfg_MLPE,
+  simp only [andM, orM, toBool, currentlyEnabled.eq_def, get_xLPE, hartSupports.eq_def, _get_Seccfg_MLPE,
     bool_bit_backwards, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hpriv', hmlpe,
     Bool.true_and, Bool.and_false, Bool.false_and, ite_false]
@@ -113,7 +113,7 @@ theorem ceM_apply (s : SailState) (hs : s.isInitialized)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
     runSail (currentlyEnabled extension.Ext_M) s = EStateM.Result.ok true s := by
   show (runSail (currentlyEnabled extension.Ext_M)) s = .ok true s
-  simp only [andM, orM, toBool, currentlyEnabled, hartSupports, pure_bind, bind_assoc,
+  simp only [andM, orM, toBool, currentlyEnabled.eq_def, hartSupports.eq_def, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hmisa, Bool.true_and, beq_self_eq_true]
   rfl
 
@@ -123,7 +123,7 @@ theorem ceZmmul_apply (s : SailState) (hs : s.isInitialized)
     (hmisa : _get_Misa_M (s.regs.get Register.misa (hs Register.misa)) = 1#1) :
     runSail (currentlyEnabled extension.Ext_Zmmul) s = EStateM.Result.ok true s := by
   show (runSail (currentlyEnabled extension.Ext_Zmmul)) s = .ok true s
-  simp only [andM, orM, toBool, currentlyEnabled, hartSupports, pure_bind, bind_assoc,
+  simp only [andM, orM, toBool, currentlyEnabled.eq_def, hartSupports.eq_def, pure_bind, bind_assoc,
     run_readReg_bind_of_isInitialized s _ hs, hmisa, Bool.true_and, Bool.false_or,
     beq_self_eq_true]
   rfl
