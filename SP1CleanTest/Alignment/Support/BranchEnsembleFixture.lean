@@ -105,7 +105,7 @@ def finalSeeds : List Seed :=
 /-- Every published final receipt is checked against the fixed complete target snapshot. -/
 def validatorSeeds : List Seed :=
   (orderedMemory true).map fun record =>
-    Seed.ofCells 90 (toElements (M := FinalRegisterCheck.RowInput) ((⟨record, 0⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList
+    Seed.ofCells 94 (toElements (M := FinalRegisterCheck.RowInput) ((⟨record, 0⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList
 /-- Terminate the actual finite ordered register inventory. -/
 def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0
@@ -170,10 +170,10 @@ theorem builtTables_components (target : ExecutionSnapshot) (seeds : List Seed)
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
-/-- Building rows never changes the complete 95-table host inventory. -/
+/-- Building rows never changes the complete 99-table host inventory. -/
 theorem builtTables_length (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
-    (builtTables target seeds bounded).length = 95 := by
+    (builtTables target seeds bounded).length = 99 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   exact tables_length (context target)
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/

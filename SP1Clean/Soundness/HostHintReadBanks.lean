@@ -47,7 +47,7 @@ def bankTables (deferred : Bool) (witness : Witness (p := p) (image := image) (s
 private theorem auxiliary_length
     (witness : Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) :
-    (witness.tables.drop 63).length = 31 := by
+    (witness.tables.drop 63).length = 35 := by
   have size := congrArg List.length (HostTableRegistry.auxiliary_components witness)
   simp only [List.length_map] at size
   exact size

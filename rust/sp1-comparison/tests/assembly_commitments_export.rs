@@ -113,7 +113,7 @@ fn commitment_execution<P: Program<F> + GeneratedAirSpec>(
             };
             let flag = if bank == 0 { public[56] } else { public[57] };
             assert_eq!(
-                P::fixed_row::<F>(94, (8 * bank + slot) as u64),
+                P::fixed_row::<F>(98, (8 * bank + slot) as u64),
                 vec![
                     F::from_u64(bank as u64),
                     F::from_u64(slot as u64),
@@ -260,17 +260,17 @@ fn commitment_proofs<P: Program<F> + GeneratedAirSpec>(
     {
         reject_traces::<P>(&fields(&case["publicInput"]), traces.clone());
     }
-    for table in [88, 89, 94] {
+    for table in [88, 89, 98] {
         let mut missing = traces.clone();
         missing[table].values.clear();
         reject_traces::<P>(&public, missing);
     }
     // Only the sixteen counts are committed. Fixed payload and eligibility columns
     // come from the verifier's preprocessing, never from mutable witness columns.
-    assert_eq!(traces[94].width(), 1);
+    assert_eq!(traces[98].width(), 1);
     for slot in 0..16 {
         let mut changed = traces.clone();
-        changed[94].values[slot] += F::ONE;
+        changed[98].values[slot] += F::ONE;
         reject_traces::<P>(&public, changed);
     }
     if let Some(table) = repeated {

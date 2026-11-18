@@ -31,7 +31,7 @@ def memorySeeds (context : Context) (frontier : AccessFrontier) (touched : List 
     let some check := FinalRamCheck.populate? context.source.sail.memorySnapshot context.target.sail.memorySnapshot record
       | throw "RAM target constructor rejected its endpoint"
     consumers := consumers ++ [⟨1, (toElements initial).toList⟩, ⟨4, (toElements final).toList⟩,
-      ⟨91, (toElements check).toList⟩]
+      ⟨95, (toElements check).toList⟩]
     previous := address + 1
   let terminal := (toElements (OrderedBoundaryEnd.populate (Target.bitVecToWord (BitVec.ofNat 64 previous))
     (OrderedMemoryEnsemble.endKey (p := SP1Prime)))).toList

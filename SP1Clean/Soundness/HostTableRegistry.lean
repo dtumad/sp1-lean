@@ -43,7 +43,7 @@ theorem auxiliary_components {image : ProgramImage} {source : ExecutionSnapshot}
 
 /-- Number of installed host components before any further resource extension. -/
 theorem auxiliary_length (hints : List Bytes) (outgoing : MemorySnapshot) :
-    (auxiliary (p := p) hints outgoing).length = 31 := rfl
+    (auxiliary (p := p) hints outgoing).length = 35 := rfl
 
 /-- Physical bank position inside the host block, including its administrative terminal. -/
 def bankPosition (deferred : Bool) : Index → ℕ

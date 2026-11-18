@@ -57,7 +57,7 @@ theorem declaration_fresh (context : Context) :
     LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
     SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
     MemorySnapshot.registerTable, StaticTable.ofRows, FinalMemoryChecks.checkTables,
-    FinalRegisterValue.membership, HostHintReadLocal.sourceResources,
+    FinalRegisterValue.membership, HostHintReadLocal.sourceResources, HostHintReadLocal.bankResources,
     HostHintQueue.source, HostHintQueue.sourceWord, StaticTable.payloadComponent,
     StaticTable.payloadProvider]
   exact of_decide_eq_true rfl
@@ -77,7 +77,7 @@ def assembly (context : Context) : Ensemble Fp SP1PublicIO :=
   CommitmentEnsemble.install context.commitments (withoutCommitments context) (declaration_fresh context)
     (declarations_registered context)
 
-theorem without_tables_length (context : Context) : (withoutCommitments context).tables.length = 94 := by
+theorem without_tables_length (context : Context) : (withoutCommitments context).tables.length = 98 := by
   simp only [withoutCommitments, HostFinalMemory.ensemble, ClosedVerifier.install,
     HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
     FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set,
@@ -87,7 +87,7 @@ theorem without_tables_length (context : Context) : (withoutCommitments context)
 theorem tables_eq (context : Context) : (assembly context).tables =
     (withoutCommitments context).tables ++ [CommitmentDeclaration.source context.commitments] := rfl
 
-theorem tables_length (context : Context) : (assembly context).tables.length = 95 := by
+theorem tables_length (context : Context) : (assembly context).tables.length = 99 := by
   rw [tables_eq, List.length_append, without_tables_length]
   rfl
 
@@ -130,7 +130,7 @@ def registerSeeds (context : Context) (registers : List (ℕ × ℕ)) : List See
     let final := OrderedMemoryProvider.populate record acc.1 address
     let selected : Fp := if Semantics.MemLoc.reg index ∈ context.source.sail.memorySnapshot.changes context.target.sail.memorySnapshot then 1 else 0
     (address + 1, acc.2 ++ [⟨0, (toElements initial).toList⟩, ⟨3, (toElements final).toList⟩,
-      ⟨90, (toElements (M := FinalRegisterCheck.RowInput)
+      ⟨94, (toElements (M := FinalRegisterCheck.RowInput)
         ((⟨record, selected⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList⟩])) (0, [])).2
 
 /-- An empty segment still closes both ordered inventories, both banks and public Exit.

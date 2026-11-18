@@ -1,5 +1,5 @@
-import SP1Clean.Soundness.OrdinaryObservation
-import SP1Clean.Native.Operations.OrdinaryObservationEndpoint
+import SP1Clean.Native.Operations.OrdinaryObservation
+import SP1Clean.Native.Operations.OrdinaryObservationBoundary
 import ToClean.Air.HintIndex
 
 /-! # The ordinary observation tables installed with the host inventory
@@ -33,7 +33,7 @@ def consumerDemand : WitnessGeneration.DemandMode (ZMod p) Inputs where
 
 /-- The ordered receipt consumer. -/
 def consumer : Component (ZMod p) :=
-  (view consumerDemand).component
+  { circuit := circuit, generation := .demand consumerDemand, Assumptions := circuit.Assumptions }
 
 /-- The chain's terminal for one mode. -/
 def terminalComponent (mode : Mode) : Component (ZMod p) :=

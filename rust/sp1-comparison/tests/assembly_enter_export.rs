@@ -91,5 +91,5 @@ fn references_preserve_every_native_row_and_occurrence() {
 
 #[test]
 fn assemblies_prove_and_reject_missing_or_changed_obligations() {
-    malformed::<enter::Ensemble>(&enter::reference(), &[18, 58, 64, 65, 90]);
+    malformed::<enter::Ensemble>(&enter::reference(), &[18, 58, 64, 65, 94]);
 }

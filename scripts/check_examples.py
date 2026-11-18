@@ -36,19 +36,20 @@ def validate_report(name, result, revision, dirty):
                        "changed-untouched-x31", "changed-untouched-ram", "missing-bank-terminal",
                        "empty-identity"]
         values = [True] + [False] * 7 + [True]
-        require(report["table_count"] == 94, "ADD inventory mismatch")
+        # 94 tables plus the ordinary observation consumer and its three mode terminals.
+        require(report["table_count"] == 98, "ADD inventory mismatch")
     elif name == "branch":
         identifiers = ["active-branch", "wrong-public-next-pc", "missing-authentication-row",
                        "duplicate-authentication-row", "changed-untouched-register", "empty-identity",
                        "malformed-seed-index", "malformed-seed-length"]
         values = [True, False, False, False, False, True, False, False]
-        # 620 table declarations from the independently checked componentChannelIndices;
-        # 132 verifier declarations. The canonical registry has 34 unique names: 32 used by tables or
-        # the verifier, plus the ordinary receipt and observation channels it registers ahead of
-        # their tables.
+        # 634 table declarations from the independently checked componentChannelIndices (620, plus the
+        # observation consumer's 8 and its three terminals' 2 each);
+        # 132 verifier declarations. The canonical registry has 34 unique names, including the
+        # ordinary receipt and observation channels.
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 95, "uniqueChannels": 34, "declaredChannelOccurrences": 620 + 132,
+                    "tableCount": 99, "uniqueChannels": 34, "declaredChannelOccurrences": 634 + 132,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and

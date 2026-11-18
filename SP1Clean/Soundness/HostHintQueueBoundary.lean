@@ -470,9 +470,14 @@ theorem source_queue_silent :
       stateChannel.toRaw ∉ component.circuit.channels := by
   intro component member used
   rcases List.mem_append.mp member with fixed | added
-  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at fixed
-    rcases fixed with rfl | rfl | rfl | rfl <;> change false = true at present <;> exact Bool.noConfusion present
+  · rcases List.mem_append.mp fixed with bank | observed
+    · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
+      simp only [bankResources, List.mem_cons, List.not_mem_nil, or_false] at bank
+      rcases bank with rfl | rfl | rfl | rfl <;> change false = true at present <;> exact Bool.noConfusion present
+    · exact tables_silent component observed _
+        (by simp [stateChannel, Channels.byteChannel, Channel.toRaw])
+        (by simp [stateChannel, InstructionReceipt.channel, Channel.toRaw])
+        (by simp [stateChannel, OrdinaryObservation.stateChannel, Channel.toRaw]) used
   · exact HostFinalMemory.checks_silent outgoing stateChannel.toRaw (by rfl) component added used
 
 variable {sourceTableChannels : ∀ component ∈

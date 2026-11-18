@@ -3,6 +3,7 @@ import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.OrdinaryStateReceipt
 import SP1Clean.Semantics.Execution.SailBookkeeping
 import ToClean.Air.TransitionView
+import SP1Clean.Soundness.OrdinaryObservationResources
 
 /-! # Exhaustive ordinary observation histories
 
@@ -30,6 +31,9 @@ def view (generation : WitnessGeneration.DemandMode (ZMod p) Inputs) : Transitio
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)
   interactions := state_values
+
+/-- The installed consumer is the transition view's component. -/
+theorem consumer_view : (consumer (p := p)) = (view consumerDemand).component := rfl
 
 /-- Read observation inputs directly from their physical arrays and shared data. -/
 def rows (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Inputs (ZMod p)) :=

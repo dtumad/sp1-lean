@@ -73,7 +73,7 @@ def prepare (context : Context) (consumers : List Seed) : Except String Prepared
           for (slot, input) in keyed do encoded := encoded.set! slot input
           first := (keyed.head?.map Prod.fst).getD 0
         else if position ∈ [0, 1, 3, 4, 55, 57, 63, 64, 65] ||
-            (66 ≤ position && position ≤ 85) || position == 90 || position == 91 then
+            (66 ≤ position && position ≤ 85) || position == 94 || position == 95 then
           let keyed ← seeds.mapM fun seed => do
             let message ← response component seed name mode.trigger
             let keys :=
@@ -81,7 +81,7 @@ def prepare (context : Context) (consumers : List Seed) : Except String Prepared
               else if name == "sp1.native.hint_read_state" then [clock message, word message 5 3]
               else if name == "SP1Exit" then [word message 0 1]
               else if name == "SP1Memory" then [clock message * 32 + word message 2 1]
-              else if position == 90 || position == 91 then [word message 2 3]
+              else if position == 94 || position == 95 then [word message 2 3]
               else [word message 0 4]
             unless keys.all (· < UInt64.size) do throw "private-input key exceeds UInt64"
             pure (keys.map UInt64.ofNat, rowPrefix component.rowOffset seed.cells.toArray)
