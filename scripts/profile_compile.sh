@@ -60,6 +60,11 @@ set -o pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 ROOT="$(pwd)"
+# The profiler's categories are wall-clock: a sleeping Mac charges hours to whatever category was
+# running (the 2026-11-18 sweep lost ~8 h this way across 26 modules). Keep the machine awake.
+if [ "$(uname)" = Darwin ] && [ -z "${PROFILE_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null; then
+  exec env PROFILE_CAFFEINATED=1 caffeinate -i "$0" "$@"
+fi
 OUTDIR="${OUTDIR:-$ROOT/.lake/profile}"
 PREFIX="${1:-}"
 case "$PREFIX" in
