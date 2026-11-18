@@ -206,9 +206,9 @@ grounding-time chip `Spec` (so the walk's per-row `RowOK` is available before gr
 navigation it anticipated landed as the `rowAligned_*_of_shape` family
 (`Soundness/GroundingAdapter.lean`): a direct extraction from the recursively-flattened interaction
 list (`circuit_norm`'s `toFlat_subcircuit`/`interactions_subcircuit`) — this leaf's byte-pull pattern
-applied to the register pulls at the flattened level — combined with
-`decodedInROM_rtype_operand_lt` (`Soundness/Decode.lean`, the decode-intrinsic `op_a/op_b/op_c < 32`),
-discharging every registered chip's `rowAligned` field. -/
+applied to the register pulls at the flattened level — combined with the decode-intrinsic operand
+bound `regidxVal_val_lt` (`Semantics/ISA/Decode.lean`), discharging every registered chip's
+`rowAligned` field. -/
 theorem Readers.RegisterAccessTimestamp.bounds_of_byteGuarantees
     (input : Var Readers.RegisterAccessTimestamp.Inputs (ZMod p)) (offset : ℕ)
     (env : Environment (ZMod p))

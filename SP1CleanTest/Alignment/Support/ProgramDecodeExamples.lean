@@ -1,53 +1,32 @@
 import SP1Clean.Semantics.ISA.Opcode
-import SP1Clean.Semantics.Sail.SailDecode
 import SP1Clean.Semantics.ISA.Decode
 import SP1Clean.Semantics.Execution.ConfiguredState
+import SP1Clean.Proofs.Sail.InstructionDecode
 
-/-! # Decode-witness substrate: the ∀s → ∃I∀s hoists and the concrete-program shapes
+/-! # Concrete `decodedInROM` examples, one per supported instruction family
 
-Evidence layer for the Program-channel decode facts (`decodedInROM`, `Semantics/ISA/Decode.lean`):
-
-* `decodedInROMg` is the weak ∀s form over the *guarded* projection — what a decode step naturally
-  yields; the per-family hoist lemmas (`decodedInROM_<family>_hoist`, one per supported
-  instruction family) prove the strengthened ∃I∀s `decodedInROM` is derivable from it, so
-  strengthening the trusted Program-channel guarantee costs no fundamental obligation beyond a
-  mechanical per-family lift.
-* `decodedInROM_rtype_operand_lt` recovers the 5-bit source-register bounds from the instruction
-  encoding — the decode-intrinsic provenance of `rowAligned_rtype`'s operand-bound hypotheses
-  (`Soundness/GroundingAdapter.lean`).
-* `addProgram`/`addRow` and the per-family `<fam>Program`/`<fam>Row` shapes exhibit the concrete
-  one-instruction programs, and `decodedInROM_<fam>Row` proves the end-to-end `decodedInROM` fact
-  for each of the 18 supported families on the `Semantics/Sail/SailDecode.lean` decode witnesses (the
-  original ADD witness was retired in the 4.32.2 / Sail-v5 migration and restored 2026-08 with
-  the `whnf`-cascade recipe).
-
-The frozen Eulerian-walk consumers that used to live here (`DecodeOperandsBound`, `decode_bound`,
-the `TargetObligations` wiring) were retired with `Soundness/TargetVm.lean` (2026-08): the live
-capstone derives the program-decode truth globally in `supportedCore_orderedRows_programDecoded`
-(`Soundness/AIR.lean`) and consumes these hoists through the grounding contracts. -/
+Each example is a one-instruction guest program at pc `0x10000`, the committed Program-bus row it
+decodes to, and a proof of `decodedInROM` for that pair. The fetch reduces at the singleton ROM
+(`pcBitsOfRow_x10000` keys it at `0x10000`); the configured-state decode is
+`SailDecode.instructionDecode_agrees` at the executable decoder's result, checked by `rfl`; and the
+`instrToProgramRow'` projection closes by `rfl` against the transcribed row. A mis-transcribed
+`instrToProgramRow` arm breaks its family's example, so `decodedInROM` cannot become silently
+vacuous for that family.
+-/
 
 open LeanRV64D
-namespace SP1Clean.Soundness.Target
+namespace SP1CleanTest.ProgramDecode
 
 open Sail LeanRV64D LeanRV64D.Functions
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Soundness.Target
 open SP1Clean.ProgramChip (ProgramRow)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩
 
+/-! ## The R-type example -/
 
-/-! ## W3-A end-to-end: the concrete-instruction decode witnesses (restored 2026-08)
-
-A one-instruction guest program (ADD at pc `0x10000`) and the committed Program-bus row it decodes
-to — the worked template for the per-family end-to-end examples at the end of this file. The
-original end-to-end proof (`decodedInROM_addRow`, composing `SailDecode.decode_ADD_example` — the
-old arm-by-arm `ext_decode` reduction — with `instrToProgramRow_rtype`) was removed in the 4.32.2 /
-Sail-v5 migration; it was **restored 2026-08** on the `whnf`-cascade decode recipe
-(`Semantics/Sail/SailDecode.lean`), and the retirement is over: the per-family examples below
-(`decodedInROM_<fam>Row`, all 18 supported instruction families) now discharge the concrete
-`decodedInROM` shape family by family. `addProgram`/`addRow` are consumed by
-`decodedInROM_addRow`. -/
 
 /-- A one-instruction guest program: `ADD x1, x2, x3` (`0x003100B3`) at pc `0x10000` — the base of the SP1
 code window `[2^16, 2^48)`, so it satisfies `rom_in_window`; the word's low two bits are `0b11`
@@ -78,74 +57,8 @@ def addRow : ProgramRow (ZMod p) :=
     op_a_0 := if regidxVal (p := p) (regidx.Regidx 1#5) = 0 then 1 else 0,
     imm_c := 0 }
 
-/-! ## The ∀s → ∃I∀s hoist (C1/Move-2) — evidence the strengthened `decodedInROM` is derivable
+/-! ## The other families -/
 
-`decodedInROM` was strengthened (Move-2) from the weak ∀s∃i form to the ∃I∀s guarded form. These lemmas
-prove that strengthening is **sound and derivable**: from `decodedInROMg` (the weak ∀s form over the
-*guarded* projection — what a decode step naturally yields) plus the committed `(opcode, imm_c)` columns,
-the fixed-instruction ∃I∀s `decodedInROM` follows (the row's columns pin every per-state decode to one
-instruction). So strengthening the trusted Program-channel guarantee adds no new *fundamental* obligation
-on the eventual grounding engine — only a mechanical per-family lift. RTYPE (unguarded) and MUL
-(guard-load-bearing, `inv_mul'` without `hpin`) are the two templates; the remaining families follow
-below, with immediates/shift-amounts pinned through the committed `Word` columns
-(`bv64_eq_of_wordCol` + the per-width injectivity lemmas) rather than `regidx` pinning alone, and
-LOAD/STORE riding their guarded (`'`) inversions exactly as MUL does. -/
-
-/-- The weak ∀s form over the *guarded* projection — what the Program provider certifies pre-hoist. -/
-def decodedInROMg (prog : GuestProgram) (row : ProgramRow (ZMod p)) : Prop :=
-  ∃ w, prog.fetchWord (pcBitsOfRow row) = some w ∧
-    ∀ s, SailConfigured s → ∃ i, (runSail (ext_decode w)) s = .ok i s ∧
-      instrToProgramRow' (rowPcVec row) i = some row
-
-/-- The pinning step shared by every `decodedInROM` hoist: a committed scalar operand column
-(`op_a`) determines its register, because `regidxVal` is injective on the 5-bit range. -/
-private theorem regidx_eq_of_regCol {r r' : regidx} {x : ZMod p}
-    (h : x = regidxVal r) (h' : x = regidxVal r') : r' = r := by
-  obtain ⟨b⟩ := r
-  obtain ⟨b'⟩ := r'
-  simp only [regidxVal] at h h'
-  exact congrArg regidx.Regidx (regidx_bv_inj (h'.symm.trans h))
-
-/-- The `op_b`/`op_c` twin of `regidx_eq_of_regCol`: those columns commit the register in limb `0`
-of a `Word`, so the pinning goes through `v[0]`. -/
-private theorem regidx_eq_of_vecCol {r r' : regidx} {v : Vector (ZMod p) 4}
-    (h : v = #v[regidxVal r, 0, 0, 0]) (h' : v = #v[regidxVal r', 0, 0, 0]) : r' = r := by
-  refine regidx_eq_of_regCol (x := v[0]) ?_ ?_
-  · rw [h]; simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero]
-  · rw [h']; simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero]
-
-/-- The immediate twin of `regidx_eq_of_regCol`: an `op_b`/`op_c` column committed as the limb
-encoding (`bitVecToWord`) of two 64-bit values pins them equal, because `Word.toBitVec64` is a
-retraction of `bitVecToWord` (`toBitVec64_bitVecToWord`). The immediate-shaped hoists compose it
-with the per-width injectivity of the encoding (`sext12_inj`/`sext13_inj`/`sext21_inj`/
-`setWidth64_inj`). -/
-private theorem bv64_eq_of_wordCol {v v' : BitVec 64} {w : Word (ZMod p)}
-    (h : w = bitVecToWord v) (h' : w = bitVecToWord v') : v' = v := by
-  have e := congrArg Word.toBitVec64 (h'.symm.trans h)
-  rwa [toBitVec64_bitVecToWord, toBitVec64_bitVecToWord] at e
-
-/-- Zero-extension to 64 bits is injective from any width `≤ 64` — the shift-amount pin for the
-`SHIFTIOP`/`SHIFTIWOP` hoists (their `op_c` commits `shamt.setWidth 64`); the `setWidth` twin of
-`sext12_inj`. -/
-private theorem setWidth64_inj {n : ℕ} (hn : n ≤ 64) {a b : BitVec n}
-    (h : a.setWidth 64 = b.setWidth 64) : a = b := by
-  have key : ∀ x : BitVec n, (x.setWidth 64).setWidth n = x := fun x => by
-    apply BitVec.eq_of_getLsbD_eq; intro i hi
-    have h64 : i < 64 := by omega
-    simp [hi, h64]
-  rw [← key a, ← key b, h]
-
-/-! ## Per-family end-to-end examples — the concrete `decodedInROM` discharges
-
-One one-instruction guest program + committed Program-bus row + `decodedInROM` proof per supported
-instruction family — the 18 decode witnesses of `Semantics/Sail/SailDecode.lean`, each carried to the full
-Program-channel fact. Every proof is the same three-step shape: the ROM fetch reduces at the
-concrete singleton rom (`pcBitsOfRow_x10000` keys it at `0x10000`), the ∀-configured-state decode
-is the per-family `SailDecode.decode_<X>` witness instantiated from the `SailConfigured` bundle
-(`init`/`priv`/`mseccfg_disabled`, plus `misa_m` for the six M-extension families), and the
-`instrToProgramRow'` projection closes by `rfl` against the transcribed row. These anchors close
-the external PR110 report's Finding 3 vacuity hazard family by family: a mis-transcribed
-`instrToProgramRow` arm would break its family's `rfl` here. -/
 
 /-- Any committed row with pc limbs `(0, 1, 0)` keys the ROM at `0x10000` — the shared
 `pcBitsOfRow` computation of every example row. Not a `rfl`: the pc-limb casts sit under
@@ -166,7 +79,7 @@ theorem decodedInROM_addRow : decodedInROM addProgram (addRow (p := p)) := by
     .RTYPE (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, rop.ADD), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (addRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_ADD s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `ADDI x1, x2, 5` (`0x00510093`) at pc `0x10000` — the I-type example program. -/
@@ -202,7 +115,7 @@ theorem decodedInROM_addiRow : decodedInROM addiProgram (addiRow (p := p)) := by
     .ITYPE (5#12, regidx.Regidx 2#5, regidx.Regidx 1#5, iop.ADDI), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (addiRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_ADDI s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `SLLI x1, x2, 3` (`0x00311093`) at pc `0x10000` — the shift-immediate example program. -/
@@ -237,7 +150,7 @@ theorem decodedInROM_slliRow : decodedInROM slliProgram (slliRow (p := p)) := by
     .SHIFTIOP (3#6, regidx.Regidx 2#5, regidx.Regidx 1#5, sop.SLLI), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (slliRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_SLLI s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `ADDIW x1, x2, 5` (`0x0051009B`) at pc `0x10000` — the W-form I-type example program. -/
@@ -271,7 +184,7 @@ theorem decodedInROM_addiwRow : decodedInROM addiwProgram (addiwRow (p := p)) :=
   refine ⟨0x0051009B#32, .ADDIW (5#12, regidx.Regidx 2#5, regidx.Regidx 1#5), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (addiwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_ADDIW s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `ADDW x1, x2, x3` (`0x003100BB`) at pc `0x10000` — the W-form R-type example program. -/
@@ -306,7 +219,7 @@ theorem decodedInROM_addwRow : decodedInROM addwProgram (addwRow (p := p)) := by
     .RTYPEW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, ropw.ADDW), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (addwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_ADDW s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `SLLIW x1, x2, 3` (`0x0031109B`) at pc `0x10000` — the W-form shift-immediate example
@@ -342,7 +255,7 @@ theorem decodedInROM_slliwRow : decodedInROM slliwProgram (slliwRow (p := p)) :=
     .SHIFTIWOP (3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, sopw.SLLIW), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (slliwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_SLLIW s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `LUI x1, 1` (`0x000010B7`) at pc `0x10000` — the U-type example program. -/
@@ -377,7 +290,7 @@ theorem decodedInROM_luiRow : decodedInROM luiProgram (luiRow (p := p)) := by
   refine ⟨0x000010B7#32, .UTYPE (1#20, regidx.Regidx 1#5, uop.LUI), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (luiRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_LUI s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `JAL x1, 8` (`0x008000EF`) at pc `0x10000` — the J-type example program. -/
@@ -412,7 +325,7 @@ theorem decodedInROM_jalRow : decodedInROM jalProgram (jalRow (p := p)) := by
   refine ⟨0x008000EF#32, .JAL (8#21, regidx.Regidx 1#5), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (jalRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_JAL s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `JALR x1, x2, 4` (`0x004100E7`) at pc `0x10000` — the JALR example program. -/
@@ -446,7 +359,7 @@ theorem decodedInROM_jalrRow : decodedInROM jalrProgram (jalrRow (p := p)) := by
   refine ⟨0x004100E7#32, .JALR (4#12, regidx.Regidx 2#5, regidx.Regidx 1#5), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (jalrRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_JALR s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `BEQ x1, x2, 8` (`0x00208463`) at pc `0x10000` — the B-type example program. -/
@@ -482,7 +395,7 @@ theorem decodedInROM_beqRow : decodedInROM beqProgram (beqRow (p := p)) := by
     .BTYPE (8#13, regidx.Regidx 2#5, regidx.Regidx 1#5, bop.BEQ), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (beqRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_BEQ s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `LW x1, 0(x2)` (`0x00012083`) at pc `0x10000` — the LOAD example program. -/
@@ -518,7 +431,7 @@ theorem decodedInROM_lwRow : decodedInROM lwProgram (lwRow (p := p)) := by
     .LOAD (0#12, regidx.Regidx 2#5, regidx.Regidx 1#5, false, 4), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (lwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_LW s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `SW x1, 0(x2)` (`0x00112023`) at pc `0x10000` — the STORE example program. -/
@@ -554,7 +467,7 @@ theorem decodedInROM_swRow : decodedInROM swProgram (swRow (p := p)) := by
     .STORE (0#12, regidx.Regidx 1#5, regidx.Regidx 2#5, 4), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (swRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_SW s hcfg.init hcfg.priv hcfg.mseccfg_disabled
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `MUL x1, x2, x3` (`0x023100B3`) at pc `0x10000` — the M-extension multiply example program. -/
@@ -591,7 +504,7 @@ theorem decodedInROM_mulRow : decodedInROM mulProgram (mulRow (p := p)) := by
     ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (mulRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_MUL s hcfg.init hcfg.priv hcfg.mseccfg_disabled hcfg.misa_m
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `MULW x1, x2, x3` (`0x023100BB`) at pc `0x10000` — the MULW example program. -/
@@ -626,7 +539,7 @@ theorem decodedInROM_mulwRow : decodedInROM mulwProgram (mulwRow (p := p)) := by
     .MULW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (mulwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_MULW s hcfg.init hcfg.priv hcfg.mseccfg_disabled hcfg.misa_m
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `DIV x1, x2, x3` (`0x023140B3`) at pc `0x10000` — the signed-divide example program. -/
@@ -661,7 +574,7 @@ theorem decodedInROM_divRow : decodedInROM divProgram (divRow (p := p)) := by
     .DIV (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (divRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_DIV s hcfg.init hcfg.priv hcfg.mseccfg_disabled hcfg.misa_m
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `REM x1, x2, x3` (`0x023160B3`) at pc `0x10000` — the signed-remainder example program. -/
@@ -696,7 +609,7 @@ theorem decodedInROM_remRow : decodedInROM remProgram (remRow (p := p)) := by
     .REM (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (remRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_REM s hcfg.init hcfg.priv hcfg.mseccfg_disabled hcfg.misa_m
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `DIVW x1, x2, x3` (`0x023140BB`) at pc `0x10000` — the W-form signed-divide example
@@ -732,7 +645,7 @@ theorem decodedInROM_divwRow : decodedInROM divwProgram (divwRow (p := p)) := by
     .DIVW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (divwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_DIVW s hcfg.init hcfg.priv hcfg.mseccfg_disabled hcfg.misa_m
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
 /-- `REMW x1, x2, x3` (`0x023160BB`) at pc `0x10000` — the W-form signed-remainder example
@@ -768,7 +681,7 @@ theorem decodedInROM_remwRow : decodedInROM remwProgram (remwRow (p := p)) := by
     .REMW (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, false), ?_, ?_, ?_⟩
   · rw [pcBitsOfRow_x10000 (remwRow (p := p)) rfl rfl rfl]; rfl
   · intro s hcfg
-    exact SailDecode.decode_REMW s hcfg.init hcfg.priv hcfg.mseccfg_disabled hcfg.misa_m
+    exact SailDecode.instructionDecode_agrees _ _ rfl s hcfg
   · rfl
 
-end SP1Clean.Soundness.Target
+end SP1CleanTest.ProgramDecode
