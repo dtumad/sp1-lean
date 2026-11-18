@@ -7,9 +7,9 @@ import SP1Clean.Semantics.ISA.Decode
 /-! # Fixed endpoints of the ordinary observation chain
 
 The chain starts at clock zero, below every ordinary source clock, with the incoming retirement
-counter and nextPC. A terminal row moves the last observation to clock `2^48`, outside every
-ordinary source clock, so a fixed verifier can bind the outgoing counter and nextPC without
-exposing the last ordinary clock.
+counter, nextPC and retirement flag. A terminal row moves the last observation to its mode's
+sentinel clock, at or above `2^48` and outside every ordinary source clock, so a fixed verifier can
+bind the outgoing counter and nextPC without exposing the last ordinary clock.
 
 The terminal's mode records what the supplied target says about whether the segment retired an
 ordinary instruction. That matters only when the target's retirement flag, interrupt refresh and
@@ -24,14 +24,6 @@ open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime]
 
-/-- Seed the chain with the incoming counter and nextPC limbs, below every ordinary clock. -/
-def start (counter : Word (ZMod p)) (pc : Vector (ZMod p) 3) : State (ZMod p) :=
-  ⟨0, 0, counter, pc⟩
-
-/-- The terminal's outgoing link, at clock `2^48`. -/
-def final {R : Type} [OfNat R 16777216] [Zero R] (counter : Word R) (pc : Vector R 3) : State R :=
-  ⟨16777216, 0, counter, pc⟩
-
 /-- What the supplied target fixes about whether the segment observed an ordinary retirement. -/
 inductive Mode
   /-- No ordinary instruction retired: the last observation is the start. -/
@@ -41,6 +33,23 @@ inductive Mode
   /-- The target's bookkeeping is the same either way. -/
   | any
 deriving DecidableEq
+
+/-- Each mode's sentinel high clock limb: all three are at or above `2^24`, so every sentinel clock is
+outside every ordinary source clock, and distinct, so the verifier selects one mode's link. -/
+def Mode.sentinel {R : Type} [OfNat R 16777216] [OfNat R 16777217] [OfNat R 16777218] : Mode → R
+  | .empty => 16777216
+  | .nonempty => 16777217
+  | .any => 16777218
+
+/-- Seed the chain with the incoming counter, nextPC limbs and retirement flag, below every
+ordinary clock. -/
+def start (counter : Word (ZMod p)) (pc : Vector (ZMod p) 3) (enabled : ZMod p) : State (ZMod p) :=
+  ⟨0, 0, counter, pc, enabled⟩
+
+/-- The terminal's outgoing link for a mode, at its sentinel clock. -/
+def final {R : Type} [OfNat R 16777216] [OfNat R 16777217] [OfNat R 16777218] [Zero R]
+    (mode : Mode) (counter : Word R) (pc : Vector R 3) (enabled : R) : State R :=
+  ⟨mode.sentinel, 0, counter, pc, enabled⟩
 
 /-- The terminal's last observation has a bounded clock, consistent with the mode: the start's
 clock is zero, and every observed receipt's is not. -/
@@ -55,15 +64,14 @@ def TerminalSpec (mode : Mode) (input : State (ZMod p)) : Prop :=
 def pcLimbs (pc : BitVec 64) : Vector (ZMod p) 3 :=
   #v[(bitVecToWord pc)[0], (bitVecToWord pc)[1], (bitVecToWord pc)[2]]
 
-/-- The supplied source's retirement counter and nextPC seed the chain. -/
+/-- The source's retirement flag, as the chain carries it. -/
+def flagFor (source : SailSnapshot) : ZMod p :=
+  if retirementEnabled source.realize then 1 else 0
+
+/-- The supplied source's retirement counter, nextPC and retirement flag seed the chain. -/
 def startFor (source : SailSnapshot) : State (ZMod p) :=
   start (bitVecToWord ((source.registers.get? Register.minstret : Option (BitVec 64)).getD 0))
-    (pcLimbs ((source.registers.get? Register.nextPC : Option (BitVec 64)).getD 0))
-
-/-- The supplied target's retirement counter and nextPC close the chain. -/
-def finalFor (target : SailSnapshot) : State (ZMod p) :=
-  final (bitVecToWord ((target.registers.get? Register.minstret : Option (BitVec 64)).getD 0))
-    (pcLimbs ((target.registers.get? Register.nextPC : Option (BitVec 64)).getD 0))
+    (pcLimbs ((source.registers.get? Register.nextPC : Option (BitVec 64)).getD 0)) (flagFor source)
 
 /-- The target keeps the source's retirement flag, interrupt state and written event index, as a
 segment without ordinary retirement does. -/
@@ -110,5 +118,12 @@ def Mode.of (source target : SailSnapshot) : Mode :=
   | true, true => .any
   | true, false => .empty
   | false, _ => .nonempty
+
+/-- The supplied target's retirement counter and nextPC close the chain at the sentinel of the mode
+the target fixes, with the source's flag unchanged. -/
+def finalFor (source target : SailSnapshot) : State (ZMod p) :=
+  final (Mode.of source target)
+    (bitVecToWord ((target.registers.get? Register.minstret : Option (BitVec 64)).getD 0))
+    (pcLimbs ((target.registers.get? Register.nextPC : Option (BitVec 64)).getD 0)) (flagFor source)
 
 end SP1Clean.OrdinaryObservation

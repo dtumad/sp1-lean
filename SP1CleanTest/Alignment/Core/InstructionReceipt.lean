@@ -64,9 +64,9 @@ theorem mutations :
      agrees .add paddingInputs [[0, 17, 4, 1, 0]]] = List.replicate 6 false := by native_decide
 
 private def consumed (message : Channels.StateMsg Fp) :=
-  let input := OrdinaryObservation.populate true ⟨0, 0, 0, #v[0, 0, 0]⟩ message
+  let input := OrdinaryObservation.populate ⟨0, 0, 0, #v[0, 0, 0], 1⟩ message
   SP1CleanTest.Core.HostChecks.evaluateProgram
-    (OrdinaryObservation.main true (varFromOffset OrdinaryObservation.Inputs 0))
+    (OrdinaryObservation.main (varFromOffset OrdinaryObservation.Inputs 0))
     (toElements input).toList
 
 private def joined (id : InstructionChipId) (inputs : List Fp)

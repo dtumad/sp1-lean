@@ -24,12 +24,12 @@ variable {generation : WitnessGeneration.DemandMode (ZMod p) Inputs}
 local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 /-- The actual circuit's pull/push pair supplies the common transition interface. -/
-def view (generation : WitnessGeneration.DemandMode (ZMod p) Inputs) (enabled : Bool) : TransitionView (stateChannel (p := p)) where
-  component := { circuit := circuit enabled, generation := .demand generation, Assumptions := (circuit enabled).Assumptions }
+def view (generation : WitnessGeneration.DemandMode (ZMod p) Inputs) : TransitionView (stateChannel (p := p)) where
+  component := { circuit := circuit, generation := .demand generation, Assumptions := circuit.Assumptions }
   edge env :=
     let input := valueFromOffset Inputs 0 env
     (input.previous, input.next)
-  interactions := state_values enabled
+  interactions := state_values
 
 /-- Read observation inputs directly from their physical arrays and shared data. -/
 def rows (table : Table (ZMod p)) (data : ProverData (ZMod p)) : List (Inputs (ZMod p)) :=
@@ -43,16 +43,16 @@ def edge (input : Inputs (ZMod p)) : State (ZMod p) × State (ZMod p) :=
 def rank (state : State (ZMod p)) : ℕ := Semantics.clkNat state.clkHigh state.clkLow
 
 /-- No projected rows or synthetic receipt ledger is needed to read the unit consumers. -/
-theorem receipt_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view generation enabled).component) :
+theorem receipt_ledger (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view generation).component) :
     table.interactionsWith InstructionReceipt.channel.toRaw =
       (rows table data).map (fun input => InstructionReceipt.channel.pulledValue input.receipt) := by
   simp only [Table.interactionsWith, registered, view, receipt_values, rows, List.map_map]
   exact List.map_eq_flatMap.symm
 
 /-- Observation transitions are the literal evaluated table ledger. -/
-theorem state_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view generation enabled).component) :
+theorem state_ledger (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view generation).component) :
     table.interactionsWith stateChannel.toRaw = (rows table data).flatMap (fun input =>
       [stateChannel.pulledValue input.previous, stateChannel.pushedValue input.next]) := by
   have cells (physical : Array (ZMod p)) :
@@ -62,17 +62,17 @@ theorem state_ledger (enabled : Bool) (table : Table (ZMod p)) (data : ProverDat
   simp only [Table.interactionsWith, registered, view, state_values, rows, List.flatMap_map, cells]
 
 /-- One receipt occurrence is consumed for each physical row, with no padding discount. -/
-theorem receipt_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view generation enabled).component) :
+theorem receipt_count (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view generation).component) :
     (table.interactionsWith InstructionReceipt.channel.toRaw).length = table.length := by
-  rw [receipt_ledger enabled table data registered]
+  rw [receipt_ledger table data registered]
   simp only [rows, List.length_map]
 
 /-- Every consumer contributes two physical observation-channel occurrences. -/
-theorem state_count (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view generation enabled).component) :
+theorem state_count (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view generation).component) :
     (table.interactionsWith stateChannel.toRaw).length = 2 * table.length := by
-  rw [state_ledger enabled table data registered, List.length_flatMap]
+  rw [state_ledger table data registered, List.length_flatMap]
   simp [rows, Function.comp_def, List.sum_replicate, Nat.mul_comm]
 
 /-- A balanced producer/consumer ledger matches complete successor messages, with padding
@@ -81,7 +81,7 @@ the original chip contracts when the components are installed in the mixed ensem
 theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod p))
     (data : ProverData (ZMod p))
     (source : original.component = (supportedChipFor id).table)
-    (enabled : Bool) (registered : consumer.component = (view generation enabled).component)
+    (registered : consumer.component = (view generation).component)
     (binary : ∀ physical ∈ original.table,
       ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 0 ∨
         ((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1)
@@ -92,16 +92,16 @@ theorem receipts_exact (id : InstructionChipId) (original consumer : Table (ZMod
       (((supportedChipFor (p := p) id).decodeRow data physical).is_real = 1))).map
         (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))).Perm
       ((rows consumer data).map Inputs.receipt) := by
-  rw [OrdinaryStateReceipt.construct_receipts, receipt_ledger enabled consumer data registered] at balanced
+  rw [OrdinaryStateReceipt.construct_receipts, receipt_ledger consumer data registered] at balanced
   apply InstructionReceipt.channel.gated_unit_perm_of_balanced original.table
     (fun physical => ((supportedChipFor (p := p) id).decodeRow data physical).is_real)
     (fun physical => statePushMessage ((supportedChipFor (p := p) id).decodeRow data physical))
     ((rows consumer data).map Inputs.receipt) binary
   simpa only [List.map_map, Function.comp_def] using balanced
 
-private theorem rows_spec (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view generation enabled).component) (valid : table.Spec) :
-    ∀ input ∈ rows table data, Spec enabled input := by
+private theorem rows_spec (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view generation).component) (valid : table.Spec) :
+    ∀ input ∈ rows table data, Spec input := by
   intro input member
   change input ∈ table.table.map (fun physical => valueFromOffset Inputs 0 (Environment.fromArray physical data)) at member
   obtain ⟨physical, inTable, equal⟩ := List.mem_map.mp member
@@ -111,11 +111,12 @@ private theorem rows_spec (enabled : Bool) (table : Table (ZMod p)) (data : Prov
   exact result
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem counter_of_walk (enabled : Bool) (initial final : State (ZMod p))
-    (path : List (Inputs (ZMod p))) (valid : ∀ input ∈ path, Spec enabled input)
+private theorem counter_of_walk (initial final : State (ZMod p))
+    (path : List (Inputs (ZMod p))) (valid : ∀ input ∈ path, Spec input)
     (walk : Walk.IsWalk edge initial final path) :
-    Word.toBitVec64 final.counter = Word.toBitVec64 initial.counter +
-      BitVec.ofNat 64 (if enabled then path.length else 0) := by
+    final.enabled = initial.enabled ∧
+      Word.toBitVec64 final.counter =
+        Word.toBitVec64 initial.counter + BitVec.ofNat 64 (path.length * initial.enabled.val) := by
   induction path generalizing initial with
   | nil =>
     change initial = final at walk
@@ -123,18 +124,14 @@ private theorem counter_of_walk (enabled : Bool) (initial final : State (ZMod p)
     simp
   | cons input rest ih =>
     obtain ⟨source, tail⟩ := walk
-    have step := (valid input (List.mem_cons_self ..)).2.2.2
     change input.previous = initial at source
-    rw [source] at step
-    rw [ih input.next (fun row member => valid row (List.mem_cons_of_mem _ member)) tail]
-    change Word.toBitVec64 input.counter + _ = _
-    rw [step]
-    cases enabled with
-    | false => simp
-    | true =>
-      simp only [↓reduceIte, List.length_cons, BitVec.ofNat_add]
-      rw [BitVec.add_assoc, BitVec.add_comm 1]
-      rfl
+    subst source
+    have step := (valid input (List.mem_cons_self ..)).2.2.2.2
+    obtain ⟨flag, counter⟩ := ih input.next (fun row member => valid row (List.mem_cons_of_mem _ member)) tail
+    refine ⟨flag, ?_⟩
+    rw [counter]
+    change Word.toBitVec64 input.counter + BitVec.ofNat 64 (rest.length * input.previous.enabled.val) = _
+    rw [step, BitVec.add_assoc, ← BitVec.ofNat_add, List.length_cons, Nat.succ_mul, Nat.add_comm]
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem pc_of_walk (initial final : State (ZMod p)) (path : List (Inputs (ZMod p)))
@@ -147,8 +144,8 @@ private theorem pc_of_walk (initial final : State (ZMod p)) (path : List (Inputs
 
 /-- Raw observation balance and local table meaning force one exhaustive ordered history.
 The endpoint parameters are an installation boundary, not capstone caller premises. -/
-theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : ProverData (ZMod p))
-    (registered : table.component = (view generation enabled).component) (valid : table.Spec)
+theorem ordered_history (table : Table (ZMod p)) (data : ProverData (ZMod p))
+    (registered : table.component = (view generation).component) (valid : table.Spec)
     (initial final : State (ZMod p))
     (balanced : BalancedInteractions
       ([stateChannel.pushedValue initial, stateChannel.pulledValue final] ++
@@ -156,14 +153,15 @@ theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : Prover
     ∃ path : List (Inputs (ZMod p)), path.Perm (rows table data) ∧
       Walk.IsWalk edge initial final path ∧
       (path.map (fun input => rank input.next)).Pairwise (· < ·) ∧
-      Word.toBitVec64 final.counter = Word.toBitVec64 initial.counter +
-        BitVec.ofNat 64 (if enabled then table.length else 0) ∧
+      final.enabled = initial.enabled ∧
+      Word.toBitVec64 final.counter =
+        Word.toBitVec64 initial.counter + BitVec.ofNat 64 (table.length * initial.enabled.val) ∧
       final.pc = path.foldl (fun _ input => input.next.pc) initial.pc := by
-  rw [state_ledger enabled table data registered] at balanced
+  rw [state_ledger table data registered] at balanced
   have endpoints := (stateChannel.transitionLedger_balanced_iff initial final (rows table data) edge).mp balanced
   have endpointBalance : EndpointBalanced (↑(rows table data)) edge initial final := by
     simpa only [EndpointBalanced, Multiset.map_coe, Multiset.cons_coe, Multiset.coe_eq_coe] using endpoints
-  have specs := rows_spec enabled table data registered valid
+  have specs := rows_spec table data registered valid
   have strict : ∀ input ∈ rows table data, rank input.previous < rank input.next :=
     fun input member => (specs input member).1.2.2.2.2
   obtain ⟨path, walk, exhaustive⟩ := exists_exhaustiveTrail_of_endpointBalanced
@@ -171,24 +169,25 @@ theorem ordered_history (enabled : Bool) (table : Table (ZMod p)) (data : Prover
     (fun input member => strict input (Multiset.mem_coe.mp member))
   have perm := Multiset.coe_eq_coe.mp exhaustive
   have pathSpecs := fun input member => specs input (perm.mem_iff.mp member)
-  refine ⟨path, perm, walk, ?_, ?_, pc_of_walk initial final path walk⟩
-  · exact targetRanks_pairwise_of_isWalk edge rank walk
-      (fun input member => strict input (perm.mem_iff.mp member))
-  · have length : path.length = table.length := by simpa only [rows, List.length_map] using perm.length_eq
-    rw [← length]
-    exact counter_of_walk enabled initial final path pathSpecs walk
+  have length : path.length = table.length := by simpa only [rows, List.length_map] using perm.length_eq
+  obtain ⟨flag, counter⟩ := counter_of_walk initial final path pathSpecs walk
+  refine ⟨path, perm, walk, ?_, flag, by rwa [← length], pc_of_walk initial final path walk⟩
+  exact targetRanks_pairwise_of_isWalk edge rank walk
+    (fun input member => strict input (perm.mem_iff.mp member))
 
 omit [Fact (2 ^ 25 < p)] in
-/-- Counter observations agree with the existing semantic retirement fold, including inhibition.
-An empty ordinary history leaves the supplied incoming increment flag untouched. -/
-theorem retirement_fold (enabled : Bool) (initial final : State (ZMod p))
-    (path : List (Inputs (ZMod p))) (flag : Option Bool)
-    (valid : ∀ input ∈ path, Spec enabled input) (walk : Walk.IsWalk edge initial final path) :
+/-- Counter observations agree with the existing semantic retirement fold, including inhibition,
+when the chain's flag denotes the semantic retirement flag. An empty ordinary history leaves the
+supplied incoming increment flag untouched. -/
+theorem retirement_fold (initial final : State (ZMod p)) (path : List (Inputs (ZMod p)))
+    (flag : Option Bool) (valid : ∀ input ∈ path, Spec input) (walk : Walk.IsWalk edge initial final path)
+    (enabled : Bool) (denotes : initial.enabled.val = if enabled then 1 else 0) :
     path.foldl (fun values _ => Semantics.retirementTick values true)
       (enabled, flag, some (Word.toBitVec64 initial.counter)) =
         (enabled, if path.length = 0 then flag else some enabled, some (Word.toBitVec64 final.counter)) := by
   rw [Semantics.retirementTick_fold (fun _ : Inputs (ZMod p) => true)]
   simp only [List.countP_true, Option.map_some]
-  rw [counter_of_walk enabled initial final path valid walk]
+  rw [(counter_of_walk initial final path valid walk).2, denotes]
+  cases enabled <;> simp
 
 end SP1Clean.Soundness.OrdinaryObservation
