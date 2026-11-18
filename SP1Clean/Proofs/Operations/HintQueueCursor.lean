@@ -9,7 +9,7 @@ state channel itself carries no semantic binding.
 
 namespace SP1Clean.HostHintQueue
 
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

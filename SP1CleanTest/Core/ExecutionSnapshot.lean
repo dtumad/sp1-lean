@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Host.HostSnapshot
+import SP1Clean.Math.SP1Field
 
 /-! # Complete finite-boundary and host-execution regressions
 
@@ -10,7 +10,7 @@ HINT_READ and preserves those full-state fields. No dense Sail memory is evaluat
 
 namespace SP1CleanTest.Core.ExecutionSnapshot
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target SP1Clean.Machine LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 

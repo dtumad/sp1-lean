@@ -10,7 +10,7 @@ over this one inventory, so these facts sit below them.
 
 namespace SP1Clean.Soundness.HostFinalMemory
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance finalNamesLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩

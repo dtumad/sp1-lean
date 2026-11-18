@@ -13,7 +13,7 @@ is introduced. Complete machine-state binding and source-time admissibility belo
 
 namespace SP1Clean.Soundness.SnapshotMemoryEnsemble
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

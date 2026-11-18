@@ -10,7 +10,7 @@ syscall wrapper and participates in HostCall accounting.
 
 namespace SP1Clean.Soundness.HostHintReadTerminal
 
-open Circuit Air.Flat Channels Model.Core NativeCore HostHintReadLocal
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

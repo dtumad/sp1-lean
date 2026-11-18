@@ -11,7 +11,7 @@ Memory currency remain separate semantic obligations.
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Model.Core HostHintReadHandoff
+open Circuit Air.Flat Semantics HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
@@ -158,24 +158,9 @@ theorem wordTables_aligned (witness : EnsembleWitness (ensemble image source oth
   simpa only [List.forall₂_map_left_iff, List.forall₂_map_right_iff] using equal
 
 private theorem cursor_fresh : HintReadWordChip.stateChannel.toRaw ∉
-    (LocalCore.ensemble (p := p) image source).channels := by
-  intro member
-  change HintReadWordChip.stateChannel.toRaw ∈ (LocalCore.baseEnsemble image source).channels ++
-    [LocalCore.sourceChannel image source] at member
-  rcases List.mem_append.mp member with member | member
-  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) member)
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HintReadWordChip.stateChannel,
-      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
-      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
-      StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
-      StaticTable.ofRows, Channel.toRaw] at present
-  · have same := (List.mem_singleton.mp member).symm
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    simp [LocalSourceBoundary.checker, HintReadWordChip.stateChannel] at heads
+    (LocalCore.baseEnsemble (p := p) image source).channels :=
+  LocalCore.not_mem_baseEnsemble_channels (by
+    simp [LocalCore.baseChannelNames, HintReadWordChip.stateChannel, Channel.toRaw])
 
 private theorem wrapper_cursor_silent : HintReadWordChip.stateChannel.toRaw ∉
     (HostCallLedger.producer (p := p)).circuit.channels := by

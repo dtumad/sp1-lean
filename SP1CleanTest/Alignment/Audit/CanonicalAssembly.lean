@@ -10,7 +10,7 @@ Program-binding consumers must use an authenticated boundary.
 
 namespace SP1CleanTest.CanonicalAssembly
 
-open SP1Clean SP1Clean.Model.Core SP1CleanTest.Alignment.InstalledAssembly Air.Flat
+open SP1Clean SP1Clean.Semantics SP1CleanTest.Alignment.InstalledAssembly Air.Flat
 
 /-- No witness of this physical inventory contains the legacy initial-PC data entry. -/
 theorem uncommittedInitialPcAbsent {context : Context}

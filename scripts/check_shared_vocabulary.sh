@@ -55,9 +55,9 @@ check_absent() {
   fi
 }
 
-check_owner ConfiguredDecode SP1Clean/Model/Semantics/GuestProgram.lean
-check_owner SP1TransitionView SP1Clean/Model/Semantics/TransitionView.lean
-check_owner SyscallMsg SP1Clean/Model/BusMessages.lean
+check_owner ConfiguredDecode SP1Clean/Semantics/Sail/GuestProgram.lean
+check_owner SP1TransitionView SP1Clean/Semantics/Transition/TransitionView.lean
+check_owner SyscallMsg SP1Clean/Circuits/Channels/BusMessages.lean
 
 check_absent SupportedOrdinaryShardStatement
 check_absent SupportedCoreStatement

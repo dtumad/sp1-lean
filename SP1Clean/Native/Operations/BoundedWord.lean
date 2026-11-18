@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.BoundedWord
 import SP1Clean.Native.Operations.WordRangeCheck
 import SP1Clean.Circuits.Gadgets.LtUnsigned
-import SP1Clean.Model.Semantics.Decode
+import SP1Clean.Semantics.ISA.Decode
 
 /-! # A native unsigned constant-bound check
 

@@ -1,5 +1,5 @@
-import SP1Clean.Model.Semantics.SailInstructionFrame
-import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.Semantics.Sail.SailInstructionFrame
+import SP1Clean.Semantics.Execution.SourceExecution
 import SP1Clean.Proofs.Sail.Advance
 import SP1Clean.Proofs.Sail.InstructionDecode
 
@@ -12,7 +12,7 @@ and same-value ROM stores. Native evaluation is confined to finite source data a
 -/
 
 namespace SP1CleanTest.Core.MemoryFrame
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 open Sail LeanRV64D LeanRV64D.Functions
 
 private def image (word : BitVec 32) : ProgramImage := ⟨[(65536, word)], 65536, []⟩

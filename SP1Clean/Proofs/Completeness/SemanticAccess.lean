@@ -11,7 +11,7 @@ below; the remaining families and full mixed-table assembly remain separate comp
 -/
 
 namespace SP1Clean.TraceGen
-open Model.Core Machine Semantics FormalModel.Shard
+open Semantics Machine FormalModel.Shard
 
 /-- The existing compiler succeeds at every actual ordinary occurrence. Its output retains the
 canonical plan, ordered timestamps, valid refreshes and the next frontier invariant. -/

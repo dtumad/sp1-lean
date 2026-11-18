@@ -1,4 +1,4 @@
-import SP1Clean.Model.FinalMemoryChange
+import SP1Clean.Circuits.Channels.FinalMemoryChange
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
 import SP1Clean.Math.WordEquality
 

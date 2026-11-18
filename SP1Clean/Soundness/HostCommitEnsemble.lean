@@ -15,7 +15,7 @@ witness-specific semantic boundary facts. Installation in the mixed machine rema
 
 namespace SP1Clean.Soundness.HostCommitEnsemble
 
-open Circuit Air.Flat HostCommitChip Model.Core HostCommitBank
+open Circuit Air.Flat HostCommitChip Semantics HostCommitBank
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

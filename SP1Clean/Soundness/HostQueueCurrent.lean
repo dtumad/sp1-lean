@@ -12,7 +12,7 @@ Memory currency and execution of the current call remain the mixed grounding obl
 
 namespace SP1Clean.Soundness.HostQueueCurrent
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueOrder HostQueueCPUOrder HostQueueCPUReplay
+open Circuit Air.Flat Semantics HostHintReadLocal HostQueueOrder HostQueueCPUOrder HostQueueCPUReplay
 open NativeCore Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

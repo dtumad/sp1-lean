@@ -14,7 +14,7 @@ WRITE/hook allocations need their own authenticated local advance and ordering p
 
 namespace SP1Clean.Soundness.HostQueueHistory
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintQueue HostQueueOrder
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintQueue HostQueueOrder
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

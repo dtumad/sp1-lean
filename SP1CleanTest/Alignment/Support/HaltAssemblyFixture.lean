@@ -7,7 +7,7 @@ supplies the sole Exit receipt; the legacy continuing-padding component has no r
 -/
 
 namespace SP1CleanTest.Alignment.HaltAssembly
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1CleanTest.Alignment.InstalledAssembly
 
 private def image := HostProgram.image [.ecall]

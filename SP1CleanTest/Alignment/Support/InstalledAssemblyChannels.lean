@@ -7,7 +7,7 @@ The registry transport retains complete raw channel identities and every physica
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Channels
 
 /-- Original protocol channels; public assertion channels are allocated separately. -/
 def originalChannels (context : Context) : List (RawChannel Fp) :=

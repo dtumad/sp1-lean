@@ -9,7 +9,7 @@ so it transports both integer balance and the original count bounds.
 
 namespace SP1Clean.Soundness.HostFinalMemory
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

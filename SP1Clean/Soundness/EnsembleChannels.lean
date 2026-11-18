@@ -13,7 +13,7 @@ The fact is load-bearing for any argument that reads the whole ledger at once an
 bus a given key came from. `Interaction.toAccess` puts the emitting channel's own `name` in the key,
 so a key already determines a channel *name*; turning that into a channel needs to know the name
 ranges over a finite set with no collisions, which is exactly what this file plus
-`Model/Channels.lean`'s per-pair distinctness supplies.
+`Circuits/Channels/Channels.lean`'s per-pair distinctness supplies.
 
 Each chip reduces the same way: `circuit.channels` is `channelsWithGuarantees ++
 channelsWithRequirements`, the guarantee half goes through the chip's own `elaborated` instance
@@ -749,7 +749,7 @@ theorem witness_channelLedger_eq_filter_kind
         registered (selected.trans channelKind.symm))
     simp only [Function.comp_def, Interaction.toAccess, different, same, decide_false]
 
-/-- **The side condition `Model/CleanLedger.lean`'s kind-filter asks of a table**, discharged for
+/-- **The side condition `Machine/Ledger/CleanLedger.lean`'s kind-filter asks of a table**, discharged for
 every table of this ensemble: an interaction whose kind matches a declared channel's *is* on that
 channel. Both halves are already proved — the table emits only on the ensemble's channels, and those
 seven have seven distinct kinds. -/

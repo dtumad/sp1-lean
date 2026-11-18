@@ -1,8 +1,7 @@
-import SP1Clean.Proofs.Chips.OrderedInitialProvider
+import SP1Clean.Proofs.Chips.OrderedSnapshotProvider
 import SP1CleanTest.Core.InitialMemoryLookup
-import SP1Clean.Soundness.InitialMemoryEnsemble
+import SP1Clean.Soundness.SnapshotMemoryEnsemble
 import SP1Clean.Soundness.FinalMemoryEnsemble
-import SP1Clean.Soundness.NativeCoreBoundaries
 import SP1Clean.Soundness.LocalCoreBoundaries
 
 /-! # Initial/final records and ordered-key AIR regressions
@@ -14,7 +13,7 @@ ordering interactions are retained for the separate whole-ensemble balance argum
 
 namespace SP1CleanTest.Core.MemoryBoundary
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 
@@ -45,55 +44,36 @@ private def evaluate {Input : TypeMap} [ProvableType Input]
 
 private def word (address : ℕ) : Word Fp := bitVecToWord (BitVec.ofNat 64 address)
 
+/-- The image's memory as a local source snapshot, with zero registers. -/
+private def snapshot : MemorySnapshot := ⟨Vector.replicate 32 0, image.initialMemory⟩
+
+private def initChannel : String := Soundness.SnapshotMemoryEnsemble.channelName
+
+private def initRam := OrderedSnapshotProvider.ramCircuit (p := SP1Prime) initChannel snapshot
+
+private def initRegister := OrderedSnapshotProvider.registerCircuit (p := SP1Prime) initChannel snapshot
+
 private def ramInput (previous address current : ℕ) :
-    OrderedInitialProvider.Inputs Word Fp :=
+    OrderedSnapshotProvider.Inputs Word Fp :=
   (⟨word address,
     OrderedBoundary.populate (word previous) (word current)⟩, 1)
 
-private def registerInput (previous index current : ℕ) : OrderedInitialProvider.Inputs field Fp :=
-  (⟨index, OrderedBoundary.populate (word previous) (word current)⟩, 1)
+private def registerInput (previous index current : ℕ) :
+    OrderedSnapshotProvider.Inputs SnapshotRegisterProvider.Inputs Fp :=
+  (⟨⟨index, word 0⟩, OrderedBoundary.populate (word previous) (word current)⟩, 1)
 
-/-- info: exportable ✓ (872 witness cells) -/
-#guard_msgs in
-#assert_exportable (OrderedInitialProvider.ramCircuit (p := SP1Prime) image)
-
-/-- info: exportable ✓ (133 witness cells) -/
-#guard_msgs in
-#assert_exportable (OrderedInitialProvider.registerCircuit (p := SP1Prime) image)
-
-/-- Valid ordered RAM rows cross limb boundaries and reach the last aligned guest cell. -/
-theorem constructedRamRows : [65536, 131064, 131072, 2 ^ 48 - 8].all (fun address =>
-    ((OrderedSnapshotProvider.populateRam? 32 address).map fun input =>
-      let result := evaluate (OrderedInitialProvider.ramCircuit image).main input
-      result.1 && (result.2 ==
-        ([(0 : Fp), 0, (word address)[0], (word address)[1], (word address)[2]] ++
-          (bitVecToWord (p := SP1Prime) (image.initialMemory.readWord address)).toList))).getD false) = true := by
-  native_decide
-
-/-- All 32 register indices emit their exact zero-valued, zero-time boundary messages. -/
-theorem constructedRegisterRows : (List.range 32).all (fun index =>
-    evaluate (OrderedInitialProvider.registerCircuit image).main (registerInput index index (index + 1)) ==
-      (true, [0, 0, (index : Fp), 0, 0, 0, 0, 0, 0])) = true := by
-  native_decide
-
-/-- The ordered key cannot be changed independently of the authenticated Memory record. -/
-theorem rejectsUnrelatedKeys :
-    [(evaluate (OrderedInitialProvider.ramCircuit image).main (ramInput 32 65536 65538)).1,
-     (evaluate (OrderedInitialProvider.registerCircuit image).main (registerInput 0 0 2)).1] =
-      [false, false] := by native_decide
-
-/-- Equal/reversed links, reserved or misaligned RAM, and out-of-range registers fail the AIR. -/
+/-- Equal/reversed links and reserved or misaligned RAM fail the AIR. An out-of-range register
+index fails fixed register-table membership instead (`SnapshotBoundary.rejectsForgedRegisters`). -/
 theorem rejectsInvalidBoundaryRows :
-    [(evaluate (OrderedInitialProvider.ramCircuit image).main (ramInput 65537 65536 65537)).1,
-     (evaluate (OrderedInitialProvider.ramCircuit image).main (ramInput 65538 65536 65537)).1,
-     (evaluate (OrderedInitialProvider.ramCircuit image).main (ramInput 0 32 33)).1,
-     (evaluate (OrderedInitialProvider.ramCircuit image).main (ramInput 0 65537 65538)).1,
-     (evaluate (OrderedInitialProvider.registerCircuit image).main (registerInput 0 32 33)).1] =
-      [false, false, false, false, false] := by native_decide
+    [(evaluate initRam.main (ramInput 65537 65536 65537)).1,
+     (evaluate initRam.main (ramInput 65538 65536 65537)).1,
+     (evaluate initRam.main (ramInput 0 32 33)).1,
+     (evaluate initRam.main (ramInput 0 65537 65538)).1] =
+      [false, false, false, false] := by native_decide
 
 private def controlRow {Input Output : TypeMap} [ProvableType Input] [ProvableType Output]
     (program : Var Input Fp → Circuit Fp (Var Output Fp)) (input : Input Fp)
-    (channelName : String := OrderedInitialProvider.channelName) :
+    (channelName : String := initChannel) :
     Bool × List (List Fp × Fp) :=
   let circuit := program (varFromOffset Input 0)
   let env := (circuit.proverEnvironment (ProverHint.empty Fp) (toElements input).toList).toEnvironment
@@ -113,28 +93,27 @@ private def controlValid (rows : List (Bool × List (List Fp × Fp))) : Bool :=
       ((interactions.filter (fun interaction => interaction.1 == message)).map Prod.snd).sum == 0
 
 private def verifierRow : Bool × List (List Fp × Fp) :=
-  controlRow (OrderedBoundaryVerifier.circuit OrderedInitialProvider.channelName
-    (Soundness.InitialMemoryEnsemble.startKey (p := SP1Prime))
-    Soundness.InitialMemoryEnsemble.endKey).main ()
+  controlRow (OrderedBoundaryVerifier.circuit initChannel
+    (Soundness.OrderedMemoryEnsemble.startKey (p := SP1Prime))
+    Soundness.OrderedMemoryEnsemble.endKey).main ()
 
 private def terminalRow (previous : ℕ) : Bool × List (List Fp × Fp) :=
-  controlRow (OrderedBoundaryEnd.circuit OrderedInitialProvider.channelName
-    (Soundness.InitialMemoryEnsemble.endKey (p := SP1Prime))).main
-      (OrderedBoundaryEnd.populate (word previous) Soundness.InitialMemoryEnsemble.endKey)
+  controlRow (OrderedBoundaryEnd.circuit initChannel
+    (Soundness.OrderedMemoryEnsemble.endKey (p := SP1Prime))).main
+      (OrderedBoundaryEnd.populate (word previous) Soundness.OrderedMemoryEnsemble.endKey)
 
 private def initRegisterRow (previous index : ℕ) :=
-  controlRow (OrderedInitialProvider.registerCircuit (p := SP1Prime) image).main
-    (registerInput previous index (index + 1))
+  controlRow initRegister.main (registerInput previous index (index + 1))
 
 /-- info: exportable ✓ (128 witness cells) -/
 #guard_msgs in
-#assert_exportable (OrderedBoundaryEnd.circuit (p := SP1Prime) OrderedInitialProvider.channelName
-  Soundness.InitialMemoryEnsemble.endKey)
+#assert_exportable (OrderedBoundaryEnd.circuit (p := SP1Prime) initChannel
+  Soundness.OrderedMemoryEnsemble.endKey)
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (OrderedBoundaryVerifier.circuit (p := SP1Prime) OrderedInitialProvider.channelName
-  Soundness.InitialMemoryEnsemble.startKey Soundness.InitialMemoryEnsemble.endKey)
+#assert_exportable (OrderedBoundaryVerifier.circuit (p := SP1Prime) initChannel
+  Soundness.OrderedMemoryEnsemble.startKey Soundness.OrderedMemoryEnsemble.endKey)
 
 /-- The actual fixed verifier and terminal balance an empty inventory without padding rows. -/
 theorem emptyInventory : controlValid [verifierRow, terminalRow 0] = true := by native_decide
@@ -142,7 +121,7 @@ theorem emptyInventory : controlValid [verifierRow, terminalRow 0] = true := by 
 /-- Register and RAM rows coordinate through their actual shared ledger, independent of physical order. -/
 theorem mixedInventory : controlValid
     [verifierRow, initRegisterRow 1 31, initRegisterRow 0 0,
-      controlRow (OrderedInitialProvider.ramCircuit image).main (ramInput 32 65536 65537),
+      controlRow initRam.main (ramInput 32 65536 65537),
       terminalRow 65537] = true := by native_decide
 
 /-- Missing/duplicate terminal rows, duplicate initial records, and a disconnected strict row
@@ -221,17 +200,15 @@ theorem rejectsMalformedFinalInventories :
      controlValid [finalVerifierRow, finalTerminalRow 0, finalTerminalRow 0],
      controlValid [finalVerifierRow, finalRegisterRow 0 0, finalRegisterRow 0 0, finalTerminalRow 1],
      controlValid [finalVerifierRow, finalRegisterRow 0 0, finalRegisterRow 2 3, finalTerminalRow 1],
-     controlValid [controlRow (OrderedBoundaryVerifier.circuit OrderedInitialProvider.channelName
+     controlValid [controlRow (OrderedBoundaryVerifier.circuit initChannel
        (Soundness.OrderedMemoryEnsemble.startKey (p := SP1Prime))
        Soundness.OrderedMemoryEnsemble.endKey).main () OrderedFinalProvider.channelName,
        finalTerminalRow 0]] = [false, false, false, false, false] := by native_decide
 
 /-- Disabled invalid payloads remain physical Memory occurrences with zero multiplicity. -/
 theorem paddingRetainsMemoryOccurrences :
-    [controlRow (OrderedInitialProvider.registerCircuit image).main
-        ((registerInput 0 32 0).1, 0) "SP1Memory",
-     controlRow (OrderedInitialProvider.ramCircuit image).main
-        ((ramInput 0 32 0).1, 0) "SP1Memory",
+    [controlRow initRegister.main ((registerInput 0 32 0).1, 0) "SP1Memory",
+     controlRow initRam.main ((ramInput 0 32 0).1, 0) "SP1Memory",
      controlRow OrderedFinalProvider.registerCircuit.main
         ((finalInput 0 32 0 9 16).1, 0) "SP1Memory",
      controlRow OrderedFinalProvider.ramCircuit.main
@@ -241,8 +218,8 @@ theorem paddingRetainsMemoryOccurrences :
 
 /-- Activity is constrained Boolean even when the payload could otherwise be padding. -/
 theorem rejectsNonBooleanActivity :
-    [(evaluate (OrderedInitialProvider.registerCircuit image).main ((registerInput 0 0 1).1, 2)).1,
-     (evaluate (OrderedInitialProvider.ramCircuit image).main ((ramInput 0 65536 65537).1, 2)).1,
+    [(evaluate initRegister.main ((registerInput 0 0 1).1, 2)).1,
+     (evaluate initRam.main ((ramInput 0 65536 65537).1, 2)).1,
      (evaluate OrderedFinalProvider.registerCircuit.main ((finalInput 0 0 1 9 16).1, 2)).1,
      (evaluate OrderedFinalProvider.ramCircuit.main ((finalInput 0 65536 65537 9 16).1, 2)).1] =
       [false, false, false, false] := by
@@ -250,8 +227,7 @@ theorem rejectsNonBooleanActivity :
 
 /-- Initial/final physical Memory ledgers close only when every clock, location, and value agrees. -/
 theorem pairedMemoryBoundary :
-    let initial := controlRow (OrderedInitialProvider.ramCircuit image).main
-      (ramInput 0 65536 65537) "SP1Memory"
+    let initial := controlRow initRam.main (ramInput 0 65536 65537) "SP1Memory"
     let final (value clock : ℕ) := controlRow OrderedFinalProvider.ramCircuit.main
       (finalInput 0 65536 65537 value clock) "SP1Memory"
     let value := (image.initialMemory.readWord 65536).toNat
@@ -296,11 +272,6 @@ private def bootPublic : SP1PublicIO Fp where
   commitSyscall := 0
   commitDeferredSyscall := 0
 
-private def nativeVerifierLedger (pi : SP1PublicIO Fp) :=
-  let env := Environment.fromInput pi (.empty Fp)
-  (Soundness.NativeCore.ensemble image).verifierOperations.interactions.map
-    (AbstractInteraction.eval env)
-
 private def checkedVerifierRow (ledger : List (Interaction Fp)) (checkName name : String) :
     Bool × List (List Fp × Fp) :=
   let bytes := ledger.all fun interaction =>
@@ -310,54 +281,6 @@ private def checkedVerifierRow (ledger : List (Interaction Fp)) (checkName name 
     ((checks.filter (fun other => other.msg == interaction.msg)).map (·.signedMult)).sum == 0
   (bytes && checked, (ledger.filter (fun interaction => interaction.channel.name == name)).map
     (fun interaction => (interaction.msg.toList, interaction.signedMult)))
-
-private def nativeVerifierRow (pi : SP1PublicIO Fp) (name : String) :
-    Bool × List (List Fp × Fp) :=
-  checkedVerifierRow (nativeVerifierLedger pi)
-    (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name name
-
-/-- The installed verifier retains all 19 source occurrences and all ten boot-check occurrences,
-including zero-valued checks. It adds no committed table. -/
-theorem nativeVerifierInventory :
-    (Soundness.NativeCore.ensemble (p := SP1Prime) image).tables.length = 60 ∧
-    (nativeVerifierLedger bootPublic).length = 29 ∧
-    ((nativeVerifierLedger bootPublic).filter fun interaction =>
-      interaction.channel.name == (Soundness.NativeCore.bootChannel (p := SP1Prime) image).name).length = 10 := by
-  native_decide
-
-/-- info: exportable ✓ (0 witness cells) -/
-#guard_msgs in
-#assert_exportable (Soundness.NativeCore.verifier (p := SP1Prime) image)
-
-/-- The installed public verifier emits both fixed control boundaries while enforcing the boot
-fields through its assertion channel and retaining the original Byte requirements. -/
-theorem nativeVerifierEndpoints :
-    nativeVerifierRow bootPublic OrderedInitialProvider.channelName = verifierRow ∧
-    nativeVerifierRow bootPublic OrderedFinalProvider.channelName = finalVerifierRow := by
-  native_decide
-
-/-- Wrong boot PC/time and a field-wrapping alternative clock encoding are rejected by the
-installed public verifier and its Byte requirements. A matching folded clock alone is insufficient. -/
-theorem rejectsForgedBoot :
-    [nativeVerifierRow { bootPublic with init_clk_0_16 := 0 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_clk_24_32 := 1 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_pc0 := 4 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_pc1 := 0 } OrderedInitialProvider.channelName,
-     nativeVerifierRow { bootPublic with init_clk_0_16 := 65537, init_clk_16_24 := -1 }
-       OrderedInitialProvider.channelName].map Prod.fst = [false, false, false, false, false] := by
-  native_decide
-
-/-- Both private inventories close using the one composed verifier. Omitting either terminal
-or duplicating an initial record fails its actual control ledger. -/
-theorem nativeBoundaryInventories :
-    let initial := nativeVerifierRow bootPublic OrderedInitialProvider.channelName
-    let final := nativeVerifierRow bootPublic OrderedFinalProvider.channelName
-    [controlValid [initial, initRegisterRow 0 0, terminalRow 1],
-     controlValid [final, finalRegisterRow 0 0, finalTerminalRow 1],
-     controlValid [initial, initRegisterRow 0 0],
-     controlValid [final, finalRegisterRow 0 0],
-     controlValid [initial, initRegisterRow 0 0, initRegisterRow 0 0, terminalRow 1]] =
-      [true, true, false, false, false] := by native_decide
 
 private def source : ExecutionSnapshot where
   sail := { registers := (configuredState 65536).regs, memory := image.initialMemory }

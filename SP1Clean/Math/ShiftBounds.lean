@@ -1,7 +1,9 @@
-import SP1Clean.Math.Word
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.Ring
+module
+
+public import SP1Clean.Math.Word
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.NormNum
+public import Mathlib.Tactic.Ring
 
 /-! # Shared `.val`-bridge and bound lemmas for the shift within-byte proofs
 
@@ -11,6 +13,8 @@ the ~100 `nlinarith` call sites to `exact`/one-liners. This is the opaque-helper
 in `docs/agents/proof-patterns.md`.
 
 Every lemma is generic over byte-decomposition radices `M`, `N` with `M * N = 65536`. -/
+
+@[expose] public section
 
 namespace SP1Clean.ShiftBounds
 open SP1Clean

@@ -12,7 +12,7 @@ The fixture consumer is not the full HINT_READ handler or a mixed-AIR integratio
 
 namespace SP1CleanTest.Core.HintQueueWords
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue HostChecks
+open Circuit Air.Flat SP1Clean Semantics HintQueue HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

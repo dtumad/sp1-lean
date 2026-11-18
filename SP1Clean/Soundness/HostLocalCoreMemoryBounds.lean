@@ -11,7 +11,7 @@ these bounds to predecessors; no instruction-only Memory balance is asserted.
 
 namespace SP1Clean.Soundness.HostLocalCore
 
-open Circuit Air.Flat Channels Model.Core Semantics
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -1,7 +1,7 @@
 module
 
 public import SP1Clean.Circuits.Types.CPUState
-public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Channels.Channels
 public import Clean.Air.WitnessGeneration.Generation
 public import Clean.Circuit.WitnessIRSugar
 

@@ -1,11 +1,11 @@
-import SP1Clean.Model.Core.ResourceUsage
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.Model.Core.MemorySupport
+import SP1Clean.Semantics.Resources.ResourceUsage
+import SP1Clean.Semantics.Execution.ExecutionEncoding
+import SP1Clean.Semantics.Memory.MemorySupport
 
 /-! # Resource edges independent of witness construction -/
 
 namespace SP1CleanTest.Core.ResourceUsage
-open SP1Clean.Model.Core LeanRV64D
+open SP1Clean.Semantics LeanRV64D
 
 private def memory : ByteMemory := ⟨[(32, 7), (32, 9), (33, 0), (64, 8)]⟩
 

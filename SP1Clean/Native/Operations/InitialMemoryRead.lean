@@ -13,7 +13,7 @@ complete eight-byte footprint is the semantic completeness condition.
 
 namespace SP1Clean.InitialMemoryRead
 
-open Circuit SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

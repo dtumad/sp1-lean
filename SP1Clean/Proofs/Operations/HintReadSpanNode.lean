@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Operations.HintReadSpanPopulate
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Checked HINT_READ endpoints bound to the actual immutable node
 
@@ -10,7 +10,7 @@ The future handler must derive these bindings from the source/allocation and que
 
 namespace SP1Clean.HintReadSpan
 
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime]
 

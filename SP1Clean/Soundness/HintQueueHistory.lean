@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HintQueueEvent
+import SP1Clean.Semantics.Host.HintQueueEvent
 import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Soundness.Walk
 
@@ -12,7 +12,7 @@ allocating handlers must eventually supply the same local advance proof as obser
 
 namespace SP1Clean.Soundness.HintQueueHistory
 
-open Model.Core Model.Core.HintQueue HostHintQueue
+open Semantics Semantics.HintQueue HostHintQueue
 
 variable {p : ℕ} {Row : Type*}
 

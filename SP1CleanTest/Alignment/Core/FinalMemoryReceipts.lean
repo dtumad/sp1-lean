@@ -3,7 +3,7 @@ import SP1CleanTest.Core.StaticMembership
 import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Native.Operations.FinalRegisterValue
 import SP1Clean.Native.Operations.FinalRamValue
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Physical finalizer receipt installation
 
@@ -15,7 +15,7 @@ belong to the enclosing machine.
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryReceipts
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 
 private abbrev Fp := ZMod SP1Prime
 

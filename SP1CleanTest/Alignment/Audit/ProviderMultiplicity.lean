@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Completeness.Providers
 import SP1Clean.Proofs.Completeness.Ledger
-import SP1Clean.Model.BalanceBridge
+import SP1Clean.Machine.Ledger.BalanceBridge
 import ToClean.Air.TableEvaluation
 import SP1CleanTest.TraceGenTests.Conformance
 

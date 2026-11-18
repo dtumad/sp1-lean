@@ -12,7 +12,7 @@ ledger split preserves padding and the original characteristic count bound.
 
 namespace SP1Clean.Soundness.HostLocalCore
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
@@ -42,7 +42,7 @@ private theorem prefix_length (witness : EnsembleWitness (ensemble image source 
   omega
 
 private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
-    (channel : RawChannel (ZMod p)) (fresh : channel ∉ (LocalCore.ensemble (p := p) image source).channels)
+    (channel : RawChannel (ZMod p)) (fresh : channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels)
     (permission : channel ≠ WritePermissionProvider.channel.toRaw)
     (notMembership : channel ≠ image.writePermissionTable.channel.toRaw)
     (index : Fin 63) (notWrapper : index.val ≠ 58) :
@@ -63,12 +63,12 @@ private theorem prefixTable_silent (witness : EnsembleWitness (ensemble image so
   rcases support with same | same | core
   · exact permission same
   · exact notMembership same
-  · exact fresh (List.mem_append_left _ core)
+  · exact fresh core
 
 /-- A fresh protocol's complete ledger comes only from the installed wrapper and actual auxiliaries. -/
 theorem interactions_split_new (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (channel : RawChannel (ZMod p)) (registered : channel ∈ (baseEnsemble image source auxiliary channels names channelNames tableChannels).channels)
-    (fresh : channel ∉ (LocalCore.ensemble (p := p) image source).channels)
+    (fresh : channel ∉ (LocalCore.baseEnsemble (p := p) image source).channels)
     (permission : channel ≠ WritePermissionProvider.channel.toRaw)
     (notMembership : channel ≠ image.writePermissionTable.channel.toRaw) :
     witness.interactionsWith channel = (hostCallTable witness).interactionsWith channel ++
@@ -78,8 +78,7 @@ theorem interactions_split_new (witness : EnsembleWitness (ensemble image source
       (baseEnsemble image source auxiliary channels names channelNames tableChannels)).verifierOperations.interactionValuesWith
         channel witness.data.publicEnvironment = []
     rw [PublicVerifier.install_verifier_interactions_of_mem _ _ _ _ registered]
-    exact LocalCore.boundaryVerifier_silent image source channel
-      (fun member => fresh (List.mem_append_left _ member)) _
+    exact LocalCore.boundaryVerifier_silent image source channel fresh _
   simp only [EnsembleWitness.interactionsWith, verifierSilent, List.nil_append,
     EnsembleWitness.toTables, Tables.interactionsWith]
   have split := List.take_append_drop 63 witness.tables
@@ -108,22 +107,10 @@ theorem interactions_split_new (witness : EnsembleWitness (ensemble image source
     ↓reduceIte, List.flatten_cons, List.flatten_nil, List.nil_append, List.append_nil]
 
 /-- HostCall is a fresh private channel of the native extension. -/
-theorem hostCall_fresh : HostCallChip.channel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels := by
-  intro member
-  change HostCallChip.channel.toRaw ∈ (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at member
-  rcases List.mem_append.mp member with member | member
-  · have used := List.mem_map_of_mem (f := RawChannel.name) member
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, HostCallChip.channel,
-      stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-      publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable,
-      StaticTable.ofRows, Channel.toRaw] at used
-  · have same := (List.mem_singleton.mp member).symm
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    simp [LocalSourceBoundary.checker, HostCallChip.channel] at heads
+theorem hostCall_fresh :
+    HostCallChip.channel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels :=
+  LocalCore.not_mem_baseEnsemble_channels (by
+    simp [LocalCore.baseChannelNames, HostCallChip.channel, Channel.toRaw])
 
 /-- The whole HostCall ledger, including the unique physical producer position. -/
 theorem hostCall_interactions (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels)) :

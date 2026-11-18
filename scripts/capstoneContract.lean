@@ -15,7 +15,7 @@ Run through `scripts/check_capstone_contract.py`, which builds the dependency fi
 completion and diagnostics, and diffs the manifest. No main-library declaration is introduced.
 -/
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Machine SP1Clean.FormalModel.Shard
+open SP1Clean SP1Clean.Semantics SP1Clean.Machine SP1Clean.FormalModel.Shard
   SP1Clean.Soundness.Shard Air.Flat
 
 section Contract

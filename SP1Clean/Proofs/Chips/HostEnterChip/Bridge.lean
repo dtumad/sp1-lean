@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # ENTER_UNCONSTRAINED is a zero-effect constrained-replay step
 
@@ -10,7 +10,7 @@ dispatch this call. Unconstrained execution is deliberately outside this native 
 
 namespace SP1Clean.HostEnterChip
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

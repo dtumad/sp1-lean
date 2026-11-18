@@ -18,7 +18,7 @@ snapshot. Each commitment call of the path also requests its declaration in the 
 
 namespace SP1Clean.Soundness.HostFinalMemory
 
-open Circuit Air.Flat Channels Model.Core Semantics
+open Circuit Air.Flat Channels Semantics
 open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

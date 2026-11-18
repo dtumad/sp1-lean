@@ -12,7 +12,7 @@ these tests do not claim that a host call has selected the complete buffer footp
 
 namespace SP1CleanTest.Core.HostRamBytes
 
-open Circuit SP1Clean SP1Clean.Model.Core HostChecks
+open Circuit SP1Clean SP1Clean.Semantics HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

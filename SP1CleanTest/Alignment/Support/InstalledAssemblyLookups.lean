@@ -6,7 +6,7 @@ import ToClean.Air.EnsembleCheck
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Channels
 
 /-- All installed providers use AIR constraints and channels; no legacy lookup oracle remains. -/
 def fixed (_context : Context) : List (FiniteLookup Fp) := []

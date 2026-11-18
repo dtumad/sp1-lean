@@ -1,6 +1,6 @@
 import SP1CleanTest.Alignment.Audit.OneAddNativePremises
 import SP1Clean.Soundness.ProtectedLocalCore
-import SP1Clean.Model.Core.SyscallEncoding
+import SP1Clean.Semantics.ISA.SyscallEncoding
 import ToClean.Air.FiniteLookup
 import SP1CleanTest.Core.StaticMembership
 
@@ -12,7 +12,7 @@ fixed lookups, and interaction messages come from the actual component programs.
 
 namespace SP1CleanTest.Core.LocalCore.Fixture
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Soundness.Target
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Soundness.Target
 
 abbrev Fp := ZMod SP1Prime
 abbrev Row := ℕ × List Fp

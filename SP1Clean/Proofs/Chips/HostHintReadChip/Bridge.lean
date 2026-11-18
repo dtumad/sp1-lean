@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostHintReadChip.Formal
 import SP1Clean.Proofs.Operations.HintReadSpanNode
-import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # HINT_READ reaches the concrete host interpreter
 
@@ -12,7 +12,7 @@ part of the host execution statement.
 
 namespace SP1Clean.HostHintReadChip
 
-open Model.Core Model.Core.HintQueue Soundness.Target
+open Semantics Semantics.HintQueue Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

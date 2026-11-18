@@ -1,7 +1,7 @@
 import SP1Clean.Native.Operations.CommitmentStatement
 import SP1Clean.Native.Operations.CommitmentBoundary
 import SP1Clean.Proofs.Operations.CommitmentStatement
-import SP1Clean.Model.Core.BankReplay
+import SP1Clean.Semantics.Host.BankReplay
 import ToClean.Air.Authentication
 import ToClean.Air.EnsembleProjection
 import ToClean.Air.LookupFree
@@ -23,7 +23,7 @@ declared execution agrees with the immutable statement (`Declared.agrees`).
 
 namespace SP1Clean.Soundness.CommitmentEnsemble
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

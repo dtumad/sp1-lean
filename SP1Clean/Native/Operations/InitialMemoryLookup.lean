@@ -12,7 +12,7 @@ only the semantic address bound; callers supply no interval or comparison column
 
 namespace SP1Clean.InitialMemoryLookup
 
-open Circuit SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

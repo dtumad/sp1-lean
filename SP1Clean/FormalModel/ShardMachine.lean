@@ -3,7 +3,7 @@ import SP1Clean.FormalModel.Shard
 /-! # The SP1 shard as a PolyFun labeled machine
 
 `sp1Machine` bundles the existing PolyFun view of an image's complete-state execution step
-(`executionSystem`/`executionEventMap`, `Model/Core/ExecutionPath.lean`) as a
+(`executionSystem`/`executionEventMap`, `Semantics/Execution/ExecutionPath.lean`) as a
 `PFunctor.DynSystem.Labeled` machine over the image's committed program. Its traces are the existing
 `ExecutionPath` (`trace_iff_executionPath`, from the orbit correspondence proved beside the system),
 so the generic realization statement applies to the shard contract with no new execution carrier:
@@ -13,7 +13,7 @@ An invalid image commits no instruction, so its machine has no step.
 
 namespace SP1Clean.FormalModel.Shard
 
-open Model.Core Machine PFunctor PFunctor.DynSystem
+open Semantics Machine PFunctor PFunctor.DynSystem
 
 /-- The full-state SP1 step relation of an image's committed program as a labeled machine. -/
 def sp1Machine (characteristic : ℕ) (image : ProgramImage) :

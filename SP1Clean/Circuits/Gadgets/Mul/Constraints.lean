@@ -3,7 +3,7 @@ module
 public import SP1Clean.Circuits.Gadgets.Mul.Arithmetic
 public import SP1Clean.Circuits.Gadgets.U16toU8Safe
 public import SP1Clean.Circuits.Gadgets.U16MSB
-public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Channels.Channels
 public import Clean.Circuit.Subcircuit
 
 /-! # Multiplication constraints

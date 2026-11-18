@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostEnterChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # Control-handler rows from successful host execution
 
@@ -12,7 +12,7 @@ The enclosing event compiler must still match this handoff to its instruction ro
 
 namespace SP1Clean.HostControl
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

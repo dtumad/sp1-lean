@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.RowView
-import SP1Clean.Model.Semantics.GuestProgram
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.SailPlatform
+import SP1Clean.Semantics.Sail.GuestProgram
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Semantics.Sail.SailPlatform
 
 /-! # The refinement invariant and per-row effect (`RowView`-level, below `ChipRow`)
 
@@ -12,7 +12,7 @@ timed-grounding engine state their obligations against them.
 `RefinesAt`/`RowEffect`/`replayVal`/`rcvPcOf`/`sndPcOf` are all stated over the chip-agnostic
 `Trace.RowView` (never `ChipRow`), so a `ChipKind.advance` field can reference `RowEffect`/`SailStep`
 without an import cycle through the registry. `SailStep`/`RomLoaded`/`SailConfigured` already live in
-`Model/`. (Their frozen Eulerian-walk consumers — `WalkOf`/`TargetObligations` in the former
+`Semantics/`. (Their frozen Eulerian-walk consumers — `WalkOf`/`TargetObligations` in the former
 `TargetVm.lean` — were retired 2026-08 with the rest of the legacy path; the live consumers are the
 grounding contracts, `Soundness/GroundingAdapter.lean` / `Soundness/ChipContracts.lean`.) Namespace
 `SP1Clean.Soundness.Target` is unchanged (decoupled from path), so every `RefinesAt`/`RowEffect`/

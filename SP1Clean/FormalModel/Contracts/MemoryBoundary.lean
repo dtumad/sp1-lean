@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.Boot
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Execution.Boot
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # Native memory-boundary records
 
@@ -11,7 +11,7 @@ their last-access meaning and both inventories' uniqueness are global balance ar
 
 namespace SP1Clean.MemoryBoundary
 
-open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

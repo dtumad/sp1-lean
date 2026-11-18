@@ -4,7 +4,7 @@ import SP1Clean.Native.Readers.RegisterAccessCols
 import SP1Clean.Circuits.Gadgets.IsZero
 import SP1Clean.Circuits.Gadgets.U16Compare
 import SP1Clean.Circuits.Gadgets.U16toU8Safe
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel

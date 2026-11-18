@@ -1,11 +1,11 @@
-import SP1Clean.Model.Opcode
-import SP1Clean.Model.SailDecode
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Machine.ConfiguredState
+import SP1Clean.Semantics.ISA.Opcode
+import SP1Clean.Semantics.Sail.SailDecode
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Semantics.Execution.ConfiguredState
 
 /-! # Decode-witness substrate: the ∀s → ∃I∀s hoists and the concrete-program shapes
 
-Evidence layer for the Program-channel decode facts (`decodedInROM`, `Model/Semantics/Decode.lean`):
+Evidence layer for the Program-channel decode facts (`decodedInROM`, `Semantics/ISA/Decode.lean`):
 
 * `decodedInROMg` is the weak ∀s form over the *guarded* projection — what a decode step naturally
   yields; the per-family hoist lemmas (`decodedInROM_<family>_hoist`, one per supported
@@ -17,7 +17,7 @@ Evidence layer for the Program-channel decode facts (`decodedInROM`, `Model/Sema
   (`Soundness/GroundingAdapter.lean`).
 * `addProgram`/`addRow` and the per-family `<fam>Program`/`<fam>Row` shapes exhibit the concrete
   one-instruction programs, and `decodedInROM_<fam>Row` proves the end-to-end `decodedInROM` fact
-  for each of the 18 supported families on the `Model/SailDecode.lean` decode witnesses (the
+  for each of the 18 supported families on the `Semantics/Sail/SailDecode.lean` decode witnesses (the
   original ADD witness was retired in the 4.32.2 / Sail-v5 migration and restored 2026-08 with
   the `whnf`-cascade recipe).
 
@@ -44,7 +44,7 @@ to — the worked template for the per-family end-to-end examples at the end of 
 original end-to-end proof (`decodedInROM_addRow`, composing `SailDecode.decode_ADD_example` — the
 old arm-by-arm `ext_decode` reduction — with `instrToProgramRow_rtype`) was removed in the 4.32.2 /
 Sail-v5 migration; it was **restored 2026-08** on the `whnf`-cascade decode recipe
-(`Model/SailDecode.lean`), and the retirement is over: the per-family examples below
+(`Semantics/Sail/SailDecode.lean`), and the retirement is over: the per-family examples below
 (`decodedInROM_<fam>Row`, all 18 supported instruction families) now discharge the concrete
 `decodedInROM` shape family by family. `addProgram`/`addRow` are consumed by
 `decodedInROM_addRow`. -/
@@ -138,7 +138,7 @@ private theorem setWidth64_inj {n : ℕ} (hn : n ≤ 64) {a b : BitVec n}
 /-! ## Per-family end-to-end examples — the concrete `decodedInROM` discharges
 
 One one-instruction guest program + committed Program-bus row + `decodedInROM` proof per supported
-instruction family — the 18 decode witnesses of `Model/SailDecode.lean`, each carried to the full
+instruction family — the 18 decode witnesses of `Semantics/Sail/SailDecode.lean`, each carried to the full
 Program-channel fact. Every proof is the same three-step shape: the ROM fetch reduces at the
 concrete singleton rom (`pcBitsOfRow_x10000` keys it at `0x10000`), the ∀-configured-state decode
 is the per-family `SailDecode.decode_<X>` witness instantiated from the `SailConfigured` bundle

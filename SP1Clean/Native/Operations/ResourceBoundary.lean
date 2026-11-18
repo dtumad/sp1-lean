@@ -10,7 +10,7 @@ with six interactions on a fresh channel, preserving every existing channel ledg
 -/
 
 namespace SP1Clean.ResourceBoundary
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.MemoryFinalCheck
+import SP1Clean.Semantics.Memory.MemoryFinalCheck
 
 /-! # Complete finite Memory endpoint checks
 
@@ -8,7 +8,7 @@ equivalent sparse histories while rejecting both forged final values and unrecor
 
 namespace SP1CleanTest.Core.MemoryFinalCheck
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics
+open SP1Clean SP1Clean.Semantics
 
 private def source : MemorySnapshot where
   registers := (Vector.replicate 32 0).set 1 17 |>.set 2 23

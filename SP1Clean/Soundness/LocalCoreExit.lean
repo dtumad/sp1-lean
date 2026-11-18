@@ -12,7 +12,7 @@ padding row still emits zero, so this value alone does not authenticate terminal
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat Channels Model.Core NativeCore
+open Circuit Air.Flat Channels Semantics NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 local instance exitLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 24 < p); omega⟩

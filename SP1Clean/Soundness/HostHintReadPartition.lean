@@ -15,7 +15,7 @@ the committed tables; no new physical table or recomputed witness data is introd
 namespace SP1Clean.Soundness.HostHintReadPartition
 
 open Circuit Air.Flat HostHintReadCoverage
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -2,7 +2,7 @@ import ToClean.Circuit.ComputableWitnesses
 import ToClean.Circuit.WitgenEval
 import SP1Clean.Math.Word
 import ToMathlib.General
-import SP1Clean.Model.ByteTable
+import SP1Clean.Circuits.Channels.ByteTable
 import SP1Clean.Math.ShiftBounds
 import SP1Clean.Circuits.Gadgets.U16MSB
 

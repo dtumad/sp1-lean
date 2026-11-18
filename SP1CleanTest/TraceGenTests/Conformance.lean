@@ -1,5 +1,5 @@
 import SP1Clean.Math.Word
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Shared scaffolding for the circuit-as-trace-generator layer (`TraceGenTests/`).
 

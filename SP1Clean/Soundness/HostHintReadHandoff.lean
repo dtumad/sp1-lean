@@ -108,7 +108,7 @@ private theorem callClock_nodup_of_receiver (table : Table (ZMod p)) (data : Pro
 /-- Registration and the actual CPU/HostCall evidence fix the physical handler clocks.
 No Byte balance is required of this proof view. -/
 theorem handler_clocks_nodup_of_registered_channels
-    {image : Model.Core.ProgramImage} {source : Model.Core.ExecutionSnapshot}
+    {image : Semantics.ProgramImage} {source : Semantics.ExecutionSnapshot}
     {receivers : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
     {channels : List (RawChannel (ZMod p))}
     {names : ((HostLocalCore.tables image source (receivers.map (·.component) ++ resources)).map (·.circuit.name)).Nodup}

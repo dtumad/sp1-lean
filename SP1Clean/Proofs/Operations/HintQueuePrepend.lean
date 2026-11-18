@@ -10,7 +10,7 @@ one capacity bound. Matching these rows to the host call and its bytes remains A
 
 namespace SP1Clean.HintNodeAllocate
 
-open Circuit Model.Core Model.Core.HintQueue
+open Circuit Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

@@ -5,7 +5,7 @@ import SP1Clean.FormalModel.Contracts.FinalRamValue
 
 namespace SP1Clean.FinalRamCheck
 
-open Circuit Model.Core
+open Circuit Semantics
 
 /-- The existing complete target read and its coverage selector. -/
 structure Inputs (F : Type) where

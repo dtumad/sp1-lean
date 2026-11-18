@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.CommitmentStatement
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Execution.CommitmentStatement
+import SP1Clean.Semantics.Host.HostExecution
+import SP1Clean.Math.SP1Field
 
 /-! # Declaration consistency is distinct from execution and coverage
 
@@ -10,7 +10,7 @@ partial coverage, flags and conflicting writes that the operational host still e
 
 namespace SP1CleanTest.Core.CommitmentStatement
 
-open SP1Clean.Model.Core SP1Clean.Machine
+open SP1Clean.Semantics SP1Clean.Machine
 
 private def statement : CommitmentStatement :=
   ⟨Vector.replicate 8 7, Vector.replicate 8 9, true, true⟩

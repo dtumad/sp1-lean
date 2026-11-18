@@ -11,7 +11,7 @@ outgoing registers and RAM, whose commitment declarations agree with the context
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
-open Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 
 /-- **The exported native assembly proves a Sail trace.** -/
 theorem trace_of_statement (context : Context) (valid : context.image.Valid) {header : SP1PublicIO Fp}

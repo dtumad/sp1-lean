@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Shard
-import SP1Clean.Model.Core.ExecutionFrame
-import SP1Clean.Model.Core.ExecutionMemory
+import SP1Clean.Semantics.Execution.ExecutionFrame
+import SP1Clean.Semantics.Execution.ExecutionMemory
 
 /-! # ROM preservation and official fetch for the shard's semantic domain
 
@@ -11,7 +11,7 @@ ROM, and an empty identity, including a stopped one, needs no fetch.
 -/
 
 namespace SP1Clean.FormalModel.Shard.Executes
-open Model.Core Machine Soundness.Target LeanRV64D LeanRV64D.Functions
+open Semantics Machine Soundness.Target LeanRV64D LeanRV64D.Functions
 
 variable {characteristic : ℕ} {image : ProgramImage}
   {source target : ExecutionSnapshot} {events : List ExecutionEvent}

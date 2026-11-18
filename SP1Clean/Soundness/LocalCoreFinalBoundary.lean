@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.LocalCoreBoundaries
-import SP1Clean.Soundness.NativeCoreFinalBoundary
+import SP1Clean.Soundness.CoreTables
 
 /-! # Structural finalization from the local-shard AIR
 
@@ -11,7 +11,7 @@ These are the boundary facts needed before timed Memory grounding can establish 
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

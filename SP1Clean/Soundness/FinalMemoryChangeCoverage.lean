@@ -12,7 +12,7 @@ The assembly must derive these inventories and local facts from its physical tab
 
 namespace SP1Clean.Soundness.FinalMemoryChangeCoverage
 
-open Model.Core Channels Semantics FinalMemoryChange
+open Semantics Channels FinalMemoryChange
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

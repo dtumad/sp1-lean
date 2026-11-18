@@ -12,7 +12,7 @@ Replay success remains the induction hypothesis, not an assumed success of the c
 
 namespace SP1Clean.Soundness.HostQueueCPUReplay
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueOrder HostQueueCPUOrder
+open Circuit Air.Flat Semantics HostHintReadLocal HostQueueOrder HostQueueCPUOrder
 open NativeCore Semantics HostQueueCallProjection
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

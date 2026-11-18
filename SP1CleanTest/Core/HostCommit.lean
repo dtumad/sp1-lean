@@ -4,7 +4,7 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostCommitChip.Bridge
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Executed mutable commitment regressions
 
@@ -15,7 +15,7 @@ endpoints are explicit test fixtures; global endpoint authentication remains an 
 
 namespace SP1CleanTest.Core.HostCommit
 
-open Circuit Air.Flat SP1Clean SP1Clean.HostCommitChip SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.HostCommitChip SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 open HostChecks

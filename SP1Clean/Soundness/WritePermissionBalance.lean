@@ -12,7 +12,7 @@ exhaustive source classification and from the store's byte-footprint proof.
 
 namespace SP1Clean.Soundness.WritePermission
 
-open Circuit Air.Flat SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

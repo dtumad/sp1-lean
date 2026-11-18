@@ -1,16 +1,16 @@
-import SP1Clean.Model.Core.ExecutionFrame
+import SP1Clean.Semantics.Execution.ExecutionFrame
 
 /-! # Architectural preservation by concrete host execution
 
 The native host interpreter writes PC/x5 and its explicit byte effect. All other integer registers
 and the Sail configuration survive, and the checked memory policy protects every program byte.
-These compatibility statements consume the circuit-independent proofs in `Model/Core/ExecutionFrame`,
+These compatibility statements consume the circuit-independent proofs in `Semantics/Execution/ExecutionFrame`,
 which also prove preservation for whole mixed paths.
 -/
 
 namespace SP1Clean.Soundness
 
-open Model.Core Target LeanRV64D
+open Semantics Target LeanRV64D
 
 /-- Concrete syscall execution authenticates architectural observations and preserves all other
 registers, configuration, and protected bytes. The RAM write itself remains in the semantic step. -/

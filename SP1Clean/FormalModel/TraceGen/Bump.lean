@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.TraceGen.Readers
 import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.Model.Semantics.AccessSchedule
+import SP1Clean.Semantics.Transition.AccessSchedule
 
 /-!
 # Trace generation — the two system-table bump rows

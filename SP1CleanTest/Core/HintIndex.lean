@@ -1,6 +1,6 @@
 import ToClean.Air.HintIndex
 import SP1Clean.Proofs.Chips.HintReadWordChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1Clean.Proofs.Chips.HaltChip.Formal
 import Clean.Air.WitnessGeneration
 

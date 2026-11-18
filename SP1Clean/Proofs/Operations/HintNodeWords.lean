@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Operations.HintNodeAllocatePopulate
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Allocated word contents share the checked fresh node identity
 
@@ -11,7 +11,7 @@ authorization for arbitrary witness bytes or a replacement for the host's byte-s
 
 namespace SP1Clean.HintNodeAllocate
 
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

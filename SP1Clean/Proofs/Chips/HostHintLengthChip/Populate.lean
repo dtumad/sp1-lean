@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Formal
-import SP1Clean.Model.Core.HostQueue
+import SP1Clean.Semantics.Host.HostQueue
 import SP1Clean.Proofs.Operations.HintQueueCursor
 import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Operations.ClockOrderPopulate
@@ -13,7 +13,7 @@ Successful dispatch supplies the return; only the explicit pointer and strictly 
 
 namespace SP1Clean.HostHintLengthChip
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

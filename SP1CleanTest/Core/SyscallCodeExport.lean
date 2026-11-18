@@ -34,7 +34,7 @@ def rustExports : List (String × Except String String) :=
 
 /-- Cross-language row references include real calls, rejected values and unrestricted padding. -/
 def cases : List (String × SyscallCodeGuard.Inputs Fp × Bool) :=
-  (Model.Core.SyscallKind.all.map fun kind =>
+  (Semantics.SyscallKind.all.map fun kind =>
     (toString kind.code.toNat, ⟨kind.encode, 1⟩, true)) ++
   [("padding", ⟨#v[65536, 91, 123, 90000], 0⟩, true),
    ("unsupported", ⟨#v[4, 0, 0, 0], 1⟩, false),

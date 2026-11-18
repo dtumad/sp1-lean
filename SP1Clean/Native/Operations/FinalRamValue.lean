@@ -12,7 +12,7 @@ The fixed target table has a distinct export name from the incoming memory table
 
 namespace SP1Clean.FinalRamValue
 
-open Circuit Model.Core Channels Semantics
+open Circuit Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

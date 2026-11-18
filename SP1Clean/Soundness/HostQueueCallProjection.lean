@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HostQueueCPUOrder
 import SP1Clean.Soundness.HostCommitBank
-import SP1Clean.Model.Core.QueueReplay
+import SP1Clean.Semantics.Host.QueueReplay
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
 
@@ -13,7 +13,7 @@ the semantic queue actions, including the natural read length rather than its mo
 
 namespace SP1Clean.Soundness.HostQueueCallProjection
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueOrder HostQueueCPUOrder Semantics
+open Circuit Air.Flat Semantics HostHintReadLocal HostQueueOrder HostQueueCPUOrder
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

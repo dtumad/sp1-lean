@@ -8,7 +8,7 @@ combined numeric budget: two individually legal shards need not fit one shard's 
 -/
 
 namespace SP1Clean.FormalModel.Shard
-open Model.Core Machine
+open Semantics Machine
 
 variable {limits larger : ResourceLimits} {characteristic : ℕ} {image : ProgramImage}
   {source left right target : ExecutionSnapshot} {events first second : List ExecutionEvent}

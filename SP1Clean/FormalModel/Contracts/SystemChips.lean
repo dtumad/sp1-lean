@@ -138,7 +138,7 @@ namespace HaltChip
 halting shard. One real row per halting shard:
 
 - its `CPUState` block pulls the pre-syscall state `(clk, pc)` and pushes the halted state
-  `(clk + 264, pc = 1)` — SP1's syscall row duration and `HALT_PC` (`Model/Machine/Syscall.lean`'s
+  `(clk + 264, pc = 1)` — SP1's syscall row duration and `HALT_PC` (`Semantics/Execution/Syscall.lean`'s
   `haltPc`);
 - it pulls the committed instruction at `pc` from the Program bus and pins it to the ECALL shape
   (`opcode = Opcode.ECALL.toNat = 50`, operands `x5/x10/x11`, no immediates) — proving the halt

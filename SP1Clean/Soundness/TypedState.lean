@@ -2,7 +2,7 @@ import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.BumpDecode
 import SP1Clean.Soundness.RankedGrounding
 import SP1Clean.Soundness.TypedSelectors
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # Typed State transitions emitted by instruction rows
 

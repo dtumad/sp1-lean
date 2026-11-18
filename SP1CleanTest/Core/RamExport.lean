@@ -13,7 +13,7 @@ interactions; Rust checks those separately. They do not establish full-ensemble 
 
 namespace SP1CleanTest.Core.RamExport
 
-open Air.Flat Circuit SP1Clean SP1Clean.Model.Core
+open Air.Flat Circuit SP1Clean SP1Clean.Semantics
 
 abbrev Fp := ZMod SP1Prime
 abbrev Requests := ProvableVector MemoryIntervalRow 2

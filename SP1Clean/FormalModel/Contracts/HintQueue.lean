@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HintQueueRecords
+import SP1Clean.Semantics.Host.HintQueueRecords
 import SP1Clean.FormalModel.Contracts.HostCall
 import SP1Clean.FormalModel.Contracts.ClockOrder
 
@@ -12,7 +12,7 @@ advancing its private queue clock. Its two component variants hide empty/nonempt
 
 namespace SP1Clean.HostHintQueue
 
-open Circuit SP1Clean.Model.Core.HintQueue
+open Circuit SP1Clean.Semantics.HintQueue
 
 structure State (F : Type) where
   clk_high : F
@@ -24,7 +24,7 @@ provable_struct_eval_lemmas State
 
 /-- Allocation identities are fresh relative to the entire persistent store, including popped nodes. -/
 def State.Binds {p : ℕ} (state : State (ZMod p)) (store : Store)
-    (hints : List SP1Clean.Model.Core.Bytes) : Prop :=
+    (hints : List SP1Clean.Semantics.Bytes) : Prop :=
   Address.Bounded state.head ∧ Address.Bounded state.allocated ∧
     Address.toNat state.allocated = store.size ∧ Represents store (Address.toNat state.head) hints
 
@@ -43,7 +43,7 @@ end SP1Clean.HostHintQueue
 
 namespace SP1Clean.HostHintLengthChip
 
-open SP1Clean.Model.Core SP1Clean.Soundness.Target
+open SP1Clean.Semantics SP1Clean.Soundness.Target
 
 structure Inputs (F : Type) where
   call : HostCallChip.Message F

@@ -2,7 +2,7 @@ import SP1Clean.Circuits.Gadgets.Mul
 import SP1Clean.Circuits.Gadgets.DivRem.Assertions
 import SP1Clean.Native.Operations.DivRemOperation.AssertZeros
 import SP1Clean.Circuits.Types.DivRem
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel

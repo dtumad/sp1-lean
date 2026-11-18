@@ -1,6 +1,8 @@
-import Clean.Circuit.Basic
-import Clean.Utils.Field
-import Mathlib.Tactic.LinearCombination
+module
+
+public import Clean.Circuit.Basic
+public import Clean.Utils.Field
+public import Mathlib.Tactic.LinearCombination
 
 /-! # Minimal half-word (32-bit) foundation
 
@@ -11,6 +13,8 @@ small case/bound helper lemmas. The 32→64
 sign-extension fill is **not** re-derived here — the SLLW assembly reuses
 `Word.toBitVec64_signExtend_word` (`Math/Word.lean`) on the four-limb output word
 directly. -/
+
+@[expose] public section
 
 namespace SP1Clean
 

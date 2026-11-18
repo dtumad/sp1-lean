@@ -1,5 +1,5 @@
 import Clean.Air.WitnessGeneration.Generation
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -15,7 +15,7 @@ SP1's program chip is a **preprocessed** ROM over the committed program: it `rec
 instruction fetch — on the Program bus those receives are *pushes* of validly-decoded rows, balanced
 against the CPU readers' pulls (the W11 polarity flip). Clean has no "trusted preprocessed table"
 primitive for channels, so a finished-`programChannel` **provider must re-prove each pushed row valid
-in-circuit** — the `ProgramMsg.RowSpec` membership predicate (`Model/Channels.lean`): the write-register
+in-circuit** — the `ProgramMsg.RowSpec` membership predicate (`Circuits/Channels/Channels.lean`): the write-register
 index `op_a < 32` (5-bit), the pc limbs `< 2^16` (16-bit), and `op_a_0` boolean.
 
 This module is the in-circuit provider's push side: a single Clean `GeneralFormalCircuit` whose `main`

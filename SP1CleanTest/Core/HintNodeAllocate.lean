@@ -12,7 +12,7 @@ between a checked header and authenticated bytes; host-call and byte-source inte
 
 namespace SP1CleanTest.Core.HintNodeAllocate
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core HostChecks
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

@@ -1,4 +1,4 @@
-import SP1Clean.Model.FinalMemoryChange
+import SP1Clean.Circuits.Channels.FinalMemoryChange
 import ToClean.Air.VerifierExtension
 
 /-! # Verifier-owned demand for every changed Memory location
@@ -9,7 +9,7 @@ The closed verifier adapter invokes it exactly once. No witness chooses its keys
 
 namespace SP1Clean.FinalMemoryChangeBoundary
 
-open Circuit Air.Flat Model.Core FinalMemoryChange
+open Circuit Air.Flat Semantics FinalMemoryChange
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime]

@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Model.Core.NativeLayout
+import SP1Clean.Semantics.Memory.NativeLayout
 
 /-! # RAM-specific finalization
 
@@ -10,7 +10,7 @@ RAM observation in the existing complete snapshot. Values and clocks remain glob
 
 namespace SP1Clean.MemoryBoundary
 
-open Model.Core Channels Semantics
+open Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

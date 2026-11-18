@@ -1,5 +1,5 @@
 import SP1CleanTest.Alignment.Support.InstalledAssembly
-import SP1Clean.Model.Semantics.AccessSchedule
+import SP1Clean.Semantics.Transition.AccessSchedule
 
 /-! # Shared finite memory-boundary inputs
 
@@ -10,7 +10,7 @@ only constructs consumer inputs; Clean owns all witness generation and provider 
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Semantics
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 
 /-- Close every touched register/RAM location, in address order, with target receipt checks. -/
 def memorySeeds (context : Context) (frontier : AccessFrontier) (touched : List MemLoc) :

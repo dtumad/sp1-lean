@@ -12,7 +12,7 @@ there are no calls. No equation identifies an incomplete mutable bank with a ful
 
 namespace SP1Clean.CommitmentBoundary
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

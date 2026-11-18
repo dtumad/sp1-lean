@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
-import SP1Clean.Model.Core.MemoryWord
-import SP1Clean.Model.Core.Boot
+import SP1Clean.Semantics.Memory.MemoryWord
+import SP1Clean.Semantics.Execution.Boot
 
 /-! # The native initial-memory word-read contract
 
@@ -10,7 +10,7 @@ The complete eight-byte footprint is bounded; byte-row witnesses belong to the c
 
 namespace SP1Clean.InitialMemoryRead
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

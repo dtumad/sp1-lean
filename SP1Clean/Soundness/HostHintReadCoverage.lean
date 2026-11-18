@@ -12,7 +12,7 @@ still derive these record bindings, local specifications, and each call's projec
 
 namespace SP1Clean.Soundness.HostHintReadCoverage
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

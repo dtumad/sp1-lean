@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.FinishedChannels
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1CleanTest.Core.StaticMembership
 
 /-! # Complete outgoing Memory assembly regression
@@ -13,7 +13,7 @@ an execution from the source snapshot. Mixed execution grounding authenticates t
 
 namespace SP1CleanTest.Alignment.Core.FinalMemoryChecks
 
-open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 private abbrev Row := ℕ × List Fp

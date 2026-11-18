@@ -1,4 +1,4 @@
-import SP1Clean.Soundness.NativeCoreFinalBoundary
+import SP1Clean.Soundness.CoreTables
 import SP1Clean.Soundness.TypedProgram
 
 /-! # Shared Program authentication for native core assemblies
@@ -10,7 +10,7 @@ active fetch, independently of table order and of State/Memory grounding.
 
 namespace SP1Clean.Soundness.NativeCore
 
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

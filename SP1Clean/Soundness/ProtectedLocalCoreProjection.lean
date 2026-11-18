@@ -2,18 +2,17 @@ import SP1Clean.Soundness.ProtectedLocalCore
 import SP1Clean.Soundness.LocalCoreLookups
 import ToClean.Air.ComponentReplacement
 
-/-! # The protected local AIR retains the original execution witness
+/-! # Component layout of the protected local tables
 
-The first 61 physical tables are reinterpreted by their original components; the permission request
-and fixed membership tables are omitted. Assertions, lookups, public input, and every original channel's complete
-interaction list are preserved. Fixed lookup predicates survive changes to canonical data.
-Thus all previously proved local ordering and grounding results apply to this projection without
-additional validity or balance premises.
+The first 61 protected tables are the local core's components, with the four store chips replaced
+by their permission wrappers; the permission request and fixed membership tables follow. The host
+assembly reads its original components through `component_projection`/`component_layout`, and the
+two permission channels are fresh for every local-core channel.
 -/
 
 namespace SP1Clean.Soundness.ProtectedLocalCore
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
@@ -83,130 +82,17 @@ theorem component_layout (image : ProgramImage) (source : ExecutionSnapshot) (in
   · subst index; exact ⟨ProtectedStore.byte_width.symm, rfl⟩
   · exact ⟨rfl, rfl⟩
 
-private theorem projectionLength (image : ProgramImage) (source : ExecutionSnapshot) :
-    (LocalCore.ensemble (p := p) image source).tables.length ≤ (ensemble (p := p) image source).tables.length := by
-  change (LocalCore.tables (p := p) image source).length ≤ (tables (p := p) image source).length
-  rw [LocalCore.tables_length, tables_length]
-  decide
-
-private theorem projectionWidth (image : ProgramImage) (source : ExecutionSnapshot)
-    (index : Fin (LocalCore.ensemble (p := p) image source).tables.length) :
-    (LocalCore.ensemble image source).tables[index.val].width =
-      ((ensemble image source).tables[index.val]'(by have := projectionLength (p := p) image source; omega)).width :=
-  (component_layout image source ⟨index.val, by
-    simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).1
-
-private theorem projectionFixed (image : ProgramImage) (source : ExecutionSnapshot)
-    (index : Fin (LocalCore.ensemble (p := p) image source).tables.length) :
-    (LocalCore.ensemble image source).tables[index.val].FixedRowsMatch =
-      ((ensemble image source).tables[index.val]'(by have := projectionLength (p := p) image source; omega)).FixedRowsMatch :=
-  (component_layout image source ⟨index.val, by
-    simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2
-
-/-- Project the same physical rows and public boundary; canonical data retains the original public input and drops the permission keys. -/
-def localWitness {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source)) :
-    EnsembleWitness (LocalCore.ensemble (p := p) image source) :=
-  witness.projectPrefix (LocalCore.ensemble image source) (projectionLength image source)
-    (fun index => (projectionWidth image source index).le) (projectionFixed image source)
-
-/-- Each projected table retains its complete physical arrays under the original component. -/
-theorem localWitness_table {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source)) (index : Fin 61) :
-    ((localWitness witness).tables[index.val]'(by
-      rw [← (localWitness witness).same_length]
-      change index.val < (LocalCore.tables (p := p) image source).length
-      rw [LocalCore.tables_length]; exact index.isLt)).table =
-      (witness.tables[index.val]'(by
-        rw [← witness.same_length]; change index.val < (tables image source).length
-        rw [tables_length]; omega)).table :=
-  witness.projectPrefix_getElem_rows_of_width_eq (projectionLength image source) _ _
-    ⟨index.val, by
-      change index.val < (LocalCore.tables (p := p) image source).length
-      rw [LocalCore.tables_length]; exact index.isLt⟩ (component_layout image source index).1
-
-theorem localWitness_constraints {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source))
-    (constraints : witness.Constraints) : (localWitness witness).Constraints := by
-  apply witness.projectPrefix_constraints_of (target := LocalCore.ensemble image source)
-    (projectionLength image source) _ _ ?_ constraints
-  intro index row rowWidth checked
-  rw [projectionWidth, ← rowWidth, Array.extract_size]
-  have bound : index.val < 61 := by
-    simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)
-  have projection := component_projection (p := p) image source ⟨index.val, bound⟩
-  change (tables (p := p) image source)[index.val]'(by rw [tables_length]; omega) |>.operations.ConstraintsHold
-    (Environment.fromArray row witness.data) at checked
-  have original : ((LocalCore.tables (p := p) image source)[index.val]'(by
-      rw [LocalCore.tables_length]; exact bound)).operations.ConstraintsHold
-      (Environment.fromArray row witness.data) := by
-    simpa only [Operations.ConstraintsHold, projection.1, projection.2.1] using checked
-  exact (LocalCore.tables_lookupFree image source).constraintsHold_setData (List.getElem_mem _)
-    original
-
-private theorem provider_suffix_silent {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source))
-    (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw)
-    (notMembership : channel ≠ image.writePermissionTable.channel.toRaw) :
-    (witness.tables.drop 61).flatMap (·.interactionsWith channel) = [] := by
-  apply List.flatMap_eq_nil_iff.mpr
-  intro table member
-  have mapped := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
-  rw [List.map_drop, witness.tables_map_component] at mapped
-  change table.component ∈ (tables image source).drop 61 at mapped
-  rw [tables, List.drop_left'] at mapped
-  swap
-  · simp only [List.length_set, LocalCore.tables_length]
-  apply table.interactionsWith_nil_of_channel_not_mem
-  rcases List.mem_cons.mp mapped with same | same
-  · rw [same]
-    change channel ∉ [image.writePermissionTable.channel.toRaw, WritePermissionProvider.channel.toRaw]
-    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
-    exact ⟨notMembership, different⟩
-  · rw [List.mem_singleton.mp same]
-    change channel ∉ [image.writePermissionTable.channel.toRaw]
-    simpa only [List.mem_singleton] using notMembership
-
-/-- Retaining the old components also retains each complete pre-existing channel ledger. -/
-theorem localWitness_interactions {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source))
-    (channel : RawChannel (ZMod p)) (different : channel ≠ WritePermissionProvider.channel.toRaw)
-    (notMembership : channel ≠ image.writePermissionTable.channel.toRaw) :
-    (localWitness witness).interactionsWith channel = witness.interactionsWith channel := by
-  apply witness.projectPrefix_interactions (target := LocalCore.ensemble image source)
-    (projectionLength image source) _ _ rfl channel ?_ ?_
-  · intro index row rowWidth
-    rw [projectionWidth, ← rowWidth, Array.extract_size]
-    have projection := (component_projection (p := p) image source ⟨index.val, by
-      simpa only [LocalCore.tables_length] using (show index.val < (LocalCore.tables (p := p) image source).length from index.isLt)⟩).2.2 channel different
-    change ((ensemble image source).tables[index.val]'(by have := projectionLength (p := p) image source; omega)).operations.interactionsWith channel =
-      (LocalCore.ensemble image source).tables[index.val].operations.interactionsWith channel at projection
-    rw [Operations.interactionValuesWith, Operations.interactionValuesWith, projection]
-    exact List.map_congr_left fun interaction _ => AbstractInteraction.eval_congr rfl
-  · change (witness.tables.drop (LocalCore.tables image source).length).flatMap _ = []
-    rw [LocalCore.tables_length]
-    exact provider_suffix_silent witness channel different notMembership
-
 theorem old_channel_ne_permission {image : ProgramImage} {source : ExecutionSnapshot}
     (channel : RawChannel (ZMod p)) (member : channel ∈ (LocalCore.ensemble image source).channels) :
     channel ≠ WritePermissionProvider.channel.toRaw := by
   change channel ∈ (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at member
   rcases List.mem_append.mp member with member | member
-  · intro same
-    have names := List.mem_map_of_mem (f := RawChannel.name) member
-    rw [same] at names
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-      WritePermissionProvider.channel, stateChannel, memoryChannel, byteChannel, programChannel,
-      exitChannel, syscallChannel, publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership,
-      MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at names
+  · rintro rfl
+    exact LocalCore.not_mem_baseEnsemble_channels
+      (by simp [LocalCore.baseChannelNames, WritePermissionProvider.channel, Channel.toRaw]) member
   · obtain rfl := List.mem_singleton.mp member
-    intro same
-    have names := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList.head?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at names
-    rw [String.toList_append] at names
-    simp [LocalSourceBoundary.checker, WritePermissionProvider.channel] at names
+    exact VerifierChannel.channel_ne_of_not_prefix "sp1.local.source" _ (by
+      simp only [WritePermissionProvider.channel, Channel.toRaw]; decide)
 
 /-- The interval-membership channel is fresh for every registered local-core channel. -/
 theorem old_channel_ne_membership {image : ProgramImage} {source : ExecutionSnapshot}
@@ -214,52 +100,13 @@ theorem old_channel_ne_membership {image : ProgramImage} {source : ExecutionSnap
     channel ≠ image.writePermissionTable.channel.toRaw := by
   change channel ∈ (LocalCore.baseEnsemble image source).channels ++ [LocalCore.sourceChannel image source] at member
   rcases List.mem_append.mp member with member | member
-  · intro same
-    have names := List.mem_map_of_mem (f := RawChannel.name) member
-    rw [same] at names
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName,
-      stateChannel, memoryChannel, byteChannel, programChannel, exitChannel, syscallChannel,
-      publicValuesChannel, StaticTable.channel, InitialMemoryLookup.membership,
-      MemorySnapshot.registerTable, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw] at names
+  · rintro rfl
+    exact LocalCore.not_mem_baseEnsemble_channels (by
+      simp [LocalCore.baseChannelNames, StaticTable.channel, ProgramImage.writePermissionTable,
+        StaticTable.ofRows, Channel.toRaw]) member
   · obtain rfl := List.mem_singleton.mp member
-    intro same
-    have names := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList.take 5) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at names
-    rw [String.toList_append] at names
-    simp [LocalSourceBoundary.checker, StaticTable.channel, ProgramImage.writePermissionTable,
-      StaticTable.ofRows] at names
-
-/-- The protected ensemble supplies all balance premises of the original local grounding. -/
-theorem localWitness_balanced {image : ProgramImage} {source : ExecutionSnapshot}
-    (witness : EnsembleWitness (ensemble (p := p) image source))
-    (balanced : witness.BalancedChannels) : (localWitness witness).BalancedChannels := by
-  intro channel member
-  change BalancedInteractions ((localWitness witness).interactionsWith channel)
-  rw [localWitness_interactions witness channel (old_channel_ne_permission channel member)
-    (old_channel_ne_membership channel member)]
-  exact balanced channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ member))
-
-/-- The protected AIR refines the original local AIR at the same public boundary. -/
-theorem statement_implies_local (image : ProgramImage) (source : ExecutionSnapshot)
-    (balance : Balance (ZMod p)) (publicInput : SP1PublicIO (ZMod p)) (heights : List ℕ)
-    (statement : (ensemble image source).Statement balance publicInput heights) :
-    ∃ localHeights, (LocalCore.ensemble image source).Statement balance publicInput localHeights := by
-  obtain ⟨fit, witness, publicEq, heightsEq, constraints, balanced⟩ := statement
-  have sourceFit : witness.InteractionsFit balance :=
-    EnsembleWitness.interactionsFit_of_heights (heightsEq.symm ▸ fit)
-  refine ⟨(localWitness witness).heights, ?_, localWitness witness, publicEq, rfl,
-    localWitness_constraints witness constraints, ?_⟩
-  · apply List.all_eq_true.mpr
-    intro channel member
-    rw [← (localWitness witness).length_interactionsWith member,
-      localWitness_interactions witness channel (old_channel_ne_permission channel member)
-        (old_channel_ne_membership channel member)]
-    exact sourceFit channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ member))
-  · intro channel member
-    rw [localWitness_interactions witness channel (old_channel_ne_permission channel member)
-      (old_channel_ne_membership channel member)]
-    exact balanced channel (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ member))
+    exact VerifierChannel.channel_ne_of_not_prefix "sp1.local.source" _ (by
+      simp only [StaticTable.channel, ProgramImage.writePermissionTable, StaticTable.ofRows, Channel.toRaw]
+      decide)
 
 end SP1Clean.Soundness.ProtectedLocalCore

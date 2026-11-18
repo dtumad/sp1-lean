@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Model.Core.HostExecutionLaws
+import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # HALT handlers reach the independent host interpreter
 
@@ -11,7 +11,7 @@ whole-machine responsibilities.
 
 namespace SP1Clean.HostHaltChip
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

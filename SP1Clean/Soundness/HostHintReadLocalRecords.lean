@@ -15,7 +15,7 @@ bindings to the current frontier using current-head truth and the actual cursor 
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintReadHandoff HostHintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintReadHandoff HostHintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
@@ -45,41 +45,13 @@ theorem auxiliary_record_sources (store : Store)
   · exact HostHintRecordSources.word_consumer_authenticates store true
   · exact sources component (List.mem_append_right _ extra)
 
-private theorem node_fresh : nodeChannel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels := by
-  intro used
-  change nodeChannel.toRaw ∈ (LocalCore.baseEnsemble image source).channels ++
-    [LocalCore.sourceChannel image source] at used
-  rcases List.mem_append.mp used with used | used
-  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, nodeChannel,
-      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
-      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
-      StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
-  · have same := (List.mem_singleton.mp used).symm
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    simp [LocalSourceBoundary.checker, nodeChannel] at heads
+private theorem node_fresh : nodeChannel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels :=
+  LocalCore.not_mem_baseEnsemble_channels (by
+    simp [LocalCore.baseChannelNames, nodeChannel, Channel.toRaw])
 
-private theorem word_fresh : wordChannel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels := by
-  intro used
-  change wordChannel.toRaw ∈ (LocalCore.baseEnsemble image source).channels ++
-    [LocalCore.sourceChannel image source] at used
-  rcases List.mem_append.mp used with used | used
-  · have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
-    simp [LocalCore.baseEnsemble, sp1Ensemble_channels, OrderedBoundary.channel,
-      SnapshotMemoryEnsemble.channelName, OrderedFinalProvider.channelName, wordChannel,
-      Channels.stateChannel, Channels.memoryChannel, Channels.byteChannel, Channels.programChannel,
-      Channels.exitChannel, Channels.syscallChannel, Channels.publicValuesChannel,
-      StaticTable.channel, InitialMemoryLookup.membership, MemorySnapshot.registerTable, StaticTable.ofRows, Channel.toRaw] at present
-  · have same := (List.mem_singleton.mp used).symm
-    have heads := congrArg (fun channel : RawChannel (ZMod p) => channel.name.toList[4]?) same
-    dsimp only [LocalCore.sourceChannel, PublicVerifier.channel, VerifierChannel.channel,
-      Verifier.zeroChannel, Channel.toRaw, VerifierChannel.channelName] at heads
-    rw [String.toList_append] at heads
-    simp [LocalSourceBoundary.checker, wordChannel] at heads
+private theorem word_fresh : wordChannel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels :=
+  LocalCore.not_mem_baseEnsemble_channels (by
+    simp [LocalCore.baseChannelNames, wordChannel, Channel.toRaw])
 
 private theorem wrapper_node_silent : nodeChannel.toRaw ∉
     (HostCallLedger.producer (p := p)).circuit.channels := by

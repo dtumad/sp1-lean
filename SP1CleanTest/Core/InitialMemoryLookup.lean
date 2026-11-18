@@ -1,5 +1,5 @@
 import SP1Clean.Native.Operations.InitialMemoryLookup
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Initial-memory AIR regressions
@@ -11,7 +11,7 @@ fixed-row authentication from address containment: either can fail while the oth
 
 namespace SP1CleanTest.Core.InitialMemoryLookup
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.InitialMemoryLookup
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.InitialMemoryLookup
 open SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Clean.SP1Prime

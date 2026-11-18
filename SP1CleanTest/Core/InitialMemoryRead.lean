@@ -10,7 +10,7 @@ individually authenticates a real initial-memory byte.
 
 namespace SP1CleanTest.Core.InitialMemoryRead
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.InitialMemoryRead
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.InitialMemoryRead
 
 private abbrev Fp := ZMod SP1Clean.SP1Prime
 

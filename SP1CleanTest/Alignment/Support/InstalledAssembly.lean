@@ -14,7 +14,7 @@ remaining complete Sail/host target equality or mixed compiler theorem.
 
 namespace SP1CleanTest.Alignment.InstalledAssembly
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 
 /-- The native SP1 field used by the installed comparison fixtures. -/
 abbrev Fp := ZMod SP1Prime

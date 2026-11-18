@@ -22,7 +22,7 @@ relation. Faithfulness to the pinned Rust AIR is separate.
 
 namespace SP1Clean.Soundness.Shard
 
-open Air.Flat Model.Core Machine FormalModel.Shard
+open Air.Flat Semantics Machine FormalModel.Shard
 
 variable {p : ℕ} [Fact p.Prime]
 variable {PublicIO : TypeMap} [ProvableType PublicIO]

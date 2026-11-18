@@ -1,7 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Specs.U16Compare
-public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Channels.Channels
 public import Clean.Gadgets.Equality
 import Clean.Utils.Tactics.CircuitProofStart
 import Clean.Gadgets.Boolean

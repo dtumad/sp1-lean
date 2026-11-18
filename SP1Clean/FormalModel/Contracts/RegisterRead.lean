@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.Readers
-import SP1Clean.Model.Semantics.MicroTime
+import SP1Clean.Semantics.Transition.MicroTime
 
 /-! # One register read with unchanged read-back
 

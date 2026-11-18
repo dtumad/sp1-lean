@@ -1,9 +1,9 @@
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.HostHalt
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Semantics.MicroTime
-import SP1Clean.Model.Semantics.EventTime
+import SP1Clean.Semantics.Execution.ExecutionReplay
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.Host.HostHalt
+import SP1Clean.Semantics.Execution.EventExecution
+import SP1Clean.Semantics.Transition.MicroTime
+import SP1Clean.Semantics.Transition.EventTime
 import SP1Clean.Soundness.HostHintReadExecution
 
 /-! # Local execution soundness for the installed instruction, control, and hint AIR
@@ -19,7 +19,7 @@ Exit-bus binding, WRITE/VERIFY handlers, and constructive completeness remain se
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core Semantics NativeCore HostHintReadLocal TimedGrounding
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGrounding
 open LeanRV64D (Register)
 
 private theorem path_of_replay {policy : HostPolicy} {program : Target.GuestProgram}

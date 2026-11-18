@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
-import SP1Clean.Model.Machine.ConfiguredState
-import SP1Clean.Model.Semantics.SailControlExecute
+import SP1Clean.Semantics.Execution.ConfiguredState
+import SP1Clean.Semantics.Sail.SailControlExecute
 
 /-! # Control-flow compiler boundary counterexamples
 
@@ -13,7 +13,7 @@ counterexamples, not a claim that the complete mixed capstone has been instantia
 -/
 
 namespace SP1CleanTest.Core.CompilerBoundary
-open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 open SP1Clean.TraceGen LeanRV64D LeanRV64D.Functions
 
 private def lastPc : BitVec 64 := BitVec.ofNat 64 (2 ^ 48 - 4)

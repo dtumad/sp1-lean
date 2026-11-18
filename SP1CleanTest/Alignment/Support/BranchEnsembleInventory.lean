@@ -6,7 +6,7 @@ import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
 namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
-open Circuit Air.Flat SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean.Semantics
 
 /-- Check actual physical rows and every registered channel, including their capacity bound. -/
 def checkPhysical (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)

@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HostQueueCPUReplay
 import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Model.Core.BankReplay
+import SP1Clean.Semantics.Host.BankReplay
 
 /-! # Commitment histories agree with the ordered CPU tape
 
@@ -12,7 +12,7 @@ fold is a projection of the existing full host interpreter.
 
 namespace SP1Clean.Soundness.HostBankCPUReplay
 
-open Circuit Air.Flat Model.Core HostHintReadLocal HostQueueCallProjection NativeCore Semantics
+open Circuit Air.Flat Semantics HostHintReadLocal HostQueueCallProjection NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

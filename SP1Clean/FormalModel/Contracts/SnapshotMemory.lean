@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.MemoryBoundary
-import SP1Clean.Model.Core.MemorySnapshot
+import SP1Clean.Semantics.Memory.MemorySnapshot
 
 /-! # Authenticated source records for arbitrary local snapshots
 
@@ -10,7 +10,7 @@ Transport to timed grounding and complete endpoint authentication remain ensembl
 
 namespace SP1Clean.MemoryBoundary
 
-open SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HintReadCoverage
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Exact physical word writes from authenticated hint coverage
 
@@ -11,7 +11,7 @@ the internal nonfinal/final split. Word bindings and per-call table balance rema
 
 namespace SP1Clean.Soundness.HintReadWrites
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HintReadCoverage
+open Circuit Air.Flat Semantics Semantics.HintQueue HintReadCoverage
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

@@ -1,7 +1,7 @@
 import SP1Clean.FormalModel.Contracts.Readers
 import SP1Clean.Math.Word
-import SP1Clean.Model.ByteTable
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.ByteTable
+import SP1Clean.Circuits.Channels.Channels
 import SP1Clean.Circuits.Types.RTypeReader
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -17,7 +17,7 @@ The genuinely-tiny (2-column) inner block of SP1's `RegisterAccessCols`
 
 SP1's `eval_register_access_*` emits, per operand, two byte-bus timestamp checks
 (`crates/core/machine/src/air/memory.rs`), modelled here as **`byteChannel.pull`s**
-(`Model/Channels.lean`, the faithful Clean `Channel` for SP1's `send_byte` into the preprocessed
+(`Circuits/Channels/Channels.lean`, the faithful Clean `Channel` for SP1's `send_byte` into the preprocessed
 `ByteChip`), both gated by `is_real`:
 
 - a 16-bit `Range` check on `diff_low_limb`, and

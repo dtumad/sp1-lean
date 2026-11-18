@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.HostTerminalLedger
 import SP1Clean.Soundness.HostHintReadTerminalProjection
 import SP1Clean.Soundness.HostHintReadExecutionPath
-import SP1Clean.Model.Core.HostReplay
+import SP1Clean.Semantics.Host.HostReplay
 
 /-! # Optional terminal status agrees with the actual CPU replay
 
@@ -12,7 +12,7 @@ by the verifier, including running identities, stopped identities, and HALT with
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Model.Core NativeCore HostHintReadLocal
+open Circuit Air.Flat Semantics NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}

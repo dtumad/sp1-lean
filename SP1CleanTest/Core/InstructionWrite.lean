@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.Core.ProgramImage
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.ISA.InstructionDecode
+import SP1Clean.Semantics.Execution.ProgramImage
 
 /-! # Ordinary write-policy regressions
 
@@ -10,7 +10,7 @@ invalid observations. Whole-AIR same-value ROM-write rejection is tested in `Ali
 
 namespace SP1CleanTest.Core.InstructionWrite
 
-open SP1Clean.Model.Core LeanRV64D
+open SP1Clean.Semantics LeanRV64D
 
 private def image : ProgramImage := ⟨[(65536, 0x00110023)], 65536, []⟩
 

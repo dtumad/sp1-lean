@@ -12,7 +12,7 @@ and current register observations remain explicit inputs to mixed grounding.
 
 namespace SP1Clean.Soundness.HostHintReadLocal
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintReadCoverage HostHintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintReadCoverage HostHintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

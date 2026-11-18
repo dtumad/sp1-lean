@@ -17,12 +17,14 @@
 0   -             ToMathlib/
 0   -             ToClean/
 
-# 1..3 — the substrate. Model/ is currently the one pillar that obeys the contract exactly.
+# 1..3 — the substrate: arithmetic, execution semantics, native column types, channel declarations
+# and the trace-level ledger they are read through.
 1   Math          SP1Clean/Math/
-2   Model         SP1Clean/Model/
-2   Circuits      SP1Clean/Circuits/Types/
 2   Semantics     SP1Clean/Semantics/
-2   Semantics     SP1Clean/Model/Semantics/
+2   Circuits      SP1Clean/Circuits/Types/
+2   Circuits      SP1Clean/Circuits/Channels/
+2   -             SP1Clean/Machine/Ledger/
+2   -             SP1Clean/Machine/Inventory/
 
 # 4 — semantic contracts and the row view they are read through.
 4   FormalModel   SP1Clean/FormalModel/

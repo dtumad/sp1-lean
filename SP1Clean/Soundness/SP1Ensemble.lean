@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.WitnessDecode
-import SP1Clean.Model.BalanceBridge
-import SP1Clean.Model.InteractionProjection
-import SP1Clean.Model.ProviderTableId
+import SP1Clean.Machine.Ledger.BalanceBridge
+import SP1Clean.Machine.Ledger.InteractionProjection
+import SP1Clean.Machine.Inventory.ProviderTableId
 import SP1Clean.Proofs.Chips.ByteChip.ByteChip
 import SP1Clean.Proofs.Chips.ByteChip.RangeChip
 import SP1Clean.Proofs.Chips.ProgramProviderChip

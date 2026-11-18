@@ -1,7 +1,7 @@
 import Clean.Air.WitnessGeneration.Generation
 import ToClean.Gadgets.LookupProjection
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
+import SP1Clean.Circuits.Channels.Channels
+import SP1Clean.Circuits.Channels.ByteTable
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel
@@ -49,7 +49,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 /-- `p > 2` (needed by `Gadgets.ToBits.rangeCheck`'s `Fact (p > 2)`), from `2^17 < p`. Kept **`local`** so
 importing this provider (its wiring into `SP1Clean.lean`) does not leak a global `Fact (p > 2)` derived
 from `Fact (2^17 < p)` — which would make downstream `omit [Fact (2^17 < p)]` clauses illegal (cf. the
-`local instance : NeZero p` note in `Model/ByteTable.lean`). -/
+`local instance : NeZero p` note in `Circuits/Channels/ByteTable.lean`). -/
 local instance : Fact (p > 2) := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
 omit [Fact p.Prime] in

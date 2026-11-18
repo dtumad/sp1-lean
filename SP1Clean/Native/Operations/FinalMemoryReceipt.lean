@@ -1,4 +1,4 @@
-import SP1Clean.Model.FinalMemoryValue
+import SP1Clean.Circuits.Channels.FinalMemoryValue
 import Clean.Air.FlatComponent
 import ToClean.Circuit.SubcircuitProjection
 

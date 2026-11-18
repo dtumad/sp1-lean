@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Completeness.EventBuckets
 import SP1Clean.Soundness.StateCanon
 import SP1Clean.FormalModel.TraceGen.Bump
-import SP1Clean.Model.InteractionProjection
+import SP1Clean.Machine.Ledger.InteractionProjection
 
 /-!
 # Canonical State inventories

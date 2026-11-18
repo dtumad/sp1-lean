@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Formal
-import SP1Clean.Model.MemoryClock
+import SP1Clean.Semantics.Memory.MemoryClock
 
 /-! # Constructing the host RAM timestamp witness
 

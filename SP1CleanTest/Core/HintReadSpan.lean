@@ -14,7 +14,7 @@ word-request fixtures exercise source contents; the complete AIR consumer walk i
 
 namespace SP1CleanTest.Core.HintReadSpan
 
-open Circuit Air.Flat SP1Clean Model.Core HostChecks
+open Circuit Air.Flat SP1Clean Semantics HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

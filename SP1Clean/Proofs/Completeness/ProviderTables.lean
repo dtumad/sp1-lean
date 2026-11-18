@@ -11,7 +11,7 @@ those eight closed forms to the table the trace generator builds, via
 > `entries.map access`.
 
 That is the statement Tier 3 needs, and it is stated over **`ℕ` keys and an `ℤ` multiplicity** —
-the `LookupAccess` vocabulary the closure arithmetic in `Model/InteractionBus.lean` speaks — rather
+the `LookupAccess` vocabulary the closure arithmetic in `Machine/Ledger/InteractionBus.lean` speaks — rather
 than over field elements. Discharging the `ZMod.val` round trips here rather than in Tier 3 is what
 lets Tier 3 be pure list algebra against `closingAccesses`/`closingKeys`.
 

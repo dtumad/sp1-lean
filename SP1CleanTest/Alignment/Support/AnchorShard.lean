@@ -1,18 +1,18 @@
 import SP1Clean.FormalModel.TraceGen.Events
-import SP1Clean.Model.Semantics.ProgramCommitment
-import SP1Clean.Model.Machine.EventExecution
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Machine.ConfiguredState
-import SP1Clean.Model.Semantics.GuestProgram
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Opcode
+import SP1Clean.Semantics.Execution.ProgramCommitment
+import SP1Clean.Semantics.Execution.EventExecution
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.Execution.ConfiguredState
+import SP1Clean.Semantics.Sail.GuestProgram
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Semantics.ISA.Opcode
 import SP1Clean.Soundness.RowView
 import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.TypedState
 
-import SP1Clean.Model.Machine.EventExecution
+import SP1Clean.Semantics.Execution.EventExecution
 import SP1Clean.Proofs.Sail.Advance
-import SP1Clean.Model.SailDecode
+import SP1Clean.Semantics.Sail.SailDecode
 import SP1CleanTest.TraceGenTests.Conformance
 import SP1CleanTest.Core.StaticMembership
 import ToClean.Air.TableEvaluation
@@ -272,7 +272,7 @@ theorem jalView_rcvPc : rcvPcOf (stateAccess jalView) = 65536#64 := by native_de
 theorem jalView_sndPc : sndPcOf (stateAccess jalView) = 65536#64 := by native_decide
 
 /-- The official decoder on the committed word `0x0000006F` is `JAL x0, 0` (the `decode_JAL`
-recipe of `Model/SailDecode.lean`, at the self-jump word). -/
+recipe of `Semantics/Sail/SailDecode.lean`, at the self-jump word). -/
 theorem decode_jal_x0 (s : SailState) (hs : s.isInitialized)
     (hpriv : s.regs.get? Register.cur_privilege = some Privilege.Machine)
     (hseccfg :
@@ -394,7 +394,7 @@ theorem anchor_configuredDecode :
 
 /-- The self-jump writes only `x0`, so it is permitted under every read-only memory policy. -/
 theorem anchor_permittedAt (readOnly : ℕ → Bool) :
-    SP1Clean.Model.Core.InstructionWrite.PermittedAt readOnly anchorProgram anchorState :=
+    SP1Clean.Semantics.InstructionWrite.PermittedAt readOnly anchorProgram anchorState :=
   ⟨65536, 0x6f, .JAL (0, .Regidx 0), anchorState_pc, anchorProgram_fetchWord_selfJump,
     anchor_configuredDecode, rfl⟩
 

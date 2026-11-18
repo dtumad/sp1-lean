@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.CommitmentStatement
-import SP1Clean.Model.Semantics.Decode
+import SP1Clean.Semantics.Execution.CommitmentStatement
+import SP1Clean.Semantics.ISA.Decode
 import ToClean.Circuit.StaticTable
 
 /-! # Immutable commitment declarations
@@ -12,7 +12,7 @@ requiring every slot to occur, or inferring occurrence from a flag.
 
 namespace SP1Clean.CommitmentDeclaration
 
-open Circuit Model.Core
+open Circuit Semantics
 
 /-- One immutable bank/slot declaration with its public flag. -/
 structure Row (F : Type) where

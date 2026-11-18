@@ -1,7 +1,7 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Chips.BranchChip.Complete
 import SP1Clean.Alignment.Chips.BranchChip.Bridge
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Air.WitnessGeneration
 import ToClean.Air.EnsembleBuild
 
@@ -16,7 +16,7 @@ no provider construction, channel balance, or complete shard relation is claimed
 
 namespace SP1Clean.Audit.BranchCompilerRoundTrip
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Soundness.Target
 open SP1Clean.TraceGen LeanRV64D LeanRV64D.Functions
 
 /-- A single full-width BEQ word at the native guest-memory lower bound. -/

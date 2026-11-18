@@ -10,7 +10,7 @@ providers, fixed lookup meanings, complete target Memory and every registered ch
 namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Semantics
+open Circuit Air.Flat SP1Clean.Semantics
 open LeanRV64D LeanRV64D.Functions
 
 /-- Every concrete input seed has a valid physical slot and exact input length. -/

@@ -13,7 +13,7 @@ A separate Boolean activity field guards the entire row for physical padding.
 
 namespace SP1Clean.FinalRamCheck
 
-open Circuit Model.Core Channels Semantics
+open Circuit Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

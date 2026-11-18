@@ -11,7 +11,7 @@ The source snapshot and the ordering channel are instance parameters, independen
 
 namespace SP1Clean.OrderedSnapshotProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
+open Circuit SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 abbrev Inputs := OrderedMemoryProvider.RowInput

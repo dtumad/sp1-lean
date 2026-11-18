@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.LocalCoreBoundary
-import SP1Clean.Model.Core.ExecutionResources
+import SP1Clean.Semantics.Resources.ExecutionResources
 
 /-! # Resource checks on fixed complete boundaries
 
@@ -9,7 +9,7 @@ Those conclusions require the complete boundary and event inventories.
 -/
 
 namespace SP1Clean.ResourceBoundary
-open Model.Core
+open Semantics
 
 /-- Finite endpoint checks, computed before field narrowing. -/
 def checkBounds (limits : ResourceLimits) (source target : ExecutionSnapshot) : Bool :=

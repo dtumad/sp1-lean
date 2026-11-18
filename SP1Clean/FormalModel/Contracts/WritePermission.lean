@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.WritePermission
+import SP1Clean.Semantics.Memory.WritePermission
 import Clean.Circuit.Channel
 
 /-! # Byte-level write permission contract
@@ -10,7 +10,7 @@ requests with fixed-table providers. Instruction rows need no local permission p
 
 namespace SP1Clean.WritePermissionProvider
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 structure Inputs (F : Type) where
   address : fields 3 F

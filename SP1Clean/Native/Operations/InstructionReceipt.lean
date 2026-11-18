@@ -1,4 +1,4 @@
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import ToClean.Circuit.Receipt
 
 /-! # Ordinary instruction observations for outgoing Sail bookkeeping

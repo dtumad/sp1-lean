@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostRamReadChip.Formal
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Model.Core.MemorySpan
+import SP1Clean.Semantics.Memory.MemorySpan
 
 /-! # Constructing host RAM reads
 
@@ -11,7 +11,7 @@ for the prior record at each cell.
 
 namespace SP1Clean.HostRamReadChip
 
-open Circuit Channels Model.Core
+open Circuit Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

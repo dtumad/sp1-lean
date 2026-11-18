@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.CoreRowTransport
 import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.ExecutionReplay
+import SP1Clean.Semantics.Execution.ExecutionReplay
 
 /-! # Stateful replay shared by complete execution carriers
 
@@ -12,7 +12,7 @@ These identities do not assume that replay succeeds.
 
 namespace SP1Clean.Soundness.NativeCore
 
-open Circuit Air.Flat Channels Model.Core Semantics TimedGrounding
+open Circuit Air.Flat Channels Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
   {facts : ExecutionRow p → RowFacts p} {inventory : List (ExecutionRow p)}

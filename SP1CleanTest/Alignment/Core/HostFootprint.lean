@@ -1,5 +1,5 @@
 import SP1Clean.Soundness.HostFootprint
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Host byte-slice and aligned-word footprint regressions
 
@@ -10,7 +10,7 @@ claim that the pending host AIR tables authenticate an execution.
 
 namespace SP1CleanTest.Core.HostFootprint
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Soundness.Target
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 open LeanRV64D LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
@@ -23,7 +23,7 @@ private def source (code arg1 arg2 length : BitVec 64) : SailState :=
     mem := (∅ : Std.ExtHashMap ℕ (BitVec 8)).insertMany
       ((List.range 96).map fun offset => (65536 + offset, BitVec.ofNat 8 offset)) }
 
-private def footprint (host : HostState) (state : SailState) : Option Model.Core.HostFootprint := do
+private def footprint (host : HostState) (state : SailState) : Option Semantics.HostFootprint := do
   let execution ← host.run policy (.ofSail state)
   execution.footprint? (.ofSail state)
 

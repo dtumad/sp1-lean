@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.HostSail
-import SP1Clean.Model.Core.HostReplay
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Host.HostSail
+import SP1Clean.Semantics.Host.HostReplay
+import SP1Clean.Math.SP1Field
 
 /-! # Stateful native host execution regressions
 
@@ -10,7 +10,7 @@ semantic regressions, not Rust trace conformance or evidence that the host effec
 
 namespace SP1CleanTest.Core.HostExecution
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target LeanRV64D LeanRV64D
 
 private def policy : HostPolicy := ⟨⟨fun _ => false, NativeLayout.guestMemory⟩, SP1Prime⟩
 
@@ -25,7 +25,7 @@ private def buffer : List (ℕ × BitVec 8) :=
   (List.range 64).map fun index => (65536 + index, BitVec.ofNat 8 index)
 
 private def run (host : HostState) (kind : SyscallKind) (arg1 arg2 : BitVec 64)
-    (length : Option (BitVec 64) := none) : Option SP1Clean.Model.Core.HostExecution :=
+    (length : Option (BitVec 64) := none) : Option SP1Clean.Semantics.HostExecution :=
   host.run policy (context kind.code arg1 arg2 length buffer)
 
 /-- All eight selected calls succeed on concrete legal observations. -/

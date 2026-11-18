@@ -1,6 +1,6 @@
-import SP1Clean.Model.Core.ResourceLimits
-import SP1Clean.Model.Core.HostExecution
-import SP1Clean.Model.Core.MemorySpan
+import SP1Clean.Semantics.Resources.ResourceLimits
+import SP1Clean.Semantics.Host.HostExecution
+import SP1Clean.Semantics.Memory.MemorySpan
 
 /-! # Range consumers at boundary and cell-cover edges
 
@@ -9,7 +9,7 @@ shared data. They do not claim that an arbitrary range is realized by the pinned
 -/
 
 namespace SP1CleanTest.Core.ResourceLayout
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 private def window : AddressRange := ⟨24, 56⟩
 private def policy : HostMemoryPolicy := ⟨fun address => address == 55, window⟩

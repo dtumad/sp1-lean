@@ -10,7 +10,7 @@ nonzero stopped code. All physical components and boundary terminals remain inst
 
 namespace SP1CleanTest.Alignment.StoppedAssembly
 
-open SP1Clean SP1Clean.Model.Core SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean SP1Clean.Semantics SP1CleanTest.Alignment.InstalledAssembly
 
 private def base : Context :=
   SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target

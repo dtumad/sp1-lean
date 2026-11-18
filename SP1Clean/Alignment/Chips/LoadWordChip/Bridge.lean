@@ -1,5 +1,5 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
+import SP1Clean.Semantics.Sail.SailMemory
+import SP1Clean.Semantics.Sail.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.LoadWordChip.Formal
 import SP1Clean.Soundness.ChipRow
@@ -345,7 +345,7 @@ def AdvanceReady (inp : Inputs (ZMod p)) (_cols : LoadWordChip.Columns (ZMod p))
 /-- **The width/sign pin for the width-4 loads** (LW · LWU) — `advance_of_load_width4`'s `hpin`.
 Stated over loose `isU` so both flag branches of `advance` below cite it instead of re-running the
 `loadOpcode` case split against the whole `advance` context (that inline `simp_all` was the file's
-entire elaboration budget). The `Model/Semantics/Decode.lean` `storeOpcode_pin_one` analogue. -/
+entire elaboration budget). The `Semantics/ISA/Decode.lean` `storeOpcode_pin_one` analogue. -/
 private lemma loadOpcode_pin_four (isU : Bool) (w' : word_width) (u' : Bool)
     (h : (loadOpcode w' u').toNat = (loadOpcode 4 isU).toNat) : w' = 4 ∧ u' = isU := by
   simp only [loadOpcode] at h

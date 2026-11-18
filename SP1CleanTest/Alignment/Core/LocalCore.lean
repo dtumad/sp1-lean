@@ -5,8 +5,8 @@ import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Soundness.HostHintQueueBoundary
 import SP1Clean.Native.Operations.CommitmentStatement
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.Core.InstructionWrite
+import SP1Clean.Semantics.Host.HostSnapshot
+import SP1Clean.Semantics.Memory.InstructionWrite
 import SP1CleanTest.Alignment.Support.LocalCoreFixture
 import ToClean.Air.FiniteLookup
 import Clean.Circuit.WitnessExport
@@ -28,7 +28,7 @@ This is AIR conformance, not an execution theorem.
 
 namespace SP1CleanTest.Core.LocalCore
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Soundness.Target
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 private abbrev Row := ℕ × List Fp

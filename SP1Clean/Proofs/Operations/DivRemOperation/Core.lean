@@ -238,7 +238,7 @@ theorem forall_of_ownAssertsHold (env : Environment (ZMod p)) {colsV : Var DivRe
 
 
 /-- A width-16 `Range` byte-table row from a `< 2^16` bound (the completeness direction of the
-byte-pull guarantees; numeral-width sibling of `Model/ByteTable`'s `byteRowSpec_range`). -/
+byte-pull guarantees; numeral-width sibling of `Circuits/Channels/ByteTable`'s `byteRowSpec_range`). -/
 private lemma byteRowSpec_of_isU16 {v : ZMod p} (h : v.val < 2 ^ 16) :
     ByteRowSpec (⟨6, v, 16, 0⟩ : ByteRow (ZMod p)) := by
   refine ⟨ByteOpcode.Range, by norm_cast, ?_⟩

@@ -6,7 +6,7 @@ import SP1Clean.Native.Operations.FinalRegisterCheck
 import SP1Clean.Native.Operations.FinalRamCheck
 import SP1Clean.Native.Operations.FinalMemoryChangeBoundary
 import SP1Clean.Proofs.Chips.OrderedFinalProvider
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 import SP1CleanTest.Core.StaticMembership
 
@@ -20,7 +20,7 @@ remain available to the enclosing machine; this fixture does not claim a complet
 
 namespace SP1CleanTest.Core.FinalMemoryValue
 
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target
 
 private abbrev Fp := ZMod SP1Prime
 

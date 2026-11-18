@@ -8,7 +8,7 @@ independently of the mutable banks. This does not establish general compiler com
 -/
 
 namespace SP1CleanTest.Alignment.CommitAssembly
-open Circuit SP1Clean SP1Clean.Model.Core SP1Clean.Soundness
+open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1CleanTest.Alignment.InstalledAssembly HostProgram
 
 /-- A repeated declaration exercises power-of-two padding and remains a continuing segment. -/

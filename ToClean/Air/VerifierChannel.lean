@@ -59,6 +59,21 @@ theorem name_not_mem (stem : String) (ens : Ensemble F PublicIO) :
     String.length_append, String.length_ofList, List.length_replicate] at bound
   omega
 
+/-- The allocated name starts with `stem`, so it differs from every name that does not, whatever
+the ensemble. -/
+theorem name_ne_of_not_prefix (stem : String) (ens : Ensemble F PublicIO) {name : String}
+    (unprefixed : ¬ stem.toList <+: name.toList) : (channel stem ens).name ≠ name := by
+  intro same
+  apply unprefixed
+  rw [← same]
+  simp only [channel, Verifier.zeroChannel, Channel.toRaw, channelName, String.toList_append]
+  exact List.prefix_append _ _
+
+/-- The channel differs from every channel whose name does not start with `stem`. -/
+theorem channel_ne_of_not_prefix (stem : String) (ens : Ensemble F PublicIO) {other : RawChannel F}
+    (unprefixed : ¬ stem.toList <+: other.name.toList) : channel stem ens ≠ other :=
+  fun same => name_ne_of_not_prefix stem ens unprefixed (congrArg RawChannel.name same)
+
 /-- Static evidence that the check channel has no pre-existing producer or consumer. -/
 structure Fresh (stem : String) (ens : Ensemble F PublicIO) : Prop where
   /-- The channel is newly registered by installation. -/

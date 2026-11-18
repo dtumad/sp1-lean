@@ -3,8 +3,8 @@ import ToClean.Circuit.Guarded
 import SP1Clean.FormalModel.Contracts.OrderedMemoryProvider
 import SP1Clean.Native.Operations.OrderedBoundary
 import SP1Clean.Proofs.Operations.AddOperation.Formal
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.Core.MemoryTable
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Semantics.Memory.MemoryTable
 
 /-! # Canonical memory records with checked ordering
 
@@ -15,7 +15,7 @@ zero therefore precedes x0, and the increment cannot wrap for canonical 48-bit l
 
 namespace SP1Clean.OrderedMemoryProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
+open Circuit SP1Clean.Semantics SP1Clean.Channels SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 variable {Payload : TypeMap} [ProvableType Payload]

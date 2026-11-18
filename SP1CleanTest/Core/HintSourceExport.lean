@@ -14,7 +14,7 @@ and Rust reference. Native source-queue authentication is separate from full hos
 
 namespace SP1CleanTest.Core.HintSourceExport
 
-open Circuit Air.Flat SP1Clean Model.Core HintQueue
+open Circuit Air.Flat SP1Clean Semantics HintQueue
 open ComponentExport (Fp)
 
 /-- A production fixed inventory and its existing semantic channel. -/

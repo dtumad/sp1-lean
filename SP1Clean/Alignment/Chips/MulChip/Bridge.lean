@@ -1,4 +1,4 @@
-import SP1Clean.Model.SailWrap
+import SP1Clean.Semantics.Sail.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.MulChip.Formal
 import SP1Clean.Soundness.ChipRow
@@ -14,7 +14,7 @@ product), `spec_mulh` (high 64, signed×signed), `spec_mulhu` (high 64, unsigned
 `MUL` `mul_op` records (Low/High × the signedness pair) plus `MULW`.
 
 This bridge uses the **RV64 provider library's** connection lemmas directly:
-`SailRV64.execute_MUL_eq`/`SailRV64.execute_MULW_eq` (`Model/SailPure.lean`) chained with
+`SailRV64.execute_MUL_eq`/`SailRV64.execute_MULW_eq` (`Semantics/Sail/SailPure.lean`) chained with
 `RV64.{mul,mulh,mulhu,mulhsu,mulw}_eq` (`Proofs/Sail/RV64Bridge.lean`, fully proven incl. the
 MULHSU signed×unsigned high half). `correct_mul*_native` is pure monad plumbing — the BitVec
 algebra lives in those dep lemmas.

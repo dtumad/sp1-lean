@@ -10,7 +10,7 @@ they do not supply predecessor currency or permission-provider authentication th
 namespace SP1Clean.Soundness.HintReadWriteLedger
 
 open Circuit Air.Flat HintReadCoverage
-open Model.Core Model.Core.HintQueue
+open Semantics Semantics.HintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

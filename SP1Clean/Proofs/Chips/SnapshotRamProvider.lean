@@ -14,7 +14,7 @@ no padding, and each present row supplies exactly one initial record.
 
 namespace SP1Clean.SnapshotRamProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open Circuit SP1Clean.Semantics SP1Clean.Channels
 open SP1Clean.Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]

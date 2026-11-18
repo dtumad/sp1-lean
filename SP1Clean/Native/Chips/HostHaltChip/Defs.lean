@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.HostControl
 import SP1Clean.Native.Operations.BoundedWord
-import SP1Clean.Model.HostExit
+import SP1Clean.Circuits.Channels.HostExit
 import Clean.Gadgets.Equality
 
 /-! # The native HALT host consumer

@@ -14,7 +14,7 @@ and balance the instruction handoffs; these are not conclusions of this subsyste
 
 namespace SP1Clean.Soundness.HostCommitHistory
 
-open Circuit Air.Flat SP1Clean.HostCommitChip SP1Clean.Model.Core RankedGrounding
+open Circuit Air.Flat SP1Clean.HostCommitChip SP1Clean.Semantics RankedGrounding
 open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.Memory
+import SP1Clean.Semantics.Memory.Memory
 import SP1Clean.Math.Word
 
 /-! # Initial-memory byte-read contract
@@ -9,7 +9,7 @@ comparison columns belong to the circuit implementation, below this input/output
 
 namespace SP1Clean.InitialMemoryLookup
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

@@ -1,8 +1,8 @@
 import SP1Clean.FormalModel.ShardPreservation
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.Core.HostSnapshot
-import SP1Clean.Model.SP1Field
-import SP1Clean.Model.Semantics.SailControlExecute
+import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Semantics.Host.HostSnapshot
+import SP1Clean.Math.SP1Field
+import SP1Clean.Semantics.Sail.SailControlExecute
 import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # ROM and fetch on mixed semantic paths
@@ -15,7 +15,7 @@ and host-interpreter data, never dense Sail memory or ordinary execution.
 -/
 
 namespace SP1CleanTest.Core.ExecutionRom
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target SP1Clean.Machine
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target SP1Clean.Machine
 open Sail LeanRV64D LeanRV64D.Functions
 
 private def image (word : BitVec 32) : ProgramImage :=
@@ -31,7 +31,7 @@ private def source (word : BitVec 32) (left right : BitVec 64) : ExecutionSnapsh
   host := initialHost
   clock := 17
 
-private def hint : SP1Clean.Model.Core.HostExecution :=
+private def hint : SP1Clean.Semantics.HostExecution :=
   ⟨.hintRead, 70000, 8, 241, ⟨{ initialHost with io.hints := [[9]] },
     some ⟨70000, [1, 2, 3, 4, 5, 6, 7, 8] ++ List.replicate 8 0⟩⟩⟩
 

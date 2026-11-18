@@ -64,9 +64,9 @@ class TouchedTests(unittest.TestCase):
     def test_paths_and_names(self):
         with tempfile.TemporaryDirectory() as tmp:
             f = Path(tmp) / "touched.txt"
-            f.write_text("SP1Clean/Math/Word.lean\nSP1Clean.Model.Register\nscripts/foo.py\n\n")
-            touched = bsem.read_touched(str(f), {"SP1Clean.Math.Word", "SP1Clean.Model.Register"})
-        self.assertEqual(touched, {"SP1Clean.Math.Word", "SP1Clean.Model.Register"})
+            f.write_text("SP1Clean/Math/Word.lean\nSP1Clean.Semantics.Sail.Register\nscripts/foo.py\n\n")
+            touched = bsem.read_touched(str(f), {"SP1Clean.Math.Word", "SP1Clean.Semantics.Sail.Register"})
+        self.assertEqual(touched, {"SP1Clean.Math.Word", "SP1Clean.Semantics.Sail.Register"})
 
 
 if __name__ == "__main__":

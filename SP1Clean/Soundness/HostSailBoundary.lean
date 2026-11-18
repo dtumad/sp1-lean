@@ -11,7 +11,7 @@ does not yet fill the end-to-end shard target.
 
 namespace SP1Clean.Soundness.HostSailBoundary
 
-open Circuit Air.Flat Model.Core Semantics Channels
+open Circuit Air.Flat Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance sailLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩

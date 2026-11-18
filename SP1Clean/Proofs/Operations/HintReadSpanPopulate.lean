@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Operations.HintReadSpan
-import SP1Clean.Model.Core.HintQueueWords
+import SP1Clean.Semantics.Host.HintQueueWords
 
 /-! # Semantic construction of complete padded span endpoints
 
@@ -10,7 +10,7 @@ These endpoints still need a balance-derived consumer walk to authenticate actua
 
 namespace SP1Clean.HintReadSpan
 
-open Model.Core
+open Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Chips.HostCallChip.Ledger
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
@@ -17,7 +17,7 @@ remain whole-ensemble obligations outside these local satisfiability tests.
 
 namespace SP1CleanTest.Core.HostCall
 
-open Circuit Air.Flat SP1Clean SP1Clean.HostCallChip SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.HostCallChip SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 

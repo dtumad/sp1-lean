@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HostHintReadExecutionPath
 import SP1Clean.Soundness.HostHintReadBanks
-import SP1Clean.Model.Core.SailBookkeeping
+import SP1Clean.Semantics.Execution.SailBookkeeping
 
 /-! # Complete retirement bookkeeping along the installed local execution
 
@@ -12,7 +12,7 @@ the endpoint execution theorem. Binding these observations to a supplied target 
 
 namespace SP1Clean.Soundness.HostHintReadCPU
 
-open Circuit Air.Flat Channels Model.Core NativeCore HostHintReadLocal
+open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 open LeanRV64D (Register)
 
 private def retirementObservation (state : SailState) : Bool × Option Bool × Option (BitVec 64) :=

@@ -1,7 +1,7 @@
-import SP1Clean.Model.Core.MemorySnapshot
+import SP1Clean.Semantics.Memory.MemorySnapshot
 import SP1Clean.FormalModel.Contracts.InitialMemoryRead
 import SP1Clean.FormalModel.Contracts.FinalRam
-import SP1Clean.Model.FinalMemoryValue
+import SP1Clean.Circuits.Channels.FinalMemoryValue
 
 /-! # Complete outgoing RAM values
 
@@ -12,7 +12,7 @@ facts. This operation neither consumes the Memory bus nor invents a second final
 
 namespace SP1Clean.FinalRamValue
 
-open Model.Core Channels Semantics
+open Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

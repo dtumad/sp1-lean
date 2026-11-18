@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.CoreSyscallChip.Formal
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Native syscall guard regressions
@@ -11,7 +11,7 @@ These local checks make no claim about host effects or whole-ensemble balance.
 
 namespace SP1CleanTest.Core.SyscallCode
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 

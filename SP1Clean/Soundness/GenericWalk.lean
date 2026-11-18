@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.TimedGrounding
 import SP1Clean.Soundness.Walk
-import SP1Clean.Model.Semantics.GenericTruth
-import SP1Clean.Model.Semantics.EventTime
+import SP1Clean.Semantics.Transition.GenericTruth
+import SP1Clean.Semantics.Transition.EventTime
 
 /-! # The grounding walk
 

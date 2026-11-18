@@ -11,7 +11,7 @@ all added contributions either zero or unit pulls; padding cannot manufacture a 
 
 namespace SP1Clean.Soundness.WritePermission
 
-open Circuit Air.Flat SP1Clean.Model.Core SP1Clean.Channels
+open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

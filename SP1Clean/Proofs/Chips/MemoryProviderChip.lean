@@ -1,5 +1,5 @@
 import Clean.Air.WitnessGeneration.Generation
-import SP1Clean.Model.Channels
+import SP1Clean.Circuits.Channels.Channels
 import SP1Clean.Native.Operations.WordRangeCheck
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
@@ -17,7 +17,7 @@ value) are materialized by the **Memory Global init/finalize** chips. On our W11
 boundary rows are **pushes** of `MemoryMsg.isU64`-valid value words, balanced against the chips' read-prior
 pulls. As with the Program ROM provider, Clean has no "trusted preprocessed table" primitive, so a
 finished-`memoryChannel` **provider must re-prove each pushed value `U64` in-circuit** — `MemoryMsg.isU64`
-(`Model/Channels.lean`): the 4-limb `value` word is a `U64`.
+(`Circuits/Channels/Channels.lean`): the 4-limb `value` word is a `U64`.
 
 This is the in-circuit provider's push side: a single Clean `GeneralFormalCircuit` whose `main`
 range-checks the whole `value` word in-circuit with one `WordRangeCheck.circuit` assertion (genuine

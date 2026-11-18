@@ -1,9 +1,9 @@
-import SP1Clean.Model.Core.SourceExecution
-import SP1Clean.Model.Core.ExecutionReplay
-import SP1Clean.Model.Core.InstructionWrite
-import SP1Clean.Model.Core.ExecutionEncoding
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.Core.CommitmentStatement
+import SP1Clean.Semantics.Execution.SourceExecution
+import SP1Clean.Semantics.Execution.ExecutionReplay
+import SP1Clean.Semantics.Memory.InstructionWrite
+import SP1Clean.Semantics.Execution.ExecutionEncoding
+import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Semantics.Execution.CommitmentStatement
 
 /-! # Complete-state semantics for the native shard capstone
 
@@ -23,7 +23,7 @@ See `Soundness/Shard/Contract` for the two end-to-end targets.
 
 namespace SP1Clean.FormalModel.Shard
 
-open Model.Core Machine
+open Semantics Machine
 
 /-- Native host policy uses the AIR characteristic and the checked image's protected ROM bytes. -/
 def policy (characteristic : ℕ) (image : ProgramImage) : HostPolicy :=

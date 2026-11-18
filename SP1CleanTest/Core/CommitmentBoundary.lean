@@ -1,4 +1,4 @@
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1Clean.Native.Operations.CommitmentBoundary
 import SP1Clean.Native.Operations.CommitmentStatement
 import ToClean.Air.TableBuild
@@ -11,7 +11,7 @@ complete sixteen-row provider. Agreement does not imply that any slot was actual
 
 namespace SP1CleanTest.Core.CommitmentBoundary
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics
 
 private def statement : CommitmentStatement :=
   ⟨Vector.replicate 8 0x89abcdef,

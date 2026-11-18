@@ -1,5 +1,5 @@
 import SP1Clean.Native.Witgen.StateDemand
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Air.WitnessGeneration
 import Clean.Utils.Tactics
 

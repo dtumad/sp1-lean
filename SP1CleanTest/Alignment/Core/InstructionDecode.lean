@@ -1,5 +1,5 @@
 import SP1Clean.Alignment.Chips.FixedProgramProvider.Bridge
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Executable decoder regressions
 
@@ -10,7 +10,7 @@ proof library; these regressions also witness the official hint-extension priori
 
 namespace SP1CleanTest.Core.InstructionDecode
 
-open Circuit LeanRV64D SP1Clean.Model.Core SP1Clean.Soundness SP1Clean.Channels
+open Circuit LeanRV64D SP1Clean.Semantics SP1Clean.Soundness SP1Clean.Channels
 open SP1Clean (runSail)
 
 private abbrev Fp := ZMod SP1Clean.SP1Prime

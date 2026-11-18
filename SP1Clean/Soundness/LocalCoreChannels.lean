@@ -10,7 +10,7 @@ without repeating the table inventory for each host protocol.
 
 namespace SP1Clean.Soundness.LocalCore
 
-open Circuit Air.Flat Model.Core Channels
+open Circuit Air.Flat Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 

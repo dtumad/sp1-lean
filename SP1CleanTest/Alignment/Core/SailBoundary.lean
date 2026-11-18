@@ -11,7 +11,7 @@ from their Memory projection, and range tests precede field conversion.
 
 namespace SP1CleanTest.Alignment.Core.SailBoundary
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core LeanRV64D
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics LeanRV64D
 
 private abbrev Fp := ZMod SP1Prime
 private def image := SP1CleanTest.Core.LocalCore.Fixture.image

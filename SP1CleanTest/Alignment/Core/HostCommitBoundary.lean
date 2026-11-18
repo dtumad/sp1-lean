@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1CleanTest.Core.StaticMembership
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Physical commitment-bank boundary regressions
@@ -74,7 +74,7 @@ private def tableFor (deferred : Bool) (events : List (Fin 8 × Inputs Fp))
   | none => SP1CleanTest.StaticMembership.buildTable ((HostCommitBank.view deferred none).component) terminals
       [] (.empty Fp) (ProverHint.empty Fp) terminalsBound
 
-private def witnessFor (deferred : Bool) (source : Model.Core.HostState) (events : List (Fin 8 × Inputs Fp))
+private def witnessFor (deferred : Bool) (source : Semantics.HostState) (events : List (Fin 8 × Inputs Fp))
     (terminals : List (State Fp)) (publicValues : Vector (Word Fp) 8)
     (eventsBound : events.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map]; decide)
     (terminalsBound : terminals.length ≤ UInt64.size := by simp only [List.length_cons, List.length_nil, List.length_map]; decide) :
@@ -176,7 +176,7 @@ theorem terminalClocks : [false, true].all (fun deferred =>
 #guard_msgs in
 #assert_exportable (HostCommitBoundary.verifier (p := SP1Prime) true (Vector.replicate 8 0))
 
-private def continuationSource : Model.Core.HostState :=
+private def continuationSource : Semantics.HostState :=
   { committed := #v[1, 65537, 3, 4, 5, 6, 7, 4294967295],
     deferred := #v[101, 102, 103, 104, 105, 106, 107, 108],
     stdout := [11, 22], stderr := [33] }
@@ -190,7 +190,7 @@ private def continuation (deferred : Bool) : List (Fin 8 × Inputs Fp) × State 
   let third := make 7 1049105 33 (second.next 0)
   return ([(7, first), (0, second), (7, third)], third.next 7)
 
-private def bankChecked (deferred : Bool) (source : Model.Core.HostState)
+private def bankChecked (deferred : Bool) (source : Semantics.HostState)
     (events : List (Fin 8 × Inputs Fp)) (last : State Fp) (values : Vector (Word Fp) 8) : Bool :=
   if bounded : events.length ≤ UInt64.size then
     let checks := evaluatedWitness (witnessFor deferred source events [last] values bounded)

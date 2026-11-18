@@ -1,6 +1,6 @@
 import SP1Clean.Soundness.HaltGrounding
 import SP1Clean.Soundness.CoreExecutionEvents
-import SP1Clean.Model.Core.HostHalt
+import SP1Clean.Semantics.Host.HostHalt
 
 /-! # HALT from grounded observations
 
@@ -12,7 +12,7 @@ does not choose a trajectory, reset the host, or use a row's result as an oracle
 namespace SP1Clean.Soundness
 
 open SP1Clean.Soundness.NativeCore (haltEventOfRow)
-open SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding LeanRV64D
+open SP1Clean.Channels SP1Clean.Semantics TimedGrounding LeanRV64D
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

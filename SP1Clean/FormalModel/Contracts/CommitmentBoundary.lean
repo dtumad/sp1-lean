@@ -10,7 +10,7 @@ rest of SP1's shard record, including previous commitments and cross-shard field
 
 namespace SP1Clean.CommitmentBoundary
 
-open Model.Core
+open Semantics
 
 variable {p : ℕ} [Fact p.Prime]
 

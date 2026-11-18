@@ -1,7 +1,7 @@
 import SP1Clean.Soundness.HostHintReadHandoff
 import SP1Clean.Native.Operations.HintQueueWordSource
-import SP1Clean.Model.Core.ExecutionResources
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Math.SP1Field
 import ToClean.Air.Authentication
 
 /-! # Immutable hint-record source contracts
@@ -15,7 +15,7 @@ alone. Neither current queue heads nor RAM predecessor currency is assumed here.
 
 namespace SP1Clean.Soundness.HostHintRecordSources
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintQueue
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintQueue
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

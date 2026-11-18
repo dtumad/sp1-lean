@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.FixedProgramProvider.Preprocessed
-import SP1Clean.Model.Semantics.Truth
+import SP1Clean.Semantics.Transition.Truth
 import SP1Clean.Proofs.Sail.InstructionDecode
 import ToClean.Air.ChannelClosure
 
@@ -12,7 +12,7 @@ multiplicity. This bridge needs no decoder certificate or semantic provider-vali
 
 namespace SP1Clean.FixedProgramProvider.Preprocessed
 
-open Circuit Air.Flat SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

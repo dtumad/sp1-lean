@@ -1,8 +1,8 @@
 import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Ledger
 import SP1Clean.Proofs.Chips.HostRamAccessChip.Populate
-import SP1Clean.Model.Semantics.Decode
-import SP1Clean.Model.SP1Field
+import SP1Clean.Semantics.ISA.Decode
+import SP1Clean.Math.SP1Field
 import Clean.Circuit.WitnessExport
 
 /-! # Executed host RAM access regressions

@@ -11,7 +11,7 @@ no physical table. State limb bounds and ordered Memory boundaries belong to the
 
 namespace SP1Clean.LocalSourceBoundary
 
-open Circuit Air.Flat Model.Core Soundness
+open Circuit Air.Flat Semantics Soundness
 
 variable {p : ℕ} [Fact p.Prime]
 

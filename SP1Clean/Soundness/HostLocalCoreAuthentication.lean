@@ -11,7 +11,7 @@ ledger equality or physical-table alignment premise.
 
 namespace SP1Clean.Soundness.HostLocalCore
 
-open Circuit Air.Flat Model.Core
+open Circuit Air.Flat Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
@@ -27,7 +27,7 @@ theorem authenticated_auxiliary_pull {image : ProgramImage} {source : ExecutionS
     (witness : EnsembleWitness (ensemble image source auxiliary channels names channelNames tableChannels))
     (channel : Channel (ZMod p) Record)
     (registered : channel.toRaw ∈ (baseEnsemble image source auxiliary channels names channelNames tableChannels).channels)
-    (fresh : channel.toRaw ∉ (LocalCore.ensemble (p := p) image source).channels)
+    (fresh : channel.toRaw ∉ (LocalCore.baseEnsemble (p := p) image source).channels)
     (permission : channel.toRaw ≠ WritePermissionProvider.channel.toRaw)
     (notMembership : channel.toRaw ≠ image.writePermissionTable.channel.toRaw)
     (wrapper : channel.toRaw ∉ (HostCallLedger.producer (p := p)).circuit.channels)

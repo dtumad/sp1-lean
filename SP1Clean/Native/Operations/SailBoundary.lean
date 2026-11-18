@@ -10,7 +10,7 @@ twelve interactions on a fresh channel and preserves every existing channel ledg
 
 namespace SP1Clean.SailBoundary
 
-open Circuit Air.Flat Model.Core Soundness.Target
+open Circuit Air.Flat Semantics Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime]
 

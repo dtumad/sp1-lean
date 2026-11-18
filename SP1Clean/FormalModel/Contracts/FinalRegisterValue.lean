@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.FinalMemoryValue
+import SP1Clean.Semantics.Execution.RegisterSnapshotTable
+import SP1Clean.Circuits.Channels.FinalMemoryValue
 
 /-! # Complete outgoing register values
 
@@ -9,7 +9,7 @@ Its clock is preserved by the full-record handoff and is grounded by the enclosi
 
 namespace SP1Clean.FinalRegisterValue
 
-open Model.Core Channels Semantics
+open Semantics Channels
 
 variable {p : ℕ} [Fact p.Prime]
 

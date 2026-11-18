@@ -2,8 +2,8 @@ import ToClean.Circuit.Guarded
 import ToClean.Circuit.SubcircuitProjection
 import ToClean.Air.StaticProvider
 import SP1Clean.FormalModel.Contracts.SnapshotMemory
-import SP1Clean.Model.Core.RegisterSnapshotTable
-import SP1Clean.Model.Channels
+import SP1Clean.Semantics.Execution.RegisterSnapshotTable
+import SP1Clean.Circuits.Channels.Channels
 import ToClean.Circuit.InteractionRecovery
 import Clean.Utils.Tactics
 
@@ -17,7 +17,7 @@ are represented by an empty table; the separate fixed provider retains all 32 re
 
 namespace SP1Clean.SnapshotRegisterProvider
 
-open Circuit SP1Clean.Model.Core SP1Clean.Semantics SP1Clean.Channels
+open Circuit SP1Clean.Semantics SP1Clean.Channels
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

@@ -1,5 +1,5 @@
 import SP1Clean.FormalModel.Contracts.RegisterRead
-import SP1Clean.Model.MemoryClock
+import SP1Clean.Semantics.Memory.MemoryClock
 import SP1Clean.Native.Readers.RegisterAccessCols
 import ToClean.Circuit.InteractionRecovery
 

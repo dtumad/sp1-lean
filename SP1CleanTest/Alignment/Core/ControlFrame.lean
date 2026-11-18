@@ -1,6 +1,6 @@
-import SP1Clean.Model.Semantics.SailControlExecute
-import SP1Clean.Model.Semantics.SailControlFrame
-import SP1Clean.Model.Core.SourceExecution
+import SP1Clean.Semantics.Sail.SailControlExecute
+import SP1Clean.Semantics.Sail.SailControlFrame
+import SP1Clean.Semantics.Execution.SourceExecution
 import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Normally retiring control flow without circuit rows
@@ -13,7 +13,7 @@ source data and operands; the retirement and preservation proofs run through the
 
 namespace SP1CleanTest.Core.ControlFrame
 
-open SP1Clean SP1Clean.Model.Core SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Functions
+open SP1Clean SP1Clean.Semantics SP1Clean.Soundness.Target LeanRV64D LeanRV64D.Functions
 
 private def image (word : BitVec 32) : ProgramImage := ⟨[(65536, word)], 65536, []⟩
 

@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.MemoryTable
+import SP1Clean.Semantics.Memory.MemoryTable
 import SP1Clean.Circuits.Gadgets.LtUnsigned
 
 /-! # Exportable witnesses for address-based memory reads
@@ -11,7 +11,7 @@ one search expression. Evaluation is related to the existing semantic interval s
 
 namespace SP1Clean.InitialMemoryLookup
 
-open Circuit Witgen Model.Core Soundness.Target
+open Circuit Witgen Semantics Soundness.Target
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 

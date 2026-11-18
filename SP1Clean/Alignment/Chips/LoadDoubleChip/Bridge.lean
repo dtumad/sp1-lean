@@ -1,5 +1,5 @@
-import SP1Clean.Model.SailMemory
-import SP1Clean.Model.SailWrap
+import SP1Clean.Semantics.Sail.SailMemory
+import SP1Clean.Semantics.Sail.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.LoadDoubleChip.Formal
 import SP1Clean.Soundness.ChipRow

@@ -1,6 +1,6 @@
 import SP1Clean.FormalModel.Contracts.SystemChips
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
+import SP1Clean.Circuits.Channels.Channels
+import SP1Clean.Circuits.Channels.ByteTable
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit
 import Clean.Circuit.Channel

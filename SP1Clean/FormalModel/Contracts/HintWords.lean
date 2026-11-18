@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HintQueueWordRecords
+import SP1Clean.Semantics.Host.HintQueueWordRecords
 
 /-! # Immutable hint-word coordination
 
@@ -9,7 +9,7 @@ byte binding; complete consumers must request every required word, including fin
 
 namespace SP1Clean.HostHintQueue
 
-open Circuit Model.Core.HintQueue
+open Circuit Semantics.HintQueue
 
 def wordChannel {p : ℕ} [Fact p.Prime] : Channel (ZMod p) WordRecord where
   name := "sp1.native.hint_word"

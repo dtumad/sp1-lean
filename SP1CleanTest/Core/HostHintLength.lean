@@ -15,7 +15,7 @@ not a claim that the handler is installed in the full local-core ensemble.
 
 namespace SP1CleanTest.Core.HostHintLength
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core HostChecks
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics HostChecks
 
 private abbrev Fp := ZMod SP1Prime
 

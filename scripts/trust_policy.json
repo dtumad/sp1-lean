@@ -103,7 +103,7 @@
       "_private.SP1Clean.Alignment.Chips.StoreWordChip.Bridge.0.SP1Clean.StoreWordChip.store_byte1_32._native.bv_decide",
       "_private.SP1Clean.Alignment.Chips.StoreWordChip.Bridge.0.SP1Clean.StoreWordChip.store_byte2_32._native.bv_decide",
       "_private.SP1Clean.Alignment.Chips.StoreWordChip.Bridge.0.SP1Clean.StoreWordChip.store_byte3_32._native.bv_decide",
-      "jump_to_of_mod4_eq_zero._native.bv_decide"
+      "_private.SP1Clean.Semantics.Sail.SailWrap.0.jump_to_of_mod4_eq_zero._native.bv_decide"
     ]
   },
   "testNativeTactics": [

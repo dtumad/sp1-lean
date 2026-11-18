@@ -1,11 +1,11 @@
-import SP1Clean.Model.Core.MemoryIntervals
-import SP1Clean.Model.Core.SailMemory
+import SP1Clean.Semantics.Memory.MemoryIntervals
+import SP1Clean.Semantics.Memory.SailMemory
 
 /-! # Sparse memory lookup and Sail-map regressions -/
 
 namespace SP1CleanTest.Core.MemoryIntervals
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 private def memory : ByteMemory := ⟨[(7, 42), (0, 13), (7, 9), (15, 255), (16, 99)]⟩
 

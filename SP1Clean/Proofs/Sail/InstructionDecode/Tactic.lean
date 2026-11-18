@@ -1,5 +1,5 @@
-import SP1Clean.Model.Core.InstructionDecode
-import SP1Clean.Model.SailDecode
+import SP1Clean.Semantics.ISA.InstructionDecode
+import SP1Clean.Semantics.Sail.SailDecode
 
 /-! # Symbolic reduction of the pinned Sail instruction decoder
 
@@ -13,7 +13,7 @@ namespace SP1Clean.SailDecode.Symbolic
 
 open LeanRV64D LeanRV64D.Functions Sail
 open SP1Clean SP1Clean.Soundness.Target SP1Clean.SailDecode
-open SP1Clean.Model.Core.InstructionDecode
+open SP1Clean.Semantics.InstructionDecode
 
 private theorem run_guard_true {α : Type} (b : Bool) (yes no : SailM α) (s : SailState)
     (hb : b = true) : runSail (if b then yes else no) s = runSail yes s := by rw [hb]; rfl
@@ -59,14 +59,14 @@ private theorem ceMul (s : SailState) (cfg : SailConfigured s) :
 /-- Rewrite known whole bit fields before converting remaining guards to natural arithmetic.
 That order keeps the generated encoding maps reducible at symbolic operand values. -/
 macro "sail_decode_guard" : tactic => `(tactic| (
-  simp_all only [SP1Clean.Model.Core.InstructionDecode.bits, Sail.BitVec.extractLsb,
+  simp_all only [SP1Clean.Semantics.InstructionDecode.bits, Sail.BitVec.extractLsb,
     BitVec.extractLsb, BitVec.extractLsb']
   all_goals simp_all [bool_matches, width_matches, ntl_matches, cbop_matches,
-    SP1Clean.Model.Core.InstructionDecode.reservedHint, LeanRV64D.Functions.base_E_enabled,
+    SP1Clean.Semantics.InstructionDecode.reservedHint, LeanRV64D.Functions.base_E_enabled,
     LeanRV64D.not, encdec_reg_backwards_matches, encdec_uop_backwards_matches,
     encdec_iop_backwards_matches, encdec_bop_backwards_matches, Bool.and_eq_true,
     Bool.and_eq_false_iff, Bool.or_eq_true, Bool.or_eq_false_iff,
-    beq_iff_eq, bne_iff_ne, BitVec.toNat_eq, SP1Clean.Model.Core.InstructionDecode.bits,
+    beq_iff_eq, bne_iff_ne, BitVec.toNat_eq, SP1Clean.Semantics.InstructionDecode.bits,
     Sail.BitVec.extractLsb, BitVec.extractLsb, BitVec.extractLsb'_toNat,
     BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow, Nat.reducePow, Nat.reduceSub,
     Nat.reduceAdd, Nat.div_one, Nat.mod_self, Nat.reduceMod]
@@ -95,21 +95,21 @@ macro_rules
      · sail_decode_walk $s, $cfg, $inst)
   | (refine (run_bind_step _ ?value _ $s ?_).trans ?_
      rotate_left
-     · simp_all only [SP1Clean.Model.Core.InstructionDecode.bits, Sail.BitVec.extractLsb,
+     · simp_all only [SP1Clean.Semantics.InstructionDecode.bits, Sail.BitVec.extractLsb,
          BitVec.extractLsb, BitVec.extractLsb']
        all_goals simp_all [LeanRV64D.Functions.base_E_enabled, LeanRV64D.not,
          encdec_uop_backwards_matches, encdec_reg_backwards_matches, encdec_uop_backwards,
          encdec_reg_backwards, encdec_iop_backwards,
          encdec_bop_backwards, Sail.BitVec.extractLsb, BitVec.extractLsb,
-         LeanRV64D.Functions.regidx_bit_width, SP1Clean.Model.Core.InstructionDecode.bits,
+         LeanRV64D.Functions.regidx_bit_width, SP1Clean.Semantics.InstructionDecode.bits,
          BitVec.extractLsb', BitVec.toNat_eq, runSail_pure]
        all_goals rfl)
   | (refine congrArg (fun value => EStateM.Result.ok value $s) ?_
-     simp_all only [SP1Clean.Model.Core.InstructionDecode.bits, Sail.BitVec.extractLsb,
+     simp_all only [SP1Clean.Semantics.InstructionDecode.bits, Sail.BitVec.extractLsb,
        BitVec.extractLsb, BitVec.extractLsb']
      all_goals simp_all [width_enc_backwards, bool_bit_backwards, Sail.BitVec.extractLsb,
        BitVec.extractLsb, LeanRV64D.Functions.regidx_bit_width,
-       SP1Clean.Model.Core.InstructionDecode.bits, BitVec.extractLsb']
+       SP1Clean.Semantics.InstructionDecode.bits, BitVec.extractLsb']
      all_goals and_intros
      all_goals first | rfl | apply BitVec.eq_of_toNat_eq
      all_goals simp only [BitVec.toNat, BitVec.ofNat, Fin.Internal.ofNat_eq_ofNat,

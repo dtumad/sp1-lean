@@ -28,7 +28,7 @@ outgoing-snapshot equality, WRITE/VERIFY installation and resource limits remain
 
 namespace SP1Clean.Soundness.Shard
 
-open Circuit Air.Flat Channels Machine Model.Core Semantics FormalModel.Shard
+open Circuit Air.Flat Channels Machine Semantics FormalModel.Shard
 open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]

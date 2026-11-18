@@ -1,4 +1,4 @@
-import SP1Clean.Model.Core.HostIO
+import SP1Clean.Semantics.Host.HostIO
 
 /-! # Executable regressions for the native host I/O contract
 
@@ -8,7 +8,7 @@ eight-byte boundary. They do not substitute for syscall AIR grounding or Rust co
 
 namespace SP1CleanTest.Core
 
-open SP1Clean.Model.Core
+open SP1Clean.Semantics
 
 private def policy : HostMemoryPolicy := ⟨fun _ => false, NativeLayout.guestMemory⟩
 

@@ -12,7 +12,7 @@ integration obligations. This producer installation alone is not an end-to-end c
 
 namespace SP1Clean.Soundness.HostOrdinaryReceipts
 
-open Circuit Air.Flat Channels Model.Core
+open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance receiptClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -179,22 +179,17 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
                 simp only [List.map_append, List.mem_append, List.map_cons, List.map_nil,
                   List.mem_singleton] at old
                 have separate (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
-                    (long : 0 < stem.toList.length) (different : stem.toList[0]? ≠ some 'S') :
+                    (unprefixed : ¬ stem.toList <+: "SP1OrdinaryStateReceipt".toList) :
                     (InstructionReceipt.channel (p := p)).toRaw.name ≠
-                      (VerifierChannel.channel stem ens).name := by
-                  intro same
-                  have heads := congrArg (fun name : String => name.toList[0]?) same
-                  dsimp only [VerifierChannel.channel, Verifier.zeroChannel,
-                    Channel.toRaw, VerifierChannel.channelName] at heads
-                  rw [String.toList_append, List.getElem?_append_left long] at heads
-                  apply different
-                  simpa [InstructionReceipt.channel] using heads.symm
+                      (VerifierChannel.channel stem ens).name := fun same =>
+                  VerifierChannel.name_ne_of_not_prefix stem ens unprefixed
+                    (same.symm.trans (by simp [InstructionReceipt.channel, Channel.toRaw]))
                 rcases old with (((old | old) | old) | old) | old
                 · exact FreshReceipt.fresh (image := image) (source := source) (channels := channels) old
-                · exact separate "sp1.local.source" _ (by decide) (by decide) old
-                · exact separate "host-boundary" _ (by decide) (by decide) old
-                · exact separate "final-memory-change" _ (by decide) (by decide) old
-                · exact separate "sail_boundary" _ (by decide) (by decide) old
+                · exact separate "sp1.local.source" _ (by decide) old
+                · exact separate "host-boundary" _ (by decide) old
+                · exact separate "final-memory-change" _ (by decide) old
+                · exact separate "sail_boundary" _ (by decide) old
               tables_channels := by
                 intro component member channel used
                 obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member

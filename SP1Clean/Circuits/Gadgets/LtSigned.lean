@@ -8,7 +8,7 @@ public import ToClean.Circuit.WitgenEval
 public import SP1Clean.Semantics.Specs.LtSigned
 public import SP1Clean.Circuits.Gadgets.LtUnsigned
 public import SP1Clean.Circuits.Gadgets.U16MSB
-public import SP1Clean.Model.Channels
+public import SP1Clean.Circuits.Channels.Channels
 public import Clean.Gadgets.Equality
 import ToClean.Circuit.IteDecide
 import Clean.Utils.Tactics.CircuitProofStart

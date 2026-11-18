@@ -1,4 +1,4 @@
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1Clean.Proofs.Chips.AddChip.Formal
 import Clean.Circuit.Theorems
 import Clean.Circuit.Subcircuit

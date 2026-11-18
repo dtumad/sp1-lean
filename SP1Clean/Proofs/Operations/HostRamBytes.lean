@@ -1,5 +1,5 @@
 import SP1Clean.Native.Operations.HostRamBytes
-import SP1Clean.Model.Core.HostReadWords
+import SP1Clean.Semantics.Host.HostReadWords
 import ToClean.Circuit.InteractionRecovery
 
 /-! # Canonical bytes from a bounded host read
@@ -99,13 +99,13 @@ theorem populate_assumptions (read : HostRamReadChip.Message (ZMod p)) (valid : 
 omit [Fact (2 ^ 17 < p)] in
 /-- Once the consumed word is grounded, the circuit output is the host's exact byte read. -/
 theorem Spec.readBytes {input : Inputs (ZMod p)} {output : Vector (ZMod p) 8}
-    (checked : Spec input output) (context : Model.Core.HostReadContext)
+    (checked : Spec input output) (context : Semantics.HostReadContext)
     (observed : context.ObservesWord (Word.toNat input.read.address)
       (Word.toBitVec64 input.read.value)) :
     context.readBytes? (Word.toNat input.read.address) 8 =
       some (output.map fun byte => BitVec.ofNat 8 byte.val).toList := by
   rw [checked.2.2] at observed
-  exact Model.Core.HostReadContext.readBytes_of_word _ _ _ observed
+  exact Semantics.HostReadContext.readBytes_of_word _ _ _ observed
 
 open scoped Classical
 

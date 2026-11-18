@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Completeness.LoadByteStatic
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 
 /-! # Executable LoadByte fixed-lookup comparison
 

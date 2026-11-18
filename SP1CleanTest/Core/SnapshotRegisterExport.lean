@@ -1,7 +1,7 @@
 import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Proofs.Chips.SnapshotRegisterProvider
 import SP1Clean.Native.Operations.FinalRegisterValue
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import ToClean.Air.EnsembleCheck
 
 /-! # Built-in export of source and target register authentication
@@ -14,7 +14,7 @@ The nonzero local snapshot is independent of SP1's boot-only register initializa
 
 namespace SP1CleanTest.Core.SnapshotRegisterExport
 
-open Air.Flat Circuit SP1Clean SP1Clean.Model.Core
+open Air.Flat Circuit SP1Clean SP1Clean.Semantics
 
 abbrev Fp := ZMod SP1Prime
 abbrev Requests := ProvableVector RegisterSnapshotRow 2

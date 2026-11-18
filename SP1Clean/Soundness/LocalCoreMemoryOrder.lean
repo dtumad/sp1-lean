@@ -13,7 +13,7 @@ without assuming Memory truth, and supplies refresh elimination with its complet
 namespace SP1Clean.Soundness.LocalCore
 
 open SP1Clean.Soundness.NativeCore (ExecutionRow AlignedFacts MemoryClockBounds rowTouches walk_rank_bound memoryBump_row_order)
-open Circuit Air.Flat SP1Clean.Channels SP1Clean.Model.Core SP1Clean.Semantics TimedGrounding
+open Circuit Air.Flat SP1Clean.Channels SP1Clean.Semantics TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

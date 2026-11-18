@@ -1,5 +1,5 @@
-import SP1Clean.Model.Semantics.TransitionView
-import SP1Clean.Model.Semantics.AccessSchedule
+import SP1Clean.Semantics.Transition.TransitionView
+import SP1Clean.Semantics.Transition.AccessSchedule
 import SP1Clean.Proofs.Completeness.EventBuckets
 
 /-!

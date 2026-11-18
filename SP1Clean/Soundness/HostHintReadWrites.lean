@@ -13,7 +13,7 @@ grounding must still authenticate their predecessors and prove the complete outg
 
 namespace SP1Clean.Soundness.HostHintReadWrites
 
-open Circuit Air.Flat Model.Core Model.Core.HintQueue HostHintReadCoverage
+open Circuit Air.Flat Semantics Semantics.HintQueue HostHintReadCoverage
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 

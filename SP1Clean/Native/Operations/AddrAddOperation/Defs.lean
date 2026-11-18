@@ -1,6 +1,6 @@
 import SP1Clean.Math.Word
-import SP1Clean.Model.Channels
-import SP1Clean.Model.ByteTable
+import SP1Clean.Circuits.Channels.Channels
+import SP1Clean.Circuits.Channels.ByteTable
 import SP1Clean.FormalModel.Contracts.Operations
 import Clean.Circuit.Basic
 import Clean.Circuit.Subcircuit

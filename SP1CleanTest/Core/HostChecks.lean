@@ -1,6 +1,6 @@
 import Clean.Air.Balance
 import SP1Clean.Proofs.Chips.HostCallChip.Populate
-import SP1Clean.Model.SP1Field
+import SP1Clean.Math.SP1Field
 import SP1Clean.Math.Address
 import ToClean.Air.FiniteLookup
 
@@ -14,7 +14,7 @@ These fixture checks do not assert whole-machine balance or authentic boot-memor
 
 namespace SP1CleanTest.Core.HostChecks
 
-open Circuit Air.Flat SP1Clean SP1Clean.Model.Core
+open Circuit Air.Flat SP1Clean SP1Clean.Semantics
 
 private abbrev Fp := ZMod SP1Prime
 /-- Active interactions retained for fixture balance and endpoint checks. -/

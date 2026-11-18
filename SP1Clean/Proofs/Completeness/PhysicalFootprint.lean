@@ -1,6 +1,6 @@
 import SP1Clean.Proofs.Completeness.Assembly
 import ToClean.Air.Footprint
-import SP1Clean.Model.Core.ResourceLimits
+import SP1Clean.Semantics.Resources.ResourceLimits
 
 /-! # Exact construction costs of the retained native compiler
 
@@ -12,7 +12,7 @@ acceptance condition. The mixed A4/A5/A6 construction must supply its own full i
 -/
 
 namespace SP1Clean.Soundness.SupportedCoreTraceWitness
-open Air.Flat TraceGen Model.Core
+open Air.Flat TraceGen Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable (trace : SupportedCoreTraceWitness p)
