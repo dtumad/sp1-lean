@@ -48,6 +48,10 @@
 #                        exit is nonzero for process failures or rejected profiler output
 #   summary.md           the ranking as a markdown table with a totals/failures footer
 #   measurements.jsonl   one JSON-Lines record per module (archival)
+#   resources.tsv        module<TAB>instructions<TAB>max_rss_bytes<TAB>c_bytes (instructions and RSS
+#                        on macOS, from `time -l`; instructions retired are the noise-robust metric
+#                        on a shared machine, 0 where the platform does not report them)
+#   c/<module>.c         the generated C; Lake always emits it, so the sweep measures that cost too
 #   profile.md           ranking + category totals + per-pillar split (from profile_aggregate.py)
 #   profile.json         the same data, machine-readable
 
@@ -74,6 +78,11 @@ PACKAGE_FLAGS=($pkg_flags); TEST_FLAGS=($test_flags); MODEL_FLAGS=($model_flags)
 mkdir -p "$OUTDIR"
 : > "$OUTDIR/summary.tsv"
 : > "$OUTDIR/measurements.jsonl"
+: > "$OUTDIR/resources.tsv"
+mkdir -p "$OUTDIR/c"
+# macOS `time -l` adds instructions retired and peak RSS to the `-p` lines.
+TIME_FLAGS=(-p)
+[ "$(uname)" = Darwin ] && TIME_FLAGS=(-l -p)
 
 # 1. Warm the olean cache. Abort the sweep if the build is broken — profiling a non-building
 #    tree measures error-recovery, not steady-state elaboration. The default Lake target is
@@ -146,9 +155,12 @@ while IFS= read -r f; do
   #    profiler breakdown) go to $log, while /usr/bin/time -p's own `real/user/sys` lines stay on
   #    the outer stderr -> $timefile. time -p exits with the wrapped command's status, so rc is
   #    lean's exit code. (Redirecting lean directly under time would capture time's output too.)
-  /usr/bin/time -p sh -c \
-    'log="$1"; lean="$2"; shift 2; "$lean" -Dprofiler=true -Dprofiler.threshold=50 "$@" > "$log" 2>&1' \
-    _ "$log" "$LEAN_BIN" "${flags[@]}" "$f" 2> "$timefile"
+  #    `exec` makes lean the measured process: macOS reports instructions retired for the direct
+  #    child only.
+  cfile="$OUTDIR/c/${module}.c"
+  /usr/bin/time "${TIME_FLAGS[@]}" sh -c \
+    'log="$1"; lean="$2"; shift 2; exec "$lean" -Dprofiler=true -Dprofiler.threshold=50 "$@" > "$log" 2>&1' \
+    _ "$log" "$LEAN_BIN" "${flags[@]}" "$f" -c "$cfile" 2> "$timefile"
   rc=$?
   if [ "$rc" -eq 0 ] && ! python3 "$ROOT/scripts/profile_aggregate.py" --check-log "$log"; then
     rc=1
@@ -157,6 +169,10 @@ while IFS= read -r f; do
 
   secs="$(awk '/^real/ {print $2}' "$timefile")"
   cpu="$(awk '/^user/ {u=$2} /^sys/ {s=$2} END {printf "%.2f", u + s}' "$timefile")"
+  instr="$(awk '/instructions retired/ {print $1}' "$timefile")"
+  rss="$(awk '/maximum resident set size/ {print $1}' "$timefile")"
+  cbytes="$(wc -c < "$cfile" 2>/dev/null | tr -d ' ')"
+  printf '%s\t%s\t%s\t%s\n' "$module" "${instr:-0}" "${rss:-0}" "${cbytes:-0}" >> "$OUTDIR/resources.tsv"
   rm -f "$timefile"
   [ -z "$secs" ] && secs="0"
   [ -z "$cpu" ] && cpu="0"
