@@ -43,10 +43,12 @@ def validate_report(name, result, revision, dirty):
                        "malformed-seed-index", "malformed-seed-length"]
         values = [True, False, False, False, False, True, False, False]
         # 620 table declarations from the independently checked componentChannelIndices;
-        # 132 verifier declarations. The canonical registry has 32 unique names.
+        # 132 verifier declarations. The canonical registry has 34 unique names: 32 used by tables or
+        # the verifier, plus the ordinary receipt and observation channels it registers ahead of
+        # their tables.
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 95, "uniqueChannels": 32, "declaredChannelOccurrences": 620 + 132,
+                    "tableCount": 95, "uniqueChannels": 34, "declaredChannelOccurrences": 620 + 132,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and

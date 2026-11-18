@@ -1,5 +1,7 @@
 import SP1Clean.Soundness.HostHintReadLocalRecords
 import SP1Clean.Soundness.FinalMemoryChecks
+import SP1Clean.Native.Operations.InstructionReceipt
+import SP1Clean.FormalModel.Contracts.OrdinaryObservation
 
 /-! # Static registry of the complete-memory host inventory
 
@@ -60,7 +62,9 @@ theorem Registration.targetChannels {image : ProgramImage} {source : ExecutionSn
     change _ ∈ [_, _] ++ [_, FinalMemoryChange.channel.toRaw]
     simp
 
-/-- Each host protocol is registered once; shared core channels are inherited from the core. -/
+/-- Each host protocol is registered once; shared core channels are inherited from the core.
+The ordinary receipt and observation protocols are registered here with their future consumer;
+their producers are installed above this inventory. -/
 def sourceChannels (target : MemorySnapshot) : List (RawChannel (ZMod p)) :=
   [HostHintQueue.wordChannel.toRaw, HostHintQueue.nodeChannel.toRaw, HostHintQueue.stateChannel.toRaw,
     HostExitBoundary.channel.toRaw, (HostCommitChip.stateChannel false).toRaw,
@@ -68,11 +72,12 @@ def sourceChannels (target : MemorySnapshot) : List (RawChannel (ZMod p)) :=
     (FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
     FinalMemoryChange.channel.toRaw, (FinalRegisterValue.membership target).channel.toRaw,
     (InitialMemoryLookup.membership target.memory (2 ^ 48) "sp1.native.target_memory").channel.toRaw,
-    CommitmentDeclaration.channel.toRaw]
+    CommitmentDeclaration.channel.toRaw, InstructionReceipt.channel.toRaw,
+    OrdinaryObservation.stateChannel.toRaw]
 
 /-- Indices of the complete raw channel declarations for the physical host suffix.
 Repeated declarations remain here; the registry they index contains each protocol once. -/
-private def sourceChannelIndices : List (List (Fin 28)) :=
+private def sourceChannelIndices : List (List (Fin 30)) :=
   [[8, 8, 15, 8, 8, 16, 0, 17, 14, 16, 15, 0, 17, 14], [8, 0, 0, 18], [0, 0], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 19, 27, 0, 19, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [8, 8, 27, 0, 20, 27, 0, 20, 13], [16, 0, 17, 0, 17, 16], [0, 17, 0, 17], [8, 10, 15, 8, 8, 21, 1, 1, 1, 1, 1, 1, 1, 1, 14, 10, 21, 15, 1, 14], [8, 10, 15, 8, 8, 21, 1, 1, 1, 1, 1, 1, 1, 1, 14, 10, 21, 15, 1, 14], [16], [15], [19, 19], [20, 20], [25, 22, 22, 24], [26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 8, 8, 8, 8, 26, 8, 23, 23, 24], [25], [26]]
 
 private theorem source_channel_declarations (image : ProgramImage) (source : ExecutionSnapshot)
@@ -82,7 +87,7 @@ private theorem source_channel_declarations (image : ProgramImage) (source : Exe
         FinalMemoryChecks.checkTables target))).map (fun component : Component (ZMod p) => component.circuit.channels)) =
       sourceChannelIndices.map (fun indices => indices.map (fun index =>
         (HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels target))[index.val]'(by
-          change index.val < 28
+          change index.val < 30
           exact index.isLt))) := by
   repeat' first
     | apply congrArg₂ List.cons
@@ -98,7 +103,7 @@ theorem source_registration (image : ProgramImage) (source : ExecutionSnapshot) 
       List.nil_append, StaticTable.channel, StaticTable.ofRows, MemorySnapshot.registerTable,
       ProgramImage.writePermissionTable, InitialMemoryLookup.membership, FinalRegisterValue.membership,
       Channel.toRaw_name]
-    change (["sp1.native.host_call", "SP1WritePermission", "sp1.native.write_permission", "SP1NativeMemoryInitOrder", "SP1NativeMemoryFinalOrder", "sp1.native.source_registers", "sp1.native.initial_memory", "SP1State", "SP1Byte", "SP1Program", "SP1Memory", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.hint_read_state", "sp1.native.hint_word", "sp1.native.hint_node", "sp1.native.hint_queue_state", "SP1HostExit", "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access", "SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange", "sp1.native.target_registers", "sp1.native.target_memory", "sp1.native.commitment_declaration"]).Nodup
+    change (["sp1.native.host_call", "SP1WritePermission", "sp1.native.write_permission", "SP1NativeMemoryInitOrder", "SP1NativeMemoryFinalOrder", "sp1.native.source_registers", "sp1.native.initial_memory", "SP1State", "SP1Byte", "SP1Program", "SP1Memory", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.hint_read_state", "sp1.native.hint_word", "sp1.native.hint_node", "sp1.native.hint_queue_state", "SP1HostExit", "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access", "SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange", "sp1.native.target_registers", "sp1.native.target_memory", "sp1.native.commitment_declaration", "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"]).Nodup
     decide
   · intro component member channel used
     have declared := List.mem_map_of_mem

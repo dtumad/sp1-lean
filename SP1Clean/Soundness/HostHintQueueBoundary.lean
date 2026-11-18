@@ -128,13 +128,15 @@ theorem projected_drop
   HaltPadding.drop_tables witness count after
 
 /-- Channels whose producers lie outside the host proof view: the final-memory receipts consumed
-by appended target validators, and the commitment declarations pulled by COMMIT handlers from the
-verifier-owned statement provider. The host grounding proofs assume no balance on them; the target
+by appended target validators, the commitment declarations pulled by COMMIT handlers from the
+verifier-owned statement provider, and the ordinary receipts and observation links whose producers
+are installed above the host inventory. The host grounding proofs assume no balance on them; the target
 comparison (`HostFinalMemory.checkFinal_of_channels`) and statement authentication
 (`CommitmentEnsemble.declared_member`) use their balance, which complete acceptance supplies. -/
 def hiddenChannels : List (RawChannel (ZMod p)) :=
   [(FinalMemoryValue.channel false).toRaw, (FinalMemoryValue.channel true).toRaw,
-    FinalMemoryChange.channel.toRaw, CommitmentDeclaration.channel.toRaw]
+    FinalMemoryChange.channel.toRaw, CommitmentDeclaration.channel.toRaw,
+    InstructionReceipt.channel.toRaw, OrdinaryObservation.stateChannel.toRaw]
 
 /-- Balance on every registered channel except the hidden ones: the host grounding premise. -/
 def Balanced (witness : EnsembleWitness (ensemble image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels)) :
@@ -151,15 +153,16 @@ theorem Balanced.of_balancedChannels
 /-- The hidden channels' names. -/
 private def hiddenNames : List String :=
   ["SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange",
-    "sp1.native.commitment_declaration"]
+    "sp1.native.commitment_declaration", "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"]
 
 omit [Fact (2 ^ 25 < p)] in
 private theorem hidden_name {hidden : RawChannel (ZMod p)} (member : hidden ∈ hiddenChannels (p := p)) :
     hidden.name ∈ hiddenNames := by
   simp only [hiddenChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl <;>
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;>
     simp [hiddenNames, FinalMemoryValue.channel, FinalMemoryChange.channel,
-      CommitmentDeclaration.channel, Channel.toRaw]
+      CommitmentDeclaration.channel, InstructionReceipt.channel, OrdinaryObservation.stateChannel,
+      Channel.toRaw]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- No fresh verifier channel of the installed checkers is hidden: no hidden name starts with a
@@ -224,13 +227,14 @@ omit [Fact (2 ^ 25 < p)] in
 /-- A channel whose name differs from every hidden name is not hidden. -/
 theorem visible_of_name (channel : RawChannel (ZMod p))
     (named : channel.name ∉ ["SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange",
-      "sp1.native.commitment_declaration"]) :
+      "sp1.native.commitment_declaration", "SP1OrdinaryStateReceipt", "SP1OrdinaryObservation"]) :
     channel ∉ hiddenChannels (p := p) := by
   intro member
   apply named
   simp only [hiddenChannels, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl <;>
-    simp [FinalMemoryValue.channel, FinalMemoryChange.channel, CommitmentDeclaration.channel, Channel.toRaw]
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;>
+    simp [FinalMemoryValue.channel, FinalMemoryChange.channel, CommitmentDeclaration.channel,
+      InstructionReceipt.channel, OrdinaryObservation.stateChannel, Channel.toRaw]
 
 /-- The complete HostCall handoff is unchanged by the queue, bank and exit endpoints. -/
 theorem projected_hostCall_balancedChannel

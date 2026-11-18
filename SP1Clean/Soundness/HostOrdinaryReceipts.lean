@@ -5,9 +5,11 @@ import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 
 Only the 25 instruction components change. They retain all original row arrays, constraints,
 lookups and ledgers, including each store's byte-permission requests. Complete Memory checks,
-host resources and the supplied Sail frame remain installed. The resource block can contain
-the ordered observation consumer; authentic endpoints and its full Byte closure are subsequent
-integration obligations. This producer installation alone is not an end-to-end capstone.
+host resources and the supplied Sail frame remain installed. The receipt protocol is registered
+with the host inventory, next to its ordered observation consumer, before the producers are
+installed; the host proofs treat it as hidden. Authentic observation endpoints and the consumer's
+Byte closure are subsequent integration obligations. This producer installation alone is not an
+end-to-end capstone.
 -/
 
 namespace SP1Clean.Soundness.HostOrdinaryReceipts
@@ -38,23 +40,17 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources}
   [registration : HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
 
-/-- Static freshness of the additional receipt protocol in the existing channel registry. -/
-class FreshReceipt (image : ProgramImage) (source : ExecutionSnapshot)
+/-- The receipt protocol is registered with the host inventory. -/
+class ReceiptRegistered (image : ProgramImage) (source : ExecutionSnapshot)
     (channels : List (RawChannel (ZMod p))) : Prop where
-  fresh : (InstructionReceipt.channel (p := p)).toRaw.name ∉
-    (HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)
+  registered : (InstructionReceipt.channel (p := p)).toRaw ∈
+    HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)
 
-/-- The canonical source-backed host registry leaves the ordinary receipt name available. -/
-instance source_freshReceipt (image : ProgramImage) (source : ExecutionSnapshot)
-    (target : MemorySnapshot) : FreshReceipt (p := p) image source (HostFinalMemory.sourceChannels target) where
-  fresh := by
-    simp only [HostLocalCore.registry, LocalCore.baseEnsemble, sp1Ensemble_channels,
-      HostFinalMemory.sourceChannels, List.map_cons, List.map_nil, List.cons_append,
-      List.nil_append, StaticTable.channel, StaticTable.ofRows, MemorySnapshot.registerTable,
-      ProgramImage.writePermissionTable, InitialMemoryLookup.membership, FinalRegisterValue.membership,
-      Channel.toRaw_name]
-    change "SP1OrdinaryStateReceipt" ∉ ["sp1.native.host_call", "SP1WritePermission", "sp1.native.write_permission", "SP1NativeMemoryInitOrder", "SP1NativeMemoryFinalOrder", "sp1.native.source_registers", "sp1.native.initial_memory", "SP1State", "SP1Byte", "SP1Program", "SP1Memory", "SP1Exit", "SP1Syscall", "SP1PublicValues", "sp1.native.hint_read_state", "sp1.native.hint_word", "sp1.native.hint_node", "sp1.native.hint_queue_state", "SP1HostExit", "sp1.native.commit_state", "sp1.native.deferred_state", "sp1.native.host_ram_access", "SP1FinalRegisterValue", "SP1FinalRamValue", "SP1FinalMemoryChange", "sp1.native.target_registers", "sp1.native.target_memory", "sp1.native.commitment_declaration"]
-    decide
+/-- The canonical source-backed host registry includes the receipt protocol. -/
+instance source_receiptRegistered (image : ProgramImage) (source : ExecutionSnapshot)
+    (target : MemorySnapshot) :
+    ReceiptRegistered (p := p) image source (HostFinalMemory.sourceChannels target) where
+  registered := by simp [HostLocalCore.registry, HostFinalMemory.sourceChannels]
 
 private theorem base_length :
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length =
@@ -151,10 +147,9 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
     (channels : List (RawChannel (ZMod p)))
     (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
     [HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
-    [FreshReceipt (p := p) image source channels] : Ensemble (ZMod p) SP1PublicIO :=
+    [ReceiptRegistered (p := p) image source channels] : Ensemble (ZMod p) SP1PublicIO :=
   let base := HostSailBoundary.ensemble image source target final others resources channels names
   { base with tables := base.tables.mapIdx replace
-              channels := base.channels ++ [InstructionReceipt.channel.toRaw]
               unique_names := by
                 have unchanged : (base.tables.mapIdx replace).map (·.circuit.name) =
                     base.tables.map (·.circuit.name) := by
@@ -167,29 +162,6 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
                       ⟨index, by simpa only [List.length_map] using right⟩).1
                 rw [unchanged]
                 exact base.unique_names
-              unique_channel_names := by
-                rw [List.map_append, List.nodup_append]
-                refine ⟨base.unique_channel_names, by simp, ?_⟩
-                intro a old b added same
-                subst a
-                have : b = (InstructionReceipt.channel (p := p)).toRaw.name := by simpa using added
-                subst b
-                change _ ∈ ((((HostLocalCore.registry image source
-                  (HintReadWordChip.stateChannel.toRaw :: channels) ++ [_]) ++ [_]) ++ [_]) ++ [_]).map (fun channel : RawChannel (ZMod p) => channel.name) at old
-                simp only [List.map_append, List.mem_append, List.map_cons, List.map_nil,
-                  List.mem_singleton] at old
-                have separate (stem : String) (ens : Ensemble (ZMod p) SP1PublicIO)
-                    (unprefixed : ¬ stem.toList <+: "SP1OrdinaryStateReceipt".toList) :
-                    (InstructionReceipt.channel (p := p)).toRaw.name ≠
-                      (VerifierChannel.channel stem ens).name := fun same =>
-                  VerifierChannel.name_ne_of_not_prefix stem ens unprefixed
-                    (same.symm.trans (by simp [InstructionReceipt.channel, Channel.toRaw]))
-                rcases old with (((old | old) | old) | old) | old
-                · exact FreshReceipt.fresh (image := image) (source := source) (channels := channels) old
-                · exact separate "sp1.local.source" _ (by decide) old
-                · exact separate "host-boundary" _ (by decide) old
-                · exact separate "final-memory-change" _ (by decide) old
-                · exact separate "sail_boundary" _ (by decide) old
               tables_channels := by
                 intro component member channel used
                 obtain ⟨index, bound, rfl⟩ := List.mem_iff_getElem.mp member
@@ -199,11 +171,15 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
                   (final := final) (others := others) (resources := resources) (channels := channels)
                   (names := names) ⟨index, bound'⟩ used
                 rcases List.mem_append.mp declared with old | added
-                · exact List.mem_append_left _ (base.tables_channels _ (List.getElem_mem _) old)
-                · exact List.mem_append_right _ added
-              verifier_channels := fun _ used => List.mem_append_left _ (base.verifier_channels used) }
+                · exact base.tables_channels _ (List.getElem_mem _) old
+                · obtain rfl := List.mem_singleton.mp added
+                  change _ ∈ (((HostLocalCore.registry image source
+                    (HintReadWordChip.stateChannel.toRaw :: channels) ++ [_]) ++ [_]) ++ [_]) ++ [_]
+                  exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _
+                    (List.mem_append_left _ (ReceiptRegistered.registered (image := image)
+                      (source := source) (channels := channels))))) }
 
-variable [fresh : FreshReceipt (p := p) image source channels]
+variable [receiptRegistered : ReceiptRegistered (p := p) image source channels]
 
 /-- Receipt publication adds no tables. -/
 theorem tables_length :
@@ -251,7 +227,7 @@ theorem instructionTable_receipt_count (index : Fin 25)
       (instructionTable index witness).length := by
   rw [instructionTable_receipts, List.length_map]
 
-omit fresh in
+omit receiptRegistered in
 private theorem component_projection
     (index : Fin (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
@@ -280,7 +256,7 @@ private theorem layout (image : ProgramImage) (source target : ExecutionSnapshot
     (channels : List (RawChannel (ZMod p)))
     (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
     [HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
-    [FreshReceipt (p := p) image source channels]
+    [ReceiptRegistered (p := p) image source channels]
     (index : Fin
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :
     let original := (HostSailBoundary.ensemble image source target final others resources channels names).tables[index.val]
