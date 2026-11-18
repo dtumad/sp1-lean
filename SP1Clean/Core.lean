@@ -343,6 +343,7 @@ import SP1Clean.Native.Operations.SailBoundary
 import SP1Clean.Native.Operations.InstructionReceipt
 import SP1Clean.Native.Operations.OrdinaryObservation
 import SP1Clean.Native.Operations.OrdinaryObservationBoundary
+import SP1Clean.Native.Operations.OrdinaryObservationEndpoint
 import SP1Clean.Proofs.Operations.OrdinaryObservation
 import SP1Clean.Native.Operations.ShiftLeftOperation.Core
 import SP1Clean.Native.Operations.ShiftRightOperation.Core
