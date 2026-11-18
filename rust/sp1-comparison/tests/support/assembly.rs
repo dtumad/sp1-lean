@@ -65,8 +65,8 @@ pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
     cases: usize,
 ) {
     let inventory = reference["inventory"].as_array().unwrap();
-    assert_eq!(inventory.len(), 95);
-    assert_eq!(P::COMPONENTS, 95);
+    assert_eq!(inventory.len(), 99);
+    assert_eq!(P::COMPONENTS, 99);
     for (index, component) in inventory.iter().enumerate() {
         assert_eq!(component["name"], P::COMPONENT_NAMES[index]);
         assert_eq!(component["width"], P::ROW_WIDTHS[index]);
@@ -110,7 +110,7 @@ pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
             }
             if case["accepted"] == true {
                 let traces = witness.into_traces().unwrap();
-                assert_eq!(traces.len(), 95);
+                assert_eq!(traces.len(), 99);
                 for (index, trace) in traces.iter().enumerate() {
                     assert_eq!(trace.width(), P::WIDTHS[index]);
                     let fixed_height = P::FIXED_HEIGHTS[index];
@@ -207,14 +207,14 @@ pub fn malformed<P: Program<F> + GeneratedAirSpec>(
         changed[column] += F::ONE;
         reject_traces::<P>(&changed, traces.clone());
     }
-    for table in consumers.iter().copied().chain([2, 5, 88, 89, 94]) {
+    for table in consumers.iter().copied().chain([2, 5, 88, 89, 98]) {
         eprintln!("missing table {table}");
         assert!(traces[table].height() > 0);
         let mut missing = traces.clone();
         missing[table].values.clear();
         reject_traces::<P>(&public, missing);
     }
-    for table in [6, 59, 92, 94] {
+    for table in [6, 59, 96, 98] {
         eprintln!("changed provider count {table}");
         let mut wrong_count = traces.clone();
         wrong_count[table].values[0] += F::ONE;
