@@ -20,7 +20,8 @@ Byte/Range demands are closed by executing the actual provider circuits. An acti
 checks the wide syscall edge and all three Memory pairs, and records the unclosed host-result
 binding with a concrete forged-return example. Same-register accesses and a real State clock carry
 exercise the grounding interfaces; stopped-source rows are rejected while identities remain valid.
-This is AIR conformance, not an execution theorem.
+This is AIR conformance, not an execution theorem. The whole-assembly checks are listed in `checks`
+and run compiled by `lake exe sp1Checks`.
 -/
 
 -- Local bank and memory preservation checks; complete public-statement binding is
@@ -75,62 +76,6 @@ private def check (image : ProgramImage) (source : ExecutionSnapshot) (pi : SP1P
 #guard_msgs in
 #assert_exportable (Soundness.LocalCore.verifier (p := SP1Prime) image source)
 
-/-- The full local fixture has an active instruction, nonzero incoming registers, and no boot clock. -/
-theorem activeLocalShard : check image source publicInput baseRows = true := by native_decide
-
-/-- State endpoints are bound to the physical instruction ledger, not chosen independently. -/
-theorem rejectsWrongEndpoints :
-    [check image source { publicInput with init_clk_0_16 := 1 } baseRows,
-     check image source { publicInput with final_clk_0_16 := 18 } baseRows,
-     check image source { publicInput with final_pc0 := 8 } baseRows] = [false, false, false] := by native_decide
-
-/-- Changing fixed incoming values or removing a register invalidates this physical witness. -/
-theorem rejectsWrongSource :
-    [check image { source with sail.registers := source.sail.registers.insert .x2 101 } publicInput baseRows,
-     check image { source with sail.registers := source.sail.registers.erase .x2 } publicInput baseRows,
-     check image { source with sail.memory := source.sail.memory.write 65536 0 } publicInput baseRows] =
-      [false, false, false] := by native_decide
-
-/-- The source's actual PC and clock cannot differ from the public incoming token. -/
-theorem rejectsUnboundSource :
-    [check image { source with clock := 10 } publicInput baseRows,
-     check image { source with sail.registers := source.sail.registers.insert .PC 65540 } publicInput baseRows,
-     check image { source with clock := 2 ^ 48 + 9 } publicInput baseRows,
-     check image { source with sail.registers := source.sail.registers.insert .PC (2 ^ 48 + 65536) }
-       publicInput baseRows] = [false, false, false, false] := by native_decide
-
-/-- Platform configuration is checked even when the affected register is untouched by the row. -/
-theorem rejectsInvalidPlatform :
-    [check image { source with sail.registers := source.sail.registers.insert .misa 0 } publicInput baseRows,
-     check image { source with sail.registers := source.sail.registers.insert .misa 4100 } publicInput baseRows,
-     check image { source with sail.registers := source.sail.registers.insert .mstatus 8 } publicInput baseRows,
-     check image { source with sail.registers := source.sail.registers.erase .pma_regions } publicInput baseRows] =
-      [false, false, false, false] := by native_decide
-
-/-- ROM agreement is enforced even when no source/final RAM row reads the changed code byte. -/
-theorem checksUntouchedRom :
-    check image source publicInput withoutRam = true ∧
-      check image { source with sail.memory := source.sail.memory.write 65536 0 } publicInput withoutRam = false := by
-  native_decide
-
-/-- Missing or duplicate source records fail the actual Memory/order balances. -/
-theorem rejectsBrokenInventory :
-    [check image source publicInput (baseRows.drop 1),
-     check image source publicInput (sourceRegister 0 1 :: baseRows),
-     check image source publicInput (baseRows.filter (fun row => row.1 != 2)),
-     check image source publicInput (baseRows.filter (fun row => row.1 != 4))] =
-      [false, false, false, false] := by native_decide
-
-/-- A forged final value cannot be hidden by keeping the same canonical address and clock. -/
-theorem rejectsWrongFinalValue :
-    check image source publicInput (baseRows.set 5 (3, finalRecord 0 1 13 124)) = false := by native_decide
-
-/-- Fetch authentication rejects an unavailable ROM and prover-supplied fixed-column rows. -/
-theorem rejectsUnauthenticatedFetch :
-    [check { image with rom := [] } source publicInput baseRows,
-     check image source publicInput (baseRows ++ [(6, List.replicate 17 0)])] =
-      [false, false] := by native_decide
-
 private def twoImage : ProgramImage := ⟨[(65536, 0x003100b3), (65540, 0x003100b3)], 65536, []⟩
 
 private def twoSource : ExecutionSnapshot := { source with sail.memory := twoImage.initialMemory }
@@ -151,23 +96,11 @@ private def twoRows : List Row :=
     secondAdd, paddingAdd, (7, Audit.OneAddNativePremises.inputs),
     (57, List.replicate (size HaltChip.Inputs) 0)]
 
-/-- The physical ADD rows are reversed, with padding between them; the ledger still closes
-for the two-step local segment. Duplicating an active occurrence invalidates it. -/
-theorem acceptsReorderedPaddedSegment :
-    check twoImage twoSource twoPublic twoRows = true ∧
-      check twoImage twoSource twoPublic (secondAdd :: twoRows) = false := by native_decide
-
 private def identityPublic : SP1PublicIO Fp :=
   { publicInput with final_clk_0_16 := 9, final_pc0 := 0 }
 
 private def identityRows : List Row :=
   [terminal 2 0, terminal 5 0, paddingAdd, (57, List.replicate (size HaltChip.Inputs) 0)]
-
-/-- A zero-step segment has equal State endpoints and empty touched inventories. The same
-identity is accepted for a stopped host; this does not permit a semantic step after HALT. -/
-theorem acceptsEmptySegments :
-    check image source identityPublic identityRows = true ∧
-      check image { source with host.exitCode := some 0 } identityPublic identityRows = true := by native_decide
 
 private def aliasImage : ProgramImage := ⟨[(65536, 0x001080b3)], 65536, []⟩
 
@@ -185,16 +118,6 @@ private def aliasRows : List Row :=
     (SnapshotRegisterProvider.populate aliasSource.sail.memorySnapshot 1#5) 0 1)).toList), terminal 2 2,
     (3, finalRecord 0 1 13 200), terminal 5 2,
     (7, TraceGenTests.rTypeEventInputs aliasEvent), (57, List.replicate (size HaltChip.Inputs) 0)]
-
-/-- ADD x1,x1,x1 uses one source/final location and three consecutive touches within the row.
-Skipping either intermediate prior record breaks the complete physical Memory ledger. -/
-theorem acceptsSameRegisterTouches :
-    check aliasImage aliasSource publicInput aliasRows = true ∧
-      check aliasImage aliasSource publicInput
-        (aliasRows.set 4 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsA := 0 })) = false ∧
-      check aliasImage aliasSource publicInput
-        (aliasRows.set 4 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsB := 0 })) = false := by
-  native_decide
 
 private def clockEvent (clock : ℕ) : TraceGenTests.AluEventRec :=
   { Audit.OneAddNativePremises.event with clk := clock, tsA := clock + 4, tsB := clock + 3, tsC := clock + 2 }
@@ -217,26 +140,6 @@ private def clockCarry : Row := (56, (toElements ({
     next_clk_32_48 := 0, next_clk_24_32 := 1, next_clk_16_24 := 0, next_clk_0_16 := 1,
     clk_high := 0, clk_low := 2 ^ 24 + 1, next_pc0 := 4, next_pc1 := 1, next_pc2 := 0,
     pc0 := 4, pc1 := 1, pc2 := 0, is_clk := 1, is_real := 1 } : StateBumpChip.Inputs Fp)).toList)
-
-/-- A row crossing the 24-bit epoch needs the actual StateBump link to its canonical public end.
-The three Memory touches still precede the carry and preserve their original timestamps. -/
-theorem acceptsStateClockCarry :
-    let clock := 2 ^ 24 - 7
-    check image { source with clock := clock } (clockPublic clock) (clockCarry :: clockRows clock) = true ∧
-      check image { source with clock := clock } (clockPublic clock) (clockRows clock) = false := by
-  native_decide
-
-/-- Source validation checks clock range, while active CPU rows additionally require SP1's
-1-mod-8 clock phase. Shared semantic compiler bounds must account for this profile condition. -/
-theorem clockPhaseNeedsProfile :
-    checkExecutionSource image { source with clock := 10 } = true ∧
-      check image { source with clock := 10 } (clockPublic 10) (clockRows 10) = false := by
-  native_decide
-
-/-- The stopped-source clock constraints reject this formerly accepted active ADD. Empty
-segments at stopped sources remain valid, as checked by `acceptsEmptySegments`. -/
-theorem rejectsActiveRowsAfterHalt :
-    check image { source with host.exitCode := some 0 } publicInput baseRows = false := by native_decide
 
 private def syscallImage : ProgramImage := ⟨[(65536, 0x00000073)], 65536, []⟩
 
@@ -379,51 +282,9 @@ private def checkCommit (target : HostState) (rows : List Row) : Bool :=
   let checked := commitChecks target rows
   checked.1 && checked.2
 
-/-- An active COMMIT closes the complete installed ledger from nonzero incoming banks,
-including the actual CPU handoff, register Memory pairs, both terminals, and every Byte provider. -/
-theorem activeCommitLocalShard : checkCommit commitTarget commitRows = true := by native_decide
-
-/-- Untouched source values need no Memory rows, even below the RAM bus window and at its upper
-edge. Removing a touched final record still fails after repairing the boundary ordering chain. -/
-theorem untouchedCommitMemory :
-    ((commitSource.hostStep? syscallPolicy syscallProgram).map (fun result =>
-      (result.1.sail.registers.get? LeanRV64D.Register.x20,
-        result.1.sail.memory.read 8, result.1.sail.memory.read 80000,
-        result.1.sail.memory.read (2 ^ 48 - 1)))) = some (some 907, 19, 42, 55) ∧
-    commitChecks commitTarget (commitRows.take 6 ++ [terminal 5 11] ++ commitRows.drop 8) = (true, false) := by
-  native_decide
-
-/-- Complete balance rejects changed outgoing words in either bank and missing or duplicate terminals. -/
-theorem rejectsCommitBoundaries :
-    [checkCommit commitSource.host commitRows,
-     checkCommit { commitTarget with deferred := commitTarget.deferred.set 0 0 } commitRows,
-     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 88)),
-     checkCommit commitTarget (commitRows.filter (fun row => row.1 != 89)),
-     checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 88))] =
-      [false, false, false, false, false] := by native_decide
-
-/-- The installed interaction-only public verifier contains no native witness closure. -/
-theorem installedVerifier_exportable :
-    Witgen.unexportableWitnesses ((hostAssembly commitSource commitTarget).verifierOperations.toFlat) = [] := by
-  native_decide
-
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
 #assert_exportable (HaltPaddingChip.circuit (p := SP1Prime))
-
-/-- An active ECALL closes the actual 61-table ledger with all three nonzero source registers,
-its wide State edge, the changed result, and source/final inventories. No syscall row is erased. -/
-theorem activeSyscallLocalShard :
-    check syscallImage syscallSource syscallPublic (syscallRows 3) = true := by native_decide
-
-/-- Missing, duplicated, stale, or corrupted syscall read-back records fail complete AIR checks. -/
-theorem rejectsBrokenSyscallLedger :
-    [check syscallImage syscallSource syscallPublic ((syscallRows 3).drop 1),
-     check syscallImage syscallSource syscallPublic ((syscallRows 3).set 4 (3, finalRecord 0 5 13 4)),
-     check syscallImage syscallSource syscallPublic ((syscallRows 3).set 5 (3, finalRecord 6 10 11 7)),
-     check syscallImage syscallSource syscallPublic ((syscallRows 3).set 6 (3, finalRecord 11 11 11 8)),
-     check syscallImage syscallSource syscallPublic ((syscallRows 3) ++ [(58, (toElements (syscallInput 3)).toList)])] =
-      [false, false, false, false, false] := by native_decide
 
 private def epochRows (epoch : ℕ) : List Row :=
   let refresh (index value : ℕ) : Row :=
@@ -436,24 +297,6 @@ private def epochRows (epoch : ℕ) : List Row :=
   ((((syscallRows 3).set 4 (3, finalRecord 0 5 13 3 epoch)).set 5 (3, finalRecord 6 10 12 7 epoch)).set
     6 (3, finalRecord 11 11 11 9 epoch)).set 9 (58, (toElements input).toList) ++
       [refresh 5 240, refresh 10 7, refresh 11 9]
-
-/-- One refresh per touched register reaches the incoming epoch, even at the largest 24-bit
-high clock. The continuation does not need rows for all preceding clock epochs. -/
-theorem acceptsDistantSourceEpochs : [1, 2 ^ 24 - 1].all (fun epoch =>
-    check syscallImage { syscallSource with clock := epoch * 2 ^ 24 + 9 }
-      { syscallPublic with
-        init_clk_24_32 := (epoch % 256 : ℕ), init_clk_32_48 := (epoch / 256 : ℕ)
-        final_clk_24_32 := (epoch % 256 : ℕ), final_clk_32_48 := (epoch / 256 : ℕ) }
-      (epochRows epoch)) = true := by native_decide
-
-/-- Recorded integration gap: matching a forged HINT_LEN return on both the instruction and final
-record still satisfies this AIR, although finite host execution returns three. Host binding must
-close this before any local execution-equivalence theorem is claimed. -/
-theorem hintReturnNeedsHostBinding :
-    check syscallImage syscallSource syscallPublic (syscallRows 4) = true ∧
-      ((syscallSource.hostStep? syscallPolicy syscallProgram).map
-        (fun output => output.1.sail.registers.get? LeanRV64D.Register.x5)) = some (some 3) := by
-  native_decide
 
 private def haltSource (exit : ℕ) : ExecutionSnapshot :=
   { syscallSource with
@@ -477,30 +320,6 @@ private def haltRows (exit : ℕ) : List Row :=
   [sourceRow 0 5, sourceRow 6 10, sourceRow 11 11, terminal 2 12,
     (3, finalRecord 0 5 13 0), (3, finalRecord 6 10 12 exit), (3, finalRecord 11 11 11 9), terminal 5 12,
     (57, (toElements (haltInput exit)).toList)]
-
-/-- The complete local AIR accepts HALT at a non-boot source with the largest legacy exit code. -/
-theorem activeHaltLocalShard :
-    check syscallImage (haltSource 65535) (haltPublic 65535) (haltRows 65535) = true := by native_decide
-
-/-- The next exit code is valid for the concrete host but excluded by the legacy row's three
-upper-zero assertions. This is a completeness restriction, not an error in host dispatch. -/
-theorem legacyHaltExitRange :
-    check syscallImage (haltSource 65536) (haltPublic 65536) (haltRows 65536) = false ∧
-      (((haltSource 65536).host.run syscallPolicy (.ofSail (haltSource 65536).sail.realize)).map
-        (fun execution => execution.effect.state.exitCode)) = some (some 65536) := by
-  rw [← SailSnapshot.readContext_eq]
-  native_decide
-
-/-- HALT's actual register observations and public exit cannot be changed independently. -/
-theorem rejectsForgedHalt :
-    [check syscallImage { haltSource 65535 with
-        sail.registers := (haltSource 65535).sail.registers.insert .x5 1 }
-      (haltPublic 65535) (haltRows 65535),
-     check syscallImage { haltSource 65535 with
-        sail.registers := (haltSource 65535).sail.registers.insert .x11 8 }
-      (haltPublic 65535) (haltRows 65535),
-     check syscallImage (haltSource 65535) (haltPublic 65534) (haltRows 65535)] =
-      [false, false, false] := by native_decide
 
 private def unchangedBanks (host : HostState) : List Row :=
   [(88, (toElements (HostCommitBoundary.start (HostCommitEnsemble.sourceValues false host))).toList),
@@ -530,50 +349,10 @@ private def checkInstalledHalt (exit publicExit : ℕ) (rows : List Row) : Bool 
     { (haltSource exit).host with exitCode := some (BitVec.ofNat 32 exit) } rows
   checked.1 && checked.2
 
-/-- The installed assembly rejects active legacy HALT and accepts canonical syscall HALT,
-including a code above the legacy range, without a legacy padding companion. -/
-theorem installedHaltExit :
-    checkInstalledHalt 65535 65535 (installedHaltRows 65535 true) = false ∧
-    checkInstalledHalt 65536 65536 (installedHaltRows 65536 false) = true ∧
-    checkInstalledHalt 0 0 (installedHaltRows 0 false) = true ∧
-    ((haltSource 0).hostStep? syscallPolicy syscallProgram).map (fun result => result.1.host.exitCode) =
-      some (some 0) := by native_decide
-
-/-- Wrong public values, duplicate HALT producers, and a spurious legacy padding producer are
-rejected by complete acceptance, including when the genuine exit code is zero. -/
-theorem rejectsInstalledExitForgery :
-    [checkInstalledHalt 65536 65535 (installedHaltRows 65536 false),
-     checkInstalledHalt 0 1 (installedHaltRows 0 false),
-     checkInstalledHalt 0 0 (installedHaltRows 0 false ++
-       (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 64)),
-     checkInstalledHalt 0 0 (installedHaltRows 0 false ++
-       [(57, List.replicate (size HaltChip.Inputs) 0)])] =
-      [false, false, false, false] := by native_decide
-
-/-- A real HALT-zero cannot be advertised as running or as a different exit code. -/
-theorem rejectsSuppliedExitStatus :
-    installedChecks (haltSource 0) (haltPublic 0)
-      { (haltSource 0).host with exitCode := none } (installedHaltRows 0 false) = (false, true) ∧
-    installedChecks (haltSource 0) (haltPublic 0)
-      { (haltSource 0).host with exitCode := some 7 } (installedHaltRows 0 false) = (false, true) := by
-  native_decide
-
 private def checkTerminalIdentity (initial final : Option (BitVec 32)) : Bool × Bool :=
   let incoming := { haltSource 0 with host.exitCode := initial }
   installedChecks incoming identityPublic { incoming.host with exitCode := final }
     (identityRows ++ unchangedBanks incoming.host)
-
-/-- Empty running and stopped shards retain their exact optional exit, including wide codes.
-Neither a fabricated HALT-zero nor restarting a stopped host can pass the complete checks. -/
-theorem terminalIdentity :
-    [checkTerminalIdentity none none,
-     checkTerminalIdentity (some 0) (some 0),
-     checkTerminalIdentity (some 65536) (some 65536),
-     checkTerminalIdentity none (some 0),
-     checkTerminalIdentity (some 0) none,
-     checkTerminalIdentity (some 65536) (some 0)] =
-      [(true, true), (true, true), (true, true), (false, true), (false, true), (false, true)] := by
-  native_decide
 
 private def storeRomImage : ProgramImage := ⟨[(65536, 0x00110023)], 65536, []⟩
 
@@ -605,14 +384,6 @@ private def storeRomRows : List Row :=
     (4, finalRecord 3 65536 10 0x00110000), terminal 5 65537,
     (25, (toElements storeRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
-/-- The unguarded local AIR permits SB to overwrite its own instruction byte. Source ROM
-validation and fixed Program membership alone do not enforce ROM preservation. -/
-theorem unguardedStoreIntoRom :
-    check storeRomImage storeRomSource publicInput storeRomRows = true ∧
-      storeRomImage.readOnly 65536 = true ∧
-      storeRomSource.sail.memory.read 65536 = 0x23 ∧
-      Word.toBitVec64 storeRomInput.store_value = 0x00110000 := by native_decide
-
 private def permissionRow (address : ℕ) : Row :=
   (61, ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage address).map
     (fun input => (toElements input).toList)).getD [])
@@ -638,16 +409,6 @@ private def sameValueRomRows : List Row :=
     (4, finalRecord 3 65536 10 0x00110023), terminal 5 65537,
     (25, (toElements sameValueRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
-/-- An SB that leaves its entire RAM cell unchanged still needs code-write permission.
-The unprotected AIR accepts the real row; both the protected AIR and semantic policy reject it. -/
-theorem rejectsSameValueRomStore :
-    check storeRomImage sameValueRomSource publicInput sameValueRomRows = true ∧
-    check storeRomImage sameValueRomSource publicInput sameValueRomRows true = false ∧
-    sameValueRomInput.store_value = sameValueRomInput.memory_access.prev_value ∧
-    InstructionWrite.check storeRomImage.readOnly
-      sameValueRomSource.sail.readContext.register (.STORE (0, .Regidx 1, .Regidx 2, 1)) = false := by
-  native_decide
-
 private def besideRomSource : ExecutionSnapshot :=
   { storeRomSource with
     sail.registers := (storeRomSource.sail.registers.insert .x1 127).insert .x2 65540 }
@@ -672,25 +433,6 @@ private def besideRomRows : List Row :=
     (4, finalRecord 3 65536 10 0x7f00110023), terminal 5 65537,
     (25, (toElements besideRomInput).toList), (57, List.replicate (size HaltChip.Inputs) 0)]
 
-/-- The strengthened full AIR rejects the reproduced store into its own code byte, including
-an attempted provider row whose writable query is changed to a protected ROM address. -/
-theorem protectedRejectsStoreIntoRom :
-    [check storeRomImage storeRomSource publicInput storeRomRows true,
-     check storeRomImage storeRomSource publicInput (storeRomRows ++ [permissionRow 65540]) true,
-     check storeRomImage storeRomSource publicInput (storeRomRows ++ [(61,
-       ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage 65540).map
-         (fun input => (toElements (M := WritePermissionProvider.RowInput)
-           ({ input.1 with address := Address.ofNat 65536 }, input.2)).toList)).getD [])]) true] =
-      [false, false, false] := by native_decide
-
-/-- Byte-precise protection permits changing writable data in the other half of the same RAM
-cell as code, while requiring a matching permission provider at the actual written address. -/
-theorem protectedPartialStoreBesideRom :
-    [check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65540]) true,
-     check storeRomImage besideRomSource publicInput besideRomRows true,
-     check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65541]) true] =
-      [true, false, false] := by native_decide
-
 private def receiptStore (source : ExecutionSnapshot) (input : StoreByteChip.Inputs Fp) :=
   evaluate storeRomImage source (ProtectedOrdinaryReceipt.component .storeByte) (toElements input).toList
 
@@ -706,32 +448,6 @@ private def receiptPermission (source : ExecutionSnapshot) (input : StoreByteChi
     StaticMembership.check storeRomImage.writePermissionTable complete
       (WritePermissionProvider.membership_height_lt_uint64 storeRomImage) && ledger.all (fun key =>
     ((ledger.filter (fun item => item.2.1 == key.2.1)).map (·.2.2)).sum == 0)
-
-/-- Publishing a receipt retains byte-precise permission enforcement. Even an unchanged code
-store fails, while a writable byte beside code succeeds only with the matching provider.
-This checks the actual permission subsystem; observation endpoint installation is separate. -/
-theorem receiptStoreProtection :
-    (receiptStore sameValueRomSource sameValueRomInput).1 = true ∧
-    ((receiptStore sameValueRomSource sameValueRomInput).2.filter
-      (fun entry => entry.1 == "SP1OrdinaryStateReceipt")) =
-        [("SP1OrdinaryStateReceipt", [0, 17, 4, 1, 0], 1)] ∧
-    [receiptPermission sameValueRomSource sameValueRomInput [],
-     receiptPermission sameValueRomSource sameValueRomInput [(permissionRow 65540).2],
-     receiptPermission besideRomSource besideRomInput [],
-     receiptPermission besideRomSource besideRomInput [(permissionRow 65541).2],
-     receiptPermission besideRomSource besideRomInput [(permissionRow 65540).2]] =
-      [false, false, false, false, true] := by native_decide
-
-/-- Adding the permission ledger preserves ordinary non-store and HALT local segments. -/
-theorem protectedNonStores :
-    check image source publicInput baseRows true = true ∧
-      check syscallImage (haltSource 65535) (haltPublic 65535) (haltRows 65535) true = true := by native_decide
-
-/-- Endpoint encoding includes the last native byte and excludes the first out-of-range address. -/
-theorem permissionAddressWindow :
-    ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage (2 ^ 48 - 1)).isSome,
-      (WritePermissionProvider.populate? (p := SP1Prime) storeRomImage (2 ^ 48)).isSome) =
-        (true, false) := by native_decide
 
 /-- info: exportable ✓ (4 witness cells) -/
 #guard_msgs in
@@ -753,15 +469,260 @@ theorem permissionAddressWindow :
 #guard_msgs in
 #assert_exportable (WritePermissionProvider.circuit (p := SP1Prime) storeRomImage)
 
-/-- Padding in every store table has zero permission demand; stopped-source identities remain valid. -/
-theorem protectedPaddingIdentity :
-    let rows := identityRows ++
+set_option compiler.extract_closed false in
+/-- Every whole-assembly regression above, as a named Boolean decision. These are the decisions
+`native_decide` used to evaluate for the former theorems; Lean's interpreter spent 173 of this file's
+180 s on them. The compiled `sp1Checks` driver (`scripts/sp1Checks.lean`) runs them instead. Closed-term
+extraction is off so that each check runs (and is timed) when the driver calls it. -/
+def checks : List (String × (Unit → Bool)) := [
+  -- The full local fixture has an active instruction, nonzero incoming registers, and no boot clock.
+  ("activeLocalShard", fun _ => decide (
+      check image source publicInput baseRows = true)),
+  -- State endpoints are bound to the physical instruction ledger, not chosen independently.
+  ("rejectsWrongEndpoints", fun _ => decide (
+      [check image source { publicInput with init_clk_0_16 := 1 } baseRows,
+      check image source { publicInput with final_clk_0_16 := 18 } baseRows,
+      check image source { publicInput with final_pc0 := 8 } baseRows] = [false, false, false])),
+  -- Changing fixed incoming values or removing a register invalidates this physical witness.
+  ("rejectsWrongSource", fun _ => decide (
+      [check image { source with sail.registers := source.sail.registers.insert .x2 101 } publicInput baseRows,
+      check image { source with sail.registers := source.sail.registers.erase .x2 } publicInput baseRows,
+      check image { source with sail.memory := source.sail.memory.write 65536 0 } publicInput baseRows] =
+      [false, false, false])),
+  -- The source's actual PC and clock cannot differ from the public incoming token.
+  ("rejectsUnboundSource", fun _ => decide (
+      [check image { source with clock := 10 } publicInput baseRows,
+      check image { source with sail.registers := source.sail.registers.insert .PC 65540 } publicInput baseRows,
+      check image { source with clock := 2 ^ 48 + 9 } publicInput baseRows,
+      check image { source with sail.registers := source.sail.registers.insert .PC (2 ^ 48 + 65536) }
+      publicInput baseRows] = [false, false, false, false])),
+  -- Platform configuration is checked even when the affected register is untouched by the row.
+  ("rejectsInvalidPlatform", fun _ => decide (
+      [check image { source with sail.registers := source.sail.registers.insert .misa 0 } publicInput baseRows,
+      check image { source with sail.registers := source.sail.registers.insert .misa 4100 } publicInput baseRows,
+      check image { source with sail.registers := source.sail.registers.insert .mstatus 8 } publicInput baseRows,
+      check image { source with sail.registers := source.sail.registers.erase .pma_regions } publicInput baseRows] =
+      [false, false, false, false])),
+  -- ROM agreement is enforced even when no source/final RAM row reads the changed code byte.
+  ("checksUntouchedRom", fun _ => decide (
+      check image source publicInput withoutRam = true ∧
+      check image { source with sail.memory := source.sail.memory.write 65536 0 } publicInput withoutRam = false)),
+  -- Missing or duplicate source records fail the actual Memory/order balances.
+  ("rejectsBrokenInventory", fun _ => decide (
+      [check image source publicInput (baseRows.drop 1),
+      check image source publicInput (sourceRegister 0 1 :: baseRows),
+      check image source publicInput (baseRows.filter (fun row => row.1 != 2)),
+      check image source publicInput (baseRows.filter (fun row => row.1 != 4))] =
+      [false, false, false, false])),
+  -- A forged final value cannot be hidden by keeping the same canonical address and clock.
+  ("rejectsWrongFinalValue", fun _ => decide (
+      check image source publicInput (baseRows.set 5 (3, finalRecord 0 1 13 124)) = false)),
+  -- Fetch authentication rejects an unavailable ROM and prover-supplied fixed-column rows.
+  ("rejectsUnauthenticatedFetch", fun _ => decide (
+      [check { image with rom := [] } source publicInput baseRows,
+      check image source publicInput (baseRows ++ [(6, List.replicate 17 0)])] =
+      [false, false])),
+  -- The physical ADD rows are reversed, with padding between them; the ledger still closes
+  -- for the two-step local segment. Duplicating an active occurrence invalidates it.
+  ("acceptsReorderedPaddedSegment", fun _ => decide (
+      check twoImage twoSource twoPublic twoRows = true ∧
+      check twoImage twoSource twoPublic (secondAdd :: twoRows) = false)),
+  -- A zero-step segment has equal State endpoints and empty touched inventories. The same
+  -- identity is accepted for a stopped host; this does not permit a semantic step after HALT.
+  ("acceptsEmptySegments", fun _ => decide (
+      check image source identityPublic identityRows = true ∧
+      check image { source with host.exitCode := some 0 } identityPublic identityRows = true)),
+  -- ADD x1,x1,x1 uses one source/final location and three consecutive touches within the row.
+  -- Skipping either intermediate prior record breaks the complete physical Memory ledger.
+  ("acceptsSameRegisterTouches", fun _ => decide (
+      check aliasImage aliasSource publicInput aliasRows = true ∧
+      check aliasImage aliasSource publicInput
+      (aliasRows.set 4 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsA := 0 })) = false ∧
+      check aliasImage aliasSource publicInput
+      (aliasRows.set 4 (7, TraceGenTests.rTypeEventInputs { aliasEvent with prevTsB := 0 })) = false)),
+  -- A row crossing the 24-bit epoch needs the actual StateBump link to its canonical public end.
+  -- The three Memory touches still precede the carry and preserve their original timestamps.
+  ("acceptsStateClockCarry", fun _ => decide (
+      let clock := 2 ^ 24 - 7
+      check image { source with clock := clock } (clockPublic clock) (clockCarry :: clockRows clock) = true ∧
+      check image { source with clock := clock } (clockPublic clock) (clockRows clock) = false)),
+  -- Source validation checks clock range, while active CPU rows additionally require SP1's
+  -- 1-mod-8 clock phase. Shared semantic compiler bounds must account for this profile condition.
+  ("clockPhaseNeedsProfile", fun _ => decide (
+      checkExecutionSource image { source with clock := 10 } = true ∧
+      check image { source with clock := 10 } (clockPublic 10) (clockRows 10) = false)),
+  -- The stopped-source clock constraints reject this formerly accepted active ADD. Empty
+  -- segments at stopped sources remain valid, as checked by `acceptsEmptySegments`.
+  ("rejectsActiveRowsAfterHalt", fun _ => decide (
+      check image { source with host.exitCode := some 0 } publicInput baseRows = false)),
+  -- An active COMMIT closes the complete installed ledger from nonzero incoming banks,
+  -- including the actual CPU handoff, register Memory pairs, both terminals, and every Byte provider.
+  ("activeCommitLocalShard", fun _ => decide (
+      checkCommit commitTarget commitRows = true)),
+  -- Untouched source values need no Memory rows, even below the RAM bus window and at its upper
+  -- edge. Removing a touched final record still fails after repairing the boundary ordering chain.
+  ("untouchedCommitMemory", fun _ => decide (
+      ((commitSource.hostStep? syscallPolicy syscallProgram).map (fun result =>
+      (result.1.sail.registers.get? LeanRV64D.Register.x20,
+      result.1.sail.memory.read 8, result.1.sail.memory.read 80000,
+      result.1.sail.memory.read (2 ^ 48 - 1)))) = some (some 907, 19, 42, 55) ∧
+      commitChecks commitTarget (commitRows.take 6 ++ [terminal 5 11] ++ commitRows.drop 8) = (true, false))),
+  -- Complete balance rejects changed outgoing words in either bank and missing or duplicate terminals.
+  ("rejectsCommitBoundaries", fun _ => decide (
+      [checkCommit commitSource.host commitRows,
+      checkCommit { commitTarget with deferred := commitTarget.deferred.set 0 0 } commitRows,
+      checkCommit commitTarget (commitRows.filter (fun row => row.1 != 88)),
+      checkCommit commitTarget (commitRows.filter (fun row => row.1 != 89)),
+      checkCommit commitTarget (commitRows ++ commitRows.filter (fun row => row.1 == 88))] =
+      [false, false, false, false, false])),
+  -- The installed interaction-only public verifier contains no native witness closure.
+  ("installedVerifier_exportable", fun _ => decide (
+      Witgen.unexportableWitnesses ((hostAssembly commitSource commitTarget).verifierOperations.toFlat) = [])),
+  -- An active ECALL closes the actual 61-table ledger with all three nonzero source registers,
+  -- its wide State edge, the changed result, and source/final inventories. No syscall row is erased.
+  ("activeSyscallLocalShard", fun _ => decide (
+      check syscallImage syscallSource syscallPublic (syscallRows 3) = true)),
+  -- Missing, duplicated, stale, or corrupted syscall read-back records fail complete AIR checks.
+  ("rejectsBrokenSyscallLedger", fun _ => decide (
+      [check syscallImage syscallSource syscallPublic ((syscallRows 3).drop 1),
+      check syscallImage syscallSource syscallPublic ((syscallRows 3).set 4 (3, finalRecord 0 5 13 4)),
+      check syscallImage syscallSource syscallPublic ((syscallRows 3).set 5 (3, finalRecord 6 10 11 7)),
+      check syscallImage syscallSource syscallPublic ((syscallRows 3).set 6 (3, finalRecord 11 11 11 8)),
+      check syscallImage syscallSource syscallPublic ((syscallRows 3) ++ [(58, (toElements (syscallInput 3)).toList)])] =
+      [false, false, false, false, false])),
+  -- One refresh per touched register reaches the incoming epoch, even at the largest 24-bit
+  -- high clock. The continuation does not need rows for all preceding clock epochs.
+  ("acceptsDistantSourceEpochs", fun _ => decide (
+      [1, 2 ^ 24 - 1].all (fun epoch =>
+      check syscallImage { syscallSource with clock := epoch * 2 ^ 24 + 9 }
+      { syscallPublic with
+      init_clk_24_32 := (epoch % 256 : ℕ), init_clk_32_48 := (epoch / 256 : ℕ)
+      final_clk_24_32 := (epoch % 256 : ℕ), final_clk_32_48 := (epoch / 256 : ℕ) }
+      (epochRows epoch)) = true)),
+  -- Recorded integration gap: matching a forged HINT_LEN return on both the instruction and final
+  -- record still satisfies this AIR, although finite host execution returns three. Host binding must
+  -- close this before any local execution-equivalence theorem is claimed.
+  ("hintReturnNeedsHostBinding", fun _ => decide (
+      check syscallImage syscallSource syscallPublic (syscallRows 4) = true ∧
+      ((syscallSource.hostStep? syscallPolicy syscallProgram).map
+      (fun output => output.1.sail.registers.get? LeanRV64D.Register.x5)) = some (some 3))),
+  -- The complete local AIR accepts HALT at a non-boot source with the largest legacy exit code.
+  ("activeHaltLocalShard", fun _ => decide (
+      check syscallImage (haltSource 65535) (haltPublic 65535) (haltRows 65535) = true)),
+  -- The next exit code is valid for the concrete host but excluded by the legacy row's three
+  -- upper-zero assertions. This is a completeness restriction, not an error in host dispatch.
+  ("legacyHaltExitRange", fun _ => decide (
+      check syscallImage (haltSource 65536) (haltPublic 65536) (haltRows 65536) = false ∧
+      (((haltSource 65536).host.run syscallPolicy (haltSource 65536).sail.readContext).map
+      (fun execution => execution.effect.state.exitCode)) = some (some 65536))),
+  -- HALT's actual register observations and public exit cannot be changed independently.
+  ("rejectsForgedHalt", fun _ => decide (
+      [check syscallImage { haltSource 65535 with
+      sail.registers := (haltSource 65535).sail.registers.insert .x5 1 }
+      (haltPublic 65535) (haltRows 65535),
+      check syscallImage { haltSource 65535 with
+      sail.registers := (haltSource 65535).sail.registers.insert .x11 8 }
+      (haltPublic 65535) (haltRows 65535),
+      check syscallImage (haltSource 65535) (haltPublic 65534) (haltRows 65535)] =
+      [false, false, false])),
+  -- The installed assembly rejects active legacy HALT and accepts canonical syscall HALT,
+  -- including a code above the legacy range, without a legacy padding companion.
+  ("installedHaltExit", fun _ => decide (
+      checkInstalledHalt 65535 65535 (installedHaltRows 65535 true) = false ∧
+      checkInstalledHalt 65536 65536 (installedHaltRows 65536 false) = true ∧
+      checkInstalledHalt 0 0 (installedHaltRows 0 false) = true ∧
+      ((haltSource 0).hostStep? syscallPolicy syscallProgram).map (fun result => result.1.host.exitCode) =
+      some (some 0))),
+  -- Wrong public values, duplicate HALT producers, and a spurious legacy padding producer are
+  -- rejected by complete acceptance, including when the genuine exit code is zero.
+  ("rejectsInstalledExitForgery", fun _ => decide (
+      [checkInstalledHalt 65536 65535 (installedHaltRows 65536 false),
+      checkInstalledHalt 0 1 (installedHaltRows 0 false),
+      checkInstalledHalt 0 0 (installedHaltRows 0 false ++
+      (installedHaltRows 0 false).filter (fun row => row.1 == 58 || row.1 == 64)),
+      checkInstalledHalt 0 0 (installedHaltRows 0 false ++
+      [(57, List.replicate (size HaltChip.Inputs) 0)])] =
+      [false, false, false, false])),
+  -- A real HALT-zero cannot be advertised as running or as a different exit code.
+  ("rejectsSuppliedExitStatus", fun _ => decide (
+      installedChecks (haltSource 0) (haltPublic 0)
+      { (haltSource 0).host with exitCode := none } (installedHaltRows 0 false) = (false, true) ∧
+      installedChecks (haltSource 0) (haltPublic 0)
+      { (haltSource 0).host with exitCode := some 7 } (installedHaltRows 0 false) = (false, true))),
+  -- Empty running and stopped shards retain their exact optional exit, including wide codes.
+  -- Neither a fabricated HALT-zero nor restarting a stopped host can pass the complete checks.
+  ("terminalIdentity", fun _ => decide (
+      [checkTerminalIdentity none none,
+      checkTerminalIdentity (some 0) (some 0),
+      checkTerminalIdentity (some 65536) (some 65536),
+      checkTerminalIdentity none (some 0),
+      checkTerminalIdentity (some 0) none,
+      checkTerminalIdentity (some 65536) (some 0)] =
+      [(true, true), (true, true), (true, true), (false, true), (false, true), (false, true)])),
+  -- The unguarded local AIR permits SB to overwrite its own instruction byte. Source ROM
+  -- validation and fixed Program membership alone do not enforce ROM preservation.
+  ("unguardedStoreIntoRom", fun _ => decide (
+      check storeRomImage storeRomSource publicInput storeRomRows = true ∧
+      storeRomImage.readOnly 65536 = true ∧
+      storeRomSource.sail.memory.read 65536 = 0x23 ∧
+      Word.toBitVec64 storeRomInput.store_value = 0x00110000)),
+  -- An SB that leaves its entire RAM cell unchanged still needs code-write permission.
+  -- The unprotected AIR accepts the real row; both the protected AIR and semantic policy reject it.
+  ("rejectsSameValueRomStore", fun _ => decide (
+      check storeRomImage sameValueRomSource publicInput sameValueRomRows = true ∧
+      check storeRomImage sameValueRomSource publicInput sameValueRomRows true = false ∧
+      sameValueRomInput.store_value = sameValueRomInput.memory_access.prev_value ∧
+      InstructionWrite.check storeRomImage.readOnly
+      sameValueRomSource.sail.readContext.register (.STORE (0, .Regidx 1, .Regidx 2, 1)) = false)),
+  -- The strengthened full AIR rejects the reproduced store into its own code byte, including
+  -- an attempted provider row whose writable query is changed to a protected ROM address.
+  ("protectedRejectsStoreIntoRom", fun _ => decide (
+      [check storeRomImage storeRomSource publicInput storeRomRows true,
+      check storeRomImage storeRomSource publicInput (storeRomRows ++ [permissionRow 65540]) true,
+      check storeRomImage storeRomSource publicInput (storeRomRows ++ [(61,
+      ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage 65540).map
+      (fun input => (toElements (M := WritePermissionProvider.RowInput)
+      ({ input.1 with address := Address.ofNat 65536 }, input.2)).toList)).getD [])]) true] =
+      [false, false, false])),
+  -- Byte-precise protection permits changing writable data in the other half of the same RAM
+  -- cell as code, while requiring a matching permission provider at the actual written address.
+  ("protectedPartialStoreBesideRom", fun _ => decide (
+      [check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65540]) true,
+      check storeRomImage besideRomSource publicInput besideRomRows true,
+      check storeRomImage besideRomSource publicInput (besideRomRows ++ [permissionRow 65541]) true] =
+      [true, false, false])),
+  -- Publishing a receipt retains byte-precise permission enforcement. Even an unchanged code
+  -- store fails, while a writable byte beside code succeeds only with the matching provider.
+  -- This checks the actual permission subsystem; observation endpoint installation is separate.
+  ("receiptStoreProtection", fun _ => decide (
+      (receiptStore sameValueRomSource sameValueRomInput).1 = true ∧
+      ((receiptStore sameValueRomSource sameValueRomInput).2.filter
+      (fun entry => entry.1 == "SP1OrdinaryStateReceipt")) =
+      [("SP1OrdinaryStateReceipt", [0, 17, 4, 1, 0], 1)] ∧
+      [receiptPermission sameValueRomSource sameValueRomInput [],
+      receiptPermission sameValueRomSource sameValueRomInput [(permissionRow 65540).2],
+      receiptPermission besideRomSource besideRomInput [],
+      receiptPermission besideRomSource besideRomInput [(permissionRow 65541).2],
+      receiptPermission besideRomSource besideRomInput [(permissionRow 65540).2]] =
+      [false, false, false, false, true])),
+  -- Adding the permission ledger preserves ordinary non-store and HALT local segments.
+  ("protectedNonStores", fun _ => decide (
+      check image source publicInput baseRows true = true ∧
+      check syscallImage (haltSource 65535) (haltPublic 65535) (haltRows 65535) true = true)),
+  -- Endpoint encoding includes the last native byte and excludes the first out-of-range address.
+  ("permissionAddressWindow", fun _ => decide (
+      ((WritePermissionProvider.populate? (p := SP1Prime) storeRomImage (2 ^ 48 - 1)).isSome,
+      (WritePermissionProvider.populate? (p := SP1Prime) storeRomImage (2 ^ 48)).isSome) =
+      (true, false))),
+  -- Padding in every store table has zero permission demand; stopped-source identities remain valid.
+  ("protectedPaddingIdentity", fun _ => decide (
+      let rows := identityRows ++
       [(25, List.replicate (size StoreByteChip.Inputs) 0),
-       (26, List.replicate (size StoreHalfChip.Inputs) 0),
-       (27, List.replicate (size StoreWordChip.Inputs) 0),
-       (28, List.replicate (size StoreDoubleChip.Inputs) 0)]
-    check image source identityPublic rows true = true ∧
-      check image { source with host.exitCode := some 0 } identityPublic rows true = true := by native_decide
+      (26, List.replicate (size StoreHalfChip.Inputs) 0),
+      (27, List.replicate (size StoreWordChip.Inputs) 0),
+      (28, List.replicate (size StoreDoubleChip.Inputs) 0)]
+      check image source identityPublic rows true = true ∧
+      check image { source with host.exitCode := some 0 } identityPublic rows true = true))]
 
 /-- Shared active ADD fixture for extensions of the same native physical assembly. -/
 def addFixture : ProgramImage × ExecutionSnapshot × SP1PublicIO Fp × List Row :=
