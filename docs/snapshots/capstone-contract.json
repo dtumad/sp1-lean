@@ -51885,28 +51885,28 @@
       "typeFingerprint": "2330190150"
     },
     {
-      "bodyFingerprint": "2905753670",
+      "bodyFingerprint": "4077811927",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.State.casesOn",
-      "typeFingerprint": "4127180563"
+      "typeFingerprint": "1611657241"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.State.mk",
-      "typeFingerprint": "2860887116"
+      "typeFingerprint": "1185500310"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.State.rec",
-      "typeFingerprint": "234238374"
+      "typeFingerprint": "2323413613"
     },
     {
-      "bodyFingerprint": "2748042919",
+      "bodyFingerprint": "730079263",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.instProvableStructState",
@@ -51917,35 +51917,35 @@
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.instProvableStructState._proof_1",
-      "typeFingerprint": "1350218585"
+      "typeFingerprint": "477957253"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.instProvableStructState._proof_2",
-      "typeFingerprint": "2140364992"
+      "typeFingerprint": "2623855113"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.instProvableStructState._proof_3",
-      "typeFingerprint": "4284388964"
+      "typeFingerprint": "3186045837"
     },
     {
-      "bodyFingerprint": "3675150932",
+      "bodyFingerprint": "3064664903",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.instProvableStructState.match_1",
-      "typeFingerprint": "431182164"
+      "typeFingerprint": "144739816"
     },
     {
-      "bodyFingerprint": "839112282",
+      "bodyFingerprint": "1172986869",
       "local": true,
       "module": "SP1Clean.FormalModel.Contracts.OrdinaryObservation",
       "name": "SP1Clean.OrdinaryObservation.instProvableStructState.match_3",
-      "typeFingerprint": "2809683932"
+      "typeFingerprint": "3176495086"
     },
     {
       "bodyFingerprint": "1342015168",
