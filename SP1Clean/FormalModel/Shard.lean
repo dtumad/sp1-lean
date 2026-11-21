@@ -45,15 +45,15 @@ noncomputable def nativeProfile (limits : ResourceLimits) (characteristic : ℕ)
     source.realize.resources.Fits limits ∧ target.realize.resources.Fits limits ∧
     target.clock < NativeLayout.clocks.upper ∧ target.pc.toNat < NativeLayout.guestMemory.upper
 
-/-- Both capstone directions use this one fixed domain, indexed only by numeric instance data. -/
+/-- Resource-bounded Sail execution, including jumps whose links use all 64 register bits.
+`ShardRelease` adds the pinned JAL/JALR link encoding to the native capstone targets. -/
 noncomputable def AdmissibleExecution (limits : ResourceLimits) (characteristic : ℕ) (image : ProgramImage)
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=
   Executes characteristic image source target events ∧
     nativeProfile limits characteristic image source target events
 
-/-- A provable execution declares words of one immutable public statement. The operational
-relation remains permissive; conflicting declarations are excluded by statement meaning alone.
-Coverage of every digest word is a separate property of the executed program. -/
+/-- The broader execution and its immutable commitment declarations. This relation supports
+comparison with the released native profile. Digest-word coverage is a separate program property. -/
 noncomputable def StatementExecution (limits : ResourceLimits) (characteristic : ℕ)
     (commitments : CommitmentStatement) (image : ProgramImage)
     (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop :=

@@ -16,9 +16,8 @@ import Clean.Circuit.Channel
 gated by the flag-sum `is_real = is_mul + … + is_mulw` (`alu/mul/mod.rs:234`). The semantic, flag-gated
 `Spec` (RV64 `mul`/`mulh`/`mulhu`/`mulhsu`/`mulw` identities on `cols.a`) is in `FormalModel/Contracts/Chips.lean`.
 
-The chip's own `AssertSpec` tail is the five variant-flag booleans, their sum-bound, and `op_a_0 = 0`;
-`InteractSpec` is `True` — all byte-range pulls live inside `MulOperation`. Carries `Fact (2^24 < p)`
-(the `MulOperation` column-sum bound). Soundness and completeness are proven. -/
+The chip checks the five opcode selectors, their sum and the destination's x0 flag.
+The composed multiplication operation checks byte ranges and bounds the column sums. -/
 
 namespace SP1Clean.MulChip
 
@@ -26,23 +25,6 @@ open Circuit
 open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
-
-/-- The multiplication row's own assertions: five binary opcode selectors, a binary flag sum
-and `op_a_0 = 0`. The arithmetic relation belongs to the composed MulOperation circuit. -/
-def AssertSpec (cols : Columns (ZMod p)) : Prop :=
-  let m := cols.is_mul; let mh := cols.is_mulh; let mhu := cols.is_mulhu
-  let mhsu := cols.is_mulhsu; let mw := cols.is_mulw
-  let sum := m + mh + mhu + mhsu + mw
-  m * (m - 1) = 0 ∧
-  mh * (mh - 1) = 0 ∧
-  mhu * (mhu - 1) = 0 ∧
-  mw * (mw - 1) = 0 ∧
-  mhsu * (mhsu - 1) = 0 ∧
-  sum * (sum - 1) = 0 ∧
-  cols.adapter.op_a_0 = 0
-
-/-- SP1's `MulCols.interactions` own tail is empty: every byte-range pull lives inside `MulOperation`. -/
-def InteractSpec (_cols : Columns (ZMod p)) : Prop := True
 
 /-- Compose the `CPUState`/`RTypeReader` readers and the witnessed `MulOperation` as Clean sub-circuits.
 Witnesses result word `a`; derives activity from the input selectors and assembles `Columns`.

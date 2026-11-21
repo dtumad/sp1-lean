@@ -213,8 +213,8 @@ they do not establish complete ensemble balance.
   | Lt | 468 / 12 | 4,884 | SLT/SLTU, register and immediate forms, equal operands, each differing limb, sign boundaries, zero padding |
   | ShiftLeft | 2,596 / 28 | 12,090 | SLL/SLLW, every shift amount, register and immediate forms, ignored upper shift bits, limb placement, word sign extension, nonzero padding powers |
   | ShiftRight | 6,136 / 8 | 27,531 | SRL/SRA/SRLW/SRAW, every shift amount, register and immediate forms, ignored upper shift bits, sign fill, word truncation/sign extension, nonzero padding powers |
-  | Branch | 9,720 / 8 | 36,585 | All six opcodes, taken/fallthrough, equal operands, signed boundaries, negative/zero offsets, PC carries, `x0` reads, zero padding |
-  | JAL | 40 / 24 | 5,952 | Signed offsets, PC carries, discarded links, zero padding |
+  | Branch | 9,722 / 6 | 36,855 | All six opcodes, taken/fallthrough, equal operands, signed boundaries, negative/zero offsets, PC carries, out-of-window unselected targets, `x0` reads, zero padding |
+  | JAL | 41 / 23 | 5,952 | Signed offsets, PC carries, discarded link at the last fetch slot, zero padding |
   | JALR | 321 / 31 | 36,960 | Signed immediates, cleared low bit, address wraparound, `x0` sources/destinations, zero padding |
   | UType | 80 / 16 | 8,928 | LUI/AUIPC, signed upper immediates, PC carries, discarded writes |
   | LoadHalf | 130 / 30 | 21,120 | LH/LHU, aligned offsets, sign extension, address and timestamp boundaries |

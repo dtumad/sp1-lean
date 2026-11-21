@@ -59,6 +59,7 @@ import SP1Clean.Proofs.Completeness.ConsumerClosure
 import SP1Clean.Proofs.Completeness.EventBuckets
 import SP1Clean.Proofs.Completeness.FieldClosure
 import SP1Clean.Proofs.Completeness.InstructionEvent
+import SP1Clean.Proofs.Completeness.InstructionSuccessor
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Proofs.Completeness.PhysicalFootprint
 import SP1Clean.Proofs.Completeness.Ledger
@@ -165,6 +166,10 @@ import SP1Clean.Proofs.Completeness.HintQueueTerminal
 import SP1Clean.Proofs.Completeness.OrdinaryObservationPadding
 import SP1Clean.Proofs.Completeness.ExecutionObservation
 import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
+import SP1Clean.Proofs.Completeness.ObservationData
+import SP1Clean.Proofs.Completeness.ExecutionObservationSuccessor
+import SP1Clean.Proofs.Completeness.ExecutionObservationEndpoint
+import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.Soundness.HostHintQueueBoundary
@@ -259,7 +264,6 @@ import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.Shard.Contract
-import SP1Clean.Soundness.Shard.DynamicMatch
 import SP1Clean.Soundness.Shard.TargetEndpoint
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Soundness.SnapshotMemoryEnsemble

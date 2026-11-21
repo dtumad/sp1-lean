@@ -118,6 +118,7 @@ decision's binary and semantic properties. All 25 instruction chips now use empt
 Providers may still require external witness data under their own contracts.
 
 The instruction-event registry lives with semantic trace contracts, below physical assembly.
+The [shard bookkeeping contract](../SP1Clean/FormalModel/ShardDynamic.lean) describes nextPC, retirement, interrupts and event-index observations for a finite execution. Soundness reads this contract from physical tables. The [semantic execution proof](../SP1Clean/FormalModel/ShardRetirement.lean) derives it from the Sail and host steps, and the observation constructor uses it to populate the outgoing terminal.
 Chronological State/Memory inventories and the provider-closure builders in `Proofs/Completeness`
 are starting material for the mixed compiler; capacity, exact channel accounting and fixed-table
 padding remain its obligations (#12 C9/C10).

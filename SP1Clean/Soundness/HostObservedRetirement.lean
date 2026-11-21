@@ -13,15 +13,6 @@ private theorem present_counter {initial outgoing : Option (BitVec 64)} {delta :
     outgoing = initial.map (fun value => value + BitVec.ofNat 64 delta) := by
   cases initial <;> cases outgoing <;> simp_all
 
-private theorem enabled_count {p : ℕ} [Fact p.Prime] (snapshot : SailSnapshot) (n : ℕ) :
-    n * (startFor (p := p) snapshot).enabled.val = if retirementEnabled snapshot.realize then n else 0 := by
-  have flag : retirementEnabled snapshot.skeleton = retirementEnabled snapshot.realize := by
-    unfold retirementEnabled
-    rfl
-  change n * ((if retirementEnabled snapshot.skeleton then 1 else 0 : ZMod p)).val = _
-  rw [flag]
-  cases retirementEnabled snapshot.realize <;> simp [ZMod.val_one'' (Fact.out (p := p.Prime)).ne_one]
-
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 /-- The terminal counter and the exact ordinary count determine the complete optional Sail
@@ -43,6 +34,6 @@ theorem retirement_of_counter {image : ProgramImage} {source target : ExecutionS
     Target.toBitVec64_bitVecToWord _
   exact present_counter (Std.ExtDHashMap.isSome_get?_iff_mem.mpr (valid.2.1.init Register.minstret))
     (Std.ExtDHashMap.isSome_get?_iff_mem.mpr (boundary.initialized Register.minstret))
-    (by simpa only [terminal, finalValue, startValue, enabled_count] using sum)
+    (by simpa only [terminal, finalValue, startValue, startFor_enabled_count] using sum)
 
 end SP1Clean.Soundness.HostObserved

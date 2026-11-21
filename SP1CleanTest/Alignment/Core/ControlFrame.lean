@@ -65,14 +65,16 @@ theorem jalLeavesRom : RetiresWithFrame 0x008000ef 0 0 := by
   apply retires _ _ _ (.JAL (8, .Regidx 1)) (by native_decide) rfl trivial
   intro state cfg _ pc nextPc
   have ran := Advance.execute_JAL_reaches 8 1 65536 state cfg.init pc nextPc (by decide)
-  exact ⟨_, ran, (Advance.jal_execute_frame state cfg _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.jal_execute_frame state cfg _ _ _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 /-- The JAL link may be discarded at x0 without changing the memory frame. -/
 theorem jalToZero : RetiresWithFrame 0x0000006f 0 0 := by
   apply retires _ _ _ (.JAL (0, .Regidx 0)) (by native_decide) rfl trivial
   intro state cfg _ pc nextPc
   have ran := Advance.execute_JAL_reaches 0 0 65536 state cfg.init pc nextPc (by decide)
-  exact ⟨_, ran, (Advance.jal_execute_frame state cfg _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.jal_execute_frame state cfg _ _ _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 /-- JALR accepts an odd base after clearing bit zero; its outgoing PC needs no further fetch. -/
 theorem jalrMasksLowBit : RetiresWithFrame 0x000100e7 65545 0 := by
@@ -82,7 +84,8 @@ theorem jalrMasksLowBit : RetiresWithFrame 0x000100e7 65545 0 := by
     (registers 2).trans (source_left _ _ _)
   have ran := Advance.execute_JALR_reaches 0 2 1 65536 65545 state cfg.init
     cfg.toValidMemConfig nextPc base (by decide)
-  exact ⟨_, ran, (Advance.jalr_execute_frame state cfg _ _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.jalr_execute_frame state cfg _ _ _ _ base _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 /-- A taken branch retires into a boundary outside the finite ROM image. -/
 theorem branchTaken : RetiresWithFrame 0x00310463 7 7 := by
@@ -92,7 +95,8 @@ theorem branchTaken : RetiresWithFrame 0x00310463 7 7 := by
   have right : state.get_reg? 3 = some 7 := (registers 3).trans (source_right _ _ _)
   have ran := Advance.execute_BTYPE_reaches 8 2 3 .BEQ 65536 65544 7 7 state cfg.init pc nextPc
     left right (fun _ => rfl) (by decide) (by decide)
-  exact ⟨_, ran, (Advance.branch_execute_frame state cfg _ _ _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.branch_execute_frame state cfg _ _ _ _ _ _ left right _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 /-- An untaken branch does not demand alignment of its unused branch destination. -/
 theorem branchNotTakenMisalignedOffset : RetiresWithFrame 0x00310163 7 8 := by
@@ -102,6 +106,7 @@ theorem branchNotTakenMisalignedOffset : RetiresWithFrame 0x00310163 7 8 := by
   have right : state.get_reg? 3 = some 8 := (registers 3).trans (source_right _ _ _)
   have ran := Advance.execute_BTYPE_reaches 2 2 3 .BEQ 65536 65540 7 8 state cfg.init pc nextPc
     left right (by decide) (fun _ => rfl) (by decide)
-  exact ⟨_, ran, (Advance.branch_execute_frame state cfg _ _ _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.branch_execute_frame state cfg _ _ _ _ _ _ left right _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 end SP1CleanTest.Core.ControlFrame

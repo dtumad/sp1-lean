@@ -1,4 +1,5 @@
 import SP1Clean.Math.Word
+import SP1Clean.Semantics.ISA.JumpLink
 
 /-! # Trace generation — the semantic events of the register-adapter families
 
@@ -724,11 +725,10 @@ def JTypeEvent.jalTarget (e : JTypeEvent) : ℕ := (e.pc + e.immB) % 2 ^ 64
   compressed extension, so every instruction is four bytes and RISC-V raises an
   instruction-address-misaligned exception on any other target — which traps rather than emitting a
   row. This is exactly the content of the chip's `Range(add_operation.value[0] / 4, 14)` byte pull.
-* `link_lt` — the link address `pc + 4` is a 48-bit address too (`op_a_operation.value[3] = 0`);
-  it is the address the jump returns to, hence itself a program counter.
+* A nonzero destination receives the 48-bit link `pc + 4`. A discarded link has zero witness limbs.
 -/
 def JTypeEvent.JalTargets (e : JTypeEvent) : Prop :=
-  e.jalTarget < 2 ^ 48 ∧ e.jalTarget % 4 = 0 ∧ e.pc + 4 < 2 ^ 48
+  e.jalTarget < 2 ^ 48 ∧ e.jalTarget % 4 = 0 ∧ Semantics.JumpLinkFits e.pc (e.opA ≠ 0)
 
 /-- The **uncleared** address a `JALR` row computes: `rs1 + op_c`, truncated to 64 bits. The row
 jumps to this value with its low bit cleared (`next_pc = target - target % 2`, SP1's `& !1`), but
@@ -745,10 +745,10 @@ low bit is cleared — which is the whole difference between the two chips:
   is RISC-V's rule for `JALR` (the LSB is cleared by the instruction, and the result must still be
   instruction-aligned or the access traps), and it is exactly the content of the chip's
   `Range((add_operation.value[0] - lsb) / 4, 14)` byte pull.
-* `link_lt` — the link address `pc + 4` is a 48-bit address (`op_a_operation.value[3] = 0`).
+* A nonzero destination receives `pc + 4` in three limbs. With x0 the link word is zero.
 -/
 def ITypeEvent.JalrTargets (e : ITypeEvent) : Prop :=
-  e.jalrTarget < 2 ^ 48 ∧ (e.jalrTarget - e.jalrTarget % 2) % 4 = 0 ∧ e.pc + 4 < 2 ^ 48
+  e.jalrTarget < 2 ^ 48 ∧ (e.jalrTarget - e.jalrTarget % 2) % 4 = 0 ∧ Semantics.JumpLinkFits e.pc (e.opA ≠ 0)
 
 /-! ## The branch family
 
@@ -845,27 +845,10 @@ fall-through `pc + 4` when it is not. This is the value the chip commits as `nex
 def ITypeEvent.branchNextPc (e : ITypeEvent) : ℕ :=
   if e.branchTaken then e.branchTarget else (e.pc + 4) % 2 ^ 64
 
-/--
-**A branch row's two candidate addresses.** The three facts SP1's `Branch` AIR records about them:
-
-* `target_lt` — the taken target is a 48-bit address. The chip runs the taken-side carry chain on
-  *every* real row (the selection happens afterwards) and gates its high limb to zero, so this is
-  owed whether or not the branch is taken; a program whose branch offset pointed outside the 48-bit
-  address space would have no row to write.
-* `link_lt` — the fall-through `pc + 4` is a 48-bit address too, for the same reason on the other
-  carry chain.
-* `next_aligned` — the address the row **continues at** is 4-byte aligned. Gated on the decision
-  because that is exactly how the AIR gates it: the `Range(next_pc[0] / 4, 14)` byte pull is on the
-  *selected* `next_pc`, so the unselected candidate owes no alignment. SP1 implements RV64IM without
-  the compressed extension, so every instruction is four bytes and RISC-V traps a misaligned
-  instruction address rather than emitting a row.
-
-Separate from `WellFormedBranch` for the same reason `JTypeEvent.JalTargets` is separate from
-`JTypeEvent.WellFormed`: these are facts about *where the executor went*, false for the other users
-of the shared `ITypeEvent` record (an `Addi` sum is an arbitrary 64-bit value).
--/
+/-- The destination actually selected by a branch fits the three-limb, four-byte-aligned native
+PC. The released `control_flow/branch/air.rs` gates each carry chain by its own branch decision. -/
 def ITypeEvent.BranchTargets (e : ITypeEvent) : Prop :=
-  e.branchTarget < 2 ^ 48 ∧ e.pc + 4 < 2 ^ 48 ∧ e.branchNextPc % 4 = 0
+  e.branchNextPc < 2 ^ 48 ∧ e.branchNextPc % 4 = 0
 
 /-! ## The memory family
 

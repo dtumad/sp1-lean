@@ -346,6 +346,34 @@ theorem instructionAccessPlan?_isSome {decoded : instruction} {source target : S
     obtain ⟨newRam, newEq⟩ := Option.isSome_iff_exists.mp newPresent
     simp [instructionPlanByShape?, storePlan?, priorEq, oldEq, newEq]
 
+/-- The two canonical JALR touches read the base and prior destination from the incoming state,
+even when the two register roles alias. -/
+theorem jalrPlan_pulled {source target : SailState} {plan : InstructionAccessPlan} {imm : BitVec 12}
+    {rs1 rd : regidx} {base prior : BitVec 64}
+    (read : source.get_reg? (regidxBits rs1) = some base) (dest : source.get_reg? (regidxBits rd) = some prior)
+    (generated : instructionAccessPlan? (.JALR (imm, rs1, rd)) source target = some plan) :
+    plan.map PlannedTouch.pulled = [base, prior] := by
+  have route : instructionRouteId (.JALR (imm, rs1, rd)) = some .jalr := rfl
+  cases post : destinationPost? target (regidxBits rd) prior with
+  | none => simp [instructionAccessPlan?, certifiedInstructionPlan?, route, instructionPlanByShape?, baPlan?, read, dest, post] at generated
+  | some value =>
+    simp [instructionAccessPlan?, certifiedInstructionPlan?, route, instructionPlanByShape?, baPlan?,
+      read, dest, post] at generated
+    cases generated
+    rfl
+
+/-- The branch adapter reads rs2 first and rs1 second. Both come from its actual incoming state. -/
+theorem branchPlan_pulled {source target : SailState} {plan : InstructionAccessPlan} {imm : BitVec 13}
+    {rs2 rs1 : regidx} {op : bop} {left right : BitVec 64}
+    (read1 : source.get_reg? (regidxBits rs1) = some left) (read2 : source.get_reg? (regidxBits rs2) = some right)
+    (generated : instructionAccessPlan? (.BTYPE (imm, rs2, rs1, op)) source target = some plan) :
+    plan.map PlannedTouch.pulled = [right, left] := by
+  have route : instructionRouteId (.BTYPE (imm, rs2, rs1, op)) = some .branch := by cases op <;> rfl
+  simp [instructionAccessPlan?, certifiedInstructionPlan?, route, instructionPlanByShape?, baReadbackPlan?,
+    read2, read1] at generated
+  cases generated
+  rfl
+
 /-- Constructor form of readiness, useful when the compiler retains the extracted plan. -/
 theorem InstructionPlanReady.of_generated {decoded : instruction} {source target : SailState}
     {plan : InstructionAccessPlan}

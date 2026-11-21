@@ -29,16 +29,6 @@ open SP1Clean.Channels (stateChannel byteChannel memoryChannel programChannel)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- The chip's own assertions: the binary activity gate and destination-x0 zeroing flag.
-Arithmetic and reader obligations are composed through their bundled circuits. -/
-def AssertSpec (cols : Columns (ZMod p)) : Prop :=
-  cols.is_real * (cols.is_real - 1) = 0 ∧
-  cols.adapter.op_a_0 = 0
-
-/-- The chip has no additional interactions: all byte-range pulls belong to its composed
-AddOperation, CPUState and ITypeReader circuits. -/
-def InteractSpec (_cols : Columns (ZMod p)) : Prop := True
-
 /-- Compose the `CPUState`/`AddOperation`/`ITypeReader` sub-circuits, witness the ALU result word via
 `AddOperation.populateIR` (the exportable witness IR; `populate` remains its value-level anchor), gate `is_real`, and assemble the native `Columns` struct. The `ITypeReader`
 carries opcode `1` and the four `op_a_write_value` limbs. -/

@@ -111,13 +111,14 @@ theorem vmem_read_frame (source : SailState) (cfg : SailConfigured source)
     cases error <;> simp only [with_excinst_offset] at same <;>
       first | exact direct other same | cases same
 
-/-- Loads preserve configuration and memory for every actual execute result, including x0. -/
-theorem load_execute_frame (source : SailState) (cfg : SailConfigured source)
+/-- Loads preserve the staged successor, configuration and memory for every actual execute result, including x0. -/
+theorem load_execute_successor (source : SailState) (cfg : SailConfigured source)
     (imm : BitVec 12) (rs1 rd : BitVec 5) (unsigned : Bool) (width : word_width)
     (result : ExecutionResult) (target : SailState)
     (ran : (runSail (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))) source =
       .ok result target) :
-    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem ∧
+      target.regs.get? Register.nextPC = source.regs.get? Register.nextPC ∧ Semantics.PreservesRetirementRegisters source target := by
   simp only [SailExecute.dispatch_LOAD, execute_LOAD, PreSail.sail_assert] at ran
   split at ran
   · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran
@@ -129,11 +130,36 @@ theorem load_execute_frame (source : SailState) (cfg : SailConfigured source)
       rw [run_bind_of_run' source _ _ () (run_wX_bits (.Regidx rd) (extend_value unsigned bytes))] at rest
       cases rest
       exact ⟨(fun _ h => nomatch h), SailConfigured.writeGPR cfg rd _, by
-        by_cases zero : rd = 0#5 <;> simp only [zero, ↓reduceIte]⟩
+        by_cases zero : rd = 0#5 <;> simp only [zero, ↓reduceIte], writeGPR_nextPC _ _ _, writeGPR_retirementRegisters _ _ _⟩
     | Err error =>
       cases rest
-      exact ⟨fun other same => direct other (congrArg Result.Err same), cfg, rfl⟩
+      exact ⟨fun other same => direct other (congrArg Result.Err same), cfg, rfl, rfl, fun _ _ => rfl⟩
   · cases ran
+
+/-- Loads preserve configuration and memory for every actual execute result, including x0. -/
+theorem load_execute_frame (source : SailState) (cfg : SailConfigured source)
+    (imm : BitVec 12) (rs1 rd : BitVec 5) (unsigned : Bool) (width : word_width)
+    (result : ExecutionResult) (target : SailState)
+    (ran : (runSail (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))) source =
+      .ok result target) :
+    (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
+  obtain ⟨direct, configured, memory, _⟩ := load_execute_successor source cfg imm rs1 rd unsigned width result target ran
+  exact ⟨direct, configured, memory⟩
+
+/-- A normal load, including a discarded x0 result, commits the sequential successor. -/
+theorem load_normal_successor {program : GuestProgram} {source target : SailState}
+    {pc : BitVec 64} {word : BitVec 32} {imm : BitVec 12} {rs1 rd : BitVec 5}
+    {unsigned : Bool} {width : word_width}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (atPc : source.regs.get? Register.PC = some pc) (fetched : program.fetchWord pc = some word)
+    (decode : ConfiguredDecode word (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))
+    (normal : SailRetiresNormally source target) :
+    target.regs.get? Register.PC = some (pc + 4#64) ∧ target.regs.get? Register.nextPC = some (pc + 4#64) := by
+  obtain ⟨_, _, committed, successor, _⟩ := normal_observed_direct_execute configured loaded atPc fetched decode
+    (fun _ => True) (fun result => result = some (pc + 4#64)) (fun state cfg _ _ _ staged result next ran => by
+      obtain ⟨direct, afterCfg, _, retained, _⟩ := load_execute_successor state cfg imm rs1 rd unsigned width result next ran
+      exact ⟨direct, afterCfg, trivial, fun _ => retained.trans staged⟩) normal
+  exact ⟨successor, committed.trans successor⟩
 
 /-- Normal load retirement preserves the configured platform and the complete memory map. -/
 theorem load_normal_frame {program : GuestProgram} {source target : SailState}

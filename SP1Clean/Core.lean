@@ -99,8 +99,12 @@ import SP1Clean.FormalModel.Contracts.WritePermission
 import SP1Clean.FormalModel.Shard
 import SP1Clean.FormalModel.ShardMachine
 import SP1Clean.FormalModel.ShardPreservation
+import SP1Clean.FormalModel.ShardNextPC
+import SP1Clean.FormalModel.ShardDynamic
+import SP1Clean.FormalModel.ShardRetirement
 import SP1Clean.FormalModel.ShardAccess
 import SP1Clean.FormalModel.ShardResources
+import SP1Clean.FormalModel.ShardRelease
 import SP1Clean.FormalModel.TraceGen.AluGenerator
 import SP1Clean.FormalModel.TraceGen.Arith
 import SP1Clean.FormalModel.TraceGen.Bump
@@ -134,6 +138,7 @@ import SP1Clean.Semantics.Execution.CommitmentStatement
 import SP1Clean.Semantics.Execution.Execution
 import SP1Clean.Semantics.Execution.ExecutionBoot
 import SP1Clean.Semantics.Execution.ExecutionEncoding
+import SP1Clean.Semantics.Execution.ReleaseLinks
 import SP1Clean.Semantics.Execution.ExecutionMemory
 import SP1Clean.Semantics.Execution.ExecutionAccess
 import SP1Clean.Semantics.Execution.ExecutionFrame
@@ -161,6 +166,7 @@ import SP1Clean.Semantics.Host.HostSnapshot
 import SP1Clean.Semantics.Host.SixCallProfile
 import SP1Clean.Semantics.Host.HostTerminal
 import SP1Clean.Semantics.ISA.InstructionBytes
+import SP1Clean.Semantics.ISA.JumpLink
 import SP1Clean.Semantics.ISA.InstructionDecode
 import SP1Clean.Semantics.Execution.InstructionFetch
 import SP1Clean.Semantics.Memory.InstructionWrite
@@ -243,6 +249,7 @@ import SP1Clean.Semantics.Sail.SailMemorySplit
 import SP1Clean.Semantics.Sail.SailMemoryWrite
 import SP1Clean.Semantics.Sail.SailReadOnly
 import SP1Clean.Semantics.Sail.SailRetirement
+import SP1Clean.Semantics.Sail.RetirementRegisters
 import SP1Clean.Semantics.Sail.SailStepReduction
 import SP1Clean.Semantics.Sail.SailStoreFrame
 import SP1Clean.Semantics.Transition.TransitionDecode
@@ -472,6 +479,7 @@ import SP1Clean.Proofs.Chips.JalChip.Complete
 import SP1Clean.Proofs.Chips.JalChip.Formal
 import SP1Clean.Proofs.Chips.JalrChip.Complete
 import SP1Clean.Proofs.Chips.JalrChip.Formal
+import SP1Clean.Proofs.Chips.JumpLinkBound
 import SP1Clean.Proofs.Chips.LoadByteChip.Complete
 import SP1Clean.Proofs.Chips.LoadByteChip.Formal
 import SP1Clean.Proofs.Chips.LoadByteStaticChip.Complete

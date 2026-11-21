@@ -30,6 +30,27 @@ theorem balanceOf_append (left right : List (Interaction F)) (message : Array F)
     balanceOf (left ++ right) message = balanceOf left message + balanceOf right message := by
   simp only [balanceOf, List.filter_append, List.map_append, List.sum_append]
 
+/-- Appending a terminal transition changes the boundary pull from its source to its target.
+Equal messages and repeated interior occurrences contribute their ordinary signed weights. -/
+theorem Channel.logUp_append_terminal {M : TypeMap} [ProvableType M] (ch : Channel F M)
+    (start held outgoing : M F) (rows : List (Interaction F))
+    (balanced : LogUpBalanced ([ch.pushedValue start, ch.pulledValue held] ++ rows)) :
+    LogUpBalanced (([ch.pushedValue start, ch.pulledValue outgoing] ++ rows) ++
+      [ch.pulledValue held, ch.pushedValue outgoing]) := by
+  intro msg
+  have old := balanced msg
+  change balanceOf ((ch.pushedValue start) :: ch.pulledValue held :: rows) msg = 0 at old
+  rw [balanceOf_append]
+  change balanceOf ((ch.pushedValue start) :: ch.pulledValue outgoing :: rows) msg + _ = 0
+  simp only [balanceOf_cons, Channel.pushedValue, Channel.pulledValue, Interaction.signedMult,
+    show balanceOf ([] : List (Interaction F)) msg = 0 from rfl, add_zero] at old ⊢
+  have cancel (a b c : F) : a + (-1 + c) + (b + 1) = a + (b + c) := calc
+    _ = a + (b + c) + (-1 + 1) := by ac_rfl
+    _ = _ := by simp
+  by_cases same : (toElements outgoing).toArray = msg
+  · simpa only [same, ↓reduceIte, cancel] using old
+  · simpa only [same, ↓reduceIte, zero_add, add_zero, add_assoc, add_comm, add_left_comm] using old
+
 /-- Selecting by payload retains either every occurrence of a message or none of them. -/
 theorem balanceOf_filter_messages (interactions : List (Interaction F)) (keep : Array F → Bool)
     (message : Array F) :

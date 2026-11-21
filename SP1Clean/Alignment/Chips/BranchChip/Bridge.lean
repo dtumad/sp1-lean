@@ -1,3 +1,4 @@
+import SP1Clean.Semantics.Sail.SailControlFrame
 import SP1Clean.Semantics.Sail.SailWrap
 import SP1Clean.Math.Word
 import SP1Clean.Proofs.Chips.BranchChip.Formal
@@ -28,17 +29,6 @@ noncomputable def spec_btype (imm : BitVec 13) (rs2 rs1 : regidx) (op : bop) : S
 /-- The SP1 chip emulation: set `nextPC` to the committed `next_pc` word. Branches write no register. -/
 def sp1_branch (next_pc_word : Word (ZMod p)) : SailM Unit := do
   set_next_pc (Word.toBitVec64 next_pc_word)
-
-/-- The chip-side branch condition per opcode (matching `BranchChip.Spec`'s six decision conjuncts): the
-RISC-V taken predicate expressed on the two `BitVec 64` register values via `BitVec.slt`/`ult`. -/
-def branchCond (op : bop) (x y : BitVec 64) : Prop :=
-  match op with
-  | .BEQ => x = y
-  | .BNE => x ≠ y
-  | .BLT => x.slt y = true
-  | .BGE => x.slt y = false
-  | .BLTU => x.ult y = true
-  | .BGEU => x.ult y = false
 
 /-! ### Sail comparison functions ↔ `BitVec.slt`/`ult` -/
 

@@ -17,8 +17,7 @@ open Circuit
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
-/-- The assertion block has no semantic precondition: its own constraints establish the complete
-structural `AssertSpec`. -/
+/-- This block's constraints establish the chip's `CoreSpec` for every input. -/
 def Assumptions (_ : ShiftRightChip.Columns (ZMod p)) : Prop := True
 
 omit [Fact (2 ^ 17 < p)] in

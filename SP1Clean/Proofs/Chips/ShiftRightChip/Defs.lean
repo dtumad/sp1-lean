@@ -18,8 +18,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # The ShiftRight chip row as a GeneralFormalCircuit
 
 SRL/SRA/SRLW/SRAW share power encodings, sign-extension gadgets, limb decomposition and output
-placement. `AssertSpec` and `InteractSpec` describe this implementation evidence; the public RV64
-contract lives in `Semantics/Specs/Chips/ShiftRight.lean`.
+placement. The public RV64 contract lives in `Semantics/Specs/Chips/ShiftRight.lean`.
 
 The circuit composes native readers and MSB gadgets with Clean-generated witnesses. Its bundled
 proofs retain selector, padding and bounded-input obligations. Released Rust comparisons exercise
@@ -35,43 +34,11 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
 
 local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 
-/-- **Assertion half** — the literal meaning of the generated ShiftRight `asserts` *own* assertZero
-list. `E14 = is_srl + is_sra` (the 64-bit-shift indicator) and `E13 = is_srlw + is_sraw` (the
-word-shift indicator) gate the two output-placement blocks; the `v_*` powers are the **inverted**
-right-shift form `2^(16 - bitShift)`. In exact upstream order this is the four flag booleans, their
-combined boolean gate, then `CoreSpec`'s remaining 53 assertions. -/
-def AssertSpec (cols : Columns (ZMod p)) : Prop :=
-  let srl := cols.is_srl; let sra := cols.is_sra; let srlw := cols.is_srlw; let sraw := cols.is_sraw
-  let sum := srl + sra + srlw + sraw
-  srl * (srl - 1) = 0 ∧ sra * (sra - 1) = 0 ∧ srlw * (srlw - 1) = 0 ∧
-    sraw * (sraw - 1) = 0 ∧ sum * (sum - 1) = 0 ∧ CoreSpec cols
-
 /-- The register-read operands the chip decomposes are 64-bit values (received facts from the offline
 memory: the writer range-checked them). These are the `rs1`/`rs2` the `Spec` shifts. Lives here (not in
 `Formal`) so the per-op `Soundness/<Op>.lean` split files can import it without a cycle through `Formal`. -/
 def Assumptions (input : Inputs (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
   Word.isU64 input.adapter.op_b_memory.prev_value ∧ Word.isU64 input.adapter.op_c_memory.prev_value
-
-/-- **Interaction half** — SP1's `Columns.interactions` byte-range sends (gated by
-`gate = is_srl + is_sra + is_srlw + is_sraw`): the shift-amount high bits `< 2^10`, and, per limb, the
-`lower_limb` `< 2^bitShift` and `higher_limb` `< 2^(16 - bitShift)` ranges. (Note the lower/higher
-widths are swapped versus `ShiftLeftChip`, as the right shift keeps the high bits.) -/
-def InteractSpec (cols : Columns (ZMod p)) : Prop :=
-  let b0 := cols.c_bits[0]; let b1 := cols.c_bits[1]; let b2 := cols.c_bits[2]
-  let b3 := cols.c_bits[3]; let b4 := cols.c_bits[4]; let b5 := cols.c_bits[5]
-  let bitShift : ZMod p := b0 * 1 + b1 * 2 + b2 * 4 + b3 * 8
-  let shamt : ZMod p := bitShift + b4 * 16 + b5 * 32
-  let e84 : ZMod p := (cols.adapter.op_c_memory.prev_value[0] - shamt) * (64 : ZMod p)⁻¹
-  let gate : ZMod p := cols.is_srl + cols.is_sra + cols.is_srlw + cols.is_sraw
-  (gate ≠ 0 → e84.val < 2 ^ (10 : ZMod p).val) ∧
-  (gate ≠ 0 → cols.lower_limb[0].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.higher_limb[0].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.lower_limb[1].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.higher_limb[1].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.lower_limb[2].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.higher_limb[2].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.lower_limb[3].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.higher_limb[3].val < 2 ^ (16 - bitShift).val)
 
 /-! ### Folded witness prefix
 
@@ -245,7 +212,7 @@ folded while structural consumers select the early reader boundary. -/
   is_sraw * (is_sraw - 1) === 0
   let gate := is_srl + is_sra + is_srlw + is_sraw
   assertion ShiftRightCore.circuit cols
-  -- The byte-range pulls (`InteractSpec`), gated by `gate = is_srl+is_sra+is_srlw+is_sraw`.
+  -- The byte-range pulls are gated by `gate = is_srl+is_sra+is_srlw+is_sraw`.
   let b0 := c_bits[0]; let b1 := c_bits[1]; let b2 := c_bits[2]
   let b3 := c_bits[3]; let b4 := c_bits[4]; let b5 := c_bits[5]
   let bitShift : Expression (ZMod p) := b0 * 1 + b1 * 2 + b2 * 4 + b3 * 8
@@ -273,8 +240,8 @@ folded while structural consumers select the early reader boundary. -/
 
 /-- Compose the threaded `CPUState`/`ALUTypeReader` reader blocks and the **three** `U16MSBOperation`
 gadgets (`b_msb` on `op_b` limb 3 gated `is_sra` and limb 1 gated `is_sraw`; `srw_msb` on `a[1]` gated
-`is_srlw + is_sraw`), witness the shift column block, gate `is_real`, emit the ~58 inline shift
-assertions (`AssertSpec`) and the nine byte-range pulls (`InteractSpec`), and assemble the native
+`is_srlw + is_sraw`), witness the shift column block, gate `is_real`, emit the inline shift
+assertions and nine byte-range pulls, and assemble the native
 `Columns` struct. -/
 def main (input : Var Inputs (ZMod p)) : Circuit (ZMod p) (Var Columns (ZMod p)) := do
   let _ ← Readers.CPUState.circuit

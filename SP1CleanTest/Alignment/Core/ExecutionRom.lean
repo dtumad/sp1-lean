@@ -151,7 +151,8 @@ theorem hintThenJalr : Preserved 0x000100e7 65553 0 := by
   intro state cfg left _ _ nextPc
   have ran := Advance.execute_JALR_reaches 0 2 1 65540 65553 state cfg.init cfg.toValidMemConfig
     nextPc left (by decide)
-  exact ⟨_, ran, (Advance.jalr_execute_frame state cfg _ _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.jalr_execute_frame state cfg _ _ _ _ left _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 /-- A taken branch after HINT_READ needs its current fetch but no instruction at its destination. -/
 theorem hintThenBranch : Preserved 0x00310463 7 7 := by
@@ -160,7 +161,8 @@ theorem hintThenBranch : Preserved 0x00310463 7 7 := by
   intro state cfg left right pc nextPc
   have ran := Advance.execute_BTYPE_reaches 8 2 3 .BEQ 65540 65548 7 7 state cfg.init pc nextPc
     left right (fun _ => rfl) (by decide) (by decide)
-  exact ⟨_, ran, (Advance.branch_execute_frame state cfg _ _ _ _ _ _ ran).2⟩
+  obtain ⟨_, configured, memory, _⟩ := Advance.branch_execute_frame state cfg _ _ _ _ _ _ left right _ _ ran
+  exact ⟨_, ran, configured, memory⟩
 
 /-- The same mixed semantic fixture counts one host event and one ordinary event at their actual costs. -/
 theorem mixedResourceWork :

@@ -8,7 +8,7 @@ import ToClean.Air.TableBuild
 
 Event opcodes supply the six committed selectors. Clean generates the comparison, branch
 bit and next PC without per-row hints. `WellFormedBranch` permits reading `x0`; `BranchTargets`
-bounds both candidate PCs and aligns the selected target.
+bounds and aligns the selected target.
 -/
 
 namespace SP1Clean.TraceGen
@@ -196,7 +196,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 theorem proverAssumptions_of_event {e : ITypeEvent} (h : e.WellFormedBranch) (hop : e.IsBranch)
     (htgt : e.BranchTargets) (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ProverAssumptions (e.toBranchInputs (p := p)) data hint := by
-  obtain ⟨htgt48, _hlink, halign⟩ := htgt
+  obtain ⟨bounded, halign⟩ := htgt
   obtain ⟨hbin, _hsum⟩ := branchFlags_spec (p := p) hop
   have hpc : e.pc < 2 ^ 48 := h.pc_lt
   simp only [ProverAssumptions, e.toBranchInputs_is_real hop]
@@ -208,18 +208,29 @@ theorem proverAssumptions_of_event {e : ITypeEvent} (h : e.WellFormedBranch) (ho
     exact wordOfNat_isU64 _
   · rw [rs2WordInput_toBranchInputs]
     exact wordOfNat_isU64 _
-  · rw [branchTargetWord_toBranchInputs hpc]
-    exact wordOfNat_three_eq_zero htgt48
-  · rw [fallThroughWord_toBranchInputs hpc]
-    exact wordOfNat_three_eq_zero (by omega)
+  · intro _ taken
+    rw [populateBranching_toBranchInputs hop] at taken
+    cases decision : e.branchTaken with
+    | false => simp [decision] at taken
+    | true =>
+      rw [branchTargetWord_toBranchInputs hpc]
+      exact wordOfNat_three_eq_zero (by simpa only [ITypeEvent.branchNextPc, decision, ↓reduceIte] using bounded)
+  · intro _ untaken
+    rw [populateBranching_toBranchInputs hop] at untaken
+    cases decision : e.branchTaken with
+    | true => simp [decision] at untaken
+    | false =>
+      rw [fallThroughWord_toBranchInputs hpc]
+      exact wordOfNat_three_eq_zero (by simpa only [ITypeEvent.branchNextPc, decision, Bool.false_eq_true, ↓reduceIte] using bounded)
   · intro i
     exact hbin i i.isLt
   · intro _
     rw [populateBranching_toBranchInputs hop]
     exact committedNextPc_bounds hop hpc halign
 
+omit [Fact (2 ^ 24 < p)] in
 /-- Zero selectors make every activity-gated padding obligation vacuous.
-The two ungated high limbs vanish for `0 + 0` and `0 + 4`. -/
+Both high-limb obligations are gated off. -/
 theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ProverAssumptions (branchPaddingInputs (p := p)) data hint := by
   have hzero : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) :=
@@ -232,9 +243,8 @@ theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHin
   · exact ⟨⟨zero_mul _, zero_mul _, zero_mul _, zero_mul _⟩, fun hr => absurd hr hne,
       fun hr => absurd hr hne, fun hr => absurd hr hne, fun hr => absurd hr hne,
       fun hr => absurd hr hne⟩
-  · simp [branchTargetWord, branchPaddingInputs, zeroCPUStateCols, zeroITypeReaderCols,
-      AddOperation.populate]
-  · simp [fallThroughWord, branchPaddingInputs, zeroCPUStateCols, AddOperation.populate]
+  · exact fun hr => absurd hr hne
+  · exact fun hr => absurd hr hne
   · intro i
     left
     fin_cases i <;> rfl

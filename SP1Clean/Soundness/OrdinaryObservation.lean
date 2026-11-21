@@ -21,6 +21,48 @@ open scoped Classical
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
+/-- Decode each physical terminal input in its own table environment. -/
+def terminalRows (table : Table (ZMod p)) : List (TerminalInputs (ZMod p)) :=
+  table.table.map fun physical => valueFromOffset TerminalInputs 0 (table.environment physical)
+
+/-- The actual terminal edge, keeping the two carries on the decoded input. -/
+def terminalEdge (mode : Mode) (input : TerminalInputs (ZMod p)) :=
+  (input.previous, SP1Clean.OrdinaryObservation.final mode input.previous.counter input.pc input.previous.enabled)
+
+private theorem terminal_values (mode : Mode) (env : Environment (ZMod p)) :
+    (terminalComponent mode).operations.interactionValuesWith
+      (SP1Clean.OrdinaryObservation.stateChannel (p := p)).toRaw env =
+      [SP1Clean.OrdinaryObservation.stateChannel.pulledValue
+        (terminalEdge mode (valueFromOffset TerminalInputs 0 env)).1,
+       SP1Clean.OrdinaryObservation.stateChannel.pushedValue
+        (terminalEdge mode (valueFromOffset TerminalInputs 0 env)).2] := by
+  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
+    terminalComponent, SP1Clean.OrdinaryObservation.terminal_interactions,
+    List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed]
+  rw [← eval_varFromOffset_valueFromOffset TerminalInputs 0 env]
+  cases mode <;>
+    simp only [terminalEdge, SP1Clean.OrdinaryObservation.final, SP1Clean.OrdinaryObservation.Mode.sentinel,
+      TerminalInputs.pc, circuit_norm]
+
+/-- Every terminal row supplies exactly one unguarded incoming pull and one sentinel push. -/
+theorem terminal_state_ledger (table : Table (ZMod p)) (mode : Mode)
+    (registered : table.component = terminalComponent mode) :
+    table.interactionsWith SP1Clean.OrdinaryObservation.stateChannel.toRaw =
+      (terminalRows table).flatMap (fun input =>
+        [SP1Clean.OrdinaryObservation.stateChannel.pulledValue (terminalEdge mode input).1,
+         SP1Clean.OrdinaryObservation.stateChannel.pushedValue (terminalEdge mode input).2]) := by
+  simp only [Table.interactionsWith, registered, terminal_values, terminalRows, List.flatMap_map]
+
+/-- Validity of every decoded terminal comes from that terminal's local table specification. -/
+theorem terminal_rows_valid (table : Table (ZMod p)) (mode : Mode)
+    (registered : table.component = terminalComponent mode) (valid : table.Spec) :
+    ∀ input ∈ terminalRows table, input.Valid mode := by
+  intro input member
+  obtain ⟨row, inTable, rfl⟩ := List.mem_map.mp member
+  have atRow := valid row inTable
+  rw [registered] at atRow
+  cases mode <;> exact atRow
+
 /-- Binding a terminal to canonical PC limbs authenticates the numerical raw successor.
 The two upper raw-limb bounds come from the State ledger. The low raw limb may carry. -/
 theorem terminal_pc {input : TerminalInputs (ZMod p)} {mode : Mode}
@@ -332,7 +374,9 @@ theorem receipts_exact (id : InstructionChipId) (original observed : Table (ZMod
       (fun row member => (rows_spec observed data registered valid row member).1) balanced
 
 omit [Fact (2 ^ 25 < p)] in
-private theorem counter_of_walk (initial final : State (ZMod p))
+/-- Every valid observation walk carries its original enable bit and increases the retirement word
+once per active row, modulo 64 bits. -/
+theorem counter_of_walk (initial final : State (ZMod p))
     (path : List (Inputs (ZMod p))) (valid : ∀ input ∈ path, Spec input)
     (walk : Walk.IsWalk edge initial final path) :
     final.enabled = initial.enabled ∧

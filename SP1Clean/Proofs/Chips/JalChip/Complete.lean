@@ -14,7 +14,7 @@ so the adapter half is `UTypeChip/Complete.lean` verbatim. What is new is the **
 row witnesses two `AddOperation` results, the jump target `pc + op_b` and the link address
 `pc + 4`, and its contract asks three things about them that no reader lemma supplies —
 
-* both results' high limbs are zero (they are program counters, committed as three u16 limbs), and
+* the jump target and any enabled link fit three 16-bit limbs, and
 * the jump target is 4-byte aligned (the `Range(add_operation.value[0] / 4, 14)` byte pull).
 
 Those are facts about **where the executor jumped**, so they are stated in plain `ℕ` on the event —
@@ -37,6 +37,15 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 
 Both are `AddOperation.populate` at the built program-counter word, so both are built words of the
 executor's own wrapping sums. -/
+
+omit [Fact (2 ^ 24 < p)] in
+/-- The released event enables its physical link addition exactly on a nonzero destination. -/
+theorem linkGate_iff (e : JTypeEvent) :
+    (e.toJalInputs (p := p)).is_real - (e.toJalInputs (p := p)).adapter.op_a_0 = 1 ↔ e.opA ≠ 0 := by
+  change 1 - (jTypeReaderCols (p := p) e).op_a_0 = 1 ↔ _
+  by_cases zero : e.opA = 0
+  · simp [zero, jTypeReaderCols_op_a_0_eq_one zero]
+  · simp [zero, jTypeReaderCols_op_a_0_eq_zero zero]
 
 /-- The witnessed jump target of a built row is the built word of `pc + op_b`. -/
 lemma jumpTargetWord_toJalInputs {e : JTypeEvent} (h : e.pc < 2 ^ 48) :
@@ -82,8 +91,10 @@ theorem proverAssumptions_of_event {e : JTypeEvent} (h : e.WellFormedJal) (htgt 
   -- the jump target is a program counter: 48 bits, so the committed high limb is zero
   · rw [jumpTargetWord_toJalInputs hpc]
     exact wordOfNat_three_eq_zero htgt48
-  -- so is the link address `pc + 4`
-  · rw [linkTargetWord_toJalInputs hpc]
+  -- The physical link addition is enabled only for a nonzero destination register.
+  · intro enabled
+    have bound := hlink ((linkGate_iff e).mp enabled)
+    rw [linkTargetWord_toJalInputs hpc]
     exact wordOfNat_three_eq_zero (by omega)
   -- and the jump target is 4-byte aligned — the `Range(value[0] / 4, 14)` byte pull
   · intro _
@@ -91,10 +102,7 @@ theorem proverAssumptions_of_event {e : JTypeEvent} (h : e.WellFormedJal) (htgt 
     simpa using wordOfNat_div_four_val_lt (p := p) (n := e.jalTarget) (sub := 0) (by omega)
       (by omega)
 
-/-- **A padding row satisfies the same contract.** `is_real = 0` makes every gated conjunct vacuous;
-what survives is the two operand `isU64`s, the exact `op_a_0` invariant, and — because they are stated
-**ungated** — the two `value[3] = 0` gates, which the zero row's two sums `0 + 0` and `0 + 4`
-satisfy. -/
+/-- A padding row has zero operands and jump target. Its link addition is disabled. -/
 theorem proverAssumptions_padding (data : ProverData (ZMod p)) (hint : ProverHint (ZMod p)) :
     ProverAssumptions (jalPaddingInputs (p := p)) data hint := by
   have hzero : Word.isU64 (#v[0, 0, 0, 0] : Word (ZMod p)) :=

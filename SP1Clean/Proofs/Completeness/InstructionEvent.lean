@@ -1081,4 +1081,85 @@ theorem compileInstructionEvent?_branch_immediate
   · contradiction
 
 
+/-- A compiled JAL uses the decoded sign-extended immediate and incoming PC. -/
+theorem compileInstructionEvent?_jal_fields {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ}
+    {result : CompiledInstructionEvent} {imm : BitVec 21} {rd : regidx}
+    (decoded : view.decoded = .JAL (imm, rd)) (routed : view.chipId = .jal)
+    (generated : compileInstructionEvent? view frontier clk = some result) :
+    ∃ event : JTypeEvent, result.routed = ⟨.jal, event⟩ ∧ event.pc = view.pc.toNat ∧
+      event.immB = (imm.signExtend 64).toNat := by
+  rcases view with ⟨pc, word, instruction, key, id, plan⟩
+  dsimp only at decoded routed
+  subst instruction id
+  obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+  refine ⟨event, rfl, ?_⟩
+  simp only [instructionEventFor?, jTypeEvent?] at constructed
+  split at constructed
+  · split at constructed
+    · cases Option.some.inj constructed
+      exact ⟨rfl, rfl⟩
+    · contradiction
+  · contradiction
+
+private theorem compiled_pulled {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ}
+    {result : CompiledInstructionEvent} {values : List (BitVec 64)}
+    (generated : compileInstructionEvent? view frontier clk = some result) (reads : result.plan.map PlannedTouch.pulled = values) :
+    result.stamped.map (fun t => t.touch.pulled) = values := by
+  rw [← reads, ← compileInstructionEvent?_stamped_touches generated, List.map_map]
+  rfl
+
+/-- A compiled JALR retains the actual base read before any destination write. -/
+theorem compileInstructionEvent?_jalr_fields {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ}
+    {result : CompiledInstructionEvent} {imm : BitVec 12} {rs1 rd : regidx} {base prior : BitVec 64}
+    (decoded : view.decoded = .JALR (imm, rs1, rd)) (routed : view.chipId = .jalr)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (reads : result.plan.map PlannedTouch.pulled = [base, prior]) :
+    ∃ event : ITypeEvent, result.routed = ⟨.jalr, event⟩ ∧ event.b = base.toNat ∧
+      event.imm = (imm.signExtend 64).toNat := by
+  have values := compiled_pulled generated reads
+  rcases view with ⟨pc, word, instruction, key, id, plan⟩
+  dsimp only at decoded routed
+  subst instruction id
+  obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+  refine ⟨event, rfl, ?_⟩
+  change (scheduleAccessPlan frontier clk accesses).stampedTouches.map _ = _ at values
+  simp only [instructionEventFor?, iTypeEvent?, iWriteEventOf?] at constructed
+  split at constructed
+  · rename_i original b a shape
+    split at constructed
+    · cases Option.some.inj constructed
+      rw [shape] at values
+      have first := congrArg List.head? values
+      exact ⟨congrArg BitVec.toNat (Option.some.inj first), rfl⟩
+    · contradiction
+  · contradiction
+
+/-- A compiled branch uses both incoming source values, its selected opcode and its complete
+thirteen-bit sign-extended offset. -/
+theorem compileInstructionEvent?_branch_fields {view : SP1TransitionView} {frontier : AccessFrontier} {clk : ℕ}
+    {result : CompiledInstructionEvent} {imm : BitVec 13} {rs2 rs1 : regidx} {op : bop} {left right : BitVec 64}
+    (decoded : view.decoded = .BTYPE (imm, rs2, rs1, op)) (routed : view.chipId = .branch)
+    (generated : compileInstructionEvent? view frontier clk = some result)
+    (reads : result.plan.map PlannedTouch.pulled = [right, left]) :
+    ∃ event : ITypeEvent, result.routed = ⟨.branch, event⟩ ∧ event.pc = view.pc.toNat ∧
+      event.rs1BV = left ∧ event.rs2BV = right ∧ event.imm = (imm.signExtend 64).toNat ∧
+      event.opcode = view.routeKey.opcode.toNat := by
+  have values := compiled_pulled generated reads
+  rcases view with ⟨pc, word, instruction, key, id, plan⟩
+  dsimp only at decoded routed
+  subst instruction id
+  obtain ⟨accesses, event, _, constructed, rfl⟩ := compileInstructionEvent?_components generated
+  refine ⟨event, rfl, ?_⟩
+  change (scheduleAccessPlan frontier clk accesses).stampedTouches.map _ = _ at values
+  simp only [instructionEventFor?, iTypeEvent?] at constructed
+  split at constructed
+  · rename_i original b a shape
+    split at constructed
+    · cases Option.some.inj constructed
+      rw [shape] at values
+      simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true] at values
+      exact ⟨rfl, by simpa [ITypeEvent.rs1BV] using values.2, by simpa [ITypeEvent.rs2BV] using values.1, rfl, rfl⟩
+    · contradiction
+  · contradiction
+
 end SP1Clean.TraceGen

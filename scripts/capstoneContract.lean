@@ -2,7 +2,8 @@ import Lean
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Export.ShardChain
 import SP1Clean.Export.InstalledHintCompleteness
-import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
+import SP1Clean.Proofs.Completeness.ObservationCapacity
+import SP1Clean.Proofs.Completeness.ObservationData
 
 /-! # Compiled native capstone contract audit
 
@@ -38,6 +39,7 @@ example : SoundnessTarget ensemble limits commitments image source target header
       ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
         publicInput = header ∧ ExecutionSourceValid image source ∧
         nativeProfile limits p image source target events ∧
+        ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 example : CompilerTarget ensemble limits commitments image source target header =
@@ -45,6 +47,7 @@ example : CompilerTarget ensemble limits commitments image source target header 
       (fun publicInput events => (sp1Machine p image).Trace source.realize events target.realize ∧
         publicInput = header ∧ ExecutionSourceValid image source ∧
         nativeProfile limits p image source target events ∧
+        ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 -- Together the targets are exactly a realization of the SP1 machine.
@@ -56,7 +59,7 @@ example (sound : SoundnessTarget ensemble limits commitments image source target
 
 example (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔ ∃ events, StatementExecution limits p commitments image source target events :=
+    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔ ∃ events, ReleaseStatementExecution limits p commitments image source target events :=
   SP1Clean.Soundness.Shard.statement_iff sound compiler
 
 end Contract
@@ -90,7 +93,7 @@ example :
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
           (∀ event ∈ events, SixCallProfile.event event) ∧
-          DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
+          SP1Clean.FormalModel.Shard.DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.
 example {events : List ExecutionEvent} {actual : ExecutionState}
@@ -121,12 +124,17 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
-  ``SP1Clean.TraceGen.admissibleExecution_observationTable,
-  ``SP1Clean.TraceGen.admissibleExecution_hostOnlyTerminalTable,
+  ``SP1Clean.TraceGen.admissibleExecution_observationWitness,
+  ``SP1Clean.TraceGen.admissibleExecution_observationData,
+  ``SP1Clean.TraceGen.admissibleExecution_observationFits,
+  ``SP1Clean.TraceGen.routed_successor_at,
+  ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,
+  ``SP1Clean.FormalModel.Shard.ReleaseAdmissibleExecution,
+  ``SP1Clean.FormalModel.Shard.ReleaseStatementExecution,
   ``SP1Clean.FormalModel.Shard.sp1Machine,
   ``Air.Flat.Realizes]
 

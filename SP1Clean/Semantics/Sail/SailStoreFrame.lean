@@ -153,6 +153,27 @@ theorem store_execute_frame (readOnly : ℕ → Bool) (source : SailState) (cfg 
   obtain ⟨direct, frame⟩ := store_execute_memory_frame readOnly source cfg imm rs2 rs1 width permission result target ran
   exact ⟨direct, frame.configured cfg, frame.memory⟩
 
+/-- A permitted, normally retired store commits the sequential successor. The actual register
+frame of every split memory write preserves the staged nextPC. -/
+theorem store_normal_successor {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
+    {pc : BitVec 64} {word : BitVec 32} {imm : BitVec 12} {rs2 rs1 : BitVec 5} {width : word_width}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (atPc : source.regs.get? Register.PC = some pc) (fetched : program.fetchWord pc = some word)
+    (decode : ConfiguredDecode word (.STORE (imm, .Regidx rs2, .Regidx rs1, width)))
+    (permission : Semantics.InstructionWrite.PermittedAt readOnly program source)
+    (normal : SailRetiresNormally source target) :
+    target.regs.get? Register.PC = some (pc + 4#64) ∧ target.regs.get? Register.nextPC = some (pc + 4#64) := by
+  have checked := permission.check configured atPc fetched decode
+  obtain ⟨_, _, committed, successor, _⟩ := normal_observed_direct_execute configured loaded atPc fetched decode
+    (fun _ => True) (fun result => result = some (pc + 4#64)) (fun state cfg registers _ _ staged result next ran => by
+      have permitted : Semantics.InstructionWrite.check readOnly state.get_reg?
+          (.STORE (imm, .Regidx rs2, .Regidx rs1, width)) = true := by
+        rw [funext registers]
+        exact checked
+      obtain ⟨direct, frame⟩ := store_execute_memory_frame readOnly state cfg imm rs2 rs1 width permitted result next ran
+      exact ⟨direct, frame.configured cfg, trivial, fun _ => by simpa only [frame.registers] using staged⟩) normal
+  exact ⟨successor, committed.trans successor⟩
+
 /-- Normally retiring SB/SH/SW/SD preserve configuration and every byte protected by their actual
 decoded write permission. Existing byte presence is retained as well; no alignment or compiler-readiness premise is added. -/
 theorem store_normal_memory_frame {readOnly : ℕ → Bool} {program : GuestProgram} {source target : SailState}
