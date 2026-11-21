@@ -140,6 +140,7 @@ def roots : Array Name := #[
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
   ``SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement,
+  ``SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity,
   ``SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
