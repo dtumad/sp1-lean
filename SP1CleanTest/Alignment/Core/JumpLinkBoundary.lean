@@ -1,5 +1,5 @@
 import SP1Clean.Semantics.Execution.ExecutionBoot
-import SP1Clean.FormalModel.Shard
+import SP1Clean.FormalModel.ShardRelease
 import SP1Clean.Semantics.Sail.SailControlExecute
 import SP1Clean.Semantics.Sail.SailControlFrame
 import SP1Clean.Proofs.Sail.InstructionDecode
@@ -10,7 +10,7 @@ import SP1Clean.Math.SP1Field
 /-! # Enabled jump links at the last instruction slot
 
 The finite loader accepts an instruction at `2^48-4`. Official Sail boots there and normally
-retires both `jal x1,0` and `jalr x1,x0,0`. Each execution satisfies the fixed capstone domain
+retires both `jal x1,0` and `jalr x1,x0,0`. Each execution satisfies the broader Sail contract
 with complete snapshots and numerical resource limits. On either native chip the enabled link addition
 requires `2^48`, while the three-limb link constraint enforces a value strictly below `2^48`.
 -/
@@ -160,7 +160,7 @@ private theorem admissible_of_run {word : BitVec 32} (valid : (image word).Valid
   · change ((terminal.regs.get? Register.PC).getD 0).toNat < NativeLayout.guestMemory.upper
     simpa only [pc, Option.getD_some] using bound
 
-/-- Both concrete programs satisfy the complete fixed capstone domain at the SP1 field
+/-- Both concrete programs satisfy the broader resource-bounded Sail contract at the SP1 field
 characteristic, for some numerical limits and a complete reached target snapshot. -/
 theorem admissible_from_boot (inputs : HostInputs) :
     (∃ limits target, FormalModel.Shard.AdmissibleExecution limits SP1Prime (image 0x000000ef)
@@ -191,6 +191,63 @@ theorem admissible_from_boot (inputs : HostInputs) :
       (by simp [SailState.get_reg?]) decoded normal,
       (Advance.control_normal_frame rom.initialSailState_configured (rom.initialSailState_romLoaded valid)
         rom.initialSailState_pc fetched decoded trivial normal).2⟩
+
+private def imageAt (pc : BitVec 64) (word : BitVec 32) : ProgramImage := ⟨[(pc, word)], pc, []⟩
+
+private theorem boot_links_iff {pc : BitVec 64} {word : BitVec 32} {decoded : instruction}
+    (valid : (imageAt pc word).Valid) (parsed : InstructionDecode.decode word = some decoded)
+    (policy : HostPolicy) (inputs : HostInputs) :
+    ExecutionPath.ReleaseLinks policy (imageAt pc word).program ((imageAt pc word).executionBoot inputs)
+      [.ordinary] ↔ instructionLinkFits pc decoded := by
+  let rom := imageAt pc word
+  rw [ExecutionPath.releaseLinks_singleton, ProgramImage.program_eq _ valid]
+  exact releaseLinkAt_iff rom.initialSailState_pc (rom.fetchWord_of_mem valid (entry := (pc, word)) (by simp [rom, imageAt]))
+    (SailDecode.instructionDecode_agrees _ _ parsed _ rom.initialSailState_configured)
+
+/-- Each enabled jump supplies a fully admitted Sail execution, and its identical endpoints and
+single ordinary tape fail the released contract. -/
+theorem admitted_jumps_excluded_by_release (inputs : HostInputs) :
+    (∃ limits target, FormalModel.Shard.AdmissibleExecution limits SP1Prime (image 0x000000ef)
+        ((image 0x000000ef).executionBootSnapshot inputs) target [.ordinary] ∧
+      ¬ FormalModel.Shard.ReleaseAdmissibleExecution limits SP1Prime (image 0x000000ef)
+        ((image 0x000000ef).executionBootSnapshot inputs) target [.ordinary]) ∧
+    (∃ limits target, FormalModel.Shard.AdmissibleExecution limits SP1Prime (image 0x000000e7)
+        ((image 0x000000e7).executionBootSnapshot inputs) target [.ordinary] ∧
+      ¬ FormalModel.Shard.ReleaseAdmissibleExecution limits SP1Prime (image 0x000000e7)
+        ((image 0x000000e7).executionBootSnapshot inputs) target [.ordinary]) := by
+  obtain ⟨⟨limits, target, ordinary⟩, ⟨limits', target', ordinary'⟩⟩ := admissible_from_boot inputs
+  constructor
+  · refine ⟨limits, target, ordinary, fun released => ?_⟩
+    have links := released.2
+    rw [ProgramImage.executionBootSnapshot_realize] at links
+    have fits := (boot_links_iff (pc := lastPc) (word := 0x000000ef) (decoded := .JAL (0, .Regidx 1))
+      (by decide) rfl _ inputs).mp links
+    exact (by decide : ¬ (lastPc.toNat + 4 < 2 ^ 48)) (fits (by decide))
+  · refine ⟨limits', target', ordinary', fun released => ?_⟩
+    have links := released.2
+    rw [ProgramImage.executionBootSnapshot_realize] at links
+    have fits := (boot_links_iff (pc := lastPc) (word := 0x000000e7) (decoded := .JALR (0, .Regidx 0, .Regidx 1))
+      (by decide) rfl _ inputs).mp links
+    exact (by decide : ¬ (lastPc.toNat + 4 < 2 ^ 48)) (fits (by decide))
+
+/-- Both jumps may discard a link at the last slot. The preceding aligned slot supports a real
+write of the largest aligned link, `2^48 - 4`. A non-jump at the last slot owes no link bound. -/
+theorem representable_boot_links (policy : HostPolicy) (inputs : HostInputs) :
+    let links (pc : BitVec 64) (word : BitVec 32) := ExecutionPath.ReleaseLinks policy (imageAt pc word).program
+      ((imageAt pc word).executionBoot inputs) [.ordinary]
+    links lastPc 0x0000006f ∧ links lastPc 0x00000067 ∧
+      links (lastPc - 4) 0x000000ef ∧ links (lastPc - 4) 0x000000e7 ∧ links lastPc 0x00000013 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · apply (boot_links_iff (decoded := .JAL (0, .Regidx 0)) (by decide) rfl policy inputs).mpr
+    exact fun writes => (writes rfl).elim
+  · apply (boot_links_iff (decoded := .JALR (0, .Regidx 0, .Regidx 0)) (by decide) rfl policy inputs).mpr
+    exact fun writes => (writes rfl).elim
+  · apply (boot_links_iff (decoded := .JAL (0, .Regidx 1)) (by decide) rfl policy inputs).mpr
+    exact fun _ => (by decide : (lastPc - 4).toNat + 4 < 2 ^ 48)
+  · apply (boot_links_iff (decoded := .JALR (0, .Regidx 0, .Regidx 1)) (by decide) rfl policy inputs).mpr
+    exact fun _ => (by decide : (lastPc - 4).toNat + 4 < 2 ^ 48)
+  · apply (boot_links_iff (decoded := .ITYPE (0, .Regidx 0, .Regidx 0, .ADDI)) (by decide) rfl policy inputs).mpr
+    trivial
 
 private theorem link_impossible {pc link : Word (ZMod SP1Prime)}
     (last : pc.toBitVec64 = lastPc) (bounded : link.isU64) (top : link[3] = 0)

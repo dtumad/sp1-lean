@@ -1,12 +1,13 @@
 import ToClean.Air.Realizes
 import SP1Clean.FormalModel.ShardMachine
+import SP1Clean.FormalModel.ShardRelease
 
 /-! # End-to-end proof targets for the native shard
 
 The shard contract is `Air.Flat.Realizes` at the SP1 machine: raw acceptance of an ensemble at
 a public input is exactly an admissible trace of `sp1Machine` between fixed complete endpoints.
 `header` is their canonical public encoding. Admissibility is the header identity, source
-validity, the native resource profile and the immutable commitment statement. `SoundnessTarget`
+validity, the native resource profile, the released jump-link limit and the immutable commitment statement. `SoundnessTarget`
 and `CompilerTarget` are the two fields of that realization: soundness starts at the raw Clean
 statement, with no semantic conjunct added to the AIR, and the compiler must construct every
 table and provider from data and prove success throughout the same semantic domain. Conflicting
@@ -33,13 +34,14 @@ def boundary (source target : ExecutionSnapshot) :
     PublicIO (ZMod p) → ExecutionState × ExecutionState :=
   fun _ => (source.realize, target.realize)
 
-/-- The header identity, source validity, resource profile and commitment statement. -/
+/-- The header identity, source validity, resource profile, released jump links and commitments. -/
 noncomputable def admissible (limits : ResourceLimits) (commitments : CommitmentStatement)
     (image : ProgramImage) (source target : ExecutionSnapshot) (header : PublicIO (ZMod p)) :
     PublicIO (ZMod p) → List ExecutionEvent → Prop :=
   fun publicInput events =>
     publicInput = header ∧ ExecutionSourceValid image source ∧
       nativeProfile limits p image source target events ∧
+      ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
       commitments.WellFormed p ∧ commitments.Matches events
 
 /-- Raw AIR acceptance must yield an admissible machine trace to the complete outgoing state. -/
@@ -66,14 +68,14 @@ theorem statement_iff {ensemble : Ensemble (ZMod p) PublicIO} {limits : Resource
     (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
     (∃ heights, ensemble.Statement Balance.logUp header heights) ↔
-      ∃ events, StatementExecution limits p commitments image source target events := by
+      ∃ events, ReleaseStatementExecution limits p commitments image source target events := by
   have realizes : Realizes (sp1Machine p image) ensemble Balance.logUp (boundary source target)
       (admissible limits commitments image source target header) := ⟨sound, compiler⟩
   rw [realizes.statement_iff header]
   refine exists_congr fun events => ?_
   -- `executes_iff` is instantiated by hand: `events : List (sp1Machine …).Event` only unfolds to
   -- `List ExecutionEvent` at default transparency, which `simp` no longer does when assigning it.
-  simp only [boundary, admissible, StatementExecution, AdmissibleExecution, true_and,
+  simp only [boundary, admissible, ReleaseStatementExecution, ReleaseAdmissibleExecution, AdmissibleExecution, true_and,
     executes_iff (events := events)]
   tauto
 

@@ -40,6 +40,15 @@ lemma rs1WordI_toJalrInputs (e : ITypeEvent) :
     registerAccessCols_prev_value]
   exact word_eta _
 
+omit [Fact (2 ^ 24 < p)] in
+/-- The released event enables its physical link addition exactly on a nonzero destination. -/
+theorem linkGate_iff (e : ITypeEvent) :
+    (e.toJalrInputs (p := p)).is_real - (e.toJalrInputs (p := p)).adapter.op_a_0 = 1 ↔ e.opA ≠ 0 := by
+  change 1 - (iTypeReaderCols (p := p) e).op_a_0 = 1 ↔ _
+  by_cases zero : e.opA = 0
+  · simp [zero, iTypeReaderCols_op_a_0_eq_one zero]
+  · simp [zero, iTypeReaderCols_op_a_0_eq_zero zero]
+
 /-- The witnessed jump target of a built row is the built word of `rs1 + imm` — the **uncleared**
 sum the chip's `AddOperation` computes. -/
 lemma jumpTargetWord_toJalrInputs (e : ITypeEvent) :
@@ -97,11 +106,7 @@ theorem proverAssumptions_of_event {e : ITypeEvent} (h : e.WellFormedJalr) (htgt
     exact wordOfNat_three_eq_zero htgt48
   -- The physical link addition is enabled only for a nonzero destination register.
   · intro enabled
-    change 1 - (iTypeReaderCols (p := p) e).op_a_0 = 1 at enabled
-    have writes : e.opA ≠ 0 := by
-      intro discarded
-      simp [iTypeReaderCols_op_a_0_eq_one discarded] at enabled
-    have bound := hlink writes
+    have bound := hlink ((linkGate_iff e).mp enabled)
     rw [linkTargetWord_toJalrInputs hpc]
     exact wordOfNat_three_eq_zero (by omega)
   -- and the **cleared** target is 4-byte aligned — the `Range((value[0] - lsb) / 4, 14)` byte pull
