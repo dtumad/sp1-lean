@@ -172,6 +172,7 @@ import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 import SP1Clean.Proofs.Completeness.ObservationData
 import SP1Clean.Proofs.Completeness.ExecutionObservationSuccessor
 import SP1Clean.Proofs.Completeness.ExecutionObservationEndpoint
+import SP1Clean.Proofs.Completeness.HintInventory
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint

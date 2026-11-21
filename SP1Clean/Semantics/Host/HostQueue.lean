@@ -114,17 +114,16 @@ theorem HostState.executeKind_hintSuffix {host : HostState} {policy : HostPolicy
     all_goals cases success; exact ⟨[], rfl⟩
 
 /-- Compile the actual host effect. Unchanged queues become a zero-allocation prepend. -/
-def HostState.hintUpdate (host : HostState) (execution : HostExecution) : HintQueue.Update :=
-  if execution.kind = .hintRead then .pop
-  else .prepend (execution.effect.state.io.hints.take
-    (execution.effect.state.io.hints.length - host.io.hints.length))
+def HostState.hintUpdate (host : HostState) (kind : SyscallKind) (next : HostState) : HintQueue.Update :=
+  if kind = .hintRead then .pop
+  else .prepend (next.io.hints.take (next.io.hints.length - host.io.hints.length))
 
 /-- Every successful host call has a computed queue update, with no extra readiness condition. -/
 theorem HostState.hintUpdate_sound {host : HostState} {policy : HostPolicy}
     {context : HostReadContext} {execution : HostExecution}
     (success : host.run policy context = some execution)
     {store : HintQueue.Store} {head : ℕ} (represents : HintQueue.Represents store head host.io.hints) :
-    ∃ next, (host.hintUpdate execution).apply? store head = some next ∧
+    ∃ next, (host.hintUpdate execution.kind execution.effect.state).apply? store head = some next ∧
       HintQueue.Represents next.1 next.2 execution.effect.state.io.hints := by
   have executed := (host.run_eq_some_iff policy context execution).mp success |>.2.2.2.2.2
   by_cases isRead : execution.kind = .hintRead

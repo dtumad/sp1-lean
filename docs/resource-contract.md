@@ -158,7 +158,12 @@ not yet derived from `nativeProfile` for the full mixed constructor. Semantic me
 not stand in for that proof. `boundaryBytes` is a variable-payload measure, not a full Sail
 serialization-size theorem: fixed public register/platform data and the final boundary circuit's
 actual row cost remain part of A4/R5. No bounded-ensemble instance is claimed by these definitions. `MemorySnapshot` remains the provider view.
-`HintQueue.Store` is a persistent implementation of semantic host queues, related by `Represents`.
+`HintQueue.storeAfter?` constructs the persistent node store along the same complete replay,
+including interleaved WRITE allocations, hook replies and HINT_READ pops. At every cut its size
+equals the initial hint count plus cumulative allocations. The suffix reuses that store and
+preserves every historical pointer. The native KoalaBear ceilings on those two terms imply that
+the head and allocation frontier both fit 48 bits. Authentication of the new node and word rows
+belongs to the mixed host assembly. [Persistent hint inventory](../SP1Clean/Proofs/Completeness/HintInventory.lean)
 
 | Compatibility surface | Replacement / removal condition |
 |---|---|
