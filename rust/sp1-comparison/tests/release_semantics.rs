@@ -243,6 +243,64 @@ fn verify_ignores_invalid_pointers_and_preserves_the_hint_queue() {
 }
 
 #[test]
+fn deferred_commit_replay_records_low32_and_syscall_air_requires_a_field_word() {
+    use slop_algebra::PrimeField32;
+    use sp1_core_executor::ExecutionRecord;
+    use sp1_core_machine::syscall::instructions::SyscallInstrsChip;
+    use sp1_hypercube::{air::MachineAir, debug_constraints, Chip};
+    use sp1_primitives::{SP1Field, SP1GlobalContext};
+
+    let modulus = u64::from(SP1Field::ORDER_U32);
+    let slot = 3;
+    let syscall = SyscallCode::COMMIT_DEFERRED_PROOFS;
+    let chip = Chip::<SP1Field, _>::new(SyscallInstrsChip::<SupervisorMode>::default());
+    for word in [modulus - 1, modulus, modulus + 1, u32::MAX.into(), 1 << 32] {
+        let mut code = vec![];
+        execution::syscall(&mut code, syscall, slot, word);
+        code.push(Instruction::new(Opcode::ADDI, 6, 5, 0, false, true));
+        execution::syscall(&mut code, SyscallCode::HALT, 0, 0);
+        let (executor, records) = execution::run(Program::new(code, STACK_TOP, STACK_TOP), &[]);
+        assert_eq!(executor.exit_code(), 0);
+        assert_eq!(executor.registers()[6], syscall as u64);
+        let [record] = records.as_slice() else {
+            panic!("expected one shard for word {word}");
+        };
+        assert_eq!(record.syscall_events.len(), 2);
+        let event = &record.syscall_events[0].0;
+        assert_eq!(
+            (event.syscall_code, event.arg1, event.arg2),
+            (syscall, slot, word)
+        );
+        let mut public = record.public_values;
+        let mut expected_digest = [0; 8];
+        expected_digest[slot as usize] = word as u32;
+        assert_eq!(public.deferred_proofs_digest, expected_digest);
+        assert_eq!(public.commit_deferred_syscall, 1);
+
+        // Give the public digest the field residue of the full operand so even the
+        // noncanonical rows satisfy eval_commit's field equality. The operand range
+        // constraint must still reject them. Only pass canonical u32s to to_vec.
+        public.deferred_proofs_digest[slot as usize] = (word % modulus) as u32;
+        let trace = chip.generate_trace(record, &mut ExecutionRecord::default());
+        let failures =
+            debug_constraints::<SP1GlobalContext, _>(&chip, None, &trace.into(), &public.to_vec());
+        let failed_rows: Vec<_> = failures.into_iter().map(|(row, _, _)| row).collect();
+        if word < modulus {
+            assert!(
+                failed_rows.is_empty(),
+                "canonical word {word}: {failed_rows:?}"
+            );
+        } else {
+            assert_eq!(
+                failed_rows,
+                [0],
+                "only the deferred-commit row should fail for {word}"
+            );
+        }
+    }
+}
+
+#[test]
 fn default_release_status_policy_rejects_every_sampled_nonzero_exit() {
     use sp1_core_executor::StatusCode;
     assert!(StatusCode::SUCCESS.is_accepted_code(0));

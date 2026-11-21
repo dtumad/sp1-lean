@@ -1,11 +1,11 @@
 import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
-import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
 
 /-! # Authenticated finite checking of the complete branch host assembly -/
 
 namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Semantics
 
 /-- Check actual physical rows and every registered channel, including their capacity bound. -/

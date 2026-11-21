@@ -24,6 +24,63 @@ structure RoutedEvent where
 
 namespace RoutedEvent
 
+/-- Clock carried by the common CPU-state input of a routed event. -/
+def clock : RoutedEvent → ℕ
+  | ⟨.add, event⟩ => event.clk
+  | ⟨.addi, event⟩ => event.clk
+  | ⟨.addw, event⟩ => event.clk
+  | ⟨.sub, event⟩ => event.clk
+  | ⟨.subw, event⟩ => event.clk
+  | ⟨.bitwise, event⟩ => event.clk
+  | ⟨.lt, event⟩ => event.clk
+  | ⟨.shiftLeft, event⟩ => event.clk
+  | ⟨.shiftRight, event⟩ => event.clk
+  | ⟨.jal, event⟩ => event.clk
+  | ⟨.jalr, event⟩ => event.clk
+  | ⟨.branch, event⟩ => event.clk
+  | ⟨.uType, event⟩ => event.clk
+  | ⟨.loadByte, event⟩ => event.clk
+  | ⟨.loadHalf, event⟩ => event.clk
+  | ⟨.loadWord, event⟩ => event.clk
+  | ⟨.loadDouble, event⟩ => event.clk
+  | ⟨.loadX0, event⟩ => event.clk
+  | ⟨.storeByte, event⟩ => event.clk
+  | ⟨.storeHalf, event⟩ => event.clk
+  | ⟨.storeWord, event⟩ => event.clk
+  | ⟨.storeDouble, event⟩ => event.clk
+  | ⟨.mul, event⟩ => event.clk
+  | ⟨.divRem, event⟩ => event.clk
+  | ⟨.aluX0, event⟩ => event.clk
+
+/-- Program counter carried by the common CPU-state input of a routed event. -/
+def pc : RoutedEvent → ℕ
+  | ⟨.add, event⟩ => event.pc
+  | ⟨.addi, event⟩ => event.pc
+  | ⟨.addw, event⟩ => event.pc
+  | ⟨.sub, event⟩ => event.pc
+  | ⟨.subw, event⟩ => event.pc
+  | ⟨.bitwise, event⟩ => event.pc
+  | ⟨.lt, event⟩ => event.pc
+  | ⟨.shiftLeft, event⟩ => event.pc
+  | ⟨.shiftRight, event⟩ => event.pc
+  | ⟨.jal, event⟩ => event.pc
+  | ⟨.jalr, event⟩ => event.pc
+  | ⟨.branch, event⟩ => event.pc
+  | ⟨.uType, event⟩ => event.pc
+  | ⟨.loadByte, event⟩ => event.pc
+  | ⟨.loadHalf, event⟩ => event.pc
+  | ⟨.loadWord, event⟩ => event.pc
+  | ⟨.loadDouble, event⟩ => event.pc
+  | ⟨.loadX0, event⟩ => event.pc
+  | ⟨.storeByte, event⟩ => event.pc
+  | ⟨.storeHalf, event⟩ => event.pc
+  | ⟨.storeWord, event⟩ => event.pc
+  | ⟨.storeDouble, event⟩ => event.pc
+  | ⟨.mul, event⟩ => event.pc
+  | ⟨.divRem, event⟩ => event.pc
+  | ⟨.aluX0, event⟩ => event.pc
+
+
 /-- Project a routed event at one requested registry identity.  A mismatched identity is absent;
 on a match the dependent payload is transported along the proved identity equality. -/
 def forId? (routed : RoutedEvent) (requested : InstructionChipId) :

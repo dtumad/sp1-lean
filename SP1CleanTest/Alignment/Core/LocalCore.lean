@@ -97,7 +97,7 @@ private def twoRows : List Row :=
     (57, List.replicate (size HaltChip.Inputs) 0)]
 
 private def identityPublic : SP1PublicIO Fp :=
-  { publicInput with final_clk_0_16 := 9, final_pc0 := 0 }
+  { publicInput with final_clk_0_16 := 9, final_pc0 := 0, is_execution_shard := 0 }
 
 private def identityRows : List Row :=
   [terminal 2 0, terminal 5 0, paddingAdd, (57, List.replicate (size HaltChip.Inputs) 0)]

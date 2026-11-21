@@ -55,7 +55,7 @@ private def installedReference : IO Json := do
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context),
     ("compilerBranchRow", toJson (SP1Clean.Audit.BranchCompilerRoundTrip.row.map (·.val)))]
 
-private def installedIdentityReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+private def installedIdentityReference (context : SP1Clean.Export.InstalledAssembly.Context)
     (header : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime)) (label : String) : IO Json := do
   let consumers := SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context
   let prepared ← match SP1CleanTest.Alignment.InstalledAssemblyExport.prepare context consumers with
@@ -79,7 +79,7 @@ private def installedIdentityReference (context : SP1CleanTest.Alignment.Install
         installedCase context prepared name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
 
-private def installedHintReadReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+private def installedHintReadReference (context : SP1Clean.Export.InstalledAssembly.Context)
     (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed) (length : ℕ) : IO Json := do
   let prepared ← match SP1CleanTest.Alignment.InstalledAssemblyExport.prepare context consumers with
     | .ok value => pure value
@@ -108,7 +108,7 @@ private def installedHintReadReference (context : SP1CleanTest.Alignment.Install
         installedCase context prepared name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
 
-private def installedHaltReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+private def installedHaltReference (context : SP1Clean.Export.InstalledAssembly.Context)
     (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed) (exit : ℕ) : IO Json := do
   let prepared ← match SP1CleanTest.Alignment.InstalledAssemblyExport.prepare context consumers with
     | .ok value => pure value
@@ -129,7 +129,7 @@ private def installedHaltReference (context : SP1CleanTest.Alignment.InstalledAs
         installedCase context prepared name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]
 
-private def installedCommitReference (context : SP1CleanTest.Alignment.InstalledAssembly.Context)
+private def installedCommitReference (context : SP1Clean.Export.InstalledAssembly.Context)
     (consumers : List SP1CleanTest.Alignment.InstalledAssembly.Seed)
     (header : SP1Clean.SP1PublicIO (ZMod SP1Clean.SP1Prime)) (name : String) : IO Json := do
   let prepared ← match SP1CleanTest.Alignment.InstalledAssemblyExport.prepare context consumers with
@@ -305,16 +305,17 @@ private def exportEnsembleFixture : IO Unit := do
     ("constructor", toJson (reprStr opcode)), ("discriminant", toJson opcode.toNat)]
   IO.FS.writeFile (out / "opcodes.reference.json") ((toJson opcodes).compress ++ "\n")
   let context := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.target
-  for (name, consumers) in [
-      ("installed_assembly", SP1Clean.Audit.BranchEnsemble.consumerSeeds),
-      ("installed_empty", SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers context)] do
-    let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportProgram context consumers with
+  let identity := SP1Clean.Audit.BranchEnsemble.context SP1Clean.Audit.BranchEnsemble.source
+  for (name, instanceContext, consumers) in [
+      ("installed_assembly", context, SP1Clean.Audit.BranchEnsemble.consumerSeeds),
+      ("installed_empty", identity, SP1CleanTest.Alignment.InstalledAssembly.emptyConsumers identity)] do
+    let installed ← match SP1CleanTest.Alignment.InstalledAssemblyExport.exportProgram instanceContext consumers with
       | .ok value => pure value
       | .error message => throw (IO.userError message)
     SP1CleanTest.Alignment.SharedAssemblyExport.write shared out name installed
   IO.FS.writeFile (out / "installed_assembly.reference.json") ((← installedReference).compress ++ "\n")
   IO.FS.writeFile (out / "installed_empty.reference.json")
-    ((← installedIdentityReference context SP1Clean.Audit.BranchEnsemble.identityHeader
+    ((← installedIdentityReference identity SP1Clean.Audit.BranchEnsemble.identityHeader
       "empty-local").compress ++ "\n")
   for (name, context) in [
       ("installed_stopped_zero", SP1CleanTest.Alignment.StoppedAssembly.zero),

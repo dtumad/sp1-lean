@@ -10,6 +10,7 @@ providers, fixed lookup meanings, complete target Memory and every registered ch
 namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Semantics
 open LeanRV64D LeanRV64D.Functions
 
@@ -52,9 +53,9 @@ theorem public_endpoints :
     header.final_pc0.val + 65536 * header.final_pc1.val + 65536 ^ 2 * header.final_pc2.val = 69628 := by
   native_decide
 
-/-- The active instruction occupies the original installed Branch component. -/
+/-- The active instruction occupies the installed receipt-bearing Branch component. -/
 theorem branch_component :
-    (activeWitness.tables[18]'(by rw [activeWitness_length]; decide)).component = BranchChip.component := by
+    (activeWitness.tables[18]'(by rw [activeWitness_length]; decide)).component = Soundness.ProtectedOrdinaryReceipt.component .branch := by
   exact (activeWitness.same_circuits 18 (by decide)).symm
 
 /-- The assembled Branch table contains exactly the earlier compiler-built real row. -/
@@ -96,7 +97,11 @@ def results : List (String × Bool × Bool) :=
     ("changed-untouched-register", false,
       check { target with sail.registers := target.sail.registers.insert LeanRV64D.Register.x31 (1 : BitVec 64) }
         header consumerSeeds),
-    ("empty-identity", true, check target identityHeader (emptyConsumers (context target))),
+    ("empty-identity", true, check source identityHeader (emptyConsumers (context source))),
+    ("changed-empty-target", false, check target identityHeader (emptyConsumers (context target))),
+    ("wrong-execution-flag", false, check target { header with is_execution_shard := 0 } consumerSeeds),
+    ("changed-host-output", false, check { target with host.stdout := [65] } header consumerSeeds),
+    ("changed-hint-suffix", false, check { target with host.io.hints := [[]] } header consumerSeeds),
     ("malformed-seed-index", false, check target header (consumerSeeds ++ [Seed.ofCells 999 []])),
     ("malformed-seed-length", false,
       check target header ({ branchSeed with cells := [] } :: consumerSeeds))]

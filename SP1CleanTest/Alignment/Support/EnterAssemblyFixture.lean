@@ -12,6 +12,7 @@ namespace SP1CleanTest.Alignment.EnterAssembly
 
 open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness SP1Clean.TraceGen
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 
 /-- ENTER; BEQ x5,x0,+12; ADDI x5,x0,4; EXIT; HALT. -/
 def image : ProgramImage :=
@@ -31,7 +32,7 @@ def prepare : Except String (Context × List Seed × SP1PublicIO Fp) := do
     host := {}, clock := 9 }
   let first ← HostProgram.ecall { current := incoming } policy program
   let after : ExecutionSnapshot := { first.current with
-    sail.registers := first.current.sail.registers.insert .PC 131088
+    sail := retiredSnapshot first.current.sail first.current.sail.registers 131088
     clock := first.current.clock + 8 }
   let compiled ← OrdinaryAssembly.compile
     ⟨first.current, after, .BTYPE (12, .Regidx 0, .Regidx 5, .BEQ), 0x00028663⟩ first.frontier

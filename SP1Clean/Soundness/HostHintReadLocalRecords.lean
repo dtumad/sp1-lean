@@ -350,6 +350,7 @@ theorem tables_interface : HostLocalCore.AuxiliaryInterface (Soundness.OrdinaryO
     simp only [Soundness.OrdinaryObservation.tables, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl | rfl <;>
       simp [Soundness.OrdinaryObservation.consumer, Soundness.OrdinaryObservation.terminalComponent,
+        OrdinaryObservation.guardedCircuit, Guarded.circuit_channelsWithRequirements,
         OrdinaryObservation.circuit, OrdinaryObservation.terminal, OrdinaryObservation.terminalEmpty,
         OrdinaryObservation.terminalNonempty, OrdinaryObservation.terminalAny, Channels.byteChannel,
         InstructionReceipt.channel, OrdinaryObservation.stateChannel, Channel.toRaw]

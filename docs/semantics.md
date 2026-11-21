@@ -70,14 +70,20 @@ it must not become a per-execution readiness condition in the public equivalence
 Host effects include padding writes, peak queue/output/request resources, ordered byte streams
 and fresh allocation history. Popping a hint does not authorize reusing its node.
 WRITE must distinguish exact 64-bit descriptor branches from low32 branches and authenticate
-x12, buffer reads, output, hints and hook replies. VERIFY follows released execution: both
-pointers are ignored, no memory is read, and no requests, replies or queue effects occur. Its
-normal return-register, PC and clock transition still belongs to the execution. It does not
-perform cryptographic verification.
+x12, buffer reads, output, hints and hook replies. In both SP1 v6.9.0 and v6.10.0, VERIFY
+ignores its pointers and preserves memory and host state. The return-register write, PC advance
+and clock advance still occur. The earlier native verification-request model diverged from
+v6.9.0 already. See the v6.9.0 [minimal dispatcher](https://github.com/succinctlabs/sp1/blob/v6.9.0/crates/core/executor/src/minimal/ecall.rs#L186)
+and [replay dispatcher](https://github.com/succinctlabs/sp1/blob/v6.9.0/crates/core/executor/src/vm/syscall.rs#L404-L410).
+
 The proof statement includes one immutable public-output digest, one deferred-proof digest and
 their rolling flags. Every actual COMMIT or COMMIT_DEFERRED declaration must match its selected
-word and a set flag. Public-output words are u32s; deferred words must be canonical field elements.
-This semantic agreement condition is independent of AIR rows and compiler success.
+word and a set flag. Public-output words are u32s. A deferred operand must be below the field
+modulus. This matches the released syscall AIR. The minimal executor ignores the deferred
+declaration, while constrained replay records the low 32 bits and sets the deferred flag.
+A successful replay can therefore contain a declaration that fails the AIR's range check.
+See the pinned [replay handler](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/executor/src/vm/syscall/deferred.rs)
+and [AIR check](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/syscall/instructions/air.rs#L215-L222).
 
 The operational host still records mutable banks: conflicting writes can execute, but cannot
 satisfy one proof statement. Repeating an identical declaration is allowed. Partial and empty
@@ -91,11 +97,15 @@ Adjacent segments use the same statement; cutting a segment preserves declaratio
 |---|---|
 | 25 instruction chips | Native soundness/completeness and Sail bridges; exported rows have separate released-Rust comparison tests |
 | Execution model | Complete steps/paths, finite boundaries, split/join, semantic boot/HALT, independent ROM/frame/fetch preservation and PolyFun connections |
-| Construction builders | Chronological event/execution compilers, provider closure and capacity builders exist as C9/C10 starting material; they carry local success predicates and no completeness theorem over the fixed domain yet |
-| Installed host assembly | Six calls: HALT, ENTER, COMMIT, COMMIT_DEFERRED, HINT_LEN and HINT_READ; `Shard.sail_trace` turns raw acceptance of the exported circuit (the complete-memory assembly with the commitment statement) into a trace of the PolyFun SP1 machine from the complete source, with header and endpoint observations derived, a well-formed statement and agreement of every actual declaration with it. Over any prime field with `2 ^ 25 < p`, SP1's among them, it has no premise beyond the checked image; the exported fixture is an instance |
+| Construction builders | Every admissible mixed execution determines one routed row per ordinary occurrence at its actual source PC and clock. The observation consumer has valid constraints and balanced receipt and state ledgers at the demand-mode height. Host and mixed Memory tables still need a joint construction. [Observation completeness](../SP1Clean/Proofs/Completeness/ExecutionObservation.lean) |
+| Installed host assembly | Raw acceptance derives a valid source, the public clock, PC and execution flag, and a PolyFun trace covering all 25 ordinary families and the six installed syscalls. Both digests, both flags and each actual declaration agree with the verifier-owned commitment statement. [Trace theorem](../SP1Clean/Soundness/Shard/Trace.lean) |
+| Outgoing host and clock | The production verifier decodes the ordered target hint suffix in the immutable incoming queue and checks the preserved host fields. The recovered trace reaches the supplied host and clock within the elapsed-tick budget. Every prefix respects the incoming limits on hint count, hint bytes, requests and output bytes. The assembler still takes the last hint-access timestamp as instance data. [Installed assembly](../SP1Clean/Export/InstalledAssembly.lean) |
 | Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison, and the accepted execution ends with exactly the supplied integer registers and RAM; the complete Memory ensemble retains its separate public verifier |
-| Sail boundary | Static target checks, protected ordinary receipts and ordered observation are proved; combined dynamic supplied-target equality remains open |
+| Sail boundary | For arbitrary accepted six-handler segments, the actual CPU order and physical receipt/terminal ledgers determine the last ordinary successor and the retirement count. The resulting nextPC, counter, increment flag, interrupt refresh and written event index identify the literal complete target. Adjacent accepted segments compose across extensionally equal boundaries. [Production soundness theorem](../SP1Clean/Export/InstalledAssembly.lean) |
+| Constructive observation history | Routing supplies a chronological raw receipt for each ordinary instruction. The history constructs its counter update and ordered links, including raw clock carries. Guarded consumer rows retain zero-weight padding. A nine-instruction witness occupies sixteen observation rows and one terminal. [History construction](../SP1Clean/Proofs/Completeness/OrdinaryObservationHistory.lean) |
+| Host-only observation terminal | For an admissible host-only tape of any length, the constructor places the selected terminal row and proves its outgoing link equals the verifier's supplied endpoint, including absent or wide incoming nextPC. [Terminal construction](../SP1Clean/Proofs/Completeness/ExecutionObservationTerminal.lean) |
 | Concrete examples | Accepted ADD and compiler-derived BEQ assemblies; LoadByte fixed-table replacement with occurrence-preserving transport |
+| Composed execution | Any finite sequence of accepted six-handler shards with agreeing complete boundaries yields a single trace with one commitment statement. From canonical boot to a stopped host, its final HALT carries the supplied exit code. [Shard composition](../SP1Clean/Export/ShardChain.lean) |
 | Released SP1 agreement | Direct Rust comparisons of exported native components; public-addressing and complete active-host assembly gaps remain explicit |
 
 Current Rust evidence is tied to the single released-SP1 revision in

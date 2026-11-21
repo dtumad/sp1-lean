@@ -4,7 +4,7 @@ import SP1CleanTest.Alignment.Support.BranchEnsembleFixture
 Generated reports live under the ignored build tree; Rust supplies the independent release layout.
 -/
 
-open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 open Lean Circuit Air.Flat SP1Clean.Audit.BranchEnsemble
 
 private def releaseInventory : IO Unit := do

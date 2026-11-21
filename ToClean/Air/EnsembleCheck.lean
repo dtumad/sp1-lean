@@ -162,6 +162,18 @@ theorem statement_of_checkWitness (description : EnsembleCheck ens) (witness : E
   obtain ⟨fit, constraints, balanced⟩ := (description.checkWitness_iff witness).mp checked
   exact ⟨fit, witness, rfl, rfl, constraints, balanced⟩
 
+/-- A raw height-indexed statement has exactly a checked physical witness for that header and every
+slot height. -/
+theorem statement_iff_exists_checkWitness (description : EnsembleCheck ens)
+    (header : PublicIO F) (heights : List ℕ) :
+    ens.Statement .logUp header heights ↔ ∃ witness : EnsembleWitness ens,
+      witness.publicInput = header ∧ witness.heights = heights ∧ description.checkWitness witness = true := by
+  constructor
+  · rintro ⟨fit, witness, rfl, rfl, constraints, balanced⟩
+    exact ⟨witness, rfl, rfl, (description.checkWitness_iff witness).mpr ⟨fit, constraints, balanced⟩⟩
+  · rintro ⟨witness, rfl, rfl, checked⟩
+    exact description.statement_of_checkWitness witness checked
+
 end EnsembleCheck
 
 end Air.Flat

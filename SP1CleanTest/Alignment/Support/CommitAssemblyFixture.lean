@@ -10,6 +10,7 @@ independently of the mutable banks. This does not establish general compiler com
 namespace SP1CleanTest.Alignment.CommitAssembly
 open Circuit SP1Clean SP1Clean.Semantics SP1Clean.Soundness
 open SP1CleanTest.Alignment.InstalledAssembly HostProgram
+open SP1Clean.Export.InstalledAssembly
 
 /-- A repeated declaration exercises power-of-two padding and remains a continuing segment. -/
 def repeated : List Action := [.ecall, .ecall, .ecall]

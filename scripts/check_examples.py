@@ -41,16 +41,16 @@ def validate_report(name, result, revision, dirty):
     elif name == "branch":
         identifiers = ["active-branch", "wrong-public-next-pc", "missing-authentication-row",
                        "duplicate-authentication-row", "changed-untouched-register", "empty-identity",
-                       "malformed-seed-index", "malformed-seed-length"]
-        values = [True, False, False, False, False, True, False, False]
-        # 634 table declarations from the independently checked componentChannelIndices (620, plus the
-        # observation consumer's 8 and its three terminals' 2 each);
-        # 132 verifier declarations. The canonical registry has 34 unique names, including the
-        # ordinary receipt and observation channels.
+                       "changed-empty-target", "wrong-execution-flag", "changed-host-output",
+                       "changed-hint-suffix", "malformed-seed-index", "malformed-seed-length"]
+        values = [True, False, False, False, False, True, False, False, False, False, False, False]
+        # 634 original component-channel declarations plus one receipt for each of 25 producers.
+        # The verifier adds the observation start and final links.
+        # Sail, host and resource boundary checks add seven, one and three assertions.
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 99, "uniqueChannels": 34, "declaredChannelOccurrences": 634 + 132,
-                    "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43}
+                    "tableCount": 99, "uniqueChannels": 37, "declaredChannelOccurrences": 634 + 25 + 132 + 2 + 22,
+                    "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43 + 2 + 22}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and
                 report["tableRows"] == sum(table["rows"] for table in report["tables"]) and
@@ -76,7 +76,7 @@ def validate_report(name, result, revision, dirty):
     if name != "loadbyte":
         require(report["revision"] == revision and report["dirty"] is dirty,
                 "revision or working-tree status mismatch")
-        assembly = ("SP1CleanTest.Alignment.InstalledAssembly.assembly" if name == "branch" else
+        assembly = ("SP1Clean.Export.InstalledAssembly.assembly" if name == "branch" else
                     "SP1Clean.Soundness.HostFinalMemory.ensemble")
         require(report["assembly"] == assembly,
                 "wrong assembly")

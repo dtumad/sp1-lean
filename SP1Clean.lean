@@ -1,4 +1,6 @@
 import SP1Clean.Core
+import SP1Clean.Export.InstalledAssembly
+import SP1Clean.Export.ShardChain
 import SP1Clean.Alignment.Chips.AddChip.Bridge
 import SP1Clean.Alignment.Chips.AddChip.Contracts
 import SP1Clean.Alignment.Chips.AddiChip.Bridge
@@ -115,6 +117,13 @@ import SP1Clean.Soundness.HostSailBoundary
 import SP1Clean.Soundness.OrdinaryStateReceipt
 import SP1Clean.Soundness.ProtectedOrdinaryReceipt
 import SP1Clean.Soundness.HostOrdinaryReceipts
+import SP1Clean.Soundness.HostObserved
+import SP1Clean.Soundness.HostObservedLedger
+import SP1Clean.Soundness.HostObservedConsumer
+import SP1Clean.Soundness.HostObservedHistory
+import SP1Clean.Soundness.HostObservedProducers
+import SP1Clean.Soundness.HostObservedRetirement
+import SP1Clean.Soundness.HostObservedDynamic
 import SP1Clean.Soundness.FinishedChannels
 import SP1Clean.Soundness.GenericWalk
 import SP1Clean.Soundness.GoodnessFilter
@@ -144,7 +153,12 @@ import SP1Clean.Soundness.CommitmentEnsemble
 import SP1Clean.Soundness.HostCommitHistory
 import SP1Clean.Soundness.OrdinaryObservation
 import SP1Clean.Soundness.OrdinaryObservationResources
+import SP1Clean.Soundness.OrdinaryObservationProjection
 import SP1Clean.Proofs.Completeness.OrdinaryObservation
+import SP1Clean.Proofs.Completeness.OrdinaryObservationHistory
+import SP1Clean.Proofs.Completeness.OrdinaryObservationPadding
+import SP1Clean.Proofs.Completeness.ExecutionObservation
+import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.Soundness.HostHintQueueBoundary
@@ -239,6 +253,7 @@ import SP1Clean.Soundness.RowEffectDefs
 import SP1Clean.Soundness.RowSoundness
 import SP1Clean.Soundness.SP1Ensemble
 import SP1Clean.Soundness.Shard.Contract
+import SP1Clean.Soundness.Shard.DynamicMatch
 import SP1Clean.Soundness.Shard.TargetEndpoint
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.Soundness.SnapshotMemoryEnsemble

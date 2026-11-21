@@ -1,4 +1,4 @@
-import SP1Clean.Native.Operations.OrdinaryObservation
+import SP1Clean.Native.Operations.OrdinaryObservationRow
 import ToClean.Circuit.InteractionRecovery
 import Clean.Air.FlatComponent
 import Clean.Gadgets.Boolean
@@ -107,5 +107,53 @@ theorem state_values
 theorem width
     {generation : WitnessGeneration.Generation (ZMod p) Inputs} : ({ circuit := circuit (p := p), Assumptions := (circuit (p := p)).Assumptions, generation } : Component (ZMod p)).width = 205 := by
   rfl
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Read the child inputs from their physical positions in the guarded row. -/
+theorem eval_row_payload (env : Environment (ZMod p)) :
+    Eval.eval env ((varFromOffset RowInput 0 : Var RowInput (ZMod p)).1) =
+      (valueFromOffset RowInput 0 env).1 := by
+  have decoded := eval_varFromOffset_valueFromOffset RowInput 0 env
+  rw [CircuitType.eval_var_provablePair] at decoded
+  exact congrArg Prod.fst decoded
+
+/-- An inactive installed row retains its receipt occurrence with multiplicity zero. -/
+theorem guarded_receipt_values {generation : WitnessGeneration.Generation (ZMod p) RowInput}
+    (env : Environment (ZMod p)) :
+    ({ circuit := guardedCircuit, Assumptions := guardedCircuit.Assumptions, generation } :
+        Component (ZMod p)).operations.interactionValuesWith InstructionReceipt.channel.toRaw env =
+      [InstructionReceipt.channel.pulledIfValue (valueFromOffset RowInput 0 env).2
+        (valueFromOffset RowInput 0 env).1.receipt] := by
+  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
+  change ((Guarded.main circuit guardSupported (varFromOffset RowInput 0)).operations
+    (size RowInput)).interactionValuesWith InstructionReceipt.channel.toRaw env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [circuit, Operations.interactionValuesWith, main_receipt_interactions, List.map_cons,
+    List.map_nil, Channel.eval_pulled, eval_receipt, Guarded.eval_activity,
+    eval_varFromOffset_valueFromOffset, Channel.pulledValue, Channel.pulledIfValue, mul_one]
+  exact congrArg (fun input : Inputs (ZMod p) =>
+    [InstructionReceipt.channel.pulledIfValue (valueFromOffset RowInput 0 env).2 input.receipt])
+    (eval_row_payload env)
+
+/-- The same gate controls both links of a physical observation transition. -/
+theorem guarded_state_values {generation : WitnessGeneration.Generation (ZMod p) RowInput}
+    (env : Environment (ZMod p)) :
+    ({ circuit := guardedCircuit, Assumptions := guardedCircuit.Assumptions, generation } :
+        Component (ZMod p)).operations.interactionValuesWith stateChannel.toRaw env =
+      [stateChannel.pulledIfValue (valueFromOffset RowInput 0 env).2
+          (valueFromOffset RowInput 0 env).1.previous,
+        stateChannel.pushedIfValue (valueFromOffset RowInput 0 env).2
+          (valueFromOffset RowInput 0 env).1.next] := by
+  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations]
+  change ((Guarded.main circuit guardSupported (varFromOffset RowInput 0)).operations
+    (size RowInput)).interactionValuesWith stateChannel.toRaw env = _
+  rw [Guarded.main_interactionValuesWith]
+  simp only [circuit, Operations.interactionValuesWith, main_state_interactions, List.map_cons,
+    List.map_nil, Channel.eval_pulled, Channel.eval_pushed, eval_previous, eval_next,
+    Guarded.eval_activity, eval_varFromOffset_valueFromOffset, Channel.pulledValue, Channel.pulledIfValue,
+    Channel.pushedValue, Channel.pushedIfValue, mul_one]
+  exact congrArg (fun input : Inputs (ZMod p) =>
+    [stateChannel.pulledIfValue (valueFromOffset RowInput 0 env).2 input.previous,
+      stateChannel.pushedIfValue (valueFromOffset RowInput 0 env).2 input.next]) (eval_row_payload env)
 
 end SP1Clean.OrdinaryObservation

@@ -34,6 +34,7 @@ fn empty_generated_witness_matches_native_boundaries_and_rejects_mutations() {
     assert_eq!(public[0], F::ONE);
     assert_eq!(&public[4..7], &[F::ZERO, F::ONE, F::ZERO]);
     assert_eq!(&public[..7], &public[7..14]);
+    assert_eq!(public[15], F::ZERO);
     let witness = empty::generate(&public, &fields(&case["privateInput"]), 1).unwrap();
     // The instruction range is the canonical 25-chip inventory, following six memory
     // boundary components and the Program provider. No instruction row is invented.
@@ -151,6 +152,10 @@ fn complete_assembly_proves_and_binds_public_endpoints() {
     let mut key = EnsembleKey::new(backend::config(), 1).unwrap();
     let proof = key.prove(&statement, traces, &public).unwrap();
     key.verify(&statement, &proof, &public).unwrap();
+    assert_eq!(public[15], F::ONE);
+    let mut wrong_flag = public.clone();
+    wrong_flag[15] = F::ZERO;
+    assert!(key.verify(&statement, &proof, &wrong_flag).is_err());
     let wrong_public = fields(&reference["cases"][1]["publicInput"]);
     assert!(key.verify(&statement, &proof, &wrong_public).is_err());
 

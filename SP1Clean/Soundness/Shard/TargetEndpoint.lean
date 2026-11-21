@@ -1,5 +1,6 @@
 import SP1Clean.Soundness.Shard.Trace
 import SP1Clean.FormalModel.Contracts.SailBoundary
+import SP1Clean.FormalModel.Contracts.HostHintTarget
 
 /-! # The trace endpoint is the complete supplied target
 
@@ -9,9 +10,9 @@ final bank. Then the Sail boundary check, agreement of the five dynamic Sail boo
 registers and agreement of the host's hint suffix identify the final state with
 `target.realize`.
 
-The two agreements are stated as equalities between the target's fields and the trace's
-bookkeeping: `DynamicMatch` (C2) and `HostMatch` (C3). They are what the ordinary observation
-consumer and the hint-queue terminal must establish. They are not premises of the shard target.
+`DynamicMatch` describes the ordinary-retirement bookkeeping. The verifier-owned
+`HostHintTarget.Spec` checks the decoded suffix and the host fields preserved by the six-call
+profile. The complete shard target asks for literal equality of the realized state.
 -/
 
 namespace SP1Clean.Soundness.Shard
@@ -21,35 +22,25 @@ open LeanRV64D (Register)
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-/-- The supplied target's dynamic Sail bookkeeping agrees with the trace's: nextPC, the
-retirement flag and count, the interrupt refresh and the written event index. -/
-structure DynamicMatch (source target : ExecutionSnapshot) (events : List ExecutionEvent) : Prop where
-  nextPC : target.sail.registers.get? Register.nextPC =
-    nextPcAfter events (source.sail.registers.get? Register.nextPC) (some target.pc)
-  increment : target.sail.registers.get? Register.minstret_increment =
-    if events.countP ExecutionEvent.isOrdinary = 0
-      then source.sail.registers.get? Register.minstret_increment
-      else some (retirementEnabled source.sail.realize)
-  retired : target.sail.registers.get? Register.minstret =
-    (source.sail.registers.get? Register.minstret).map (fun value => value + BitVec.ofNat 64
-      (if retirementEnabled source.sail.realize then events.countP ExecutionEvent.isOrdinary else 0))
-  interrupts : target.sail.registers.get? Register.mip =
-    if events.countP ExecutionEvent.isOrdinary = 0 then source.sail.registers.get? Register.mip
-      else some (TryStepReduction.refreshedMip source.sail.realize)
-  eventIndex : target.sail.registers.get? Register.written_event_index =
-    if events.countP ExecutionEvent.isOrdinary = 0
-      then source.sail.registers.get? Register.written_event_index else some none
+omit [Fact (2 ^ 25 < p)] in
+/-- At equal clocks the verifier authenticates the full optional Sail bookkeeping for an empty tape. -/
+theorem DynamicMatch.nil_of_equal_clock {source target : ExecutionSnapshot} {header : SP1PublicIO (ZMod p)}
+    (boundary : SailBoundary.Spec source target header) (clock : source.clock = target.clock) :
+    DynamicMatch source target [] := by
+  obtain ⟨quiet, retired⟩ := boundary.equal_clock clock
+  obtain ⟨increment, interrupts, index, next⟩ := (SP1Clean.OrdinaryObservation.quiet_iff ..).mp quiet
+  refine ⟨by simpa using next, by simpa using increment, ?_, by simpa using interrupts, by simpa using index⟩
+  simpa using retired
 
-/-- The supplied target's host state is the source's, with the decoded hint suffix and the final
-bank fields. -/
-def HostMatch (source target : ExecutionSnapshot) (final : HostHintQueue.State (ZMod p)) : Prop :=
-  ∀ hints, HintQueue.decode? (HintQueue.ofList source.host.io.hints).1 (Address.toNat final.head) =
-      some hints →
-    { source.host with
-      io.hints := hints
-      committed := target.host.committed
-      deferred := target.host.deferred
-      exitCode := target.host.exitCode } = target.host
+omit [Fact (2 ^ 25 < p)] in
+/-- The host frame and the suffix read at the authenticated head determine the whole host. -/
+theorem Endpoint.host_eq {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
+    {header : SP1PublicIO (ZMod p)} {events : List ExecutionEvent} {actual : ExecutionState}
+    (endpoint : Endpoint source target final header events actual)
+    (checked : HostHintTarget.Spec source.host target.host (Address.toNat final.head)) :
+    actual.host = target.host := by
+  obtain ⟨hints, decoded, host⟩ := endpoint.host
+  exact host.trans (checked.outgoing_eq decoded)
 
 omit [Fact (2 ^ 25 < p)] in
 /-- A checked target stores the PC it reports. -/
@@ -68,12 +59,12 @@ theorem Endpoint.realize_eq {source target : ExecutionSnapshot} {final : HostHin
     {header : SP1PublicIO (ZMod p)} {events : List ExecutionEvent} {actual : ExecutionState}
     (endpoint : Endpoint source target final header events actual)
     (boundary : SailBoundary.Spec source target header) (dynamic : DynamicMatch source target events)
-    (host : HostMatch source target final) : actual = target.realize := by
+    (host : HostHintTarget.Spec source.host target.host (Address.toNat final.head)) : actual = target.realize := by
   have : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
   have : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
   obtain ⟨clockBound, pcBound⟩ := boundary.ranges
   have finalPc : StateMsg.pcBits (finalBoundaryStateMessage header) = target.pc :=
-    SailBoundary.TargetFor.pc pcBound boundary.2
+    SailBoundary.TargetFor.pc pcBound boundary.2.1
   have preserved (reg : Register) (frozen : SailSnapshot.executionRegister reg = false) :
       actual.sail.regs.get? reg = source.sail.registers.get? reg := by
     simp only [SailSnapshot.executionRegister, decide_eq_false_iff_not, not_or, not_exists,
@@ -95,11 +86,41 @@ theorem Endpoint.realize_eq {source target : ExecutionSnapshot} {final : HostHin
     · rw [endpoint.eventIndex, dynamic.eventIndex]
     · exact preserved
     · exact endpoint.runtime
-  obtain ⟨hints, decoded, hostEq⟩ := endpoint.host
+  have hostEq := endpoint.host_eq host
   have clock : actual.clock = target.clock :=
-    endpoint.clock.trans (SailBoundary.TargetFor.clock clockBound boundary.2)
+    endpoint.clock.trans (SailBoundary.TargetFor.clock clockBound boundary.2.1)
   cases actual
   simp only [ExecutionSnapshot.realize, ExecutionState.mk.injEq]
-  exact ⟨sail, hostEq.trans (host hints decoded), clock⟩
+  exact ⟨sail, hostEq, clock⟩
+
+/-- Equal authenticated clocks force an empty execution and identify the complete supplied target. -/
+theorem Endpoint.empty_of_equal_clock {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
+    {header : SP1PublicIO (ZMod p)} {events : List ExecutionEvent} {actual : ExecutionState}
+    {policy : HostPolicy} {program : Target.GuestProgram}
+    (endpoint : Endpoint source target final header events actual)
+    (path : ExecutionPath policy program source.realize events actual) (boundary : SailBoundary.Spec source target header)
+    (host : HostHintTarget.Spec source.host target.host (Address.toNat final.head))
+    (clock : source.clock = target.clock) : events = [] ∧ actual = target.realize := by
+  have : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
+  have bound : actual.clock = target.clock :=
+    endpoint.clock.trans (SailBoundary.TargetFor.clock boundary.ranges.1 boundary.2.1)
+  have elapsed := path.clock
+  change actual.clock = source.clock + _ at elapsed
+  have := event_count_le_ticks events
+  have nil : events = [] := List.length_eq_zero_iff.mp (by omega)
+  subst events
+  exact ⟨rfl, endpoint.realize_eq boundary (DynamicMatch.nil_of_equal_clock boundary clock) host⟩
+
+/-- With the verifier-checked host suffix, the six-call machine trace reaches the literal supplied
+Sail, host and clock state. The same ordered events bind the commitment statement. -/
+theorem SailTrace.realized {commitments : CommitmentStatement} {image : ProgramImage}
+    {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} {header : SP1PublicIO (ZMod p)}
+    (accepted : SailTrace commitments image source target final header)
+    (host : HostHintTarget.Spec source.host target.host (Address.toNat final.head)) :
+    ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
+      commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
+  obtain ⟨_, _, boundary, _, events, actual, path, commitmentsMatch, calls, dynamic, endpoint⟩ := accepted
+  rw [endpoint.realize_eq boundary dynamic host] at path
+  exact ⟨events, path, commitmentsMatch, calls⟩
 
 end SP1Clean.Soundness.Shard

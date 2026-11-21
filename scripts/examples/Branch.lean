@@ -5,7 +5,7 @@ import Lean.Data.Json
 witness and its mutations. The imported theorem supplies official Sail execution; this driver
 does not execute the noncomputable full Sail state. -/
 
-open SP1CleanTest.Alignment.InstalledAssembly (assembly)
+open SP1Clean.Export.InstalledAssembly (assembly)
 open Lean Circuit Air.Flat SP1Clean
 open SP1Clean.Audit.BranchEnsemble
 
@@ -40,7 +40,7 @@ private def runBranchEnsembleExample : IO Unit := do
     (Environment.fromInput header activeWitness.data)
   let report := Json.mkObj [
     ("revision", toJson revision.get!), ("dirty", toJson (status == some "dirty")),
-    ("assembly", toJson "SP1CleanTest.Alignment.InstalledAssembly.assembly"),
+    ("assembly", toJson "SP1Clean.Export.InstalledAssembly.assembly"),
     ("theorem", toJson "SP1Clean.Audit.BranchEnsemble.joined"),
     ("sailEvidence", toJson "official Sail retirement proved by imported theorem; not executed by this runner"),
     ("instruction", toJson s!"BEQ x{event.opA},x{event.opB},+{event.imm}"),

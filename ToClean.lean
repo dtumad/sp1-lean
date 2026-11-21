@@ -34,6 +34,7 @@ public import ToClean.Air.EnsembleBuild
 public import ToClean.Air.VerifierExtension
 public import ToClean.Air.VerifierChannel
 public import ToClean.Air.PublicVerifier
+public import ToClean.Air.ProverInputStatement
 public import ToClean.Air.Footprint
 public import ToClean.Air.ChannelClosure
 public import ToClean.Air.Authentication
@@ -42,6 +43,7 @@ public import ToClean.Air.ComponentOutput
 public import ToClean.Air.ComponentReplacement
 public import ToClean.Air.FiniteLookup
 public import ToClean.Air.EnsembleCheck
+public import ToClean.Air.DemandPadding
 public import ToClean.Circuit.StaticTable
 public import ToClean.Air.TableBuild
 public import ToClean.Air.LookupFree

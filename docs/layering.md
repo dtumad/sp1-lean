@@ -30,7 +30,7 @@ exceptions are migration work, not a requirement to preserve the current API or 
 | 5 | Readers, operation gadgets and their proofs |
 | 6 | Instruction chips, local proofs and event-to-row builders |
 | 8 | Registration, machine grounding and soundness |
-| 9 | Physical table construction and completeness assembly |
+| 9 | Physical table construction, completeness assembly and the production export facade |
 
 Some directories straddle strata: chip `Bridge`/`Contracts` files depend on machine grounding.
 The map describes those dependencies

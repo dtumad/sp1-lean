@@ -797,6 +797,90 @@ private theorem compileInstructionEvent?_components {view : SP1TransitionView}
           simp only [Option.some.injEq] at generated
           exact ⟨accesses, event, rfl, eventEq, generated.symm⟩
 
+private theorem rTypeEvent?_coordinates (decoded : instruction) (stamped : List StampedTouch)
+    (clk pc opcode : ℕ) {event : RTypeEvent}
+    (built : rTypeEvent? decoded stamped clk pc opcode = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold rTypeEvent? at built
+  obtain ⟨_, _, built⟩ := Option.bind_eq_some_iff.mp built
+  repeat' split at built
+  all_goals cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem aluRegisterEvent?_coordinates (decoded : instruction) (stamped : List StampedTouch)
+    (clk pc opcode : ℕ) {event : ALUTypeEvent}
+    (built : aluRegisterEvent? decoded stamped clk pc opcode = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold aluRegisterEvent? at built
+  obtain ⟨_, _, built⟩ := Option.bind_eq_some_iff.mp built
+  repeat' split at built
+  all_goals cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem aluImmediateEventOf?_coordinates (stamped : List StampedTouch) (clk pc opcode : ℕ)
+    (rs1 rd : regidx) (immediate : BitVec 64) {event : ALUTypeEvent}
+    (built : aluImmediateEventOf? stamped clk pc opcode rs1 rd immediate = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold aluImmediateEventOf? at built
+  repeat' split at built
+  all_goals cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem aluTypeEvent?_coordinates (decoded : instruction) (stamped : List StampedTouch)
+    (clk pc opcode : ℕ) {event : ALUTypeEvent}
+    (built : aluTypeEvent? decoded stamped clk pc opcode = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold aluTypeEvent? at built
+  repeat' split at built
+  all_goals first | exact aluImmediateEventOf?_coordinates _ _ _ _ _ _ _ built | exact aluRegisterEvent?_coordinates _ _ _ _ _ built
+
+private theorem iWriteEventOf?_coordinates (stamped : List StampedTouch) (clk pc opcode : ℕ)
+    (rs1 rd : regidx) (immediate : BitVec 12) {event : ITypeEvent}
+    (built : iWriteEventOf? stamped clk pc opcode rs1 rd immediate = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold iWriteEventOf? at built
+  repeat' split at built
+  all_goals cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem iTypeEvent?_coordinates (decoded : instruction) (stamped : List StampedTouch)
+    (clk pc opcode : ℕ) {event : ITypeEvent}
+    (built : iTypeEvent? decoded stamped clk pc opcode = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold iTypeEvent? at built
+  repeat' split at built
+  all_goals first | exact iWriteEventOf?_coordinates _ _ _ _ _ _ _ built | cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem jTypeEvent?_coordinates (decoded : instruction) (stamped : List StampedTouch)
+    (clk pc opcode : ℕ) {event : JTypeEvent}
+    (built : jTypeEvent? decoded stamped clk pc opcode = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold jTypeEvent? at built
+  repeat' split at built
+  all_goals cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem memoryEvent?_coordinates (decoded : instruction) (stamped : List StampedTouch)
+    (clk pc opcode : ℕ) {event : MemoryEvent}
+    (built : memoryEvent? decoded stamped clk pc opcode = some event) : event.clk = clk ∧ event.pc = pc := by
+  unfold memoryEvent? at built
+  repeat' split at built
+  all_goals cases built
+  all_goals exact ⟨rfl, rfl⟩
+
+private theorem instructionEventFor?_coordinates {id : InstructionChipId} {event : id.Event}
+    {decoded : instruction} {stamped : List StampedTouch} {clk pc opcode : ℕ}
+    (built : instructionEventFor? id decoded stamped clk pc opcode = some event) :
+    (RoutedEvent.mk id event).clock = clk ∧ (RoutedEvent.mk id event).pc = pc := by
+  cases id <;> first
+    | exact rTypeEvent?_coordinates _ _ _ _ _ built
+    | exact aluTypeEvent?_coordinates _ _ _ _ _ built
+    | exact iTypeEvent?_coordinates _ _ _ _ _ built
+    | exact jTypeEvent?_coordinates _ _ _ _ _ built
+    | exact memoryEvent?_coordinates _ _ _ _ _ built
+
+/-- The registry-indexed event retains the exact timestamp and PC of its input transition. -/
+theorem compileInstructionEvent?_coordinates {view : SP1TransitionView}
+    {frontier : AccessFrontier} {clk : ℕ} {result : CompiledInstructionEvent}
+    (generated : compileInstructionEvent? view frontier clk = some result) :
+    result.routed.clock = clk ∧ result.routed.pc = view.pc.toNat := by
+  obtain ⟨_, _, _, built, rfl⟩ := compileInstructionEvent?_components generated
+  exact instructionEventFor?_coordinates built
+
 /-- Compilation cannot invent or relabel a route: the dependent event carries exactly the identity
 selected by the canonical semantic router. -/
 theorem compileInstructionEvent?_route {view : SP1TransitionView}

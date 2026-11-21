@@ -12,7 +12,7 @@ installed inventory and native reference format. Rust independently executes the
 
 namespace SP1CleanTest.Alignment.MixedAssemblyExport
 
-open Lean Circuit SP1Clean InstalledAssembly InstalledAssemblyReference
+open Lean Circuit SP1Clean SP1Clean.Export.InstalledAssembly InstalledAssembly InstalledAssemblyReference
 
 /-- Independently located finite cuts and host programs, with complete boundary observations. -/
 def instances : List (String × Except String (Context × List Seed × SP1PublicIO Fp)) :=

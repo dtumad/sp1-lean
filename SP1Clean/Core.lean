@@ -65,6 +65,7 @@ import SP1Clean.FormalModel.Contracts.FinalRegisterValue
 import SP1Clean.FormalModel.Contracts.FinalRegisterCheck
 import SP1Clean.FormalModel.Contracts.HintNodeAllocate
 import SP1Clean.FormalModel.Contracts.HintQueue
+import SP1Clean.FormalModel.Contracts.HostHintTarget
 import SP1Clean.FormalModel.Contracts.HintReadSpan
 import SP1Clean.FormalModel.Contracts.HintReadStep
 import SP1Clean.FormalModel.Contracts.HintReadWord
@@ -139,8 +140,10 @@ import SP1Clean.Semantics.Execution.ExecutionFrame
 import SP1Clean.Semantics.Execution.ExecutionPath
 import SP1Clean.Semantics.Execution.ExecutionReplay
 import SP1Clean.Semantics.Resources.ExecutionResources
+import SP1Clean.Semantics.Resources.SixCallResources
 import SP1Clean.Semantics.Execution.ExecutionSnapshot
 import SP1Clean.Semantics.Host.HintQueue
+import SP1Clean.Semantics.Host.HintQueueSuffix
 import SP1Clean.Semantics.Host.HintQueueEvent
 import SP1Clean.Semantics.Host.HintQueueRecords
 import SP1Clean.Semantics.Host.HintQueueWordRecords
@@ -155,6 +158,7 @@ import SP1Clean.Semantics.Host.HostReadWords
 import SP1Clean.Semantics.Host.HostReplay
 import SP1Clean.Semantics.Host.HostSail
 import SP1Clean.Semantics.Host.HostSnapshot
+import SP1Clean.Semantics.Host.SixCallProfile
 import SP1Clean.Semantics.Host.HostTerminal
 import SP1Clean.Semantics.ISA.InstructionBytes
 import SP1Clean.Semantics.ISA.InstructionDecode
@@ -314,6 +318,7 @@ import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Native.Operations.HintQueueBoundary
 import SP1Clean.Native.Operations.HintQueueSource
 import SP1Clean.Native.Operations.HintQueueWordSource
+import SP1Clean.Native.Operations.HostHintTarget
 import SP1Clean.Native.Operations.HintReadSpan
 import SP1Clean.Native.Operations.HintReadStep
 import SP1Clean.Native.Operations.HostBoundary
@@ -345,6 +350,7 @@ import SP1Clean.Native.Operations.InstructionReceipt
 import SP1Clean.Native.Operations.OrdinaryObservation
 import SP1Clean.Native.Operations.OrdinaryObservationBoundary
 import SP1Clean.Native.Operations.OrdinaryObservationEndpoint
+import SP1Clean.Native.Operations.OrdinaryObservationRow
 import SP1Clean.Proofs.Operations.OrdinaryObservation
 import SP1Clean.Native.Operations.ShiftLeftOperation.Core
 import SP1Clean.Native.Operations.ShiftRightOperation.Core

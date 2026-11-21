@@ -103,7 +103,7 @@ def check (target : MemorySnapshot) (input : SP1PublicIO Fp) (rows : List Row) :
   else false
 
 def identityHeader : SP1PublicIO Fp :=
-  { header with final_clk_0_16 := 9, final_pc0 := 0 }
+  { header with final_clk_0_16 := 9, final_pc0 := 0, is_execution_shard := 0 }
 
 def identityRows : List Row :=
   [2, 5].map (fun index => (index, (toElements (OrderedBoundaryEnd.populate (word 0)

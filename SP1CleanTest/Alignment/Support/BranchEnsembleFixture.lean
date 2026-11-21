@@ -14,6 +14,7 @@ Boundary records and preprocessing rows are derived from its actual physical int
 namespace SP1Clean.Audit.BranchEnsemble
 
 open SP1CleanTest.Alignment.InstalledAssembly
+open SP1Clean.Export.InstalledAssembly
 open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Soundness SP1Clean.TraceGen
 
 /-- The native SP1 field. -/
@@ -25,15 +26,15 @@ def source : ExecutionSnapshot where
   sail := { registers := (Target.configuredState 65536).regs, memory := image.initialMemory }
   host := {}
   clock := 1
-/-- Branches preserve the complete register and RAM snapshot; the fixture's target snapshot is the
-source's, which fixes the outgoing memory and host bank. -/
-def target : ExecutionSnapshot := source
+/-- The taken branch retires once and changes the PC while preserving integer registers and RAM. -/
+def target : ExecutionSnapshot :=
+  { source with sail := retiredSnapshot source.sail source.sail.registers 69628, clock := 9 }
 /-- The branch fixture's instance data for the shared complete installed assembly. -/
 def context (target : ExecutionSnapshot) : Context where
   image := image
   source := source
   target := target
-  finalHints := SP1Clean.HostHintQueueBoundary.initial []
+  lastHintClock := 0
   commitments := default
 /-- Public ordinary-step endpoints, not a HALT endpoint claim. -/
 def header : SP1PublicIO Fp where
@@ -63,7 +64,7 @@ def identityHeader : SP1PublicIO Fp :=
     final_clk_0_16 := header.init_clk_0_16,
     final_clk_16_24 := header.init_clk_16_24, final_clk_24_32 := header.init_clk_24_32,
     final_clk_32_48 := header.init_clk_32_48, final_pc0 := header.init_pc0,
-    final_pc1 := header.init_pc1, final_pc2 := header.init_pc2 }
+    final_pc1 := header.init_pc1, final_pc2 := header.init_pc2, is_execution_shard := 0 }
 /-- Empty generation input; semantic data is derived from the committed physical rows. -/
 def data : ProverData Fp := BranchCompilerRoundTrip.data
 /-- Evaluate a field word from a natural boundary key. -/
@@ -140,6 +141,7 @@ def byteSeed? (entry : String × List Fp × Fp) : Option (Option Seed) :=
 /-- Extend all physical consumer demand, including the public verifier, with real providers. -/
 def seeds? (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) :
     Option (List Seed) := do
+  let consumers ← (withObservationSeeds (context target) consumers).toOption
   let ledgers ← consumers.mapM (seedLedger? target)
   let verifier := (assembly (context target)).verifierOperations.interactionValues
     (Environment.fromInput input data) |>.map fun interaction =>
@@ -191,6 +193,8 @@ theorem source_memory_realizes : source.sail.memorySnapshot.Realizes BranchCompi
 
 /-- The complete target snapshot realizes the same normally retiring official Sail target. -/
 theorem target_realizes : target.sail.memorySnapshot.Realizes BranchCompilerRoundTrip.target := by
+  have sameMemory : target.sail.memorySnapshot = source.sail.memorySnapshot := by native_decide
+  rw [sameMemory]
   constructor
   · intro index
     have unchanged := BranchCompilerRoundTrip.target_effect.regs

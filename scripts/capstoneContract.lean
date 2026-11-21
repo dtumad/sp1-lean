@@ -1,6 +1,7 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
-import SP1Clean.Soundness.Shard.Trace
+import SP1Clean.Export.ShardChain
+import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 
 /-! # Compiled native capstone contract audit
 
@@ -69,8 +70,8 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {commitments : CommitmentStatement} {header : SP1PublicIO (ZMod p)}
 
 -- Pin the headline theorem's application surface independently of its proof.
-example (valid : image.Valid)
-    (fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
+attribute [local irreducible] HostObserved.ensemble
+example (fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
       (installed image source target final).tables.map (·.circuit.name))
     (registered : CommitmentDeclaration.channel.toRaw ∈
       (installed image source target final).channels)
@@ -78,15 +79,17 @@ example (valid : image.Valid)
     (accepted : (CommitmentEnsemble.install commitments
       (installed image source target final) fresh registered).Statement .logUp header heights) :
     SailTrace commitments image source target final header :=
-  sail_trace valid accepted
+  sail_trace accepted
 
 example :
     SailTrace commitments image source target final header ↔
-      ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed p ∧
+      ExecutionSourceValid image source ∧ header.SourceFor source ∧ SailBoundary.Spec source target header ∧
+        CommitmentBoundary.Spec commitments header ∧
         ∃ (events : List ExecutionEvent) (actual : ExecutionState),
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
-          Endpoint source target final header events actual := Iff.rfl
+          (∀ event ∈ events, SixCallProfile.event event) ∧
+          DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.
 example {events : List ExecutionEvent} {actual : ExecutionState}
@@ -110,6 +113,15 @@ def roots : Array Name := #[
   ``SP1Clean.Soundness.Shard.SailTrace,
   ``SP1Clean.Soundness.Shard.Endpoint,
   ``SP1Clean.Soundness.Shard.sail_trace,
+  ``SP1Clean.Export.InstalledAssembly.proverStatement_iff,
+  ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.soundness,
+  ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
+  ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
+  ``SP1Clean.TraceGen.admissibleExecution_observationTable,
+  ``SP1Clean.TraceGen.admissibleExecution_hostOnlyTerminalTable,
+  ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,

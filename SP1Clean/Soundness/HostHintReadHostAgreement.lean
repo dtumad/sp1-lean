@@ -28,20 +28,14 @@ variable {image : ProgramImage} {source : ExecutionSnapshot}
       (HostHintReadHandoff.wordResources ++ resources)),
     component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
-private theorem wrapper_frame (input : HostCallChip.Inputs (ZMod p)) (flag : ZMod p)
-    (notWrite : Word.toBitVec64 (input.message flag).code ≠ SyscallKind.write.code) :
-    HostFrameSafe (ExecutionRow.syscall input.instruction).event := by
-  simpa only [HostFrameSafe, ExecutionRow.event, rawCode_syscallEventOfRow,
-    HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat] using notWrite
-
-private theorem inventory_frame
+private theorem inventory_calls
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
     (interface : ExtensionInterface HostCallReceivers.available resources)
     (constraints : witness.Constraints) (calls : witness.BalancedChannel HostCallChip.channel.toRaw)
     (bytes : witness.BalancedChannel Channels.byteChannel.toRaw)
     (specs : ∀ table ∈ queueTables witness, table.Spec) :
-    ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), HostFrameSafe row.event := by
-  have noWrite := (HostQueueCallProjection.calls_projection witness interface constraints bytes specs).1
+    ∀ row ∈ LocalCore.executionRows (HostLocalCore.localWitness witness), SixCallProfile.event row.event := by
+  have receivedCode := HostQueueCallProjection.calls_code witness interface constraints bytes specs
   have handoff := HostLocalHandoff.calls_perm_of_balancedChannel witness (resources_hostCall_silent interface) constraints calls
   intro row member
   cases row with
@@ -51,15 +45,18 @@ private theorem inventory_frame
           (haltRow (HostLocalCore.localWitness witness).data) (·.is_real) := by simpa [LocalCore.executionRows] using member
       have zero := HostQueueCPUReplay.halt_code (HostLocalCore.localWitness witness)
         (HostLocalCore.localWitness_constraints witness constraints) row active
-      simp only [ExecutionRow.event, HostFrameSafe, haltEventOfRow, zero, SyscallKind.code]
-      decide
+      change SixCallProfile.code (Word.toBitVec64 row.x5_memory.prev_value)
+      rw [zero]
+      exact ⟨.halt, by decide, rfl⟩
   | syscall row =>
       have active : row ∈ activeSystemRows (LocalCore.systemTable (HostLocalCore.localWitness witness) 3)
           (syscallInstrsRow (HostLocalCore.localWitness witness).data) (·.is_real) := by simpa [LocalCore.executionRows] using member
       rw [← HostLocalCore.hostCallTable_projection] at active
       obtain ⟨env, envMem, rfl⟩ := List.mem_map.mp active
       have received := handoff.mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) envMem)
-      exact wrapper_frame (HostCallLedger.input env) _ (noWrite _ received)
+      simpa only [SixCallProfile.event, ExecutionRow.event, rawCode_syscallEventOfRow,
+        HostCallLedger.call, HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat]
+        using receivedCode _ received
 
 private theorem queue_terminal
     (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
@@ -119,21 +116,35 @@ theorem GroundingCarrier.final_hints (valid : image.Valid)
   simp only [HostHintQueueBoundary.projected_data, HostHintQueueBoundary.projected_publicInput] at terminal
   exact terminal carrier.cpuWalk exhaustive walk history _ _ target replay
 
+/-- Every event of the physical CPU inventory belongs to the installed six-call profile. -/
+theorem installed_events
+    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
+      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
+    ∀ event ∈ (LocalCore.executionRows (HostLocalCore.localWitness
+      (HostHintQueueBoundary.projected witness))).map ExecutionRow.event, SixCallProfile.event event := by
+  have checks := HostHintQueueBoundary.projected_constraints witness constraints
+  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
+  have records := HostHintQueueBoundary.record_channels witness balanced
+  have admitted := inventory_calls (HostHintQueueBoundary.projected witness) interface checks calls records.byte
+    (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
+  intro event member
+  obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp member
+  exact admitted row rowMem
+
 /-- The installed AIR derives the host frame from its complete receiver inventory. -/
 theorem GroundingCarrier.host_frame_safe
     {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
       (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ event ∈ carrier.events, HostFrameSafe event := by
-  have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
-  have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
-  have records := HostHintQueueBoundary.record_channels witness balanced
-  have frame := inventory_frame (HostHintQueueBoundary.projected witness) interface checks calls records.byte
-    (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
   intro event member
-  obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp member
-  exact frame row (carrier.exhaustive.mem_iff.mp rowMem)
+  have admitted := installed_events witness constraints balanced event
+    ((carrier.exhaustive.map ExecutionRow.event).mem_iff.mp member)
+  cases event with
+  | ordinary => trivial
+  | syscall call => exact SixCallProfile.ne_write admitted
 
 /-- All host fields are recovered on the same path: authenticated hints and banks, preserved
 external I/O, and the exact optional terminal status from actual events. -/

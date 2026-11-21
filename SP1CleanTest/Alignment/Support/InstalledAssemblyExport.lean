@@ -1,5 +1,5 @@
-import SP1CleanTest.Alignment.Support.InstalledAssemblyInventory
-import SP1CleanTest.Core.ComponentExport
+import SP1CleanTest.Alignment.Support.InstalledAssembly
+import Clean.Backends.Program
 
 /-! # Export of the complete installed native assembly
 
@@ -12,9 +12,7 @@ witness-generation completeness or correctness of lowering.
 namespace SP1CleanTest.Alignment.InstalledAssemblyExport
 
 open Circuit Air.Flat SP1Clean SP1Clean.Soundness SP1CleanTest.Alignment.InstalledAssembly
-
-/-- Export exactly the production physical inventory and authenticated registry. -/
-def installed (context : Context) := assembly context
+open SP1Clean.Export.InstalledAssembly
 
 /-- Encoded private inputs and their upstream hint-table views. `samples` identifies each physical
 component's first supplied input for mutation tests; it is not the generation hint schema. -/
@@ -44,8 +42,8 @@ private def response (component : Component Fp) (seed : Seed)
 /-- Encode all private inputs once. Duplicate keys, invalid widths and unsupported input routes
 fail before either Lean generation or Rust export. No mode is replaced or preallocated here. -/
 def prepare (context : Context) (consumers : List Seed) : Except String Prepared := do
-  let tables := (installed context).tables
-  unless consumers.all (seedValid tables) do throw "invalid component input or physical position"
+  let tables := (assembly context).tables
+  let consumers ← withObservationSeeds context consumers
   let mut data : Array Fp := #[]
   let mut hints : List HintTable := []
   let mut samples : List HintTable := []
@@ -72,12 +70,13 @@ def prepare (context : Context) (consumers : List Seed) : Except String Prepared
           encoded := Array.replicate height (Array.replicate component.rowOffset 0)
           for (slot, input) in keyed do encoded := encoded.set! slot input
           first := (keyed.head?.map Prod.fst).getD 0
-        else if position ∈ [0, 1, 3, 4, 55, 57, 63, 64, 65] ||
+        else if name == (InstructionReceipt.channel (p := SP1Prime)).name ||
+            position ∈ [0, 1, 3, 4, 55, 57, 63, 64, 65] ||
             (66 ≤ position && position ≤ 85) || position == 94 || position == 95 then
           let keyed ← seeds.mapM fun seed => do
             let message ← response component seed name mode.trigger
             let keys :=
-              if name == "sp1.native.host_call" then [clock message]
+              if name == "sp1.native.host_call" || name == (InstructionReceipt.channel (p := SP1Prime)).name then [clock message]
               else if name == "sp1.native.hint_read_state" then [clock message, word message 5 3]
               else if name == "SP1Exit" then [word message 0 1]
               else if name == "SP1Memory" then [clock message * 32 + word message 2 1]
@@ -103,22 +102,19 @@ def prepare (context : Context) (consumers : List Seed) : Except String Prepared
     data := data ++ rows.flatten
   hints := hints ++ [{ key := "sp1.state.origin", width := 2, offset := data.size, rows := 1 }]
   data := data ++ #[((context.source.clock / 16777216 : ℕ) : Fp), ((context.source.clock % 16777216 : ℕ) : Fp)]
+  hints := hints ++ [{ key := SP1Clean.OrdinaryObservation.terminalModeHint, width := 1, offset := data.size, rows := 1 }]
+  data := data.push (SP1Clean.OrdinaryObservation.Mode.of context.source.sail context.target.sail).sentinel
   pure ⟨data, hints, samples⟩
-
-/-- Private-input metadata changes only the input view, retaining production component modes. -/
-def fixture (context : Context) (prepared : Prepared) : FormalEnsemble Fp SP1PublicIO .logUp :=
-  SP1CleanTest.Core.ComponentExport.fixture
-    ((installed context).withProverInput (fields prepared.data.size) prepared.hints)
 
 /-- Native generation uses the same upstream scheduler and private-input schema as emitted Rust. -/
 def generate (context : Context) (prepared : Prepared) (publicInput : SP1PublicIO Fp)
     (input : fields prepared.data.size Fp := ⟨prepared.data, rfl⟩) :=
-  WitnessGeneration.generate (fixture context prepared).ensemble 4096 publicInput input
+  WitnessGeneration.generate (proverAssembly context (fields prepared.data.size) prepared.hints) 4096 publicInput input
     |>.mapError toString
 
 /-- Built-in validated lowering, shared by inline and shared-module emission. -/
 def exportProgram (context : Context) (consumers : List Seed) : Except String (Backends.Program Fp) := do
   let prepared ← prepare context consumers
-  Backends.lower (fixture context prepared).ensemble 4096 |>.mapError toString
+  Backends.lower (proverAssembly context (fields prepared.data.size) prepared.hints) 4096 |>.mapError toString
 
 end SP1CleanTest.Alignment.InstalledAssemblyExport

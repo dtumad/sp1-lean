@@ -125,62 +125,6 @@ end StateRecord
 
 namespace RoutedEvent
 
-/-- Clock carried by the common CPU-state input of a routed event. -/
-def clock : RoutedEvent → ℕ
-  | ⟨.add, event⟩ => event.clk
-  | ⟨.addi, event⟩ => event.clk
-  | ⟨.addw, event⟩ => event.clk
-  | ⟨.sub, event⟩ => event.clk
-  | ⟨.subw, event⟩ => event.clk
-  | ⟨.bitwise, event⟩ => event.clk
-  | ⟨.lt, event⟩ => event.clk
-  | ⟨.shiftLeft, event⟩ => event.clk
-  | ⟨.shiftRight, event⟩ => event.clk
-  | ⟨.jal, event⟩ => event.clk
-  | ⟨.jalr, event⟩ => event.clk
-  | ⟨.branch, event⟩ => event.clk
-  | ⟨.uType, event⟩ => event.clk
-  | ⟨.loadByte, event⟩ => event.clk
-  | ⟨.loadHalf, event⟩ => event.clk
-  | ⟨.loadWord, event⟩ => event.clk
-  | ⟨.loadDouble, event⟩ => event.clk
-  | ⟨.loadX0, event⟩ => event.clk
-  | ⟨.storeByte, event⟩ => event.clk
-  | ⟨.storeHalf, event⟩ => event.clk
-  | ⟨.storeWord, event⟩ => event.clk
-  | ⟨.storeDouble, event⟩ => event.clk
-  | ⟨.mul, event⟩ => event.clk
-  | ⟨.divRem, event⟩ => event.clk
-  | ⟨.aluX0, event⟩ => event.clk
-
-/-- Program counter carried by the common CPU-state input of a routed event. -/
-def pc : RoutedEvent → ℕ
-  | ⟨.add, event⟩ => event.pc
-  | ⟨.addi, event⟩ => event.pc
-  | ⟨.addw, event⟩ => event.pc
-  | ⟨.sub, event⟩ => event.pc
-  | ⟨.subw, event⟩ => event.pc
-  | ⟨.bitwise, event⟩ => event.pc
-  | ⟨.lt, event⟩ => event.pc
-  | ⟨.shiftLeft, event⟩ => event.pc
-  | ⟨.shiftRight, event⟩ => event.pc
-  | ⟨.jal, event⟩ => event.pc
-  | ⟨.jalr, event⟩ => event.pc
-  | ⟨.branch, event⟩ => event.pc
-  | ⟨.uType, event⟩ => event.pc
-  | ⟨.loadByte, event⟩ => event.pc
-  | ⟨.loadHalf, event⟩ => event.pc
-  | ⟨.loadWord, event⟩ => event.pc
-  | ⟨.loadDouble, event⟩ => event.pc
-  | ⟨.loadX0, event⟩ => event.pc
-  | ⟨.storeByte, event⟩ => event.pc
-  | ⟨.storeHalf, event⟩ => event.pc
-  | ⟨.storeWord, event⟩ => event.pc
-  | ⟨.storeDouble, event⟩ => event.pc
-  | ⟨.mul, event⟩ => event.pc
-  | ⟨.divRem, event⟩ => event.pc
-  | ⟨.aluX0, event⟩ => event.pc
-
 /-- The canonical State record consumed by this instruction occurrence. -/
 def pullState (routed : RoutedEvent) : StateRecord :=
   StateRecord.canonical routed.clock routed.pc
@@ -230,6 +174,39 @@ def rawPushState : RoutedEvent → StateRecord
   | ⟨.mul, event⟩ => straightRawPush event.clk event.pc
   | ⟨.divRem, event⟩ => straightRawPush event.clk event.pc
   | ⟨.aluX0, event⟩ => straightRawPush event.clk event.pc
+
+private theorem controlRawPush_pc {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (clock target : ℕ) :
+    Semantics.StateMsg.pcBits ((controlRawPush clock target).toMessage (p := p)) = BitVec.ofNat 64 (target % 2 ^ 48) := by
+  have hp := Fact.out (p := 2 ^ 25 < p)
+  have limb (n : ℕ) : n % 2 ^ 16 < p := by omega
+  dsimp only [controlRawPush, StateRecord.toMessage, Semantics.StateMsg.pcBits, Semantics.pcBits]
+  rw [ZMod.val_natCast_of_lt (limb target), ZMod.val_natCast_of_lt (limb (target / 2 ^ 16)),
+    ZMod.val_natCast_of_lt (limb (target / 2 ^ 32))]
+  congr 1
+  omega
+
+private theorem straightRawPush_pc {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (clock pc : ℕ) :
+    Semantics.StateMsg.pcBits ((straightRawPush clock pc).toMessage (p := p)) = BitVec.ofNat 64 (pc % 2 ^ 48 + 4) := by
+  have hp := Fact.out (p := 2 ^ 25 < p)
+  have limb (n : ℕ) : n % 2 ^ 16 < p := by omega
+  have low : pc % 2 ^ 16 + 4 < p := by omega
+  dsimp only [straightRawPush, StateRecord.toMessage, Semantics.StateMsg.pcBits, Semantics.pcBits]
+  rw [ZMod.val_natCast_of_lt low, ZMod.val_natCast_of_lt (limb (pc / 2 ^ 16)),
+    ZMod.val_natCast_of_lt (limb (pc / 2 ^ 32))]
+  congr 1
+  omega
+
+/-- Decode any emitted successor at its actual raw limbs. Straight-line rows add four after the
+source's 48-bit split, so a carry from the low limb remains visible. Control rows split precisely
+the selected destination, including JALR's low-bit mask. -/
+theorem rawPushState_pcBits {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (routed : RoutedEvent) :
+    Semantics.StateMsg.pcBits (routed.rawPushState.toMessage (p := p)) = match routed with
+      | ⟨.jal, event⟩ => BitVec.ofNat 64 (event.jalTarget % 2 ^ 48)
+      | ⟨.jalr, event⟩ => BitVec.ofNat 64 ((event.jalrTarget - event.jalrTarget % 2) % 2 ^ 48)
+      | ⟨.branch, event⟩ => BitVec.ofNat 64 (event.branchNextPc % 2 ^ 48)
+      | other => BitVec.ofNat 64 (other.pc % 2 ^ 48 + 4) := by
+  rcases routed with ⟨id, event⟩
+  cases id <;> first | exact straightRawPush_pc _ _ | exact controlRawPush_pc _ _
 
 /-- Canonical successor after the optional State refresh. -/
 def nextState (routed : RoutedEvent) : StateRecord := routed.rawPushState.normalize
