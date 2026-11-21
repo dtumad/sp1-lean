@@ -36373,6 +36373,20 @@
       "typeFingerprint": "3735719081"
     },
     {
+      "bodyFingerprint": "3983391279",
+      "local": true,
+      "module": "SP1Clean.FormalModel.ShardRelease",
+      "name": "SP1Clean.FormalModel.Shard.ReleaseAdmissibleExecution",
+      "typeFingerprint": "3154178738"
+    },
+    {
+      "bodyFingerprint": "692016404",
+      "local": true,
+      "module": "SP1Clean.FormalModel.ShardRelease",
+      "name": "SP1Clean.FormalModel.Shard.ReleaseStatementExecution",
+      "typeFingerprint": "3887941216"
+    },
+    {
       "bodyFingerprint": "1783084905",
       "local": true,
       "module": "SP1Clean.FormalModel.Shard",
@@ -60390,6 +60404,13 @@
       "typeFingerprint": "3623745647"
     },
     {
+      "bodyFingerprint": "606851681",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.ReleaseLinks",
+      "name": "SP1Clean.Semantics.ExecutionPath.ReleaseLinks",
+      "typeFingerprint": "3623745647"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Semantics.Execution.ExecutionPath",
@@ -62147,6 +62168,13 @@
       "typeFingerprint": "1534397938"
     },
     {
+      "bodyFingerprint": "1026567920",
+      "local": true,
+      "module": "SP1Clean.Semantics.ISA.JumpLink",
+      "name": "SP1Clean.Semantics.JumpLinkFits",
+      "typeFingerprint": "431162151"
+    },
+    {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Semantics.Transition.MicroTime",
@@ -62866,6 +62894,13 @@
       "module": "SP1Clean.Semantics.Execution.RegisterSnapshotTable",
       "name": "SP1Clean.Semantics.RegisterSnapshotRow.value",
       "typeFingerprint": "1366289325"
+    },
+    {
+      "bodyFingerprint": "3243024317",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.ReleaseLinks",
+      "name": "SP1Clean.Semantics.ReleaseLinkAt",
+      "typeFingerprint": "2838213024"
     },
     {
       "bodyFingerprint": null,
@@ -82594,6 +82629,34 @@
       "typeFingerprint": "3260392996"
     },
     {
+      "bodyFingerprint": "3218666631",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.ReleaseLinks",
+      "name": "SP1Clean.Semantics.instructionLinkFits",
+      "typeFingerprint": "387790992"
+    },
+    {
+      "bodyFingerprint": "2528691234",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.ReleaseLinks",
+      "name": "SP1Clean.Semantics.instructionLinkFits._sparseCasesOn_1",
+      "typeFingerprint": "1290976763"
+    },
+    {
+      "bodyFingerprint": "3457916517",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.ReleaseLinks",
+      "name": "SP1Clean.Semantics.instructionLinkFits._sparseCasesOn_2",
+      "typeFingerprint": "77907820"
+    },
+    {
+      "bodyFingerprint": "733162008",
+      "local": true,
+      "module": "SP1Clean.Semantics.Execution.ReleaseLinks",
+      "name": "SP1Clean.Semantics.instructionLinkFits.match_1",
+      "typeFingerprint": "1921248143"
+    },
+    {
       "bodyFingerprint": "2311886928",
       "local": true,
       "module": "SP1Clean.Semantics.Execution.ExecutionEncoding",
@@ -87158,7 +87221,7 @@
       "typeFingerprint": "202532860"
     },
     {
-      "bodyFingerprint": "956599185",
+      "bodyFingerprint": "3616154309",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.admissible",
@@ -87197,7 +87260,7 @@
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Contract",
       "name": "SP1Clean.Soundness.Shard.statement_iff",
-      "typeFingerprint": "138502032"
+      "typeFingerprint": "970978256"
     },
     {
       "bodyFingerprint": null,
@@ -103008,6 +103071,8 @@
     "SP1Clean.FormalModel.Shard.Executes",
     "SP1Clean.FormalModel.Shard.nativeProfile",
     "SP1Clean.FormalModel.Shard.AdmissibleExecution",
+    "SP1Clean.FormalModel.Shard.ReleaseAdmissibleExecution",
+    "SP1Clean.FormalModel.Shard.ReleaseStatementExecution",
     "SP1Clean.FormalModel.Shard.sp1Machine",
     "Air.Flat.Realizes"
   ],
