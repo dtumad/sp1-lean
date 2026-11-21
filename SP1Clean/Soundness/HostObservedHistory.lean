@@ -52,7 +52,8 @@ private theorem isolate_terminal {α β γ : Type*} (high : γ → Bool)
       (balanced.trans ((List.perm_append_singleton (finish row).1 _).cons last))).cons_inv
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+/-- Use the finite-field equality used by the canonical physical ledger. -/
+local instance observationFieldDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
 
 variable {image : ProgramImage} {source target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)}
 

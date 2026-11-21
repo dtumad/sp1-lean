@@ -62,8 +62,11 @@ def TerminalSpec (mode : Mode) (input : State (ZMod p)) : Prop :=
 
 /-- The last raw observation and the two base-65536 carries used to bind its numerical PC. -/
 structure TerminalInputs (F : Type) where
+  /-- The last observed state, or the initial link for an empty history. -/
   previous : State F
+  /-- Carry from the low raw PC limb into the middle limb. -/
   carryLow : F
+  /-- Carry from the middle raw PC limb into the high limb. -/
   carryMiddle : F
 deriving ProvableStruct
 provable_struct_eval_lemmas TerminalInputs
