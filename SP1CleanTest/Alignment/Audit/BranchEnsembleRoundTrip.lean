@@ -26,8 +26,8 @@ theorem activeSeeds_bounded : activeSeeds.length ≤ UInt64.size := by native_de
 /-- The actual witness on `HostFinalMemory.ensemble`, retaining its complete original registry. -/
 def activeWitness : EnsembleWitness (assembly (context target)) := witness target header activeSeeds activeSeeds_bounded
 
-/-- All 99 tables remain installed, including empty instruction and host components. -/
-theorem activeWitness_length : activeWitness.tables.length = 99 := by
+/-- All 100 tables remain installed, including empty instruction and host components. -/
+theorem activeWitness_length : activeWitness.tables.length = 100 := by
   simpa only [activeWitness, witness, EnsembleWitness.ofTables_tables,
     withDerivedData, List.length_map, List.length_attach] using builtTables_length target activeSeeds activeSeeds_bounded
 
@@ -102,7 +102,7 @@ def results : List (String × Bool × Bool) :=
     ("wrong-execution-flag", false, check target { header with is_execution_shard := 0 } consumerSeeds),
     ("changed-host-output", false, check { target with host.stdout := [65] } header consumerSeeds),
     ("changed-hint-suffix", false, check { target with host.io.hints := [[]] } header consumerSeeds),
-    ("malformed-seed-index", false, check target header (consumerSeeds ++ [Seed.ofCells 999 []])),
+    ("malformed-seed-index", false, check target header (consumerSeeds ++ [Seed.ofCells 1009 []])),
     ("malformed-seed-length", false,
       check target header ({ branchSeed with cells := [] } :: consumerSeeds))]
 

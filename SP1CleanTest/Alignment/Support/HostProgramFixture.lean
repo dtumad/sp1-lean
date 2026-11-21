@@ -174,7 +174,6 @@ def finish (image : ProgramImage) (incoming : ExecutionSnapshot) (commitments : 
     (final : Construction) : Except String (Context × List Seed × SP1PublicIO Fp) := do
   let context : Context := {
     image, source := incoming, target := final.current
-    lastHintClock := BitVec.ofNat 48 final.queueClock
     commitments }
   let padding := if final.current.host.exitCode.isSome then [] else
     (emptyConsumers context).filter (fun seed => seed.table == 57)

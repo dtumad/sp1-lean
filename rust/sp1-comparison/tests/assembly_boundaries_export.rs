@@ -36,6 +36,13 @@ fn empty_generated_witness_matches_native_boundaries_and_rejects_mutations() {
     assert_eq!(&public[..7], &public[7..14]);
     assert_eq!(public[15], F::ZERO);
     let witness = empty::generate(&public, &fields(&case["privateInput"]), 1).unwrap();
+    let terminal = &witness.tables[99];
+    assert_eq!(
+        <empty::Ensemble as Program<F>>::COMPONENT_NAMES[99],
+        "sp1.native.hint_queue.terminal"
+    );
+    assert_eq!(terminal.len(), 1);
+    assert_eq!(&terminal[0][..4], &[F::ONE, F::ONE, F::ZERO, F::ZERO]);
     // The instruction range is the canonical 25-chip inventory, following six memory
     // boundary components and the Program provider. No instruction row is invented.
     assert!(witness.tables[7..32].iter().all(Vec::is_empty));
@@ -105,6 +112,9 @@ fn empty_assembly_proves_and_requires_every_boundary_terminal() {
             .verify(&statement, &proof, &fields(&case["publicInput"]))
             .is_err());
     }
+    let mut missing_hint_height = heights.clone();
+    missing_hint_height[99] = 0;
+    assert!(empty::Statement::<F>::new(&missing_hint_height, 1).is_err());
     // Removing any one terminal must fail actual proving/verification with the new shape,
     // not merely fail to verify an old proof against a different statement.
     for name in [
@@ -144,7 +154,7 @@ fn complete_assembly_proves_and_binds_public_endpoints() {
         .unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
     let statement = generated::Statement::<F>::new(&heights, 1).unwrap();
-    assert_eq!(statement.component_count(), 99);
+    assert_eq!(statement.component_count(), 100);
     assert_eq!(
         statement.interaction_counts().values().sum::<u128>() as usize,
         case["witness"]["interactions"].as_array().unwrap().len()
