@@ -57,19 +57,20 @@ private theorem mapped_frontier {α : Type*} (records : List α) (location : α 
   simp only [List.filter_map, Function.comp_def, List.head?_map, Option.map_map]
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance snapshotClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance snapshotLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 /-- Decode every original final-record occurrence; no record is discarded or filled in. -/
 noncomputable def finalMemoryValues
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)) : List (MemLoc × BitVec 64) :=
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames) : List (MemLoc × BitVec 64) :=
   (FinalMemoryEnsemble.records
     (LocalCore.finalWitness (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)))).map
       (fun record => (MemoryMsg.locOf record, Word.toBitVec64 record.value))
@@ -77,8 +78,7 @@ noncomputable def finalMemoryValues
 /-- A successful finite target check identifies all integer registers and the entire Sail RAM
 map on the already-derived execution. Its enforcement by the native AIR remains separate. -/
 theorem GroundingCarrier.memory_of_checkFinal (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (targetMemory : MemorySnapshot)
     (checked : source.sail.memorySnapshot.checkFinal targetMemory (finalMemoryValues witness) = true)
@@ -104,8 +104,7 @@ theorem GroundingCarrier.memory_of_checkFinal (valid : image.Valid)
 /-- The finite comparison accepts exactly the complete Memory observations of this execution.
 Final-record bounds and uniqueness come from the installed AIR, not the check's caller. -/
 theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     (targetMemory : MemorySnapshot) {target : ExecutionState}
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
@@ -122,7 +121,7 @@ theorem GroundingCarrier.checkFinal_iff (valid : image.Valid)
     intro address bound
     rw [ram, ByteMemory.toSailMemory_get?, ite_eq_left bound]⟩
   have records := HostLocalCore.final_records_canonical_nodup (HostHintQueueBoundary.projected witness)
-    (auxiliaryInterface (HostFinalMemory.sourceInterface source.host.io.hints outgoing))
+    (auxiliaryInterface (GroundingResources.sourceInterface source.host.io.hints extra))
     (source_boundary_silent source _ (by simp))
     (HostHintQueueBoundary.projected_constraints witness constraints)
     (HostHintQueueBoundary.record_channels witness balanced).byte
@@ -164,8 +163,7 @@ register frames, all retirement/nextPC effects, and the actual HALT's public exi
 the optional terminal status agrees with the supplied host. The finite Memory endpoint check is
 characterized on this same path. Its AIR enforcement and complete target equality remain open. -/
 theorem source_execution_with_memory (valid : image.Valid)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧

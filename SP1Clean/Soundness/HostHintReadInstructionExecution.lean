@@ -16,7 +16,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal TimedGrounding
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 local instance instructionLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance instructionLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -40,13 +40,13 @@ private theorem instruction_staticInputs
       (fun table member => witness.same_data table (LocalCore.instructionTables_mem witness member))
       (fun table tableMem => program table (LocalCore.instructionTables_mem witness tableMem)) row member⟩
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 private theorem instruction_inputs (valid : image.Valid)
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -55,8 +55,7 @@ private theorem instruction_inputs (valid : image.Valid)
       Target.decodedInROM (image.toGuestProgram valid) (programAccess (row.toChipRow witness.data).view).toRow := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have checked := HostLocalCore.localWitness_constraints _ checks
-  have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-    (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
+  have ordering := HostHintQueueBoundary.SourceWitness.orderingChannels witness constraints balanced
   have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
       (row.toChipRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data).is_real = 1 := by
     simpa [LocalCore.executionRows, LocalCore.activeInstructionRows] using member
@@ -76,9 +75,7 @@ private theorem instruction_inputs (valid : image.Valid)
       inputs.constraints inputs.byte active.2)
 
 private theorem trajectory_ordinary (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -111,9 +108,7 @@ private theorem trajectory_ordinary (valid : image.Valid)
 /-- All 25 ordinary instruction families supply complete step/frame facts on the same carrier
 as the hint handlers. ROM preservation and absence of added hint accesses follow from the AIR. -/
 theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -146,8 +141,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
     (fun _ effect loaded => effect.romLoaded_of_writePermission valid permission loaded)
   · intro n time
     have successor := ExecutionCarrier.originalTimeStep carrier member n time
-    have ordering := HostHintQueueBoundary.projected_orderingChannels witness
-      (HostFinalMemory.sourceInterface source.host.io.hints outgoing) constraints balanced
+    have ordering := HostHintQueueBoundary.SourceWitness.orderingChannels witness constraints balanced
     have duration := (LocalCore.executionRows_advancing_of_orderingChannels _
       (HostLocalCore.localWitness_constraints _ checks) ordering member).2
     rw [ExecutionRow.edge_setData (.instruction row)
@@ -163,9 +157,7 @@ theorem GroundingCarrier.instruction_engineFacts (valid : image.Valid)
 state, with write permission from the installed AIR. Instruction dispatch and readiness stay
 inside the registered chip contracts. -/
 theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈
@@ -182,7 +174,12 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
     ∃ next, ExecutionStep ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       current .ordinary next ∧
       Target.RowEffect (image.toGuestProgram valid) (row.toChipRow witness.data).view current.sail next.sail ∧
-      InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail := by
+      InstructionWrite.PermittedAt image.readOnly (image.toGuestProgram valid) current.sail ∧
+      DecodedRowStaticInputs row witness.data ∧ DecodedRowDynamicInputs row witness.data (image.toGuestProgram valid) current.sail ∧
+      (row.toChipRow witness.data).is_real = 1 ∧
+      Target.decodedInROM (image.toGuestProgram valid) (programAccess (row.toChipRow witness.data).view).toRow ∧
+      current.sail.regs.get? LeanRV64D.Register.PC = some (Target.pcBitsOfRow (programAccess (row.toChipRow witness.data).view).toRow) ∧
+      Target.SailConfigured current.sail := by
   have checked := instruction_inputs valid witness constraints balanced member
   have contracts := supportedChip_groundingContracts row.chip checked.1.registered
   have active : row ∈ LocalCore.instructionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) ∧
@@ -232,13 +229,12 @@ theorem GroundingCarrier.instruction_step_effect (valid : image.Valid)
   obtain ⟨_, _, fetched, _, _⟩ := checked.2
   have running := carrier.pairedTrajectory_running_of_fetch valid constraints balanced member present atPc fetched
   exact ⟨⟨next, current.host, current.clock + Machine.ordinarySchedule.duration⟩,
-    .ordinary running notEcall effect.normal permitted, effect, permitted⟩
+    .ordinary running notEcall effect.normal permitted, effect, permitted, checked.1,
+    ⟨inputs, ready current.sail operands sourceA pulls, operands⟩, active.2, checked.2, atPc, configured⟩
 
 /-- Projection to normal retirement keeps the original instruction-step interface. -/
 theorem GroundingCarrier.instruction_step (valid : image.Valid)
-    {witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {row : DecodedInstructionRow p}
     (member : ExecutionRow.instruction row ∈

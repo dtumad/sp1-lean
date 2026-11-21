@@ -2,7 +2,7 @@ import SP1Clean.Native.Operations.HostBoundary
 import SP1Clean.Soundness.HostHintReadLocalQueue
 import SP1Clean.Soundness.HostCommitEnsemble
 import SP1Clean.Soundness.HaltPadding
-import SP1Clean.Soundness.HostFinalMemoryRegistry
+import SP1Clean.Soundness.HostResourceExtension
 
 /-! # Installing queue and commitment-bank boundaries in the local verifier
 
@@ -20,7 +20,6 @@ namespace SP1Clean.Soundness.HostHintQueueBoundary
 open Circuit Air.Flat Semantics HostHintQueue HostHintReadLocal HostHintReadHandoff
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
 
 local instance boundaryLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
@@ -82,6 +81,15 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (final : State 
     ((boundary source final bankFinal).install (HostHintReadLocal.ensemble image source others resources channels names channelNames tableChannels)
       (installation_registered image source final bankFinal others resources channels names channelNames tableChannels boundaryChannels))
     (haltSlot image source _)
+
+/-- The source-backed host witness with an arbitrary registered resource suffix. -/
+abbrev SourceWitness (image : ProgramImage) (source : ExecutionSnapshot) (final : State (ZMod p))
+    (bankFinal : HostState) (extra : List (Component (ZMod p))) (channels : List (RawChannel (ZMod p)))
+    (names : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available (sourceResources source.host.io.hints))
+    [registry : HostFinalMemory.Registration image source extra HostCallReceivers.available
+      (sourceResources source.host.io.hints) channels] :=
+  EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available
+    (sourceResources source.host.io.hints ++ extra) channels names registry.unique registry.tables registry.boundary)
 
 variable {image : ProgramImage} {source : ExecutionSnapshot} {final : State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
@@ -464,9 +472,11 @@ theorem queue_ordered
     (by simpa only [projected_data] using queue_balanced witness silent balanced)
   simpa only [projected_data] using ordered
 
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
+
 /-- No source record table or target validator carries a queue edge. -/
 theorem source_queue_silent :
-    ∀ component ∈ sourceResources (p := p) source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing,
+    ∀ component ∈ sourceResources (p := p) source.host.io.hints ++ extra,
       stateChannel.toRaw ∉ component.circuit.channels := by
   intro component member used
   rcases List.mem_append.mp member with fixed | added
@@ -478,34 +488,46 @@ theorem source_queue_silent :
         (by simp [stateChannel, Channels.byteChannel, Channel.toRaw])
         (by simp [stateChannel, InstructionReceipt.channel, Channel.toRaw])
         (by simp [stateChannel, OrdinaryObservation.stateChannel, Channel.toRaw]) used
-  · exact HostFinalMemory.checks_silent outgoing stateChannel.toRaw (by rfl) component added used
+  · exact GroundingResources.silent (extra := extra) (channel := stateChannel.toRaw) (by simp [groundingChannels]) component added used
 
-variable {sourceTableChannels : ∀ component ∈
-    (receiver :: HostCallReceivers.available).map (·.component) ++
-      (wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)),
-    component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
+variable {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (sourceResources source.host.io.hints)}
+  [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
+    (sourceResources source.host.io.hints) channels]
+
+/-- The projected CPU inherits all ordering channels from the registered host witness. -/
+theorem SourceWitness.orderingChannels
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
+    (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
+    LocalCore.OrderingChannels (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) :=
+  HostHintQueueBoundary.projected_orderingChannels witness (GroundingResources.sourceInterface source.host.io.hints extra) constraints balanced
+
+omit [GroundingResources extra] in
+/-- Projecting the host and CPU rows preserves the verifier-owned endpoints. -/
+theorem SourceWitness.localPublicInput
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames) :
+    (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).publicInput = witness.publicInput := by
+  rw [HostLocalCore.localWitness_publicInput, HostHintQueueBoundary.projected_publicInput]
 
 /-- The actual fixed provider tables authenticate immutable records, without a verifier resource. -/
 theorem source_authentication
-    (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) channelNames sourceTableChannels boundaryChannels))
+    (witness : SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) :
     RecordAuthentication (projected witness) (HintQueue.ofList source.host.io.hints).1 :=
   source_record_authentication (projected witness)
-    (fun _ added => ⟨HostFinalMemory.checks_silent outgoing nodeChannel.toRaw (by rfl) _ added,
-      HostFinalMemory.checks_silent outgoing wordChannel.toRaw (by rfl) _ added⟩)
+    (fun _ added => ⟨GroundingResources.silent (extra := extra) (channel := nodeChannel.toRaw) (by simp [groundingChannels]) _ added,
+      GroundingResources.silent (extra := extra) (channel := wordChannel.toRaw) (by simp [groundingChannels]) _ added⟩)
     _ (.refl _) (projected_constraints witness constraints)
 
 /-- The source/HINT_LEN/HINT_READ registration needs no record-authentication or endpoint premise.
 This is a token-path theorem; semantic replay is established in `HostHintQueueHistory`. -/
 theorem source_queue_ordered
-    (witness : EnsembleWitness (ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) channelNames sourceTableChannels boundaryChannels))
+    (witness : SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : Balanced witness) :
     ∃ path : List (HostQueueOrder.Row (p := p)),
       path.Perm (TransitionView.readIndexedRows HostQueueOrder.indices (queueTables (projected witness))) ∧
       Walk.IsWalk HostQueueOrder.edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path := by
-  apply queue_ordered witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) (HintQueue.ofList source.host.io.hints).1
+  apply queue_ordered witness (GroundingResources.sourceInterface source.host.io.hints extra) (HintQueue.ofList source.host.io.hints).1
     _ _ constraints balanced
   · exact source_authentication witness constraints
   · exact source_queue_silent

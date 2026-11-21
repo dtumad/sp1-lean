@@ -21,8 +21,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
-  {names : UniqueNames image source target others resources}
-  {registration : Registration image source target others resources channels}
+  {names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources}
+  {registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels}
 
 /-- The existing grounding projection, retaining the complete source and original row arrays. -/
 def coreWitness

@@ -123,8 +123,8 @@ theorem ensemble_lookupFree {image : ProgramImage} {source : ExecutionSnapshot}
     {target : MemorySnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
     {channels : List (RawChannel (ZMod p))}
-    {names : UniqueNames image source target others resources}
-    {registration : Registration image source target others resources channels}
+    {names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources}
+    {registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels}
     (free : LookupFree ((HostHintReadHandoff.receiver :: others).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))) :
     LookupFree (ensemble image source target final bankFinal others resources channels names

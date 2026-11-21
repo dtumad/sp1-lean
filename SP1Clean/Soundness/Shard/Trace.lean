@@ -111,7 +111,7 @@ theorem trace_of_witness
         Endpoint source target final witness.publicInput events actual ∧
         (∀ event ∈ events, SixCallProfile.event event) ∧ HostFinalMemory.PhysicalEventOrder witness events ∧ CommitmentEnsemble.Declared witness events := by
   have ordering := HostHintQueueBoundary.projected_orderingChannels (HostFinalMemory.baseWitness witness)
-    (HostFinalMemory.sourceInterface source.host.io.hints target.sail.memorySnapshot)
+    (GroundingResources.sourceInterface source.host.io.hints (FinalMemoryChecks.checkTables target.sail.memorySnapshot))
     (HostFinalMemory.baseWitness_constraints witness constraints)
     (HostFinalMemory.baseWitness_hostBalanced witness balanced)
   have contract := LocalCore.public_contract_of_byte _ ordering.sourceChecks ordering.verifierByte

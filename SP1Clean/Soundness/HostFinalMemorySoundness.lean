@@ -21,8 +21,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
-  {names : UniqueNames image source target others resources}
-  {registration : Registration image source target others resources channels}
+  {names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources}
+  {registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels}
 
 /-- Complete comparison requires only inherited Byte guarantees and the actual membership and receipt balances. -/
 theorem checkFinal_of_channels
@@ -69,7 +69,7 @@ theorem checkFinal
 
 /-- The concrete six-call registration needs only raw acceptance, with no caller interface proofs. -/
 theorem source_checkFinal
-    [sourceRegistration : Registration image source target HostCallReceivers.available
+    [sourceRegistration : Registration image source (FinalMemoryChecks.checkTables target) HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) channels]
     (witness : EnsembleWitness (ensemble image source target final bankFinal HostCallReceivers.available
       (HostHintReadLocal.sourceResources source.host.io.hints) channels (source_unique_names image source target) sourceRegistration))

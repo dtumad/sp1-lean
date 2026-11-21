@@ -15,18 +15,19 @@ namespace SP1Clean.Soundness.HostCommitDeclarations
 open Circuit Air.Flat Semantics NativeCore HostCommitBank
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance declarationsLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 /-- Every commitment event of the actual instruction inventory requests its declaration. -/
 theorem rows_declared (valid : image.Valid)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     CommitmentEnsemble.Declared witness ((LocalCore.executionRows
       (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))).map ExecutionRow.event) := by
