@@ -91,13 +91,27 @@ theorem available_lookupFree :
   rcases member with (((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩) | rfl | rfl
   all_goals row_lookups
 
+/-- The ordinary observation consumer and its three terminals are lookup-free. -/
+theorem observation_lookupFree : LookupFree (Soundness.OrdinaryObservation.tables (p := p)) := by
+  simp only [Soundness.OrdinaryObservation.tables, LookupFree.cons_iff, LookupFree.nil, and_true]
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> rw [Component.lookups_eq] <;>
+    simp [Soundness.OrdinaryObservation.consumer, Soundness.OrdinaryObservation.terminalComponent,
+      OrdinaryObservation.circuit, OrdinaryObservation.main, OrdinaryObservation.terminal,
+      OrdinaryObservation.terminalEmpty, OrdinaryObservation.terminalNonempty,
+      OrdinaryObservation.terminalAny, OrdinaryObservation.emptyMain,
+      OrdinaryObservation.nonemptyMain, OrdinaryObservation.anyMain, ClockOrder.circuit,
+      WordRangeCheck.circuit, AddOperation.circuit, AddOperation.main, Gadgets.Equality.main, assertBool,
+      Gadgets.IsZeroField.circuit, circuit_norm, List.ofFn_succ]
+
 /-- The HINT_READ handler, every other receiver, the word consumers and the source resources. -/
 theorem registered_lookupFree (hints : List Bytes) :
     LookupFree ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
       (·.component) ++
         (HostHintReadHandoff.wordResources ++ HostHintReadLocal.sourceResources hints)) := by
   refine LookupFree.append (LookupFree.cons (by row_lookups) available_lookupFree) ?_
-  simp only [HostHintReadHandoff.wordResources, HostHintReadLocal.sourceResources, List.cons_append,
+  simp only [HostHintReadLocal.sourceResources, ← List.append_assoc]
+  refine LookupFree.append ?_ observation_lookupFree
+  simp only [HostHintReadHandoff.wordResources, HostHintReadLocal.bankResources, List.cons_append,
     List.nil_append, LookupFree.cons_iff, LookupFree.nil, and_true]
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals row_lookups
@@ -122,8 +136,8 @@ theorem ensemble_lookupFree {image : ProgramImage} {source : ExecutionSnapshot}
 
 /-- Every installed component is lookup-free, including currently unused physical slots. -/
 theorem installed_lookupFree {image : ProgramImage} {source : ExecutionSnapshot}
-    {outgoing : MemorySnapshot} {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} :
-    LookupFree (Installed image source outgoing final bankFinal).tables :=
+    {target : ExecutionSnapshot} {final : HostHintQueue.State (ZMod p)} :
+    LookupFree (Installed image source target final).tables :=
   ensemble_lookupFree (registered_lookupFree source.host.io.hints)
 
 end SP1Clean.Soundness.HostFinalMemory

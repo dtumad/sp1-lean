@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Sail.SailMemoryRead
+import SP1Clean.Semantics.Sail.SailExecuteDispatch
 
 /-! # Independent load preservation
 
@@ -117,7 +118,7 @@ theorem load_execute_frame (source : SailState) (cfg : SailConfigured source)
     (ran : (runSail (execute (.LOAD (imm, .Regidx rs1, .Regidx rd, unsigned, width)))) source =
       .ok result target) :
     (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured target ∧ target.mem = source.mem := by
-  simp only [execute, execute_LOAD, PreSail.sail_assert] at ran
+  simp only [SailExecute.dispatch_LOAD, execute_LOAD, PreSail.sail_assert] at ran
   split at ran
   · rw [run_bind_of_run source (FreeM.pure ()) () rfl] at ran
     obtain ⟨middle, value, readRun, rest⟩ := run_bind_success _ _ source target result ran

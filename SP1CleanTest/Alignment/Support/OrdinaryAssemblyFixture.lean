@@ -112,8 +112,8 @@ def prepare (start : ℕ := 0) (count : ℕ := 9) : Except String (Context × Li
     frontier := compiled.nextFrontier
     touched := touched ++ compiled.plan.map (·.loc)
   let context : Context := {
-    image, source := incoming, target := outgoing.sail.memorySnapshot
-    finalHints := HostHintQueue.State.encode 0 0 0, finalHost := outgoing.host, commitments := default }
+    image, source := incoming, target := outgoing
+    finalHints := HostHintQueue.State.encode 0 0 0, commitments := default }
   if selected.isEmpty then
     return (context, emptyConsumers context,
       boundaryInputs incoming.clock incoming.pc.toNat outgoing.clock outgoing.pc.toNat)

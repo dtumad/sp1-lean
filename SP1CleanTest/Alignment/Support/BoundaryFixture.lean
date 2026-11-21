@@ -24,14 +24,14 @@ def memorySeeds (context : Context) (frontier : AccessFrontier) (touched : List 
   let mut previous := (registers.getLast?).map (· + 1) |>.getD 0
   for address in ram do
     let record := memoryRecord address (frontier (.ram (BitVec.ofNat 61 (address / 8))))
-      (context.target.memory.readWord address)
+      (context.target.sail.memorySnapshot.memory.readWord address)
     let initial := OrderedSnapshotProvider.populate
       (Target.bitVecToWord (BitVec.ofNat 64 address)) previous address
     let final := OrderedMemoryProvider.populate record previous address
-    let some check := FinalRamCheck.populate? context.source.sail.memorySnapshot context.target record
+    let some check := FinalRamCheck.populate? context.source.sail.memorySnapshot context.target.sail.memorySnapshot record
       | throw "RAM target constructor rejected its endpoint"
     consumers := consumers ++ [⟨1, (toElements initial).toList⟩, ⟨4, (toElements final).toList⟩,
-      ⟨91, (toElements check).toList⟩]
+      ⟨95, (toElements check).toList⟩]
     previous := address + 1
   let terminal := (toElements (OrderedBoundaryEnd.populate (Target.bitVecToWord (BitVec.ofNat 64 previous))
     (OrderedMemoryEnsemble.endKey (p := SP1Prime)))).toList

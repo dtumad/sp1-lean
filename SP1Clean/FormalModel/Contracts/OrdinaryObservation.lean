@@ -1,6 +1,7 @@
 import SP1Clean.FormalModel.Contracts.ClockOrder
 import SP1Clean.Circuits.Channels.BusMessages
 import SP1Clean.Math.Word
+import Clean.Gadgets.Boolean
 
 /-! # Ordered observations of ordinary instruction retirement
 
@@ -8,6 +9,8 @@ This is an observation accumulator, not an execution state. The receipt supplies
 successor State message. Ordering uses its source clock (subtracting the ordinary eight ticks),
 so a successor crossing the low-limb window remains admissible. PC limbs are retained exactly
 as emitted; this contract does not impose a new canonical representation on the State bus.
+The segment's retirement flag rides in every observation: the chain's verifier-owned start fixes
+it, and each row carries it unchanged, so the tables need no static parameter.
 -/
 
 namespace SP1Clean.OrdinaryObservation
@@ -24,6 +27,8 @@ structure State (F : Type) where
   counter : Word F
   /-- The latest receipt's PC limbs, with their original State-bus representation. -/
   pc : Vector F 3
+  /-- The segment's retirement flag (`1` when retirement counts), carried unchanged. -/
+  enabled : F
 deriving ProvableStruct
 provable_struct_eval_lemmas State
 
@@ -45,16 +50,19 @@ def Inputs.clock {R : Type} [Sub R] [OfNat R 8] (input : Inputs R) : ClockOrder.
 /-- Record the new counter and the exact successor PC, ranked by the ordinary source clock. -/
 def Inputs.next {R : Type} [Sub R] [OfNat R 8] (input : Inputs R) : State R :=
   ⟨input.receipt.clk_high, input.receipt.clk_low - 8, input.counter,
-    #v[input.receipt.pc0, input.receipt.pc1, input.receipt.pc2]⟩
+    #v[input.receipt.pc0, input.receipt.pc1, input.receipt.pc2], input.previous.enabled⟩
 
-/-- A fixed retirement enable bit selects zero or one in the existing four-limb encoding. -/
-def increment {R : Type} [Zero R] [One R] (enabled : Bool) : Word R :=
-  #v[if enabled then 1 else 0, 0, 0, 0]
+/-- The retirement flag as the counter increment in the existing four-limb encoding. -/
+def increment {R : Type} [Zero R] (enabled : R) : Word R :=
+  #v[enabled, 0, 0, 0]
 
-/-- A strictly later ordinary observation updates the architectural counter modulo 2^64. -/
-def Spec {p : ℕ} [Fact p.Prime] (enabled : Bool) (input : Inputs (ZMod p)) : Prop :=
-  ClockOrder.Spec input.clock ∧ Word.isU64 input.previous.counter ∧ Word.isU64 input.counter ∧
-    Word.toBitVec64 input.counter = Word.toBitVec64 input.previous.counter + if enabled then 1 else 0
+/-- A strictly later ordinary observation of a Boolean-flagged chain updates the architectural
+counter modulo 2^64 by its flag. -/
+def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop :=
+  ClockOrder.Spec input.clock ∧ IsBool input.previous.enabled ∧ Word.isU64 input.previous.counter ∧
+    Word.isU64 input.counter ∧
+    Word.toBitVec64 input.counter =
+      Word.toBitVec64 input.previous.counter + BitVec.ofNat 64 input.previous.enabled.val
 
 /-- Private observation links; complete endpoint meaning is established by ordered consumption. -/
 def stateChannel {p : ℕ} : Channel (ZMod p) State where

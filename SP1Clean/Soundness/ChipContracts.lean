@@ -6,7 +6,6 @@ import SP1Clean.Soundness.Grounding.ALUTypeChips
 import SP1Clean.Soundness.Grounding.JTypeChips
 import SP1Clean.Soundness.Grounding.ControlFlowChips
 import SP1Clean.Soundness.Grounding.MemoryChips
-import SP1Clean.Soundness.Decode
 import SP1Clean.Soundness.MemoryFrontier
 import SP1Clean.Soundness.SystemMemoryRows
 import SP1Clean.Alignment.Chips.LoadByteChip.Contracts

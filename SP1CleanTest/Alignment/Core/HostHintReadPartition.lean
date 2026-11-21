@@ -349,7 +349,7 @@ theorem installedRecords :
     let records := calls.map (·.endStep.word) ++ rows.map (fun row => (row.2.1.step row.1).word)
     let witness := withSources hints calls rows nodes records ⟨calls_bounded, reversedWords_bounded⟩
     let changed := [[99] ++ (HintReadFixtures.bytes 16).drop 1, HintReadFixtures.bytes 8, []]
-    witness.tables.length = 90 ∧ sourceRowsChecked hints nodes records = true ∧
+    witness.tables.length = 94 ∧ sourceRowsChecked hints nodes records = true ∧
       HintReadFixtures.balanced (recordLedger witness.interactions) = true ∧
       HintReadFixtures.balanced (recordLedger (withSources hints calls rows (nodes.drop 1) records
         ⟨calls_bounded, reversedWords_bounded⟩).interactions) = false ∧
@@ -442,7 +442,7 @@ theorem installedQueueEndpoints :
     let projected := Soundness.HostHintQueueBoundary.projected witness
     let endpoints := queueLedger ((queueAssembly hints final).verifierOperations.interactionValues
       (Environment.fromInput witness.publicInput witness.data))
-    witness.tables.length = 90 ∧ projected.tables.length = 90 ∧
+    witness.tables.length = 94 ∧ projected.tables.length = 94 ∧
       witness.tables.map (·.table) = projected.tables.map (·.table) ∧
       endpoints = [queueEndpoint (SP1Clean.HostHintQueueBoundary.initial hints) 1,
         queueEndpoint final (-1)] ∧

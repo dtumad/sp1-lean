@@ -236,6 +236,61 @@ def run_lake_logs(logs: list[Path], out: Path, top: int) -> None:
           f"{sum(times.values()):.1f} s summed)")
 
 
+def inventory_rows(summary: str, resources: str, closure: dict | None) -> list[dict]:
+    """Join a sweep's CPU (`summary.tsv`) with its instructions, peak RSS and C size
+    (`resources.tsv`) and, given a `scripts/proof_closure.py --json` report, each module's reach from
+    the headline roots. Ranked by instructions retired, the noise-robust metric. Pure."""
+    cpu = {}
+    for line in summary.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4:
+            cpu[parts[3]] = float(parts[0])
+    reach: dict[str, list[int]] = {}
+    for key, index in (("reachable", 0), ("unreachable", 1)):
+        for entry in (closure or {}).get(key, []):
+            reach.setdefault(entry["module"], [0, 0])[index] += 1
+    rows = []
+    for line in resources.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 4:
+            continue
+        module = parts[0]
+        reached, unreached = reach.get(module, [0, 0])
+        if module.startswith("LeanRV64D"):
+            verdict = "model"
+        elif module.startswith("SP1CleanTest"):
+            verdict = "test"
+        elif closure is None:
+            verdict = "-"
+        else:
+            verdict = "headline" if reached else "off-path"
+        rows.append({"module": module, "instructions": int(parts[1] or 0), "rss": int(parts[2] or 0),
+                     "c_bytes": int(parts[3] or 0), "cpu": cpu.get(module, 0.0), "reached": reached,
+                     "declarations": reached + unreached, "verdict": verdict})
+    return sorted(rows, key=lambda row: -row["instructions"])
+
+
+def run_inventory(directory: Path, closure_path: Path | None, top: int) -> None:
+    closure = json.loads(closure_path.read_text()) if closure_path else None
+    rows = inventory_rows((directory / "summary.tsv").read_text(), (directory / "resources.tsv").read_text(),
+                          closure)
+    total = sum(row["instructions"] for row in rows)
+    lines = ["# Module inventory (instructions retired, solo sweep)", "",
+             f"{len(rows)} modules, {total / 1e12:.2f} T instructions, "
+             f"{sum(row['c_bytes'] for row in rows) / 1e6:.0f} MB of generated C. Verdict: `headline` = "
+             "declarations reached from the proof-closure roots; `off-path` = production module with none; "
+             "`test`, `model` = test library, generated Sail model.", "",
+             "| Rank | G instr | CPU s | Peak RSS GB | C KB | Reached / decls | Verdict | Module |",
+             "| ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |"]
+    for rank, row in enumerate(rows[:top], 1):
+        lines.append(f"| {rank} | {row['instructions'] / 1e9:.0f} | {row['cpu']:.1f} | {row['rss'] / 1e9:.1f} | "
+                     f"{row['c_bytes'] / 1e3:.0f} | {row['reached']} / {row['declarations']} | {row['verdict']} | "
+                     f"`{row['module']}` |")
+    (directory / "inventory.md").write_text("\n".join(lines) + "\n")
+    (directory / "inventory.json").write_text(json.dumps(rows, indent=1))
+    print(f"wrote {directory / 'inventory.md'} and inventory.json ({len(rows)} modules)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--profile-dir", type=Path, help="output directory of scripts/profile_compile.sh")
@@ -244,6 +299,9 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=Path(".lake/profile/build-log"),
                         help="output path prefix for --lake-log (default .lake/profile/build-log)")
     parser.add_argument("--top", type=int, default=50, help="rows in ranking tables (default 50)")
+    parser.add_argument("--inventory", action="store_true",
+                        help="with --profile-dir: join resources.tsv (and --closure) into inventory.md")
+    parser.add_argument("--closure", type=Path, help="scripts/proof_closure.py --json report for --inventory")
     args = parser.parse_args()
     if args.profile_dir is None and not args.lake_log and args.check_log is None:
         parser.error("give --profile-dir, --lake-log or --check-log")
@@ -252,7 +310,9 @@ def main() -> None:
             check_log(args.check_log)
         except (OSError, ValueError) as error:
             sys.exit(str(error))
-    if args.profile_dir is not None:
+    if args.profile_dir is not None and args.inventory:
+        run_inventory(args.profile_dir, args.closure, args.top)
+    elif args.profile_dir is not None:
         run_profile_dir(args.profile_dir, args.top)
     if args.lake_log:
         run_lake_logs(args.lake_log, args.out, args.top)

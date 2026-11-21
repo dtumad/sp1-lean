@@ -161,8 +161,8 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
     assert_eq!(witness.tables[82].len(), 4);
     assert_eq!(witness.tables[83].len(), 1);
     assert!(witness.tables[57].is_empty());
-    for row in &witness.tables[91] {
-        if row[P::HINT_TABLES[91].width - 1] == F::ONE {
+    for row in &witness.tables[95] {
+        if row[P::HINT_TABLES[95].width - 1] == F::ONE {
             assert_eq!(
                 decode(&row[5..9]),
                 executor.get_memory_value(decode(&row[2..5])).value
@@ -192,11 +192,11 @@ fn references_preserve_every_native_row_and_occurrence() {
 
 #[test]
 fn assemblies_prove_and_reject_missing_or_changed_obligations() {
-    malformed::<hint_empty::Ensemble>(&hint_empty::reference(), &[58, 63, 82, 83, 85, 90, 91]);
-    malformed::<hint_tail::Ensemble>(&hint_tail::reference(), &[58, 63, 82, 83, 84, 85, 90, 91]);
+    malformed::<hint_empty::Ensemble>(&hint_empty::reference(), &[58, 63, 82, 83, 85, 94, 95]);
+    malformed::<hint_tail::Ensemble>(&hint_tail::reference(), &[58, 63, 82, 83, 84, 85, 94, 95]);
     malformed::<hint_aligned::Ensemble>(
         &hint_aligned::reference(),
-        &[58, 63, 82, 83, 84, 85, 90, 91],
+        &[58, 63, 82, 83, 84, 85, 94, 95],
     );
 }
 

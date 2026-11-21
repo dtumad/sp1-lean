@@ -1,5 +1,6 @@
 import SP1Clean.FormalModel.Shard
 import SP1Clean.Semantics.Execution.Boot
+import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Ordinary steps require actual write permission
 
@@ -25,8 +26,7 @@ private theorem source_valid : ExecutionSourceValid image source := by
   native_decide
 
 private theorem decode_store : ConfiguredDecode 0x00112023 (.STORE (0, .Regidx 1, .Regidx 2, 4)) := by
-  intro state configured
-  exact SailDecode.decode_SW state configured.init configured.priv configured.mseccfg_disabled
+  exact SailDecode.instructionDecode_agrees _ _ rfl
 
 private theorem permitted_of_registers {left right : SailState} (program : GuestProgram)
     (readOnly : ℕ → Bool) (equal : left.regs = right.regs)

@@ -40,7 +40,7 @@ fn empty_generated_witness_matches_native_boundaries_and_rejects_mutations() {
     assert!(witness.tables[7..32].iter().all(Vec::is_empty));
     // Program and complete source/target register providers remain physically present,
     // with their fixed rows and zero multiplicities, despite no consumer demand.
-    for index in [6, 59, 92] {
+    for index in [6, 59, 96] {
         assert_eq!(
             witness.tables[index].len(),
             empty::Ensemble::FIXED_HEIGHTS[index]
@@ -143,7 +143,7 @@ fn complete_assembly_proves_and_binds_public_endpoints() {
         .unwrap();
     let heights = traces.iter().map(Matrix::height).collect::<Vec<_>>();
     let statement = generated::Statement::<F>::new(&heights, 1).unwrap();
-    assert_eq!(statement.component_count(), 95);
+    assert_eq!(statement.component_count(), 99);
     assert_eq!(
         statement.interaction_counts().values().sum::<u128>() as usize,
         case["witness"]["interactions"].as_array().unwrap().len()

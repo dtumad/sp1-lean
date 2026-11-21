@@ -25,15 +25,15 @@ def source : ExecutionSnapshot where
   sail := { registers := (Target.configuredState 65536).regs, memory := image.initialMemory }
   host := {}
   clock := 1
-/-- Branches preserve the complete register and RAM snapshot. -/
-def target : MemorySnapshot := source.sail.memorySnapshot
+/-- Branches preserve the complete register and RAM snapshot; the fixture's target snapshot is the
+source's, which fixes the outgoing memory and host bank. -/
+def target : ExecutionSnapshot := source
 /-- The branch fixture's instance data for the shared complete installed assembly. -/
-def context (target : MemorySnapshot) : Context where
+def context (target : ExecutionSnapshot) : Context where
   image := image
   source := source
   target := target
   finalHints := SP1Clean.HostHintQueueBoundary.initial []
-  finalHost := source.host
   commitments := default
 /-- Public ordinary-step endpoints, not a HALT endpoint claim. -/
 def header : SP1PublicIO Fp where
@@ -105,7 +105,7 @@ def finalSeeds : List Seed :=
 /-- Every published final receipt is checked against the fixed complete target snapshot. -/
 def validatorSeeds : List Seed :=
   (orderedMemory true).map fun record =>
-    Seed.ofCells 90 (toElements (M := FinalRegisterCheck.RowInput) ((⟨record, 0⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList
+    Seed.ofCells 94 (toElements (M := FinalRegisterCheck.RowInput) ((⟨record, 0⟩, 1) : FinalRegisterCheck.RowInput Fp)).toList
 /-- Terminate the actual finite ordered register inventory. -/
 def terminal (table : ℕ) (records : List (Channels.MemoryMsg Fp)) : Seed :=
   let previous := records.foldl (fun _ record => record.addr0.val + 1) 0
@@ -121,7 +121,7 @@ def consumerSeeds : List Seed :=
     [terminal 2 (orderedMemory false), terminal 5 (orderedMemory true)] ++ hostTerminals ++
     [Seed.ofCells 57 (List.replicate (size HaltChip.Inputs) 0)]
 /-- Evaluate one seed, failing closed if its component position is absent. -/
-def seedLedger? (target : MemorySnapshot) (seed : Seed) : Option Ledger :=
+def seedLedger? (target : ExecutionSnapshot) (seed : Seed) : Option Ledger :=
   match (assembly (context target)).tables[seed.table]? with
   | none => none
   | some component => if !SP1CleanTest.StaticMembership.acceptsSeed component || seed.cells.length != component.rowOffset then none else
@@ -138,7 +138,7 @@ def byteSeed? (entry : String × List Fp × Fp) : Option (Option Seed) :=
     else none
   | _ => none
 /-- Extend all physical consumer demand, including the public verifier, with real providers. -/
-def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) :
+def seeds? (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) :
     Option (List Seed) := do
   let ledgers ← consumers.mapM (seedLedger? target)
   let verifier := (assembly (context target)).verifierOperations.interactionValues
@@ -148,12 +148,12 @@ def seeds? (target : MemorySnapshot) (input : SP1PublicIO Fp) (consumers : List 
   let generated := providers.filterMap id
   if generated.all (seedValid (assembly (context target)).tables) then some (consumers ++ generated) else none
 /-- Every table remains installed, including all fixed membership rows at their actual counts. -/
-def builtTables (target : MemorySnapshot) (seeds : List Seed)
+def builtTables (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) : List (Table Fp) :=
   let components := (assembly (context target)).tables
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
-    (FinalRegisterValue.membership (p := SP1Prime) target).channel.name,
+    (FinalRegisterValue.membership (p := SP1Prime) target.sail.memorySnapshot).channel.name,
     "sp1.native.initial_memory", "sp1.native.target_memory", "SP1Program", "sp1.native.write_permission",
     "sp1.native.hint_node", "sp1.native.hint_word", "sp1.native.commitment_declaration"]
   let ledger := SP1CleanTest.StaticMembership.demandLedger components inputs channels data (ProverHint.empty Fp)
@@ -164,20 +164,20 @@ def builtTables (target : MemorySnapshot) (seeds : List Seed)
       exact (List.length_filter_le _ _).trans bounded)
 
 /-- All built tables retain the assembly's original component identities and order. -/
-theorem builtTables_components (target : MemorySnapshot) (seeds : List Seed)
+theorem builtTables_components (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
     (builtTables target seeds bounded).map (·.component) = (assembly (context target)).tables := by
   unfold builtTables
   exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
 
-/-- Building rows never changes the complete 95-table host inventory. -/
-theorem builtTables_length (target : MemorySnapshot) (seeds : List Seed)
+/-- Building rows never changes the complete 99-table host inventory. -/
+theorem builtTables_length (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
-    (builtTables target seeds bounded).length = 95 := by
+    (builtTables target seeds bounded).length = 99 := by
   simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
   exact tables_length (context target)
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/
-def witness (target : MemorySnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
+def witness (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
     EnsembleWitness (assembly (context target)) :=
   EnsembleWitness.ofTables _ (builtTables target seeds bounded) input (builtTables_components target seeds bounded)
@@ -190,7 +190,7 @@ theorem source_memory_realizes : source.sail.memorySnapshot.Realizes BranchCompi
   exact source.sail.memorySnapshot_realizes (Target.cfgState_init 65536)
 
 /-- The complete target snapshot realizes the same normally retiring official Sail target. -/
-theorem target_realizes : target.Realizes BranchCompilerRoundTrip.target := by
+theorem target_realizes : target.sail.memorySnapshot.Realizes BranchCompilerRoundTrip.target := by
   constructor
   · intro index
     have unchanged := BranchCompilerRoundTrip.target_effect.regs

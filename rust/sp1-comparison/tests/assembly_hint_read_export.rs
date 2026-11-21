@@ -74,9 +74,9 @@ fn hint_target_words_match_released<P: Program<F>>(reference: &serde_json::Value
             word | (cell.as_canonical_u64() << (16 * index))
         })
     };
-    assert_eq!(witness.tables[90].len(), 4);
+    assert_eq!(witness.tables[94].len(), 4);
     for (row, (address, value)) in
-        witness.tables[90][..3]
+        witness.tables[94][..3]
             .iter()
             .zip([(5, result.value), (10, 65536), (11, length)])
     {
@@ -84,8 +84,8 @@ fn hint_target_words_match_released<P: Program<F>>(reference: &serde_json::Value
         assert_eq!(decode(&row[5..9]), value);
         assert_eq!(row[10], F::ONE);
     }
-    assert_eq!(witness.tables[91].len(), words.next_power_of_two());
-    for (index, row) in witness.tables[91][..words].iter().enumerate() {
+    assert_eq!(witness.tables[95].len(), words.next_power_of_two());
+    for (index, row) in witness.tables[95][..words].iter().enumerate() {
         let address = 65536 + 8 * index as u64;
         assert_eq!(decode(&row[2..5]), address);
         assert_eq!(decode(&row[5..9]), executor.get_memory_value(address).value);
@@ -98,10 +98,10 @@ fn hint_target_words_match_released<P: Program<F>>(reference: &serde_json::Value
 
 #[test]
 fn complete_hint_read_proves_with_arbitrary_disabled_cells_and_rejects_bad_activity() {
-    check_hint_padding::<hint_read::Ensemble>(&hint_read::reference(), &[0, 1, 3, 4, 90, 91]);
+    check_hint_padding::<hint_read::Ensemble>(&hint_read::reference(), &[0, 1, 3, 4, 94, 95]);
     check_hint_padding::<hint_word_padding::Ensemble>(
         &hint_word_padding::reference(),
-        &[0, 3, 84, 90],
+        &[0, 3, 84, 94],
     );
 }
 
@@ -201,9 +201,9 @@ fn check_hint_padding<P: Program<F> + GeneratedAirSpec>(
     }
     // A real target checker or word cannot be erased, nor can padding consume a receipt.
     let mut activity_mutations = vec![
-        (90, 0, F::ZERO),
-        (90, 3, F::ONE),
-        (91, 0, F::ZERO),
+        (94, 0, F::ZERO),
+        (94, 3, F::ONE),
+        (95, 0, F::ZERO),
         (84, 0, F::ZERO),
         (85, 0, F::ZERO),
     ];

@@ -40,6 +40,8 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
 | Did my PR move the build? | `scripts/build_semantics.py --compare` | `scripts/build_semantics.py --lake-log base.log --compare head.log --out out/cmp --touched touched.txt` (`touched.txt` = `git diff --name-only base..head`) | `compare.md`: both totals and critical paths, the touched modules' deltas, largest regressions/improvements among common modules, a noise check over untouched modules. |
 | Which layer / stratum / claim closure pays what? | `scripts/build_semantics.py` (`layers.md`, `claims.md`, `unreached.md`, `chips.md`) | as above, optionally `--profile-dir <solo sweep>` for the category split | the cost-versus-claims tables of `docs/audits/2026-09-build-semantics.md`. |
 | A controlled cold / warm measurement on the CI runner, without touching the shared cache | `.github/workflows/build-experiment.yml` | `gh workflow run build-experiment.yml --ref <branch> -f label=<tag> -f restore=none [-f lean_num_threads=3] [-f targets=…]` | job summary: runner inventory, `time -v` (max RSS, CPU-seconds), swap-out from `vmstat`, critical path, timeline, top modules; artifact `experiment-<label>-<run id>` with `lake.log` (time-stamped), `vmstat.log`, `ps.log`, `time.txt`. The workflow file must exist on `main` to be dispatchable; `--ref` picks the branch to build. |
+| Which modules cost most, and are they still needed? | `scripts/profile_compile.sh` + `scripts/profile_aggregate.py --inventory` | `TREES="SP1Clean ToClean ToMathlib SP1CleanTest LeanRV64D" SKIP_BUILD=1 scripts/profile_compile.sh`, then `scripts/proof_closure.py --no-build --json closure.json` and `scripts/profile_aggregate.py --profile-dir .lake/profile --inventory --closure closure.json` | `inventory.md`: instructions retired (rank by these; wall time on a laptop is noise), peak RSS, C size, reach from the headline roots. Profiler categories are wall-clock, so the sweep runs under `caffeinate` on macOS. |
+| Which modules compile large generated C? | `resources.tsv` C size, then the module's `c/<module>.c` | look for `_splitter` functions: a match splitter is compiled in every module that first needs a match's equations | see `docs/audits/2026-11-build-performance.md`, mechanisms 1–3 |
 | Import graph, transitive-import waste | importGraph | `lake exe graph --to SP1Clean out.html` / `lake exe unused_transitive_imports <mods>`; `#redundant_imports`, `#min_imports` (`import ImportGraph.Tools`) | needs built oleans. `lake shake` (Lake's, the successor of Mathlib's) only runs on `module` files — usable after the `SP1Clean/` migration (#33). No `lake exe pole` exists in this dependency set; the critical path above replaces it. |
 
 ## One module
@@ -123,9 +125,13 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   bare prefix fallback exists any more.
 - The `path:` list is part of an entry's version hash: editing it invalidates every entry, so it
   ships with a `SP1_CACHE_VERSION` bump and one cold transition.
-- A PR's entries live on `refs/pull/N/merge` and are invisible to `main`, so every merge used to
-  redo the PR's build. After all full checks pass, the build runner passes the completed core,
-  alignment and test build to `main` as an artifact. Lake still checks the merged tree's content hashes.
+- A PR's entries live on `refs/pull/N/merge` and are invisible to `main` and to other PRs, so
+  every merge used to redo the PR's build, and every stacked PR (base = another PR's branch)
+  restored `main`'s entry, which may predate the whole stack: #188–#193 each rebuilt about 1,290
+  jobs (87–145 min). After all full checks pass, the build runner uploads the completed build as
+  `lake-full-build-<head sha>`. `scripts/ci/handoff_restore.py` restores it for the merge to
+  `main` (`HEAD^2`, then deleted) and for stacked children (`HEAD^1`, kept), waiting while the
+  parent's run is still going. Lake still checks the restored tree's content hashes.
 - Mathlib's downloaded cache includes generated C but omits native objects. A separate cache,
   keyed by toolchain and dependency pins, retains those objects and their traces for the
   backend exporter. Only full runs save it; downloaded oleans are not duplicated there.
@@ -139,6 +145,9 @@ Clean's `doc/performance-problems.md` (the *why* of slow elaboration) — this f
   also defaults to all cores. 16 threads on 4 vCPU cost a third of the CPU-seconds; 3 jobs × 2
   threads (`LEAN_NUM_THREADS=3` + `-j2` in `moreLeanArgs`) is −17 % wall on a cold build.
 - GitHub serves a job's log only after it completes; `gh run view --log` is empty in progress.
+- Separate `lake build` calls per target left one job running at every boundary (233 s on a PR
+  run, 736 s on the clean build); the runner builds every Lean target and the exporter in one
+  invocation so native objects compile during elaboration.
 - The `build` runner performs core and full builds on every PR, then full-tree `lake lint`,
   backend checks and both compiled trust scopes. Setup and cache restore/save happen once,
   and full lint covers the core. Fresh export generations use the compiled driver on separate

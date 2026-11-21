@@ -185,7 +185,7 @@
         "rust/sp1-comparison/tests/assembly_hints_export.rs",
         "rust/sp1-comparison/tests/assembly_enter_export.rs"
       ],
-      "limit": "The complete 95-table assembly exports arithmetic/branch/RAM programs and local cuts, empty/stopped segments, HALT, repeated/partial/full commitments, HINT_READ/length programs and constrained ENTER replay. Every public verifier occurrence is retained. The 58-cell header binds canonical commitment bytes, deferred words and flags to the fixed declaration provider; stopped segments reject changed digest fields. Fresh proofs test public mutations, missing/fabricated terminals, changed provider counts and padding; fixed declarations are independently checked against released public values. These are finite assembly tests, not total compiler or cryptographic verifier soundness proofs."
+      "limit": "The complete 99-table assembly exports arithmetic/branch/RAM programs and local cuts, empty/stopped segments, HALT, repeated/partial/full commitments, HINT_READ/length programs and constrained ENTER replay. Every public verifier occurrence is retained. The 58-cell header binds canonical commitment bytes, deferred words and flags to the fixed declaration provider; stopped segments reject changed digest fields. Fresh proofs test public mutations, missing/fabricated terminals, changed provider counts and padding; fixed declarations are independently checked against released public values. These are finite assembly tests, not total compiler or cryptographic verifier soundness proofs."
     }
   },
   "released": {
@@ -403,6 +403,10 @@
     {"name": "sp1.native.hint_word.source", "width": 13, "inputWidth": 13, "fixedColumns": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "group": "host", "lookups": []},
     {"name": "sp1.native.commit.terminal", "width": 82, "inputWidth": 34, "fixedColumns": [], "group": "host", "lookups": []},
     {"name": "sp1.native.commit_deferred.terminal", "width": 82, "inputWidth": 34, "fixedColumns": [], "group": "host", "lookups": []},
+    {"name": "sp1.native.ordinary_observation", "width": 205, "inputWidth": 19, "fixedColumns": [], "group": "host", "lookups": []},
+    {"name": "sp1.native.ordinary_observation.terminal.empty", "width": 58, "inputWidth": 10, "fixedColumns": [], "group": "host", "lookups": []},
+    {"name": "sp1.native.ordinary_observation.terminal.nonempty", "width": 62, "inputWidth": 10, "fixedColumns": [], "group": "host", "lookups": []},
+    {"name": "sp1.native.ordinary_observation.terminal.any", "width": 58, "inputWidth": 10, "fixedColumns": [], "group": "host", "lookups": []},
     {"name": "sp1.native.memory.check.registers.changes", "width": 11, "inputWidth": 11, "fixedColumns": [], "group": "memory", "lookups": []},
     {"name": "sp1.native.memory.check.ram.changes", "width": 751, "inputWidth": 11, "fixedColumns": [], "group": "memory", "lookups": []},
     {"name": "sp1.native.target_registers.provider", "width": 7, "inputWidth": 7, "fixedColumns": [0, 1, 2, 3, 4, 5], "group": "memory", "lookups": []},

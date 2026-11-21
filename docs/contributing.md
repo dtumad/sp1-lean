@@ -15,10 +15,12 @@ lake build --wfail --iofail SP1Clean SP1CleanTest ToClean ToMathlib backendGadge
 lake lint
 scripts/run_audit.sh
 python3 scripts/check_examples.py
+lake exe sp1Checks
 ```
 
 The default build is the core. The full build adds machine/alignment proofs; the separate test
-library is the only home of native_decide. PR CI runs both scopes automatically, with no
+library is the only home of native_decide. Whole-assembly regression checks too large for Lean's
+interpreter run compiled in `lake exe sp1Checks`. PR CI runs both scopes automatically, with no
 alignment label required. Warnings and stray info diagnostics fail the build.
 
 ## Change a circuit or proof

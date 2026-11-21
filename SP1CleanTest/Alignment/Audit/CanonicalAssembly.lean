@@ -2,7 +2,7 @@ import SP1CleanTest.Alignment.Support.InstalledAssembly
 
 /-! # Generation inputs cannot supply uncommitted program metadata
 
-The complete installed 95-table inventory has no physical table named `sp1.pc_start`. Its
+The complete installed 99-table inventory has no physical table named `sp1.pc_start`. Its
 canonical data therefore cannot inherit that entry from witness-generation inputs. The check
 applies to every witness of this inventory, independently of generation or semantic validity.
 Program-binding consumers must use an authenticated boundary.

@@ -2,6 +2,7 @@ import SP1Clean.Soundness.HostHintRecordSources
 import SP1Clean.Soundness.HostHintReadLocal
 import SP1Clean.Soundness.HostLocalCoreAuthentication
 import SP1Clean.Native.Operations.HostCommitBoundary
+import SP1Clean.Soundness.OrdinaryObservationResources
 
 /-! # Record authentication in the installed HINT_READ assembly
 
@@ -310,10 +311,53 @@ theorem word_spec (witness : EnsembleWitness (ensemble image source others resou
     rw [component] at checkedRow byteRow wordRow memoryRow ⊢
     exact word_spec_of_channels _ _ checkedRow byteRow memoryRow wordRow
 
-/-- Source hint records and the two physical bank terminals. The verifier supplies their endpoints. -/
-def sourceResources (hints : List Bytes) : List (Component (ZMod p)) :=
+/-- Source hint records and the two physical bank terminals. -/
+def bankResources (hints : List Bytes) : List (Component (ZMod p)) :=
   [HostHintQueue.source hints, HostHintQueue.sourceWord hints,
     { circuit := HostCommitBoundary.terminal false, Assumptions := (HostCommitBoundary.terminal false).Assumptions, generation := HostCommitBoundary.terminalGeneration false }, { circuit := HostCommitBoundary.terminal true, Assumptions := (HostCommitBoundary.terminal true).Assumptions, generation := HostCommitBoundary.terminalGeneration true }]
+
+/-- The bank resources and the four ordinary observation tables. The verifier supplies their
+endpoints. -/
+def sourceResources (hints : List Bytes) : List (Component (ZMod p)) :=
+  bankResources hints ++ Soundness.OrdinaryObservation.tables
+
+/-- Every observation table uses only the Byte channel, the receipt protocol and its links. -/
+theorem tables_channels (component : Component (ZMod p))
+    (member : component ∈ Soundness.OrdinaryObservation.tables (p := p)) :
+    component.circuit.channels ⊆ [Channels.byteChannel.toRaw, InstructionReceipt.channel.toRaw,
+      OrdinaryObservation.stateChannel.toRaw] := by
+  simp only [Soundness.OrdinaryObservation.tables, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl
+  · exact Soundness.OrdinaryObservation.consumer_channels
+  all_goals
+    rw [Soundness.OrdinaryObservation.terminal_channels]
+    simp
+
+/-- An observation table is silent on every other channel. -/
+theorem tables_silent (component : Component (ZMod p))
+    (member : component ∈ Soundness.OrdinaryObservation.tables (p := p)) (channel : RawChannel (ZMod p))
+    (byte : channel ≠ Channels.byteChannel.toRaw) (receipt : channel ≠ InstructionReceipt.channel.toRaw)
+    (observation : channel ≠ OrdinaryObservation.stateChannel.toRaw) :
+    channel ∉ component.circuit.channels := fun used => by
+  have listed := tables_channels component member used
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at listed
+  rcases listed with rfl | rfl | rfl <;> contradiction
+
+/-- The observation tables request Byte checks without owing them, and touch no State link. -/
+theorem tables_interface : HostLocalCore.AuxiliaryInterface (Soundness.OrdinaryObservation.tables (p := p)) := by
+  apply HostLocalCore.AuxiliaryInterface.of_channels
+  · intro component member
+    simp only [Soundness.OrdinaryObservation.tables, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl <;>
+      simp [Soundness.OrdinaryObservation.consumer, Soundness.OrdinaryObservation.terminalComponent,
+        OrdinaryObservation.circuit, OrdinaryObservation.terminal, OrdinaryObservation.terminalEmpty,
+        OrdinaryObservation.terminalNonempty, OrdinaryObservation.terminalAny, Channels.byteChannel,
+        InstructionReceipt.channel, OrdinaryObservation.stateChannel, Channel.toRaw]
+  · intro component member
+    exact tables_silent component member _
+      (by simp [Channels.stateChannel, Channels.byteChannel, Channel.toRaw])
+      (by simp [Channels.stateChannel, InstructionReceipt.channel, Channel.toRaw])
+      (by simp [Channels.stateChannel, OrdinaryObservation.stateChannel, Channel.toRaw])
 
 private theorem source_auxiliary_names (hints : List Bytes) :
     (((receiver (p := p) :: HostCallReceivers.available).map
@@ -327,7 +371,9 @@ private theorem source_auxiliary_names (hints : List Bytes) :
       "sp1.native.commit_deferred.4", "sp1.native.commit_deferred.5", "sp1.native.commit_deferred.6",
       "sp1.native.commit_deferred.7", "sp1.native.hint_len.nonempty", "sp1.native.hint_len.empty",
       "sp1.native.hint_read_word.next", "sp1.native.hint_read_word.last", "sp1.native.hint_node.source",
-      "sp1.native.hint_word.source", "sp1.native.commit.terminal", "sp1.native.commit_deferred.terminal"] := by
+      "sp1.native.hint_word.source", "sp1.native.commit.terminal", "sp1.native.commit_deferred.terminal",
+      "sp1.native.ordinary_observation", "sp1.native.ordinary_observation.terminal.empty",
+      "sp1.native.ordinary_observation.terminal.nonempty", "sp1.native.ordinary_observation.terminal.any"] := by
   rfl
 
 private theorem source_auxiliary_fresh (image : ProgramImage) (source : ExecutionSnapshot)
@@ -394,8 +440,8 @@ theorem source_record_authentication {extra : List (Component (ZMod p))}
   have component := List.mem_map_of_mem (f := fun table : Table (ZMod p) => table.component) member
   rw [HostLocalCore.auxiliaryTables_components] at component
   simp only [List.map_cons, List.mem_append, List.mem_cons, wordResources, sourceResources,
-    List.not_mem_nil, or_false] at component
-  rcases component with (handler | other) | ((next | last) | ((node | word | terminal | deferred) | added))
+    bankResources, List.not_mem_nil, or_false] at component
+  rcases component with (handler | other) | ((next | last) | (((node | word | terminal | deferred) | observed) | added))
   · apply fromComponent
     rw [handler]
     exact HostHintRecordSources.handler_authenticates store
@@ -424,17 +470,25 @@ theorem source_record_authentication {extra : List (Component (ZMod p))}
     constructor <;> apply Component.Authenticates.of_silent <;>
       simp [HostCommitBoundary.terminal, HostCommitChip.stateChannel, nodeChannel, wordChannel,
         Channel.toRaw, circuit_norm]
+  · exact fromComponent ⟨Component.Authenticates.of_silent _ _ _ (tables_silent _ observed _
+        (by simp [nodeChannel, Channels.byteChannel, Channel.toRaw])
+        (by simp [nodeChannel, InstructionReceipt.channel, Channel.toRaw])
+        (by simp [nodeChannel, OrdinaryObservation.stateChannel, Channel.toRaw])),
+      Component.Authenticates.of_silent _ _ _ (tables_silent _ observed _
+        (by simp [wordChannel, Channels.byteChannel, Channel.toRaw])
+        (by simp [wordChannel, InstructionReceipt.channel, Channel.toRaw])
+        (by simp [wordChannel, OrdinaryObservation.stateChannel, Channel.toRaw]))⟩
   · exact fromComponent ⟨Component.Authenticates.of_silent _ _ _ (silent _ added).1,
       Component.Authenticates.of_silent _ _ _ (silent _ added).2⟩
 
-theorem source_interface (hints : List Bytes) :
-    ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) := by
-  have sourceSilent (component : Component (ZMod p)) (member : component ∈ sourceResources hints)
+theorem bank_interface (hints : List Bytes) :
+    ExtensionInterface (HostCallReceivers.available (p := p)) (bankResources hints) := by
+  have sourceSilent (component : Component (ZMod p)) (member : component ∈ bankResources hints)
       (channel : RawChannel (ZMod p)) (node : channel ≠ nodeChannel.toRaw) (word : channel ≠ wordChannel.toRaw)
       (commit : channel ≠ (HostCommitChip.stateChannel false).toRaw)
       (deferred : channel ≠ (HostCommitChip.stateChannel true).toRaw) :
       channel ∉ component.circuit.channels := by
-    simp only [sourceResources, List.mem_cons, List.not_mem_nil, or_false] at member
+    simp only [bankResources, List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl | rfl
     · change channel ∉ [nodeChannel.toRaw]
       simpa only [List.mem_singleton] using node
@@ -478,5 +532,18 @@ theorem source_interface (hints : List Bytes) :
         (by simp [HintReadWordChip.stateChannel, wordChannel, Channel.toRaw])
         (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
         (by simp [HintReadWordChip.stateChannel, HostCommitChip.stateChannel, Channel.toRaw])
+
+/-- The observation tables join the bank resources without changing the host interface. -/
+theorem source_interface (hints : List Bytes) :
+    ExtensionInterface (HostCallReceivers.available (p := p)) (sourceResources hints) :=
+  (bank_interface hints).appendResources tables_interface
+    (fun component member => tables_silent component member _
+      (by simp [HostCallChip.channel, Channels.byteChannel, Channel.toRaw])
+      (by simp [HostCallChip.channel, InstructionReceipt.channel, Channel.toRaw])
+      (by simp [HostCallChip.channel, OrdinaryObservation.stateChannel, Channel.toRaw]))
+    (fun component member => tables_silent component member _
+      (by simp [HintReadWordChip.stateChannel, Channels.byteChannel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, InstructionReceipt.channel, Channel.toRaw])
+      (by simp [HintReadWordChip.stateChannel, OrdinaryObservation.stateChannel, Channel.toRaw]))
 
 end SP1Clean.Soundness.HostHintReadLocal

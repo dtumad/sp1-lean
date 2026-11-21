@@ -8,15 +8,12 @@ public import SP1Clean.Math.Word
 
 /-! # Decode core — LeanRV64D `instruction` → committed Program-bus columns
 
-The decode projection `instrToProgramRow` and the ROM-membership predicate `decodedInROM`, relocated
-DOWN to `Semantics/ISA/` (from `Soundness/Decode.lean`) so the Program-bus execution truth
-`ProgTruth` (`Semantics/Transition/Truth.lean` — a grounding conclusion, not a channel guarantee) can
-reference `decodedInROM`. Built on the
-official `ext_decode`/`encdec_backwards` decoder so fetch-decode coherence with `try_step` holds by
-construction. The hoist/evidence layer (`decodedInROMg`, the per-family hoists, the concrete
-program shapes) stays in `Soundness/Decode.lean`, which imports this core. Namespace
-`SP1Clean.Soundness.Target` is unchanged (decoupled from path), so every
-`instrToProgramRow`/`decodedInROM` reference resolves as before. -/
+The decode projection `instrToProgramRow` and the ROM-membership predicate `decodedInROM`, low enough
+that the Program-bus execution truth `ProgTruth` (`Semantics/Transition/Truth.lean` — a grounding
+conclusion, not a channel guarantee) can reference `decodedInROM`. Built on the official
+`ext_decode`/`encdec_backwards` decoder so fetch-decode coherence with `try_step` holds by
+construction. Concrete one-instruction examples for every supported family are test fixtures
+(`SP1CleanTest/Alignment/Support/ProgramDecodeExamples.lean`). -/
 
 @[expose] public section
 
@@ -41,8 +38,7 @@ def regidxVal (r : regidx) : ZMod p := match r with | .Regidx b => (b.toNat : ZM
 is the *decode-intrinsic* source-register bound (`op_b`/`op_c < 32`): SP1 does **not** range-check
 the source indices in-circuit (the Program bus's `ProgramMsg.RowSpec` bounds only the write index
 `op_a`), so this is the honest — and only — provenance of the bound, derived from the 5-bit
-instruction encoding rather than assumed on the boundary. See `decodedInROM_rtype_operand_lt`
-(`Soundness/Decode.lean`) for the row-level consumer. -/
+instruction encoding rather than assumed on the boundary. -/
 theorem regidxVal_val_lt (r : regidx) : (regidxVal (p := p) r).val < 32 := by
   obtain ⟨b⟩ := r
   have hb : b.toNat < 32 := Nat.lt_of_lt_of_le b.isLt (by decide)
@@ -765,9 +761,8 @@ using the provider table, program commitment, and balanced Clean interactions.
 not ∀s∃i) over the **guarded** projection `instrToProgramRow'`. Fixing `I` across all configured
 states is what lets every `decodes<T>` consumer invert *once* (no cross-state `regidx_bv_inj`
 pinning), and the guarded projection is what lets the MUL/LOAD/STORE consumers drop their `hpin`
-side-conditions. This strengthens the predicate; it is a sound, derivable strengthening (see
-`decodedInROM_*_hoist` in `Soundness/Decode.lean` — ∃I∀s follows from the weak guarded ∀s form for
-real decodes). -/
+side-conditions. Every decode the executable decoder accepts satisfies it: the instruction is fixed
+by the word, and `SailDecode.instructionDecode_agrees` gives the decode in every configured state. -/
 def decodedInROM (prog : GuestProgram) (row : ProgramRow (ZMod p)) : Prop :=
   ∃ (w : BitVec 32) (I : instruction),
     prog.fetchWord (pcBitsOfRow row) = some w ∧

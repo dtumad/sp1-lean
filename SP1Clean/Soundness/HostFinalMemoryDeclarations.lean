@@ -17,8 +17,8 @@ open Circuit Air.Flat Channels Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
-variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+variable {image : ProgramImage} {source target : ExecutionSnapshot}
+  {final : HostHintQueue.State (ZMod p)}
 
 /-- The declaration channel is fresh for the local core. -/
 private theorem declaration_fresh :
@@ -41,28 +41,28 @@ private theorem closed_silent (closed : ClosedVerifier (ZMod p))
 
 /-- No public-verifier layer of the installed assembly emits a declaration. -/
 theorem verifier_declarations_silent (env : Environment (ZMod p)) :
-    (Installed image source outgoing final bankFinal).verifierOperations.interactionValuesWith
+    (Installed image source target final).verifierOperations.interactionValuesWith
       CommitmentDeclaration.channel.toRaw env = [] := by
-  let registration := source_registration (p := p) image source outgoing
+  let registration := source_registration (p := p) image source target.sail.memorySnapshot
   let original := HostHintReadLocal.ensemble image source HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)
-    (sourceChannels outgoing) (source_unique_names image source outgoing)
+    (HostHintReadLocal.sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables target.sail.memorySnapshot)
+    (sourceChannels target.sail.memorySnapshot) (source_unique_names image source target.sail.memorySnapshot)
     registration.unique registration.tables
   have declared : (CommitmentDeclaration.channel (p := p)).toRaw ∈
-      HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels outgoing) := by
+      HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: sourceChannels target.sail.memorySnapshot) := by
     simp [HostLocalCore.registry, sourceChannels]
   have originalDeclared : CommitmentDeclaration.channel.toRaw ∈ original.channels :=
     List.mem_append_left _ declared
-  have boundaryRegistered : (HostHintQueueBoundary.boundary source final bankFinal).circuit.channels ⊆ original.channels := by
+  have boundaryRegistered : (HostHintQueueBoundary.boundary source final target.host).circuit.channels ⊆ original.channels := by
     intro selected used
     apply List.mem_append_left _ (registration.boundary ?_)
     by_contra absent
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at absent
     exact HostHintQueueBoundary.boundary_silent selected absent.1 absent.2.1 absent.2.2.1 absent.2.2.2 used
-  let beforeChanges := withReceipts image source outgoing final bankFinal HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels outgoing)
-    (source_unique_names image source outgoing) registration
-  have changesRegistered : (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot outgoing).circuit.channels ⊆ beforeChanges.channels := by
+  let beforeChanges := withReceipts image source target.sail.memorySnapshot final target.host HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) (sourceChannels target.sail.memorySnapshot)
+    (source_unique_names image source target.sail.memorySnapshot) registration
+  have changesRegistered : (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target.sail.memorySnapshot).circuit.channels ⊆ beforeChanges.channels := by
     intro selected used
     apply List.mem_append_left _ (List.mem_append_left _ (registration.targetChannels ?_))
     have equal : selected = FinalMemoryChange.channel.toRaw := by
@@ -72,13 +72,13 @@ theorem verifier_declarations_silent (env : Environment (ZMod p)) :
       · exact same.symm
       · exact same
     simp [equal]
-  change ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot outgoing).install
+  change ((FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target.sail.memorySnapshot).install
     beforeChanges changesRegistered).verifierOperations.interactionValuesWith CommitmentDeclaration.channel.toRaw env = []
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ beforeChanges changesRegistered env _
       (List.mem_append_left _ originalDeclared),
     closed_silent _ (by simp [FinalMemoryChangeBoundary.closed, FinalMemoryChangeBoundary.circuit,
       CommitmentDeclaration.channel, FinalMemoryChange.channel, Channel.toRaw, circuit_norm]), List.append_nil]
-  change ((HostHintQueueBoundary.boundary source final bankFinal).install original boundaryRegistered).verifierOperations.interactionValuesWith
+  change ((HostHintQueueBoundary.boundary source final target.host).install original boundaryRegistered).verifierOperations.interactionValuesWith
     CommitmentDeclaration.channel.toRaw env = []
   rw [ClosedVerifier.install_verifier_interactions_of_mem _ original boundaryRegistered env _ originalDeclared,
     closed_silent _ (HostHintQueueBoundary.boundary_silent _
@@ -128,7 +128,7 @@ private theorem commit_authenticates {property : CommitmentDeclaration.Row (ZMod
 /-- Only the commitment handlers touch the declaration channel, and they only request. -/
 theorem declaration_sources (property : CommitmentDeclaration.Row (ZMod p) → Prop)
     (component : Component (ZMod p))
-    (member : component ∈ (Installed image source outgoing final bankFinal).tables) :
+    (member : component ∈ (Installed image source target final).tables) :
     component.Authenticates CommitmentDeclaration.channel property := by
   simp only [Installed, ensemble, ClosedVerifier.install, withReceipts, withRegisters, FinalReceiptEnsemble.install,
     Ensemble.replaceComponent, base, HostHintQueueBoundary.ensemble, HaltPadding.install,
@@ -187,7 +187,7 @@ theorem declaration_sources (property : CommitmentDeclaration.Row (ZMod p) → P
         · exact authenticates_of_name _ rfl
         · exact authenticates_of_name _ rfl
     · have quiet : (HostHintReadHandoff.wordResources ++ (HostHintReadLocal.sourceResources source.host.io.hints ++
-          FinalMemoryChecks.checkTables outgoing)).all (fun component : Component (ZMod p) =>
+          FinalMemoryChecks.checkTables target.sail.memorySnapshot)).all (fun component : Component (ZMod p) =>
             !(component.circuit.channels.map RawChannel.name).contains
               (CommitmentDeclaration.channel (p := p)).toRaw.name) = true := by
         rfl

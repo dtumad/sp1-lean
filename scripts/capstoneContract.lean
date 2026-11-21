@@ -64,36 +64,36 @@ section NativeTraceContract
 open SP1Clean.Soundness SP1Clean.Channels SP1Clean.Semantics
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {image : ProgramImage} {source : ExecutionSnapshot} {outgoing : MemorySnapshot}
-  {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
+variable {image : ProgramImage} {source target : ExecutionSnapshot}
+  {final : HostHintQueue.State (ZMod p)}
   {commitments : CommitmentStatement} {header : SP1PublicIO (ZMod p)}
 
 -- Pin the headline theorem's application surface independently of its proof.
 example (valid : image.Valid)
     (fresh : (CommitmentDeclaration.source (p := p) commitments).circuit.name ∉
-      (installed image source outgoing final bankFinal).tables.map (·.circuit.name))
+      (installed image source target final).tables.map (·.circuit.name))
     (registered : CommitmentDeclaration.channel.toRaw ∈
-      (installed image source outgoing final bankFinal).channels)
+      (installed image source target final).channels)
     (heights : List ℕ)
     (accepted : (CommitmentEnsemble.install commitments
-      (installed image source outgoing final bankFinal) fresh registered).Statement .logUp header heights) :
-    SailTrace commitments image source outgoing final bankFinal header :=
+      (installed image source target final) fresh registered).Statement .logUp header heights) :
+    SailTrace commitments image source target final header :=
   sail_trace valid accepted
 
 example :
-    SailTrace commitments image source outgoing final bankFinal header ↔
+    SailTrace commitments image source target final header ↔
       ExecutionSourceValid image source ∧ header.SourceFor source ∧ commitments.WellFormed p ∧
-        ∃ (events : List ExecutionEvent) (target : ExecutionState),
-          (sp1Machine p image).Trace source.realize events target ∧
+        ∃ (events : List ExecutionEvent) (actual : ExecutionState),
+          (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
-          Endpoint source outgoing final bankFinal header events target := Iff.rfl
+          Endpoint source target final header events actual := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.
-example {events : List ExecutionEvent} {target : ExecutionState}
-    (endpoint : Endpoint source outgoing final bankFinal header events target) :
-    target.sail.mem = outgoing.memory.toSailMemory (2 ^ 48) ∧
-      (∀ index, target.sail.get_reg? index = some (outgoing.read (.reg index))) ∧
-      target.clock = StateMsg.timeNat (finalBoundaryStateMessage header) :=
+example {events : List ExecutionEvent} {actual : ExecutionState}
+    (endpoint : Endpoint source target final header events actual) :
+    actual.sail.mem = target.sail.memorySnapshot.memory.toSailMemory (2 ^ 48) ∧
+      (∀ index, actual.sail.get_reg? index = some (target.sail.memorySnapshot.read (.reg index))) ∧
+      actual.clock = StateMsg.timeNat (finalBoundaryStateMessage header) :=
   ⟨endpoint.ram, endpoint.registers, endpoint.clock⟩
 
 end NativeTraceContract

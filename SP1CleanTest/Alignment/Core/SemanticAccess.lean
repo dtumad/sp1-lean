@@ -1,5 +1,6 @@
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Semantics.Execution.ConfiguredState
+import SP1Clean.Proofs.Sail.InstructionDecode
 
 /-! # Canonical memory access and refresh regressions
 
@@ -76,7 +77,8 @@ private theorem addProjected :
   have cfg := cfgState_configured 65536
   have atPc : addState.regs.get? Register.PC = some (65536#64) := cfgState_pc _
   have fetched : addProgram.fetchWord 65536 = some (0x003100B3#32) := rfl
-  have decoded := SailDecode.decode_ADD addState cfg.init cfg.priv cfg.mseccfg_disabled
+  have decoded := SailDecode.instructionDecode_agrees 0x003100B3#32
+    (.RTYPE (regidx.Regidx 3#5, regidx.Regidx 2#5, regidx.Regidx 1#5, rop.ADD)) rfl addState cfg
   have observed := decodeLocated?_eq_some_of (located := ⟨addState, ⟨.ordinary, addState⟩⟩)
     atPc fetched decoded
   unfold projectSP1Transition?

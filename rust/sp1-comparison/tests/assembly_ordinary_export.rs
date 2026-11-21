@@ -227,8 +227,8 @@ fn references_preserve_every_native_row_and_occurrence() {
 
 #[test]
 fn assemblies_prove_and_reject_missing_or_changed_obligations() {
-    malformed::<ordinary::Ensemble>(&ordinary::reference(), &[8, 18, 23, 28, 90, 91]);
-    malformed::<prefix::Ensemble>(&prefix::reference(), &[8, 28, 90, 91]);
-    malformed::<suffix::Ensemble>(&suffix::reference(), &[8, 18, 23, 28, 90, 91]);
+    malformed::<ordinary::Ensemble>(&ordinary::reference(), &[8, 18, 23, 28, 94, 95]);
+    malformed::<prefix::Ensemble>(&prefix::reference(), &[8, 28, 94, 95]);
+    malformed::<suffix::Ensemble>(&suffix::reference(), &[8, 18, 23, 28, 94, 95]);
     malformed::<empty::Ensemble>(&empty::reference(), &[57]);
 }

@@ -20,7 +20,7 @@ interpreter or scheduler.
 - The whole-ensemble fixture uses Clean's built-in Rust exporter and backend. Verifier-fixed
   columns replace its legacy lookup; fresh Rust witnesses are compared with Lean reference rows,
   and backend proofs exercise public binding, row constraints and rejected mutations.
-- The complete installed 95-table assembly uses the same exporter and scheduler. Fixtures cover
+- The complete installed 99-table assembly uses the same exporter and scheduler. Fixtures cover
   arithmetic/branch/RAM programs and local cuts, empty and stopped segments, repeated HINT_LEN
   around overlapping empty/aligned/byte-tail HINT_READ calls, constrained ENTER replay, HALT,
   repeated commitments and partial/full declarations followed by HALT. Comparisons retain every row, empty position,
@@ -148,7 +148,7 @@ changes may justify a minimal temporary dependency patch.
 
 The fixed-membership fixtures establish native backend boundaries. Component comparisons keep
 external buses open and check that an isolated active component cannot claim balanced execution.
-The installed 95-component host assembly is lookup-free. Its finite cases cover the boundaries
+The installed 99-component host assembly is lookup-free. Its finite cases cover the boundaries
 listed above. Arbitrary mixed execution, all-eight-call installation, general data agreement and total
 construction remain open. The retired
 instruction-only pipeline did not supply that missing whole-assembly coverage.

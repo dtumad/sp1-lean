@@ -87,9 +87,9 @@ private def installedHintReadReference (context : SP1CleanTest.Alignment.Install
   let input := prepared.data
   let base : fields input.size (ZMod SP1Clean.SP1Prime) := ⟨input, rfl⟩
   let hints := prepared.samples
-  let some registers := hints[90]?
+  let some registers := hints[94]?
     | throw (IO.userError "HINT_READ assembly has no register target checker")
-  let some ram := hints[91]?
+  let some ram := hints[95]?
     | throw (IO.userError "HINT_READ assembly has no RAM target checker")
   let some words := hints[84]?
     | throw (IO.userError "HINT_READ assembly has no nonfinal word consumer")
