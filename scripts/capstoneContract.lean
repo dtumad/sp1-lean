@@ -1,6 +1,7 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Export.ShardChain
+import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 
 /-! # Compiled native capstone contract audit
@@ -114,6 +115,7 @@ def roots : Array Name := #[
   ``SP1Clean.Soundness.Shard.Endpoint,
   ``SP1Clean.Soundness.Shard.sail_trace,
   ``SP1Clean.Export.InstalledAssembly.proverStatement_iff,
+  ``SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor,
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
   ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
   ``SP1Clean.Export.InstalledAssembly.soundness,

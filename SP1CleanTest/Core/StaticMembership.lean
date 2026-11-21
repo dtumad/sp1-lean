@@ -49,9 +49,9 @@ def count {Input : TypeMap} [ProvableType Input] (mode : PreallocatedMode F Inpu
 /-- Materialize every upstream preallocated row, including unused rows. -/
 def preallocatedTable (component : Component F) (mode : PreallocatedMode F component.Input)
     (generation : component.generation = .preallocated mode) (ledger : Ledger F)
-    (data : ProverData F) (hint : ProverHint F) (rowCount : UInt64 → F := count mode ledger) : Table F :=
+    (data : ProverData F) (hint : ProverHint F) : Table F :=
   let inputs := List.ofFn fun index : Fin mode.height.toNat =>
-    inputAt mode (UInt64.ofNat index.val) (rowCount (UInt64.ofNat index.val))
+    inputAt mode (UInt64.ofNat index.val) (count mode ledger (UInt64.ofNat index.val))
   let ownData := component.inputData inputs data
   Table.build component inputs ownData hint
     (by simp only [inputs, List.length_ofFn]; exact mode.height.toNat_lt_size.le)

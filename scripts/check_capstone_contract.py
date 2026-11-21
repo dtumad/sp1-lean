@@ -25,6 +25,7 @@ EXPECTED_ROOTS = {
 } | {"SP1Clean.FormalModel.Shard." + name
      for name in ("Executes", "nativeProfile", "AdmissibleExecution", "sp1Machine")} | {
     "SP1Clean.Export.InstalledAssembly.proverStatement_iff",
+    "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
     "SP1Clean.Export.InstalledAssembly.soundness",
@@ -52,7 +53,7 @@ def main() -> int:
     if not args.no_build:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
-             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain",
+             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain", "SP1Clean.Export.InstalledHintCompleteness",
              "SP1Clean.Proofs.Completeness.ExecutionObservationTerminal"],
             cwd=ROOT, check=True,
         )

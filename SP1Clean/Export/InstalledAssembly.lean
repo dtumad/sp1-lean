@@ -12,7 +12,8 @@ open scoped Classical
 
 private abbrev Ledger := List (Interaction Fp)
 
-private theorem cancel_bridge (first last : Ledger) (publicCursor privateCursor : HostHintQueue.State Fp) :
+/-- Adding the terminal and the verifier pull preserves each signed cursor balance. -/
+theorem cancel_terminal (first last : Ledger) (publicCursor privateCursor : HostHintQueue.State Fp) :
     LogUpBalanced (first ++ [stateChannel.pulledValue publicCursor] ++ last ++
       [stateChannel.pulledValue privateCursor, stateChannel.pushedValue publicCursor]) ↔
     LogUpBalanced (first ++ [stateChannel.pulledValue privateCursor] ++ last) := by
@@ -94,7 +95,7 @@ theorem project_statement (context : Context) {header : SP1PublicIO Fp} {heights
     rw [earlier]
     by_cases same : channel = stateChannel.toRaw
     · simp only [ite_eq_left same, List.length_append, List.length_cons, List.length_nil] at enough ⊢
-      exact ⟨by omega, (cancel_bridge ..).mp (by simpa only [ite_eq_left same] using funded)⟩
+      exact ⟨by omega, (cancel_terminal ..).mp (by simpa only [ite_eq_left same] using funded)⟩
     · simpa only [ite_eq_right same, List.append_nil] using And.intro enough funded
   refine ⟨clock, ?_, old, (project_header witness clock).trans publicEq, height, project_constraints witness clock checked,
     fun channel member => (raw channel member).2⟩

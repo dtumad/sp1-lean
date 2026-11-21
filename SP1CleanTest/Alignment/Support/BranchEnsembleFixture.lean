@@ -1,5 +1,6 @@
 import SP1CleanTest.Alignment.Audit.BranchCompilerRoundTrip
 import SP1CleanTest.Alignment.Support.InstalledAssembly
+import SP1Clean.Proofs.Completeness.HintQueueTerminal
 import ToClean.Air.EnsembleBuild
 import ToClean.Air.FiniteLookup
 import ToClean.Air.ChannelRegistry
@@ -151,8 +152,7 @@ def seeds? (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (consumers : Li
 /-- The branch fixture does not access the hint queue. Its single fixed terminal transfers the
 unchanged cursor once, with both private timestamp limbs zero. -/
 private def hintTerminal (target : ExecutionSnapshot) : Table Fp :=
-  let component := HostHintQueueTerminal.component (publicCursor (context target))
-  SP1CleanTest.StaticMembership.preallocatedTable component _ rfl [] data (ProverHint.empty Fp) (fun _ => 1)
+  HostHintQueueTerminal.tableFor (publicCursor (context target)) 0 data
 
 /-- Every table remains installed, including all fixed membership rows at their actual counts. -/
 def builtTables (target : ExecutionSnapshot) (seeds : List Seed)

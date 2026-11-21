@@ -2,6 +2,7 @@ import SP1Clean.Core
 import SP1Clean.Export.FixedHintAssembly
 import SP1Clean.Export.InstalledAssembly
 import SP1Clean.Export.InstalledHintAssembly
+import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Export.InstalledHintProjection
 import SP1Clean.Export.InstalledHintVerifier
 import SP1Clean.Export.ShardChain
@@ -160,6 +161,7 @@ import SP1Clean.Soundness.OrdinaryObservationResources
 import SP1Clean.Soundness.OrdinaryObservationProjection
 import SP1Clean.Proofs.Completeness.OrdinaryObservation
 import SP1Clean.Proofs.Completeness.OrdinaryObservationHistory
+import SP1Clean.Proofs.Completeness.HintQueueTerminal
 import SP1Clean.Proofs.Completeness.OrdinaryObservationPadding
 import SP1Clean.Proofs.Completeness.ExecutionObservation
 import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
