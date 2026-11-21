@@ -159,8 +159,10 @@ bytes before emitting one Memory occurrence. Target reads retain the complete fi
 Global balance and fixed prefixes establish membership without caller-supplied provider validity.
 Projected ledgers retain every fixed row, including unused intervals and zero-count padding.
 
-The host grounding proofs are stated over the installed complete-memory resource list and take
-balance on every registered channel except `HostHintQueueBoundary.hiddenChannels`: the
+The host grounding proofs use the typed receiver and source-resource inventory followed by an
+arbitrary registered component block. Its static operations must discharge Byte requirements
+and preserve the channels used to authenticate host, Memory and permission records. The four
+released target validators meet this contract. Grounding takes balance on every registered channel except `HostHintQueueBoundary.hiddenChannels`: the
 final-memory receipts and commitment declarations, whose producers lie outside the host proof
 view. The observed assembly projects its original rows through the 25 producer replacements. It also hides receipt and observation-state traffic when proving host grounding. The verifier retains both observation endpoints, and the source and target determine their payloads. The target comparison
 (`HostFinalMemory.checkFinal_of_channels`) and commitment-statement authentication

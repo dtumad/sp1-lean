@@ -15,7 +15,7 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Semantics HostHintReadLocal NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance hostAgreementLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
@@ -92,20 +92,21 @@ private theorem queue_terminal
   exact decoded.trans (replayed.symm.trans actual)
 
 variable {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 /-- The terminal queue cursor authenticates the actual replay's remaining complete hint bytes. -/
 theorem GroundingCarrier.final_hints (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (target : ExecutionState)
     (replay : replayEvents? ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events = some target) :
     HintQueue.decode? (HintQueue.ofList source.host.io.hints).1 (Address.toNat final.head) =
       some target.host.io.hints := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have records := HostHintQueueBoundary.record_channels witness balanced
   obtain ⟨path, exhaustive, walk, history⟩ := HostHintQueueHistory.source_history witness constraints balanced
@@ -118,13 +119,12 @@ theorem GroundingCarrier.final_hints (valid : image.Valid)
 
 /-- Every event of the physical CPU inventory belongs to the installed six-call profile. -/
 theorem installed_events
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ event ∈ (LocalCore.executionRows (HostLocalCore.localWitness
       (HostHintQueueBoundary.projected witness))).map ExecutionRow.event, SixCallProfile.event event := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have calls := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have records := HostHintQueueBoundary.record_channels witness balanced
   have admitted := inventory_calls (HostHintQueueBoundary.projected witness) interface checks calls records.byte
@@ -135,8 +135,7 @@ theorem installed_events
 
 /-- The installed AIR derives the host frame from its complete receiver inventory. -/
 theorem GroundingCarrier.host_frame_safe
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∀ event ∈ carrier.events, HostFrameSafe event := by
   intro event member
@@ -149,8 +148,7 @@ theorem GroundingCarrier.host_frame_safe
 /-- All host fields are recovered on the same path: authenticated hints and banks, preserved
 external I/O, and the exact optional terminal status from actual events. -/
 theorem GroundingCarrier.final_host (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) (target : ExecutionState)
     (path : ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
       source.realize carrier.events target) :
@@ -168,8 +166,7 @@ theorem GroundingCarrier.final_host (valid : image.Valid)
 /-- Raw installed AIR reconstructs a local path and its complete final host, alongside the
 existing final PC/clock/Memory-frontier agreement. No host frame, order, or replay premise is added. -/
 theorem source_execution_with_host (valid : image.Valid)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ events target hints, ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)
         source.realize events target ∧

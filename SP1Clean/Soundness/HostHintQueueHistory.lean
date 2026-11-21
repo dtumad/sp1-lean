@@ -16,7 +16,7 @@ open Circuit Air.Flat Semantics Semantics.HintQueue HostHintQueue HostHintReadLo
 open SP1Clean.Soundness.HostHintQueueBoundary
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 /-- Complete replay, with current store/frontier truth at every prefix of the physical path. -/
 def History (hints : List Bytes) (final : State (ZMod p)) (upper : Store) (path : List (Row (p := p))) : Prop :=
@@ -82,19 +82,20 @@ theorem of_witness
     (HostQueueHistory.records_of_witness (projected witness) upper authenticated records row physical)
 
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 /-- Source bytes and the installed AIR alone determine every observed length, queue pop, and final
 reachable queue. This theorem does not require current-head or record-authentication premises. -/
 theorem source_history
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ path : List (Row (p := p)),
       path.Perm (TransitionView.readIndexedRows indices (queueTables (projected witness))) ∧
       Walk.IsWalk edge (SP1Clean.HostHintQueueBoundary.initial source.host.io.hints) final path ∧
       History source.host.io.hints final (ofList source.host.io.hints).1 path := by
-  apply of_witness witness (HostFinalMemory.sourceInterface source.host.io.hints outgoing) _ (.refl _)
+  apply of_witness witness (GroundingResources.sourceInterface source.host.io.hints extra) _ (.refl _)
     (source_authentication witness constraints) source_queue_silent constraints balanced
 
 end SP1Clean.Soundness.HostHintQueueHistory

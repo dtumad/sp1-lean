@@ -36,8 +36,8 @@ variable {image : ProgramImage} {source target : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
-  {names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources}
-  [registration : HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+  {names : HostFinalMemory.UniqueNames image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources}
+  [registration : HostFinalMemory.Registration image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources channels]
 
 /-- The receipt protocol is registered with the host inventory. -/
 class ReceiptRegistered (image : ProgramImage) (source : ExecutionSnapshot)
@@ -158,8 +158,8 @@ def ensemble (image : ProgramImage) (source target : ExecutionSnapshot)
     (final : HostHintQueue.State (ZMod p))
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
-    [HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+    (names : HostFinalMemory.UniqueNames image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources)
+    [HostFinalMemory.Registration image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources channels]
     [ReceiptRegistered (p := p) image source channels] : Ensemble (ZMod p) SP1PublicIO :=
   let base := HostSailBoundary.ensemble image source target final others resources channels names
   { base with tables := base.tables.mapIdx replace
@@ -287,8 +287,8 @@ private theorem layout (image : ProgramImage) (source target : ExecutionSnapshot
     (final : HostHintQueue.State (ZMod p))
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : HostFinalMemory.UniqueNames image source target.sail.memorySnapshot others resources)
-    [HostFinalMemory.Registration image source target.sail.memorySnapshot others resources channels]
+    (names : HostFinalMemory.UniqueNames image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources)
+    [HostFinalMemory.Registration image source (FinalMemoryChecks.checkTables target.sail.memorySnapshot) others resources channels]
     [ReceiptRegistered (p := p) image source channels]
     (index : Fin
     (HostSailBoundary.ensemble (p := p) image source target final others resources channels names).tables.length) :

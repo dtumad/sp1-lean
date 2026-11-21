@@ -15,7 +15,7 @@ namespace SP1Clean.Soundness.HostBankCPUReplay
 open Circuit Air.Flat Semantics HostHintReadLocal HostQueueCallProjection NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 /-- Use Clean's field equality when projecting the original physical balance. -/
 local instance cleanBalanceDecidableEq : DecidableEq (ZMod p) := FiniteField.instDecidableEq
@@ -229,13 +229,14 @@ private theorem calls_projection_generic (deferred : Bool)
   · simpa only [controlTables, control_slot_tables] using
       control_calls deferred witness interface constraints bytes
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 /-- Selecting a bank from the complete physical handoff retains exactly its handler occurrences. -/
 theorem calls_projection (deferred : Bool)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ((HostLocalHandoff.calls (HostHintQueueBoundary.projected witness)).filterMap (stamped deferred)).Perm
       (((TransitionView.readIndexedActiveRows HostCommitBank.indices (HostCommitBank.view deferred)
@@ -243,7 +244,7 @@ theorem calls_projection (deferred : Bool)
         HostCommitBank.call?).map label) := by
   have checks := HostHintQueueBoundary.projected_constraints witness constraints
   have records := HostHintQueueBoundary.record_channels witness balanced
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   rw [HostHintReadBanks.calls_eq_slot_tables]
   have projected := calls_projection_generic deferred (HostHintQueueBoundary.projected witness) interface checks records.byte
     (queue_specs _ interface _ (HostHintQueueBoundary.source_authentication witness constraints) checks records)
@@ -357,8 +358,7 @@ private theorem cpu_ordered (deferred : Bool)
 /-- Every ordered bank history is the same subsequence of the exhaustive CPU tape, including
 the argument values and incoming clocks of repeated updates. -/
 theorem cpu_projection (deferred : Bool)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))
@@ -377,7 +377,7 @@ theorem cpu_projection (deferred : Bool)
   have records := by
     exact HostHintQueueBoundary.record_channels witness balanced
   have interface := by
-    exact HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+    exact GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have handoff := by
     exact HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   have ordering := by
@@ -424,8 +424,7 @@ private theorem final_bank (deferred : Bool) (host target : HostState) :
 /-- The bank endpoints authenticated by the installed AIR equal the banks of its actual replay.
 The CPU walk and successful replay here are supplied internally by the execution capstone. -/
 theorem replay_bank (deferred : Bool)
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {cpu : List (ExecutionRow p)}
     (exhaustive : cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))))

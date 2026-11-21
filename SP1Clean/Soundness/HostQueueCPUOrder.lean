@@ -15,7 +15,7 @@ namespace SP1Clean.Soundness.HostQueueCPUOrder
 open Circuit Air.Flat Semantics HostHintQueue HostQueueOrder HostHintReadLocal NativeCore
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 
 local instance cpuClockBound : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance cpuLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
@@ -273,14 +273,15 @@ private theorem ordered_history
   exact ⟨included, currentQueues_of_order witness.data history queueSorted cpuSorted included⟩
 
 
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 /-- The installed source-only queue registry determines both exhaustive paths and their order
 agreement from raw constraints and full balance. It retains arbitrary local CPU endpoints.
 Successful whole-host replay, Memory grounding, and outgoing snapshot binding remain separate. -/
 theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness) :
     ∃ cpu : List (ExecutionRow p), ∃ path : List (Row (p := p)),
       cpu.Perm (LocalCore.executionRows (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness))) ∧
@@ -293,7 +294,7 @@ theorem source_history {final : State (ZMod p)} {bankFinal : HostState}
       CurrentQueues witness.data source.host.io.hints (HintQueue.ofList source.host.io.hints).1 cpu path := by
   let retained := HostHintQueueBoundary.projected witness
   have checks : retained.Constraints := by exact HostHintQueueBoundary.projected_constraints witness constraints
-  have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+  have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
   have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
   have callBalance := HostHintQueueBoundary.projected_hostCall_balancedChannel witness balanced
   obtain ⟨cpu, cpuExhaustive, cpuWalk⟩ := HostLocalCore.executionRows_ordered_of_orderingChannels retained checks ordering

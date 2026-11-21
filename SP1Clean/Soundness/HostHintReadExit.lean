@@ -15,24 +15,27 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))} [GroundingResources extra]
 local instance exitLt24 : Fact (2 ^ 24 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 local instance exitLt17 : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState} {channels : List (RawChannel (ZMod p))}
-variable [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+variable [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
 
 private theorem source_exit_silent :
     ∀ component ∈ (HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map (·.component) ++
-      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing)),
+      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ extra)),
       exitChannel.toRaw ∉ component.circuit.channels := by
   have checked : ((HostHintReadHandoff.receiver (p := p) :: HostCallReceivers.available).map
       (fun view : HostLocalHandoff.Receiver (p := p) => view.component) ++
-      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing))).all
+      (HostHintReadHandoff.wordResources ++ (sourceResources source.host.io.hints ++ extra))).all
       (fun component => !(component.circuit.channels.map RawChannel.name).contains
-        (exitChannel (p := p)).toRaw.name) = true := rfl
+        (exitChannel (p := p)).toRaw.name) = true :=
+      by exact GroundingResources.quiet (extra := extra) exitChannel.toRaw (by simp [groundingChannels])
   intro component member used
   have silent := List.all_eq_true.mp checked component member
   rw [List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)] at silent
@@ -40,8 +43,7 @@ private theorem source_exit_silent :
 
 /-- Exit balance projects from the full installed witness, independently of Memory balance. -/
 theorem source_exit_balance
-    (witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels))
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames)
     (balanced : HostHintQueueBoundary.Balanced witness) :
     (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel exitChannel.toRaw := by
   change BalancedInteractions ((HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).interactionsWith _)
@@ -76,8 +78,7 @@ private theorem halt_selector (row : SyscallInstrsChip.Inputs (ZMod p))
   rw [selectors.2.2.2.1, selected, real, one_mul]
 
 private theorem GroundingCarrier.halt_field (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {call : Machine.CoreSyscallEvent} (member : .syscall call ∈ carrier.events)
     (zero : call.rawCode = 0) : (call.arg1.toNat : ZMod p) = witness.publicInput.exit_code := by
@@ -93,7 +94,7 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
   have checked := HostLocalCore.localWitness_constraints _ checks
   have exitBalance := source_exit_balance witness balanced
   cases event with
-  | instruction row => contradiction
+  | instruction row => cases same
   | halt row =>
     cases Machine.ExecutionEvent.syscall.inj same
     have active : row ∈ activeSystemRows
@@ -112,7 +113,7 @@ private theorem GroundingCarrier.halt_field (valid : image.Valid)
         (LocalCore.systemTable (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)) 3)
         (syscallInstrsRow (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).data) (·.is_real) := by simpa [LocalCore.executionRows] using actual
     obtain ⟨physical, physicalMem, rowEq, real⟩ := activeSystemRows_member _ _ _ active
-    have interface := HostFinalMemory.sourceInterface (p := p) source.host.io.hints outgoing
+    have interface := GroundingResources.sourceInterface (p := p) source.host.io.hints extra
     have ordering := HostHintQueueBoundary.projected_orderingChannels witness interface constraints balanced
     have programBalance : (HostLocalCore.localWitness (HostHintQueueBoundary.projected witness)).BalancedChannel
         programChannel.toRaw := by
@@ -155,8 +156,7 @@ private theorem halt_bounds {policy : HostPolicy} {program : Target.GuestProgram
 /-- Every newly halted endpoint has exactly the public Exit value, with no modular alias.
 A stopped source instead admits only the existing identity path and preserves its prior status. -/
 theorem GroundingCarrier.final_exit (valid : image.Valid)
-    {witness : HostHintReadBanks.Witness (p := p) (image := image) (source := source)
-      (final := final) (bankFinal := bankFinal) (outgoing := outgoing) (channels := channels)} (carrier : GroundingCarrier witness)
+    {witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames} (carrier : GroundingCarrier witness)
     (constraints : witness.Constraints) (balanced : HostHintQueueBoundary.Balanced witness)
     {target : ExecutionState}
     (path : ExecutionPath ⟨{ readOnly := image.readOnly }, p⟩ (image.toGuestProgram valid)

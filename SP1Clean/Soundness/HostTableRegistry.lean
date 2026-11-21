@@ -14,36 +14,37 @@ namespace SP1Clean.Soundness.HostTableRegistry
 open Circuit Air.Flat Semantics HostHintReadLocal HostHintReadHandoff HostCommitBank
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
-variable {outgoing : MemorySnapshot}
+variable {extra : List (Component (ZMod p))}
 
 local instance registryLimbBound : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
 
-/-- Existing receiver, source-resource and target-validator blocks, in their physical
-registration order. -/
-def auxiliary (hints : List Bytes) (outgoing : MemorySnapshot) : List (Component (ZMod p)) :=
+/-- Existing receivers and source resources followed by the registered extension block. -/
+def auxiliary (hints : List Bytes) (extra : List (Component (ZMod p))) : List (Component (ZMod p)) :=
   (receiver :: HostCallReceivers.available).map (·.component) ++
-    (wordResources ++ (sourceResources hints ++ FinalMemoryChecks.checkTables outgoing))
-
+    (wordResources ++ (sourceResources hints ++ extra))
 
 /-- The installed physical suffix has exactly the registered host components, in order. -/
 theorem auxiliary_components {image : ProgramImage} {source : ExecutionSnapshot}
     {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
     {channels : List (RawChannel (ZMod p))}
-    [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
+    [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
     (HostHintReadLocal.sourceResources source.host.io.hints) channels]
-    (witness : EnsembleWitness (HostHintQueueBoundary.ensemble image source final bankFinal
-      HostCallReceivers.available (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels
-      (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary)) :
-    (witness.tables.drop 63).map (·.component) = auxiliary source.host.io.hints outgoing := by
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)}
+    (witness : HostHintQueueBoundary.SourceWitness image source final bankFinal extra channels sourceNames) :
+    (witness.tables.drop 63).map (·.component) = auxiliary source.host.io.hints extra := by
   have components := HostLocalCore.auxiliaryTables_components (HostHintQueueBoundary.projected witness)
   change ((HostHintQueueBoundary.projected witness).tables.drop 63).map (·.component) =
-    auxiliary source.host.io.hints outgoing at components
+    auxiliary source.host.io.hints extra at components
   rw [HostHintQueueBoundary.projected_drop witness 63 (by decide)] at components
   exact components
 
-/-- Number of installed host components before any further resource extension. -/
-theorem auxiliary_length (hints : List Bytes) (outgoing : MemorySnapshot) :
-    (auxiliary (p := p) hints outgoing).length = 35 := rfl
+/-- Length of the complete host block, including all appended resources. -/
+theorem auxiliary_length (hints : List Bytes) (extra : List (Component (ZMod p))) :
+    (auxiliary (p := p) hints extra).length = 31 + extra.length := by
+  simp only [auxiliary, List.length_append]
+  change 21 + (2 + (8 + extra.length)) = _
+  omega
 
 /-- Physical bank position inside the host block, including its administrative terminal. -/
 def bankPosition (deferred : Bool) : Index → ℕ
@@ -58,10 +59,12 @@ theorem bankPosition_lt (deferred : Bool) (index : Index) : bankPosition deferre
       ite_false, ite_true] <;> omega
 
 /-- Typed receiver and terminal references, independent of the enclosing CPU prefix. -/
-def bankSlot (hints : List Bytes) (outgoing : MemorySnapshot) (deferred : Bool) (index : Index) :
-    TableSlot (auxiliary (p := p) hints outgoing) (view deferred index).component where
+def bankSlot (hints : List Bytes) (extra : List (Component (ZMod p))) (deferred : Bool) (index : Index) :
+    TableSlot (auxiliary (p := p) hints extra) (view deferred index).component where
   index := ⟨bankPosition deferred index, by
-    rw [auxiliary_length]; exact Nat.lt_of_lt_of_le (bankPosition_lt deferred index) (by decide)⟩
+    rw [auxiliary_length]
+    have bound := bankPosition_lt deferred index
+    omega⟩
   component_eq := by
     cases index with
     | none => cases deferred <;> rfl
@@ -69,13 +72,15 @@ def bankSlot (hints : List Bytes) (outgoing : MemorySnapshot) (deferred : Bool) 
 
 /-- Typed bank registration in the actual boundary-installed local ensemble. -/
 def installedBankSlot (image : ProgramImage) (source : ExecutionSnapshot)
-    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (outgoing : MemorySnapshot)
+    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (extra : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) channels] (deferred : Bool) (index : Index) :
+    [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)} (deferred : Bool) (index : Index) :
     TableSlot (HostHintQueueBoundary.ensemble image source final bankFinal HostCallReceivers.available
-      (sourceResources source.host.io.hints ++ FinalMemoryChecks.checkTables outgoing) channels (HostFinalMemory.source_unique_names image source outgoing) sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary).tables (view deferred index).component :=
-  ((bankSlot source.host.io.hints outgoing deferred index).appendRight
+      (sourceResources source.host.io.hints ++ extra) channels sourceNames sourceRegistration.unique sourceRegistration.tables sourceRegistration.boundary).tables (view deferred index).component :=
+  ((bankSlot source.host.io.hints extra deferred index).appendRight
     ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer)).setOther 57
     HaltPaddingChip.component (by
       change 57 ≠ ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer).length +
@@ -85,11 +90,13 @@ def installedBankSlot (image : ProgramImage) (source : ExecutionSnapshot)
 
 /-- The installed position is the original host-block position plus its CPU prefix. -/
 theorem installedBankSlot_index (image : ProgramImage) (source : ExecutionSnapshot)
-    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (outgoing : MemorySnapshot)
+    (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState) (extra : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    [sourceRegistration : HostFinalMemory.Registration image source outgoing HostCallReceivers.available
-    (HostHintReadLocal.sourceResources source.host.io.hints) channels] (deferred : Bool) (index : Index) :
-    (installedBankSlot image source final bankFinal outgoing channels deferred index).index.val =
+    [sourceRegistration : HostFinalMemory.Registration image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints) channels]
+  {sourceNames : HostFinalMemory.UniqueNames image source extra HostCallReceivers.available
+    (HostHintReadLocal.sourceResources source.host.io.hints)} (deferred : Bool) (index : Index) :
+    (installedBankSlot image source final bankFinal extra channels (sourceNames := sourceNames) deferred index).index.val =
       63 + bankPosition deferred index := by
   change ((ProtectedLocalCore.tables image source).set 58 HostCallLedger.producer).length +
     bankPosition deferred index = _

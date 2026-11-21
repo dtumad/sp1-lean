@@ -23,8 +23,8 @@ registered by the same host assembly as every other resource. -/
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources)
-    (registration : Registration image source target others resources channels) : Ensemble (ZMod p) SP1PublicIO :=
+    (names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources)
+    (registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels) : Ensemble (ZMod p) SP1PublicIO :=
   HostHintQueueBoundary.ensemble image source final bankFinal others
     (resources ++ FinalMemoryChecks.checkTables target) channels names
     registration.unique registration.tables registration.boundary
@@ -34,8 +34,8 @@ theorem base_tables_length (image : ProgramImage) (source : ExecutionSnapshot) (
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources)
-    (registration : Registration image source target others resources channels) :
+    (names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources)
+    (registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels) :
     (base image source target final bankFinal others resources channels names registration).tables.length =
       70 + others.length + resources.length := by
   simp only [base, HostHintQueueBoundary.ensemble, HaltPadding.install, Ensemble.replaceComponent,
@@ -50,8 +50,8 @@ variable {image : ProgramImage} {source : ExecutionSnapshot} {target : MemorySna
   {final : HostHintQueue.State (ZMod p)} {bankFinal : HostState}
   {others : List (HostLocalHandoff.Receiver (p := p))} {resources : List (Component (ZMod p))}
   {channels : List (RawChannel (ZMod p))}
-  {names : UniqueNames image source target others resources}
-  {registration : Registration image source target others resources channels}
+  {names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources}
+  {registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels}
 
 private theorem base_boundary_component (index : Fin 6) :
     (base image source target final bankFinal others resources channels names registration).tables[index.val]'(by
@@ -91,8 +91,8 @@ private theorem base_ram_component :
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources)
-    (registration : Registration image source target others resources channels) :=
+    (names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources)
+    (registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels) :=
   FinalReceiptEnsemble.install (base image source target final bankFinal others resources channels names registration)
     false OrderedFinalProvider.registerCircuit
     ⟨⟨3, by rw [base_tables_length]; omega⟩, base_register_component⟩
@@ -117,8 +117,8 @@ private theorem withRegisters_ram_component :
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources)
-    (registration : Registration image source target others resources channels) :=
+    (names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources)
+    (registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels) :=
   FinalReceiptEnsemble.install (withRegisters image source target final bankFinal others resources channels names registration)
     true OrderedFinalProvider.ramCircuit
     ⟨⟨4, by
@@ -132,8 +132,8 @@ def ensemble (image : ProgramImage) (source : ExecutionSnapshot) (target : Memor
     (final : HostHintQueue.State (ZMod p)) (bankFinal : HostState)
     (others : List (HostLocalHandoff.Receiver (p := p))) (resources : List (Component (ZMod p)))
     (channels : List (RawChannel (ZMod p)))
-    (names : UniqueNames image source target others resources)
-    (registration : Registration image source target others resources channels) : Ensemble (ZMod p) SP1PublicIO :=
+    (names : UniqueNames image source (FinalMemoryChecks.checkTables target) others resources)
+    (registration : Registration image source (FinalMemoryChecks.checkTables target) others resources channels) : Ensemble (ZMod p) SP1PublicIO :=
   (FinalMemoryChangeBoundary.closed source.sail.memorySnapshot target).install
     (withReceipts image source target final bankFinal others resources channels names registration) (by
       intro channel used
