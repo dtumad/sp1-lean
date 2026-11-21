@@ -35,6 +35,8 @@ macro_rules! exported {
 }
 exported!(halt, "host_halt.rs");
 exported!(enter, "host_enter.rs");
+exported!(verify, "host_verify.rs");
+exported!(enter_or_verify, "host_enter_or_verify.rs");
 exported!(commit_0, "host_commit_0.rs");
 exported!(commit_1, "host_commit_1.rs");
 exported!(commit_2, "host_commit_2.rs");
@@ -275,6 +277,7 @@ struct ExitPolicyCase {
 #[derive(Deserialize)]
 struct ControlReferences {
     rows: Vec<Reference>,
+    verify: Reference,
     #[serde(rename = "releaseExitPolicy")]
     release_exit_policy: Vec<ExitPolicyCase>,
 }
@@ -434,6 +437,16 @@ fn all_commit_slots_preserve_released_executor_effects_and_literal_receipts() {
     }
 }
 
+fn constrained_enter(instructions: &mut Vec<Instruction>) {
+    execution::syscall(instructions, SyscallCode::ENTER_UNCONSTRAINED, u64::MAX, 17);
+    // Minimal execution enters the unconstrained region; its writes roll back at EXIT. The
+    // constrained trace takes the zero return and skips those instructions.
+    instructions.push(Instruction::new(Opcode::BEQ, 5, 0, 16, false, true));
+    execution::load_constant(instructions, 9, 99);
+    execution::load_constant(instructions, 5, SyscallCode::EXIT_UNCONSTRAINED as u64);
+    instructions.push(Instruction::new(Opcode::ECALL, 5, 10, 11, false, false));
+}
+
 #[test]
 fn halt_and_constrained_enter_match_released_execution() {
     let handlers = handlers();
@@ -458,18 +471,7 @@ fn halt_and_constrained_enter_match_released_execution() {
         );
     }
     let mut instructions = vec![];
-    execution::syscall(
-        &mut instructions,
-        SyscallCode::ENTER_UNCONSTRAINED,
-        u64::MAX,
-        17,
-    );
-    // Minimal execution enters the unconstrained region; its writes roll back at EXIT. The
-    // constrained trace takes the zero return and skips those instructions.
-    instructions.push(Instruction::new(Opcode::BEQ, 5, 0, 16, false, true));
-    execution::load_constant(&mut instructions, 9, 99);
-    execution::load_constant(&mut instructions, 5, SyscallCode::EXIT_UNCONSTRAINED as u64);
-    instructions.push(Instruction::new(Opcode::ECALL, 5, 10, 11, false, false));
+    constrained_enter(&mut instructions);
     execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
     let (executor, records) = execution::run(Sp1Program::new(instructions, 65536, 65536), &[]);
     assert_eq!(executor.registers()[9], 0);
@@ -488,6 +490,102 @@ fn halt_and_constrained_enter_match_released_execution() {
         (handlers[1].ledger)(&row),
         vec![entry("sp1.native.host_call", -F::ONE, &input)],
     );
+}
+
+#[test]
+fn verify_matches_released_x5_write_and_full_handoff() {
+    let verify = handler::<verify::Ensemble>();
+    let code = SyscallCode::VERIFY_SP1_PROOF as u64;
+    let reference = references().verify;
+    let input = call(code, u64::MAX, 1, code, 265);
+    let row = verify.build(&input);
+    assert_eq!(values(&input), reference.input);
+    assert_eq!(values(&row), reference.row);
+    same_ledger((verify.ledger)(&row), reference.ledger);
+    assert!(verify.valid(&row));
+    for col in [2, 5, 14, 17, 18] {
+        let mut wrong = input.clone();
+        wrong[col] += F::ONE;
+        assert!(!verify.valid(&verify.build(&wrong)));
+    }
+
+    for (key, digest) in [(0, 0), (u64::MAX, u64::MAX), (65537, 65539)] {
+        let mut instructions = vec![];
+        execution::syscall(
+            &mut instructions,
+            SyscallCode::VERIFY_SP1_PROOF,
+            key,
+            digest,
+        );
+        instructions.push(Instruction::new(Opcode::ADDI, 6, 5, 0, false, true));
+        execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
+        let (executor, records) = execution::run(Sp1Program::new(instructions, 65536, 65536), &[]);
+        assert_eq!(executor.registers()[6], code);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].syscall_events.len(), 2);
+        let (event, access) = records[0].syscall_events[0];
+        assert_eq!(event.syscall_code, SyscallCode::VERIFY_SP1_PROOF);
+        assert_eq!((event.arg1, event.arg2), (key, digest));
+        let MemoryRecordEnum::Write(write) = access.a else {
+            panic!("missing VERIFY result");
+        };
+        assert_eq!(write.value, code);
+        let message = call(code, event.arg1, event.arg2, write.value, event.clk);
+        let row = verify.build(&message);
+        assert!(verify.valid(&row));
+        same_ledger(
+            (verify.ledger)(&row),
+            vec![entry("sp1.native.host_call", -F::ONE, &message)],
+        );
+    }
+}
+
+#[test]
+fn shared_receipt_consumes_both_released_no_effect_calls_once() {
+    let shared = handler::<enter_or_verify::Ensemble>();
+    assert_eq!((shared.input_width, shared.width), (22, 22));
+    assert!(!shared.valid(&shared.build(&vec![F::ZERO; shared.input_width])));
+    let mut instructions = vec![];
+    constrained_enter(&mut instructions);
+    execution::syscall(
+        &mut instructions,
+        SyscallCode::VERIFY_SP1_PROOF,
+        u64::MAX,
+        1,
+    );
+    execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
+    let (executor, records) = execution::run(Sp1Program::new(instructions, 65536, 65536), &[]);
+    assert_eq!(executor.exit_code(), 0);
+    assert_eq!(records.len(), 1);
+    let events = &records[0].syscall_events;
+    assert_eq!(events.len(), 3);
+    assert_eq!(events[2].0.syscall_code, SyscallCode::HALT);
+    let expected = [
+        (SyscallCode::ENTER_UNCONSTRAINED, 0),
+        (SyscallCode::VERIFY_SP1_PROOF, 27),
+    ];
+    for ((event, access), (code, result)) in events[..2].iter().zip(expected) {
+        assert_eq!(event.syscall_code, code);
+        let MemoryRecordEnum::Write(write) = &access.a else {
+            panic!("missing no-effect result")
+        };
+        assert_eq!(write.value, result);
+        let input = call(code as u64, event.arg1, event.arg2, write.value, event.clk);
+        let row = shared.build(&input);
+        assert!(shared.valid(&row));
+        same_ledger(
+            (shared.ledger)(&row),
+            vec![entry("sp1.native.host_call", -F::ONE, &input)],
+        );
+        for col in [2, 5, 14, 17, 18] {
+            let mut wrong = input.clone();
+            wrong[col] += F::ONE;
+            assert!(!shared.valid(&shared.build(&wrong)));
+        }
+        let wrong_return = if result == 0 { 27 } else { 0 };
+        let crossed = call(code as u64, event.arg1, event.arg2, wrong_return, event.clk);
+        assert!(!shared.valid(&shared.build(&crossed)));
+    }
 }
 
 #[test]

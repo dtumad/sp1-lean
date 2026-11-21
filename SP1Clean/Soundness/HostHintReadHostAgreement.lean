@@ -54,7 +54,7 @@ private theorem inventory_calls
       rw [← HostLocalCore.hostCallTable_projection] at active
       obtain ⟨env, envMem, rfl⟩ := List.mem_map.mp active
       have received := handoff.mem_iff.mp (List.mem_map_of_mem (f := HostCallLedger.call) envMem)
-      simpa only [SixCallProfile.event, ExecutionRow.event, rawCode_syscallEventOfRow,
+      simpa only [HostReceiptProfile.code, SixCallProfile.event, ExecutionRow.event, rawCode_syscallEventOfRow,
         HostCallLedger.call, HostCallChip.Inputs.message, Word.toBitVec64, Word.toNat]
         using receivedCode _ received
 

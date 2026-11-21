@@ -2,7 +2,7 @@ import SP1CleanTest.Core.ComponentExport
 import SP1Clean.Semantics.ReleasePolicy
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+import SP1Clean.Proofs.Chips.HostNoopChip.Choice
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Populate
 import SP1Clean.Proofs.Chips.HostHintReadChip.Populate
 import SP1Clean.Native.Operations.HostCommitBoundary
@@ -10,7 +10,7 @@ import ToClean.Air.TableBuild
 
 /-! # Built-in exports of native control, commitment and hint handlers
 
-These are the installed production components, with their complete declared channels. Rust
+The installed production components and the separate VERIFY receiver retain their complete declared channels. Rust
 compares active effects against released execution and retains the separate per-call receipt
 and shard-public contracts. Commitment rows have Boolean activity for padding; terminals
 and the other control handlers remain actual events.
@@ -27,10 +27,12 @@ private def exportCircuit {Input : TypeMap} [ProvableType Input]
 private def commitName (deferred : Bool) (slot : Fin 8) : String :=
   s!"host_{if deferred then "deferred" else "commit"}_{slot.val}"
 
-/-- HALT, ENTER, sixteen bank updates, two terminals and three hint handlers. -/
+/-- Installed host components and the VERIFY no-effect receiver. -/
 def rustExports : List (String × Except String String) :=
   [("host_halt.rs", exportCircuit HostHaltChip.circuit),
-   ("host_enter.rs", exportCircuit HostEnterChip.circuit)] ++
+   ("host_enter.rs", exportCircuit (HostNoopChip.circuit .enter)),
+   ("host_verify.rs", exportCircuit (HostNoopChip.circuit .verify)),
+   ("host_enter_or_verify.rs", exportCircuit HostNoopChip.choiceCircuit)] ++
   [false, true].flatMap (fun deferred =>
     (List.finRange 8).map fun slot =>
       (s!"{commitName deferred slot}.rs", exportCircuit (HostCommitChip.circuit deferred slot))) ++
@@ -65,13 +67,14 @@ private def rowReference {Input : TypeMap} [ProvableType Input]
 def reference : Lean.Json := Lean.Json.mkObj [("rows", Lean.toJson (
   [rowReference "host_halt" HostHaltChip.circuit
       (HostHaltChip.populate (call 0 (SP1Prime - 1) (2 ^ 64 - 1) 0)),
-   rowReference "host_enter" HostEnterChip.circuit (call 3 (2 ^ 64 - 1) 0 0)] ++
+   rowReference "host_enter" (HostNoopChip.circuit .enter) (call 3 (2 ^ 64 - 1) 0 0)] ++
   [false, true].flatMap (fun deferred => (List.finRange 8).map fun slot =>
     let code := if deferred then 26 else 16
     rowReference (commitName deferred slot) (HostCommitChip.circuit deferred slot)
       (HostCommitChip.populate deferred (call code slot.val 131075 code) previous, 1)) ++
   [rowReference "host_commit_terminal" (HostCommitBoundary.terminal false) previous,
    rowReference "host_deferred_terminal" (HostCommitBoundary.terminal true) previous])),
+  ("verify", rowReference "host_verify" (HostNoopChip.circuit .verify) (call 27 (2 ^ 64 - 1) 1 27)),
   ("releaseExitPolicy", Lean.toJson ([0, 1, 2, 3, 65536, SP1Prime - 1, 2 ^ 32 - 1].map
     fun code : ℕ => Lean.Json.mkObj [("code", Lean.toJson code),
       ("accepted", Lean.toJson (Semantics.ReleasePolicy.acceptsExit (BitVec.ofNat 32 code)))]))]

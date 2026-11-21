@@ -1,9 +1,11 @@
-import SP1Clean.Semantics.Execution.SourceExecution
-import SP1Clean.Semantics.Execution.ExecutionReplay
-import SP1Clean.Semantics.Memory.InstructionWrite
-import SP1Clean.Semantics.Execution.ExecutionEncoding
-import SP1Clean.Semantics.Resources.ExecutionResources
-import SP1Clean.Semantics.Execution.CommitmentStatement
+module
+
+public import SP1Clean.Semantics.Execution.SourceExecution
+public import SP1Clean.Semantics.Execution.ExecutionReplay
+public import SP1Clean.Semantics.Memory.InstructionWrite
+public import SP1Clean.Semantics.Execution.ExecutionEncoding
+public import SP1Clean.Semantics.Resources.ExecutionResources
+public import SP1Clean.Semantics.Execution.CommitmentStatement
 
 /-! # Complete-state semantics for the native shard capstone
 
@@ -20,6 +22,8 @@ complete boundary/host installation remain separate implementation obligations; 
 contains no compiler readiness or supplied grounding certificate.
 See `Soundness/Shard/Contract` for the two end-to-end targets.
 -/
+
+@[expose] public section
 
 namespace SP1Clean.FormalModel.Shard
 

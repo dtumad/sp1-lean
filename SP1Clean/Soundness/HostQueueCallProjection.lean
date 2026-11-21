@@ -3,7 +3,7 @@ import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Semantics.Host.QueueReplay
 import SP1Clean.Semantics.Host.SixCallProfile
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
 
 /-! # Queue actions in the complete installed HostCall inventory
 
@@ -16,6 +16,7 @@ namespace SP1Clean.Soundness.HostQueueCallProjection
 
 open Circuit Air.Flat Semantics HostHintReadLocal HostQueueOrder HostQueueCPUOrder
 
+variable {includeVerify : Bool}
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 /-- Use Clean's field equality when projecting the original physical balance. -/
@@ -30,17 +31,17 @@ def project (message : HostCallChip.Message (ZMod p)) : Option HintQueue.Event :
 def safe (message : HostCallChip.Message (ZMod p)) : Prop :=
   Word.toBitVec64 message.code ≠ SyscallKind.write.code
 
-private def ControlCode (code : Word (ZMod p)) : Prop :=
-  code = 0 ∨ code = HostEnterChip.codeWord ∨
+private def ControlCode (includeVerify : Bool) (code : Word (ZMod p)) : Prop :=
+  code = 0 ∨ (∃ kind, (kind = .enter ∨ includeVerify = true) ∧ code = HostNoopChip.codeWord kind) ∨
     code = HostCommitChip.codeWord false ∨ code = HostCommitChip.codeWord true
 
 private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
-    (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (member : receiver ∈ (HostCallReceivers.availableFor (p := p) includeVerify).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
     (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
     (active : env receiver.activity = 1) :
-    ControlCode (receiver.message env).code := by
-  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+    ControlCode includeVerify (receiver.message env).code := by
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.profileNoop includeVerify] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
@@ -50,10 +51,9 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
     rw [HostCallReceivers.halt_message]
     exact Or.inl valid.1
-  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
-    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    rw [HostCallReceivers.enter_message]
-    exact Or.inr (Or.inl valid.1)
+  · obtain ⟨kind, permitted, valid⟩ := HostCallReceivers.profileNoop_spec includeVerify env constraints
+    rw [HostCallReceivers.profileNoop_message includeVerify]
+    exact Or.inr (Or.inl ⟨kind, permitted, valid.1⟩)
   · rw [HostCallReceivers.commit_activity] at active
     have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
     change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
@@ -66,18 +66,31 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     exact Or.inr (Or.inr (Or.inr valid.1.1))
 
 private theorem control_projection (message : HostCallChip.Message (ZMod p))
-    (code : ControlCode message.code) :
-    safe message ∧ project message = none ∧ SixCallProfile.code (Word.toBitVec64 message.code) := by
+    (code : ControlCode includeVerify message.code) :
+    safe message ∧ project message = none ∧ HostReceiptProfile.code includeVerify (Word.toBitVec64 message.code) := by
   have small (n : ℕ) (bound : n < 2 ^ 17) : ((n : ℕ) : ZMod p).val = n :=
     ZMod.val_natCast_of_lt (lt_trans bound (Fact.out (p := 2 ^ 17 < p)))
   have three : (3 : ZMod p).val = 3 := small 3 (by decide)
   have sixteen : (16 : ZMod p).val = 16 := small 16 (by decide)
   have twentySix : (26 : ZMod p).val = 26 := small 26 (by decide)
-  rcases code with code | code | code | code
+  rcases code with code | ⟨kind, permitted, code⟩ | code | code
+  case inr.inl =>
+    cases kind with
+    | enter =>
+      refine ⟨?_, ?_, HostReceiptProfile.of_six includeVerify ?_⟩ <;>
+        simp [safe, project, code, HostNoopChip.codeWord, Word.toBitVec64, Word.toNat, three,
+          queueCallEvent?, SixCallProfile.code, SixCallProfile.kinds, or_and_right, exists_or,
+          SyscallKind.decode?_eq_some_iff, SyscallKind.code]
+    | verify =>
+      have enabled : includeVerify = true := permitted.resolve_left (by decide)
+      have value : (27 : ZMod p).val = 27 := small 27 (by decide)
+      simp [safe, project, code, HostNoopChip.codeWord, Word.toBitVec64, Word.toNat, value,
+        queueCallEvent?, enabled, HostReceiptProfile.code, SyscallKind.code]
   all_goals
-    simp [safe, project, code, HostEnterChip.codeWord, HostCommitChip.codeWord,
-      Word.toBitVec64, Word.toNat, three, sixteen, twentySix, queueCallEvent?, SixCallProfile.code,
-      SixCallProfile.kinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
+    refine ⟨?_, ?_, HostReceiptProfile.of_six includeVerify ?_⟩ <;>
+      simp [safe, project, code, HostCommitChip.codeWord,
+        Word.toBitVec64, Word.toNat, sixteen, twentySix, queueCallEvent?, SixCallProfile.code,
+        SixCallProfile.kinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
 
 /-- Both queue operations have the exact action decoded from their complete call. -/
 theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Spec row.2) :
@@ -101,7 +114,7 @@ theorem queue_projection (row : Row (p := p)) (valid : (view row.1).component.Sp
     decide
 
 private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
-    (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (member : receiver ∈ (HostCallReceivers.availableFor (p := p) includeVerify).take 18)
     (env : Environment (ZMod p)) (constraints : receiver.component.operations.ConstraintsHold env)
     (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
     (active : env receiver.activity = 1)
@@ -112,7 +125,7 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
       context.register 11 = some (Word.toBitVec64 (receiver.message env).arg2)) :
     ∃ execution, host.run policy context = some execution ∧
       execution.result = Word.toBitVec64 (receiver.message env).result ∧ execution.effect.write = none := by
-  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.profileNoop includeVerify] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
@@ -123,10 +136,9 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
     rw [HostCallReceivers.halt_message] at observed ⊢
     exact ⟨_, HostHaltChip.run_of_spec _ valid host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
-  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
-    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    rw [HostCallReceivers.enter_message] at observed ⊢
-    exact ⟨_, HostEnterChip.run_of_spec _ valid host running policy context
+  · obtain ⟨kind, permitted, valid⟩ := HostCallReceivers.profileNoop_spec includeVerify env constraints
+    rw [HostCallReceivers.profileNoop_message includeVerify] at observed ⊢
+    exact ⟨_, HostNoopChip.run_of_spec kind _ valid host running policy context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
   · rw [HostCallReceivers.commit_activity] at active
     have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
@@ -144,7 +156,7 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
 private theorem controls_run (receivers : List (HostLocalHandoff.Receiver (p := p)))
     (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun receiver table => receiver.component = table.component) receivers tables)
-    (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.availableFor (p := p) includeVerify).take 18)
     (constraints : ∀ table ∈ tables, table.Constraints)
     (bytes : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw)
     (message : HostCallChip.Message (ZMod p)) (member : message ∈ ReceiverView.messages receivers tables)
@@ -176,11 +188,11 @@ private theorem controls_run (receivers : List (HostLocalHandoff.Receiver (p := 
 private theorem controls_projection (receivers : List (HostLocalHandoff.Receiver (p := p)))
     (tables : List (Table (ZMod p)))
     (aligned : List.Forall₂ (fun receiver table => receiver.component = table.component) receivers tables)
-    (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.available (p := p)).take 18)
+    (registered : ∀ receiver ∈ receivers, receiver ∈ (HostCallReceivers.availableFor (p := p) includeVerify).take 18)
     (constraints : ∀ table ∈ tables, table.Constraints)
     (bytes : ∀ table ∈ tables, table.ChannelGuarantees Channels.byteChannel.toRaw) :
     ∀ message ∈ ReceiverView.messages receivers tables,
-      safe message ∧ project message = none ∧ SixCallProfile.code (Word.toBitVec64 message.code) := by
+      safe message ∧ project message = none ∧ HostReceiptProfile.code includeVerify (Word.toBitVec64 message.code) := by
   induction aligned with
   | nil => simp [ReceiverView.messages, TransitionView.readIndexedRows]
   | @cons receiver table receivers tables same aligned ih =>
@@ -231,42 +243,42 @@ private theorem queue_messages (tables : List (Table (ZMod p))) :
 variable {image : ProgramImage} {source : ExecutionSnapshot}
   {resources : List (Component (ZMod p))} {channels : List (RawChannel (ZMod p))}
   {names : ((HostLocalCore.tables image source
-    ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+    ((HostHintReadHandoff.receiver :: HostCallReceivers.availableFor includeVerify).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources))).map (·.circuit.name)).Nodup}
   {channelNames : ((HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)).map (·.name)).Nodup}
-  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.available).map (·.component) ++
+  {tableChannels : ∀ component ∈ ((HostHintReadHandoff.receiver :: HostCallReceivers.availableFor includeVerify).map (·.component) ++
       (HostHintReadHandoff.wordResources ++ resources)),
     component.circuit.channels ⊆ HostLocalCore.registry image source (HintReadWordChip.stateChannel.toRaw :: channels)}
 
 /-- Physical control and commitment handlers in the installed receiver prefix. -/
 def controlTables
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :=
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels)) :=
   ((HostLocalHandoff.receiverTables witness).drop 1).take 18
 
 /-- Every selected control table is an original physical table of the witness. -/
 theorem controlTables_mem
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels))
     (table : Table (ZMod p)) (member : table ∈ controlTables witness) : table ∈ witness.tables :=
   List.mem_of_mem_drop (List.mem_of_mem_take (List.mem_of_mem_drop (List.mem_of_mem_take member)))
 
 /-- Complete calls split into queue handlers and the retained control/commitment inventory. -/
 theorem calls_split
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels)) :
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels)) :
     (HostLocalHandoff.calls witness).Perm
       ((TransitionView.readIndexedRows indices (queueTables witness)).map call ++
-        ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness)) := by
+        ReceiverView.messages ((HostCallReceivers.availableFor (p := p) includeVerify).take 18) (controlTables witness)) := by
   have head : HostLocalHandoff.receiverTables witness =
       handlerTable witness :: (HostLocalHandoff.receiverTables witness).drop 1 := by
     have bound := (HostLocalHandoff.receiverTables_aligned witness).length_eq
-    change (HostHintReadHandoff.receiver :: HostCallReceivers.available).length =
+    change (HostHintReadHandoff.receiver :: HostCallReceivers.availableFor includeVerify).length =
       (HostLocalHandoff.receiverTables witness).length at bound
     exact (List.cons_getElem_drop_succ (l := HostLocalHandoff.receiverTables witness) (n := 0)
       (h := by simp only [List.length_cons] at bound; omega)).symm
   rw [← queue_messages, queueTables]
-  change (ReceiverView.messages (HostHintReadHandoff.receiver :: HostCallReceivers.available)
+  change (ReceiverView.messages (HostHintReadHandoff.receiver :: HostCallReceivers.availableFor includeVerify)
     (HostLocalHandoff.receiverTables witness)).Perm _
   conv_lhs => rw [head, ReceiverView.messages_cons,
-    ReceiverView.messages_take_drop HostCallReceivers.available _ 18]
+    ReceiverView.messages_take_drop (HostCallReceivers.availableFor includeVerify) _ 18]
   change List.Perm (α := HostCallChip.Message (ZMod p)) (_ ++ (_ ++ _))
     ((ReceiverView.messages (HostHintReadHandoff.receiver :: [HostCallReceivers.hintLength false,
       HostCallReceivers.hintLength true]) (handlerTable witness ::
@@ -277,12 +289,12 @@ theorem calls_split
     (List.Perm.of_eq (List.append_assoc _ _ _).symm)
 
 private theorem control_calls
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface (HostCallReceivers.availableFor includeVerify) resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw) :
-    ∀ message ∈ ReceiverView.messages ((HostCallReceivers.available (p := p)).take 18) (controlTables witness),
-      safe message ∧ project message = none ∧ SixCallProfile.code (Word.toBitVec64 message.code) := by
-  have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
+    ∀ message ∈ ReceiverView.messages ((HostCallReceivers.availableFor (p := p) includeVerify).take 18) (controlTables witness),
+      safe message ∧ project message = none ∧ HostReceiptProfile.code includeVerify (Word.toBitVec64 message.code) := by
+  have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.availableFor (p := p) includeVerify).take 18)
     (controlTables witness) (by
       simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
         List.map_cons, List.drop_succ_cons, List.drop_zero])
@@ -293,15 +305,16 @@ private theorem control_calls
 
 /-- Every message received by the complete installed handler inventory has a unique six-call code. -/
 theorem calls_code
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface (HostCallReceivers.availableFor includeVerify) resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
     (specs : ∀ table ∈ queueTables witness, table.Spec)
     (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
-    SixCallProfile.code (Word.toBitVec64 message.code) := by
+    HostReceiptProfile.code includeVerify (Word.toBitVec64 message.code) := by
   rcases List.mem_append.mp ((calls_split witness).mem_iff.mp member) with queue | control
   · obtain ⟨row, rowMem, rfl⟩ := List.mem_map.mp queue
     have valid := rows_spec _ (queueTables_aligned witness) specs row rowMem
+    apply HostReceiptProfile.of_six includeVerify
     rcases row with ⟨index, env⟩
     cases index with
     | none =>
@@ -318,8 +331,8 @@ theorem calls_code
 dispatch succeeds on the observed registers of any running host. Control dispatch modifies
 the actual host state, independently of later authentication of its complete outgoing snapshot. -/
 theorem calls_run_or_queue
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface (HostCallReceivers.availableFor includeVerify) resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
     (message : HostCallChip.Message (ZMod p)) (member : message ∈ HostLocalHandoff.calls witness) :
     (∃ row ∈ TransitionView.readIndexedRows indices (queueTables witness), message = call row) ∨
@@ -340,7 +353,7 @@ theorem calls_run_or_queue
       intro read
       simp only [project, read, queueCallEvent?, SyscallKind.code, BitVec.reduceEq, ↓reduceIte] at projected
       cases projected
-    · have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.available (p := p)).take 18)
+    · have aligned := ReceiverView.aligned_of_map_eq ((HostCallReceivers.availableFor (p := p) includeVerify).take 18)
         (controlTables witness) (by
           simp only [controlTables, List.map_take, List.map_drop, HostLocalHandoff.receiverTables_components,
             List.map_cons, List.drop_succ_cons, List.drop_zero])
@@ -382,8 +395,8 @@ private theorem projection_of_split {Message Row Label : Type*}
 /-- The complete installed receiver inventory excludes WRITE and projects to precisely the
 physical queue-handler actions. No successful host execution is a premise. -/
 theorem calls_projection
-    (witness : EnsembleWitness (ensemble image source HostCallReceivers.available resources channels names channelNames tableChannels))
-    (interface : ExtensionInterface HostCallReceivers.available resources)
+    (witness : EnsembleWitness (ensemble image source (HostCallReceivers.availableFor includeVerify) resources channels names channelNames tableChannels))
+    (interface : ExtensionInterface (HostCallReceivers.availableFor includeVerify) resources)
     (constraints : witness.Constraints) (balanced : witness.BalancedChannel Channels.byteChannel.toRaw)
     (specs : ∀ table ∈ queueTables witness, table.Spec) :
     (∀ message ∈ HostLocalHandoff.calls witness, safe message) ∧

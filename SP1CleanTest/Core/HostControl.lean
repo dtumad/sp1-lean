@@ -2,7 +2,7 @@ import SP1CleanTest.Core.HostChecks
 import Clean.Circuit.WitnessExport
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
 import SP1Clean.Proofs.Chips.HostControlPopulate
 
 /-! # Native control handlers against instructions and host dispatch
@@ -31,7 +31,7 @@ private def evaluateHalt (input : HostCallChip.Message Fp) (corrupt : Option ℕ
     (toElements (HostHaltChip.populate input)).toList corrupt
 
 private def evaluateEnter (input : HostCallChip.Message Fp) : Bool × Ledger :=
-  evaluateProgram (HostEnterChip.main (varFromOffset HostEnterChip.Inputs 0)) (toElements input).toList
+  evaluateProgram (HostNoopChip.main .enter (varFromOffset HostNoopChip.Inputs 0)) (toElements input).toList
 
 private def instruction (halt : Bool) (arg1 arg2 : ℕ) : HostCallChip.Inputs Fp :=
   let code : ℕ := if halt then 0 else 3
@@ -140,7 +140,7 @@ theorem interpreterEffects :
         (expected.effect.state.run policy (context input)).isNone) = true ∧
     [(0, 0), (2 ^ 64 - 1, 2 ^ 64 - 1)].all (fun (a, b) =>
       let input := call false a b
-      let expected := HostEnterChip.execution input host
+      let expected := HostNoopChip.execution .enter input host
       host.run policy (context input) == some expected && expected.result == 0 &&
         expected.effect == ⟨host, none⟩) = true := by native_decide
 
@@ -157,8 +157,8 @@ private def compiledControl (halt : Bool) (arg1 : ℕ) : Bool :=
       let checked := if halt then
         evaluateProgram (HostHaltChip.main (varFromOffset HostHaltChip.Inputs 0))
           (toElements (SP1Clean.HostControl.halt clock execution)).toList
-        else evaluateProgram (HostEnterChip.main (varFromOffset HostEnterChip.Inputs 0))
-          (toElements (SP1Clean.HostControl.enter clock execution)).toList
+        else evaluateProgram (HostNoopChip.main .enter (varFromOffset HostNoopChip.Inputs 0))
+          (toElements (SP1Clean.HostControl.message clock execution)).toList
       checked.1 && Semantics.clkNat message.clk_high message.clk_low == clock &&
         selected "sp1.native.host_call" checked.2 ==
           [("sp1.native.host_call", (toElements message).toList, -1)]
@@ -174,6 +174,6 @@ theorem compiledControls :
 
 /-- info: exportable ✓ (0 witness cells) -/
 #guard_msgs in
-#assert_exportable (HostEnterChip.circuit (p := SP1Prime))
+#assert_exportable (HostNoopChip.circuit (p := SP1Prime) .enter)
 
 end SP1CleanTest.Core.HostControl

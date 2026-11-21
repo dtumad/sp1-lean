@@ -128,18 +128,18 @@ theorem hint_length_authenticates (store : Store) (empty : Bool) :
     have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
     cases empty <;> change false = true at present <;> contradiction
 
-private theorem control_authenticates (store : Store) (component : Component (ZMod p))
-    (member : component ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+private theorem control_authenticates {includeVerify : Bool} (store : Store) (component : Component (ZMod p))
+    (member : component ∈ ([HostCallReceivers.halt, HostCallReceivers.profileNoop includeVerify] ++
       (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
       (List.ofFn fun slot => HostCallReceivers.commit true slot)).map
         (fun view : HostLocalHandoff.Receiver (p := p) => view.component)) :
     Authenticates store component := by
-  have checked : (([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  have checked : (([HostCallReceivers.halt, HostCallReceivers.profileNoop includeVerify] ++
       (List.ofFn fun slot => HostCallReceivers.commit (p := p) false slot) ++
       (List.ofFn fun slot => HostCallReceivers.commit true slot)).map
         (fun view : HostLocalHandoff.Receiver (p := p) => view.component)).all (fun component : Component (ZMod p) =>
         !(component.circuit.channels.map RawChannel.name).contains (nodeChannel (p := p)).toRaw.name &&
-        !(component.circuit.channels.map RawChannel.name).contains (wordChannel (p := p)).toRaw.name) = true := rfl
+        !(component.circuit.channels.map RawChannel.name).contains (wordChannel (p := p)).toRaw.name) = true := by cases includeVerify <;> rfl
   have silent := List.all_eq_true.mp checked component member
   simp only [Bool.and_eq_true] at silent
   constructor
@@ -149,10 +149,10 @@ private theorem control_authenticates (store : Store) (component : Component (ZM
     have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
     simp only [present, Bool.not_true, Bool.false_eq_true, false_and, and_false] at silent
 
-theorem available_authenticates (store : Store) (component : Component (ZMod p))
-    (member : component ∈ (HostCallReceivers.available (p := p)).map (·.component)) :
+theorem available_authenticates {includeVerify : Bool} (store : Store) (component : Component (ZMod p))
+    (member : component ∈ (HostCallReceivers.availableFor (p := p) includeVerify).map (·.component)) :
     Authenticates store component := by
-  change component ∈ (([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change component ∈ (([HostCallReceivers.halt, HostCallReceivers.profileNoop includeVerify] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) ++
       [HostCallReceivers.hintLength false, HostCallReceivers.hintLength true]).map

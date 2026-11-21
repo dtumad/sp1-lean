@@ -61,9 +61,9 @@ theorem GroundingResources.appendInterface (extra : List (Component (ZMod p))) [
 
 /-- The source records and appended block supply the installed host extension interface. -/
 theorem GroundingResources.sourceInterface (hints : List Bytes) (extra : List (Component (ZMod p)))
-    [GroundingResources extra] :
-    HostHintReadLocal.ExtensionInterface HostCallReceivers.available (HostHintReadLocal.sourceResources hints ++ extra) :=
-  GroundingResources.appendInterface extra (HostHintReadLocal.source_interface hints)
+    [GroundingResources extra] (includeVerify : Bool := false) :
+    HostHintReadLocal.ExtensionInterface (HostCallReceivers.availableFor includeVerify) (HostHintReadLocal.sourceResources hints ++ extra) :=
+  GroundingResources.appendInterface extra (HostHintReadLocal.source_interface hints includeVerify)
 
 /-- The released fixed final-memory tables satisfy the resource interface in the installed assembly. -/
 instance (target : MemorySnapshot) : GroundingResources (FinalMemoryChecks.checkTables (p := p) target) where

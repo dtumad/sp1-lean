@@ -197,7 +197,7 @@ theorem declaration_sources (property : CommitmentDeclaration.Row (ZMod p) → P
     · simp only [List.map_cons, List.mem_cons, List.mem_map] at receivers
       rcases receivers with rfl | ⟨view, viewMem, rfl⟩
       · exact authenticates_of_name _ rfl
-      · simp only [HostCallReceivers.available, List.mem_append, List.mem_cons, List.not_mem_nil, or_false,
+      · simp only [HostCallReceivers.available, HostCallReceivers.availableFor, List.mem_append, List.mem_cons, List.not_mem_nil, or_false,
           List.mem_ofFn] at viewMem
         rcases viewMem with ((((rfl | rfl) | ⟨slot, rfl⟩) | ⟨slot, rfl⟩) | rfl | rfl)
         · exact authenticates_of_name _ rfl

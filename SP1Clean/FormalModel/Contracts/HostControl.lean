@@ -5,7 +5,8 @@ import SP1Clean.FormalModel.Contracts.BoundedWord
 
 HALT accepts canonical exits below both the field characteristic and `2^32`. Its host handler
 consumes the instruction handoff; the instruction itself remains the sole Exit sender.
-ENTER_UNCONSTRAINED returns zero and has no host or memory effect in constrained replay.
+ENTER_UNCONSTRAINED returns zero and VERIFY_SP1_PROOF returns its code. Both preserve the
+host and guest memory in constrained replay.
 Neither contract imposes a restriction on unused guest arguments.
 -/
 
@@ -27,13 +28,33 @@ def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop := CallSpec i
 
 end SP1Clean.HostHaltChip
 
-namespace SP1Clean.HostEnterChip
+namespace SP1Clean.HostNoopChip
 
+/-- Constrained-replay calls that preserve the complete host and have no guest-memory effects. -/
+inductive Kind where
+  | enter | verify
+deriving DecidableEq
+
+/-- Both handlers consume the complete instruction-authenticated host handoff. -/
 abbrev Inputs := HostCallChip.Message
 
-def codeWord {R : Type} [OfNat R 3] [Zero R] : Word R := #v[3, 0, 0, 0]
+/-- Exact full-width syscall word, with all reserved bytes zero. -/
+def codeWord {p : ℕ} (kind : Kind) : Word (ZMod p) :=
+  match kind with
+  | .enter => #v[3, 0, 0, 0]
+  | .verify => #v[27, 0, 0, 0]
 
-def Spec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop :=
-  input.code = codeWord ∧ input.result = 0 ∧ input.length = 0
+/-- ENTER clears x5. VERIFY retains the syscall code in x5. -/
+def resultWord {p : ℕ} (kind : Kind) : Word (ZMod p) :=
+  match kind with
+  | .enter => 0
+  | .verify => codeWord .verify
 
-end SP1Clean.HostEnterChip
+/-- No-effect calls leave both arguments unrestricted and use no WRITE length. -/
+def Spec {p : ℕ} [Fact p.Prime] (kind : Kind) (input : Inputs (ZMod p)) : Prop :=
+  input.code = codeWord kind ∧ input.result = resultWord kind ∧ input.length = 0
+
+/-- Either of the released no-effect calls with its corresponding x5 result. -/
+def ChoiceSpec {p : ℕ} [Fact p.Prime] (input : Inputs (ZMod p)) : Prop := Spec .enter input ∨ Spec .verify input
+
+end SP1Clean.HostNoopChip

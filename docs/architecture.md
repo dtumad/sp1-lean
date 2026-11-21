@@ -175,6 +175,13 @@ constraints establish its binarity; balance matches only active records while ke
 weighted physical ledger and occurrence bound. Target-change selection remains separate from
 row activity, so an unchanged live target still consumes its final receipt.
 
+The six-call and seven-call host inventories use the same physical position for no-effect
+receipts. In the seven-call profile every row accepts either ENTER with zero x5 or VERIFY
+with x5 equal to its full syscall code. Each row consumes one complete HostCall. Its physical
+height counts their combined occurrences. The released supervisor instruction table separately
+pads the full syscall-event stream. The registered host boundary proves code classification and
+dispatch for both profiles. The 100-slot raw execution theorem still uses the six-call inventory.
+
 Each Clean table stores its evaluation data and a proof that its physical row count fits the
 upstream `UInt64` index space. Ensemble construction makes every table's stored data agree with
 the canonical data derived from the complete inventory. Generation inputs remain separate.

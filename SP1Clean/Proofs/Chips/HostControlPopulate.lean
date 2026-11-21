@@ -1,10 +1,10 @@
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
 import SP1Clean.Semantics.Host.HostExecutionLaws
 
 /-! # Control-handler rows from successful host execution
 
-The deterministic constructors take an interpreter result and event clock. For HALT and ENTER,
+The deterministic constructors take an interpreter result and event clock. For HALT, ENTER and VERIFY,
 successful dispatch itself discharges the complete handler-domain predicates and computes the
 HALT comparison columns. No row contract is supplied to these completeness adapters.
 The enclosing event compiler must still match this handoff to its instruction row.
@@ -41,8 +41,6 @@ theorem message_values (clock : ℕ) (execution : HostExecution) :
 def halt (clock : ℕ) (execution : HostExecution) : HostHaltChip.Inputs (ZMod p) :=
   HostHaltChip.populate (message clock execution)
 
-def enter (clock : ℕ) (execution : HostExecution) : HostEnterChip.Inputs (ZMod p) := message clock execution
-
 omit [Fact (2 ^ 25 < p)] in
 private theorem encode_zero : bitVecToWord (p := p) (BitVec.ofNat 64 0) = 0 := by
   apply Vector.ext
@@ -71,15 +69,26 @@ theorem halt_assumptions_of_run (clock : ℕ) (execution : HostExecution) (kind 
     exact lt_min_iff.mpr bounds
 
 omit [Fact (2 ^ 25 < p)] in
-/-- ENTER needs no witness payload beyond the canonical message produced by successful dispatch. -/
-theorem enter_assumptions_of_run (clock : ℕ) (execution : HostExecution)
-    (kind : execution.kind = .enterUnconstrained) (host : HostState) (policy : HostPolicy)
+/-- Successful execution supplies every field of the ENTER or VERIFY receiver without auxiliary witness data. -/
+theorem noop_spec_of_run (kind : HostNoopChip.Kind) (clock : ℕ) (execution : HostExecution)
+    (selected : execution.kind = kind.syscall) (host : HostState) (policy : HostPolicy)
     (context : HostReadContext) (success : host.run policy context = some execution) :
-    HostEnterChip.Spec (enter (p := p) clock execution) := by
+    HostNoopChip.Spec kind (message (p := p) clock execution) := by
   have facts := (host.run_eq_some_iff policy context execution).mp success
-  have result : execution.result = 0 := by simpa [kind, HostState.result] using facts.2.2.2.2.1
-  refine ⟨?_, ?_, rfl⟩
-  · simp [enter, message, kind, SyscallKind.code, bitVecToWord, HostEnterChip.codeWord]
-  · simp [enter, message, result, encode_zero]
+  have result := facts.2.2.2.2.1
+  cases kind <;> simp [message, selected, result, HostNoopChip.Kind.syscall, SyscallKind.code,
+    HostState.result, HostNoopChip.Spec, HostNoopChip.codeWord, HostNoopChip.resultWord, bitVecToWord]
+  rfl
+
+omit [Fact (2 ^ 25 < p)] in
+/-- Successful replay of either no-effect call constructs one row of the shared physical receiver. -/
+theorem choice_spec_of_run (kind : HostNoopChip.Kind) (clock : ℕ) (execution : HostExecution)
+    (selected : execution.kind = kind.syscall) (host : HostState) (policy : HostPolicy)
+    (context : HostReadContext) (success : host.run policy context = some execution) :
+    HostNoopChip.ChoiceSpec (message (p := p) clock execution) := by
+  have spec := noop_spec_of_run (p := p) kind clock execution selected host policy context success
+  cases kind with
+  | enter => exact Or.inl spec
+  | verify => exact Or.inr spec
 
 end SP1Clean.HostControl

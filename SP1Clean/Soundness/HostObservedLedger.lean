@@ -27,7 +27,7 @@ private theorem observed_tables :
 theorem tables_length : (ensemble image source target final).tables.length = 98 := by
   rw [observed_tables, List.length_mapIdx]
   simp only [HostFinalMemory.Installed, HostFinalMemory.tables_eq, List.length_set, List.length_append,
-    HostFinalMemory.prefix_length, HostCallReceivers.available,
+    HostFinalMemory.prefix_length, HostCallReceivers.available, HostCallReceivers.availableFor,
     HostHintReadLocal.sourceResources, HostHintReadLocal.bankResources, OrdinaryObservation.tables,
     FinalMemoryChecks.checkTables, List.length_ofFn, List.length_cons, List.length_nil]
 
@@ -51,7 +51,7 @@ private theorem position_val (i : Fin 4) :
     (observationPosition (p := p) (source := source) (image := image) (target := target) i).index.val = 90 + i.val := by
   simp only [observationPosition, TableSlot.appendRight, TableSlot.appendLeft, TableSlot.ofIndex,
     List.length_set, ProtectedLocalCore.tables_length, List.length_cons, List.length_nil,
-    HostHintReadLocal.bankResources, HostHintReadHandoff.wordResources, HostCallReceivers.available,
+    HostHintReadLocal.bankResources, HostHintReadHandoff.wordResources, HostCallReceivers.available, HostCallReceivers.availableFor,
     List.length_map, List.length_append, List.length_ofFn]
   omega
 

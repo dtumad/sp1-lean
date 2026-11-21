@@ -118,6 +118,7 @@ import SP1Clean.Soundness.HostFinalMemoryEncoding
 import SP1Clean.Soundness.HostFinalMemoryDeclarations
 import SP1Clean.Soundness.HostFinalMemoryLookups
 import SP1Clean.Soundness.HostFinalMemoryRegistry
+import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Soundness.HostResourceExtension
 import SP1Clean.Soundness.HostFinalMemoryView
 import SP1Clean.Soundness.HostFinalMemoryLedger
@@ -174,6 +175,7 @@ import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 import SP1Clean.Proofs.Completeness.ObservationData
 import SP1Clean.Proofs.Completeness.ExecutionObservationSuccessor
 import SP1Clean.Proofs.Completeness.ExecutionObservationEndpoint
+import SP1Clean.Proofs.Completeness.HintInventory
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint
