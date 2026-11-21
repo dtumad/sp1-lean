@@ -138,7 +138,10 @@ arithmetic at complete semantic cuts. `ExecutionSnapshot.resources_realize` comp
 without materializing dense Sail memory; `ByteMemory.supportBelow` removes zeros and shadowed
 writes. Both state and tape usage are invariant under equivalent complete snapshots.
 
-`nativeProfile` is fixed at the Shard and PolyFun target consumers. It requires width-aligned
+The release statement retains the existing `nativeProfile` and adds its separate per-jump
+link encoding condition. [Release statement](../SP1Clean/FormalModel/ShardRelease.lean)
+
+`nativeProfile` bounds the broader Sail execution. It requires width-aligned
 ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. This phase implies
 the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock
 fit their native encodings but need no subsequent fetch. The physical `tableRows` and

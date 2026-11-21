@@ -23,7 +23,8 @@ EXPECTED_ROOTS = {
     "SP1Clean.Soundness.Shard." + name
     for name in ("statement_iff", "SoundnessTarget", "CompilerTarget", "SailTrace", "Endpoint", "sail_trace")
 } | {"SP1Clean.FormalModel.Shard." + name
-     for name in ("Executes", "nativeProfile", "AdmissibleExecution", "sp1Machine")} | {
+     for name in ("Executes", "nativeProfile", "AdmissibleExecution", "ReleaseAdmissibleExecution",
+                  "ReleaseStatementExecution", "sp1Machine")} | {
     "SP1Clean.Export.InstalledAssembly.proverStatement_iff",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",

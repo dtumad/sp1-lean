@@ -110,7 +110,7 @@ private def lastJalr (rd : ℕ) : ITypeEvent :=
 
 /-- On the last fetch slot JALR can discard the link while jumping back to itself. -/
 theorem lastJalr_targets_iff (rd : ℕ) : (lastJalr rd).JalrTargets ↔ rd = 0 := by
-  simp [ITypeEvent.JalrTargets, ITypeEvent.jalrTarget, lastJalr]
+  simp [ITypeEvent.JalrTargets, ITypeEvent.jalrTarget, JumpLinkFits, lastJalr]
 
 /-- Both discarded-link events supply their actual Clean chip's honest-prover contract. -/
 theorem lastSlot_discardedLinks (data : ProverData (ZMod SP1Prime)) (hint : ProverHint (ZMod SP1Prime)) :

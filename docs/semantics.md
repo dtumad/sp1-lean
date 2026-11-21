@@ -6,13 +6,12 @@ host calls. A segment may continue, halt, or be empty; boot-to-HALT is a corolla
 
 ```text
 nativeEnsemble(context, commitments, source, target).Statement(canonicalHeader)
-  ↔ ∃ events, StatementExecution(context, commitments, source, target, events)
+  ↔ ∃ events, ReleaseStatementExecution(context, commitments, source, target, events)
 ```
 
-This is a target, not an instantiated theorem. Its checked definitions are
-[Shard.StatementExecution](../SP1Clean/FormalModel/Shard.lean) and the
-[soundness/compiler targets](../SP1Clean/Soundness/Shard/Contract.lean).
-[#12](https://github.com/dtumad/sp1-lean/issues/12) owns their remaining obligations.
+The equivalence is checked conditional on supplying both the soundness proof and a constructive
+compiler. Its statement includes the broad resource-bounded Sail execution, commitment declarations,
+and the link writes representable by the pinned release. [Release statement](../SP1Clean/FormalModel/ShardRelease.lean) · [Soundness and compiler targets](../SP1Clean/Soundness/Shard/Contract.lean) · [Remaining obligations](https://github.com/dtumad/sp1-lean/issues/12)
 
 ## State and execution
 
@@ -116,14 +115,14 @@ larger inventory. For a demand-padded consumer of height h, its receipt ledger h
 and the complete observation-state ledger has 2h + 4, including both public endpoints and the
 selected terminal. This fits the standard native limits. [Canonical data](../SP1Clean/Proofs/Completeness/ObservationData.lean) and [physical capacity](../SP1Clean/Proofs/Completeness/ObservationCapacity.lean).
 
-The full semantic domain admits a jump at the final 48-bit instruction slot, `2^48 − 4`.
-Both `jal x1,0` and `jalr x1,x0,0` retire normally from canonical boot for suitable finite
-images and resource limits. Writing the link to x1 requires the value `2^48`; the released
-JAL and JALR AIR require a 48-bit link at that active write. The Lean regression proves the
-executions are admissible and that every matching enabled native row fails its constraints or
-lookup requirements. A jump to x0 disables the link-write gate. A branch checks only its
-selected destination. The unrestricted `CompilerTarget` continues to expose this domain
-mismatch. [Jump-link regression](../SP1CleanTest/Alignment/Core/JumpLinkBoundary.lean).
+The broader `AdmissibleExecution` admits `jal x1,0` and `jalr x1,x0,0` from a checked
+one-word boot image at the last instruction slot, `2^48 − 4`. Each writes `2^48` to x1. The
+pinned JAL and JALR AIRs constrain an enabled link to three 16-bit limbs, so these same
+complete source, target and tape triples fall outside `ReleaseAdmissibleExecution`. At every
+ordinary cut the release condition checks the fetched instruction at the actual source PC.
+Writing x0 disables the addition, and an enabled write from `2^48 − 8` still fits. Host calls
+and empty paths have no link writes. The existing branch check uses the selected destination.
+[Replay condition](../SP1Clean/Semantics/Execution/ReleaseLinks.lean) · [Physical row proofs](../SP1Clean/Proofs/Chips/JumpLinkBound.lean) · [Boot regressions](../SP1CleanTest/Alignment/Core/JumpLinkBoundary.lean)
 
 Current Rust evidence is tied to the single released-SP1 revision in
 [provenance](../scripts/provenance.json). A release upgrade must review loader/host behavior as

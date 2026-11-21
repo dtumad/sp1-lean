@@ -38,6 +38,15 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 24 < p)]
 Both are `AddOperation.populate` at the built program-counter word, so both are built words of the
 executor's own wrapping sums. -/
 
+omit [Fact (2 ^ 24 < p)] in
+/-- The released event enables its physical link addition exactly on a nonzero destination. -/
+theorem linkGate_iff (e : JTypeEvent) :
+    (e.toJalInputs (p := p)).is_real - (e.toJalInputs (p := p)).adapter.op_a_0 = 1 ↔ e.opA ≠ 0 := by
+  change 1 - (jTypeReaderCols (p := p) e).op_a_0 = 1 ↔ _
+  by_cases zero : e.opA = 0
+  · simp [zero, jTypeReaderCols_op_a_0_eq_one zero]
+  · simp [zero, jTypeReaderCols_op_a_0_eq_zero zero]
+
 /-- The witnessed jump target of a built row is the built word of `pc + op_b`. -/
 lemma jumpTargetWord_toJalInputs {e : JTypeEvent} (h : e.pc < 2 ^ 48) :
     jumpTargetWord (e.toJalInputs (p := p)) = wordOfNat e.jalTarget := by
@@ -84,11 +93,7 @@ theorem proverAssumptions_of_event {e : JTypeEvent} (h : e.WellFormedJal) (htgt 
     exact wordOfNat_three_eq_zero htgt48
   -- The physical link addition is enabled only for a nonzero destination register.
   · intro enabled
-    change 1 - (jTypeReaderCols (p := p) e).op_a_0 = 1 at enabled
-    have writes : e.opA ≠ 0 := by
-      intro discarded
-      simp [jTypeReaderCols_op_a_0_eq_one discarded] at enabled
-    have bound := hlink writes
+    have bound := hlink ((linkGate_iff e).mp enabled)
     rw [linkTargetWord_toJalInputs hpc]
     exact wordOfNat_three_eq_zero (by omega)
   -- and the jump target is 4-byte aligned — the `Range(value[0] / 4, 14)` byte pull

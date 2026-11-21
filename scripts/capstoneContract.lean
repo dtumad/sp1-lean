@@ -38,6 +38,7 @@ example : SoundnessTarget ensemble limits commitments image source target header
       ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
         publicInput = header ∧ ExecutionSourceValid image source ∧
         nativeProfile limits p image source target events ∧
+        ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 example : CompilerTarget ensemble limits commitments image source target header =
@@ -45,6 +46,7 @@ example : CompilerTarget ensemble limits commitments image source target header 
       (fun publicInput events => (sp1Machine p image).Trace source.realize events target.realize ∧
         publicInput = header ∧ ExecutionSourceValid image source ∧
         nativeProfile limits p image source target events ∧
+        ExecutionPath.ReleaseLinks (policy p image) image.program source.realize events ∧
         commitments.WellFormed p ∧ commitments.Matches events) := rfl
 
 -- Together the targets are exactly a realization of the SP1 machine.
@@ -56,7 +58,7 @@ example (sound : SoundnessTarget ensemble limits commitments image source target
 
 example (sound : SoundnessTarget ensemble limits commitments image source target header)
     (compiler : CompilerTarget ensemble limits commitments image source target header) :
-    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔ ∃ events, StatementExecution limits p commitments image source target events :=
+    (∃ heights, ensemble.Statement Balance.logUp header heights) ↔ ∃ events, ReleaseStatementExecution limits p commitments image source target events :=
   SP1Clean.Soundness.Shard.statement_iff sound compiler
 
 end Contract
@@ -129,6 +131,8 @@ def roots : Array Name := #[
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,
+  ``SP1Clean.FormalModel.Shard.ReleaseAdmissibleExecution,
+  ``SP1Clean.FormalModel.Shard.ReleaseStatementExecution,
   ``SP1Clean.FormalModel.Shard.sp1Machine,
   ``Air.Flat.Realizes]
 

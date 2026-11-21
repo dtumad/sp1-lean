@@ -1,4 +1,5 @@
 import SP1Clean.Math.Word
+import SP1Clean.Semantics.ISA.JumpLink
 
 /-! # Trace generation — the semantic events of the register-adapter families
 
@@ -727,7 +728,7 @@ def JTypeEvent.jalTarget (e : JTypeEvent) : ℕ := (e.pc + e.immB) % 2 ^ 64
 * A nonzero destination receives the 48-bit link `pc + 4`. A discarded link has zero witness limbs.
 -/
 def JTypeEvent.JalTargets (e : JTypeEvent) : Prop :=
-  e.jalTarget < 2 ^ 48 ∧ e.jalTarget % 4 = 0 ∧ (e.opA ≠ 0 → e.pc + 4 < 2 ^ 48)
+  e.jalTarget < 2 ^ 48 ∧ e.jalTarget % 4 = 0 ∧ Semantics.JumpLinkFits e.pc (e.opA ≠ 0)
 
 /-- The **uncleared** address a `JALR` row computes: `rs1 + op_c`, truncated to 64 bits. The row
 jumps to this value with its low bit cleared (`next_pc = target - target % 2`, SP1's `& !1`), but
@@ -747,7 +748,7 @@ low bit is cleared — which is the whole difference between the two chips:
 * A nonzero destination receives `pc + 4` in three limbs. With x0 the link word is zero.
 -/
 def ITypeEvent.JalrTargets (e : ITypeEvent) : Prop :=
-  e.jalrTarget < 2 ^ 48 ∧ (e.jalrTarget - e.jalrTarget % 2) % 4 = 0 ∧ (e.opA ≠ 0 → e.pc + 4 < 2 ^ 48)
+  e.jalrTarget < 2 ^ 48 ∧ (e.jalrTarget - e.jalrTarget % 2) % 4 = 0 ∧ Semantics.JumpLinkFits e.pc (e.opA ≠ 0)
 
 /-! ## The branch family
 

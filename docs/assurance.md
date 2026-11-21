@@ -40,6 +40,8 @@ quantifiers at these boundaries:
 | Surface | Review question |
 |---|---|
 | [Shard.Executes](../SP1Clean/FormalModel/Shard.lean) | Complete source/target equality, real Sail/host execution, permissions and independently defined resource limits? |
+| [Release statement](../SP1Clean/FormalModel/ShardRelease.lean) | Does each actual decoded JAL/JALR constrain `pc + 4 < 2^48` precisely when it writes a nonzero register, while preserving the broader Sail and commitment clauses? |
+| [Jump-link row soundness](../SP1Clean/Proofs/Chips/JumpLinkBound.lean) | Does an arbitrary assignment satisfying the enabled physical addition and its high-limb constraint imply the same bound? |
 | [Commitment statement](../SP1Clean/Semantics/Execution/CommitmentStatement.lean) | Every actual declaration agrees with one immutable digest; raw host overwrites remain operational and flags imply no coverage? |
 | [Native Sail trace](../SP1Clean/Soundness/Shard/Trace.lean) | Raw committed acceptance yields the complete machine trace, with full RAM/register endpoints, clock and host obligations; no additional readiness premise? |
 | [Production export](../SP1Clean/Export/InstalledAssembly.lean) | Does raw acceptance give one trace between the supplied complete states, with their commitments and the six installed handlers? Do consecutive statements compose across equal realized boundaries? Does adding private generation inputs preserve acceptance for every header and height vector? |
@@ -52,6 +54,10 @@ quantifiers at these boundaries:
 | [Memory snapshots](../SP1Clean/Semantics/Memory/MemorySnapshot.lean) | Untouched locations, absent keys and full boundary changes covered? |
 | [Rust coverage](../rust/sp1-comparison/inventory/coverage.json) | Released component agreement, native semantics and deliberately different public/host contracts distinguished? |
 | [Realizes](../ToClean/Air/Realizes.lean) | The intended public language rather than a vacuous profile? |
+
+SP1 v6.10.0 gates the link addition on `is_real - op_a_0` and constrains the high result limb
+to zero in both jump chips. The native chip proofs establish the resulting bound for every
+satisfying row assignment. [Released JAL AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jal/air.rs#L89-L96) · [Released JALR AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jalr/air.rs#L145-L152)
 
 `python3 scripts/check_capstone_contract.py` builds the checked roots and compares their types
 and semantic definition dependencies with the [reviewed manifest](snapshots/capstone-contract.json).
