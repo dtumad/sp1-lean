@@ -21,11 +21,12 @@ The current import rules are encoded in [layering.txt](../scripts/layering.txt);
 The core index is [SP1Clean/Core.lean](../SP1Clean/Core.lean); the full index is
 [SP1Clean.lean](../SP1Clean.lean). Tests never feed production imports.
 
-Execution memory retains newest-write history. Fixed intervals normalize memory or the program's
-protection mask to sorted, bounded nonzero entries, preserving every in-range read. Each interval
-inventory has exactly two rows per live byte plus its initial row, independently of redundant
-writes and explicit zeros. The fixed RAM membership provider rounds this count up to a power of
-two. Byte and word reads take only an address; their selected intervals and comparison
+Execution memory retains newest-write history. The fixed RAM and ROM mask providers partition the
+bounded address space into maximal constant-byte runs. A run can start only at the first byte, a
+live byte, or the byte following one. Computing candidate boundaries from finite support covers
+zero-filled gaps even in the 48-bit address space. Lean proves that any sound constant-interval
+table covering every address needs at least this many rows. Clean pads the resulting inventory
+to a power of two. Byte and word reads take only an address; their selected intervals and comparison
 columns are internal witnesses generated through Clean's built-in IR. Word reads authenticate all
 eight bytes and require the complete footprint to fit in native memory. Final RAM validation
 takes the complete memory record directly, retaining its clock and value in the receipt ledger.

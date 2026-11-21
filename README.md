@@ -25,9 +25,11 @@ Whole-assembly completeness still requires the joint instruction, Memory, host a
 witness, its channel balance and its physical capacity. WRITE and VERIFY also need complete
 eight-call installation. [Observation tables](SP1Clean/Proofs/Completeness/ObservationData.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
 
-The current native preset admits an empty execution with $2^{29}$ live RAM bytes. Its
-fixed RAM provider requires $2^{31}$ physical rows, so the installed assembly has no
-witness for that execution at any public header or heights. [Checked capacity example](SP1CleanTest/Alignment/Core/FixedRamCapacity.lean)
+The fixed RAM providers use one row per maximal constant-byte run before padding. An empty
+shard with $2^{29}$ identical live bytes needs four rows for each endpoint RAM provider.
+The native preset also admits an empty shard whose alternating bytes force at least $2^{31}$
+rows. That execution has no installed witness at any public header or heights.
+[Canonical runs](SP1Clean/Semantics/Memory/MemoryIntervals.lean) · [Checked capacity examples](SP1CleanTest/Alignment/Core/FixedRamCapacity.lean)
 
 ## Use and explore
 

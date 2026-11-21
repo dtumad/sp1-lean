@@ -145,6 +145,31 @@ private theorem cuts_bounded (memory : ByteMemory) (limit : ℕ) :
     ∀ n ∈ (memory.changePoints limit).sort, n < limit :=
   fun _ hn => ((mem_changePoints ..).mp ((Finset.mem_sort _).mp hn)).2.1
 
+/-- Two snapshots that agree throughout the address window generate identical ordered rows,
+including all zero-filled gaps. -/
+theorem intervals_congr {left right : ByteMemory} {limit : ℕ}
+    (same : left.agreesBelow right limit = true) : left.intervals limit = right.intervals limit := by
+  have reads := (agreesBelow_iff left right limit).mp same
+  have cuts : left.changePoints limit = right.changePoints limit := by
+    ext a
+    simp only [mem_changePoints]
+    by_cases h : a < limit
+    · rw [reads a h, reads (a - 1) (by omega)]
+    · simp [h]
+  rw [intervals, intervals, cuts]
+  have rows (lower : ℕ) (points : List ℕ) (bounded : ∀ a ∈ points, a < limit)
+      (lo : lower < limit) : runRows left.read limit lower points = runRows right.read limit lower points := by
+    induction points generalizing lower with
+    | nil => simp [runRows, reads lower lo]
+    | cons next rest ih =>
+      rw [runRows, runRows, reads lower lo, ih next (fun a ha => bounded a (List.mem_cons_of_mem _ ha))
+        (bounded next (by simp))]
+  by_cases positive : 0 < limit
+  · exact rows _ _ (cuts_bounded right limit) positive
+  · obtain rfl : limit = 0 := by omega
+    have empty : right.changePoints 0 = ∅ := by ext; simp
+    simp [empty, runRows]
+
 /-- Every bounded address belongs to exactly one row. -/
 theorem intervals_count (memory : ByteMemory) (limit query : ℕ) :
     (memory.intervals limit).countP (fun interval => decide (interval.Contains query)) =

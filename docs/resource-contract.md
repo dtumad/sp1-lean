@@ -119,24 +119,29 @@ assertions add exactly six occurrences on a fresh channel. Thus the installed wi
 exactly when the base witness fits and the channel ceiling is at least six. The lifting theorem
 keeps this equivalence explicit for arbitrary budgets; the native field bound covers this cost.
 
-The installed target RAM membership provider already exceeds KoalaBear's channel capacity
-for some native-admissible empty shards. A target with `n` live RAM bytes produces exactly
-`2n + 1` intervals: the splitter retains both side intervals even when empty. Clean fixes the
-provider height at the next power of two, with one membership occurrence per physical row.
-At `n = 2^29`, this gives `2^31` occurrences on a single channel, above the field's strict
-limit of 2,130,706,433. The empty shard in the checked example preserves the identical source
-and target and fits every semantic ceiling. Every public header and height vector fails the
-installed raw LogUp statement for that context. This is a capacity limit of the current native
-representation. [Fixed RAM capacity](../SP1Clean/Export/FixedRamCapacity.lean) ·
-[Empty release execution](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean)
+In a nonempty address window the fixed RAM inventory has one row plus the number of changes
+between neighboring byte values. The empty window has no logical rows. Every row covers
+a nonempty run, and every byte has exactly one covering row. Any sound interval table
+with complete coverage must contain at least as many rows. Clean pads the inventory to a
+power of two and charges one occurrence per physical row. On KoalaBear the provider itself
+fits exactly when there are fewer than $2^{30}$ interior changes.
+[Maximal runs and minimality](../SP1Clean/Semantics/Memory/MemoryIntervals.lean) ·
+[Installed RAM bound](../SP1Clean/Export/FixedRamCapacity.lean)
 
-For an independently chosen boundary payload ceiling of at most 536,871,036 bytes, at least
-125 bytes pay for host fields and the Sail output length. Each endpoint's RAM provider then
-has at most 2^30 rows, leaving at least 1,056,964,608 occurrences on its own KoalaBear channel.
-For actual provider height `h < p`, the remaining budget is exactly `p - 1 - h`.
+A region of $2^{29}$ identical nonzero bytes, surrounded by zeros, needs three runs and four
+padded rows. An alternating-byte region can exceed $2^{30}$ changes while leaving both endpoints
+within the native byte ceiling. In the checked alternating example the installed raw statement
+fails for every public header and height vector, even though the empty release trace is valid.
+[Capacity examples](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean)
 
-C10 requires a representation and capacity policy that cover the release domain. Per-channel
-physical costs include all fixed providers, dynamic consumers and padding in the same ledger.
+For a public boundary payload ceiling of at most 536,871,036 bytes, the 125-byte minimum
+boundary overhead and the bound of two changes per live byte give at most $2^{30}$ rows per
+endpoint RAM provider. Each then leaves at least 1,056,964,608 occurrences on its own KoalaBear
+channel. Every checked instruction also pays for a distinct live source byte. Every writable
+gap ends at an instruction start or the address limit. Those facts bound each fixed Program and
+permission provider by $2^{29}$ rows at the same ceiling. The whole-assembly preset must include
+the remaining physical providers, consumers, public operations and padding on each channel.
+[Fixed image capacity](../SP1Clean/Export/FixedImageCapacity.lean)
 
 ## Representation and retirement
 
