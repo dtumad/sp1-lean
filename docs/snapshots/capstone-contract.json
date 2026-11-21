@@ -17529,6 +17529,13 @@
       "typeFingerprint": "3807510281"
     },
     {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Batteries.Data.List.Basic",
+      "name": "List.Forall\u2082",
+      "typeFingerprint": "2505626646"
+    },
+    {
       "bodyFingerprint": "2864493157",
       "local": false,
       "module": "Init.Data.List.Basic",
@@ -34548,6 +34555,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.ShortShardChain",
+      "name": "SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release",
+      "typeFingerprint": "3114219370"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.ShardChain",
       "name": "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
       "typeFingerprint": "2531483871"
@@ -34620,7 +34634,7 @@
       "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.ExecutionFacts.mk",
-      "typeFingerprint": "782067664"
+      "typeFingerprint": "89958273"
     },
     {
       "bodyFingerprint": "746068900",
@@ -34735,6 +34749,34 @@
       "typeFingerprint": "2311495449"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.ShortShard",
+      "name": "SP1Clean.Export.InstalledAssembly.native_release_of_short_halt",
+      "typeFingerprint": "99211903"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.ShortShard",
+      "name": "SP1Clean.Export.InstalledAssembly.native_release_of_short_statement",
+      "typeFingerprint": "1405682145"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.SixCallResources",
+      "name": "SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak",
+      "typeFingerprint": "2627891380"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.SixCallResources",
+      "name": "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
+      "typeFingerprint": "2878849353"
+    },
+    {
       "bodyFingerprint": "513874422",
       "local": true,
       "module": "SP1Clean.Export.InstalledHintAssembly",
@@ -34754,6 +34796,13 @@
       "module": "SP1Clean.Export.InstalledHintAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.publicCursor",
       "typeFingerprint": "2339743889"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.SixCallResources",
+      "name": "SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement",
+      "typeFingerprint": "1528230111"
     },
     {
       "bodyFingerprint": null,
@@ -87235,7 +87284,7 @@
       "typeFingerprint": "1404712657"
     },
     {
-      "bodyFingerprint": "3122938804",
+      "bodyFingerprint": "3939544863",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.SailTrace",
@@ -103087,6 +103136,12 @@
     "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
+    "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
+    "SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement",
+    "SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak",
+    "SP1Clean.Export.InstalledAssembly.native_release_of_short_statement",
+    "SP1Clean.Export.InstalledAssembly.native_release_of_short_halt",
+    "SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release",
     "SP1Clean.Export.InstalledAssembly.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",

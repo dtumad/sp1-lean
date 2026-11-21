@@ -57,7 +57,9 @@ quantifiers at these boundaries:
 
 SP1 v6.10.0 gates the link addition on `is_real - op_a_0` and constrains the high result limb
 to zero in both jump chips. The native chip proofs establish the resulting bound for every
-satisfying row assignment. [Released JAL AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jal/air.rs#L89-L96) · [Released JALR AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jalr/air.rs#L145-L152)
+satisfying row assignment. The installed-shard proof transfers this bound to every ordinary cut
+of the accepted execution through the ordered physical CPU rows and the committed Program decode.
+[Accepted execution proof](../SP1Clean/Soundness/HostFinalMemoryEncoding.lean) · [Released JAL AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jal/air.rs#L89-L96) · [Released JALR AIR](https://github.com/succinctlabs/sp1/blob/d83ed91f96701209613720708f36ffce0e98ed33/crates/core/machine/src/control_flow/jalr/air.rs#L145-L152)
 
 `python3 scripts/check_capstone_contract.py` builds the checked roots and compares their types
 and semantic definition dependencies with the [reviewed manifest](snapshots/capstone-contract.json).
