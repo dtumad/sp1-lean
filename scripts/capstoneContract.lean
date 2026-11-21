@@ -1,5 +1,6 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
+import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Export.ShardChain
 import SP1Clean.Export.SixCallResources
 import SP1Clean.Export.InstalledHintCompleteness
@@ -135,6 +136,10 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.admissibleExecution_hintInventory,
   ``SP1Clean.HostControl.noop_spec_of_run,
   ``SP1Clean.HostNoopChip.run_of_spec,
+  ``SP1Clean.HostControl.choice_spec_of_run,
+  ``SP1Clean.Soundness.HostRegisteredCalls.noopTable_component,
+  ``SP1Clean.Soundness.HostRegisteredCalls.receipt_heights,
+  ``SP1Clean.Soundness.HostRegisteredCalls.classified,
   ``SP1Clean.TraceGen.routed_successor_at,
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,

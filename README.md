@@ -11,11 +11,19 @@ soundness and completeness proofs, and bridges to the generated RISC-V Sail mode
 contains the execution model, authenticated memory/host boundaries, and whole-machine proof
 infrastructure needed to assemble those chips.
 
-The 25 supported instruction chips are proved. The complete arbitrary mixed-execution capstone
-is still open: complete supplied-target equality, WRITE/VERIFY installation, resource enforcement
-and the total mixed compiler remain [tracked obligations](https://github.com/dtumad/sp1-lean/issues/12).
-The existing ordinary-shard soundness/completeness results have explicit boundary, syscall and
-readiness restrictions. They do not establish that capstone.
+**Soundness.** Raw acceptance of the 100-table assembly yields a trace between the supplied
+complete Sail, host and clock states for all 25 ordinary instruction families and six host calls.
+On the native preset, every clause of the released execution statement follows for a shard
+whose public clock advances by fewer than 16 ticks. For an arbitrary-length accepted shard,
+the remaining comparison is the peak boundary payload on that same trace.
+[Installed theorem](SP1Clean/Export/InstalledAssembly.lean) · [Short shards](SP1Clean/Export/ShortShard.lean) · [General release criterion](SP1Clean/Export/SixCallResources.lean)
+
+**Constructive completeness.** A bounded execution of the eight-call Sail model supplies the
+four observation tables and a persistent hint inventory, including every node and padded word
+after a pop. The local chip proofs construct witnesses for each supported ordinary instruction.
+Whole-assembly completeness still requires the joint instruction, Memory, host and provider
+witness, its channel balance and its physical capacity. WRITE and VERIFY also need complete
+eight-call installation. [Observation tables](SP1Clean/Proofs/Completeness/ObservationData.lean) · [Hint inventory](SP1Clean/Proofs/Completeness/HintInventory.lean) · [Capstone obligations](https://github.com/dtumad/sp1-lean/issues/12)
 
 ## Use and explore
 
