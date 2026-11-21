@@ -162,9 +162,12 @@ Projected ledgers retain every fixed row, including unused intervals and zero-co
 The host grounding proofs use the typed receiver and source-resource inventory followed by an
 arbitrary registered component block. Its static operations must discharge Byte requirements
 and preserve the channels used to authenticate host, Memory and permission records. The four
-released target validators meet this contract. Grounding takes balance on every registered channel except `HostHintQueueBoundary.hiddenChannels`: the
-final-memory receipts and commitment declarations, whose producers lie outside the host proof
-view. The observed assembly projects its original rows through the 25 producer replacements. It also hides receipt and observation-state traffic when proving host grounding. The verifier retains both observation endpoints, and the source and target determine their payloads. The target comparison
+target validators installed in the native assembly meet this contract. The grounding projection
+derives its six hidden channels from the registered final-memory receipts and the outer
+commitment, instruction-receipt and observation protocols. All verifier assertions carry a
+single field element and remain visible by their arity. The observed assembly projects its
+original rows through the 25 producer replacements. The verifier retains both observation
+endpoints, and the source and target determine their payloads. The target comparison
 (`HostFinalMemory.checkFinal_of_channels`) and commitment-statement authentication
 (`CommitmentEnsemble.declared_member`) use their balance, which complete acceptance supplies.
 Ordered source/final rows and target checks carry a separate Boolean activity column. Raw
