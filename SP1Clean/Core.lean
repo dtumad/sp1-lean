@@ -146,6 +146,7 @@ import SP1Clean.Semantics.Execution.ExecutionPath
 import SP1Clean.Semantics.Execution.ExecutionReplay
 import SP1Clean.Semantics.Resources.ExecutionResources
 import SP1Clean.Semantics.Resources.HintAllocations
+import SP1Clean.Semantics.Resources.HintReadDemand
 import SP1Clean.Semantics.Resources.SixCallResources
 import SP1Clean.Semantics.Execution.ExecutionSnapshot
 import SP1Clean.Semantics.Host.HintQueue

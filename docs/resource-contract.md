@@ -195,6 +195,16 @@ Their complete spans lie between the guest-memory endpoints. The clock phase imp
 the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock
 fit their native encodings but need no subsequent fetch. [Accepted encoding](../SP1Clean/Soundness/HostFinalMemoryEncoding.lean)
 
+Every HINT_READ with payload length `n` pays for exactly `n / 8` continuing words and one
+final word, including empty and word-aligned payloads. In each physical word row the installed
+circuit emits eight write-permission requests, two Memory occurrences, two host RAM occurrences
+and twelve Byte occurrences. The call handler emits another twelve Byte occurrences. These
+counts include padding and retain the cancelling RAM pair. At the separate demand heights of
+these three tables, permission occurrences cost at most twice the charged write bytes, each RAM
+ledger at most half, and Byte at most six times. Other producers and the providers also use
+these shared channels. Whole-assembly capacity still requires their combined physical counts.
+[Semantic charge](../SP1Clean/Semantics/Resources/HintReadDemand.lean) · [Physical bounds](../SP1Clean/Proofs/Completeness/HintReadCapacity.lean)
+
 The physical `tableRows` and
 `channelOccurrences` ceilings have actual witness consumers through `PhysicalFits`; they are
 not yet derived from `nativeProfile` for the full mixed constructor. Semantic measurements do
