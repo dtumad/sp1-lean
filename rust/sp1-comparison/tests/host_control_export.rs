@@ -35,6 +35,7 @@ macro_rules! exported {
 }
 exported!(halt, "host_halt.rs");
 exported!(enter, "host_enter.rs");
+exported!(verify, "host_verify.rs");
 exported!(commit_0, "host_commit_0.rs");
 exported!(commit_1, "host_commit_1.rs");
 exported!(commit_2, "host_commit_2.rs");
@@ -275,6 +276,7 @@ struct ExitPolicyCase {
 #[derive(Deserialize)]
 struct ControlReferences {
     rows: Vec<Reference>,
+    verify: Reference,
     #[serde(rename = "releaseExitPolicy")]
     release_exit_policy: Vec<ExitPolicyCase>,
 }
@@ -488,6 +490,54 @@ fn halt_and_constrained_enter_match_released_execution() {
         (handlers[1].ledger)(&row),
         vec![entry("sp1.native.host_call", -F::ONE, &input)],
     );
+}
+
+#[test]
+fn verify_matches_released_x5_write_and_full_handoff() {
+    let verify = handler::<verify::Ensemble>();
+    let code = SyscallCode::VERIFY_SP1_PROOF as u64;
+    let reference = references().verify;
+    let input = call(code, u64::MAX, 1, code, 265);
+    let row = verify.build(&input);
+    assert_eq!(values(&input), reference.input);
+    assert_eq!(values(&row), reference.row);
+    same_ledger((verify.ledger)(&row), reference.ledger);
+    assert!(verify.valid(&row));
+    for col in [2, 5, 14, 17, 18] {
+        let mut wrong = input.clone();
+        wrong[col] += F::ONE;
+        assert!(!verify.valid(&verify.build(&wrong)));
+    }
+
+    for (key, digest) in [(0, 0), (u64::MAX, u64::MAX), (65537, 65539)] {
+        let mut instructions = vec![];
+        execution::syscall(
+            &mut instructions,
+            SyscallCode::VERIFY_SP1_PROOF,
+            key,
+            digest,
+        );
+        instructions.push(Instruction::new(Opcode::ADDI, 6, 5, 0, false, true));
+        execution::syscall(&mut instructions, SyscallCode::HALT, 0, 0);
+        let (executor, records) = execution::run(Sp1Program::new(instructions, 65536, 65536), &[]);
+        assert_eq!(executor.registers()[6], code);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].syscall_events.len(), 2);
+        let (event, access) = records[0].syscall_events[0];
+        assert_eq!(event.syscall_code, SyscallCode::VERIFY_SP1_PROOF);
+        assert_eq!((event.arg1, event.arg2), (key, digest));
+        let MemoryRecordEnum::Write(write) = access.a else {
+            panic!("missing VERIFY result");
+        };
+        assert_eq!(write.value, code);
+        let message = call(code, event.arg1, event.arg2, write.value, event.clk);
+        let row = verify.build(&message);
+        assert!(verify.valid(&row));
+        same_ledger(
+            (verify.ledger)(&row),
+            vec![entry("sp1.native.host_call", -F::ONE, &message)],
+        );
+    }
 }
 
 #[test]

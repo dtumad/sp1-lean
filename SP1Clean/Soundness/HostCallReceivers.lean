@@ -34,19 +34,20 @@ def halt : ReceiverView (HostCallChip.channel (p := p)) where
       (size HostHaltChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
     exact HostHaltChip.host_values _ _ env
 
-def enter : ReceiverView (HostCallChip.channel (p := p)) where
+/-- A typed receiver for the released ENTER or VERIFY handoff, including its generation slot. -/
+def noop (kind : HostNoopChip.Kind) : ReceiverView (HostCallChip.channel (p := p)) where
   component := {
-    circuit := HostEnterChip.circuit
-    Assumptions := (HostEnterChip.circuit).Assumptions
-    generation := Witgen.HintIndex.unitDemand (HostEnterChip.circuit (p := p)).name HostCallChip.channel .push
+    circuit := HostNoopChip.circuit kind
+    Assumptions := (HostNoopChip.circuit kind).Assumptions
+    generation := Witgen.HintIndex.unitDemand (HostNoopChip.circuit (p := p) kind).name HostCallChip.channel .push
       (fun message => message.clk_high.val * 16777216 + message.clk_low.val)
       (fun input => input) (fun _ => 1) }
-  message env := eval env (varFromOffset HostEnterChip.Inputs 0)
+  message env := eval env (varFromOffset HostNoopChip.Inputs 0)
   interactions env := by
     simp only [Operations.interactionValuesWith, Component.interactionsWith_eq]
-    change ((HostEnterChip.main (varFromOffset HostEnterChip.Inputs 0)).operations
-      (size HostEnterChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
-    exact HostEnterChip.host_values _ _ env
+    change ((HostNoopChip.main kind (varFromOffset HostNoopChip.Inputs 0)).operations
+      (size HostNoopChip.Inputs)).interactionValuesWith HostCallChip.channel.toRaw env = _
+    exact HostNoopChip.host_values kind _ _ env
 
 def commit (deferred : Bool) (slot : Fin 8) : ReceiverView (HostCallChip.channel (p := p)) where
   component := { circuit := HostCommitChip.circuit deferred slot, Assumptions := (HostCommitChip.circuit deferred slot).Assumptions, generation := HostCommitChip.generation deferred slot }
@@ -86,10 +87,10 @@ theorem halt_message (env : Environment (ZMod p)) :
   simp only [HostCallReceivers.halt, evaluated, eval_varFromOffset_valueFromOffset]
 
 omit [Fact (2 ^ 25 < p)] in
-/-- ENTER already has exactly the complete call as its input. -/
-theorem enter_message (env : Environment (ZMod p)) :
-    (HostCallReceivers.enter (p := p)).message env = valueFromOffset HostEnterChip.Inputs 0 env := by
-  simp only [HostCallReceivers.enter, eval_varFromOffset_valueFromOffset]
+/-- Both no-effect receivers read the complete call directly from their physical row. -/
+theorem noop_message (kind : HostNoopChip.Kind) (env : Environment (ZMod p)) :
+    (HostCallReceivers.noop (p := p) kind).message env = valueFromOffset HostNoopChip.Inputs 0 env := by
+  simp only [HostCallReceivers.noop, eval_varFromOffset_valueFromOffset]
 
 /-- Each commitment receiver reads its row's complete call. -/
 theorem commit_message (deferred : Bool) (slot : Fin 8) (env : Environment (ZMod p)) :
@@ -112,7 +113,7 @@ theorem commit_activity (deferred : Bool) (slot : Fin 8) :
 /-- The implemented non-RAM handlers: control, both eight-slot commitment families,
 and empty/nonempty HINT_LEN. HINT_READ adds its own receiver and RAM resources. -/
 def available : List (ReceiverView (HostCallChip.channel (p := p))) :=
-  [halt, enter] ++ (List.ofFn fun slot => commit false slot) ++
+  [halt, noop .enter] ++ (List.ofFn fun slot => commit false slot) ++
     (List.ofFn fun slot => commit true slot) ++ [hintLength false, hintLength true]
 
 /-- All available handlers satisfy the CPU chronology interface by their static channel metadata. -/

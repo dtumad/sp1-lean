@@ -129,12 +129,12 @@ theorem hint_length_authenticates (store : Store) (empty : Bool) :
     cases empty <;> change false = true at present <;> contradiction
 
 private theorem control_authenticates (store : Store) (component : Component (ZMod p))
-    (member : component ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+    (member : component ∈ ([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
       (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
       (List.ofFn fun slot => HostCallReceivers.commit true slot)).map
         (fun view : HostLocalHandoff.Receiver (p := p) => view.component)) :
     Authenticates store component := by
-  have checked : (([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  have checked : (([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
       (List.ofFn fun slot => HostCallReceivers.commit (p := p) false slot) ++
       (List.ofFn fun slot => HostCallReceivers.commit true slot)).map
         (fun view : HostLocalHandoff.Receiver (p := p) => view.component)).all (fun component : Component (ZMod p) =>
@@ -152,7 +152,7 @@ private theorem control_authenticates (store : Store) (component : Component (ZM
 theorem available_authenticates (store : Store) (component : Component (ZMod p))
     (member : component ∈ (HostCallReceivers.available (p := p)).map (·.component)) :
     Authenticates store component := by
-  change component ∈ (([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change component ∈ (([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) ++
       [HostCallReceivers.hintLength false, HostCallReceivers.hintLength true]).map

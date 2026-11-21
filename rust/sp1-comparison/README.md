@@ -191,6 +191,8 @@ Its full run, prefix, suffix and empty endpoint compare complete Memory access o
 released records, including displaced timestamps after resetting the authenticated local boundary.
 Cuts agree on their public clock/PC endpoints. These finite fixture constructors use the production
 access compiler and semantic host steps; they are neither an interpreter nor a total Sail compiler.
+The standalone VERIFY receiver shares the constrained ENTER circuit and uses the released x5
+result for each call. Its comparison binds the full argument words and the single host-call pull.
 General generation completeness and WRITE/VERIFY installation remain open.
 
 The unmodified upstream Clean pin supplies typed demand triggers, indexed fixed providers and

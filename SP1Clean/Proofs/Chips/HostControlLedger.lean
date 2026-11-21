@@ -1,5 +1,5 @@
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+import SP1Clean.Proofs.Chips.HostNoopChip.Formal
 import ToClean.Circuit.InteractionRecovery
 import ToClean.Air.ChannelClosure
 
@@ -92,42 +92,42 @@ theorem terminal_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Envi
 
 end HostHaltChip
 
-namespace HostEnterChip
+namespace HostNoopChip
 
 omit [Fact (2 ^ 17 < p)] in
-theorem main_host_interactions (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).interactionsWith HostCallChip.channel.toRaw =
+theorem main_host_interactions (kind : Kind) (input : Var Inputs (ZMod p)) (offset : ℕ) :
+    ((main kind input).operations offset).interactionsWith HostCallChip.channel.toRaw =
       [(HostCallChip.channel.pulled input).toRaw] := by
   simp only [main, circuit_norm, control_equality_empty, List.nil_append]
 
 omit [Fact (2 ^ 17 < p)] in
-theorem host_values (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
-    ((main input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
+theorem host_values (kind : Kind) (input : Var Inputs (ZMod p)) (offset : ℕ) (env : Environment (ZMod p)) :
+    ((main kind input).operations offset).interactionValuesWith HostCallChip.channel.toRaw env =
       [HostCallChip.channel.pulledValue (Eval.eval env input)] := by
   simp only [Operations.interactionValuesWith, main_host_interactions,
     List.map_cons, List.map_nil, Channel.eval_pulled]
 
 omit [Fact (2 ^ 17 < p)] in
-theorem main_other_interactions (target : RawChannel (ZMod p))
+theorem main_other_interactions (kind : Kind) (target : RawChannel (ZMod p))
     (notHost : target ≠ HostCallChip.channel.toRaw) (input : Var Inputs (ZMod p)) (offset : ℕ) :
-    ((main input).operations offset).interactionsWith target = [] := by
-  apply InteractionRecovery.interactionsWith_main_eq_nil circuit.base target input offset
+    ((main kind input).operations offset).interactionsWith target = [] := by
+  apply InteractionRecovery.interactionsWith_main_eq_nil (circuit kind).base target input offset
   simp [circuit, circuit_norm, notHost]
 
 omit [Fact (2 ^ 17 < p)] in
-theorem row_spec_of_constraints (env : Environment (ZMod p))
-    (constraints : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).ConstraintsHold env) :
-    Spec (valueFromOffset Inputs 0 env) := by
-  suffices guarantees : ((circuit.main (varFromOffset Inputs 0)).operations (size Inputs)).FullGuarantees env by
-    have result := (circuit.original_full_soundness (size Inputs) env (varFromOffset Inputs 0)
+theorem row_spec_of_constraints (kind : Kind) (env : Environment (ZMod p))
+    (constraints : (((circuit kind).main (varFromOffset Inputs 0)).operations (size Inputs)).ConstraintsHold env) :
+    Spec kind (valueFromOffset Inputs 0 env) := by
+  suffices guarantees : (((circuit kind).main (varFromOffset Inputs 0)).operations (size Inputs)).FullGuarantees env by
+    have result := ((circuit kind).original_full_soundness (size Inputs) env (varFromOffset Inputs 0)
       (by trivial) constraints guarantees).1
     simpa only [circuit, eval_varFromOffset_valueFromOffset] using result
-  rw [Operations.guarantees_iff _ _ _ (circuit.in_channels_or_guarantees_full
+  rw [Operations.guarantees_iff _ _ _ ((circuit kind).in_channels_or_guarantees_full
     (varFromOffset Inputs 0) (size Inputs) env)]
   intro selected member
   change selected ∈ [HostCallChip.channel.toRaw] at member
   obtain rfl := List.mem_singleton.mp member
   exact Operations.channelGuarantees_of_trivial _ (by simp [HostCallChip.channel, Channel.toRaw]) _ _
 
-end HostEnterChip
+end HostNoopChip
 end SP1Clean

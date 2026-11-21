@@ -3,7 +3,7 @@ import SP1Clean.Soundness.HostCommitBank
 import SP1Clean.Semantics.Host.QueueReplay
 import SP1Clean.Semantics.Host.SixCallProfile
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
+import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
 
 /-! # Queue actions in the complete installed HostCall inventory
 
@@ -31,7 +31,7 @@ def safe (message : HostCallChip.Message (ZMod p)) : Prop :=
   Word.toBitVec64 message.code ≠ SyscallKind.write.code
 
 private def ControlCode (code : Word (ZMod p)) : Prop :=
-  code = 0 ∨ code = HostEnterChip.codeWord ∨
+  code = 0 ∨ code = HostNoopChip.codeWord .enter ∨
     code = HostCommitChip.codeWord false ∨ code = HostCommitChip.codeWord true
 
 private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
@@ -40,7 +40,7 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     (bytes : receiver.component.operations.ChannelGuarantees Channels.byteChannel.toRaw env)
     (active : env receiver.activity = 1) :
     ControlCode (receiver.message env).code := by
-  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
@@ -50,9 +50,9 @@ private theorem control_code (receiver : HostLocalHandoff.Receiver (p := p))
     change HostHaltChip.Spec (valueFromOffset HostHaltChip.Inputs 0 env) at valid
     rw [HostCallReceivers.halt_message]
     exact Or.inl valid.1
-  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
-    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    rw [HostCallReceivers.enter_message]
+  · have valid := HostNoopChip.row_spec_of_constraints .enter env ((Component.constraintsHold_iff env).mp constraints)
+    change HostNoopChip.Spec .enter (valueFromOffset HostNoopChip.Inputs 0 env) at valid
+    rw [HostCallReceivers.noop_message .enter]
     exact Or.inr (Or.inl valid.1)
   · rw [HostCallReceivers.commit_activity] at active
     have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
@@ -75,7 +75,7 @@ private theorem control_projection (message : HostCallChip.Message (ZMod p))
   have twentySix : (26 : ZMod p).val = 26 := small 26 (by decide)
   rcases code with code | code | code | code
   all_goals
-    simp [safe, project, code, HostEnterChip.codeWord, HostCommitChip.codeWord,
+    simp [safe, project, code, HostNoopChip.codeWord, HostCommitChip.codeWord,
       Word.toBitVec64, Word.toNat, three, sixteen, twentySix, queueCallEvent?, SixCallProfile.code,
       SixCallProfile.kinds, or_and_right, exists_or, SyscallKind.decode?_eq_some_iff, SyscallKind.code]
 
@@ -112,7 +112,7 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
       context.register 11 = some (Word.toBitVec64 (receiver.message env).arg2)) :
     ∃ execution, host.run policy context = some execution ∧
       execution.result = Word.toBitVec64 (receiver.message env).result ∧ execution.effect.write = none := by
-  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
@@ -123,10 +123,10 @@ private theorem control_run (receiver : HostLocalHandoff.Receiver (p := p))
     rw [HostCallReceivers.halt_message] at observed ⊢
     exact ⟨_, HostHaltChip.run_of_spec _ valid host running policy characteristic context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
-  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
-    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    rw [HostCallReceivers.enter_message] at observed ⊢
-    exact ⟨_, HostEnterChip.run_of_spec _ valid host running policy context
+  · have valid := HostNoopChip.row_spec_of_constraints .enter env ((Component.constraintsHold_iff env).mp constraints)
+    change HostNoopChip.Spec .enter (valueFromOffset HostNoopChip.Inputs 0 env) at valid
+    rw [HostCallReceivers.noop_message .enter] at observed ⊢
+    exact ⟨_, HostNoopChip.run_of_spec .enter _ valid host running policy context
       observed.1 observed.2.1 observed.2.2, rfl, rfl⟩
   · rw [HostCallReceivers.commit_activity] at active
     have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active

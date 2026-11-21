@@ -30,8 +30,8 @@ attribute [local circuit_norm]
   Gadgets.IsZeroField.circuit HaltChip.circuit HaltChip.main HaltPaddingChip.circuit
   HaltPaddingChip.main HintReadSpan.circuit HintReadSpan.main HintReadStep.circuit
   HintReadStep.main HintReadWordChip.circuit HintReadWordChip.main HostCallChip.circuit
-  HostCallChip.main HostCommitChip.circuit HostCommitChip.main HostEnterChip.circuit
-  HostEnterChip.main HostHaltChip.circuit HostHaltChip.main HostHintLengthChip.circuit
+  HostCallChip.main HostCommitChip.circuit HostCommitChip.main HostNoopChip.circuit
+  HostNoopChip.main HostHaltChip.circuit HostHaltChip.main HostHintLengthChip.circuit
   HostHintLengthChip.main HostHintReadChip.circuit HostHintReadChip.main
   LtOperationUnsigned.circuit LtOperationUnsigned.main Readers.CPUState.circuit
   Readers.CPUState.main Readers.ITypeReaderImmutable.circuit Readers.ITypeReaderImmutable.main
@@ -49,7 +49,7 @@ attribute [local circuit_norm] ProtectedStore.byte ProtectedStore.half Protected
   HostCommitBoundary.terminal HostCommitBoundary.terminalMain
   WritePermissionProvider.component WritePermissionProvider.membershipComponent
   ProgramImage.writePermissionTable StaticTable.component HostCallLedger.producer
-  HostCallReceivers.halt HostCallReceivers.enter HostCallReceivers.commit
+  HostCallReceivers.halt HostCallReceivers.noop HostCallReceivers.commit
   HostCallReceivers.hintLength HostHintReadHandoff.receiver HostHintReadCoverage.handler
   HintReadCoverage.view HintReadCoverage.component HaltPaddingChip.component
 

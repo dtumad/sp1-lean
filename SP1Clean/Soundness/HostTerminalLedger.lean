@@ -51,7 +51,7 @@ private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     (active : env receiver.activity = 1) :
     receiver.component.operations.interactionValuesWith HostExitBoundary.channel.toRaw env =
       ((receipt? (receiver.message env)).toList.map HostExitBoundary.channel.pushedValue) := by
-  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member
@@ -70,18 +70,18 @@ private theorem control_values (receiver : HostLocalHandoff.Receiver (p := p))
     simp only [HostCallReceivers.halt, Operations.interactionValuesWith, Component.interactionsWith_eq]
     exact (HostHaltChip.terminal_values _ _ env).trans (by
       rw [arg, eval_varFromOffset_valueFromOffset])
-  · have valid := HostEnterChip.row_spec_of_constraints env ((Component.constraintsHold_iff env).mp constraints)
-    change HostEnterChip.Spec (valueFromOffset HostEnterChip.Inputs 0 env) at valid
-    have silent : HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.enter (p := p)).component.circuit.channels := by
+  · have valid := HostNoopChip.row_spec_of_constraints .enter env ((Component.constraintsHold_iff env).mp constraints)
+    change HostNoopChip.Spec .enter (valueFromOffset HostNoopChip.Inputs 0 env) at valid
+    have silent : HostExitBoundary.channel.toRaw ∉ (HostCallReceivers.noop (p := p) .enter).component.circuit.channels := by
       intro used
       have present := List.contains_iff_mem.mpr (List.mem_map_of_mem (f := RawChannel.name) used)
       change false = true at present
       contradiction
     rw [values_silent _ env silent]
-    rw [HostCallReceivers.enter_message]
+    rw [HostCallReceivers.noop_message .enter]
     have three : (3 : ZMod p).val = 3 :=
       ZMod.val_natCast_of_lt (show (3 : ℕ) < p by have := Fact.out (p := 2 ^ 17 < p); omega)
-    simp [receipt?, valid.1, HostEnterChip.codeWord, Word.toBitVec64, Word.toNat, three]
+    simp [receipt?, valid.1, HostNoopChip.codeWord, Word.toBitVec64, Word.toNat, three]
   · rw [HostCallReceivers.commit_activity] at active
     have valid := HostCommitBank.commit_spec_of_byte false slot env constraints bytes active
     change HostCommitChip.Spec false slot (valueFromOffset HostCommitChip.RowInput 0 env).1 at valid
@@ -105,7 +105,7 @@ private theorem inactive_control_silent (receiver : HostLocalHandoff.Receiver (p
     (member : receiver ∈ (HostCallReceivers.available (p := p)).take 18)
     (env : Environment (ZMod p)) (inactive : env receiver.activity ≠ 1) :
     receiver.component.operations.interactionValuesWith HostExitBoundary.channel.toRaw env = [] := by
-  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.enter] ++
+  change receiver ∈ ([HostCallReceivers.halt, HostCallReceivers.noop .enter] ++
     (List.ofFn fun slot => HostCallReceivers.commit false slot) ++
     (List.ofFn fun slot => HostCallReceivers.commit true slot)) at member
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, List.mem_ofFn] at member

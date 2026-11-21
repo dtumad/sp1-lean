@@ -257,14 +257,14 @@ private def lengthHandler : HostHintLengthChip.Inputs Fp :=
   HostHintLengthChip.populate (HintQueue.ofList [[1, 2, 3]]).1 1 0 (2 ^ 24 + 1) executed
 
 private def enterMessage : HostCallChip.Message Fp :=
-  HostControl.enter 17 ⟨.enterUnconstrained, 0, 0, 0, ⟨{}, none⟩⟩
+  HostControl.message 17 ⟨.enterUnconstrained, 0, 0, 0, ⟨{}, none⟩⟩
 
 /-- Physical tables in the real 21-handler registry order, with three different active kinds. -/
 private def registeredTables : List (Table Fp) :=
   let views := Soundness.HostHintReadHandoff.registeredReceivers (p := SP1Prime)
   List.ofFn fun index : Fin views.length =>
     if index.val = 0 then handlerTable [hintHandler 1]
-    else if index.val = 2 then tableOf (Soundness.HostCallReceivers.enter (p := SP1Prime)).component
+    else if index.val = 2 then tableOf (Soundness.HostCallReceivers.noop (p := SP1Prime) .enter).component
       [enterMessage] (by exact (show 1 ≤ UInt64.size from by decide))
     else if index.val = 19 then tableOf (Soundness.HostCallReceivers.hintLength (p := SP1Prime) false).component
       [lengthHandler] (by exact (show 1 ≤ UInt64.size from by decide))

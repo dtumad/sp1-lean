@@ -268,7 +268,7 @@ import SP1Clean.Native.Chips.HaltPaddingChip
 import SP1Clean.Native.Chips.HintReadWordChip.Defs
 import SP1Clean.Native.Chips.HostCallChip.Defs
 import SP1Clean.Native.Chips.HostCommitChip.Defs
-import SP1Clean.Native.Chips.HostEnterChip.Defs
+import SP1Clean.Native.Chips.HostNoopChip.Defs
 import SP1Clean.Native.Chips.HostHaltChip.Defs
 import SP1Clean.Native.Chips.HostHintLengthChip.Defs
 import SP1Clean.Native.Chips.HostHintReadChip.Defs
@@ -458,8 +458,8 @@ import SP1Clean.Proofs.Chips.HostCommitChip.Ledger
 import SP1Clean.Proofs.Chips.HostCommitChip.Populate
 import SP1Clean.Proofs.Chips.HostControlLedger
 import SP1Clean.Proofs.Chips.HostControlPopulate
-import SP1Clean.Proofs.Chips.HostEnterChip.Bridge
-import SP1Clean.Proofs.Chips.HostEnterChip.Formal
+import SP1Clean.Proofs.Chips.HostNoopChip.Bridge
+import SP1Clean.Proofs.Chips.HostNoopChip.Formal
 import SP1Clean.Proofs.Chips.HostHaltChip.Bridge
 import SP1Clean.Proofs.Chips.HostHaltChip.Formal
 import SP1Clean.Proofs.Chips.HostHintLengthChip.Bridge

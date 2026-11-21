@@ -19,7 +19,7 @@ from check_release_surface import CHIPS
 ROOT = Path(__file__).resolve().parents[1]
 RUST_TESTS = {
     "clean_export": 17, "instruction_export": 26, "symbolic_arithmetic_export": 2, "system_export": 4,
-    "syscall_export": 7, "host_control_export": 9, "byte_provider_export": 6,
+    "syscall_export": 7, "host_control_export": 10, "byte_provider_export": 6,
     "ram_export": 4, "syscall_code_export": 3,
     "program_export": 5, "write_permission_export": 3, "hint_source_export": 5,
     "assembly_boundaries_export": 5, "assembly_stopped_export": 5,
@@ -47,7 +47,7 @@ def artifact_names():
     ] + [name + "_byte_provider.rs" for name in ["and", "or", "xor", "u8_range", "ltu", "msb"]]
     files += [f"range_{n}_provider.rs" for n in range(17)] + ["memory_bump.rs", "state_bump.rs"]
     files += ["syscall_instruction.rs", "core_syscall.rs", "host_call.rs"]
-    files += ["host_halt.rs", "host_enter.rs", "host_control.reference.json",
+    files += ["host_halt.rs", "host_enter.rs", "host_verify.rs", "host_control.reference.json",
               "host_commit_terminal.rs", "host_deferred_terminal.rs"]
     files += [f"host_{bank}_{slot}.rs" for bank in ["commit", "deferred"] for slot in range(8)]
     files += ["host_hint_length_empty.rs", "host_hint_length.rs", "host_hint_read.rs",

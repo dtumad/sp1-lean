@@ -112,6 +112,7 @@
     "host": {
       "lean": [
         "SP1Clean/Proofs/Chips/HostCallChip/Formal.lean",
+        "SP1Clean/Proofs/Chips/HostNoopChip/Formal.lean",
         "SP1Clean/Native/Operations/SyscallCodeGuard.lean",
         "SP1Clean/Native/Operations/WritePermission.lean",
         "SP1Clean/Soundness/HostCallReceivers.lean",
@@ -131,7 +132,7 @@
         "rust/sp1-comparison/tests/assembly_hints_export.rs",
         "rust/sp1-comparison/tests/assembly_enter_export.rs"
       ],
-      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN and HINT_READ; WRITE and VERIFY_SP1_PROOF installation remains #12. Full-word code checks, weighted public queries and all control/hint handlers compare released supervisor rows, effects and complete ledgers. Complete assemblies cover active HALT, repeated declarations, partial and full commit-to-HALT programs, 16/24-byte HINT_READ, repeated queue observations with overlapping empty/aligned/byte-tail reads, and constrained ENTER replay. The immutable statement fixes sixteen declaration payloads, canonical public bytes/deferred elements and flags; mutable bank histories remain distinct. Repeated identical declarations are valid; conflicting words execute but are outside the proof statement. Guarded commitment and hint-word rows retain inactive physical occurrences. Full-word coverage and call occurrence do not follow from a flag. Native ROM permission tests do not implement runtime mprotect. Arbitrary mixed execution and all-eight-call generation remain open."
+      "limit": "Six installed calls: HALT, ENTER_UNCONSTRAINED, COMMIT, COMMIT_DEFERRED_PROOFS, HINT_LEN and HINT_READ; WRITE and VERIFY_SP1_PROOF installation remains #12. The separate VERIFY receiver checks the full code and unchanged x5 against released execution with unrestricted argument pointers. Full-word code checks, weighted public queries and all control/hint handlers compare released supervisor rows, effects and complete ledgers. Complete assemblies cover active HALT, repeated declarations, partial and full commit-to-HALT programs, 16/24-byte HINT_READ, repeated queue observations with overlapping empty/aligned/byte-tail reads, and constrained ENTER replay. The immutable statement fixes sixteen declaration payloads, canonical public bytes/deferred elements and flags; mutable bank histories remain distinct. Repeated identical declarations are valid; conflicting words execute but are outside the proof statement. Guarded commitment and hint-word rows retain inactive physical occurrences. Full-word coverage and call occurrence do not follow from a flag. Native ROM permission tests do not implement runtime mprotect. Arbitrary mixed execution and all-eight-call generation remain open."
     },
     "halt": {
       "lean": [
