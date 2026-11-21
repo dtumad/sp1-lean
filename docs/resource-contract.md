@@ -85,7 +85,7 @@ The enforcement obligations remain explicit:
 | Every intermediate live queue/RAM/output/request peak fits | A4/A5 constrained resource accounting at actual prefixes |
 | Arbitrary independent event/read/write/allocation ceilings | A4/A5 exact occurrence/cost accounting, including padded writes and WRITE observations |
 | Fixed pointer/length widths and cumulative persistent allocation | A5 queue/request installation; individual field-count ceilings are insufficient |
-| Whole `ExecutionPath.Encoded` derived from registered rows | Shared CPU phase is derived from its actual specification; A6 assembly must combine each ordinary chip's address/alignment facts with actual prefix decoding |
+| Preserve `ExecutionPath.Encoded` when adding WRITE and VERIFY | The installed six-handler proof derives the full predicate from each active CPU row and its actual replayed source. The full assembly must retain this grounding. |
 | Physical height and every channel's occurrence ceiling | Exact inventory accounting below; final A4/A5/A6 construction must prove its full expansion fits, and silent tables need explicit height bounds |
 
 These are unproved implementation obligations, not additional capstone premises. The endpoint
@@ -150,9 +150,13 @@ Peak intermediate `boundaryBytes` remains a separate obligation because ordinary
 change the number of nonzero RAM bytes. [Installed six-handler bounds](../SP1Clean/Export/SixCallResources.lean)
 
 `nativeProfile` bounds the broader Sail execution. It requires width-aligned
-ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. This phase implies
+ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. The installed six-handler assembly proves both conditions at every replay cut.
+Its load and store rows identify the actual RV64 base and signed offset, including loads to x0.
+Their complete spans lie between the guest-memory endpoints. The clock phase implies
 the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock
-fit their native encodings but need no subsequent fetch. The physical `tableRows` and
+fit their native encodings but need no subsequent fetch. [Accepted encoding](../SP1Clean/Soundness/HostFinalMemoryEncoding.lean)
+
+The physical `tableRows` and
 `channelOccurrences` ceilings have actual witness consumers through `PhysicalFits`; they are
 not yet derived from `nativeProfile` for the full mixed constructor. Semantic measurements do
 not stand in for that proof. `boundaryBytes` is a variable-payload measure, not a full Sail

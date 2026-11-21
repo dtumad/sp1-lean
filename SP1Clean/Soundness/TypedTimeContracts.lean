@@ -243,7 +243,8 @@ def StateTimeConstraintShape (chip : SupportedChip p) : Prop :=
     chip.table.operations.ChannelGuarantees Channels.byteChannel.toRaw env →
       row.is_real = 1 →
         Semantics.StateMsg.timeNat (statePushMessage row) =
-          Semantics.StateMsg.timeNat (statePullMessage row) + 8
+          Semantics.StateMsg.timeNat (statePullMessage row) + 8 ∧
+          Semantics.activeClockPhase (Semantics.StateMsg.timeNat (statePullMessage row))
 
 /-- Transport a circuit-local clock theorem to its supported descriptor without unfolding the
 dependent registry record. -/
@@ -325,7 +326,8 @@ theorem DecodedInstructionRow.stateTimeStep_of_byteGuarantees
       Channels.byteChannel.toRaw (decoded.environment data))
     (real : (decoded.toChipRow data).is_real = 1) :
     Semantics.StateMsg.timeNat (decodedStateEdge data decoded).2 =
-      Semantics.StateMsg.timeNat (decodedStateEdge data decoded).1 + 8 := by
+      Semantics.StateMsg.timeNat (decodedStateEdge data decoded).1 + 8 ∧
+      Semantics.activeClockPhase (Semantics.StateMsg.timeNat (decodedStateEdge data decoded).1) := by
   exact supportedChip_stateTimeConstraintShape decoded.chip
     (decodedInstructionRows_chip_mem tables decodedMem) data decoded.physical guarantees real
 
@@ -356,9 +358,9 @@ theorem witness_realDecodedInstructionRows_timeStep
   intro decoded decodedMem
   rw [realDecodedInstructionRows, List.mem_filter] at decodedMem
   simp only [decide_eq_true_eq] at decodedMem
-  exact decoded.stateTimeStep_of_byteGuarantees witness.data witness.tables decodedMem.1
+  exact (decoded.stateTimeStep_of_byteGuarantees witness.data witness.tables decodedMem.1
     (decodedInstructionRow_byteGuarantees witness constraints balanced decoded decodedMem.1)
-    decodedMem.2
+    decodedMem.2).1
 
 private theorem halt_cpu_subcircuit_mem :
     (⟨size HaltChip.Inputs, (Readers.CPUState.circuit (p := p)).toSubcircuit

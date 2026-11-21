@@ -45,7 +45,8 @@ structure CircuitStateTimeStep {Input Output : TypeMap}
     component.operations.ChannelGuarantees byteChannel.toRaw env →
     rowView.is_real = 1 →
     Semantics.StateMsg.timeNat (statePushOfView rowView) =
-      Semantics.StateMsg.timeNat (statePullOfView rowView) + 8
+      Semantics.StateMsg.timeNat (statePullOfView rowView) + 8 ∧
+      Semantics.activeClockPhase (Semantics.StateMsg.timeNat (statePullOfView rowView))
 
 /-- A channel guarantee for an operation list restricts to its leading subcircuit. -/
 theorem channelGuarantees_head_subcircuit {F : Type} [FiniteField F]
@@ -755,19 +756,20 @@ theorem stateTimeStep_of_cpuState_byteGuarantees
       (Expression.eval env cpuInput.cols.clk_16_24) rowView)
     (real : rowView.is_real = 1) :
     Semantics.StateMsg.timeNat (statePushOfView rowView) =
-      Semantics.StateMsg.timeNat (statePullOfView rowView) + 8 := by
+      Semantics.StateMsg.timeNat (statePullOfView rowView) + 8 ∧
+      Semantics.activeClockPhase (Semantics.StateMsg.timeNat (statePullOfView rowView)) := by
   have cpuReal : Expression.eval env cpuInput.is_real = 1 := binding.real_eq.trans real
   obtain ⟨clk0Bound, clk1Bound⟩ :=
     Readers.CPUState.bounds_of_byteGuarantees cpuInput cpuOffset env guarantees cpuReal
   change Semantics.clkNat rowView.state.clk_high
       (rowView.state.clk_0_16 + rowView.state.clk_16_24 * 65536 + 8) =
     Semantics.clkNat rowView.state.clk_high
-      (rowView.state.clk_0_16 + rowView.state.clk_16_24 * 65536) + 8
+      (rowView.state.clk_0_16 + rowView.state.clk_16_24 * 65536) + 8 ∧
+    Semantics.activeClockPhase (Semantics.clkNat rowView.state.clk_high
+      (rowView.state.clk_0_16 + rowView.state.clk_16_24 * 65536))
   rw [← binding.clkHigh_eq, ← binding.clk0_eq, ← binding.clk1_eq]
-  exact TimeExtraction.clkNat_add_eight_of_cpuState_bounds
-    (Expression.eval env cpuInput.cols.clk_high)
-    (Expression.eval env cpuInput.cols.clk_0_16)
-    (Expression.eval env cpuInput.cols.clk_16_24) clk0Bound clk1Bound
+  exact ⟨TimeExtraction.clkNat_add_eight_of_cpuState_bounds _ _ _ clk0Bound clk1Bound,
+    TimeExtraction.clkNat_phase_of_cpuState_bounds _ _ _ clk0Bound clk1Bound⟩
 
 /-- A retained `CPUState` reader plus the finished Byte guarantees proves exact eight-tick progress
 for the completed chip circuit.  This is the reusable bridge from local chip composition to the
@@ -790,7 +792,8 @@ theorem circuitStateTimeStep_of_cpuStateContract {Input Output : TypeMap}
   let rowView := view (component.rowInput env) (component.rowOutput env)
   change component.operations.ChannelGuarantees byteChannel.toRaw env → rowView.is_real = 1 →
     Semantics.StateMsg.timeNat (statePushOfView rowView) =
-      Semantics.StateMsg.timeNat (statePullOfView rowView) + 8
+      Semantics.StateMsg.timeNat (statePullOfView rowView) + 8 ∧
+      Semantics.activeClockPhase (Semantics.StateMsg.timeNat (statePullOfView rowView))
   intro guarantees real
   have rowGuarantees : component.rowOperations.ChannelGuarantees byteChannel.toRaw env :=
     (Component.channelGuarantees_iff env byteChannel.toRaw).mp guarantees

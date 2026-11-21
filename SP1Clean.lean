@@ -112,7 +112,7 @@ import SP1Clean.Soundness.FinalMemoryCheckSoundness
 import SP1Clean.Soundness.HostFinalMemory
 import SP1Clean.Soundness.HostFinalMemoryByte
 import SP1Clean.Soundness.HostFinalMemoryExecution
-import SP1Clean.Soundness.HostFinalMemoryReleaseLinks
+import SP1Clean.Soundness.HostFinalMemoryEncoding
 import SP1Clean.Soundness.HostFinalMemoryDeclarations
 import SP1Clean.Soundness.HostFinalMemoryLookups
 import SP1Clean.Soundness.HostFinalMemoryRegistry
@@ -261,6 +261,7 @@ import SP1Clean.Soundness.RefreshWiring
 import SP1Clean.Soundness.ResourceEnsemble
 import SP1Clean.Soundness.ResourceFootprint
 import SP1Clean.Soundness.RomWriteProtection
+import SP1Clean.Soundness.InstructionMemoryEncoding
 import SP1Clean.Soundness.InstructionOpcode
 import SP1Clean.Soundness.InstructionReleaseLinks
 import SP1Clean.Soundness.InstructionWritePolicy
