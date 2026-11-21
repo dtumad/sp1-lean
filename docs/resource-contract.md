@@ -119,13 +119,19 @@ assertions add exactly six occurrences on a fresh channel. Thus the installed wi
 exactly when the base witness fits and the channel ceiling is at least six. The lifting theorem
 keeps this equivalence explicit for arbitrary budgets; the native field bound covers this cost.
 
-This is not yet a proof that the fixed semantic limits imply full mixed construction capacity.
-Independent ceilings of `p-1` do not imply that the sum of provider, boundary, host and padding
-costs is below `p`. A4/A5 must finish authenticating and enforcing the complete resource domain;
-A6 must give the full mixed constructor's exact demand, including those installations, and
-prove capacity against the same domain. If these limits are insufficient, the policy and its
-actual enforcement must be reviewed together. Adding compiler success or a conservative
-footprint bound as a capstone premise would not discharge this obligation.
+The installed target RAM membership provider already exceeds KoalaBear's channel capacity
+for some native-admissible empty shards. A target with `n` live RAM bytes produces exactly
+`2n + 1` intervals: the splitter retains both side intervals even when empty. Clean fixes the
+provider height at the next power of two, with one membership occurrence per physical row.
+At `n = 2^29`, this gives `2^31` occurrences on a single channel, above the field's strict
+limit of 2,130,706,433. The empty shard in the checked example preserves the identical source
+and target and fits every semantic ceiling. Every public header and height vector fails the
+installed raw LogUp statement for that context. This is a capacity limit of the current native
+representation. [Fixed RAM capacity](../SP1Clean/Export/FixedRamCapacity.lean) ·
+[Empty release execution](../SP1CleanTest/Alignment/Core/FixedRamCapacity.lean)
+
+C10 requires a representation and capacity policy that cover the release domain. Per-channel
+physical costs include all fixed providers, dynamic consumers and padding in the same ledger.
 
 ## Representation and retirement
 
