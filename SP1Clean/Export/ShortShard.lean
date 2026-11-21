@@ -1,5 +1,4 @@
 import SP1Clean.Export.SixCallResources
-import SP1Clean.FormalModel.ShardRelease
 
 /-! # Complete release execution of an accepted short shard
 
@@ -42,15 +41,14 @@ theorem ExecutionFacts.release_of_length_le_one {context : Context} {header : SP
     (valid : ExecutionSourceValid context.image context.source)
     (committed : context.commitments.WellFormed SP1Prime) (few : events.length ≤ 1) :
     ReleaseStatementExecution context.limits SP1Prime context.commitments context.image context.source context.target events := by
-  have path := trace_iff_executionPath.mp facts.path
-  obtain ⟨incoming, outgoing, _, _, clock, pc⟩ := facts.resources.1
-  rw [← context.source.resources_realize] at incoming
-  rw [← context.target.resources_realize] at outgoing
-  refine ⟨⟨⟨⟨valid, path⟩, facts.encoded, ?_, incoming, outgoing, clock, pc⟩, facts.releaseLinks⟩, committed, facts.commitments⟩
+  apply (facts.release_iff_fits valid committed).mpr
   intro kind
   by_cases payload : kind = .boundaryBytes
   · subst kind
-    exact boundaryBytes_of_one path few (incoming _) (outgoing _)
+    obtain ⟨incoming, outgoing, _⟩ := facts.resources.1
+    rw [← context.source.resources_realize] at incoming
+    rw [← context.target.resources_realize] at outgoing
+    exact boundaryBytes_of_one (trace_iff_executionPath.mp facts.path) few (incoming _) (outgoing _)
   · obtain ⟨_, _, _, bounds⟩ := facts.native_prefix_resources native events.length
     simpa only [List.take_length] using (bounds kind payload).1
 
@@ -80,5 +78,28 @@ theorem native_release_of_short_statement (context : Context) {header : SP1Publi
       simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, Nat.add_zero,
         ExecutionEvent.duration_syscall] at duration
       omega
+
+/-- An accepted running-to-stopped interval shorter than HALT followed or preceded by any
+other event has exactly one HALT. Its checked argument is the public exit code, and its
+one-event execution satisfies the complete release statement. -/
+theorem native_release_of_short_halt (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    {code : BitVec 32} (native : context.limits = ResourceLimits.native SP1Prime)
+    (running : context.source.host.exitCode = none) (stopped : context.target.host.exitCode = some code)
+    (short : clkNat header.final_clk_high header.final_clk_low - clkNat header.init_clk_high header.init_clk_low < 272)
+    (accepted : (assembly context).Statement .logUp header heights) :
+    ∃ call, ExecutionFacts context header [.syscall call] ∧ call.rawCode = 0 ∧
+      call.arg1.setWidth 32 = code ∧ code.toNat = header.exit_code.val ∧
+      ReleaseStatementExecution context.limits SP1Prime context.commitments context.image
+        context.source context.target [.syscall call] := by
+  obtain ⟨valid, sourceFor, _, committed, events, facts⟩ := execution_of_statement context accepted
+  rw [facts.resources.2.clock facts.resources.1.2.2.2.2.1, sourceFor.clock valid.2.2.1] at short
+  obtain ⟨⟨before, call, rfl, halt, argument⟩, publicExit, _⟩ := facts.halted running stopped
+  have clock := (trace_iff_executionPath.mp facts.path).clock
+  change context.target.clock = context.source.clock + _ at clock
+  simp only [List.map_append, List.sum_append, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
+    Nat.add_zero, ExecutionEvent.duration_syscall] at clock
+  have count := event_count_le_ticks before
+  obtain rfl := List.length_eq_zero_iff.mp (show before.length = 0 by omega)
+  exact ⟨call, facts, halt, argument, publicExit, facts.release_of_length_le_one native valid committed.1 (by simp)⟩
 
 end SP1Clean.Export.InstalledAssembly

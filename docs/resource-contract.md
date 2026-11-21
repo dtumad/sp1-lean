@@ -155,6 +155,23 @@ with their respective ceilings. The row proofs establish the clock phase, the fu
 instruction encoding and the SP1 link-write condition. The raw statement supplies the complete
 endpoints and the commitment declarations. [Release criterion](../SP1Clean/Export/SixCallResources.lean)
 
+Two normally retired RV64 byte stores witness the difference between endpoints and the peak.
+The first writes one to a zero byte, and the second clears it. A carried stdout stream puts
+both endpoints exactly at the native payload ceiling, `SP1Prime - 1`. The intermediate state
+uses `SP1Prime` bytes. Both endpoint checks pass, both instructions are encoded, and all nine
+other resource measurements fit. This example establishes the gap for a semantic execution.
+Whether the installed AIR accepts a witness for this execution remains open.
+[Two-store theorem](../SP1CleanTest/Alignment/Core/BoundaryPayload.lean)
+
+For an accepted native shard with fewer than 16 elapsed public ticks, the tape is empty or
+contains one ordinary instruction. Its complete release statement follows from the checked
+endpoints. A running-to-stopped shard with fewer than 272 elapsed ticks contains exactly one
+HALT, whose argument yields the public exit code. A chain of the shorter ordinary shards
+retains each local release statement and concatenates their tapes across the complete
+boundaries. Each shard keeps its own resource limits.
+[Short-shard and HALT theorems](../SP1Clean/Export/ShortShard.lean) ·
+[Chain theorem](../SP1Clean/Export/ShortShardChain.lean)
+
 `nativeProfile` bounds the broader Sail execution. It requires width-aligned
 ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. The installed six-handler assembly proves both conditions at every replay cut.
 Its load and store rows identify the actual RV64 base and signed offset, including loads to x0.

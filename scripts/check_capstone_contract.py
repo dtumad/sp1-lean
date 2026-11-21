@@ -32,6 +32,9 @@ EXPECTED_ROOTS = {
     "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
     "SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement",
     "SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak",
+    "SP1Clean.Export.InstalledAssembly.native_release_of_short_statement",
+    "SP1Clean.Export.InstalledAssembly.native_release_of_short_halt",
+    "SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release",
     "SP1Clean.Export.InstalledAssembly.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",
@@ -60,8 +63,8 @@ def main() -> int:
     if not args.no_build:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
-             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain",
-             "SP1Clean.Export.InstalledHintCompleteness", "SP1Clean.Export.SixCallResources",
+             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShortShardChain",
+             "SP1Clean.Export.InstalledHintCompleteness",
              "SP1Clean.Proofs.Completeness.ObservationCapacity", "SP1Clean.Proofs.Completeness.ObservationData"],
             cwd=ROOT, check=True,
         )

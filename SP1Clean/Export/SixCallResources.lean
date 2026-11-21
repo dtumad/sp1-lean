@@ -63,7 +63,9 @@ theorem native_resources_of_statement (context : Context) {header : SP1PublicIO 
 
 open FormalModel.Shard
 
-private theorem release_iff_fits (facts : ExecutionFacts context header events)
+/-- Given the source validity and commitment well-formedness recovered by `execution_of_statement`,
+the complete release statement on its tape is equivalent to fitting the resource limits. -/
+theorem ExecutionFacts.release_iff_fits (facts : ExecutionFacts context header events)
     (valid : ExecutionSourceValid context.image context.source)
     (commitments : context.commitments.WellFormed SP1Prime) :
     ReleaseStatementExecution context.limits SP1Prime context.commitments context.image
@@ -91,7 +93,7 @@ theorem release_statement_iff_of_statement (context : Context) {header : SP1Publ
   have incoming := facts.resources.1.1
   rw [← context.source.resources_realize] at incoming
   have charges := SixCallProfile.resourceFacts (trace_iff_executionPath.mp facts.path) facts.handlers incoming facts.ticks
-  refine ⟨events, facts, (release_iff_fits facts valid commitments.1).trans ?_⟩
+  refine ⟨events, facts, (facts.release_iff_fits valid commitments.1).trans ?_⟩
   constructor
   · intro fits
     obtain ⟨count, writes⟩ := charges.fits_iff.mp (fun kind _ => fits kind)

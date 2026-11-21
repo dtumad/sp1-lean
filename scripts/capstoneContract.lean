@@ -1,7 +1,6 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
-import SP1Clean.Export.ShardChain
-import SP1Clean.Export.SixCallResources
+import SP1Clean.Export.ShortShardChain
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Proofs.Completeness.ObservationData
@@ -127,6 +126,9 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.native_resources_of_statement,
   ``SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement,
   ``SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak,
+  ``SP1Clean.Export.InstalledAssembly.native_release_of_short_statement,
+  ``SP1Clean.Export.InstalledAssembly.native_release_of_short_halt,
+  ``SP1Clean.Export.InstalledAssembly.AcceptedChain.short_release,
   ``SP1Clean.Export.InstalledAssembly.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
