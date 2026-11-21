@@ -316,6 +316,7 @@ import SP1Clean.Native.Operations.FinalRegisterValue
 import SP1Clean.Native.Operations.FinalRegisterCheck
 import SP1Clean.Native.Operations.HintNodeAllocate
 import SP1Clean.Native.Operations.HintQueueBoundary
+import SP1Clean.Native.Operations.HostHintQueueTerminal
 import SP1Clean.Native.Operations.HintQueueSource
 import SP1Clean.Native.Operations.HintQueueWordSource
 import SP1Clean.Native.Operations.HostHintTarget

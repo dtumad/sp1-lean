@@ -1,167 +1,132 @@
-import SP1Clean.Soundness.Shard.Trace
-import SP1Clean.Semantics.ReleasePolicy
-import SP1Clean.Semantics.Resources.SixCallResources
-import SP1Clean.Native.Operations.HostHintTarget
-import SP1Clean.Soundness.Shard.TargetEndpoint
-import SP1Clean.Soundness.ResourceEnsemble
-import ToClean.Air.EnsembleCheck
-import ToClean.Air.ProverInputStatement
+import SP1Clean.Export.InstalledHintProjection
+import SP1Clean.Export.InstalledHintVerifier
+import ToClean.Air.MessageFilter
 
-/-! # The installed SP1 supervisor assembly
-
-Program and complete source and target snapshots, a hint endpoint and an immutable commitment
-statement select the assembly. Its verifier, physical tables and channel registry are shared by
-the public statement, finite witness checker and Clean's witness-generation interface.
--/
+/-! # Soundness with a private queue timestamp -/
 
 namespace SP1Clean.Export.InstalledAssembly
 
-open Circuit Air.Flat SP1Clean.Semantics SP1Clean.Soundness
+open Circuit Air.Flat Soundness Semantics
+open HostHintQueue (stateChannel)
+open scoped Classical
 
-/-- The field of the pinned SP1 supervisor assembly. -/
-abbrev Fp := ZMod SP1Prime
+private abbrev Ledger := List (Interaction Fp)
 
-/-- Data determining the complete installed assembly and its verifier. -/
-structure Context where
-  /-- Committed program and its initial byte image. -/
-  image : ProgramImage
-  /-- Complete finite incoming Sail, host and clock snapshot. -/
-  source : ExecutionSnapshot
-  /-- Complete outgoing snapshot supplying the register, RAM, host bank and exit endpoints. -/
-  target : ExecutionSnapshot
-  /-- Timestamp of the last HINT_LEN or HINT_READ, or zero when neither occurred. -/
-  lastHintClock : BitVec 48
-  /-- Immutable proof statement, independent of partially populated mutable banks. -/
-  commitments : CommitmentStatement
-  /-- Inclusive numeric bounds of the local segment. -/
-  limits : ResourceLimits := ResourceLimits.native SP1Prime
+/-- Adding the terminal and the verifier pull preserves each signed cursor balance. -/
+theorem cancel_terminal (first last : Ledger) (publicCursor privateCursor : HostHintQueue.State Fp) :
+    LogUpBalanced (first ++ [stateChannel.pulledValue publicCursor] ++ last ++
+      [stateChannel.pulledValue privateCursor, stateChannel.pushedValue publicCursor]) ↔
+    LogUpBalanced (first ++ [stateChannel.pulledValue privateCursor] ++ last) := by
+  apply forall_congr'
+  intro message
+  simp only [balanceOf_append, balanceOf_cons, Channel.pulledValue, Channel.pushedValue, Interaction.signedMult]
+  have empty : balanceOf ([] : Ledger) message = 0 := rfl
+  rw [empty]
+  split_ifs <;> ring_nf
 
-/-- Each suffix of the immutable source queue has a head equal to its remaining length.
-The allocation frontier stays at the size of the incoming queue throughout the six-call profile. -/
-def Context.finalHints (context : Context) : HostHintQueue.State Fp :=
-  HostHintQueue.State.encode context.lastHintClock.toNat context.target.host.io.hints.length
-    context.source.host.io.hints.length
+private theorem project_heights {context : Context} (witness : EnsembleWitness (assembly context)) (clock : BitVec 48) :
+    (project witness clock).heights = witness.heights.take 99 := by
+  simp only [EnsembleWitness.heights, project, EnsembleWitness.ofTables_tables, ← List.map_take]
+  change List.map (fun t : Table Fp => t.table.length) (withDerivedData _ _ _) = _
+  simpa only [List.map_map, Function.comp_def] using
+    congrArg (List.map List.length) (withDerivedData_map_table (witness.tables.take 99) _ (toElements witness.publicInput).toArray)
 
-/-- All installed components, source resources and target checks in their canonical order. -/
-abbrev withoutCommitments (context : Context) : Ensemble Fp SP1PublicIO :=
-  Shard.installed context.image context.source context.target context.finalHints
+attribute [local irreducible] assembly FixedHintAssembly.assembly
 
-/-- The declaration provider has a fresh name in the complete host inventory. -/
-private theorem declarationFresh (context : Context) :
-    (CommitmentDeclaration.source (p := SP1Prime) context.commitments).circuit.name ∉
-      (withoutCommitments context).tables.map (·.circuit.name) := by
-  change "sp1.native.commitment_declaration.source" ∉ _
-  rw [withoutCommitments, Shard.installed, HostObserved.table_names]
-  simp only [HostFinalMemory.Installed,
-    HostFinalMemory.ensemble, ClosedVerifier.install, HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
-    FinalReceiptEnsemble.install, Ensemble.replaceComponent, HostFinalMemory.base,
-    HostHintQueueBoundary.ensemble, HaltPadding.install, HostHintReadLocal.ensemble,
-    HostLocalHandoff.ensemble, HostLocalCore.ensemble, PublicVerifier.install,
-    HostLocalCore.baseEnsemble]
-  simp only [List.map_set, HostLocalCore.tables_names, ProtectedLocalCore.tables_names,
-    LocalCore.tables, LocalCore.afterSourceTables, List.map_append, List.map_cons, List.map_nil,
-    SnapshotMemoryEnsemble.registerMembership, StaticTable.component, StaticTable.provider,
-    MemorySnapshot.registerTable, StaticTable.ofRows, FinalMemoryChecks.checkTables,
-    FinalRegisterValue.membership, HostHintReadLocal.sourceResources, HostHintReadLocal.bankResources,
-    HostHintQueue.source, HostHintQueue.sourceWord, StaticTable.payloadComponent,
-    StaticTable.payloadProvider]
-  exact of_decide_eq_true rfl
+private theorem split_ledgers {context : Context} (witness : EnsembleWitness (assembly context)) (clock : BitVec 48)
+    (channel : RawChannel Fp)
+    (physical : ((terminalSlot context).table witness).interactionsWith stateChannel.toRaw =
+      [stateChannel.pulledValue (context.withClock clock).finalHints, stateChannel.pushedValue (publicCursor context)]) :
+    ∃ first last : Ledger,
+      (project witness clock).interactionsWith channel =
+        first ++ (if channel = stateChannel.toRaw then [stateChannel.pulledValue (context.withClock clock).finalHints] else []) ++ last ∧
+      witness.interactionsWith channel =
+        first ++ (if channel = stateChannel.toRaw then [stateChannel.pulledValue (publicCursor context)] else []) ++ last ++
+          (if channel = stateChannel.toRaw then [stateChannel.pulledValue (context.withClock clock).finalHints,
+            stateChannel.pushedValue (publicCursor context)] else []) := by
+  let old := project witness clock
+  let env := witness.data.publicEnvironment
+  obtain ⟨first, last, vary⟩ := verifier_split context env channel
+  have oldVerifier : old.verifierInteractionsWith channel =
+      (base context clock).verifierOperations.interactionValuesWith channel env :=
+    Operations.interactionValuesWith_congr rfl
+  have newVerifier : witness.verifierInteractionsWith channel =
+      (base context 0).verifierOperations.interactionValuesWith channel env := by
+    unfold EnsembleWitness.verifierInteractionsWith assembly
+    rfl
+  have tableLedger := project_tables_ledger witness clock channel
+  refine ⟨first, last ++ old.tables.flatMap (·.interactionsWith channel), ?_, ?_⟩
+  · change old.verifierInteractionsWith channel ++ old.tables.flatMap _ = _
+    rw [oldVerifier, vary clock, List.append_assoc]
+  · change witness.verifierInteractionsWith channel ++ witness.tables.flatMap _ = _
+    rw [newVerifier, vary 0, ← tableLedger]
+    by_cases same : channel = stateChannel.toRaw
+    · subst channel
+      rw [physical]
+      simp only [ite_true, publicCursor, List.append_assoc, old]
+    · simp only [ite_eq_right same, terminal_silent witness same, List.append_nil, List.append_assoc, old]
 
-/-- The six-call assembly with its verifier-owned commitment statement. -/
-def committedAssembly (context : Context) : Ensemble Fp SP1PublicIO :=
-  CommitmentEnsemble.install context.commitments (withoutCommitments context) (declarationFresh context)
-    (Shard.declarationsRegistered context.image context.source context.target context.finalHints)
+/-- Every accepted physical witness projects to the old checked assembly at the timestamp of the
+actual terminal row. The retained table heights are the literal public prefix. -/
+theorem project_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    (accepted : (assembly context).Statement .logUp header heights) :
+    ∃ clock : BitVec 48, (base context clock).Statement .logUp header (heights.take 99) := by
+  obtain ⟨fit, witness, publicEq, heightEq, checked, balance⟩ := accepted
+  rw [← heightEq] at fit
+  have fits := (witness.interactionsFit_iff .logUp).mp fit
+  obtain ⟨clock, physical⟩ := private_clock witness checked
+  let old := project witness clock
+  have height : old.heights = heights.take 99 := (project_heights witness clock).trans (congrArg (List.take 99) heightEq)
+  have raw (channel : RawChannel Fp) (registered : channel ∈ (base context clock).channels) :
+      (old.interactionsWith channel).length < ringChar Fp ∧ LogUpBalanced (old.interactionsWith channel) := by
+    have present : channel ∈ (assembly context).channels := by
+      unfold assembly
+      change channel ∈ (base context 0).channels
+      rw [fixed_channels context 0 clock]
+      exact registered
+    obtain ⟨first, last, earlier, actual⟩ := split_ledgers witness clock channel physical
+    have enough := fits channel present
+    simp only [Balance.logUp, ComputableRingChar.char_eq, decide_eq_true_eq] at enough
+    have funded := balance channel present
+    change LogUpBalanced (witness.interactionsWith channel) at funded
+    rw [actual] at enough funded
+    change ((project witness clock).interactionsWith channel).length < ringChar Fp ∧
+      LogUpBalanced ((project witness clock).interactionsWith channel)
+    rw [earlier]
+    by_cases same : channel = stateChannel.toRaw
+    · simp only [ite_eq_left same, List.length_append, List.length_cons, List.length_nil] at enough ⊢
+      exact ⟨by omega, (cancel_terminal ..).mp (by simpa only [ite_eq_left same] using funded)⟩
+    · simpa only [ite_eq_right same, List.append_nil] using And.intro enough funded
+  refine ⟨clock, ?_, old, (project_header witness clock).trans publicEq, height, project_constraints witness clock checked,
+    fun channel member => (raw channel member).2⟩
+  rw [← height, old.interactionsFit_iff]
+  exact fun channel member => by simpa only [Balance.logUp, ComputableRingChar.char_eq, decide_eq_true_eq] using (raw channel member).1
 
-/-- Check the invariant Sail frame, canonical public endpoints, and exact outgoing host. -/
-def assembly (context : Context) : Ensemble Fp SP1PublicIO :=
-  ResourceEnsemble.install context.limits context.source context.target
-    ((HostHintTarget.checker context.source.host context.target.host (Address.toNat context.finalHints.head)).install
-      (committedAssembly context))
-
-/-- Facts enforced by the static and public boundary circuits of the exported assembly. -/
+/-- Host and resource checks derived from the public snapshots. -/
 structure TargetChecks (context : Context) (header : SP1PublicIO Fp) : Prop where
-  /-- Exact ordered hint suffix and preserved host streams. -/
-  host : HostHintTarget.Spec context.source.host context.target.host (Address.toNat context.finalHints.head)
-  /-- Inclusive boundary occupancy and elapsed ticks. -/
+  /-- The target host contains the authenticated suffix and preserved streams. -/
+  host : HostHintTarget.Spec context.source.host context.target.host (Address.toNat (publicCursor context).head)
+  /-- Public clocks and resource ceilings hold at both boundaries. -/
   resources : ResourceBoundary.Spec context.limits context.source context.target header
 
-/-- Boundary installation preserves the height vector and adds the checked contracts. -/
-theorem boundary_statement_iff (context : Context) (header : SP1PublicIO Fp) (heights : List ℕ) :
-    (assembly context).Statement .logUp header heights ↔
-      (committedAssembly context).Statement .logUp header heights ∧ TargetChecks context header := by
-  let head := Address.toNat context.finalHints.head
-  rw [assembly, ResourceEnsemble.statement_iff,
-    (HostHintTarget.checker context.source.host context.target.host head).statement_iff _
-    (HostHintTarget.count_bound ..) (fun _ => HostHintTarget.Spec context.source.host context.target.host head)
-    (HostHintTarget.checks_iff context.source.host context.target.host head)]
-  exact ⟨fun ⟨⟨accepted, host⟩, resources⟩ => ⟨accepted, host, resources⟩,
-    fun ⟨accepted, host, resources⟩ => ⟨⟨accepted, host⟩, resources⟩⟩
-
-private theorem baseTableCount (context : Context) : (withoutCommitments context).tables.length = 98 := by
-  have names := HostObserved.table_names (image := context.image) (source := context.source)
-    (target := context.target) (final := context.finalHints)
-  have counts := congrArg List.length names
-  simp only [List.length_map] at counts
-  rw [withoutCommitments, Shard.installed, counts]
-  simp only [HostFinalMemory.Installed,
-    HostFinalMemory.ensemble, ClosedVerifier.install, HostFinalMemory.withReceipts, HostFinalMemory.withRegisters,
-    FinalReceiptEnsemble.install, Ensemble.replaceComponent, List.length_set,
-    HostFinalMemory.base_tables_length]
-  rfl
-
-/-- Installing the commitment statement appends its single verifier-fixed provider. -/
-theorem tables_eq (context : Context) : (assembly context).tables =
-    (withoutCommitments context).tables ++ [CommitmentDeclaration.source context.commitments] := rfl
-
-/-- Number of physical components in the installed supervisor assembly. -/
-theorem tables_length (context : Context) : (assembly context).tables.length = 99 := by
-  rw [tables_eq, List.length_append, baseTableCount]
-  rfl
-
-/-- Every installed component is lookup-free, including currently unused physical slots. -/
-theorem component_lookups (context : Context) (component : Component Fp)
-    (member : component ∈ (assembly context).tables) : component.operations.lookups = [] := by
-  rw [tables_eq] at member
-  rcases List.mem_append.mp member with original | added
-  · exact HostObserved.lookupFree component original
-  · obtain rfl := List.mem_singleton.mp added
-    simp [CommitmentDeclaration.source, StaticTable.payloadComponent, StaticTable.payloadProvider,
-      Component.lookups_eq, Component.rowOperations, circuit_norm]
-
-/-- Check physical rows, occurrence capacity and balance against the installed verifier. -/
-def description (context : Context) : EnsembleCheck (assembly context) where
-  lookups := []
-  lookups_unique := .nil
-  lookups_complete component member _ used := by
-    rw [component_lookups context component member] at used
-    exact False.elim (List.not_mem_nil used)
-
-/-- The private input type and its views determine how Clean generates witnesses. -/
-def proverAssembly (context : Context) (ProverInput : TypeMap) [ProvableType ProverInput]
-    (hints : List HintTable) : Ensemble Fp SP1PublicIO :=
-  (assembly context).withProverInput ProverInput hints
-
-/-- An exported assembly accepts exactly the same raw statements as the installed assembly. -/
-theorem proverStatement_iff (context : Context) (ProverInput : TypeMap) [ProvableType ProverInput]
-    (hints : List HintTable) (header : SP1PublicIO Fp) (heights : List ℕ) :
-    (proverAssembly context ProverInput hints).Statement .logUp header heights ↔
-      (assembly context).Statement .logUp header heights :=
-  Ensemble.withProverInput_statement (assembly context) hints .logUp header heights
-
-/-- Each raw public statement of the production assembly gives a machine trace from the source. -/
-theorem trace_of_statement (context : Context)
-    {header : SP1PublicIO Fp} {heights : List ℕ}
+/-- The accepted trace observes the two public hint pointers independently of the terminal clock. -/
+theorem trace_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
     (accepted : (assembly context).Statement .logUp header heights) :
-    Shard.SailTrace context.commitments context.image context.source context.target context.finalHints
+    Shard.SailTrace context.commitments context.image context.source context.target (publicCursor context)
       header ∧ TargetChecks context header := by
-  obtain ⟨committed, boundaries⟩ := (boundary_statement_iff context header heights).mp accepted
-  exact ⟨Shard.sail_trace committed, boundaries⟩
+  obtain ⟨clock, projected⟩ := project_statement context accepted
+  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, dynamic, endpoint⟩, checks⟩ :=
+    FixedHintAssembly.trace_of_statement (context.withClock clock) projected
+  refine ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, dynamic, ?_⟩,
+    ⟨checks.host, checks.resources⟩⟩
+  exact ⟨endpoint.clock, endpoint.pc, endpoint.nextPC, endpoint.increment, endpoint.retired, endpoint.interrupts,
+    endpoint.eventIndex, endpoint.preserved, endpoint.runtime, endpoint.registers, endpoint.ram, endpoint.host, endpoint.exit⟩
 
 /-- Public observations of the six-handler execution between both complete snapshots. -/
 structure ExecutionFacts (context : Context) (header : SP1PublicIO Fp)
     (events : List Machine.ExecutionEvent) : Prop where
   path : (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events context.target.realize
-  endpoint : Shard.Endpoint context.source context.target context.finalHints header events context.target.realize
+  endpoint : Shard.Endpoint context.source context.target (publicCursor context) header events context.target.realize
   handlers : ∀ event ∈ events, SixCallProfile.event event
   commitments : context.commitments.Matches events
   ticks : executionResources (FormalModel.Shard.policy SP1Prime context.image) context.image.program

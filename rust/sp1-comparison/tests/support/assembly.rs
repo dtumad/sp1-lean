@@ -65,8 +65,8 @@ pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
     cases: usize,
 ) {
     let inventory = reference["inventory"].as_array().unwrap();
-    assert_eq!(inventory.len(), 99);
-    assert_eq!(P::COMPONENTS, 99);
+    assert_eq!(inventory.len(), 100);
+    assert_eq!(P::COMPONENTS, 100);
     for (index, component) in inventory.iter().enumerate() {
         assert_eq!(component["name"], P::COMPONENT_NAMES[index]);
         assert_eq!(component["width"], P::ROW_WIDTHS[index]);
@@ -110,7 +110,7 @@ pub fn check_reference<P: Program<F> + GeneratedAirSpec>(
             }
             if case["accepted"] == true {
                 let traces = witness.into_traces().unwrap();
-                assert_eq!(traces.len(), 99);
+                assert_eq!(traces.len(), 100);
                 for (index, trace) in traces.iter().enumerate() {
                     assert_eq!(trace.width(), P::WIDTHS[index]);
                     let fixed_height = P::FIXED_HEIGHTS[index];

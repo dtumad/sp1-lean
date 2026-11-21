@@ -49,7 +49,7 @@ def validate_report(name, result, revision, dirty):
         # Sail, host and resource boundary checks add seven, one and three assertions.
         expected = {"instruction": "BEQ x1,x2,+4092", "instructionWord": 0x7e208ee3,
                     "sourcePc": 65536, "targetPc": 69628, "sourceClock": 1, "targetClock": 9,
-                    "tableCount": 99, "uniqueChannels": 37, "declaredChannelOccurrences": 634 + 25 + 132 + 2 + 22,
+                    "tableCount": 100, "uniqueChannels": 37, "declaredChannelOccurrences": 634 + 25 + 132 + 2 + 22 + 2,
                     "verifierInteractions": 19 + 2 * 8 + (2 + 2 + 2 + 1) + 2 * 2 + 2 * 43 + 2 + 22}
         require(all(report[key] == value for key, value in expected.items()), "branch metadata mismatch")
         require(report["tableCount"] == len(report["tables"]) and

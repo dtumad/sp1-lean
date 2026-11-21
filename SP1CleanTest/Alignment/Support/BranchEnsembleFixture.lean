@@ -1,5 +1,6 @@
 import SP1CleanTest.Alignment.Audit.BranchCompilerRoundTrip
 import SP1CleanTest.Alignment.Support.InstalledAssembly
+import SP1Clean.Proofs.Completeness.HintQueueTerminal
 import ToClean.Air.EnsembleBuild
 import ToClean.Air.FiniteLookup
 import ToClean.Air.ChannelRegistry
@@ -34,7 +35,6 @@ def context (target : ExecutionSnapshot) : Context where
   image := image
   source := source
   target := target
-  lastHintClock := 0
   commitments := default
 /-- Public ordinary-step endpoints, not a HALT endpoint claim. -/
 def header : SP1PublicIO Fp where
@@ -141,7 +141,7 @@ def byteSeed? (entry : String × List Fp × Fp) : Option (Option Seed) :=
 /-- Extend all physical consumer demand, including the public verifier, with real providers. -/
 def seeds? (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (consumers : List Seed) :
     Option (List Seed) := do
-  let consumers ← (withObservationSeeds (context target) consumers).toOption
+  let (consumers, _) ← (fixtureInputs (context target) consumers).toOption
   let ledgers ← consumers.mapM (seedLedger? target)
   let verifier := (assembly (context target)).verifierOperations.interactionValues
     (Environment.fromInput input data) |>.map fun interaction =>
@@ -149,10 +149,15 @@ def seeds? (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (consumers : Li
   let providers ← (verifier ++ ledgers.flatten).mapM byteSeed?
   let generated := providers.filterMap id
   if generated.all (seedValid (assembly (context target)).tables) then some (consumers ++ generated) else none
+/-- The branch fixture does not access the hint queue. Its single fixed terminal transfers the
+unchanged cursor once, with both private timestamp limbs zero. -/
+private def hintTerminal (target : ExecutionSnapshot) : Table Fp :=
+  HostHintQueueTerminal.tableFor (publicCursor (context target)) 0 data
+
 /-- Every table remains installed, including all fixed membership rows at their actual counts. -/
 def builtTables (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) : List (Table Fp) :=
-  let components := (assembly (context target)).tables
+  let components := (base (context target) 0).tables
   let inputs := fun index => (seeds.filter (fun seed => seed.table == index)).map (·.cells)
   let channels := [(source.sail.memorySnapshot.registerTable (p := SP1Prime)).channel.name,
     (FinalRegisterValue.membership (p := SP1Prime) target.sail.memorySnapshot).channel.name,
@@ -163,20 +168,21 @@ def builtTables (target : ExecutionSnapshot) (seeds : List Seed)
     (fun index => by
       dsimp only [inputs]
       rw [List.length_map]
-      exact (List.length_filter_le _ _).trans bounded)
+      exact (List.length_filter_le _ _).trans bounded) ++ [hintTerminal target]
 
 /-- All built tables retain the assembly's original component identities and order. -/
 theorem builtTables_components (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
     (builtTables target seeds bounded).map (·.component) = (assembly (context target)).tables := by
   unfold builtTables
-  exact SP1CleanTest.StaticMembership.buildTables_components (F := Fp) ..
+  rw [List.map_append, SP1CleanTest.StaticMembership.buildTables_components]
+  rfl
 
-/-- Building rows never changes the complete 99-table host inventory. -/
+/-- Building rows never changes the complete 100-table host inventory. -/
 theorem builtTables_length (target : ExecutionSnapshot) (seeds : List Seed)
     (bounded : seeds.length ≤ UInt64.size) :
-    (builtTables target seeds bounded).length = 99 := by
-  simp only [builtTables, SP1CleanTest.StaticMembership.buildTables, List.length_ofFn]
+    (builtTables target seeds bounded).length = 100 := by
+  rw [← List.length_map (f := Table.component), builtTables_components]
   exact tables_length (context target)
 /-- The exact raw Clean witness on the original, unmodified host assembly. -/
 def witness (target : ExecutionSnapshot) (input : SP1PublicIO Fp) (seeds : List Seed)

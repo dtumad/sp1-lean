@@ -91,6 +91,8 @@ private def installedHintReadReference (context : SP1Clean.Export.InstalledAssem
     | throw (IO.userError "HINT_READ assembly has no register target checker")
   let some ram := hints[95]?
     | throw (IO.userError "HINT_READ assembly has no RAM target checker")
+  let some terminal := hints.find? (·.key == SP1Clean.HostHintQueueTerminal.tableName)
+    | throw (IO.userError "HINT_READ assembly has no private queue terminal")
   let some words := hints[84]?
     | throw (IO.userError "HINT_READ assembly has no nonfinal word consumer")
   let replace (column : ℕ) (value : ZMod SP1Clean.SP1Prime) := Vector.ofFn fun index : Fin input.size =>
@@ -103,7 +105,9 @@ private def installedHintReadReference (context : SP1Clean.Export.InstalledAssem
       ("nonboolean-register-activity", header, replace (registers.offset + registers.width - 1) 2, false),
       ("wrong-target-ram-value", header, replace (ram.offset + 5) 0, false),
       ("disabled-real-word", header, replace (words.offset + words.width - 1) 0, false),
-      ("nonboolean-word-activity", header, replace (words.offset + words.width - 1) 2, false)].mapM
+      ("nonboolean-word-activity", header, replace (words.offset + words.width - 1) 2, false),
+      ("wrong-private-hint-clock", header, replace (terminal.offset + 1) 8, false),
+      ("out-of-range-private-clock-limb", header, replace terminal.offset (2 ^ 24), false)].mapM
       fun (name, publicInput, privateInput, expected) =>
         installedCase context prepared name publicInput privateInput expected
   return Json.mkObj [("cases", toJson cases), ("inventory", installedInventory context)]

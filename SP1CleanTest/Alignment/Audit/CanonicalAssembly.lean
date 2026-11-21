@@ -2,7 +2,7 @@ import SP1Clean.Export.InstalledAssembly
 
 /-! # Generation inputs cannot supply uncommitted program metadata
 
-The complete installed 99-table inventory has no physical table named `sp1.pc_start`. Its
+The complete installed 100-table inventory has no physical table named `sp1.pc_start`. Its
 canonical data therefore cannot inherit that entry from witness-generation inputs. The check
 applies to every witness of this inventory, independently of generation or semantic validity.
 Program-binding consumers must use an authenticated boundary.
@@ -21,7 +21,7 @@ theorem uncommittedInitialPcAbsent {context : Context}
     rw [tables_eq, List.map_append]
     simp only [List.mem_append, not_or]
     constructor
-    · rw [withoutCommitments, Soundness.Shard.installed, Soundness.HostObserved.table_names]
+    · rw [Export.FixedHintAssembly.withoutCommitments, Soundness.Shard.installed, Soundness.HostObserved.table_names]
       erw [Soundness.HostFinalMemory.tables_eq]
       simp only [List.map_set, Soundness.HostFinalMemory.beforeChecks,
         Soundness.HostLocalCore.tables_names, Soundness.ProtectedLocalCore.tables_names,
