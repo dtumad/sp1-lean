@@ -1,4 +1,5 @@
 import SP1Clean.Export.InstalledAssembly
+import SP1Clean.FormalModel.ShardRelease
 
 /-! # Resource bounds of the six-handler execution recovered from raw acceptance
 
@@ -59,5 +60,62 @@ theorem native_resources_of_statement (context : Context) {header : SP1PublicIO 
   refine ⟨events, facts, fun cut kind checked => ?_⟩
   obtain ⟨_, _, _, bounds⟩ := facts.native_prefix_resources native cut
   exact (bounds kind checked).1
+
+open FormalModel.Shard
+
+private theorem release_iff_fits (facts : ExecutionFacts context header events)
+    (valid : ExecutionSourceValid context.image context.source)
+    (commitments : context.commitments.WellFormed SP1Prime) :
+    ReleaseStatementExecution context.limits SP1Prime context.commitments context.image
+      context.source context.target events ↔
+      (executionResources (policy SP1Prime context.image) context.image.program context.source.realize events).Fits
+        context.limits := by
+  refine ⟨fun execution => execution.1.1.2.2.1, fun fits => ?_⟩
+  obtain ⟨incoming, outgoing, _, _, time, pc⟩ := facts.resources.1
+  rw [← context.source.resources_realize] at incoming
+  rw [← context.target.resources_realize] at outgoing
+  exact ⟨⟨⟨⟨valid, trace_iff_executionPath.mp facts.path⟩, facts.encoded, fits, incoming, outgoing, time, pc⟩,
+    facts.releaseLinks⟩, commitments, facts.commitments⟩
+
+/-- At independently chosen public ceilings, the accepted tape meets the complete release
+statement exactly when its event count, padded writes and peak boundary payload fit. -/
+theorem release_statement_iff_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    (accepted : (assembly context).Statement .logUp header heights) :
+    ∃ events, ExecutionFacts context header events ∧
+      (ReleaseStatementExecution context.limits SP1Prime context.commitments context.image
+        context.source context.target events ↔
+        let usage := executionResources (policy SP1Prime context.image) context.image.program context.source.realize events
+        events.length ≤ context.limits.events ∧ usage .writeBytes ≤ context.limits.writeBytes ∧
+        usage .boundaryBytes ≤ context.limits.boundaryBytes) := by
+  obtain ⟨valid, _, _, commitments, events, facts⟩ := execution_of_statement context accepted
+  have incoming := facts.resources.1.1
+  rw [← context.source.resources_realize] at incoming
+  have charges := SixCallProfile.resourceFacts (trace_iff_executionPath.mp facts.path) facts.handlers incoming facts.ticks
+  refine ⟨events, facts, (release_iff_fits facts valid commitments.1).trans ?_⟩
+  constructor
+  · intro fits
+    obtain ⟨count, writes⟩ := charges.fits_iff.mp (fun kind _ => fits kind)
+    exact ⟨count, writes, fits .boundaryBytes⟩
+  · rintro ⟨count, writes, peak⟩ kind
+    by_cases boundary : kind = .boundaryBytes
+    · exact boundary ▸ peak
+    · exact charges.fits_iff.mpr ⟨count, writes⟩ kind boundary
+
+/-- Raw native acceptance recovers a complete six-handler execution. All clauses of the release
+statement on that tape reduce to one comparison with its measured peak boundary payload. -/
+theorem native_release_statement_iff_peak (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    (native : context.limits = ResourceLimits.native SP1Prime)
+    (accepted : (assembly context).Statement .logUp header heights) :
+    ∃ events, ExecutionFacts context header events ∧
+      (ReleaseStatementExecution context.limits SP1Prime context.commitments context.image
+        context.source context.target events ↔
+        executionResources (policy SP1Prime context.image) context.image.program context.source.realize events
+          .boundaryBytes ≤ context.limits.boundaryBytes) := by
+  obtain ⟨events, facts, characterization⟩ := release_statement_iff_of_statement context accepted
+  obtain ⟨_, _, _, charges⟩ := facts.native_prefix_resources native events.length
+  simp only [List.take_length] at charges
+  have count := (trace_iff_executionPath.mp facts.path).resources_events
+  refine ⟨events, facts, characterization.trans ⟨fun h => h.2.2, fun peak => ?_⟩⟩
+  exact ⟨count ▸ (charges .events (by decide)).1, (charges .writeBytes (by decide)).1, peak⟩
 
 end SP1Clean.Export.InstalledAssembly

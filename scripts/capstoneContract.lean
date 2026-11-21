@@ -125,6 +125,8 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
   ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
   ``SP1Clean.Export.InstalledAssembly.native_resources_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.release_statement_iff_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.native_release_statement_iff_peak,
   ``SP1Clean.Export.InstalledAssembly.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,

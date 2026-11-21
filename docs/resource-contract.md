@@ -149,6 +149,12 @@ count and padded writes must each fit their own ceiling. Both endpoint payloads 
 Peak intermediate `boundaryBytes` remains a separate obligation because ordinary stores can
 change the number of nonzero RAM bytes. [Installed six-handler bounds](../SP1Clean/Export/SixCallResources.lean)
 
+The same tape satisfies `ReleaseStatementExecution` if and only if this peak fits the native
+ceiling. At arbitrary limits the exact criterion also compares event count and padded write bytes
+with their respective ceilings. The row proofs establish the clock phase, the full ordinary
+instruction encoding and the SP1 link-write condition. The raw statement supplies the complete
+endpoints and the commitment declarations. [Release criterion](../SP1Clean/Export/SixCallResources.lean)
+
 `nativeProfile` bounds the broader Sail execution. It requires width-aligned
 ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. The installed six-handler assembly proves both conditions at every replay cut.
 Its load and store rows identify the actual RV64 base and signed offset, including loads to x0.
