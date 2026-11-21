@@ -42,6 +42,8 @@ EXPECTED_ROOTS = {
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
+    "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
+    "SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement",
     "Air.Flat.Realizes",
 }
 
@@ -64,6 +66,7 @@ def main() -> int:
              "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain",
              "SP1Clean.Export.InstalledHintCompleteness", "SP1Clean.Export.SixCallResources",
              "SP1Clean.Proofs.Completeness.HintInventory", "SP1Clean.Proofs.Chips.HostControlPopulate",
+             "SP1CleanTest.Alignment.Core.FixedRamCapacity",
              "SP1Clean.Proofs.Completeness.ObservationCapacity", "SP1Clean.Proofs.Completeness.ObservationData"],
             cwd=ROOT, check=True,
         )
