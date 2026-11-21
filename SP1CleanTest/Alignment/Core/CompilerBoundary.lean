@@ -1,15 +1,15 @@
+import SP1Clean.Math.SP1Field
+import SP1Clean.Proofs.Chips.BranchChip.Complete
 import SP1Clean.Proofs.Completeness.SemanticAccess
 import SP1Clean.Semantics.Execution.ConfiguredState
 import SP1Clean.Semantics.Sail.SailControlExecute
 
-/-! # Control-flow compiler boundary counterexamples
+/-! # Control-flow compiler boundaries
 
-These fixtures isolate a real remaining validity obligation without changing the public semantic
-domain. A last-slot JAL retires at the official Sail execute stage, but its link is 2^48. For x0,
-the link circuit is disabled and the event contract is too strong; for a nonzero destination,
-the enabled native link arithmetic imposes a genuine 48-bit AIR restriction. An untaken branch
-likewise need not bound its unselected candidate. These are execute-stage and event-contract
-counterexamples, not a claim that the complete mixed capstone has been instantiated.
+A last-slot JAL retires at the official Sail execute stage with a link at 2^48. The x0 form
+discards its link, while a nonzero destination enables native link arithmetic. Branch fixtures
+build accepted Clean tables at both selected ends of the PC window and check that out-of-window
+selected destinations fail their event contract.
 -/
 
 namespace SP1CleanTest.Core.CompilerBoundary
@@ -109,14 +109,56 @@ private def untakenEvent : ITypeEvent where
   prevTsA := 4
   prevTsB := 0
 
-/-- The untaken BNE x0, x0, +16 has a valid selected next PC, while its unselected target is
-outside the 48-bit window and violates the stronger existing event predicate. -/
-theorem untakenBranch_selected_valid_candidate_invalid :
-    untakenEvent.branchTaken = false ∧
-      untakenEvent.branchNextPc < 2 ^ 48 ∧ untakenEvent.branchNextPc % 4 = 0 ∧
-      ¬ untakenEvent.BranchTargets := by
+/-- BNE x0, x0, +16 at the edge of guest memory falls through to a valid native PC. Its
+unselected candidate exceeds the PC window and the actual branch row still satisfies its
+honest-prover assumptions. -/
+theorem untakenBranch_selected_valid :
+    untakenEvent.branchTaken = false ∧ 2 ^ 48 ≤ untakenEvent.branchTarget ∧
+      untakenEvent.WellFormedBranch ∧ untakenEvent.IsBranch ∧ untakenEvent.BranchTargets := by
+  refine ⟨by native_decide, by native_decide, ?_, ?_, ?_⟩
+  · constructor <;> native_decide
+  · unfold ITypeEvent.IsBranch
+    native_decide
+  · unfold ITypeEvent.BranchTargets
+    native_decide
+
+private def takenEvent : ITypeEvent :=
+  {untakenEvent with pc := 2 ^ 48 - 4, opcode := 40, imm := 0}
+
+/-- BEQ x0, x0, 0 can take its self-jump from the final fetch slot. The unused link is 2^48. -/
+theorem takenBranch_selected_valid :
+    takenEvent.branchTaken = true ∧ 2 ^ 48 = takenEvent.pc + 4 ∧
+      takenEvent.WellFormedBranch ∧ takenEvent.IsBranch ∧ takenEvent.BranchTargets := by
+  refine ⟨by native_decide, by native_decide, ?_, ?_, ?_⟩
+  · constructor <;> native_decide
+  · unfold ITypeEvent.IsBranch
+    native_decide
+  · unfold ITypeEvent.BranchTargets
+    native_decide
+
+/-- Each branch direction still rejects a selected destination outside the native PC word. -/
+theorem branch_selected_overflow_invalid :
+    ¬ ({untakenEvent with opcode := 40} : ITypeEvent).BranchTargets ∧
+      ¬ ({takenEvent with opcode := 41} : ITypeEvent).BranchTargets := by
   unfold ITypeEvent.BranchTargets
   native_decide
+
+/-- Clean builds a constrained and channel-valid table for both 48-bit-edge branch directions. -/
+theorem edgeBranch_table_valid :
+    let events := [untakenEvent, takenEvent]
+    let inputs := BranchChip.traceInputs (p := SP1Prime) events 0
+    let data : ProverData (ZMod SP1Prime) := (BranchChip.component (p := SP1Prime)).inputData inputs (.empty _)
+    let table := Air.Flat.Table.build (BranchChip.component (p := SP1Prime)) inputs data (ProverHint.empty _) (by decide)
+      (by trivial) ((BranchChip.component (p := SP1Prime)).inputData_consistent _ _)
+    table.Constraints ∧ table.Guarantees := by
+  have valid : ∀ e ∈ [untakenEvent, takenEvent], e.WellFormedBranch ∧ e.IsBranch ∧ e.BranchTargets := by
+    intro e member
+    rcases List.mem_cons.mp member with rfl | later
+    · exact untakenBranch_selected_valid.2.2
+    · obtain rfl := List.mem_singleton.mp later
+      exact takenBranch_selected_valid.2.2
+  exact ⟨BranchChip.traceTable_constraints (p := SP1Prime) _ 0 _ valid (by decide) _,
+    BranchChip.traceTable_guarantees (p := SP1Prime) _ 0 _ valid (by decide) _⟩
 
 /-- Official Sail also executes that untaken branch: no target-address check is imposed on the
 candidate that the instruction does not select. -/

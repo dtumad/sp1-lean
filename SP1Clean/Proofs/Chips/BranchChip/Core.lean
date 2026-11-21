@@ -530,7 +530,7 @@ theorem completeness :
       simp
     · simp only [Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_succ, List.getElem_cons_zero]
-      exact h_bt3.symm
+      exact (h_bt3 hr1 (he_br.symm.trans hbr1)).symm
   have nextEqFall (hr1 : input_is_real = 1)
       (hbr0 : env.get (i₀ + 10) = 0) :
       (#v[env.get (i₀ + 11), env.get (i₀ + 12), env.get (i₀ + 13), 0] :
@@ -555,7 +555,7 @@ theorem completeness :
       simp
     · simp only [Vector.getElem_mk, List.getElem_toArray,
         List.getElem_cons_succ, List.getElem_cons_zero]
-      exact h_ft3.symm
+      exact (h_ft3 hr1 (he_br.symm.trans hbr0)).symm
   have branchCarries (hr1 : input_is_real = 1)
       (hbr1 : env.get (i₀ + 10) = 1) :
       AddOperation.AssertSpec

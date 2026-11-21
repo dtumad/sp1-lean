@@ -1205,14 +1205,34 @@ fn branch_trace() -> RowMajorMatrix<SP1Field> {
         }
         assert!(outcomes.iter().all(|count| *count > 0));
     }
-    assert_eq!(record.branch_events.len(), 9720);
+    // Each released carry chain is gated by its branch outcome. Exercise both directions
+    // with an unselected candidate that cannot fit in the three physical next-PC limbs.
+    let guest_limit = 1_u64 << 48;
+    for (opcode, pc, offset, selected_pc) in [
+        (Opcode::BNE, guest_limit - 8, 16, guest_limit - 4),
+        (Opcode::BEQ, guest_limit - 4, 0, guest_limit - 4),
+    ] {
+        let clk = 9 + 8 * record.branch_events.len() as u64;
+        record.branch_events.push((
+            BranchEvent::new(clk, pc, selected_pc, opcode, 0, 0, offset, true),
+            ITypeRecord {
+                op_a: 0,
+                a: read_record(0, clk + 4, clk + 3),
+                op_b: 0,
+                b: read_record(0, clk + 3, clk - 8),
+                op_c: offset,
+                is_untrusted: false,
+            },
+        ));
+    }
+    assert_eq!(record.branch_events.len(), 9722);
     let chip = BranchChip::<SupervisorMode>::default();
     let trace = chip.generate_trace(&record, &mut ExecutionRecord::default());
     assert_eq!(
         trace.width(),
         <BranchChip<SupervisorMode> as BaseAir<SP1Field>>::width(&chip)
     );
-    assert_eq!(trace.height(), 9728); // Eight zero-filled padding rows.
+    assert_eq!(trace.height(), 9728); // Six zero-filled padding rows.
     trace
 }
 
@@ -1253,9 +1273,9 @@ fn generated_branch_witness_and_air_match_released_sp1() {
                     [0, 6, 12, 18, 19].map(|pc_offset| opcode * 1620 + pair * 20 + pc_offset)
                 })
         })
-        .chain([9720])
+        .chain([9720, 9721, 9722])
         .collect();
-    assert_eq!(indices.len(), 271); // 36,585 independent column/value mutations.
+    assert_eq!(indices.len(), 273); // 36,855 independent column/value mutations.
     check_mutations::<BranchInstruction>(
         &trace,
         &indices,

@@ -33,8 +33,8 @@ def Assumptions (input : Inputs (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
 /-- Honest witness-generation assumptions for the exact Rust-shaped Branch row.
 
 The two pure `AddOperation.populate` targets are proof-level witness calculations, not AIR
-subcircuits. Their high-limb-zero hypotheses justify the three-limb PC representation used by SP1's
-inline carry equations. Complete output ranges are supplied for the three real-row byte pulls.
+subcircuits. The selected addition has a zero high limb because SP1 encodes the outgoing PC
+in three limbs. Complete output ranges are supplied for the three real-row byte pulls.
 -/
 def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
     (_hint : ProverHint (ZMod p)) : Prop :=
@@ -53,8 +53,8 @@ def ProverAssumptions (input : Inputs (ZMod p)) (_data : ProverData (ZMod p))
     ⟨input.adapter, input.is_real, input.is_real, input.state.clk_high,
       input.state.clk_0_16 + input.state.clk_16_24 * 65536,
       input.state.pc, 0⟩ ∧
-  (branchTargetWord input)[3] = 0 ∧
-  (fallThroughWord input)[3] = 0 ∧
+  (input.is_real = 1 → br = 1 → (branchTargetWord input)[3] = 0) ∧
+  (input.is_real = 1 → br = 0 → (fallThroughWord input)[3] = 0) ∧
   (∀ i : Fin 6, input.flags[i] = 0 ∨ input.flags[i] = 1) ∧
   (input.is_real = 1 →
     ((committedNextPc input br)[0] * (4 : ZMod p)⁻¹).val < 2 ^ 14 ∧
