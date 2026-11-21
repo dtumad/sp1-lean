@@ -177,7 +177,6 @@ import SP1Clean.Semantics.Memory.MemoryEquality
 import SP1Clean.Semantics.Memory.MemoryFinalCheck
 import SP1Clean.Semantics.Execution.SailFinalCheck
 import SP1Clean.Semantics.Memory.MemoryIntervals
-import SP1Clean.Semantics.Memory.MemoryNormalization
 import SP1Clean.Semantics.Memory.MemorySnapshot
 import SP1Clean.Semantics.Memory.MemorySpan
 import SP1Clean.Semantics.Memory.MemorySupport

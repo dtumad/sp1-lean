@@ -1,6 +1,7 @@
 module
 
-public import SP1Clean.Semantics.Memory.MemoryNormalization
+public import SP1Clean.Semantics.Memory.MemorySupport
+public import Mathlib.Data.Finset.Sort
 
 /-! # Maximal constant-byte runs of bounded sparse memory
 

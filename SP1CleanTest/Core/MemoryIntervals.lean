@@ -9,7 +9,7 @@ open SP1Clean.Semantics
 
 private def memory : ByteMemory := ⟨[(7, 42), (0, 13), (7, 9), (15, 255), (16, 99)]⟩
 
-example : (memory.canonicalBelow 16).entries = [(0, 13), (7, 42), (15, 255)] := by
+example : (memory.changePoints 16).sort = [1, 7, 8, 15] := by
   native_decide
 
 /-- Newer zero writes erase old nonzero values; redundant/out-of-window history costs no rows. -/
