@@ -119,7 +119,7 @@ theorem SailTrace.realized {commitments : CommitmentStatement} {image : ProgramI
     (host : HostHintTarget.Spec source.host target.host (Address.toNat final.head)) :
     ∃ events, (sp1Machine p image).Trace source.realize events target.realize ∧
       commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
-  obtain ⟨_, _, boundary, _, events, actual, path, commitmentsMatch, calls, dynamic, endpoint⟩ := accepted
+  obtain ⟨_, _, boundary, _, events, actual, path, commitmentsMatch, calls, _, dynamic, endpoint⟩ := accepted
   rw [endpoint.realize_eq boundary dynamic host] at path
   exact ⟨events, path, commitmentsMatch, calls⟩
 

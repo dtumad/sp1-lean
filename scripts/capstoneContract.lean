@@ -93,6 +93,7 @@ example :
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
           (∀ event ∈ events, SixCallProfile.event event) ∧
+          ExecutionPath.ReleaseLinks (SP1Clean.FormalModel.Shard.policy p image) image.program source.realize events ∧
           SP1Clean.FormalModel.Shard.DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.

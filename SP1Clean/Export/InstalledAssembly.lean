@@ -115,20 +115,23 @@ theorem trace_of_statement (context : Context) {header : SP1PublicIO Fp} {height
     Shard.SailTrace context.commitments context.image context.source context.target (publicCursor context)
       header ∧ TargetChecks context header := by
   obtain ⟨clock, projected⟩ := project_statement context accepted
-  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, dynamic, endpoint⟩, checks⟩ :=
+  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, links, dynamic, endpoint⟩, checks⟩ :=
     FixedHintAssembly.trace_of_statement (context.withClock clock) projected
-  refine ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, dynamic, ?_⟩,
+  refine ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, links, dynamic, ?_⟩,
     ⟨checks.host, checks.resources⟩⟩
   exact ⟨endpoint.clock, endpoint.pc, endpoint.nextPC, endpoint.increment, endpoint.retired, endpoint.interrupts,
     endpoint.eventIndex, endpoint.preserved, endpoint.runtime, endpoint.registers, endpoint.ram, endpoint.host, endpoint.exit⟩
 
-/-- Public observations of the six-handler execution between both complete snapshots. -/
+/-- Public observations of the six-handler execution between both complete snapshots, including
+the released jump-link check at every replayed ordinary source. -/
 structure ExecutionFacts (context : Context) (header : SP1PublicIO Fp)
     (events : List Machine.ExecutionEvent) : Prop where
   path : (FormalModel.Shard.sp1Machine SP1Prime context.image).Trace context.source.realize events context.target.realize
   endpoint : Shard.Endpoint context.source context.target (publicCursor context) header events context.target.realize
   handlers : ∀ event ∈ events, SixCallProfile.event event
   commitments : context.commitments.Matches events
+  releaseLinks : ExecutionPath.ReleaseLinks (FormalModel.Shard.policy SP1Prime context.image)
+    context.image.program context.source.realize events
   ticks : executionResources (FormalModel.Shard.policy SP1Prime context.image) context.image.program
     context.source.realize events .ticks ≤ context.limits.ticks
   count : 8 * events.length ≤ context.target.clock - context.source.clock
@@ -142,13 +145,13 @@ theorem execution_of_statement (context : Context) {header : SP1PublicIO Fp} {he
     ExecutionSourceValid context.image context.source ∧ header.SourceFor context.source ∧
       SailBoundary.Spec context.source context.target header ∧ CommitmentBoundary.Spec context.commitments header ∧
       ∃ events, ExecutionFacts context header events := by
-  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, dynamic, endpoint⟩, checked⟩ :=
+  obtain ⟨⟨valid, sourceFor, sail, declared, events, actual, path, agrees, handlers, links, dynamic, endpoint⟩, checked⟩ :=
     trace_of_statement context accepted
   obtain rfl := (endpoint.realize_eq sail dynamic checked.host).symm
   have execution := FormalModel.Shard.trace_iff_executionPath.mp path
   obtain ⟨clock, ticks, count⟩ := checked.resources.path_work execution endpoint.clock
   refine ⟨valid, sourceFor, sail, declared, events,
-    ⟨path, endpoint, handlers, agrees, ticks, count, checked.resources, ?_⟩⟩
+    ⟨path, endpoint, handlers, agrees, links, ticks, count, checked.resources, ?_⟩⟩
   rw [sail.2.2]
   by_cases same : context.source.clock = context.target.clock
   · have noEvents : events.length = 0 := by omega

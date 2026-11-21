@@ -118,8 +118,10 @@ selected terminal. This fits the standard native limits. [Canonical data](../SP1
 The broader `AdmissibleExecution` admits `jal x1,0` and `jalr x1,x0,0` from a checked
 one-word boot image at the last instruction slot, `2^48 − 4`. Each writes `2^48` to x1. The
 pinned JAL and JALR AIRs constrain an enabled link to three 16-bit limbs, so these same
-complete source, target and tape triples fall outside `ReleaseAdmissibleExecution`. At every
-ordinary cut the release condition checks the fetched instruction at the actual source PC.
+complete source, target and tape triples fall outside `ReleaseAdmissibleExecution`. Raw acceptance of the installed
+six-handler assembly proves this link bound at every ordinary cut. The physical instruction
+family, Program row and configured Sail decode identify the jump and destination register at
+the replayed source PC.
 Writing x0 disables the addition, and an enabled write from `2^48 − 8` still fits. Host calls
 and empty paths have no link writes. The existing branch check uses the selected destination.
 [Replay condition](../SP1Clean/Semantics/Execution/ReleaseLinks.lean) · [Physical row proofs](../SP1Clean/Proofs/Chips/JumpLinkBound.lean) · [Boot regressions](../SP1CleanTest/Alignment/Core/JumpLinkBoundary.lean)
