@@ -148,20 +148,21 @@ private theorem rawIntervals_count (memory : ByteMemory) (limit query : ℕ) :
   | cons entry rest ih =>
       rw [intervalRows, MemoryInterval.writes_count, ih]
 
-/-- The fixed table grows with the supplied sparse image, not the size of the address space. -/
-private theorem rawIntervals_length_le (memory : ByteMemory) (limit : ℕ) :
-    (memory.rawIntervals limit).length ≤ 2 * memory.entries.length + 1 := by
+/-- Each in-range write splits its unique containing interval into three physical rows. -/
+private theorem rawIntervals_length (memory : ByteMemory) (limit : ℕ)
+    (bounded : ∀ entry ∈ memory.entries, entry.1 < limit) :
+    (memory.rawIntervals limit).length = 2 * memory.entries.length + 1 := by
   rcases memory with ⟨entries⟩
-  change (intervalRows limit entries).length ≤ 2 * entries.length + 1
+  change (intervalRows limit entries).length = 2 * entries.length + 1
   induction entries with
   | nil => simp [intervalRows]
   | cons entry rest ih =>
       rw [intervalRows, MemoryInterval.writes_length]
       have count := (ByteMemory.mk rest).rawIntervals_count limit entry.1
       change (intervalRows limit rest).countP _ = _ at count
-      rw [count]
+      rw [count, ite_eq_left (bounded entry List.mem_cons_self), ih (fun e he => bounded e (List.mem_cons_of_mem _ he))]
       simp only [List.length_cons]
-      split <;> omega
+      omega
 
 /-- Every endpoint fits the chosen address-space bound. -/
 private theorem rawIntervals_bounds (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)
@@ -218,11 +219,13 @@ theorem intervals_count (memory : ByteMemory) (limit query : ℕ) :
       if query < limit then 1 else 0 :=
   (memory.canonicalBelow limit).rawIntervals_count limit query
 
-/-- The interval inventory is bounded by semantic live-byte support. -/
-theorem intervals_length_le (memory : ByteMemory) (limit : ℕ) :
-    (memory.intervals limit).length ≤ 2 * (memory.supportBelow limit).card + 1 := by
-  have bound := (memory.canonicalBelow limit).rawIntervals_length_le limit
-  simpa only [intervals, canonicalBelow_length] using bound
+/-- The canonical inventory retains both side intervals at every nonzero byte, even when empty. -/
+theorem intervals_length (memory : ByteMemory) (limit : ℕ) :
+    (memory.intervals limit).length = 2 * (memory.supportBelow limit).card + 1 := by
+  rw [intervals, rawIntervals_length, canonicalBelow_length]
+  intro entry member
+  obtain ⟨address, live, rfl⟩ := List.mem_map.mp member
+  exact ((mem_supportBelow memory limit address).mp ((Finset.mem_sort (· ≤ ·)).mp live)).1
 
 /-- Every endpoint fits the chosen address-space bound. -/
 theorem intervals_bounds (memory : ByteMemory) (limit : ℕ) (interval : MemoryInterval)

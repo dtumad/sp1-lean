@@ -39,6 +39,13 @@ private def mapReceiptSlot {tables : List (Component (ZMod p))} {component : Com
   component_eq := by
     simp only [List.getElem_mapIdx, HostOrdinaryReceipts.replace, outside, dite_false, slot.component_eq]
 
+/-- Publishing ordinary receipts retains each physical slot outside the 25 instruction producers. -/
+def retainedSlot {component : Component (ZMod p)}
+    (slot : TableSlot (HostFinalMemory.Installed image source target final).tables component)
+    (outside : ¬ (7 ≤ slot.index.val ∧ slot.index.val < 32)) :
+    TableSlot (ensemble image source target final).tables component :=
+  (mapReceiptSlot slot outside).cast observed_tables.symm
+
 private def observationPosition (i : Fin 4) :=
   (((((TableSlot.ofIndex (OrdinaryObservation.tables (p := p)) ⟨i.val, i.isLt⟩).appendRight
     (HostHintReadLocal.bankResources source.host.io.hints)).appendRight

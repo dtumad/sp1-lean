@@ -24,8 +24,8 @@ example : (List.range 17).map (fun query =>
       some 0, some 0, some 0, some 0, some 0, some 0, some 0, some 255, none] := by
   native_decide
 
-example : (memory.intervals 16).length ≤ 2 * (memory.supportBelow 16).card + 1 :=
-  memory.intervals_length_le 16
+example : (memory.intervals 16).length = 2 * (memory.supportBelow 16).card + 1 :=
+  memory.intervals_length 16
 
 example : (memory.intervalAt? 0 0).isSome = false := by native_decide
 

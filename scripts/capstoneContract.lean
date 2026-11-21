@@ -2,6 +2,7 @@ import Lean
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Soundness.HostRegisteredCalls
 import SP1Clean.Export.ShortShardChain
+import SP1CleanTest.Alignment.Core.FixedRamCapacity
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ObservationCapacity
 import SP1Clean.Proofs.Completeness.HintInventory
@@ -148,6 +149,9 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.routed_successor_at,
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
+  ``SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement,
+  ``SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity,
+  ``SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,
@@ -164,7 +168,7 @@ def moduleOf (env : Environment) (name : Name) : Name :=
 
 /-- Traverse repository definitions; pinned upstream declarations remain explicit boundary nodes. -/
 def localModule (name : Name) : Bool :=
-  ["SP1Clean", "ToClean", "ToMathlib"].any
+  ["SP1Clean", "SP1CleanTest", "ToClean", "ToMathlib"].any
     (fun rootName => name.toString.startsWith (rootName ++ "."))
 
 /-- Theorem bodies are kernel-checked implementation, rather than definition dependencies. -/

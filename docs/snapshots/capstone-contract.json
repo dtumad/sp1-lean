@@ -18600,6 +18600,13 @@
       "typeFingerprint": "1572181097"
     },
     {
+      "bodyFingerprint": null,
+      "local": false,
+      "module": "Init.Prelude",
+      "name": "Nonempty",
+      "typeFingerprint": "4091481359"
+    },
+    {
       "bodyFingerprint": "147715320",
       "local": false,
       "module": "Init.Prelude",
@@ -35059,6 +35066,13 @@
     {
       "bodyFingerprint": null,
       "local": true,
+      "module": "SP1Clean.Export.FixedRamCapacity",
+      "name": "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
+      "typeFingerprint": "3110810333"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.trace_of_statement",
       "typeFingerprint": "2204152289"
@@ -36630,6 +36644,13 @@
       "module": "SP1Clean.FormalModel.Shard",
       "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution",
       "typeFingerprint": "3154178738"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.FixedRamCapacity",
+      "name": "SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity",
+      "typeFingerprint": "726134347"
     },
     {
       "bodyFingerprint": null,
@@ -99653,6 +99674,13 @@
       "typeFingerprint": "2154538674"
     },
     {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1CleanTest.Alignment.Core.FixedRamCapacity",
+      "name": "SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement",
+      "typeFingerprint": "1679676383"
+    },
+    {
       "bodyFingerprint": "3863074956",
       "local": false,
       "module": "Sail.ArchSem",
@@ -104173,6 +104201,9 @@
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
+    "SP1Clean.Export.InstalledAssembly.target_ram_support_of_statement",
+    "SP1Clean.FormalModel.Shard.AdmissibleExecution.endpoint_ram_capacity",
+    "SP1CleanTest.FixedRamCapacity.empty_release_without_raw_statement",
     "SP1Clean.FormalModel.Shard.Executes",
     "SP1Clean.FormalModel.Shard.nativeProfile",
     "SP1Clean.FormalModel.Shard.AdmissibleExecution",

@@ -2,6 +2,7 @@ import SP1Clean.Core
 import SP1Clean.Export.FixedHintAssembly
 import SP1Clean.Export.InstalledAssembly
 import SP1Clean.Export.InstalledHintAssembly
+import SP1Clean.Export.FixedRamCapacity
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Export.InstalledHintProjection
 import SP1Clean.Export.InstalledHintVerifier
