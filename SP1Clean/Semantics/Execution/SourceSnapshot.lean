@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Memory.MemorySnapshot
+public import SP1Clean.Semantics.Memory.MemorySupport
 public import SP1Clean.Semantics.Execution.ProgramTable
 
 /-! # Finite validation of local source data
@@ -20,6 +21,30 @@ def SourceValid (image : ProgramImage) (snapshot : MemorySnapshot) : Prop :=
   image.Valid ∧ image.Decodable ∧ snapshot.Valid ∧
     ∀ entry ∈ image.rom, ∀ index : Fin 4,
       snapshot.memory.read (entry.1.toNat + index) = entry.2.extractLsb' (8 * index) 8
+
+/-- The low two bits of a checked four-byte instruction force its loaded first byte to be live. -/
+theorem SourceValid.rom_length_le_support {image : ProgramImage} {snapshot : MemorySnapshot}
+    (valid : SourceValid image snapshot) :
+    image.rom.length ≤ (snapshot.memory.supportBelow NativeLayout.sailMemory.upper).card := by
+  let addresses := (image.rom.map Prod.fst).map BitVec.toNat
+  have unique : addresses.Nodup := valid.1.1.map BitVec.toNat_injective
+  have subset : addresses.toFinset ⊆ snapshot.memory.supportBelow NativeLayout.sailMemory.upper := by
+    intro address member
+    obtain ⟨pc, inRom, rfl⟩ := List.mem_map.mp (List.mem_toFinset.mp member)
+    obtain ⟨entry, listed, rfl⟩ := List.mem_map.mp inRom
+    have word := valid.1.2.1 entry listed
+    have bound : entry.1.toNat + 4 ≤ 2 ^ 48 := word.2.1.2
+    apply (ByteMemory.mem_supportBelow ..).mpr
+    refine ⟨by change _ < 2 ^ 48; omega, ?_⟩
+    have loaded := valid.2.2.2 entry listed (0 : Fin 4)
+    simp only [Fin.val_zero, Nat.add_zero, Nat.mul_zero] at loaded
+    rw [loaded]
+    intro zero
+    have low := congrArg (BitVec.setWidth 2) zero
+    rw [BitVec.setWidth_extractLsb'_of_le (by decide : 2 ≤ 8), word.2.2] at low
+    contradiction
+  simpa only [List.toFinset_card_of_nodup unique, addresses, List.length_map] using
+    Finset.card_le_card subset
 
 /-- Executable instance validation over finite input lists, independent of the AIR field. -/
 def checkSource (image : ProgramImage) (snapshot : MemorySnapshot) : Bool :=
