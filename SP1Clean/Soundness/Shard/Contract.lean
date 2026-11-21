@@ -13,11 +13,12 @@ table and provider from data and prove success throughout the same semantic doma
 declarations remain executable but are outside the proof statement. Digest-word coverage is not
 assumed. An invalid image is rejected, because admissibility requires a valid source.
 
-These are checked target types, not closed instances. The complete boundary verifier,
-all-eight-call assembly, and compiler remain open. In particular the current source-hint
-assembly's PC/clock/frontier theorem does not establish `SoundnessTarget`. No queue cursor, bank
-path, instruction split, or grounding certificate occurs in the intended public execution
-relation. Faithfulness to the pinned Rust AIR is separate.
+These target types describe the full eight-call resource-bounded artifact. Raw acceptance
+of the installed six-handler assembly already yields a trace between the two supplied complete
+states with matching commitment declarations. Extending that proof to all eight calls and
+the full resource profile, and constructing all tables from an admissible trace, remain open.
+The public execution relation consists of the complete boundaries, tape, resources and
+commitments. Released Rust comparison exercises the independent implementation.
 -/
 
 namespace SP1Clean.Soundness.Shard

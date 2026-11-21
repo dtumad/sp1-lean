@@ -1,5 +1,6 @@
 import SP1Clean.Core
 import SP1Clean.Export.InstalledAssembly
+import SP1Clean.Export.ShardChain
 import SP1Clean.Alignment.Chips.AddChip.Bridge
 import SP1Clean.Alignment.Chips.AddChip.Contracts
 import SP1Clean.Alignment.Chips.AddiChip.Bridge
@@ -156,6 +157,8 @@ import SP1Clean.Soundness.OrdinaryObservationProjection
 import SP1Clean.Proofs.Completeness.OrdinaryObservation
 import SP1Clean.Proofs.Completeness.OrdinaryObservationHistory
 import SP1Clean.Proofs.Completeness.OrdinaryObservationPadding
+import SP1Clean.Proofs.Completeness.ExecutionObservation
+import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 import SP1Clean.Soundness.HostExecutionEffect
 import SP1Clean.Soundness.HostFootprint
 import SP1Clean.Soundness.HostHintQueueBoundary

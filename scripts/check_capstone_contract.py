@@ -28,8 +28,11 @@ EXPECTED_ROOTS = {
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
     "SP1Clean.Export.InstalledAssembly.soundness",
-    "SP1Clean.Export.InstalledAssembly.append_soundness",
-    "SP1Clean.Export.InstalledAssembly.identity_of_statement",
+    "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
+    "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",
+    "SP1Clean.TraceGen.admissibleExecution_observationTable",
+    "SP1Clean.TraceGen.admissibleExecution_hostOnlyTerminalTable",
+    "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
     "Air.Flat.Realizes",
 }
 
@@ -49,7 +52,8 @@ def main() -> int:
     if not args.no_build:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
-             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.InstalledAssembly"],
+             "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain",
+             "SP1Clean.Proofs.Completeness.ExecutionObservationTerminal"],
             cwd=ROOT, check=True,
         )
     with tempfile.TemporaryDirectory(prefix="sp1-capstone-contract-") as temporary:

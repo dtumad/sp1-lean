@@ -203,32 +203,28 @@ theorem soundness (context : Context) {header : SP1PublicIO Fp} {heights : List 
   obtain ⟨trace, checked⟩ := trace_of_statement context accepted
   exact trace.realized checked.host
 
-/-- An accepted zero-duration segment preserves the complete supplied state. -/
-theorem identity_of_statement (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
-    (accepted : (assembly context).Statement .logUp header heights)
-    (flag : header.is_execution_shard = 0) : context.source.realize = context.target.realize := by
-  obtain ⟨_, _, _, _, events, facts⟩ := execution_of_statement context accepted
-  have path := FormalModel.Shard.trace_iff_executionPath.mp facts.path
-  rw [facts.empty.mp flag] at path
-  exact (ExecutionPath.nil_iff.mp path).symm
-
-/-- Two accepted local segments compose across extensionally equal complete snapshots. -/
-theorem append_soundness (left right : Context) {leftHeader rightHeader : SP1PublicIO Fp}
-    {leftHeights rightHeights : List ℕ}
-    (first : (assembly left).Statement .logUp leftHeader leftHeights)
-    (second : (assembly right).Statement .logUp rightHeader rightHeights)
-    (sameImage : right.image = left.image) (sameStatement : right.commitments = left.commitments)
-    (joined : left.target.equivalent right.source = true) :
-    ∃ events : List Machine.ExecutionEvent, (FormalModel.Shard.sp1Machine SP1Prime left.image).Trace left.source.realize events right.target.realize ∧
-      left.commitments.Matches events ∧ ∀ event ∈ events, SixCallProfile.event event := by
-  obtain ⟨xs, xPath, xCommit, xCalls⟩ := soundness left first
-  obtain ⟨ys, yPath, yCommit, yCalls⟩ := soundness right second
-  rw [sameImage, ← (ExecutionSnapshot.equivalent_iff ..).mp joined] at yPath
-  rw [sameStatement] at yCommit
-  refine ⟨xs ++ ys, FormalModel.Shard.trace_iff_executionPath.mpr
-    ((FormalModel.Shard.trace_iff_executionPath.mp xPath).append (FormalModel.Shard.trace_iff_executionPath.mp yPath)),
-    (left.commitments.matches_append xs ys).mpr ⟨xCommit, yCommit⟩, fun event member => ?_⟩
-  exact (List.mem_append.mp member).elim (xCalls event) (yCalls event)
+/-- On an accepted shard the execution flag is zero exactly when the empty tape satisfies
+all clauses of the full resource-bounded statement between the supplied boundaries. -/
+theorem executionFlag_iff_identity (context : Context) {header : SP1PublicIO Fp} {heights : List ℕ}
+    (accepted : (assembly context).Statement .logUp header heights) :
+    header.is_execution_shard = 0 ↔
+      FormalModel.Shard.StatementExecution context.limits SP1Prime context.commitments context.image context.source context.target [] := by
+  obtain ⟨valid, _, _, fixed, events, facts⟩ := execution_of_statement context accepted
+  constructor
+  · intro flag
+    obtain rfl := facts.empty.mp flag
+    obtain ⟨incoming, outgoing, _, _, time, pc⟩ := facts.resources.1
+    rw [← context.source.resources_realize] at incoming
+    rw [← context.target.resources_realize] at outgoing
+    exact ⟨⟨⟨valid, FormalModel.Shard.trace_iff_executionPath.mp facts.path⟩,
+      ExecutionPath.encoded_nil, ResourceUsage.zero_fits _, incoming, outgoing, time, pc⟩,
+      fixed.1, facts.commitments⟩
+  · intro empty
+    have same := ExecutionPath.nil_iff.mp empty.1.1.2
+    have clock : context.target.clock = context.source.clock := congrArg ExecutionState.clock same
+    have bound := facts.count
+    rw [clock, Nat.sub_self] at bound
+    exact facts.empty.mpr (List.length_eq_zero_iff.mp (by omega))
 
 /-- Every cut of the recovered execution respects the declared hint, request and output
 ceilings, including the intermediate state and the peak so far. -/

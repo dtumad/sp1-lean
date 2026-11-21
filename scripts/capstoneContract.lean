@@ -1,6 +1,7 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
-import SP1Clean.Export.InstalledAssembly
+import SP1Clean.Export.ShardChain
+import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
 
 /-! # Compiled native capstone contract audit
 
@@ -116,8 +117,11 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.trace_of_statement,
   ``SP1Clean.Export.InstalledAssembly.execution_of_statement,
   ``SP1Clean.Export.InstalledAssembly.soundness,
-  ``SP1Clean.Export.InstalledAssembly.append_soundness,
-  ``SP1Clean.Export.InstalledAssembly.identity_of_statement,
+  ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
+  ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
+  ``SP1Clean.TraceGen.admissibleExecution_observationTable,
+  ``SP1Clean.TraceGen.admissibleExecution_hostOnlyTerminalTable,
+  ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
   ``SP1Clean.FormalModel.Shard.AdmissibleExecution,
