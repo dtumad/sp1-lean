@@ -51,20 +51,28 @@ def seedValid (tables : List (Component Fp)) (seed : Seed) : Bool :=
   | some component => StaticMembership.acceptsSeed component && seed.cells.length == component.rowOffset
 
 /-- Recover the active receipts from the physical instruction rows, then build the ordered
-observation inputs and the one terminal selected by the supplied snapshots. -/
-def withObservationSeeds (context : Context) (seeds : List Seed) : Except String (List Seed) := do
+observation inputs. Each active hint handler publishes its own clock on the queue channel.
+The private terminal uses the last such clock, or zero for an untouched queue. -/
+def fixtureInputs (context : Context) (seeds : List Seed) : Except String (List Seed × ℕ) := do
   let tables := (assembly context).tables
   let observationNames := (Soundness.OrdinaryObservation.tables (p := SP1Prime)).map (·.circuit.name)
   let receiptName := (InstructionReceipt.channel (p := SP1Prime)).name
   let data := ProverData.empty Fp
   let mut receipts : List (Channels.StateMsg Fp) := []
+  let queueName := (HostHintQueue.stateChannel (p := SP1Prime)).name
+  let mut hintClock := 0
   for seed in seeds do
     let some component := tables[seed.table]? | throw "invalid physical table position"
     unless seedValid tables seed do throw "invalid component input"
     if observationNames.contains component.circuit.name then throw "observation inputs are derived from the physical receipts"
-    if component.circuit.channelsWithRequirements.any (·.name == receiptName) then
+    if component.circuit.channels.any (fun channel => channel.name == receiptName || channel.name == queueName) then
       let row := seed.build component data
       for interaction in component.operations.interactionValues (Environment.fromArray row data) do
+        if interaction.channel.name == queueName && interaction.direction == .push && interaction.mult != 0 then
+          if width : interaction.msg.size = size HostHintQueue.State then
+            let state := fromElements (M := HostHintQueue.State) ⟨interaction.msg, width⟩
+            hintClock := max hintClock (state.clk_high.val * 2 ^ 24 + state.clk_low.val)
+          else throw "invalid hint queue cursor width"
         if interaction.channel.name == receiptName && interaction.direction == .push && interaction.mult != 0 then
           unless interaction.mult == 1 do throw "instruction receipt multiplicity must be one"
           if width : interaction.msg.size = size Channels.StateMsg then
@@ -79,7 +87,7 @@ def withObservationSeeds (context : Context) (seeds : List Seed) : Except String
   let terminal := tables.findIdx (·.circuit.name == SP1Clean.OrdinaryObservation.terminalName mode)
   let active := inputs.map fun input =>
     Seed.ofCells consumer (toElements (SP1Clean.OrdinaryObservation.activeRow input)).toList
-  return seeds ++ active ++ [⟨terminal, (toElements (SP1Clean.OrdinaryObservation.terminalInput previous)).toList⟩]
+  return (seeds ++ active ++ [⟨terminal, (toElements (SP1Clean.OrdinaryObservation.terminalInput previous)).toList⟩], hintClock)
 
 /-- One complete register/RAM message, with canonical address and value limbs. -/
 def memoryRecord (address clock : ℕ) (value : BitVec 64) : Channels.MemoryMsg Fp :=

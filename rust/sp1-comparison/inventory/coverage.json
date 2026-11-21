@@ -411,7 +411,8 @@
     {"name": "sp1.native.memory.check.ram.changes", "width": 751, "inputWidth": 11, "fixedColumns": [], "group": "memory", "lookups": []},
     {"name": "sp1.native.target_registers.provider", "width": 7, "inputWidth": 7, "fixedColumns": [0, 1, 2, 3, 4, 5], "group": "memory", "lookups": []},
     {"name": "sp1.native.target_memory.provider", "width": 11, "inputWidth": 11, "fixedColumns": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "group": "memory", "lookups": []},
-    {"name": "sp1.native.commitment_declaration.source", "width": 9, "inputWidth": 9, "fixedColumns": [0, 1, 2, 3, 4, 5, 6, 7], "group": "host", "lookups": []}
+    {"name": "sp1.native.commitment_declaration.source", "width": 9, "inputWidth": 9, "fixedColumns": [0, 1, 2, 3, 4, 5, 6, 7], "group": "host", "lookups": []},
+    {"name": "sp1.native.hint_queue.terminal", "width": 52, "inputWidth": 4, "fixedColumns": [0], "group": "host", "lookups": []}
   ],
   "publicWidth": 58,
   "verifier": "verifier"

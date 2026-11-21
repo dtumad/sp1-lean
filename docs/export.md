@@ -25,7 +25,11 @@ interpreter or scheduler.
   proves that adding private witness-generation inputs preserves raw acceptance in both directions.
   The proof transports the same physical rows and canonical data. Finite fixtures supply their
   private inputs separately. [Production assembly](../SP1Clean/Export/InstalledAssembly.lean)
-- Fixtures for the complete installed 99-table assembly cover
+- The final physical table receives the outgoing hint cursor at a private timestamp. Its fixed
+  ticket, checked count and two range-checked 24-bit limbs transfer the authenticated head and
+  allocation frontier exactly once. Raw acceptance projects to the underlying host assembly at
+  that timestamp, retaining the public heights of the first 99 tables.
+- Fixtures for the complete installed 100-table assembly cover
   arithmetic/branch/RAM programs and local cuts, empty and stopped segments, repeated HINT_LEN
   around overlapping empty/aligned/byte-tail HINT_READ calls, constrained ENTER replay, HALT,
   repeated commitments and partial/full declarations followed by HALT. Comparisons retain every row, empty position,

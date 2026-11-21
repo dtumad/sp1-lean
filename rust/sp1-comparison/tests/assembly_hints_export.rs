@@ -98,6 +98,41 @@ fn hints<P: Program<F>>(reference: &serde_json::Value, length: u64) {
         }
     }
     assert_eq!(observed, 5);
+    let last_hint = record
+        .syscall_events
+        .iter()
+        .rev()
+        .find(|(event, _)| {
+            matches!(
+                event.syscall_code,
+                SyscallCode::HINT_LEN | SyscallCode::HINT_READ
+            )
+        })
+        .unwrap()
+        .0
+        .clk
+        - first
+        + 9;
+    assert_eq!(P::COMPONENT_NAMES[99], "sp1.native.hint_queue.terminal");
+    assert_eq!(witness.tables[99].len(), 1);
+    let endpoint = &witness.tables[99][0];
+    assert_eq!(
+        &endpoint[..4],
+        &[
+            F::ONE,
+            F::ONE,
+            F::from_u64(last_hint >> 24),
+            F::from_u64(last_hint & 0xff_ffff)
+        ]
+    );
+    assert!(physical_balance::<P>(&public, &witness.tables));
+    // Range-correct limbs on the wrong clock still lose the authenticated queue cursor.
+    let mut forged = witness.tables.clone();
+    let mut input = endpoint[..4].to_vec();
+    input[3] += F::ONE;
+    let data = clean_backend::witness_generation::WitnessData::from_entries(vec![]);
+    forged[99][0] = P::complete_row(99, &input, &data, &data).unwrap();
+    assert!(!physical_balance::<P>(&public, &forged));
     // Compare each transfer, so the overlapping second read cannot hide a bad first write.
     // An independent released prefix supplies the intermediate RAM state.
     let mut first_code = vec![];

@@ -43,7 +43,7 @@ private def response (component : Component Fp) (seed : Seed)
 fail before either Lean generation or Rust export. No mode is replaced or preallocated here. -/
 def prepare (context : Context) (consumers : List Seed) : Except String Prepared := do
   let tables := (assembly context).tables
-  let consumers ← withObservationSeeds context consumers
+  let (consumers, hintClock) ← fixtureInputs context consumers
   let mut data : Array Fp := #[]
   let mut hints : List HintTable := []
   let mut samples : List HintTable := []
@@ -52,6 +52,12 @@ def prepare (context : Context) (consumers : List Seed) : Except String Prepared
     let seeds := consumers.filter (·.table == position)
     let inputs := seeds.map (fun seed => (seed.cells.toArray))
     let mut encoded := inputs.toArray
+    if component.circuit.name == HostHintQueueTerminal.tableName then
+      let descriptor : HintTable := { key := HostHintQueueTerminal.tableName, width := 2, offset := data.size, rows := 1 }
+      hints := hints ++ [descriptor]
+      samples := samples ++ [descriptor]
+      data := data ++ #[((hintClock / 2 ^ 24 : ℕ) : Fp), ((hintClock % 2 ^ 24 : ℕ) : Fp)]
+      continue
     let mut first := 0
     if !seeds.isEmpty then
       match component.generation with

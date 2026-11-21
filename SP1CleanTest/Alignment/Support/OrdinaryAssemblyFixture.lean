@@ -114,7 +114,7 @@ def prepare (start : ℕ := 0) (count : ℕ := 9) : Except String (Context × Li
     touched := touched ++ compiled.plan.map (·.loc)
   let context : Context := {
     image, source := incoming, target := outgoing
-    lastHintClock := 0, commitments := default }
+    commitments := default }
   if selected.isEmpty then
     return (context, emptyConsumers context,
       boundaryInputs incoming.clock incoming.pc.toNat outgoing.clock outgoing.pc.toNat)

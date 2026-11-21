@@ -150,7 +150,7 @@ fn stopped_source_rejects_a_valid_active_branch_with_a_fresh_proof_attempt() {
         generated::Ensemble::FIXED_HEIGHTS,
         stopped_zero::Ensemble::FIXED_HEIGHTS
     );
-    for index in 0..99 {
+    for index in 0..100 {
         if generated::Ensemble::FIXED_HEIGHTS[index] != 0 {
             assert_eq!(
                 backend::fixed_trace::<generated::Ensemble>(index).values,

@@ -25,8 +25,8 @@ fixture!(hint_word_padding, installed_hint_word_padding);
 fixture!(hint_read, installed_hint_read);
 #[test]
 fn complete_hint_read_matches_native_rows_and_rejects_malformed_consumers() {
-    check_reference::<hint_read::Ensemble>(&hint_read::reference(), 7);
-    check_reference::<hint_word_padding::Ensemble>(&hint_word_padding::reference(), 7);
+    check_reference::<hint_read::Ensemble>(&hint_read::reference(), 9);
+    check_reference::<hint_word_padding::Ensemble>(&hint_word_padding::reference(), 9);
 }
 
 #[test]
