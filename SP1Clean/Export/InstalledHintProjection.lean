@@ -23,7 +23,8 @@ def project (witness : EnsembleWitness (assembly context)) (clock : BitVec 48) :
 theorem project_header (witness : EnsembleWitness (assembly context)) (clock : BitVec 48) :
     (project witness clock).publicInput = witness.publicInput := rfl
 
-private theorem suffix (witness : EnsembleWitness (assembly context)) :
+/-- The literal suffix after the projected tables consists of the unique private cursor terminal. -/
+theorem drop_eq_terminal (witness : EnsembleWitness (assembly context)) :
     witness.tables.drop 99 = [(terminalSlot context).table witness] := by
   have length : witness.tables.length = 100 := witness.same_length.symm.trans (tables_length context)
   rw [List.drop_eq_getElem_cons (by omega), List.drop_eq_nil_of_le (by omega)]
@@ -56,7 +57,7 @@ theorem project_tables_ledger (witness : EnsembleWitness (assembly context)) (cl
       ((terminalSlot context).table witness).interactionsWith channel =
         witness.tables.flatMap (·.interactionsWith channel) := by
   rw [project, EnsembleWitness.ofTables_tables, withDerivedData_interactionsWith]
-  conv_rhs => rw [← List.take_append_drop 99 witness.tables, List.flatMap_append, suffix]
+  conv_rhs => rw [← List.take_append_drop 99 witness.tables, List.flatMap_append, drop_eq_terminal]
   simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
 
 theorem private_clock (witness : EnsembleWitness (assembly context)) (checked : witness.Constraints) :

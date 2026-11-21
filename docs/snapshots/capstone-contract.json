@@ -379,6 +379,13 @@
       "typeFingerprint": "630526172"
     },
     {
+      "bodyFingerprint": "2754641928",
+      "local": false,
+      "module": "Clean.Air.FlatEnsemble",
+      "name": "Air.Flat.Ensemble.interactionCount",
+      "typeFingerprint": "932125144"
+    },
+    {
       "bodyFingerprint": "2847971876",
       "local": false,
       "module": "Clean.Air.FlatEnsemble",
@@ -34754,6 +34761,13 @@
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.soundness",
       "typeFingerprint": "1194192588"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.InstalledHintCompleteness",
+      "name": "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
+      "typeFingerprint": "2203224658"
     },
     {
       "bodyFingerprint": null,
@@ -98904,6 +98918,13 @@
       "typeFingerprint": "2285697856"
     },
     {
+      "bodyFingerprint": "3508156546",
+      "local": false,
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "Semiring.toNonAssocSemiring",
+      "typeFingerprint": "57980453"
+    },
+    {
       "bodyFingerprint": "2472453558",
       "local": false,
       "module": "Mathlib.Basic.SetLike.Basic",
@@ -102908,6 +102929,13 @@
       "typeFingerprint": "871798398"
     },
     {
+      "bodyFingerprint": "3662052307",
+      "local": false,
+      "module": "Mathlib.Algebra.CharP.Defs",
+      "name": "ringChar",
+      "typeFingerprint": "3836158214"
+    },
+    {
       "bodyFingerprint": "2779267730",
       "local": false,
       "module": "Clean.Circuit.Subcircuit",
@@ -102965,6 +102993,7 @@
     "SP1Clean.Soundness.Shard.Endpoint",
     "SP1Clean.Soundness.Shard.sail_trace",
     "SP1Clean.Export.InstalledAssembly.proverStatement_iff",
+    "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
     "SP1Clean.Export.InstalledAssembly.soundness",
