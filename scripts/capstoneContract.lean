@@ -4,6 +4,8 @@ import SP1Clean.Export.ShardChain
 import SP1Clean.Export.SixCallResources
 import SP1Clean.Export.InstalledHintCompleteness
 import SP1Clean.Proofs.Completeness.ObservationCapacity
+import SP1Clean.Proofs.Completeness.HintInventory
+import SP1Clean.Proofs.Chips.HostControlPopulate
 import SP1Clean.Proofs.Completeness.ObservationData
 
 /-! # Compiled native capstone contract audit
@@ -130,6 +132,9 @@ def roots : Array Name := #[
   ``SP1Clean.TraceGen.admissibleExecution_observationWitness,
   ``SP1Clean.TraceGen.admissibleExecution_observationData,
   ``SP1Clean.TraceGen.admissibleExecution_observationFits,
+  ``SP1Clean.TraceGen.admissibleExecution_hintInventory,
+  ``SP1Clean.HostControl.noop_spec_of_run,
+  ``SP1Clean.HostNoopChip.run_of_spec,
   ``SP1Clean.TraceGen.routed_successor_at,
   ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,

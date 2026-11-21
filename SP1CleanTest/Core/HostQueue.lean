@@ -37,7 +37,8 @@ private abbrev Call := SyscallKind × BitVec 64 × BitVec 64 × BitVec 64
 
 private def step (state : State) (call : Call) : Option State := do
   let execution ← state.host.run policy (context call.1 call.2.1 call.2.2.1 call.2.2.2)
-  let (store, head) ← (state.host.hintUpdate execution).apply? state.store state.head
+  let update := state.host.hintUpdate execution.kind execution.effect.state
+  let (store, head) ← update.apply? state.store state.head
   some ⟨execution.effect.state, store, head,
     if execution.kind = .hintLength then state.lengths ++ [execution.result] else state.lengths,
     state.writes ++ execution.effect.write.toList.map (·.bytes)⟩

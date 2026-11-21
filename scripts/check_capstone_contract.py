@@ -36,6 +36,9 @@ EXPECTED_ROOTS = {
     "SP1Clean.TraceGen.admissibleExecution_observationWitness",
     "SP1Clean.TraceGen.admissibleExecution_observationData",
     "SP1Clean.TraceGen.admissibleExecution_observationFits",
+    "SP1Clean.TraceGen.admissibleExecution_hintInventory",
+    "SP1Clean.HostControl.noop_spec_of_run",
+    "SP1Clean.HostNoopChip.run_of_spec",
     "SP1Clean.TraceGen.routed_successor_at",
     "SP1Clean.FormalModel.Shard.Executes.dynamicMatch",
     "SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity",
@@ -60,6 +63,7 @@ def main() -> int:
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
              "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain",
              "SP1Clean.Export.InstalledHintCompleteness", "SP1Clean.Export.SixCallResources",
+             "SP1Clean.Proofs.Completeness.HintInventory", "SP1Clean.Proofs.Chips.HostControlPopulate",
              "SP1Clean.Proofs.Completeness.ObservationCapacity", "SP1Clean.Proofs.Completeness.ObservationData"],
             cwd=ROOT, check=True,
         )
