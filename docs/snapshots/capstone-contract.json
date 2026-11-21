@@ -82734,118 +82734,6 @@
       "typeFingerprint": "555073456"
     },
     {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_1",
-      "typeFingerprint": "2532503184"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_10",
-      "typeFingerprint": "3647752160"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_11",
-      "typeFingerprint": "1308527272"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_12",
-      "typeFingerprint": "1692152972"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_13",
-      "typeFingerprint": "3194952160"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_15",
-      "typeFingerprint": "918657465"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_16",
-      "typeFingerprint": "3810659771"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_17",
-      "typeFingerprint": "2573870304"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_2",
-      "typeFingerprint": "3057424141"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_3",
-      "typeFingerprint": "1957949887"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_4",
-      "typeFingerprint": "696271068"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_5",
-      "typeFingerprint": "2939461863"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_6",
-      "typeFingerprint": "2677184103"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_7",
-      "typeFingerprint": "2547959801"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_8",
-      "typeFingerprint": "2205062316"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "SP1Clean.ShiftLeftChip.InteractSpec._proof_9",
-      "typeFingerprint": "1942008032"
-    },
-    {
       "bodyFingerprint": "3328314644",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Formal",
@@ -83021,7 +82909,7 @@
       "typeFingerprint": "3868829590"
     },
     {
-      "bodyFingerprint": "1325903468",
+      "bodyFingerprint": "2708813315",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.elaborated",
@@ -83039,7 +82927,7 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.elaborated._proof_2",
-      "typeFingerprint": "3959355294"
+      "typeFingerprint": "2674837924"
     },
     {
       "bodyFingerprint": null,
@@ -83060,21 +82948,21 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.elaborated._proof_5",
-      "typeFingerprint": "1702700264"
+      "typeFingerprint": "3731098383"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.elaborated._proof_6",
-      "typeFingerprint": "3356926478"
+      "typeFingerprint": "205367806"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.elaborated._proof_7",
-      "typeFingerprint": "2370629107"
+      "typeFingerprint": "3479652970"
     },
     {
       "bodyFingerprint": null,
@@ -83091,7 +82979,7 @@
       "typeFingerprint": "1748261066"
     },
     {
-      "bodyFingerprint": "3608191218",
+      "bodyFingerprint": "2044074890",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.exposedMemoryInteractions",
@@ -83308,7 +83196,7 @@
       "typeFingerprint": "2784604196"
     },
     {
-      "bodyFingerprint": "2683529873",
+      "bodyFingerprint": "3905149373",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.main",
@@ -83319,7 +83207,7 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "SP1Clean.ShiftLeftChip.main._proof_1",
-      "typeFingerprint": "1212644478"
+      "typeFingerprint": "2380738796"
     },
     {
       "bodyFingerprint": null,
@@ -83966,118 +83854,6 @@
       "typeFingerprint": "3662581976"
     },
     {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_1",
-      "typeFingerprint": "2532503184"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_10",
-      "typeFingerprint": "3647752160"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_11",
-      "typeFingerprint": "1308527272"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_12",
-      "typeFingerprint": "1692152972"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_13",
-      "typeFingerprint": "3194952160"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_15",
-      "typeFingerprint": "918657465"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_16",
-      "typeFingerprint": "3810659771"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_17",
-      "typeFingerprint": "2573870304"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_2",
-      "typeFingerprint": "3057424141"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_3",
-      "typeFingerprint": "1957949887"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_4",
-      "typeFingerprint": "696271068"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_5",
-      "typeFingerprint": "2939461863"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_6",
-      "typeFingerprint": "2677184103"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_7",
-      "typeFingerprint": "2547959801"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_8",
-      "typeFingerprint": "2205062316"
-    },
-    {
-      "bodyFingerprint": null,
-      "local": true,
-      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
-      "name": "SP1Clean.ShiftRightChip.InteractSpec._proof_9",
-      "typeFingerprint": "1942008032"
-    },
-    {
       "bodyFingerprint": "3704148147",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Formal",
@@ -84274,7 +84050,7 @@
       "typeFingerprint": "1349247266"
     },
     {
-      "bodyFingerprint": "2080098353",
+      "bodyFingerprint": "2136367873",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.elaborated",
@@ -84292,7 +84068,7 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.elaborated._proof_2",
-      "typeFingerprint": "926561833"
+      "typeFingerprint": "2333404384"
     },
     {
       "bodyFingerprint": null,
@@ -84313,21 +84089,21 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.elaborated._proof_5",
-      "typeFingerprint": "1934153771"
+      "typeFingerprint": "2438683119"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.elaborated._proof_6",
-      "typeFingerprint": "1344276888"
+      "typeFingerprint": "3695308429"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.elaborated._proof_7",
-      "typeFingerprint": "10898110"
+      "typeFingerprint": "3056402593"
     },
     {
       "bodyFingerprint": null,
@@ -84337,21 +84113,21 @@
       "typeFingerprint": "1885022586"
     },
     {
-      "bodyFingerprint": "3500083414",
+      "bodyFingerprint": "2544682202",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.exposedMemoryInteractions",
       "typeFingerprint": "3456667042"
     },
     {
-      "bodyFingerprint": "1225574061",
+      "bodyFingerprint": "871499509",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.exposedOpcode",
       "typeFingerprint": "3414177886"
     },
     {
-      "bodyFingerprint": "1930374750",
+      "bodyFingerprint": "846133821",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.exposedProgramInteractions",
@@ -84568,7 +84344,7 @@
       "typeFingerprint": "3701270226"
     },
     {
-      "bodyFingerprint": "4065000064",
+      "bodyFingerprint": "696888700",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.main",
@@ -84579,7 +84355,7 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "SP1Clean.ShiftRightChip.main._proof_1",
-      "typeFingerprint": "656497545"
+      "typeFingerprint": "645002560"
     },
     {
       "bodyFingerprint": null,
@@ -100619,7 +100395,7 @@
       "typeFingerprint": "4082744025"
     },
     {
-      "bodyFingerprint": "4220303118",
+      "bodyFingerprint": "830185804",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness",
@@ -100636,25 +100412,109 @@
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_2",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_10",
+      "typeFingerprint": "1942008032"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_11",
+      "typeFingerprint": "3647752160"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_12",
+      "typeFingerprint": "1308527272"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_13",
+      "typeFingerprint": "3194952160"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_14",
       "typeFingerprint": "1451065395"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_3",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_15",
       "typeFingerprint": "1685859078"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
-      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_4",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_16",
       "typeFingerprint": "3555174148"
     },
     {
-      "bodyFingerprint": "2453576214",
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_2",
+      "typeFingerprint": "2205062316"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_3",
+      "typeFingerprint": "2532503184"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_4",
+      "typeFingerprint": "3057424141"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_5",
+      "typeFingerprint": "1957949887"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_6",
+      "typeFingerprint": "696271068"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_7",
+      "typeFingerprint": "2939461863"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_8",
+      "typeFingerprint": "2677184103"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitness._proof_9",
+      "typeFingerprint": "2547959801"
+    },
+    {
+      "bodyFingerprint": "269939815",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitnessReaderInput",
@@ -100682,7 +100542,28 @@
       "typeFingerprint": "73191150"
     },
     {
-      "bodyFingerprint": "2085439357",
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitnessReaderInput._proof_4",
+      "typeFingerprint": "918657465"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitnessReaderInput._proof_5",
+      "typeFingerprint": "3810659771"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.postWitnessReaderInput._proof_6",
+      "typeFingerprint": "2573870304"
+    },
+    {
+      "bodyFingerprint": "2866795875",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.witnessPrefix",
@@ -100693,6 +100574,13 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.witnessPrefix._proof_1",
+      "typeFingerprint": "1692152972"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftLeftChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftLeftChip.Defs.0.SP1Clean.ShiftLeftChip.witnessPrefix._proof_2",
       "typeFingerprint": "3479865488"
     },
     {
@@ -100794,7 +100682,7 @@
       "typeFingerprint": "974702659"
     },
     {
-      "bodyFingerprint": "933530162",
+      "bodyFingerprint": "2809811436",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness",
@@ -100811,32 +100699,109 @@
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_10",
+      "typeFingerprint": "2939461863"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_11",
+      "typeFingerprint": "2677184103"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_12",
+      "typeFingerprint": "2547959801"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_13",
+      "typeFingerprint": "3647752160"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_14",
+      "typeFingerprint": "1308527272"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_15",
+      "typeFingerprint": "3194952160"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_16",
+      "typeFingerprint": "3454709903"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_2",
-      "typeFingerprint": "1451065395"
+      "typeFingerprint": "2205062316"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_3",
-      "typeFingerprint": "1685859078"
+      "typeFingerprint": "1451065395"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_4",
-      "typeFingerprint": "3555174148"
+      "typeFingerprint": "1685859078"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_5",
-      "typeFingerprint": "3454709903"
+      "typeFingerprint": "3555174148"
     },
     {
-      "bodyFingerprint": "1216933114",
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_6",
+      "typeFingerprint": "2532503184"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_7",
+      "typeFingerprint": "3057424141"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_8",
+      "typeFingerprint": "1957949887"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitness._proof_9",
+      "typeFingerprint": "696271068"
+    },
+    {
+      "bodyFingerprint": "2008122545",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput",
@@ -100861,17 +100826,45 @@
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput._proof_3",
-      "typeFingerprint": "1676957720"
+      "typeFingerprint": "1942008032"
     },
     {
       "bodyFingerprint": null,
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput._proof_4",
+      "typeFingerprint": "1676957720"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput._proof_5",
       "typeFingerprint": "3796582376"
     },
     {
-      "bodyFingerprint": "1841673549",
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput._proof_6",
+      "typeFingerprint": "918657465"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput._proof_7",
+      "typeFingerprint": "3810659771"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.postWitnessReaderInput._proof_8",
+      "typeFingerprint": "2573870304"
+    },
+    {
+      "bodyFingerprint": "4004300367",
       "local": true,
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.witnessPrefix",
@@ -100883,6 +100876,13 @@
       "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
       "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.witnessPrefix._proof_1",
       "typeFingerprint": "453949018"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Proofs.Chips.ShiftRightChip.Defs",
+      "name": "_private.SP1Clean.Proofs.Chips.ShiftRightChip.Defs.0.SP1Clean.ShiftRightChip.witnessPrefix._proof_2",
+      "typeFingerprint": "1692152972"
     },
     {
       "bodyFingerprint": null,

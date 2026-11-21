@@ -15,8 +15,7 @@ import Clean.Utils.Tactics.ProvableStructDeriving
 /-! # The ShiftLeft chip row as a GeneralFormalCircuit
 
 SLL/SLLW share shift-amount bits, power encodings, a byte-shift selector, limb decomposition and
-sign extension. `AssertSpec` and `InteractSpec` describe implementation evidence; the public RV64
-contract lives in `Semantics/Specs/Chips/ShiftLeft.lean`.
+sign extension. The public RV64 contract lives in `Semantics/Specs/Chips/ShiftLeft.lean`.
 
 The circuit composes CPU, ALU reader, register-write and shift assertions. Opcode selectors are
 explicit inputs, activity is their sum, and Clean's witness IR generates the shift columns.
@@ -36,36 +35,6 @@ local instance : NeZero p := ⟨by have := Fact.out (p := 2 ^ 17 < p); omega⟩
 the per-op `Soundness/<Op>.lean` split files can import it without a cycle through `Formal`. -/
 def Assumptions (input : Inputs (ZMod p)) (_ : ProverData (ZMod p)) : Prop :=
   Word.isU64 input.op_b_val ∧ Word.isU64 input.op_c_val
-
-/-- **Assertion half** — the literal meaning of SP1's `Columns.asserts` own assertZero list.
-The three shallow selector constraints stay in the parent chip so Clean's channel-law proof can see
-the combined gate; `CoreSpec` is the remaining assertion tail in upstream order. -/
-def AssertSpec (cols : Columns (ZMod p)) : Prop :=
-  let sll := cols.is_sll
-  let sllw := cols.is_sllw
-  let gate := sll + sllw
-  gate * (gate - 1) = 0 ∧ sll * (sll - 1) = 0 ∧ sllw * (sllw - 1) = 0 ∧ CoreSpec cols
-
-/-- **Interaction half** — the literal meaning of SP1's `Columns.interactions` *own* byte-range
-sends (gated by `gate = is_sll + is_sllw`): the shift-amount high bits `< 2^10`, and, per limb, the
-`lower_limb` `< 2^(16 - bitShift)` and `higher_limb` `< 2^bitShift` ranges (`bitShift` = low four
-shift-amount bits). Each send's meaning is `gate ≠ 0 → value.val < 2 ^ width.val` (`Range.constrain`). -/
-def InteractSpec (cols : Columns (ZMod p)) : Prop :=
-  let b0 := cols.c_bits[0]; let b1 := cols.c_bits[1]; let b2 := cols.c_bits[2]
-  let b3 := cols.c_bits[3]; let b4 := cols.c_bits[4]; let b5 := cols.c_bits[5]
-  let bitShift : ZMod p := b0 * 1 + b1 * 2 + b2 * 4 + b3 * 8
-  let shamt : ZMod p := bitShift + b4 * 16 + b5 * 32
-  let e32 : ZMod p := (cols.adapter.op_c_memory.prev_value[0] - shamt) * (64 : ZMod p)⁻¹
-  let gate : ZMod p := cols.is_sll + cols.is_sllw
-  (gate ≠ 0 → e32.val < 2 ^ (10 : ZMod p).val) ∧
-  (gate ≠ 0 → cols.lower_limb[0].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.higher_limb[0].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.lower_limb[1].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.higher_limb[1].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.lower_limb[2].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.higher_limb[2].val < 2 ^ bitShift.val) ∧
-  (gate ≠ 0 → cols.lower_limb[3].val < 2 ^ (16 - bitShift).val) ∧
-  (gate ≠ 0 → cols.higher_limb[3].val < 2 ^ bitShift.val)
 
 /-! ### Folded witness prefix -/
 

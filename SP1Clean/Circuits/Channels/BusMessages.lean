@@ -40,12 +40,8 @@ provable_struct_eval_lemmas StateMsg
 arg2[0..2])`, arity 9. `SyscallInstrs` sends this tuple when byte one of the raw syscall code says
 that the handler has its own table, and `SyscallCore` receives it.
 
-It is the payload of `Channels.syscallChannel` on the native side too, so the exact and native
-models share one message type for this bus — the exact list proves the projection, the native
-channel emits it. What has *not* changed is that it carries no row-local semantic predicate:
-syscall meaning comes from cross-table balance plus the trace-level host handler relation, so the
-native channel's `Guarantees` is `True`. Putting either fact in this structure would turn a global
-conclusion into an unjustified channel guarantee. -/
+The native `SyscallInstrsChip` sends this payload on `Channels.syscallChannel`, whose
+row-local guarantee is `True`. The native host-call interface authenticates host effects. -/
 structure SyscallMsg (F : Type) where
   clk_high : F
   clk_low : F
