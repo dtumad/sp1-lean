@@ -129,9 +129,9 @@ Current Rust evidence is tied to the single released-SP1 revision in
 [provenance](../scripts/provenance.json). A release upgrade must review loader/host behavior as
 well as AIR equations; it cannot be achieved by changing a version string.
 
-The full mixed target equality, private terminal cursor/facade, fresh allocation authentication,
-WRITE/VERIFY installation, complete resource enforcement, compatible capacity and total mixed
-compiler remain open. No caller-supplied grounding, provider validity, syscall inactivity or
+Fresh hint allocation authentication, WRITE/VERIFY installation, complete resource enforcement,
+joint physical capacity and a total mixed compiler remain open. The six-handler soundness theorem
+already identifies the complete supplied target and recovers its private hint cursor from the witness. No caller-supplied grounding, provider validity, syscall inactivity or
 compiler-success premise may replace those obligations.
 
 ## Separate long-term claims

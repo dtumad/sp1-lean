@@ -169,7 +169,7 @@ private theorem receipt_pc_bounds {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (
 
 
 /-- The chronological history retains the last unnormalized successor limbs exactly. -/
-theorem history_last_pc {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)] (initial : State (ZMod p))
+theorem history_last_pc {p : ℕ} [Fact p.Prime] (initial : State (ZMod p))
     (earlier : List RoutedEvent) (last : RoutedEvent) :
     (history initial (earlier ++ [last])).2.pc =
       #v[(last.rawPushState.toMessage (p := p)).pc0, last.rawPushState.toMessage.pc1, last.rawPushState.toMessage.pc2] := by
