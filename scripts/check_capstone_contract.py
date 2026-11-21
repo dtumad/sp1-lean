@@ -29,6 +29,7 @@ EXPECTED_ROOTS = {
     "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
+    "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
     "SP1Clean.Export.InstalledAssembly.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",
@@ -58,7 +59,7 @@ def main() -> int:
         subprocess.run(
             ["lake", "--no-cache", "build", "--wfail", "--iofail",
              "SP1Clean.Soundness.Shard.Contract", "SP1Clean.Export.ShardChain",
-             "SP1Clean.Export.InstalledHintCompleteness",
+             "SP1Clean.Export.InstalledHintCompleteness", "SP1Clean.Export.SixCallResources",
              "SP1Clean.Proofs.Completeness.ObservationCapacity", "SP1Clean.Proofs.Completeness.ObservationData"],
             cwd=ROOT, check=True,
         )

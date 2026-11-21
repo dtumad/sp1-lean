@@ -141,6 +141,14 @@ writes. Both state and tape usage are invariant under equivalent complete snapsh
 The release statement retains the existing `nativeProfile` and adds its separate per-jump
 link encoding condition. [Release statement](../SP1Clean/FormalModel/ShardRelease.lean)
 
+At the native preset, raw acceptance of the six-handler assembly recovers a single tape whose
+every prefix meets nine semantic ceilings. Events are bounded by elapsed ticks. HINT_READ pays
+for the padded writes of the consumed hint prefix. Reads and fresh allocations are zero. The
+four host occupancies are bounded by the incoming host inventory. For arbitrary limits, event
+count and padded writes must each fit their own ceiling. Both endpoint payloads are checked.
+Peak intermediate `boundaryBytes` remains a separate obligation because ordinary stores can
+change the number of nonzero RAM bytes. [Installed six-handler bounds](../SP1Clean/Export/SixCallResources.lean)
+
 `nativeProfile` bounds the broader Sail execution. It requires width-aligned
 ordinary LOAD/STORE spans and phase one modulo eight at each active CPU source. This phase implies
 the low-clock window (`clock % 2^24 + 4 < 2^24`). Normal Sail retirement alone does not imply width alignment. Final PC/clock

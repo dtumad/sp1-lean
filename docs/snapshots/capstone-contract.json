@@ -34620,7 +34620,7 @@
       "local": true,
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.ExecutionFacts.mk",
-      "typeFingerprint": "782067664"
+      "typeFingerprint": "1454740308"
     },
     {
       "bodyFingerprint": "746068900",
@@ -34733,6 +34733,13 @@
       "module": "SP1Clean.Export.InstalledAssembly",
       "name": "SP1Clean.Export.InstalledAssembly.execution_of_statement",
       "typeFingerprint": "2311495449"
+    },
+    {
+      "bodyFingerprint": null,
+      "local": true,
+      "module": "SP1Clean.Export.SixCallResources",
+      "name": "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
+      "typeFingerprint": "2878849353"
     },
     {
       "bodyFingerprint": "513874422",
@@ -87235,7 +87242,7 @@
       "typeFingerprint": "1404712657"
     },
     {
-      "bodyFingerprint": "3122938804",
+      "bodyFingerprint": "1983462468",
       "local": true,
       "module": "SP1Clean.Soundness.Shard.Trace",
       "name": "SP1Clean.Soundness.Shard.SailTrace",
@@ -103087,6 +103094,7 @@
     "SP1Clean.Export.InstalledAssembly.statement_iff_fixedCursor",
     "SP1Clean.Export.InstalledAssembly.trace_of_statement",
     "SP1Clean.Export.InstalledAssembly.execution_of_statement",
+    "SP1Clean.Export.InstalledAssembly.native_resources_of_statement",
     "SP1Clean.Export.InstalledAssembly.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness",
     "SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt",
