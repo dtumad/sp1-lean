@@ -14,7 +14,7 @@ open Circuit Air.Flat Semantics HostHintReadLocal
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 local instance : Fact (2 ^ 17 < p) := ⟨by have := Fact.out (p := 2 ^ 25 < p); omega⟩
-local instance : DecidableEq (ZMod p) := FiniteField.instDecidableEq
+attribute [local instance] FiniteField.instDecidableEq
 
 /-- The complete host boundary and target-validator registration for the selected no-effect slot. -/
 abbrev ensemble (includeVerify : Bool) (image : ProgramImage) (source target : ExecutionSnapshot)
