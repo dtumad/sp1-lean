@@ -349,47 +349,7 @@ theorem receipt_rows (witness : EnsembleWitness (ensemble image source target fi
 
 open SP1Clean.OrdinaryObservation (TerminalInputs Mode terminal stateChannel)
 
-/-- Decode each physical terminal input in its own table environment. -/
-def terminalRows (table : Table (ZMod p)) : List (TerminalInputs (ZMod p)) :=
-  table.table.map fun physical => valueFromOffset TerminalInputs 0 (table.environment physical)
-
-/-- The actual terminal edge, keeping the two carries on the decoded input. -/
-def terminalEdge (mode : Mode) (input : TerminalInputs (ZMod p)) :=
-  (input.previous, SP1Clean.OrdinaryObservation.final mode input.previous.counter input.pc input.previous.enabled)
-
-private theorem terminal_values (mode : Mode) (env : Environment (ZMod p)) :
-    (OrdinaryObservation.terminalComponent mode).operations.interactionValuesWith
-      (SP1Clean.OrdinaryObservation.stateChannel (p := p)).toRaw env =
-      [SP1Clean.OrdinaryObservation.stateChannel.pulledValue
-        (terminalEdge mode (valueFromOffset TerminalInputs 0 env)).1,
-       SP1Clean.OrdinaryObservation.stateChannel.pushedValue
-        (terminalEdge mode (valueFromOffset TerminalInputs 0 env)).2] := by
-  simp only [Operations.interactionValuesWith, Component.interactionsWith_eq, Component.rowOperations,
-    OrdinaryObservation.terminalComponent, SP1Clean.OrdinaryObservation.terminal_interactions,
-    List.map_cons, List.map_nil, Channel.eval_pulled, Channel.eval_pushed]
-  rw [← eval_varFromOffset_valueFromOffset TerminalInputs 0 env]
-  cases mode <;>
-    simp only [terminalEdge, SP1Clean.OrdinaryObservation.final, SP1Clean.OrdinaryObservation.Mode.sentinel,
-      TerminalInputs.pc, circuit_norm]
-
-/-- Every terminal row supplies exactly one unguarded incoming pull and one sentinel push. -/
-theorem terminal_state_ledger (table : Table (ZMod p)) (mode : Mode)
-    (registered : table.component = OrdinaryObservation.terminalComponent mode) :
-    table.interactionsWith SP1Clean.OrdinaryObservation.stateChannel.toRaw =
-      (terminalRows table).flatMap (fun input =>
-        [SP1Clean.OrdinaryObservation.stateChannel.pulledValue (terminalEdge mode input).1,
-         SP1Clean.OrdinaryObservation.stateChannel.pushedValue (terminalEdge mode input).2]) := by
-  simp only [Table.interactionsWith, registered, terminal_values, terminalRows, List.flatMap_map]
-
-/-- Validity of every decoded terminal comes from that terminal's local table specification. -/
-theorem terminal_rows_valid (table : Table (ZMod p)) (mode : Mode)
-    (registered : table.component = OrdinaryObservation.terminalComponent mode) (valid : table.Spec) :
-    ∀ input ∈ terminalRows table, input.Valid mode := by
-  intro input member
-  obtain ⟨row, inTable, rfl⟩ := List.mem_map.mp member
-  have atRow := valid row inTable
-  rw [registered] at atRow
-  cases mode <;> exact atRow
+open SP1Clean.Soundness.OrdinaryObservation (terminalRows terminalEdge terminal_state_ledger terminal_rows_valid)
 
 /-- Every terminal in the three physical tables, tagged with the mode of its actual component. -/
 def terminals (witness : EnsembleWitness (ensemble image source target final)) :

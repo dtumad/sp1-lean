@@ -2,7 +2,7 @@ import SP1Clean.Soundness.HostObservedHistory
 import SP1Clean.Soundness.HostObservedProducers
 import SP1Clean.Soundness.HostObservedRetirement
 import SP1Clean.Soundness.OrdinaryObservationProjection
-import SP1Clean.Soundness.Shard.DynamicMatch
+import SP1Clean.FormalModel.ShardDynamic
 
 /-! # The complete Sail bookkeeping of the physically grounded trace
 
@@ -30,7 +30,7 @@ private theorem OrderedHistory.dynamicMatch {header : SP1PublicIO (ZMod p)} {eve
     (pc : nextPcAfter events (source.sail.registers.get? Register.nextPC) (some target.pc) =
       (history.path.map (fun input : Inputs (ZMod p) => input.receipt)).foldl (fun _ m => some (StateMsg.pcBits m)) (source.sail.registers.get? Register.nextPC))
     (bounds : ∀ row ∈ history.path, row.receipt.pc1.val < 65536 ∧ row.receipt.pc2.val < 65536) :
-    Shard.DynamicMatch source target events := by
+    FormalModel.Shard.DynamicMatch source target events := by
   have observations := OrdinaryObservation.terminal_retirement_entries boundary.retirementModes history.valid
   have zero : (history.terminal.previous.clkHigh = 0 ∧ history.terminal.previous.clkLow = 0) ↔
       events.countP ExecutionEvent.isOrdinary = 0 := history.zero_iff.trans (by rw [lengthEq])
@@ -58,7 +58,7 @@ attribute [local irreducible] ensemble HostFinalMemory.ensemble HostLocalCore.lo
 physical State walk whose labels form the replayed Sail/host tape. -/
 theorem dynamicMatch (witness : EnsembleWitness (ensemble image source target final))
     (checked : witness.Constraints) (funded : DeclarationsOpen witness) {events : List ExecutionEvent}
-    (grounded : HostFinalMemory.PhysicalEventOrder (baseWitness witness) events) : Shard.DynamicMatch source target events := by
+    (grounded : HostFinalMemory.PhysicalEventOrder (baseWitness witness) events) : FormalModel.Shard.DynamicMatch source target events := by
   let memory := baseWitness witness
   let projected := HostFinalMemory.baseWitness memory
   let host := HostHintQueueBoundary.projected projected

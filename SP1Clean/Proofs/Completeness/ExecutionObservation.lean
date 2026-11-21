@@ -27,6 +27,41 @@ noncomputable def routeObservations? (host : HostPolicy) (program : GuestProgram
       let routed ← routeObservations? host program result.nextFrontier next later
       return result.routed :: routed
 
+/-- Successful compilation exposes the exact projection, frontier and row at every ordinary
+position. A position counts earlier ordinary instructions, regardless of intervening calls. -/
+theorem routeObservations?_at {host : HostPolicy} {program : GuestProgram} {current : ExecutionState}
+    {frontier : AccessFrontier} {events : List ExecutionEvent} {rows : List RoutedEvent}
+    (routed : routeObservations? host program frontier current events = some rows)
+    {cut : ℕ} (present : events[cut]? = some .ordinary) :
+    ∃ before after view result incoming,
+      executionTrajectory host program current events cut = some before ∧
+      replayStep? host program before .ordinary = some after ∧
+      projectSP1Transition? program ⟨before.sail, ⟨.ordinary, after.sail⟩⟩ = some view ∧
+      compileInstructionEvent? view incoming before.clock = some result ∧
+      rows[((events.take cut).countP ExecutionEvent.isOrdinary)]? = some result.routed := by
+  induction events generalizing current frontier rows cut with
+  | nil => simp at present
+  | cons event later ih =>
+    simp only [routeObservations?, Option.bind_eq_bind, Option.bind_eq_some_iff] at routed
+    obtain ⟨middle, first, generated⟩ := routed
+    cases event with
+    | syscall call =>
+      cases cut with
+      | zero => simp at present
+      | succ n =>
+        obtain ⟨s, t, v, r, f, reached, ran, facts, compiled, rank⟩ := ih generated present
+        exact ⟨s, t, v, r, f, by simpa [executionTrajectory, replayEvents?, first] using reached,
+          ran, facts, compiled, by simpa [List.countP_cons] using rank⟩
+    | ordinary =>
+      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at generated
+      obtain ⟨view, projected, result, compiled, tail, rest, rfl⟩ := generated
+      cases cut with
+      | zero => exact ⟨current, middle, view, result, frontier, rfl, first, projected, compiled, rfl⟩
+      | succ n =>
+        obtain ⟨s, t, v, r, f, reached, ran, facts, other, rank⟩ := ih rest present
+        exact ⟨s, t, v, r, f, by simpa [executionTrajectory, replayEvents?, first] using reached,
+          ran, facts, other, by simpa [List.countP_cons] using rank⟩
+
 /-- Every ordinary tape position has exactly its compiler row at the rank of that position.
 Both the clock and the program counter are read from its actual incoming complete state. -/
 def ObservesOrdinary (host : HostPolicy) (program : GuestProgram) (current : ExecutionState)
@@ -35,34 +70,6 @@ def ObservesOrdinary (host : HostPolicy) (program : GuestProgram) (current : Exe
     rows[((events.take cut).countP ExecutionEvent.isOrdinary)]? = some row ∧
     executionTrajectory host program current events cut = some before ∧
     row.clock = before.clock ∧ before.sail.regs.get? LeanRV64D.Register.PC = some pc ∧ row.pc = pc.toNat
-
-private theorem observes_ordinary {host : HostPolicy} {program : GuestProgram}
-    {current middle : ExecutionState} {later : List ExecutionEvent} {row : RoutedEvent} {rows : List RoutedEvent}
-    (step : ExecutionStep host program current .ordinary middle) (seen : ObservesOrdinary host program middle later rows)
-    (time : row.clock = current.clock) {pc : BitVec 64}
-    (pcSource : current.sail.regs.get? LeanRV64D.Register.PC = some pc) (pcRow : row.pc = pc.toNat) :
-    ObservesOrdinary host program current (.ordinary :: later) (row :: rows) := by
-  intro cut idx
-  cases cut with
-  | zero => exact ⟨row, current, pc, rfl, rfl, time, pcSource, pcRow⟩
-  | succ n =>
-    obtain ⟨r, s, q, atRow, atCut, facts⟩ := seen n idx
-    refine ⟨r, s, q, ?_, ?_, facts⟩
-    · simpa [List.countP_cons] using atRow
-    · simpa only [executionTrajectory, List.take_succ_cons, replayEvents?, step.replay, Option.bind_some] using atCut
-
-private theorem observes_syscall {host : HostPolicy} {program : GuestProgram}
-    {current middle : ExecutionState} {call : CoreSyscallEvent} {later : List ExecutionEvent} {rows : List RoutedEvent}
-    (step : ExecutionStep host program current (.syscall call) middle) (seen : ObservesOrdinary host program middle later rows) :
-    ObservesOrdinary host program current (.syscall call :: later) rows := by
-  intro cut idx
-  cases cut with
-  | zero => simp at idx
-  | succ n =>
-    obtain ⟨row, s, pc, atRow, atCut, facts⟩ := seen n idx
-    refine ⟨row, s, pc, ?_, ?_, facts⟩
-    · simpa [List.countP_cons] using atRow
-    · simpa only [executionTrajectory, List.take_succ_cons, replayEvents?, step.replay, Option.bind_some] using atCut
 
 private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramImage}
     {source target : ExecutionSnapshot} {events : List ExecutionEvent}
@@ -75,10 +82,9 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
     ∃ rows, routeObservations? (policy p image) image.program frontier current later = some rows ∧
       rows.length = later.countP ExecutionEvent.isOrdinary ∧
       (∀ row ∈ rows, current.clock ≤ row.clock ∧ 0 < row.clock ∧ row.clock < last.clock) ∧
-      rows.Pairwise (fun a b => a.clock < b.clock) ∧
-      ObservesOrdinary (policy p image) image.program current later rows := by
+      rows.Pairwise (fun a b => a.clock < b.clock) := by
   induction path generalizing before frontier with
-  | nil => exact ⟨[], rfl, rfl, by simp, .nil, by intro cut present; simp at present⟩
+  | nil => exact ⟨[], rfl, rfl, by simp, .nil⟩
   | @cons current middle last event later step tail ih =>
     have present : events[before.length]? = some event := by simp [part]
     have atCut : executionTrajectory (policy p image) image.program source.realize events before.length =
@@ -89,8 +95,8 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
     have advance := step.clock_lt
     cases event with
     | syscall call =>
-      obtain ⟨rows, route, len, bounds, sorted, seen⟩ := ih _ part' reached' frontier
-      refine ⟨rows, ?_, by simpa using len, ?_, sorted, observes_syscall step seen⟩
+      obtain ⟨rows, route, len, bounds, sorted⟩ := ih _ part' reached' frontier
+      refine ⟨rows, ?_, by simpa using len, ?_, sorted⟩
       · simp [routeObservations?, step.replay, route]
       · intro row member
         have b := bounds row member
@@ -100,12 +106,12 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
         admissibleExecution_compile_at execution present frontier
       obtain rfl := Option.some.inj (atCut.symm.trans sameCut)
       obtain rfl := Option.some.inj (step.replay.symm.trans ran.replay)
-      obtain ⟨rows, route, len, bounds, sorted, seen⟩ := ih _ part' reached' result.nextFrontier
+      obtain ⟨rows, route, len, bounds, sorted⟩ := ih _ part' reached' result.nextFrontier
       have time := (compileInstructionEvent?_coordinates generated).1
       have phase := (execution.2.1 _ _ _ present atCut).1
       change _ % 8 = 1 at phase
       have tailClock := tail.clock
-      refine ⟨result.routed :: rows, ?_, by simp [List.countP_cons, len], ?_, .cons ?_ sorted, ?_⟩
+      refine ⟨result.routed :: rows, ?_, by simp [List.countP_cons, len], ?_, .cons ?_ sorted⟩
       · simp [routeObservations?, step.replay, projected, generated, route]
       · intro row member
         rcases List.mem_cons.mp member with rfl | rest
@@ -115,8 +121,6 @@ private theorem route_from {limits : ResourceLimits} {p : ℕ} {image : ProgramI
           exact ⟨advance.le.trans b.1, b.2⟩
       · intro other member
         exact time ▸ advance.trans_le (bounds other member).1
-      · exact observes_ordinary step seen time (projectSP1Transition?_components projected).1
-          (compileInstructionEvent?_coordinates generated).2
 
 /-- No compiler input or bounds witness is required at the public entry point. -/
 theorem admissibleExecution_routeObservations {limits : ResourceLimits} {p : ℕ} {image : ProgramImage}
@@ -127,11 +131,15 @@ theorem admissibleExecution_routeObservations {limits : ResourceLimits} {p : ℕ
       (∀ row ∈ rows, 0 < row.clock ∧ row.clock < 2 ^ 48) ∧
       rows.Pairwise (fun a b => a.clock < b.clock) ∧
       ObservesOrdinary (policy p image) image.program source.realize events rows := by
-  obtain ⟨rows, route, length, bounds, sorted, seen⟩ := route_from execution execution.1.2 [] rfl rfl (fun _ => 0)
-  refine ⟨rows, route, length, ?_, sorted, seen⟩
-  intro row member
-  have b := bounds row member
-  exact ⟨b.2.1, b.2.2.trans execution.2.2.2.2.2.1⟩
+  obtain ⟨rows, route, length, bounds, sorted⟩ := route_from execution execution.1.2 [] rfl rfl (fun _ => 0)
+  refine ⟨rows, route, length, ?_, sorted, ?_⟩
+  · intro row member
+    have b := bounds row member
+    exact ⟨b.2.1, b.2.2.trans execution.2.2.2.2.2.1⟩
+  · intro cut present
+    obtain ⟨before, _, view, result, _, reached, _, projected, compiled, atRow⟩ := routeObservations?_at route present
+    obtain ⟨clk, pc⟩ := compileInstructionEvent?_coordinates compiled
+    exact ⟨result.routed, before, view.pc, atRow, reached, clk, (projectSP1Transition?_components projected).1, pc⟩
 
 open Circuit Air.Flat OrdinaryObservation
 

@@ -1,6 +1,7 @@
 module
 
 public import SP1Clean.Semantics.Execution.ExecutionReplay
+public import SP1Clean.Semantics.Sail.RetirementRegisters
 
 /-! # Retirement observations of the existing Sail state
 
@@ -15,35 +16,6 @@ not execute instructions or define another machine state.
 namespace SP1Clean.Semantics
 
 open LeanRV64D LeanRV64D.Functions Machine
-
-/-- The official machine-mode retirement decision, with a total fallback on absent registers.
-Successful interpreter evaluation checks the filter when retirement is enabled and proves agreement. -/
-def retirementEnabled (state : SailState) : Bool :=
-  (_get_Counterin_IR ((state.regs.get? Register.mcountinhibit).getD 0) == 0#1) &&
-    (counter_priv_filter_bit ((state.regs.get? Register.minstretcfg).getD 0) Privilege.Machine == 0#1)
-
-/-- The data-only decision agrees with the actual successful Sail filter computation. -/
-theorem retirementEnabled_of_run {state : SailState} {enabled : Bool}
-    (success : (runSail (should_inc_minstret Privilege.Machine)) state = .ok enabled state) :
-    retirementEnabled state = enabled := by
-  simp only [should_inc_minstret, andM, toBool, runSail_bind, Sail.run_readReg] at success
-  cases inhibit : state.regs.get? Register.mcountinhibit with
-  | none => simp only [inhibit] at success; cases success
-  | some inhibitValue =>
-    simp only [inhibit] at success
-    cases active : (_get_Counterin_IR inhibitValue == 0#1) with
-    | false =>
-      simp only [active, runSail_pure] at success
-      cases success
-      simp only [retirementEnabled, inhibit, Option.getD_some, active, Bool.false_and]
-    | true =>
-      simp only [active, runSail_pure, runSail_bind, Sail.run_readReg] at success
-      cases filter : state.regs.get? Register.minstretcfg with
-      | none => simp only [filter] at success; cases success
-      | some filterValue =>
-        simp only [filter] at success
-        cases success
-        simp only [retirementEnabled, inhibit, filter, Option.getD_some, active, Bool.true_and]
 
 /-- One observation update: only a normally retired ordinary instruction changes these slots. -/
 def retirementTick (values : Bool × Option Bool × Option (BitVec 64)) (ordinary : Bool) :
@@ -154,5 +126,67 @@ theorem replayEvents?_nextPC {policy : HostPolicy} {program : Soundness.Target.G
       have bound := (List.getElem?_eq_some_iff.mp atLabel).1
       apply effect n current next label (by rwa [List.getElem?_append_left bound]) _ step
       simpa only [List.take_append_of_le_length (Nat.le_of_lt bound)] using replay
+
+/-- The official retirement decision, optional increment flag and optional counter. -/
+def retirementObservation (state : SailState) : Bool × Option Bool × Option (BitVec 64) :=
+  (retirementEnabled state, state.regs.get? Register.minstret_increment, state.regs.get? Register.minstret)
+
+/-- Every concrete host effect preserves the three retirement observations. -/
+theorem HostExecution.retirement_observation (execution : HostExecution) (current : SailState) (pc : BitVec 64) :
+    retirementObservation (execution.apply current pc) = retirementObservation current := by
+  unfold retirementObservation retirementEnabled
+  rw [execution.other_register_frame current pc Register.mcountinhibit (by decide) (by decide),
+    execution.other_register_frame current pc Register.minstretcfg (by decide) (by decide),
+    execution.other_register_frame current pc Register.minstret_increment (by decide) (by decide),
+    execution.other_register_frame current pc Register.minstret (by decide) (by decide)]
+
+/-- Observe the eventual refresh value and the two platform bookkeeping slots. -/
+def platformObservation (state : SailState) :
+    BitVec 64 × Option (BitVec 64) × Option (Option (Nat × LeanRV64D.event_csr)) :=
+  (TryStepReduction.refreshedMip state, state.regs.get? Register.mip,
+    state.regs.get? Register.written_event_index)
+
+/-- One normal retirement refreshes pending interrupts and clears the event marker. -/
+def platformTick
+    (values : BitVec 64 × Option (BitVec 64) × Option (Option (Nat × LeanRV64D.event_csr))) (ordinary : Bool) :=
+  if ordinary then (values.1, some values.1, some none) else values
+
+/-- The platform fold distinguishes whether any ordinary instruction retired. -/
+theorem platformTick_fold {ρ : Type*} (ordinary : ρ → Bool) (rows : List ρ)
+    (pending : BitVec 64) (initial : Option (BitVec 64)) (marker : Option (Option (Nat × LeanRV64D.event_csr))) :
+    rows.foldl (fun values row => platformTick values (ordinary row)) (pending, initial, marker) =
+      (pending, if rows.countP ordinary = 0 then initial else some pending,
+        if rows.countP ordinary = 0 then marker else some none) := by
+  induction rows generalizing initial marker with
+  | nil => rfl
+  | cons row rest ih =>
+    cases active : ordinary row
+    · simpa [List.foldl_cons, platformTick, active] using ih initial marker
+    · simpa [List.foldl_cons, platformTick, active] using ih (some pending) (some none)
+
+/-- Every concrete host effect preserves interrupt registers and the event marker. -/
+theorem HostExecution.platform_observation (execution : HostExecution) (current : SailState) (pc : BitVec 64) :
+    platformObservation (execution.apply current pc) = platformObservation current := by
+  unfold platformObservation TryStepReduction.refreshedMip
+  rw [execution.other_register_frame current pc Register.misa (by decide) (by decide),
+    execution.other_register_frame current pc Register.hvip (by decide) (by decide),
+    execution.other_register_frame current pc Register.mip (by decide) (by decide),
+    execution.other_register_frame current pc Register.written_event_index (by decide) (by decide)]
+
+/-- A host-only suffix frames every Sail register other than PC and the x5 return slot. -/
+theorem ExecutionPath.register_of_host_only {host : HostPolicy} {program : Soundness.Target.GuestProgram} {s t : ExecutionState}
+    {events : List ExecutionEvent} (path : ExecutionPath host program s events t)
+    (hostOnly : events.countP ExecutionEvent.isOrdinary = 0)
+    (reg : Register) (notPc : reg ≠ .PC) (notX5 : reg ≠ .x5) :
+    t.sail.regs.get? reg = s.sail.regs.get? reg := by
+  induction path with
+  | nil => rfl
+  | @cons source middle last event later step _ ih =>
+    cases step with
+    | ordinary => simp [List.countP_cons] at hostOnly
+    | syscall ran =>
+      obtain ⟨pc, exec, _, _, _, _, targetEq, _⟩ := HostState.step_observations ran
+      exact (ih (by simpa [List.countP_cons] using hostOnly)).trans
+        (targetEq ▸ exec.other_register_frame source.sail pc reg notPc notX5)
 
 end SP1Clean.Semantics

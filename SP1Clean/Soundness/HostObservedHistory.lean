@@ -10,6 +10,8 @@ terminal whose normalized outgoing state the verifier requested.
 
 namespace SP1Clean.Soundness.HostObserved
 
+open SP1Clean.Soundness.OrdinaryObservation (terminalEdge)
+
 open Circuit Air.Flat Semantics Channels
 open SP1Clean.OrdinaryObservation (Inputs State Mode TerminalInputs startFor finalFor)
 

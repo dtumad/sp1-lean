@@ -99,6 +99,9 @@ import SP1Clean.FormalModel.Contracts.WritePermission
 import SP1Clean.FormalModel.Shard
 import SP1Clean.FormalModel.ShardMachine
 import SP1Clean.FormalModel.ShardPreservation
+import SP1Clean.FormalModel.ShardNextPC
+import SP1Clean.FormalModel.ShardDynamic
+import SP1Clean.FormalModel.ShardRetirement
 import SP1Clean.FormalModel.ShardAccess
 import SP1Clean.FormalModel.ShardResources
 import SP1Clean.FormalModel.TraceGen.AluGenerator
@@ -243,6 +246,7 @@ import SP1Clean.Semantics.Sail.SailMemorySplit
 import SP1Clean.Semantics.Sail.SailMemoryWrite
 import SP1Clean.Semantics.Sail.SailReadOnly
 import SP1Clean.Semantics.Sail.SailRetirement
+import SP1Clean.Semantics.Sail.RetirementRegisters
 import SP1Clean.Semantics.Sail.SailStepReduction
 import SP1Clean.Semantics.Sail.SailStoreFrame
 import SP1Clean.Semantics.Transition.TransitionDecode

@@ -1,5 +1,6 @@
 module
 
+public import SP1Clean.Semantics.Sail.RetirementRegisters
 public import SP1Clean.Semantics.Sail.SailRetirement
 
 /-! # Circuit-independent execute and retirement frames
@@ -36,6 +37,28 @@ theorem SailConfigured.writeNextPC {source : SailState} (configured : SailConfig
   rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
     rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by decide)]
 
+/-- Arithmetic or load writeback preserves every retirement-control register; this includes
+discarded GPR writes to x0. -/
+theorem writeGPR_retirementRegisters (state : SailState) (rd : BitVec 5) (value : BitVec 64) :
+    Semantics.PreservesRetirementRegisters state
+      (if rd = 0#5 then state else {state with regs := (state.regs.insert (reg_idx_to_Register rd)
+        (bitVecToRegidxVal rd value))}) := by
+  intro reg member
+  split_ifs
+  · rfl
+  · rw [Std.ExtDHashMap.get?_insert, dite_eq_right]
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      unfold reg_idx_to_Register <;> split <;> decide
+
+/-- Staging a jump destination leaves the actual retirement-control registers intact. -/
+theorem writeNextPC_retirementRegisters (state : SailState) (pc : BitVec 64) :
+    Semantics.PreservesRetirementRegisters state {state with regs := state.regs.insert .nextPC pc} := by
+  intro reg member
+  rw [Std.ExtDHashMap.get?_insert, dite_eq_right]
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
 /-- A GPR write, or a discarded x0 write, preserves the platform configuration. -/
 theorem SailConfigured.writeGPR {source : SailState} (configured : SailConfigured source)
     (rd : BitVec 5) (value : BitVec 64) :
@@ -46,6 +69,14 @@ theorem SailConfigured.writeGPR {source : SailState} (configured : SailConfigure
   · apply SailConfigured.congr configured (source.isInitialized_insert configured.init _ _)
     rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
       rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by unfold reg_idx_to_Register; split <;> decide)]
+
+/-- A GPR write (including x0) preserves the staged architectural successor. -/
+theorem writeGPR_nextPC (state : SailState) (rd : BitVec 5) (value : BitVec 64) :
+    (if rd = 0#5 then state else {state with regs := (state.regs.insert (reg_idx_to_Register rd)
+      (bitVecToRegidxVal rd value))}).regs.get? Register.nextPC = state.regs.get? Register.nextPC := by
+  split_ifs
+  · rfl
+  · rw [Std.ExtDHashMap.get?_insert, dite_eq_right (by unfold reg_idx_to_Register; split <;> decide)]
 
 /-- Compose an execute stage observing the actual incoming registers, memory and staged successor
 with official retirement, retaining an arbitrary predicate on its resulting memory. -/
@@ -152,20 +183,28 @@ theorem run_bind_success {α β : Type} (action : SailM α) (next : α → SailM
   | ok result middle =>
     exact ⟨middle, result, rfl, by rwa [run_bind_of_run' source middle action result h] at ran⟩
 
-/-- Recover actual incoming GPR observations and a direct execute result, then transport an
-arbitrary memory predicate through official normal-retirement bookkeeping. -/
-theorem normal_memory_of_observed_direct_execute {program : GuestProgram} {source target : SailState}
+/-- Recover the execute stage of an actual ordinary retirement. The staged PC, sequential
+successor and GPR reads come from the authenticated incoming state. The official retirement tail
+commits the successful execute stage’s nextPC to both outgoing PC registers. -/
+theorem normal_observed_direct_execute {program : GuestProgram} {source target : SailState}
     {pc : BitVec 64} {word : BitVec 32} {decoded : instruction}
     (configured : SailConfigured source) (loaded : RomLoaded program source)
     (atPc : source.regs.get? Register.PC = some pc)
     (fetched : program.fetchWord pc = some word) (decode : ConfiguredDecode word decoded)
     (memoryProperty : Std.ExtHashMap ℕ (BitVec 8) → Prop)
+    (pcProperty : Option (BitVec 64) → Prop)
     (frame : ∀ state, SailConfigured state →
-      (∀ index, state.get_reg? index = source.get_reg? index) → state.mem = source.mem → ∀ result next,
+      (∀ index, state.get_reg? index = source.get_reg? index) → state.mem = source.mem →
+      state.regs.get? Register.PC = some pc → state.regs.get? Register.nextPC = some (pc + 4#64) → ∀ result next,
       (runSail (execute decoded)) state = .ok result next →
-        (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ memoryProperty next.mem)
+        (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ memoryProperty next.mem ∧
+          (result = .Retire_Success () → pcProperty (next.regs.get? Register.nextPC)))
     (normal : SailRetiresNormally source target) :
-    SailConfigured target ∧ memoryProperty target.mem := by
+    SailConfigured target ∧ memoryProperty target.mem ∧
+      target.regs.get? Register.nextPC = target.regs.get? Register.PC ∧ pcProperty (target.regs.get? Register.PC) ∧
+      ((∀ state, SailConfigured state → (∀ index, state.get_reg? index = source.get_reg? index) → ∀ next,
+        (runSail (execute decoded)) state = .ok (.Retire_Success ()) next →
+          Semantics.PreservesRetirementRegisters state next) → Semantics.OrdinaryBookkeeping source target) := by
   obtain ⟨intermediate, preparedRun, increment, bits, post, incrementRun, hartRun, targetRun⟩ := normal
   let pending := refreshedMip source
   have refresh := run_update_mip source configured.init
@@ -184,6 +223,15 @@ theorem normal_memory_of_observed_direct_execute {program : GuestProgram} {sourc
   let nextPc := BitVec.addInt (marked.regs.get Register.PC (ready.init _)) 4
   let staged : SailState := {marked with regs := marked.regs.insert Register.nextPC nextPc}
   have stagedCfg : SailConfigured staged := SailConfigured.writeNextPC markedCfg _
+  have markedPc : marked.regs.get? Register.PC = some pc := by
+    simpa only [marked, Std.ExtDHashMap.get?_insert, beq_iff_eq, reduceCtorEq, ↓reduceDIte] using preparedPc
+  have pcValue : marked.regs.get Register.PC (ready.init _) = pc := by
+    rwa [Std.ExtDHashMap.get?_eq_some_get (ready.init _), Option.some.injEq] at markedPc
+  have stagedPc : staged.regs.get? Register.PC = some pc := by
+    simpa only [staged, Std.ExtDHashMap.get?_insert, beq_iff_eq, reduceCtorEq, ↓reduceDIte] using markedPc
+  have stagedNext : staged.regs.get? Register.nextPC = some (pc + 4#64) := by
+    simp only [staged, Std.ExtDHashMap.get?_insert_self, nextPc, pcValue]
+    rfl
   have reduced := hartRun
   rw [run_hart_active_eq_of_ready marked word decoded 0 ready (decode marked markedCfg),
     run_bind_of_run marked _ _ (Sail.run_readReg_of_isInitialized marked Register.PC ready.init),
@@ -197,7 +245,7 @@ theorem normal_memory_of_observed_direct_execute {program : GuestProgram} {sourc
         (by unfold reg_idx_to_Register; split <;> decide)).trans
         (SailState.get_reg?_insert_of_ne (s := source) (reg := Register.mip)
           (by unfold reg_idx_to_Register; split <;> decide)))
-  obtain ⟨direct, afterCfg, memory⟩ := frame staged stagedCfg observed rfl result afterExecute executeRun
+  obtain ⟨direct, afterCfg, memory, successor⟩ := frame staged stagedCfg observed rfl stagedPc stagedNext result afterExecute executeRun
   have returned : result = .Retire_Success () ∧ afterExecute = post := by
     cases result
     case ExecuteAs other => exact False.elim (direct other rfl)
@@ -206,14 +254,43 @@ theorem normal_memory_of_observed_direct_execute {program : GuestProgram} {sourc
       cases rest
     all_goals exact ⟨rfl, rfl⟩
   obtain ⟨rfl, rfl⟩ := returned
-  obtain ⟨actual, tailRun, _, _, memoryTail, registers, initialized, _⟩ := tail_bookkeeping _ afterCfg.init
+  obtain ⟨actual, tailRun, pcTail, _, memoryTail, registers, initialized, _, _, counter, cleared⟩ := tail_bookkeeping _ afterCfg.init
   rw [tryStep_eq_of_hart_active source prepared 0 increment bits afterExecute refresh markedCfg.active incrementRun
     (by rw [Sail.run_readReg, preparedCfg.priv]) hartRun afterCfg.active, tailRun] at targetRun
   cases targetRun
-  refine ⟨?_, by rwa [memoryTail]⟩
-  apply SailConfigured.congr afterCfg initialized
-  rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
-    exact registers _ (by decide) (by decide) (by decide)
+  refine ⟨?_, by rwa [memoryTail], (registers _ (by decide) (by decide) (by decide)).trans pcTail.symm, ?_, ?_⟩
+  · apply SailConfigured.congr afterCfg initialized
+    rintro register (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) <;>
+      exact registers _ (by decide) (by decide) (by decide)
+  · rw [pcTail]
+    exact successor rfl
+  · intro keep
+    have held := keep staged stagedCfg observed afterExecute executeRun
+    have decision := Semantics.retirementEnabled_of_run incrementRun
+    have same : Semantics.retirementEnabled source = increment := by
+      simpa only [Semantics.retirementEnabled, Std.ExtDHashMap.get?_insert,
+        beq_iff_eq, reduceCtorEq, ↓reduceDIte] using decision
+    exact Semantics.OrdinaryBookkeeping.of_tail same held afterCfg.init registers counter cleared
+
+/-- Recover actual incoming GPR observations and a direct execute result, then transport an
+arbitrary memory predicate through official normal-retirement bookkeeping. -/
+theorem normal_memory_of_observed_direct_execute {program : GuestProgram} {source target : SailState}
+    {pc : BitVec 64} {word : BitVec 32} {decoded : instruction}
+    (configured : SailConfigured source) (loaded : RomLoaded program source)
+    (atPc : source.regs.get? Register.PC = some pc)
+    (fetched : program.fetchWord pc = some word) (decode : ConfiguredDecode word decoded)
+    (memoryProperty : Std.ExtHashMap ℕ (BitVec 8) → Prop)
+    (frame : ∀ state, SailConfigured state →
+      (∀ index, state.get_reg? index = source.get_reg? index) → state.mem = source.mem → ∀ result next,
+      (runSail (execute decoded)) state = .ok result next →
+        (∀ other, result ≠ .ExecuteAs other) ∧ SailConfigured next ∧ memoryProperty next.mem)
+    (normal : SailRetiresNormally source target) :
+    SailConfigured target ∧ memoryProperty target.mem := by
+  obtain ⟨cfg, memory, _⟩ := normal_observed_direct_execute configured loaded atPc fetched decode memoryProperty
+    (fun _ => True) (fun state cfg registers memory _ _ result next executed => by
+      obtain ⟨direct, afterCfg, preserved⟩ := frame state cfg registers memory result next executed
+      exact ⟨direct, afterCfg, preserved, fun _ => trivial⟩) normal
+  exact ⟨cfg, memory⟩
 
 /-- A complete-memory frame is a special case of observed-state normal retirement. -/
 theorem normal_frame_of_direct_execute {program : GuestProgram} {source target : SailState}

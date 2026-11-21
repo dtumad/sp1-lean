@@ -15,9 +15,6 @@ namespace SP1Clean.Soundness.HostHintReadCPU
 open Circuit Air.Flat Channels Semantics NativeCore HostHintReadLocal
 open LeanRV64D (Register)
 
-private def retirementObservation (state : SailState) : Bool × Option Bool × Option (BitVec 64) :=
-  (retirementEnabled state, state.regs.get? Register.minstret_increment, state.regs.get? Register.minstret)
-
 private theorem ordinary_retirement {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] {program : Target.GuestProgram}
     {row : Trace.RowView (ZMod p)} {current next : SailState}
     (effect : Target.RowEffect program row current next) :
@@ -34,36 +31,6 @@ private theorem ordinary_retirement {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)]
   simp only [enabledFrame, observed, flag, counter]
   cases enabled <;> simp [Sail.BitVec.addInt]
 
-private theorem host_retirement (execution : HostExecution) (current : SailState) (pc : BitVec 64) :
-    retirementObservation (execution.apply current pc) = retirementObservation current := by
-  unfold retirementObservation retirementEnabled
-  rw [execution.other_register_frame current pc Register.mcountinhibit (by decide) (by decide),
-    execution.other_register_frame current pc Register.minstretcfg (by decide) (by decide),
-    execution.other_register_frame current pc Register.minstret_increment (by decide) (by decide),
-    execution.other_register_frame current pc Register.minstret (by decide) (by decide)]
-
-/-- Observe the eventual refresh value and the two platform bookkeeping slots. -/
-private def platformObservation (state : SailState) :
-    BitVec 64 × Option (BitVec 64) × Option (Option (Nat × LeanRV64D.event_csr)) :=
-  (TryStepReduction.refreshedMip state, state.regs.get? Register.mip,
-    state.regs.get? Register.written_event_index)
-
-private def platformTick
-    (values : BitVec 64 × Option (BitVec 64) × Option (Option (Nat × LeanRV64D.event_csr))) (ordinary : Bool) :=
-  if ordinary then (values.1, some values.1, some none) else values
-
-private theorem platformTick_fold {ρ : Type*} (ordinary : ρ → Bool) (rows : List ρ)
-    (pending : BitVec 64) (initial : Option (BitVec 64)) (marker : Option (Option (Nat × LeanRV64D.event_csr))) :
-    rows.foldl (fun values row => platformTick values (ordinary row)) (pending, initial, marker) =
-      (pending, if rows.countP ordinary = 0 then initial else some pending,
-        if rows.countP ordinary = 0 then marker else some none) := by
-  induction rows generalizing initial marker with
-  | nil => rfl
-  | cons row rest ih =>
-    cases active : ordinary row
-    · simpa [List.foldl_cons, platformTick, active] using ih initial marker
-    · simpa [List.foldl_cons, platformTick, active] using ih (some pending) (some none)
-
 private theorem ordinary_platform {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] {program : Target.GuestProgram}
     {row : Trace.RowView (ZMod p)} {current next : SailState}
     (effect : Target.RowEffect program row current next) :
@@ -77,14 +44,6 @@ private theorem ordinary_platform {p : ℕ} [Fact p.Prime] [Fact (2 ^ 17 < p)] {
       effect.interrupts, Option.getD_some]
     exact TryStepReduction.refreshedMipBits_idempotent _ _ _
   exact Prod.ext refreshed (Prod.ext effect.interrupts effect.eventIndex)
-
-private theorem host_platform (execution : HostExecution) (current : SailState) (pc : BitVec 64) :
-    platformObservation (execution.apply current pc) = platformObservation current := by
-  unfold platformObservation TryStepReduction.refreshedMip
-  rw [execution.other_register_frame current pc Register.misa (by decide) (by decide),
-    execution.other_register_frame current pc Register.hvip (by decide) (by decide),
-    execution.other_register_frame current pc Register.mip (by decide) (by decide),
-    execution.other_register_frame current pc Register.written_event_index (by decide) (by decide)]
 
 variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 variable {outgoing : MemorySnapshot}
@@ -118,7 +77,7 @@ private theorem step_bookkeeping (valid : image.Valid)
     | syscall ran =>
       obtain ⟨pc, execution, _, _, _, _, sail, _⟩ := HostState.step_observations ran
       rw [sail]
-      exact ⟨host_retirement execution current.sail pc,
+      exact ⟨execution.retirement_observation current.sail pc,
         execution.other_register_frame current.sail pc Register.nextPC (by decide) (by decide)⟩
 
 private theorem step_platform (valid : image.Valid)
@@ -141,7 +100,7 @@ private theorem step_platform (valid : image.Valid)
     | syscall ran =>
       obtain ⟨pc, execution, _, _, _, _, sail, _⟩ := HostState.step_observations ran
       rw [sail]
-      exact host_platform execution current.sail pc
+      exact execution.platform_observation current.sail pc
 
 /-- One ordinary retirement refreshes interrupts and clears event bookkeeping. Further
 retirements are idempotent, and every host adapter preserves both observations. Empty and

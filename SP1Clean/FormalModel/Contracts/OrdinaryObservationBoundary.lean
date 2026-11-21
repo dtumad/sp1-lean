@@ -150,11 +150,41 @@ def Mode.of (source target : SailSnapshot) : Mode :=
   | true, false => .empty
   | false, _ => .nonempty
 
+/-- Whether the semantic count of ordinary instructions selects this terminal mode. -/
+def Mode.AcceptsCount : Mode → ℕ → Prop
+  | .empty, n => n = 0
+  | .nonempty, n => n ≠ 0
+  | .any, _ => True
+
+/-- The target-selected mode agrees with the count when its quiet and refreshed entries
+hold in the corresponding cases. -/
+theorem Mode.of_acceptsCount {source target : SailSnapshot} {n : ℕ}
+    (empty : n = 0 → quiet source target = true) (active : n ≠ 0 → refreshed source target = true) :
+    (Mode.of source target).AcceptsCount n := by
+  by_cases zero : n = 0
+  · unfold Mode.of
+    rw [empty zero]
+    cases refreshed source target <;> first | exact zero | trivial
+  · unfold Mode.of
+    rw [active zero]
+    cases quiet source target <;> first | exact zero | trivial
+
 /-- The supplied target's retirement counter and nextPC close the chain at the sentinel of the mode
 the target fixes, with the source's flag unchanged. -/
 def finalFor (source target : SailSnapshot) : State (ZMod p) :=
   final (Mode.of source target)
     (bitVecToWord ((target.registers.get? Register.minstret : Option (BitVec 64)).getD 0))
     (pcLimbs ((target.registers.get? Register.nextPC : Option (BitVec 64)).getD 0)) (flagFor source)
+
+/-- The number of unit increments in an ordinary observation history matches the realized
+Sail counter decision, including inhibited retirement. -/
+theorem startFor_enabled_count {p : ℕ} [Fact p.Prime] (snapshot : SailSnapshot) (n : ℕ) :
+    n * (startFor (p := p) snapshot).enabled.val = if retirementEnabled snapshot.realize then n else 0 := by
+  have flag : retirementEnabled snapshot.skeleton = retirementEnabled snapshot.realize := by
+    unfold retirementEnabled
+    rfl
+  change n * ((if retirementEnabled snapshot.skeleton then 1 else 0 : ZMod p)).val = _
+  rw [flag]
+  cases retirementEnabled snapshot.realize <;> simp [ZMod.val_one'' (Fact.out (p := p.Prime)).ne_one]
 
 end SP1Clean.OrdinaryObservation

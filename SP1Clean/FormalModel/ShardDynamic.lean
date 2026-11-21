@@ -1,8 +1,9 @@
-import SP1Clean.FormalModel.Contracts.SailBoundary
+import SP1Clean.FormalModel.Shard
+import SP1Clean.Semantics.Execution.SailBookkeeping
 
 /-! # Dynamic Sail bookkeeping at the supplied shard endpoint -/
 
-namespace SP1Clean.Soundness.Shard
+namespace SP1Clean.FormalModel.Shard
 
 open Machine Semantics
 open LeanRV64D (Register)
@@ -26,4 +27,4 @@ structure DynamicMatch (source target : ExecutionSnapshot) (events : List Execut
     if events.countP ExecutionEvent.isOrdinary = 0
       then source.sail.registers.get? Register.written_event_index else some none
 
-end SP1Clean.Soundness.Shard
+end SP1Clean.FormalModel.Shard

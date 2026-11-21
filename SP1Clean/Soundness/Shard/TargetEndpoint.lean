@@ -24,7 +24,7 @@ variable {p : ℕ} [Fact p.Prime] [Fact (2 ^ 25 < p)]
 
 omit [Fact (2 ^ 25 < p)] in
 /-- At equal clocks the verifier authenticates the full optional Sail bookkeeping for an empty tape. -/
-theorem DynamicMatch.nil_of_equal_clock {source target : ExecutionSnapshot} {header : SP1PublicIO (ZMod p)}
+theorem dynamicMatch_nil_of_equal_clock {source target : ExecutionSnapshot} {header : SP1PublicIO (ZMod p)}
     (boundary : SailBoundary.Spec source target header) (clock : source.clock = target.clock) :
     DynamicMatch source target [] := by
   obtain ⟨quiet, retired⟩ := boundary.equal_clock clock
@@ -109,7 +109,7 @@ theorem Endpoint.empty_of_equal_clock {source target : ExecutionSnapshot} {final
   have := event_count_le_ticks events
   have nil : events = [] := List.length_eq_zero_iff.mp (by omega)
   subst events
-  exact ⟨rfl, endpoint.realize_eq boundary (DynamicMatch.nil_of_equal_clock boundary clock) host⟩
+  exact ⟨rfl, endpoint.realize_eq boundary (dynamicMatch_nil_of_equal_clock boundary clock) host⟩
 
 /-- With the verifier-checked host suffix, the six-call machine trace reaches the literal supplied
 Sail, host and clock state. The same ordered events bind the commitment statement. -/

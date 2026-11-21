@@ -103,10 +103,27 @@ Adjacent segments use the same statement; cutting a segment preserves declaratio
 | Complete Memory boundary | Installed target values and untouched-location coverage imply the finite comparison, and the accepted execution ends with exactly the supplied integer registers and RAM; the complete Memory ensemble retains its separate public verifier |
 | Sail boundary | For arbitrary accepted six-handler segments, the actual CPU order and physical receipt/terminal ledgers determine the last ordinary successor and the retirement count. The resulting nextPC, counter, increment flag, interrupt refresh and written event index identify the literal complete target. Adjacent accepted segments compose across extensionally equal boundaries. [Production soundness theorem](../SP1Clean/Export/InstalledAssembly.lean) |
 | Constructive observation history | Routing supplies a chronological raw receipt for each ordinary instruction. The history constructs its counter update and ordered links, including raw clock carries. Guarded consumer rows retain zero-weight padding. A nine-instruction witness occupies sixteen observation rows and one terminal. [History construction](../SP1Clean/Proofs/Completeness/OrdinaryObservationHistory.lean) |
-| Host-only observation terminal | For an admissible host-only tape of any length, the constructor places the selected terminal row and proves its outgoing link equals the verifier's supplied endpoint, including absent or wide incoming nextPC. [Terminal construction](../SP1Clean/Proofs/Completeness/ExecutionObservationTerminal.lean) |
+| Constructive observation endpoint | Every admissible mixed tape yields the demand-padded consumer, one selected terminal row and two empty terminal tables. Their signed ledgers balance against the actual routed receipts and the verifier’s source and target. The construction covers empty tapes, host suffixes, all 25 ordinary families and 64-bit retirement wraparound. [Four-table witness](../SP1Clean/Proofs/Completeness/ExecutionObservationEndpoint.lean) |
 | Concrete examples | Accepted ADD and compiler-derived BEQ assemblies; LoadByte fixed-table replacement with occurrence-preserving transport |
 | Composed execution | Any finite sequence of accepted six-handler shards with agreeing complete boundaries yields a single trace with one commitment statement. From canonical boot to a stopped host, its final HALT carries the supplied exit code. [Shard composition](../SP1Clean/Export/ShardChain.lean) |
 | Released SP1 agreement | Direct Rust comparisons of exported native components; public-addressing and complete active-host assembly gaps remain explicit |
+
+The observation constructor is noncomputable in Lean. It replays the semantic path and uses the
+typed instruction-event compiler to construct the witness. Clean’s executable ensemble scheduler
+has a separate witness-generation contract. The four observation components retain their
+constraints, guarantees and exact channel ledgers when Clean installs the canonical data of a
+larger inventory. For a demand-padded consumer of height h, its receipt ledger has h occurrences
+and the complete observation-state ledger has 2h + 4, including both public endpoints and the
+selected terminal. This fits the standard native limits. [Canonical data](../SP1Clean/Proofs/Completeness/ObservationData.lean) and [physical capacity](../SP1Clean/Proofs/Completeness/ObservationCapacity.lean).
+
+The full semantic domain admits a jump at the final 48-bit instruction slot, `2^48 − 4`.
+Both `jal x1,0` and `jalr x1,x0,0` retire normally from canonical boot for suitable finite
+images and resource limits. Writing the link to x1 requires the value `2^48`; the released
+JAL and JALR AIR require a 48-bit link at that active write. The Lean regression proves the
+executions are admissible and that every matching enabled native row fails its constraints or
+lookup requirements. A jump to x0 disables the link-write gate. A branch checks only its
+selected destination. The unrestricted `CompilerTarget` continues to expose this domain
+mismatch. [Jump-link regression](../SP1CleanTest/Alignment/Core/JumpLinkBoundary.lean).
 
 Current Rust evidence is tied to the single released-SP1 revision in
 [provenance](../scripts/provenance.json). A release upgrade must review loader/host behavior as

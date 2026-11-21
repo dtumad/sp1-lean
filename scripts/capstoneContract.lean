@@ -1,7 +1,8 @@
 import Lean
 import SP1Clean.Soundness.Shard.Contract
 import SP1Clean.Export.ShardChain
-import SP1Clean.Proofs.Completeness.ExecutionObservationTerminal
+import SP1Clean.Proofs.Completeness.ObservationCapacity
+import SP1Clean.Proofs.Completeness.ObservationData
 
 /-! # Compiled native capstone contract audit
 
@@ -89,7 +90,7 @@ example :
           (sp1Machine p image).Trace source.realize events actual ∧
           commitments.Matches events ∧
           (∀ event ∈ events, SixCallProfile.event event) ∧
-          DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
+          SP1Clean.FormalModel.Shard.DynamicMatch source target events ∧ Endpoint source target final header events actual := Iff.rfl
 
 -- These are complete boundary maps, not just values at accessed addresses.
 example {events : List ExecutionEvent} {actual : ExecutionState}
@@ -119,8 +120,11 @@ def roots : Array Name := #[
   ``SP1Clean.Export.InstalledAssembly.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.soundness,
   ``SP1Clean.Export.InstalledAssembly.AcceptedChain.boot_to_halt,
-  ``SP1Clean.TraceGen.admissibleExecution_observationTable,
-  ``SP1Clean.TraceGen.admissibleExecution_hostOnlyTerminalTable,
+  ``SP1Clean.TraceGen.admissibleExecution_observationWitness,
+  ``SP1Clean.TraceGen.admissibleExecution_observationData,
+  ``SP1Clean.TraceGen.admissibleExecution_observationFits,
+  ``SP1Clean.TraceGen.routed_successor_at,
+  ``SP1Clean.FormalModel.Shard.Executes.dynamicMatch,
   ``SP1Clean.Export.InstalledAssembly.executionFlag_iff_identity,
   ``SP1Clean.FormalModel.Shard.Executes,
   ``SP1Clean.FormalModel.Shard.nativeProfile,
